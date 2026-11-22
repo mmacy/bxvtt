@@ -6,7 +6,16 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { fixtureSnapshot, type Snapshot } from '@/app/testing/fixtures';
 import { createFakeApi, renderWithTable } from '@/app/testing/renderWithTable';
 import { resetDungeonCache } from './hooks';
-import { accepted, giveValuables, partyWithPackItem, refused, stubCatalog } from './testKit';
+import {
+  accepted,
+  gameEntry,
+  giveValuables,
+  makeCaster,
+  partyWithPackItem,
+  refused,
+  stubCatalog,
+} from './testKit';
+import { useTableUi } from '@/app';
 import { TownActions } from './TownActions';
 import { TownStage } from './TownStage';
 import { useTownUi } from './townUi';
@@ -538,5 +547,67 @@ describe('the generic command form', () => {
         game.revision,
       ),
     );
+  });
+});
+
+describe('spells to prepare', () => {
+  const REST = 'Tamsin has no spells memorized. Rest for a night, then prepare spells.';
+
+  function withMage() {
+    const snapshot = fixtureSnapshot('town', 'player');
+    makeCaster(snapshot, 'Tamsin', 'magic_user', { book: 1 });
+    return snapshot;
+  }
+
+  it('warns on the town square with a button that rests for a night', async () => {
+    const snapshot = withMage();
+    const { api, user, store } = setup(snapshot);
+    const game = store.getState().game;
+    if (!game) throw new Error('No game.');
+    const banner = await screen.findByText("Spells aren't prepared");
+    expect(banner).toBeInTheDocument();
+    expect(screen.getAllByText(REST).length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText('Looks ready')).not.toBeInTheDocument();
+    api.sendCommand.mockResolvedValue(accepted(game));
+    await user.click(screen.getAllByRole('button', { name: 'Rest for a night' })[0] as HTMLElement);
+    await waitFor(() =>
+      expect(api.sendCommand).toHaveBeenCalledWith(
+        store.getState().tableId,
+        { command_type: 'rest', kind: 'night' },
+        game.revision,
+      ),
+    );
+  });
+
+  it('changes to "can prepare" after a night and opens the Spells tab', async () => {
+    const snapshot = withMage();
+    snapshot.feed.entries.push(
+      gameEntry(900, 'rest', [{ event_type: 'rested', code: 'exploration.rest.rested', kind: 'night' }]),
+    );
+    const { user } = setup(snapshot);
+    expect((await screen.findAllByText('Tamsin can prepare spells now.')).length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByRole('button', { name: 'Rest for a night' })).not.toBeInTheDocument();
+    await user.click(screen.getAllByRole('button', { name: "Open Tamsin's spells" })[0] as HTMLElement);
+    expect(useTableUi.getState().sheetMemberId).toBe('character-0004');
+    expect(useTableUi.getState().sheetTab).toBe('spells');
+  });
+
+  it('lists it with the other advice in the set-out dialog', async () => {
+    const { user } = setup(withMage());
+    await screen.findByText("Spells aren't prepared");
+    await user.click(screen.getAllByRole('button', { name: 'Set out' })[0] as HTMLElement);
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(REST)).toBeInTheDocument();
+    expect(within(dialog).getByText('A tinder box to light it')).toBeInTheDocument();
+  });
+
+  it('says nothing about a new first-level cleric', async () => {
+    const snapshot = fixtureSnapshot('town', 'player');
+    makeCaster(snapshot, 'Tamsin', 'cleric');
+    const { api } = setup(snapshot);
+    await screen.findByRole('heading', { name: 'Hollin Ferry' });
+    await waitFor(() => expect(api.fullCatalog).toHaveBeenCalledWith('classes'));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByText("Spells aren't prepared")).not.toBeInTheDocument();
   });
 });

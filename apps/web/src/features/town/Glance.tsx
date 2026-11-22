@@ -11,6 +11,7 @@ import { gaps, readinessChecklist } from './checklist';
 import { MemberToken, PurseOf, SeatOwner } from './parts';
 import { memberStatus } from './members';
 import { useTownServices } from './hooks';
+import { SpellActions, spellAdviceText, useSpellAdvice } from './SpellAdvice';
 import { parseService, sectionOf } from './services';
 import { useTownUi, type TownSection } from './townUi';
 import styles from './Glance.module.css';
@@ -118,7 +119,8 @@ export function ChecklistPanel({ onShop }: { onShop?: (search: string) => void }
   const services = useTownServices();
   const setSection = useTownUi((s) => s.setSection);
   const setSearch = useTownUi((s) => s.setOutfitterSearch);
-  const checklist = useMemo(() => readinessChecklist(party), [party]);
+  const advice = useSpellAdvice();
+  const checklist = useMemo(() => readinessChecklist(party, spellAdviceText(advice)), [party, advice]);
   const missing = gaps(checklist).length;
   const shop = (search: string) => {
     if (onShop) onShop(search);
@@ -144,7 +146,12 @@ export function ChecklistPanel({ onShop }: { onShop?: (search: string) => void }
               </span>
               <span className={styles.checkDetail}>{line.detail}</span>
             </div>
-            {!line.covered && services.outfitter && (
+            {line.key === 'spells' && (
+              <div className={styles.checkActions}>
+                <SpellActions advice={advice} />
+              </div>
+            )}
+            {!line.covered && line.key !== 'spells' && services.outfitter && (
               <Button size="sm" variant="ghost" onClick={() => shop(line.search)}>
                 Find it
               </Button>

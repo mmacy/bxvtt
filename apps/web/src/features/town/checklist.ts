@@ -9,7 +9,7 @@ import { countCarried, readInventory } from './inventory';
 /** One line of advice. */
 export interface Suggestion {
   /** A stable key for the line. */
-  key: 'light' | 'tinder' | 'rations' | 'rope';
+  key: 'spells' | 'light' | 'tinder' | 'rations' | 'rope';
   /** What to carry, such as "A light source". */
   title: string;
   /** Whether someone in the party carries it. */
@@ -41,13 +41,19 @@ function carry(list: readonly string[]): string {
  * Builds the checklist from the party's packs.
  *
  * @param party - The party in marching order.
+ * @param spellsAdvice - What to say about casters with nothing memorized, or empty when there is nothing to say.
  */
-export function readinessChecklist(party: readonly MemberView[]): Suggestion[] {
+export function readinessChecklist(party: readonly MemberView[], spellsAdvice = ''): Suggestion[] {
   const light = carriers(party, LIGHT_IDS);
   const tinder = carriers(party, ['tinder_box']);
   const rations = carriers(party, RATION_IDS);
   const rope = carriers(party, ['rope']);
+  const spells: Suggestion[] =
+    spellsAdvice === ''
+      ? []
+      : [{ key: 'spells', title: 'Spells to prepare', covered: false, detail: spellsAdvice, search: '' }];
   return [
+    ...spells,
     {
       key: 'light',
       title: 'A light source',

@@ -93,3 +93,9 @@
   list-style: disc;
   color: var(--color-text-muted);
 }
+
+.gapActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
