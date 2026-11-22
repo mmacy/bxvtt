@@ -23,11 +23,17 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm run test",
-    "gen:bxapi": "node scripts/gen-bxapi-types.mjs"
+    "gen:bxapi": "node scripts/gen-bxapi-types.mjs",
+    "test:e2e": "playwright test",
+    "test:e2e:prod": "npm run build && E2E_PROD=1 playwright test",
+    "typecheck:e2e": "tsc --noEmit -p e2e/tsconfig.json"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.65.1",
     "@types/node": "^26.6.6",
+    "cloudflared": "^0.7.3",
     "concurrently": "^10.0.7",
     "esbuild": "^0.28.2",
     "eslint": "^10.15.0",
