@@ -3,7 +3,7 @@
  * pace the table can follow, skippable, and instant with reduced motion.
  */
 import type { GameEntry } from '@bxvtt/shared/protocol';
-import { idKind } from '@bxvtt/shared/text';
+import { extendContextWithEntryNames, idKind } from '@bxvtt/shared/text';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useEncounter, useFeed, useReduceMotion, useRefereeLens, useRefereeState, useTableId } from '@/app';
 import { learnMonsterGroups, snapshotBefore, useCombatMemory } from './memory';
@@ -18,7 +18,6 @@ import {
   type MonsterGroupLookup,
   type RoundDigest,
   type TrackState,
-  withMonsterLabels,
 } from './playback';
 import { useCombatText } from './text';
 
@@ -122,6 +121,8 @@ export function usePlayback(options: PlaybackOptions): PlaybackView {
   // Entries already in the feed when the overlay opens are history, not news.
   const [startSeq] = useState(() => options.afterSeq ?? feed.at(-1)?.seq ?? 0);
   const [done, setDone] = useState(startSeq);
+  // Entries at or below the floor never play by themselves. A replay lowers it, so the history entry can replay.
+  const [floor, setFloor] = useState(startSeq);
   const [cursor, setCursor] = useState<{ seq: number; index: number } | null>(null);
   const accept = options.accept;
 
@@ -146,13 +147,19 @@ export function usePlayback(options: PlaybackOptions): PlaybackView {
     () =>
       entries.map((entry): PlaybackItem => {
         const events = entry.events as AnyEvent[];
-        // What this round reveals counts at once, before the memory catches up.
+        // The entry's own names label each monster by its group, even after a reload or once the encounter
+        // has closed. The round's attacks and spells, and those labels, place each monster's numbers on its group.
+        const named = extendContextWithEntryNames(ctx, entry.names);
         const before = snapshotBefore(tableId, entry.revision);
-        const pairs = new Map(
-          monsterGroupsFromRound(events, declaredGroups(tableId), before?.encounter?.groups),
-        );
-        const local = (id: string) => pairs.get(id) ?? lookup(id);
-        const named = withMonsterLabels(ctx, events, local);
+        const pairs = new Map(monsterGroupsFromRound(events, declaredGroups(tableId)));
+        const groups = before?.encounter?.groups ?? [];
+        const local = (id: string) => {
+          const known = pairs.get(id) ?? lookup(id);
+          if (known) return known;
+          const label = named.monsters[id]?.label;
+          const matches = label ? groups.filter((g) => g.label === label) : [];
+          return matches.length === 1 ? (matches[0]?.id ?? null) : null;
+        };
         const beats = buildBeats(events, named, {
           includeReferee: lens,
           messages: entry.messages,
@@ -174,7 +181,7 @@ export function usePlayback(options: PlaybackOptions): PlaybackView {
 
   const current = reduce
     ? null
-    : (items.find((item) => item.seq > done && item.seq > startSeq && item.beats.length > 0) ?? null);
+    : (items.find((item) => item.seq > done && item.seq > floor && item.beats.length > 0) ?? null);
   const beatIndex = current !== null && cursor?.seq === current.seq ? cursor.index : 0;
   const beat = current?.beats[beatIndex] ?? null;
   const last =
@@ -204,11 +211,12 @@ export function usePlayback(options: PlaybackOptions): PlaybackView {
 
   const lastSeq = last?.seq ?? null;
   const replayFrom =
-    lastSeq === null ? null : (items.filter((item) => item.seq < lastSeq).at(-1)?.seq ?? startSeq);
+    lastSeq === null ? null : (items.filter((item) => item.seq < lastSeq).at(-1)?.seq ?? lastSeq - 1);
   const replay = useCallback(() => {
     if (replayFrom === null || reduce) return;
     setCursor(null);
     setDone(replayFrom);
+    setFloor((f) => Math.min(f, replayFrom));
   }, [replayFrom, reduce]);
 
   const track =

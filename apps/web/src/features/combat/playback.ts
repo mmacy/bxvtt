@@ -558,24 +558,9 @@ export function digestRound(events: readonly AnyEvent[], lookup: MonsterGroupLoo
 export function monsterGroupsFromRound(
   events: readonly AnyEvent[],
   declarations: Record<string, { target_group_id?: string | null }>,
-  groups: ReadonlyArray<{ id: string; family_id?: string | null }> = [],
 ): Array<[string, string]> {
   const pairs: Array<[string, string]> = [];
   for (const event of events) {
-    if (event.event_type === 'undead_turned') {
-      // A turning names the kinds it affected. With one kind and one group of that kind, the group is known.
-      const types = Array.isArray(event.types) ? event.types : [];
-      const kinds = types
-        .filter((t): t is { template_id: string; outcome: string } => typeof t === 'object' && t !== null)
-        .filter((t) => t.outcome === 'turned' || t.outcome === 'destroyed')
-        .map((t) => t.template_id);
-      const matching = groups.filter(
-        (g) => g.family_id !== null && g.family_id !== undefined && kinds.includes(g.family_id),
-      );
-      const affected = Array.isArray(event.affected_ids) ? event.affected_ids : [];
-      if (kinds.length === 1 && matching.length === 1 && matching[0])
-        for (const id of affected) if (typeof id === 'string') pairs.push([id, matching[0].id]);
-    }
     if (event.event_type === 'attack_rolled') {
       const attacker = str(event, 'attacker_id');
       const defender = str(event, 'defender_id');
@@ -591,37 +576,6 @@ export function monsterGroupsFromRound(
     }
   }
   return pairs;
-}
-
-/**
- * Names each monster in the events after its group, when the client knows the group, so a line reads "Wren
- * misses a goblin" instead of "Wren misses a monster" when two kinds of monster are in the fight.
- */
-export function withMonsterLabels(
-  ctx: TextContext,
-  events: readonly AnyEvent[],
-  lookup: MonsterGroupLookup,
-): TextContext {
-  const ids = new Set<string>();
-  for (const event of events) {
-    for (const key of ['attacker_id', 'defender_id', 'target_id', 'monster_id', 'actor_id']) {
-      const value = event[key];
-      if (typeof value === 'string' && idKind(value) === 'monster') ids.add(value);
-    }
-    if (Array.isArray(event.target_ids))
-      for (const value of event.target_ids)
-        if (typeof value === 'string' && idKind(value) === 'monster') ids.add(value);
-  }
-  let monsters: TextContext['monsters'] | null = null;
-  for (const id of ids) {
-    if (ctx.monsters[id]) continue;
-    const groupId = lookup(id);
-    const group = groupId ? ctx.groups[groupId] : undefined;
-    if (!group) continue;
-    monsters ??= { ...ctx.monsters };
-    monsters[id] = { label: group.label, labelPlural: group.labelPlural };
-  }
-  return monsters ? { ...ctx, monsters } : ctx;
 }
 
 // Icons --------------------------------------------------------------------------------------------------------

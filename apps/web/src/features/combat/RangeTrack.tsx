@@ -113,6 +113,14 @@ export function RangeTrack({
   const meleeOf = (id: string) => present.filter((g) => g.frontRank.includes(id)).map((g) => g.labelPlural);
   const ticks: number[] = [];
   for (let feet = min; feet <= max; feet += step) ticks.push(feet);
+  // Groups at the same distance stand one above another, so their tokens and labels don't overlap.
+  const groupOffset = (group: TrackGroup): CSSProperties => {
+    const same = present.filter((g) => g.distance === group.distance);
+    if (same.length < 2) return {};
+    const index = same.indexOf(group);
+    const spread = compact ? 46 : 64;
+    return { transform: `translateY(${(index - (same.length - 1) / 2) * spread}px)` };
+  };
   const popsFor = (id: string) => pops.filter((p) => p.tokenId === id);
   const focusSet = new Set(focus);
 
@@ -155,7 +163,7 @@ export function RangeTrack({
               )}
               <div
                 className={cx(styles.group, lit && styles.focus, group.fleeing && styles.fleeing)}
-                style={{ left: at(group.distance) }}
+                style={{ left: at(group.distance), ...groupOffset(group) }}
               >
                 <span className="visually-hidden">{groupLabel(group, nearest)}</span>
                 <span className={styles.groupToken} aria-hidden="true">

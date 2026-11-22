@@ -2,12 +2,14 @@ import type { GameEntry } from '@bxvtt/shared/protocol';
 import { joinList } from '@bxvtt/shared/text';
 import { useCallback, useEffect, useMemo } from 'react';
 import {
+  useCanSend,
   useCombatStage,
   useFeed,
   useGameMode,
   useReduceMotion,
   useRevision,
   useScene,
+  useSendCommand,
   type TableStore,
 } from '@/app';
 import { Badge, Button, cx, Icon } from '@/ui';
@@ -38,14 +40,14 @@ export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
   const reduce = useReduceMotion();
   const mode = useGameMode();
   const revision = useRevision();
-  const pile = useScene()?.here?.pile === true;
   const accept = useCallback((entry: GameEntry) => entry.revision === endRevision, [endRevision]);
   const playback = usePlayback({ afterSeq, accept });
   const end = feed.find((e) => e.kind === 'game' && e.revision === endRevision && e.seq > afterSeq);
-  const summary = useMemo(
-    () => (end ? summarizeFight(fightEvents(feed, end.seq), ctx) : null),
-    [feed, end, ctx],
-  );
+  const summary = useMemo(() => {
+    if (!end) return null;
+    const fight = fightEvents(feed, end.seq, ctx);
+    return summarizeFight(fight.events, fight.ctx);
+  }, [feed, end, ctx]);
 
   // A new encounter, or the party moving on a few steps, retires the summary.
   useEffect(() => {
@@ -112,13 +114,7 @@ export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
             {summary.loot.length > 0 && (
               <div className={styles.fact}>
                 <dt>Left behind</dt>
-                <dd>{capitalize(joinList(summary.loot))}, in a pile where the party stands.</dd>
-              </div>
-            )}
-            {summary.loot.length === 0 && summary.lootDropped && pile && (
-              <div className={styles.fact}>
-                <dt>Left behind</dt>
-                <dd>A few coins, worth less than 1 gp, in a pile where the party stands.</dd>
+                <dd>{capitalize(joinList(summary.loot))}.</dd>
               </div>
             )}
             {summary.fallen.length > 0 && (
@@ -128,6 +124,7 @@ export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
               </div>
             )}
           </dl>
+          <PickUp />
           {playback.last && playback.last.beats.length > 0 && (
             <Button size="sm" variant="ghost" icon="rotate" onClick={playback.replay}>
               {summary.rounds > 0 ? 'Replay the last round' : 'Replay what happened'}
@@ -136,6 +133,60 @@ export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
         </div>
       )}
     </section>
+  );
+}
+
+/** Points the party at what it can pick up where it stands: dropped goods, or a treasure hoard. */
+function PickUp() {
+  const here = useScene()?.here ?? null;
+  const canTake = useCanSend('take_treasure');
+  const { send, pendingType } = useSendCommand();
+  if (here === null) return null;
+  const caches = here.caches.filter((cache) => cache.reachable);
+  if (!here.pile && caches.length === 0) return null;
+  const take = (featureId: string) => void send({ command_type: 'take_treasure', feature_id: featureId });
+  const busy = pendingType === 'take_treasure';
+  return (
+    <div className={styles.pickUp}>
+      {here.pile && (
+        <div className={styles.pickUpRow}>
+          <Icon name="coins" size={16} />
+          <span className={styles.pickUpText}>There are dropped goods here.</span>
+          <Button
+            size="sm"
+            variant="secondary"
+            loading={busy}
+            disabled={!canTake.allowed}
+            title={canTake.reason ?? undefined}
+            onClick={() => take('pile')}
+          >
+            Pick up the dropped goods
+          </Button>
+        </div>
+      )}
+      {caches.map((cache) => (
+        <div key={cache.id} className={styles.pickUpRow}>
+          <Icon name="chest" size={16} />
+          <span className={styles.pickUpText}>
+            {cache.trap
+              ? 'There is treasure here, and the party knows it is trapped. Deal with the trap from the area panel first.'
+              : 'There is treasure here.'}
+          </span>
+          {!cache.trap && (
+            <Button
+              size="sm"
+              variant="secondary"
+              loading={busy}
+              disabled={!canTake.allowed}
+              title={canTake.reason ?? undefined}
+              onClick={() => take(cache.id)}
+            >
+              Take the treasure
+            </Button>
+          )}
+        </div>
+      ))}
+    </div>
   );
 }
 

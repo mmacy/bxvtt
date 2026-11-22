@@ -6,6 +6,7 @@ import type { FeedEntry } from '@bxvtt/shared/protocol';
 import {
   encounterOutcomeLabel,
   encounterOutcomeSentence,
+  extendContextWithEntryNames,
   extendContextWithEvents,
   idKind,
   itemList,
@@ -30,8 +31,6 @@ export interface FightSummary {
   awards: Array<{ memberId: string; name: string; xp: number; levelAfter: number | null }>;
   /** What the slain left on the floor, as phrases. */
   loot: string[];
-  /** Whether the slain dropped anything, even coins worth less than 1 gp, which the event counts as 0 gp. */
-  lootDropped: boolean;
   fallen: string[];
 }
 
@@ -59,7 +58,10 @@ const DEFEAT_VERB: Record<string, string> = {
  * @param feed - The feed, oldest first.
  * @param endSeq - The `seq` of the entry that ended the fight.
  */
-export function fightEvents(feed: readonly FeedEntry[], endSeq: number): AnyEvent[] {
+export function fightEntries(
+  feed: readonly FeedEntry[],
+  endSeq: number,
+): Array<Extract<FeedEntry, { kind: 'game' }>> {
   const games = feed.filter(
     (e): e is Extract<FeedEntry, { kind: 'game' }> => e.kind === 'game' && e.seq <= endSeq,
   );
@@ -71,7 +73,22 @@ export function fightEvents(feed: readonly FeedEntry[], endSeq: number): AnyEven
       break;
     }
   }
-  return games.slice(start).flatMap((entry) => entry.events as AnyEvent[]);
+  return games.slice(start);
+}
+
+/**
+ * The events of the fight and a text context that knows every name its entries recorded, so a summary names
+ * monsters by their group after the encounter has closed or the page has reloaded.
+ */
+export function fightEvents(
+  feed: readonly FeedEntry[],
+  endSeq: number,
+  ctx: TextContext,
+): { events: AnyEvent[]; ctx: TextContext } {
+  const entries = fightEntries(feed, endSeq);
+  let named = ctx;
+  for (const entry of entries) named = extendContextWithEntryNames(named, entry.names);
+  return { events: entries.flatMap((entry) => entry.events as AnyEvent[]), ctx: named };
 }
 
 /** Sums up a fight from its events. */
@@ -84,7 +101,7 @@ export function summarizeFight(events: readonly AnyEvent[], ctx: TextContext): F
   const loot: string[] = [];
   const fallen: string[] = [];
   let lootCoins = 0;
-  let lootDropped = false;
+
   const lootItems: string[] = [];
   for (const event of events) {
     switch (event.event_type) {
@@ -128,7 +145,6 @@ export function summarizeFight(events: readonly AnyEvent[], ctx: TextContext): F
         break;
       }
       case 'loot_dropped': {
-        lootDropped = true;
         lootCoins += num(event, 'coins_gp_value') ?? 0;
         const ids = Array.isArray(event.item_ids)
           ? event.item_ids.filter((i): i is string => typeof i === 'string')
@@ -195,7 +211,6 @@ export function summarizeFight(events: readonly AnyEvent[], ctx: TextContext): F
     xpTotal,
     awards,
     loot,
-    lootDropped,
     fallen: fallen.map((id) => memberName(id, learned)),
   };
 }

@@ -1,7 +1,7 @@
-import { contextFromPlayerView } from '@bxvtt/shared/text';
+import { contextFromPlayerView, emptyContext } from '@bxvtt/shared/text';
 import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
-import { summarizeFight, xpSentence } from './fight';
+import { fightEvents, summarizeFight, xpSentence } from './fight';
 import {
   applyEvent,
   buildBeats,
@@ -10,7 +10,6 @@ import {
   sliceBeats,
   trackFromView,
   trackStates,
-  withMonsterLabels,
   type AnyEvent,
 } from './playback';
 
@@ -204,12 +203,30 @@ describe('naming monsters for players', () => {
     expect(pairs).toEqual([['monster-0002', 'group-0002']]);
   });
 
-  it('names a monster after its group', () => {
-    const { view } = battle();
-    const ctx = contextFromPlayerView(view);
-    const named = withMonsterLabels(ctx, round, (id) => (id === 'monster-0002' ? 'group-0001' : null));
-    expect(named.monsters['monster-0002']?.label).toBe('goblin');
-    expect(named.monsters['monster-0001']).toBeUndefined();
+  it('names monsters from the entry after the encounter has closed', () => {
+    const entry = {
+      seq: 1,
+      created_at: '2026-11-22T05:20:00Z',
+      user_id: null,
+      visibility: 'everyone' as const,
+      to: [],
+      kind: 'game' as const,
+      command_type: 'resolve_battle_round',
+      revision: 9,
+      session_id: 's',
+      messages: [],
+      events: round as never,
+      names: {
+        members: { 'character-0001': 'Brenna' },
+        groups: {},
+        monsters: { 'monster-0002': { label: 'skeleton', label_plural: 'skeletons' } },
+        items: {},
+      },
+    };
+    const fight = fightEvents([entry], 1, emptyContext());
+    expect(fight.ctx.monsters['monster-0002']?.label).toBe('skeleton');
+    const beats = buildBeats(fight.events, fight.ctx, { includeReferee: false, lookup: () => null });
+    expect(beats.some((b) => b.lines.some((l) => l.text.startsWith('Brenna hits a skeleton')))).toBe(true);
   });
 });
 
