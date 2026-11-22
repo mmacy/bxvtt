@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import type { RejoinLookup } from '@bxvtt/shared/protocol';
-import { describeProblem, getApi, useIdentity, type ProblemMessage } from '@/app';
+import { describeProblem, getApi, isRetiredToken, useIdentity, type ProblemMessage } from '@/app';
 import { Banner, Button, Card, PageLayout, Spinner } from '@/ui';
 import { NameForm } from './NameForm';
 import { ProfileMenu } from './ProfileMenu';
@@ -17,6 +17,7 @@ export function JoinPage() {
   const navigate = useNavigate();
   const status = useIdentity((s) => s.status);
   const token = useIdentity((s) => s.token);
+  const forget = useIdentity((s) => s.forget);
   const [problem, setProblem] = useState<ProblemMessage | null>(null);
   const attempted = useRef<string | null>(null);
   const [lookup, setLookup] = useState<RejoinLookup | null>(null);
@@ -48,9 +49,14 @@ export function JoinPage() {
       .joinTable(code)
       .then(
         (table) => navigate(`/tables/${table.id}`, { replace: true }),
-        (error: unknown) => setProblem(describeProblem(error)),
+        (error: unknown) => {
+          // A referee let this user back in from another browser. The name form explains that, and offers to
+          // come back in here.
+          if (isRetiredToken(error)) forget('retired');
+          else setProblem(describeProblem(error));
+        },
       );
-  }, [status, token, code, navigate]);
+  }, [status, token, code, navigate, forget]);
 
   return (
     <PageLayout width="narrow" headerActions={<ProfileMenu />}>
@@ -61,10 +67,11 @@ export function JoinPage() {
               title={returning ? "I'm new here" : "You're invited to a table"}
               description={
                 returning
-                  ? `Pick the name ${lookup.table_name} sees, and you'll go straight to its lobby.`
-                  : "Pick the name the table sees, and you'll go straight to its lobby."
+                  ? `Pick a name, and you'll go straight to ${lookup.table_name}.`
+                  : "Pick a name, and you'll go straight to the table."
               }
               submitLabel="Join the table"
+              onInvitePage
             />
           </Card>
         )}

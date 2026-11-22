@@ -5,7 +5,7 @@
  */
 export { describeProblem, displayStringProblem, getApi, isNetworkError, reportError, setApi } from './api';
 export type { ProblemMessage } from './api';
-export { useCurrentUser, useIdentity } from './identity';
+export { isRetiredToken, useCurrentUser, useIdentity } from './identity';
 export type { IdentityState, IdentityStatus } from './identity';
 export { DEFAULT_PREFERENCES, usePreferences, useReduceMotion } from './preferences';
 export { AppKitProvider } from './AppKitProvider';
@@ -87,7 +87,13 @@ export type { ScopedStorage, StorageArea } from './storage';
 export { toParamMap } from './params';
 export { useCombatStage } from './combatStage';
 export { battleRound, useBattleRound } from './battle';
-export { useDecideRejoin, useRejoinRequests } from './rejoin';
+export {
+  cancelRejoin,
+  cancelRejoinOnLeave,
+  isTransientFailure,
+  useDecideRejoin,
+  useRejoinRequests,
+} from './rejoin';
 export {
   DARKNESS_TEXT,
   NO_LIGHT_TEXT,

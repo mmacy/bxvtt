@@ -8,7 +8,7 @@ import { setApi, useIdentity } from '@/app';
 import { createFakeApi, type FakeApi } from '@/app/testing/renderWithTable';
 import { KitProvider } from '@/ui';
 import { JoinPage } from './JoinPage';
-import { REJOIN_POLL_MS } from './Rejoin';
+import { REJOIN_MAX_BACKOFF_MS, REJOIN_POLL_MS } from './Rejoin';
 
 const sam: User = { id: 'usr_sam', name: 'Sam', color: '#cc79a7', created_at: '2026-11-22T05:00:00Z' };
 
@@ -35,8 +35,12 @@ function renderJoin(api: FakeApi) {
 const ticket = {
   request_id: 'rjq_1',
   secret: 's3cret',
-  expires_at: '2026-11-22T05:05:00Z',
+  expires_at: new Date(Date.now() + 300_000).toISOString(),
   approvers_online: 1,
+};
+const lookup = {
+  table_name: 'Thursday',
+  members: [{ user_id: 'usr_sam', name: 'Sam', color: '#cc79a7' as const }],
 };
 const pending = {
   status: 'pending' as const,
@@ -76,7 +80,7 @@ describe('coming back in as an existing member', () => {
       await screen.findByRole('heading', { name: 'Waiting for a referee to let you in as Sam' }),
     ).toBeInTheDocument();
     expect(screen.getByText(/A referee is at the table now/)).toBeInTheDocument();
-    await act(async () => vi.advanceTimersByTime(REJOIN_POLL_MS * 2));
+    await act(() => vi.advanceTimersByTimeAsync(REJOIN_POLL_MS * 2));
     expect(await screen.findByText('At table tbl_1')).toBeInTheDocument();
     expect(useIdentity.getState()).toMatchObject({ status: 'ready', token: 'tok_new', user: sam });
   });
@@ -93,7 +97,7 @@ describe('coming back in as an existing member', () => {
     renderJoin(api);
     await user.click(await screen.findByRole('button', { name: 'Come back in as Sam' }));
     expect(await screen.findByText(/No referee is at the table right now/)).toBeInTheDocument();
-    await act(async () => vi.advanceTimersByTime(REJOIN_POLL_MS));
+    await act(() => vi.advanceTimersByTimeAsync(REJOIN_POLL_MS));
     expect(await screen.findByText("The referee didn't let you in as Sam")).toBeInTheDocument();
   });
 
@@ -116,5 +120,70 @@ describe('coming back in as an existing member', () => {
     renderJoin(api);
     await user.click(await screen.findByRole('button', { name: 'Come back in as Sam' }));
     expect(await screen.findByText('That member is at the table right now')).toBeInTheDocument();
+  });
+
+  it('ends the request on the server when the visitor stops waiting, and then offers the members again', async () => {
+    const api = createFakeApi();
+    api.lookupRejoin.mockResolvedValue(lookup);
+    api.requestRejoin.mockResolvedValue(ticket);
+    api.rejoinStatus.mockResolvedValue(pending);
+    let finishCancel: () => void = () => undefined;
+    api.cancelRejoin.mockImplementation(() => new Promise<void>((resolve) => (finishCancel = resolve)));
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderJoin(api);
+    await user.click(await screen.findByRole('button', { name: 'Come back in as Sam' }));
+    await screen.findByText(/Your request lasts until/);
+    await user.click(screen.getByRole('button', { name: 'Stop waiting' }));
+    expect(api.cancelRejoin).toHaveBeenCalledWith('rjq_1', 's3cret');
+    // The page keeps waiting until the server confirms.
+    expect(screen.getByText('Ending your request.')).toBeInTheDocument();
+    await act(async () => finishCancel());
+    expect(await screen.findByRole('button', { name: 'Come back in as Sam' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: "I'm new here" })).toBeInTheDocument();
+  });
+
+  it('sends a beacon to end the request when the page goes away', async () => {
+    const api = createFakeApi();
+    api.lookupRejoin.mockResolvedValue(lookup);
+    api.requestRejoin.mockResolvedValue(ticket);
+    api.rejoinStatus.mockResolvedValue(pending);
+    const beacon = vi.fn(() => true);
+    vi.stubGlobal('navigator', Object.assign(Object.create(navigator) as Navigator, { sendBeacon: beacon }));
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderJoin(api);
+    await user.click(await screen.findByRole('button', { name: 'Come back in as Sam' }));
+    await screen.findByText(/Your request lasts until/);
+    window.dispatchEvent(new Event('pagehide'));
+    expect(beacon).toHaveBeenCalledWith('/api/rejoin/rjq_1/cancel', JSON.stringify({ secret: 's3cret' }));
+    vi.unstubAllGlobals();
+  });
+
+  it('keeps waiting through failed polls, says so after several, and lets the visitor in after', async () => {
+    const api = createFakeApi();
+    api.lookupRejoin.mockResolvedValue(lookup);
+    api.requestRejoin.mockResolvedValue(ticket);
+    api.rejoinStatus
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(pending)
+      .mockResolvedValueOnce({ ...pending, status: 'approved', token: 'tok_new', user: sam });
+    api.joinTable.mockResolvedValue({ id: 'tbl_1' } as never);
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderJoin(api);
+    await user.click(await screen.findByRole('button', { name: 'Come back in as Sam' }));
+    await screen.findByText(/Your request lasts until/);
+    await act(() => vi.advanceTimersByTimeAsync(REJOIN_POLL_MS));
+    await act(() => vi.advanceTimersByTimeAsync(REJOIN_MAX_BACKOFF_MS));
+    expect(screen.queryByText(/The connection hiccuped/)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Waiting for a referee to let you in as Sam' }),
+    ).toBeInTheDocument();
+    await act(() => vi.advanceTimersByTimeAsync(REJOIN_MAX_BACKOFF_MS));
+    expect(await screen.findByText(/Still waiting. The connection hiccuped/)).toBeInTheDocument();
+    await act(() => vi.advanceTimersByTimeAsync(REJOIN_MAX_BACKOFF_MS));
+    expect(screen.queryByText(/The connection hiccuped/)).not.toBeInTheDocument();
+    await act(() => vi.advanceTimersByTimeAsync(REJOIN_POLL_MS));
+    expect(await screen.findByText('At table tbl_1')).toBeInTheDocument();
   });
 });

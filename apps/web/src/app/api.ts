@@ -50,6 +50,11 @@ const FIXED: Record<string, { title: string; detail: string }> = {
     title: "This server doesn't know your name anymore",
     detail: 'Pick a name again on the home page to continue.',
   },
+  token_retired: {
+    title: "You've signed in from another browser",
+    detail:
+      "A referee let you back in at a table from another browser, so this browser's sign-in stopped working. Play on there, or open the table's invite link here and choose \"I've played at this table before\".",
+  },
   referee_required: { title: 'Only a referee can do that', detail: 'Ask the referee at your table.' },
   host_key_required: {
     title: 'Creating a table here needs the host key',
@@ -177,7 +182,8 @@ const FIXED: Record<string, { title: string; detail: string }> = {
   },
   rejoin_pending: {
     title: 'A request to come back in is already waiting',
-    detail: 'Wait for a referee to answer it, or for it to end in a few minutes.',
+    detail:
+      'Someone already asked to come back in as this member. Ask again after a referee answers it or it ends, in a few minutes at most.',
   },
   rejoin_not_pending: {
     title: 'That request has ended',

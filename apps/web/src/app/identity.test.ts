@@ -71,6 +71,26 @@ describe('identity', () => {
     expect(localStorage.getItem(STORAGE_KEYS.identity)).toBeNull();
   });
 
+  it('says the sign-in moved to another browser when the server retired the token', async () => {
+    localStorage.setItem(STORAGE_KEYS.identity, JSON.stringify({ token: 'bxt_old', user: rhea }));
+    api.me.mockRejectedValue(
+      new BxvttProblemError({
+        type: 'about:blank',
+        title: 'Token retired',
+        status: 401,
+        code: 'token_retired',
+        detail: '',
+      }),
+    );
+    await useIdentity.getState().load();
+    expect(useIdentity.getState()).toMatchObject({
+      status: 'anonymous',
+      notice: 'retired',
+      lastName: 'Rhea',
+    });
+    expect(localStorage.getItem(STORAGE_KEYS.identity)).toBeNull();
+  });
+
   it('keeps the stored user when the server is unreachable', async () => {
     localStorage.setItem(STORAGE_KEYS.identity, JSON.stringify({ token: 'bxt_secret', user: rhea }));
     api.me.mockRejectedValue(new TypeError('Failed to fetch'));

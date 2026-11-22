@@ -47,7 +47,7 @@ export function RejoinPrompt() {
       >
         {self
           ? `A referee can't let themselves in, so another referee has to answer. The request ends by itself at ${until}.`
-          : `The table's address changed, so their browser no longer knows them. Let them in only if you know it's ${first.name}, such as by voice or chat. The request ends at ${until}.`}
+          : `Their browser doesn't remember them, so they need a referee to let them in. Let them in only if you know it's ${first.name}, such as by voice or chat. The request ends at ${until}.`}
         {others.length > 0 && (
           <span className={styles.rejoinMore}>
             {others.length === 1

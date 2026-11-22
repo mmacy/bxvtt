@@ -17,14 +17,28 @@ import { STORAGE_KEYS, readStored, writeStored } from './storage';
  */
 export type IdentityStatus = 'unknown' | 'anonymous' | 'ready';
 
-/** Why the app asks for a name again, when it does. */
-export type IdentityNotice = 'forgotten' | null;
+/**
+ * Why the app asks for a name again, when it does.
+ *
+ * - `forgotten`: the server no longer knows the stored token, for example after its data was reset.
+ * - `retired`: a referee let this user back in from another browser, which retired this browser's token. The
+ *   user still exists, so the app must not offer to make a second one with the same name as if nothing happened.
+ */
+export type IdentityNotice = 'forgotten' | 'retired' | null;
+
+/**
+ * Whether an error says the token was retired: a referee let its user back in from another browser, and that
+ * browser now holds the user's token. The server answers 401 with the `token_retired` code.
+ */
+export function isRetiredToken(error: unknown): boolean {
+  return isProblem(error, 'token_retired');
+}
 
 export interface IdentityState {
   status: IdentityStatus;
   user: User | null;
   token: string | null;
-  /** `forgotten` when the server no longer knew the stored token, so the user must pick a name again. */
+  /** Why the stored user was dropped, when it was, so the name form can explain it. */
   notice: IdentityNotice;
   /** The last display name, to prefill the name form after the server forgot the user. */
   lastName: string | null;
@@ -99,7 +113,8 @@ export const useIdentity = create<IdentityState>()((set, get) => ({
     } catch (error) {
       if (get().token !== stored.token) return;
       // Any other failure keeps the stored user, and the next request reports the problem.
-      if (isProblem(error, 'unauthorized')) get().forget('forgotten');
+      if (isRetiredToken(error)) get().forget('retired');
+      else if (isProblem(error, 'unauthorized')) get().forget('forgotten');
     }
   },
 

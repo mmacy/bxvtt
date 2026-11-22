@@ -4,6 +4,7 @@ import { Link as RouterLink, useParams } from 'react-router-dom';
 import {
   TableProvider,
   getApi,
+  isRetiredToken,
   useCombatStage,
   useIdentity,
   useMapBus,
@@ -40,6 +41,25 @@ function HomeButton() {
   );
 }
 
+/**
+ * What a browser whose sign-in was retired shows: a referee let this user back in from another browser, which now
+ * holds the user's token. It offers the ways on, and never makes a second member with the same name by itself.
+ */
+function RetiredSignIn() {
+  return (
+    <EmptyState
+      icon="log-out"
+      title="You've signed in to this table from another browser"
+      description={`A referee let you back in somewhere else, so this browser's sign-in no longer works. Play on in the other browser. To play in this browser instead, open the table's invite link here and choose "I've played at this table before".`}
+      action={
+        <Button asChild variant="secondary" icon="user">
+          <RouterLink to="/">Continue as someone new</RouterLink>
+        </Button>
+      }
+    />
+  );
+}
+
 const REMOVED_TEXT: Record<RemovedReason, { title: string; description: string }> = {
   left: { title: 'You left this table', description: 'To come back, ask the referee for a new invite link.' },
   kicked: {
@@ -72,8 +92,9 @@ function AuthFailed({ wasOpen }: { wasOpen: boolean }) {
         () => !cancelled && setChecked(true),
         (error: unknown) => {
           if (cancelled) return;
-          // The home page asks for a name again once the user leaves this page.
-          if (isProblem(error, 'unauthorized') && wasOpen) setRetired(true);
+          // The server says so with `token_retired`. A connection that was open and closed then is the same case.
+          if (isRetiredToken(error)) forget('retired');
+          else if (isProblem(error, 'unauthorized') && wasOpen) setRetired(true);
           else if (isProblem(error, 'unauthorized')) forget('forgotten');
           setChecked(true);
         },
@@ -83,16 +104,7 @@ function AuthFailed({ wasOpen }: { wasOpen: boolean }) {
     };
   }, [forget, wasOpen]);
   if (!checked) return <Spinner size={24} label="Checking the table" />;
-  if (retired) {
-    return (
-      <EmptyState
-        icon="log-out"
-        title="You've signed in to this table from another browser"
-        description="A referee let you back in somewhere else, so this browser's sign-in no longer works. Play on in the other browser, or pick a name here to join as someone new."
-        action={<HomeButton />}
-      />
-    );
-  }
+  if (retired) return <RetiredSignIn />;
   return (
     <EmptyState
       icon="lock"
@@ -212,10 +224,18 @@ export function TablePage() {
   const { tableId = '' } = useParams();
   const status = useIdentity((s) => s.status);
   const token = useIdentity((s) => s.token);
+  const notice = useIdentity((s) => s.notice);
   if (status === 'unknown') {
     return (
       <Centered>
         <Spinner size={32} label="Loading" />
+      </Centered>
+    );
+  }
+  if (status === 'anonymous' && notice === 'retired') {
+    return (
+      <Centered>
+        <RetiredSignIn />
       </Centered>
     );
   }
