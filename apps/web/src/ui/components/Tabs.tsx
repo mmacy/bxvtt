@@ -2,6 +2,7 @@ import { Tabs as TabsPrimitive } from 'radix-ui';
 import { createContext, useContext, type ReactNode } from 'react';
 import { Icon, type IconName } from '../icons/Icon';
 import { cx } from '../lib/cx';
+import { KbdControlScope } from './Kbd';
 import { useControllableState } from '../lib/hooks';
 import styles from './Tabs.module.css';
 
@@ -111,7 +112,9 @@ export function TabsTrigger({
       }}
     >
       {icon && <Icon name={icon} size={16} />}
-      <span className={iconOnly ? 'visually-hidden' : undefined}>{children}</span>
+      <span className={iconOnly ? 'visually-hidden' : undefined}>
+        <KbdControlScope>{children}</KbdControlScope>
+      </span>
       {count !== undefined && count > 0 && (
         <span className={styles.count} aria-label={`${count} new`}>
           {count > 99 ? '99+' : count}

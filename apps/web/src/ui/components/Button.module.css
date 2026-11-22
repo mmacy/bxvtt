@@ -159,3 +159,8 @@
 .spinner {
   margin-inline-start: calc(var(--space-0-5) * -1);
 }
+
+/* A shortcut hint after the label. */
+.shortcut {
+  margin-inline-start: var(--space-0-5);
+}

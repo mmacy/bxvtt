@@ -2,6 +2,7 @@ import { Toolbar } from 'radix-ui';
 import { useId, useState, type ReactNode } from 'react';
 import { IconButton } from '../components/Button';
 import { Drawer } from '../components/Dialog';
+import { ariaKeyShortcuts } from '../components/Kbd';
 import { Tooltip } from '../components/Popover';
 import { Splitter } from '../components/ResizablePanels';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/Tabs';
@@ -280,6 +281,7 @@ export function ToolRailButton({
           disabled={disabled}
           onClick={onClick}
           size="lg"
+          aria-keyshortcuts={shortcut ? ariaKeyShortcuts(shortcut) : undefined}
         />
       </Toolbar.Button>
     </Tooltip>

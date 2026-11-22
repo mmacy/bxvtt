@@ -2,6 +2,7 @@ import { Slot } from 'radix-ui';
 import { forwardRef, type AnchorHTMLAttributes, type ButtonHTMLAttributes } from 'react';
 import { Icon } from '../icons/Icon';
 import { cx } from '../lib/cx';
+import { KbdControlScope } from './Kbd';
 import styles from './Link.module.css';
 
 export interface LinkProps extends AnchorHTMLAttributes<HTMLAnchorElement> {
@@ -64,7 +65,7 @@ export const LinkButton = forwardRef<HTMLButtonElement, LinkButtonProps>(functio
       className={cx(styles.link, styles.button, styles[tone], className)}
       {...rest}
     >
-      {children}
+      <KbdControlScope>{children}</KbdControlScope>
     </button>
   );
 });

@@ -2,7 +2,7 @@ import { ContextMenu as ContextPrimitive, DropdownMenu as DropdownPrimitive } fr
 import type { ComponentType, ReactElement, ReactNode } from 'react';
 import { Icon, type IconName } from '../icons/Icon';
 import { cx } from '../lib/cx';
-import { Kbd } from './Kbd';
+import { Kbd, ariaKeyShortcuts } from './Kbd';
 import styles from './Menu.module.css';
 
 export type MenuEntry =
@@ -33,7 +33,9 @@ interface ChildProps {
 }
 
 interface MenuParts {
-  Item: ComponentType<ChildProps & { disabled?: boolean; onSelect?: (event: Event) => void }>;
+  Item: ComponentType<
+    ChildProps & { disabled?: boolean; onSelect?: (event: Event) => void; 'aria-keyshortcuts'?: string }
+  >;
   CheckboxItem: ComponentType<
     ChildProps & { checked?: boolean; onCheckedChange?: (checked: boolean) => void; disabled?: boolean }
   >;
@@ -97,10 +99,11 @@ function renderEntries(entries: MenuEntry[], parts: MenuParts): ReactNode {
             className={cx(styles.item, entry.danger && styles.danger)}
             disabled={entry.disabled}
             onSelect={() => entry.onSelect?.()}
+            aria-keyshortcuts={entry.shortcut ? ariaKeyShortcuts(entry.shortcut) : undefined}
           >
             <span className={styles.iconSlot}>{entry.icon && <Icon name={entry.icon} size={16} />}</span>
             <span className={styles.itemLabel}>{entry.label}</span>
-            {entry.shortcut && <Kbd keys={entry.shortcut} className={styles.shortcut} />}
+            {entry.shortcut && <Kbd keys={entry.shortcut} decorative className={styles.shortcut} />}
           </parts.Item>
         );
     }

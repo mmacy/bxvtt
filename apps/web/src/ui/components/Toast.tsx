@@ -12,12 +12,11 @@ const toneIcon: Record<ToastTone, IconName> = {
 };
 
 function ToastItem({ record }: { record: ToastRecord }) {
-  const urgent = record.tone === 'error' || record.tone === 'warning';
+  // The item stays a plain list item. The stack's live regions announce it, once, when it appears.
   return (
     <li
       className={cx(styles.toast, styles[record.tone], record.leaving && styles.leaving)}
-      role={urgent ? 'alert' : 'status'}
-      aria-atomic="true"
+      data-tone={record.tone}
       onMouseEnter={() => toast.pause(record.id)}
       onMouseLeave={() => toast.resume(record.id)}
       onFocus={() => toast.pause(record.id)}
@@ -55,13 +54,35 @@ function ToastItem({ record }: { record: ToastRecord }) {
 /** Renders the toast stack. ToastProvider includes it, so render it yourself only when you don't use a provider. */
 export function Toaster({ className }: { className?: string }) {
   const toasts = useSyncExternalStore(toastStore.subscribe, toastStore.getSnapshot, toastStore.getSnapshot);
+  const said = useSyncExternalStore(
+    toastStore.subscribe,
+    toastStore.getAnnouncements,
+    toastStore.getAnnouncements,
+  );
+  // A message stays in its live region while its toast is on screen, and the region empties when it closes.
+  const showing = (entry: { id: string } | null) =>
+    entry !== null && toasts.some((record) => record.id === entry.id && !record.leaving);
   return (
     <section className={cx(styles.viewport, className)} aria-label="Notifications">
-      <ol className={styles.list}>
-        {toasts.map((record) => (
-          <ToastItem key={record.id} record={record} />
-        ))}
-      </ol>
+      {/*
+        The live regions exist before any toast, so screen readers pick up each new message. They use aria-live
+        without a role, so an empty region never shows up as a status or an alert on the page.
+      */}
+      <div className="visually-hidden" aria-live="polite" aria-atomic="true" data-toast-live="polite">
+        {said.polite && showing(said.polite) && <span key={said.polite.key}>{said.polite.text}</span>}
+      </div>
+      <div className="visually-hidden" aria-live="assertive" aria-atomic="true" data-toast-live="assertive">
+        {said.assertive && showing(said.assertive) && (
+          <span key={said.assertive.key}>{said.assertive.text}</span>
+        )}
+      </div>
+      {toasts.length > 0 && (
+        <ol className={styles.list}>
+          {toasts.map((record) => (
+            <ToastItem key={record.id} record={record} />
+          ))}
+        </ol>
+      )}
     </section>
   );
 }

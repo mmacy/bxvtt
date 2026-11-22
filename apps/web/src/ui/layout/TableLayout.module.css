@@ -288,3 +288,8 @@
 .dockContent {
   overflow-y: auto;
 }
+
+/* A compact action shows only its icon, so its key hint goes too. */
+.actionItems[data-density='compact'] > button:has(> svg) > [data-kbd-hint] {
+  display: none;
+}

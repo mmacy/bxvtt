@@ -112,8 +112,9 @@
 .panelMeta {
   flex: none;
   color: var(--color-text-subtle);
-  font-family: var(--font-numeric);
-  font-size: var(--text-md);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
 }
 
 .panelActions {

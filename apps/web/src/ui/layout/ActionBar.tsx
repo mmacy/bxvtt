@@ -2,6 +2,7 @@ import { DropdownMenu as DropdownPrimitive, Toolbar } from 'radix-ui';
 import { createContext, useContext, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Button, IconButton, type ButtonVariant } from '../components/Button';
 import { DropdownMenu, menuContentClass, renderDropdownEntries, type MenuEntry } from '../components/Menu';
+import { ariaKeyShortcuts } from '../components/Kbd';
 import { Tooltip } from '../components/Popover';
 import type { IconName } from '../icons/Icon';
 import styles from './TableLayout.module.css';
@@ -244,7 +245,10 @@ export interface ActionBarMenuProps {
   items: MenuEntry[];
   /** A tooltip for the button. Defaults to `label`. Pass `null` for none. */
   tooltip?: ReactNode;
-  /** Keys shown in the tooltip, such as `['S']`. Register the shortcut itself with `useShortcut`. */
+  /**
+   * Keys shown in the tooltip, such as `['S']`, and named on the button with `aria-keyshortcuts`. Register the
+   * shortcut itself with `useShortcut`.
+   */
   shortcut?: string | string[];
   disabled?: boolean;
   loading?: boolean;
@@ -294,6 +298,7 @@ export function ActionBarMenu({
           iconEnd={side === 'top' ? 'chevron-up' : 'chevron-down'}
           loading={loading}
           disabled={disabled}
+          aria-keyshortcuts={shortcut ? ariaKeyShortcuts(shortcut) : undefined}
         >
           {label}
         </Button>

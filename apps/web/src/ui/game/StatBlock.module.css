@@ -289,6 +289,10 @@
   line-height: 1;
 }
 
+.disc::before {
+  content: attr(data-letter);
+}
+
 .coinCount {
   font-family: var(--font-numeric);
   font-size: var(--text-lg);

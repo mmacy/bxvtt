@@ -166,11 +166,11 @@ Every component below is exported from `@/ui`. The path column names the source 
 
 | Export | Description | Source |
 | --- | --- | --- |
-| `Button` | The kit's button, in primary, secondary, ghost, and danger variants, three sizes, with icons and a loading state. `asChild` styles a link as a button. | `components/Button.tsx` |
+| `Button` | The kit's button, in primary, secondary, ghost, and danger variants, three sizes, with icons and a loading state. `asChild` styles a link as a button. `shortcut` shows a key hint after the label and sets `aria-keyshortcuts`. See [Key hints](#key-hints). | `components/Button.tsx` |
 | `IconButton` | A square button with an icon and a required accessible label. `pressed` marks an active tool. | `components/Button.tsx` |
 | `Link` | A text link, inline or quiet, with an external variant. | `components/Link.tsx` |
 | `LinkButton` | A button styled as a text link, for an in-app cross-link that opens something instead of going to a URL, such as a spell name that opens the rules reference. It takes `tone` (`inline` or `quiet`) and every button attribute. | `components/Link.tsx` |
-| `Kbd` | A keyboard key or chord hint. | `components/Kbd.tsx` |
+| `Kbd`, `ariaKeyShortcuts`, `KbdControlScope` | A keyboard key or chord hint. Inside a kit control it paints its keys without adding them to the control's name or text. `ariaKeyShortcuts` turns displayed keys into an `aria-keyshortcuts` value. See [Key hints](#key-hints). | `components/Kbd.tsx` |
 
 ### Form controls
 
@@ -197,11 +197,11 @@ Every component below is exported from `@/ui`. The path column names the source 
 | `Dialog`, `DialogClose` | A modal window with a title, description, body, and footer. When it closes, focus returns to the element that opened it: for a dialog opened from a menu item, the menu's button, and for one opened from the command palette, the element that had focus before the palette. | `components/Dialog.tsx` |
 | `ConfirmDialog` | Asks the user to confirm an action, with a spinner while an async action runs. `children` render below the description and can hold block content, such as a checkbox. | `components/Dialog.tsx` |
 | `Drawer` | A side or bottom sheet over the page. `dimmed={false}` keeps the page in view behind it (the overlay still catches the click that closes it). `initialFocus` takes a ref to the element that gets focus on open, or `'content'` for the drawer itself. `Dialog` takes `initialFocus` too. | `components/Dialog.tsx` |
-| `Popover` | Non-modal content anchored to a trigger. | `components/Popover.tsx` |
+| `Popover` | Non-modal content anchored to a trigger. Its `title` names it for assistive technology. A popover without a title takes `label` instead. | `components/Popover.tsx` |
 | `Tooltip`, `TooltipProvider` | A short hint on hover and focus, with an optional shortcut. | `components/Popover.tsx` |
 | `DropdownMenu` | A menu of actions from a button, with checkbox items, labels, separators, and submenus. | `components/Menu.tsx` |
 | `ContextMenu` | The same menu on right-click, long press, or Shift+F10. | `components/Menu.tsx` |
-| `toast`, `ToastProvider`, `Toaster` | Imperative notices: `toast.success`, `toast.error`, `toast.info`, `toast.warning`, and `toast.dismiss`. On the play screen, toasts sit above the action bar. Use a toast for something the user didn't see happen, not to repeat what the screen already shows. | `components/toastStore.ts`, `components/Toast.tsx` |
+| `toast`, `ToastProvider`, `Toaster` | Imperative notices: `toast.success`, `toast.error`, `toast.info`, `toast.warning`, and `toast.dismiss`. On the play screen, toasts sit above the action bar. Use a toast for something the user didn't see happen, not to repeat what the screen already shows. The stack announces each toast once through two live regions: errors and warnings assertively, the rest politely. Each toast is a plain item of the notifications list. | `components/toastStore.ts`, `components/Toast.tsx` |
 | `CommandPalette`, `useCommandPaletteShortcut` | A searchable list of actions that opens with Ctrl+K or Cmd+K. | `components/CommandPalette.tsx` |
 | `Accordion` | Stacked sections that expand in place. | `components/Accordion.tsx` |
 | `Stepper` | Progress through a wizard. Completed steps can be buttons. | `components/Stepper.tsx` |
@@ -220,6 +220,7 @@ Every component below is exported from `@/ui`. The path column names the source 
 | `DataTable` | A dense, sortable table. | `components/DataTable.tsx` |
 | `List`, `ListItem` | A vertical list of rows that becomes a keyboard-operable listbox with `onValueChange`. | `components/List.tsx` |
 | `Divider` | A hairline rule, horizontal or vertical, with an optional label. | `components/Divider.tsx` |
+| `SectionLabel` | A small sentence-case heading for a group inside a panel, dock tab, or sheet, with an optional count and actions. Use it instead of an uppercase, letter-spaced label. `tone="paper"` sets it in rubric red. | `components/SectionLabel.tsx` |
 | `ResizablePanels`, `Splitter` | Two panes with a drag splitter, and the splitter on its own. | `components/ResizablePanels.tsx` |
 
 ### Feedback
@@ -241,7 +242,7 @@ Every component below is exported from `@/ui`. The path column names the source 
 | `StatBox`, `formatModifier` | An ability score with its modifier, with a prime requisite mark. | `game/StatBlock.tsx` |
 | `HpBar` | Hit points as a bar that changes color as they fall and trails the last hit. | `game/StatBlock.tsx` |
 | `AcShield` | Armour class on a shield. | `game/StatBlock.tsx` |
-| `CoinPurse` | Coins by metal, platinum to copper. | `game/StatBlock.tsx` |
+| `CoinPurse` | Coins by metal, platinum to copper. Each amount reads and copies as "70 gp", because the coin disc paints its letter instead of adding it to the text. | `game/StatBlock.tsx` |
 | `ConditionChip` | A condition with a tone, an icon, and the duration bxapi reports. | `game/StatBlock.tsx` |
 
 ### Dice
@@ -285,6 +286,15 @@ When the actions don't fit, the bar degrades in steps:
 1. A long status truncates at 45% of the bar.
 2. Buttons with an icon show only the icon. Each keeps its label as its accessible name.
 3. Actions move from the end into a "More actions" menu. Picking an action there presses its button, and an `ActionBarMenu` appears there as a submenu with its own entries.
+
+## Key hints
+
+A key hint inside a control must not change the control's accessible name. Otherwise the visible text ("Outfitter O") and the name ("Outfitter") disagree, which fails WCAG 2.5.3, label in name.
+
+- Give a `Button` its shortcut with `shortcut`: `<Button shortcut="G">Set out</Button>`. The button shows the key after its label, keeps it out of its name and text, and sets `aria-keyshortcuts="G"`.
+- A `Kbd` that you put inside a `Button`, `LinkButton`, tab, menu item, or command palette entry paints its keys the same way. Set `aria-keyshortcuts` on the control yourself, or use `shortcut`.
+- `ActionBarMenu`, `ToolRailButton`, menu entries, and command palette actions set `aria-keyshortcuts` from their `shortcut`.
+- For your own control, wrap its content in `KbdControlScope`, or pass `decorative` to `Kbd`. A `Kbd` in running text, such as "Press Esc to close", stays text.
 
 ## Tests
 
