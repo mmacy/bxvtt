@@ -244,6 +244,12 @@ export function itemNounFromName(name: string, options: ItemNameOptions = {}): I
     return { one, many: pluralize(one) };
   }
   if (definite || isTitleCase(text)) return { one: text, many: pluralize(text), proper: true };
+  // A name that starts with a person's name of two or more words in the possessive, such as `Miller Aske's
+  // strongbox`, takes no article and keeps its capitals. One capitalized word in the possessive, as in `Prior's
+  // iron key`, reads as a common noun ("a prior's iron key"), because it is usually a title.
+  if (/^(?:\p{Lu}[\p{L}-]*\s+)+\p{Lu}[\p{L}-]*['’]s?\s/u.test(text)) {
+    return { one: text, many: pluralize(text), noArticle: true };
+  }
   const one = lowerFirstWord(text);
   return { one, many: pluralize(one) };
 }

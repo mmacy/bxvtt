@@ -147,4 +147,52 @@ describe('text from the QA pass', () => {
     expect(labels).toContain(`Autosave: Met ${bandits} bandits in Crookback Bridge, level 1`);
     expect(labels.some((label) => label?.startsWith('Autosave: Before the battle'))).toBe(false);
   });
+
+  it('records the experience a member really gained, so a capped award reads right (F-204)', async () => {
+    const tableId = await table('sample:the-drowned-bell');
+    const awarded = await referee.client.sendCommand(tableId, {
+      command_type: 'award_xp',
+      character_id: 'character-0001',
+      amount: 5000,
+    });
+    expect(awarded.accepted).toBe(true);
+    const entry = (await gameEntries(referee, tableId)).find(
+      (candidate) => candidate.revision === awarded.revision,
+    );
+    const gained = entry?.xp_gained?.['character-0001'];
+    expect(gained).toBeDefined();
+    // A fighter needs 4,000 for level 3, so one award stops at 3,999.
+    expect(gained).toBeLessThan(5000);
+    if (entry === undefined) throw new Error('no entry');
+    const text = narrate(entry, awarded.game.scene).join(' ');
+    expect(text).toContain(
+      `gains ${(gained ?? 0).toLocaleString('en-US')} experience points. One award raises`,
+    );
+  });
+
+  it('gives a quiet wait a line in the feed (F-103)', async () => {
+    const tableId = await table('sample:the-drowned-bell');
+    await alice.client.sendCommand(tableId, { command_type: 'enter_dungeon', dungeon_id: 'priory' });
+    await referee.client.sendCommand(tableId, {
+      command_type: 'place_party',
+      location: {
+        kind: 'dungeon',
+        dungeon_id: 'priory',
+        level_number: 1,
+        position: [14, 21],
+        facing: 'north',
+      },
+    });
+    const met = await alice.client.sendCommand(tableId, { command_type: 'move_party', direction: 'north' });
+    expect(met.game.mode).toBe('encounter');
+    const waited = await alice.client.sendCommand(tableId, { command_type: 'wait' });
+    expect(waited.accepted).toBe(true);
+    const entry = (await gameEntries(alice, tableId)).find(
+      (candidate) => candidate.revision === waited.revision,
+    );
+    if (entry === undefined) throw new Error('no wait entry');
+    const lines = narrate(entry, waited.game.scene);
+    expect(lines.length).toBeGreaterThan(0);
+    if (entry.events.length === 0) expect(lines[0]).toMatch(/^The party waits\. The goblins hold back\.$/);
+  });
 });

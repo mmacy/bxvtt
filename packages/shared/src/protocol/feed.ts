@@ -120,6 +120,13 @@ export const GameEntry = FeedEntryBase.extend({
    * the type so that older fixtures still compile.
    */
   actor_id: z.string().nullable().optional(),
+  /**
+   * The experience each member really gained by the command, by member ID, from the player view before and after
+   * it: only members whose experience changed. osrlib's `xp_awarded` states the award before a cap (one award
+   * raises a character at most one level, and the rest is lost), so the text compares the two. Optional in the
+   * type so that older fixtures still compile.
+   */
+  xp_gained: z.record(z.string(), z.number().int()).optional(),
 });
 
 /** What a system notice reports. The client writes the sentence from `code` and `params`. */

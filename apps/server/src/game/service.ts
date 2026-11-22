@@ -945,6 +945,11 @@ export class GameService {
       this.ctx.tables.broadcastTable(live.tableId);
     }
     const hidden = meta.class === 'referee' && forPlayers.events.length === 0;
+    const xpGained: Record<string, number> = {};
+    for (const member of live.view.party) {
+      const before = previous.party.find((candidate) => candidate.id === member.id);
+      if (before !== undefined && member.xp !== before.xp) xpGained[member.id] = member.xp - before.xp;
+    }
     this.ctx.feed.append(live.tableId, {
       userId: meta.userId,
       visibility: hidden ? 'referees' : 'everyone',
@@ -962,6 +967,7 @@ export class GameService {
           actorId: meta.class === 'referee' ? null : meta.actorId,
         }),
         actor_id: meta.class === 'referee' ? null : (meta.actorId ?? null),
+        xp_gained: xpGained,
       },
       referee: {
         kind: 'game',
@@ -977,6 +983,7 @@ export class GameService {
           actorId: meta.actorId,
         }),
         actor_id: meta.actorId ?? null,
+        xp_gained: xpGained,
       },
     });
     this.battle.afterAcceptedLocked(live);

@@ -235,10 +235,10 @@ function goodsText(
   itemIds: readonly string[],
   gp: number,
   ctx: TextContext,
-  options: { lots?: boolean } = {},
+  options: { lots?: boolean; worth?: boolean } = {},
 ): string {
   const parts = itemList(itemIds, ctx, options);
-  if (gp > 0) parts.push(coinsText(gp));
+  if (gp > 0) parts.push(options.worth === true ? `coins worth ${formatGold(gp)}` : coinsText(gp));
   // osrlib writes these events only when goods moved, and counts coins in whole gold pieces, so goods with no
   // items and no gold are a few coins worth less than 1 gp, such as one member's share of 48 cp.
   return parts.length === 0 ? 'a few coins' : joinList(parts);
@@ -1161,9 +1161,16 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
             : event.origin === 'treasure'
               ? 'takes'
               : 'gets';
+      // A share of treasure counts its coins by their worth in whole gold pieces, rounded down. osrlib shares out
+      // every coin of each kind and gives the odd ones to the front of the marching order, so nothing is lost,
+      // although the rounded shares can add up to less than the haul.
+      const share = event.origin === 'treasure' && event.coins_gp_value > 0;
       return {
         // A purchase lists one ID per lot, so two lots of torches are 12 torches.
-        text: `${who} ${verb} ${goodsText(event.item_ids, event.coins_gp_value, ctx, { lots: event.origin === 'purchase' })}.`,
+        text: `${who} ${verb} ${goodsText(event.item_ids, event.coins_gp_value, ctx, { lots: event.origin === 'purchase', worth: share })}.`,
+        detail: share
+          ? 'Coins count by their worth in whole gold pieces, rounded down. Every coin is shared out, and the odd ones go to the front of the marching order.'
+          : undefined,
         category: event.origin === 'treasure' ? 'treasure' : 'item',
         tone: 'good',
         icon: event.item_ids.length === 0 ? 'coins' : 'chest',
@@ -2281,6 +2288,8 @@ export interface GameEntryLike {
   events: ReadonlyArray<GameEvent | LooseEvent>;
   messages?: readonly string[];
   names?: Parameters<typeof extendContextWithEntryNames>[1];
+  /** The experience each member really gained, by member ID. */
+  xp_gained?: Readonly<Record<string, number>>;
 }
 
 /**
@@ -2302,10 +2311,12 @@ export function describeGameEntry(
   options: Omit<DescribeEventsOptions, 'messages'> = {},
 ): EventLine[] {
   const context = extendContextWithEntryNames(ctx, entry.names);
-  const lines = describeEvents(entry.events, context, {
+  const described = describeEvents(entry.events, context, {
     ...options,
     ...(entry.messages === undefined ? {} : { messages: entry.messages }),
   });
+  const lines = cappedAwards(described, entry, context);
+  if (lines.length === 0 && entry.command_type === 'wait') return [waitLine(entry, context)];
   if (entry.command_type !== 'parley' || !entry.actor_id) return lines;
   const speaker = memberName(entry.actor_id, context);
   const groups = Object.entries(context.groups)
@@ -2337,6 +2348,53 @@ export function describeGameEntry(
         }
       : line,
   );
+}
+
+/**
+ * Tells what a member kept of an award that osrlib capped: one award raises a character at most one level, and
+ * the rest is lost. osrlib's event states the award before the cap, and the entry's `xp_gained` what the member
+ * really gained.
+ */
+function cappedAwards(lines: EventLine[], entry: GameEntryLike, ctx: TextContext): EventLine[] {
+  const gained = entry.xp_gained;
+  if (gained === undefined) return lines;
+  const awards = lines.filter((line) => line.eventType === 'xp_awarded');
+  return lines.map((line) => {
+    if (line.eventType !== 'xp_awarded') return line;
+    const memberId = line.actorIds[0];
+    if (memberId === undefined || awards.filter((award) => award.actorIds[0] === memberId).length !== 1)
+      return line;
+    const kept = gained[memberId];
+    if (kept === undefined || line.amount === undefined || kept >= line.amount) return line;
+    return {
+      ...line,
+      text: `${memberName(memberId, ctx)} gains ${formatInteger(kept)} experience points. One award raises a character only one level, so the rest is lost.`,
+      amount: kept,
+    };
+  });
+}
+
+/** The line for a wait that changed nothing the players can see: "The party waits. The goblins hold back." */
+function waitLine(entry: GameEntryLike, ctx: TextContext): EventLine {
+  const groups = Object.entries(ctx.groups).filter(
+    ([, group]) => group.count === undefined || group.count > 0,
+  );
+  let rest = '';
+  if (groups.length > 0) {
+    const names = joinList(groups.map(([groupId]) => groupName(groupId, ctx)));
+    const several = groups.length > 1 || groups.some(([groupId]) => groupIsPlural(groupId, ctx));
+    rest = ` ${capitalizeFirst(names)} ${several ? 'hold' : 'holds'} back.`;
+  }
+  return {
+    text: `The party waits.${rest}`,
+    category: 'encounter',
+    tone: 'info',
+    icon: 'clock',
+    actorIds: entry.actor_id ? [entry.actor_id] : [],
+    code: 'bxvtt.wait.quiet',
+    eventType: 'wait',
+    visibility: 'player',
+  };
 }
 
 function isQuietCheck(event: GameEvent | LooseEvent | undefined): boolean {

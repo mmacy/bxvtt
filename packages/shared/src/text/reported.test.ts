@@ -1186,3 +1186,105 @@ describe('the final QA pass (R-504, R-505, R-518, R-521)', () => {
     expect(lines).toEqual(['A goblin is slain.']);
   });
 });
+
+describe('the last QA run (F-102, F-103, F-204, F-208)', () => {
+  const party = extendContextWithEntryNames(emptyContext(), {
+    members: { 'character-0001': 'Brenna', 'character-0002': 'Wren', 'character-0003': 'Osric' },
+  });
+
+  it("keeps a possessive proper name's capital and gives it no article (F-102)", () => {
+    // Reported: "Osric takes a miller Aske's strongbox."
+    const ctx = extendContextWithNames(party, { aske_strongbox: "Miller Aske's strongbox" });
+    const take = {
+      event_type: 'item_acquired',
+      code: 'exploration.item.acquired',
+      visibility: 'player',
+      character_id: 'character-0003',
+      item_ids: ['aske_strongbox'],
+      coins_gp_value: 73,
+      origin: 'treasure',
+    } as never;
+    expect(describeEvent(take, ctx).text).toBe("Osric takes Miller Aske's strongbox and coins worth 73 gp.");
+    expect(itemPhrase(itemNounFromName("Prior's iron key"))).toBe("a prior's iron key");
+  });
+
+  it('says that a share counts its coins rounded down, not that coins went missing (F-208)', () => {
+    // Reported: 7 gp split three ways read "2 gp" each. osrlib shares out every coin; each share's worth is
+    // rounded down, and the odd coins go to the front of the marching order.
+    const share = describeEvent(
+      {
+        event_type: 'item_acquired',
+        code: 'exploration.item.acquired',
+        visibility: 'player',
+        character_id: 'character-0001',
+        item_ids: [],
+        coins_gp_value: 2,
+        origin: 'treasure',
+      } as never,
+      party,
+    );
+    expect(share.text).toBe('Brenna takes coins worth 2 gp.');
+    expect(share.detail).toMatch(/rounded down/);
+  });
+
+  it('says what a member kept of a capped award (F-204)', () => {
+    // Reported: "Wren gains 2,600 experience points." when the award was capped at 2,399.
+    const award = {
+      event_type: 'xp_awarded',
+      code: 'session.xp.awarded',
+      visibility: 'player',
+      character_id: 'character-0002',
+      award: 2600,
+      modified_award: 2600,
+      level_after: 2,
+    };
+    const lines = describeGameEntry(
+      { command_type: 'award_xp', events: [award] as never, xp_gained: { 'character-0002': 2399 } },
+      party,
+    );
+    expect(lines[0]?.text).toBe(
+      'Wren gains 2,399 experience points. One award raises a character only one level, so the rest is lost.',
+    );
+    const whole = describeGameEntry(
+      { command_type: 'award_xp', events: [award] as never, xp_gained: { 'character-0002': 2600 } },
+      party,
+    );
+    expect(whole[0]?.text).toBe('Wren gains 2,600 experience points.');
+  });
+
+  it('writes a line for a wait that changes nothing the players can see (F-103)', () => {
+    const lines = describeGameEntry(
+      {
+        command_type: 'wait',
+        actor_id: null,
+        events: [],
+        names: {
+          groups: {
+            'group-0001': {
+              label: 'ink-stained clerk',
+              label_plural: 'ink-stained clerks',
+              count: 1,
+              size: 1,
+            },
+            'group-0002': { label: 'bandit', label_plural: 'bandits', count: 1, size: 1 },
+          },
+        },
+      },
+      party,
+    );
+    expect(lines.map((line) => line.text)).toEqual([
+      'The party waits. The ink-stained clerk and the bandit hold back.',
+    ]);
+    const alone = describeGameEntry(
+      {
+        command_type: 'wait',
+        events: [],
+        names: {
+          groups: { 'group-0001': { label: 'Mag Corrie', label_plural: 'Mag Corries', count: 1, size: 1 } },
+        },
+      },
+      party,
+    );
+    expect(alone[0]?.text).toBe('The party waits. Mag Corrie holds back.');
+  });
+});

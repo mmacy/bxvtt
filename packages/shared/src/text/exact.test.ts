@@ -516,7 +516,7 @@ describe('events', () => {
         coins_gp_value: 30,
         origin: 'treasure',
       },
-      'Wren takes 2 torches, a 50-foot rope, a jade idol, a potion, and 30 gp in coin.',
+      'Wren takes 2 torches, a 50-foot rope, a jade idol, a potion, and coins worth 30 gp.',
       'good',
       'treasure',
     ],
