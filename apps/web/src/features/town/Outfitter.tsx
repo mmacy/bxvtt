@@ -1,4 +1,5 @@
 /** The outfitter: a catalog, item details, and a cart per party member, for buying a whole party's gear quickly. */
+import { count } from '@bxvtt/shared/text';
 import { useMemo, useRef, useState } from 'react';
 import { Badge, Banner, Button, EmptyState, Icon, Panel } from '@/ui';
 import { CartPanel, PurchaseCard } from './Cart';
@@ -160,7 +161,7 @@ export function Outfitter() {
           <ChecklistPanel onShop={setSearch} />
           <Panel
             title={`${buyer.name} carries`}
-            meta={`${carrying.length} kinds`}
+            meta={count(carrying.length, 'kind')}
             collapsible
             defaultOpen={false}
           >

@@ -3,6 +3,8 @@
  * class, weight, and purchase lot size in one cached response, so the outfitter needs one request.
  */
 import {
+  count,
+  formatFeet,
   itemPhrase,
   resolveItemNoun,
   weaponQualityDescription,
@@ -172,14 +174,14 @@ export function describeItem(item: ShopItem, ctx: TextContext): ItemFacts {
     if (radius !== null) {
       const burn =
         numberParam(params, 'burn_turns') !== null
-          ? `Burns for ${turns} turns.`
+          ? `Burns for ${count(turns ?? 0, 'turn')}.`
           : numberParam(params, 'burn_turns_per_flask') !== null
-            ? `Burns for ${turns} turns on each flask of oil.`
+            ? `Burns for ${count(turns ?? 0, 'turn')} on each flask of oil.`
             : '';
-      out.notes.push(`Light reaches ${radius} feet. ${burn}`.trim());
+      out.notes.push(`Light reaches ${formatFeet(radius)}. ${burn}`.trim());
     }
     if (typeof detail.capacity_coins === 'number') {
-      out.facts.push({ label: 'Holds', value: `${detail.capacity_coins} coins` });
+      out.facts.push({ label: 'Holds', value: count(detail.capacity_coins, 'coin') });
     }
     if (detail.combat) {
       out.facts.push({ label: 'Thrown for', value: detail.combat.damage });

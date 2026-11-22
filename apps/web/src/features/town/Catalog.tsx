@@ -129,7 +129,7 @@ export function Catalog({
       cell: (item) => {
         const lots = cart[item.summary.id] ?? 0;
         const name = item.summary.name;
-        const sells = lotSize(item) > 1 ? 'lot' : 'one';
+        const bundle = lotSize(item) > 1;
         if (lots === 0) {
           return (
             <Button
@@ -149,7 +149,7 @@ export function Catalog({
             <IconButton
               icon="minus"
               size="sm"
-              label={`Remove one ${sells} of ${name}`}
+              label={bundle ? `Remove one lot of ${name}` : `Remove one ${name}`}
               onClick={() => onLots(item.summary.id, lots - 1)}
             />
             <span className={styles.count} aria-live="polite">
@@ -158,7 +158,7 @@ export function Catalog({
             <IconButton
               icon="plus"
               size="sm"
-              label={`Add one ${sells} of ${name}`}
+              label={bundle ? `Add one lot of ${name}` : `Add one ${name}`}
               onClick={() => onLots(item.summary.id, lots + 1)}
             />
           </span>

@@ -2,7 +2,7 @@
  * The town square's small panels: what the town offers, the party at a glance, the ready checklist, the party's
  * business (quests and journal), and what the table just did.
  */
-import { describeEvents, formatGameClock } from '@bxvtt/shared/text';
+import { count, describeEvents, formatGameClock } from '@bxvtt/shared/text';
 import type { FeedEntry } from '@bxvtt/shared/protocol';
 import { useMemo } from 'react';
 import { useFeed, useMember, useParty, usePlayerView, useTextContext } from '@/app';
@@ -49,7 +49,7 @@ export function ServicesPanel() {
     return { ...parseService(line), section, icon: section ? SECTION_ICON[section] : 'town' };
   });
   return (
-    <Panel title="What the town offers" meta={lines.length > 0 ? `${lines.length} places` : undefined}>
+    <Panel title="What the town offers" meta={lines.length > 0 ? count(lines.length, 'place') : undefined}>
       {lines.length === 0 ? (
         <EmptyState
           size="compact"
@@ -86,7 +86,7 @@ export function PartyGlance() {
   const party = useParty();
   const buyerId = useTownUi((s) => s.buyerId);
   return (
-    <Panel title="The party" meta={`${party.length} adventurers`}>
+    <Panel title="The party" meta={count(party.length, 'adventurer')}>
       <ul className={styles.party}>
         {party.map((member) => {
           const status = memberStatus(member);

@@ -1,10 +1,11 @@
-import type { PlayerView } from '@bxvtt/shared/bxapi';
+import type { MemberView, PlayerView } from '@bxvtt/shared/bxapi';
 import { contextFromPlayerView } from '@bxvtt/shared/text';
 import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { cartCount, cartLines, cartTotal, purchaseItemIds } from './cartLines';
 import { gaps, readinessChecklist } from './checklist';
-import { lotSentence, type ShopItem } from './equipment';
+import { describeItem, lotSentence, type ShopItem } from './equipment';
+import { describeChanges } from './RestAndPrepare';
 import { readInventory } from './inventory';
 import { neediestFirst, memberStatus } from './members';
 import { buildCommand, missingRequired, readFields } from './schemaForm';
@@ -61,6 +62,92 @@ describe('the readiness checklist', () => {
     expect(light?.covered).toBe(true);
     expect(light?.detail).toBe('Brenna and Tamsin carry torches or a lantern.');
     expect(gaps(checklist).map((line) => line.key)).toEqual(['tinder', 'rations', 'rope']);
+  });
+});
+
+function packWith(party: MemberView[], names: string[], ids: string[]): MemberView[] {
+  const copy = structuredClone(party);
+  for (const member of copy) {
+    const inventory = member.inventory as { items: unknown[] };
+    inventory.items = names.includes(member.name)
+      ? ids.map((id) => ({
+          instance_type: 'item',
+          template: { item_type: 'gear', id, name: id },
+          quantity: 1,
+        }))
+      : [];
+  }
+  return copy;
+}
+
+describe('the checklist wording', () => {
+  const base = fixtureSnapshot('town', 'player').game?.view.party ?? [];
+  const kit = ['torch', 'tinder_box', 'rations_standard', 'rope'];
+  const details = (party: MemberView[]) => readinessChecklist(party).map((line) => line.detail);
+
+  it('uses carries for one member', () => {
+    expect(details(packWith(base, ['Brenna'], kit))).toEqual([
+      'Brenna carries torches or a lantern.',
+      'Brenna carries one.',
+      'Brenna carries rations.',
+      'Brenna carries rope.',
+    ]);
+  });
+
+  it('uses carry for two or more members', () => {
+    expect(details(packWith(base, ['Brenna', 'Wren'], kit))).toEqual([
+      'Brenna and Wren carry torches or a lantern.',
+      'Brenna and Wren carry one.',
+      'Brenna and Wren carry rations.',
+      'Brenna and Wren carry rope.',
+    ]);
+    expect(details(packWith(base, ['Brenna', 'Wren', 'Osric'], ['rope']))[3]).toBe(
+      'Brenna, Wren, and Osric carry rope.',
+    );
+  });
+
+  it('reads as a suggestion when nobody carries the item', () => {
+    expect(details(packWith(base, [], kit))).toEqual([
+      'Torches or a lantern light the way underground.',
+      'A torch or lantern needs a tinder box to light it.',
+      'A party that stays out for days needs food.',
+      'Rope is handy for pits, ledges, and prisoners.',
+    ]);
+  });
+});
+
+describe('counted words', () => {
+  it('uses the singular for one', () => {
+    const torch = {
+      summary: { id: 'torch', name: 'Torches (6)', item_type: 'gear', cost_gp: 1 },
+      detail: {
+        item_type: 'gear',
+        id: 'torch',
+        name: 'Torches (6)',
+        cost_gp: 1,
+        lot_size: 6,
+        capacity_coins: 1,
+        combat: null,
+        params: { light_radius_feet: 1, burn_turns: 1 },
+        overrides_applied: [],
+      },
+    } as unknown as ShopItem;
+    const facts = describeItem(torch, CTX);
+    expect(facts.notes).toContain('Light reaches 1 foot. Burns for 1 turn.');
+    expect(facts.facts).toContainEqual({ label: 'Holds', value: '1 coin' });
+  });
+
+  it('says one hit point, not one hit points', () => {
+    const before = structuredClone(fixtureSnapshot('town', 'player').game?.view) as PlayerView;
+    const after = structuredClone(before);
+    const wren = after.party.find((member) => member.name === 'Wren');
+    const was = before.party.find((member) => member.name === 'Wren');
+    if (!wren || !was) throw new Error('No Wren.');
+    was.current_hp = wren.max_hp - 1;
+    wren.current_hp = wren.max_hp;
+    expect(describeChanges(before, after)).toEqual([
+      `Wren recovered 1 hit point and has ${wren.max_hp} of ${wren.max_hp}.`,
+    ]);
   });
 });
 

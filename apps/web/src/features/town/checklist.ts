@@ -3,6 +3,7 @@
  * wants before it leaves. Nothing here is a rule: every line is advice, and the party can go without any of it.
  */
 import type { MemberView } from '@bxvtt/shared/bxapi';
+import { joinList } from '@bxvtt/shared/text';
 import { countCarried, readInventory } from './inventory';
 
 /** One line of advice. */
@@ -31,9 +32,9 @@ function carriers(party: readonly MemberView[], ids: readonly string[]): string[
     .map((member) => member.name);
 }
 
-function names(list: readonly string[]): string {
-  if (list.length <= 2) return list.join(' and ');
-  return `${list.slice(0, -1).join(', ')}, and ${list.at(-1) ?? ''}`;
+/** The verb for a list of carriers: "Brenna carries", "Brenna and Tamsin carry". */
+function carry(list: readonly string[]): string {
+  return `${joinList([...list])} ${list.length === 1 ? 'carries' : 'carry'}`;
 }
 
 /**
@@ -53,7 +54,7 @@ export function readinessChecklist(party: readonly MemberView[]): Suggestion[] {
       covered: light.length > 0,
       detail:
         light.length > 0
-          ? `${names(light)} carry${light.length === 1 ? 'es' : ''} torches or a lantern.`
+          ? `${carry(light)} torches or a lantern.`
           : 'Torches or a lantern light the way underground.',
       search: 'torch',
     },
@@ -62,9 +63,7 @@ export function readinessChecklist(party: readonly MemberView[]): Suggestion[] {
       title: 'A tinder box to light it',
       covered: tinder.length > 0,
       detail:
-        tinder.length > 0
-          ? `${names(tinder)} carry${tinder.length === 1 ? 'es' : ''} one.`
-          : 'A torch or lantern needs a tinder box to light it.',
+        tinder.length > 0 ? `${carry(tinder)} one.` : 'A torch or lantern needs a tinder box to light it.',
       search: 'tinder',
     },
     {
@@ -72,19 +71,14 @@ export function readinessChecklist(party: readonly MemberView[]): Suggestion[] {
       title: 'Rations',
       covered: rations.length > 0,
       detail:
-        rations.length > 0
-          ? `${names(rations)} carry${rations.length === 1 ? 'es' : ''} rations.`
-          : 'A party that stays out for days needs food.',
+        rations.length > 0 ? `${carry(rations)} rations.` : 'A party that stays out for days needs food.',
       search: 'rations',
     },
     {
       key: 'rope',
       title: 'Rope',
       covered: rope.length > 0,
-      detail:
-        rope.length > 0
-          ? `${names(rope)} carry${rope.length === 1 ? 'es' : ''} rope.`
-          : 'Rope is handy for pits, ledges, and prisoners.',
+      detail: rope.length > 0 ? `${carry(rope)} rope.` : 'Rope is handy for pits, ledges, and prisoners.',
       search: 'rope',
     },
   ];

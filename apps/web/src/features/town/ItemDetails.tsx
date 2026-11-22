@@ -1,4 +1,4 @@
-import { itemTypeLabel } from '@bxvtt/shared/text';
+import { count, itemTypeLabel } from '@bxvtt/shared/text';
 import { useTextContext } from '@/app';
 import { Badge, Button, Icon } from '@/ui';
 import { describeItem, itemIcon, weightCoins, type ShopItem } from './equipment';
@@ -36,7 +36,7 @@ export function ItemDetails({ item, lots, onAdd, buyerName, disabled }: ItemDeta
           <div className={styles.badges}>
             <Badge tone="neutral">{itemTypeLabel(item.summary.item_type)}</Badge>
             <Badge tone="gold" icon="coins">{`${item.summary.cost_gp} gp`}</Badge>
-            {weight !== null && <Badge tone="neutral">{`${weight} coins`}</Badge>}
+            {weight !== null && <Badge tone="neutral">{count(weight, 'coin')}</Badge>}
           </div>
         </div>
       </header>

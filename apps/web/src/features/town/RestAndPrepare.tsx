@@ -18,7 +18,7 @@ import {
   useTextContext,
 } from '@/app';
 import { Accordion, Banner, Button, EmptyState, Icon, Panel, type IconName } from '@/ui';
-import { commandInfo } from '@bxvtt/shared/text';
+import { commandInfo, count } from '@bxvtt/shared/text';
 import { CommandForm } from './CommandForm';
 import { usePartyAccess } from './hooks';
 import { MemberToken, PlaceHeader, classLine } from './parts';
@@ -46,7 +46,7 @@ export function describeChanges(before: PlayerView | null, after: PlayerView): s
     const was = before?.party.find((candidate) => candidate.id === member.id);
     if (was !== undefined && member.current_hp > was.current_hp) {
       changes.push(
-        `${member.name} recovered ${member.current_hp - was.current_hp} hit points and has ${member.current_hp} of ${member.max_hp}.`,
+        `${member.name} recovered ${count(member.current_hp - was.current_hp, 'hit point')} and has ${member.current_hp} of ${member.max_hp}.`,
       );
     }
   }
@@ -204,7 +204,7 @@ function OtherPanel() {
   const commands = useLegalCommands();
   const others = commands.filter((command) => !HANDLED.has(command.command_type));
   return (
-    <Panel title="Other things the party can do" meta={`${others.length} actions`}>
+    <Panel title="Other things the party can do" meta={count(others.length, 'action')}>
       {others.length === 0 ? (
         <EmptyState size="compact" icon="check" title="Nothing else is open" />
       ) : (
