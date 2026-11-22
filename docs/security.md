@@ -8,6 +8,7 @@ bxvtt is built for a group of people who trust each other enough to play a game 
 
 - **A token is your identity.** When you pick a display name, the server creates a user and returns a token: `bxt_` and 32 random bytes. The browser stores the token and sends it with every request. Anyone who has your token is you, on every table you belong to. The server stores only a SHA-256 hash of each token, so a copy of the database doesn't contain usable tokens. A token never appears in a URL, because the WebSocket sends it in its first message.
 - **An invite code lets anyone join a table as a player.** It has 100 random bits, so nobody guesses one. Every member of the table can see the code, so treat it as shared with the whole group. When a referee removes a member, the server replaces the code, so the removed member can't use the old one to join again.
+- **A referee can let a returning player back in as their old self.** A browser keeps its sign-in for one address, so after a quick tunnel's address changes, a returning player arrives with no token. With the invite code, the player asks to rejoin as one of the table's offline members, and a referee approves. The server then gives that member a new token and retires the old one. A visitor with the invite code learns only the table's name and its offline members' names and colors, which anyone who joins sees anyway. A referee can't approve a request to rejoin as themselves, so reclaiming a referee needs a second referee. Keep your sign-in as the host by opening your server at `http://127.0.0.1:<port>`.
 - **A referee sees everything at the table**, including the adventure, the referee view, referee notes, and secret rolls. A referee can promote any member to referee, remove members, and delete the table. Trust your referees.
 - **The host key protects table creation, and nothing else.** When `BXVTT_HOST_KEY` is set, a user needs the key to create a table. Without it, anyone who learns the server's address can create users and tables, up to the quotas below. The host key doesn't control who joins a table or what members do at it.
 - **bxapi is trusted and private.** The bxvtt server calls bxapi with the referee key, so bxapi permits every command. The bxvtt server decides who may send each command before it calls bxapi. The bxapi key never leaves the server, and the browser never calls bxapi.
@@ -33,6 +34,8 @@ Each guarantee below has an integration test in `apps/server/test/` that runs th
 | The browser gets strict security headers. | The web client gets a Content Security Policy that allows scripts, styles, fonts, images, and connections only from the server itself, with no inline script and no `eval`. A forged `Host` header can't add a directive. Every response has `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, and `Referrer-Policy: no-referrer`. A request that arrives through an HTTPS tunnel also gets `Strict-Transport-Security`. API responses have `Cache-Control: no-store` unless they set their own caching, and the adventure and save exports are `private`. | `web.test.ts`, `security.test.ts` |
 | Only pages from known origins open the WebSocket. | The handshake must come from the server's own origin, a loopback origin, or `BXVTT_PUBLIC_ORIGINS`. Every socket must authenticate within 10 seconds. bxvtt has no cookies, so a page on another origin can't act as a user it has no token for. | `auth.test.ts` |
 | A failed game start leaves nothing behind. | If bxapi fails while the server reads the session it just created for a start or a restore, the server deletes that session and the table stays where it was. Deleting a table holds the table's lock until bxapi's sessions, saves, and uploads and the table's rows are gone. | `security.test.ts` ("a game that fails to start halfway") |
+| A rejoin request hands a member's identity only to someone a referee approved, once. | The request needs the invite code and expires in five minutes. The visitor polls with a secret that only its browser has. The server returns the new token once, and the old token stops working at approval. A member who is online can't be asked for, and a referee never approves their own request. | `rejoin.test.ts`, `security.test.ts` |
+| The health check tells strangers only what a first visit needs. | Without a token, `GET /api/health` returns the status, the bxvtt version, `host_key_required`, and whether bxapi is reachable. bxapi's versions, storage figures, and error details go only to a request with a user's token. | `rejoin.test.ts` |
 
 The server also sends every SQL statement with bound parameters, serves static files only from the built client's directory, reads sample adventures only from the file names it lists, and passes only fixed rules paths to bxapi. No route takes a URL from a user.
 
@@ -44,6 +47,8 @@ The server also sends every SQL statement with bound parameters, serves static f
 | Invite code attempts from one address | 20 every 10 minutes |
 | Unknown tokens from one address | 30 every 10 minutes, then 429 |
 | Wrong host keys from one address | 10 every 10 minutes, then 429 even for the right key |
+| Rejoin requests from one address | 5 every 10 minutes |
+| Rejoin status polls from one address | 120 a minute |
 | Requests that change something, per user | 100 every 20 seconds |
 | Feed posts and new annotations, per user | 30 every 30 seconds |
 | Character checks in the wizard, per user | 60 a minute |
@@ -59,8 +64,9 @@ The server also sends every SQL statement with bound parameters, serves static f
 
 ## What the server doesn't protect against
 
-- **A stolen token.** Anyone who copies a token from a browser, a backup, or a shared computer acts as that user. bxvtt has no route to sign out or replace a token. To lock someone out, a referee removes the user from the table.
+- **A stolen token.** Anyone who copies a token from a browser, a backup, or a shared computer acts as that user. bxvtt has no route to sign out. A referee can replace a member's token by approving a rejoin request from that member, and can lock someone out by removing them from the table.
 - **A dishonest referee.** A referee sees everything, can change the game with referee commands, and can remove anyone.
+- **A referee who approves the wrong person.** The server trusts the referee to know who is asking. An approved rejoin request moves the member's identity to the new browser.
 - **A member who plays badly within the rules.** The caller moves the whole party and chooses who receives treasure. Any member can give items to another member's character, edit the party notes, and set `hidden` on a rest, which osrlib leaves for the referee to judge. The rate limits slow a member who floods the feed, but they don't stop one.
 - **Knowing that something hidden happened.** A player can see that the game's `revision` went up after a referee command that showed them nothing, and that feed entry numbers skip a value when a whisper between others or a secret roll was posted. The player can't learn what the entry or command was.
 - **Facts osrlib puts in player events.** An attack roll event states the target's armour class and the number needed to hit, and a defeat event names the monster's template and its experience points. bxvtt passes player events unchanged.

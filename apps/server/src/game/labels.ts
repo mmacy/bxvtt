@@ -46,13 +46,16 @@ export function learnLabels(
 ): void {
   for (const member of view.party) book.members.set(member.id, member.name);
   for (const group of view.encounter?.groups ?? []) {
+    const size = Math.max(group.count, book.groups.get(group.id)?.size ?? 0);
     const label: EntryLabel = {
       label: group.label,
       label_plural: group.label_plural === '' ? `${group.label}s` : group.label_plural,
+      ...(size > 0 ? { size } : {}),
     };
     book.groups.set(group.id, label);
     const source = refereeView.encounter?.groups.find((candidate) => candidate.id === group.id);
-    for (const monsterId of source?.monster_ids ?? []) book.monsters.set(monsterId, label);
+    const monster: EntryLabel = { label: label.label, label_plural: label.label_plural };
+    for (const monsterId of source?.monster_ids ?? []) book.monsters.set(monsterId, monster);
   }
 }
 
@@ -84,10 +87,12 @@ export function entryNames(
   if (context.actorId != null && actor !== undefined) names.members[context.actorId] = actor;
   // The groups of the open encounter, with their sizes, so a talk or an encounter's start can name the monsters.
   for (const group of context.view?.encounter?.groups ?? []) {
+    const size = Math.max(group.count, book.groups.get(group.id)?.size ?? 0);
     names.groups[group.id] = {
       label: group.label,
       label_plural: group.label_plural === '' ? `${group.label}s` : group.label_plural,
       count: group.count,
+      ...(size > 0 ? { size } : {}),
     };
   }
   for (const id of strings(events, new Set())) {

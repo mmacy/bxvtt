@@ -22,7 +22,7 @@ Check that the server reaches bxapi:
 curl -s http://127.0.0.1:8660/api/health
 ```
 
-The response should have `"status": "ok"` and the facts from bxapi's `GET /v1/meta`. When bxapi is down, the health check answers 503 and every route that needs bxapi answers 503 `bxapi_unavailable`.
+The response should have `"status": "ok"`, `bxapi.reachable: true`, and `host_key_required`, which says whether creating a table needs the host key. Without a token, the response stops there: bxapi's versions and storage from `GET /v1/meta` go only to a request with a user's token. When bxapi is down, the health check answers 503 and every route that needs bxapi answers 503 `bxapi_unavailable`.
 
 To run the production build, which also serves the built web client from `apps/web/dist`:
 
@@ -31,7 +31,11 @@ npm run build
 BXAPI_URL=http://127.0.0.1:8651 npm start
 ```
 
-To let players on other networks join through a Cloudflare quick tunnel, install `cloudflared`, run `npm run build`, and then run `npm run share`. It prints the public address and a host key. Players join with an invite link and need no key. You need the key to create a table.
+To let players on other networks join through a Cloudflare quick tunnel, run `npm run build`, and then run `npm run share`. You don't install anything else: `cloudflared` comes with bxvtt as an npm dependency, and the command uses a `cloudflared` on your `PATH` instead when you have one. The command starts the server itself, so stop `npm start` first. It prints the public address and a host key, which you need to create a table.
+
+Run your own table at `http://127.0.0.1:8660` (or your `BXVTT_PORT`), not at the public address. Your browser keeps your sign-in for the address you open, and a quick tunnel's address changes every run, while the local address stays the same. In the lobby, copy the invite link, and send your players the public address with it. A player opens the public address and pastes the link into **Join a table**, and needs no key. `docs/guide/host.md` walks through it.
+
+When the address changes, a returning player's browser has no sign-in for the new one. The player asks to rejoin as the member they were, and you approve it in the lobby or at the table. See "Rejoining after the address changes".
 
 ### Settings
 
@@ -228,11 +232,17 @@ A message is at most 2,000 characters. `getFeed(tableId, { limit })` returns the
 
 ## Routes
 
-Every route under `/api` needs `Authorization: Bearer <token>`, except `GET /api/health` and `POST /api/users`. Paths below omit the `/api` prefix, and `{t}` stands for a table ID.
+Every route under `/api` needs `Authorization: Bearer <token>`, except `GET /api/health`, `POST /api/users`, and a visitor's rejoin routes (`POST /api/rejoin/lookup`, `POST /api/rejoin`, and `POST /api/rejoin/{request_id}/status`). Paths below omit the `/api` prefix, and `{t}` stands for a table ID.
 
 | Method and path | SDK method | Who | Returns |
 | --- | --- | --- | --- |
-| `GET /health` | `health` | anyone | `Health` |
+| `GET /health` | `health` | anyone (bxapi's details: user) | `Health` |
+| `POST /rejoin/lookup` | `lookupRejoin` | anyone with the invite code (rate limited) | `RejoinLookup` |
+| `POST /rejoin` | `requestRejoin` | anyone with the invite code (rate limited) | `RejoinTicket` |
+| `POST /rejoin/{request_id}/status` | `rejoinStatus` | the holder of the ticket's secret | `RejoinStatus` |
+| `GET /tables/{t}/rejoin-requests` | `listRejoinRequests` | referee | `RejoinRequestList` |
+| `POST /tables/{t}/rejoin-requests/{id}/approve` | `approveRejoin` | referee, not the member asked for | `RejoinRequestList` |
+| `POST /tables/{t}/rejoin-requests/{id}/decline` | `declineRejoin` | referee, not the member asked for | `RejoinRequestList` |
 | `POST /users` | `createUser` | anyone (rate limited) | `CreateUserResponse` with the token |
 | `GET /users/me` | `me` | user | `User` |
 | `PATCH /users/me` | `updateMe` | user | `User` |
@@ -335,6 +345,24 @@ To count the gold, the server sends a few more such requests, each with purchase
 
 Each check counts as a change against the per-user write limit, and against its own limit of 60 checks a minute per user, because one check can cost bxapi several requests.
 
+## Rejoining after the address changes
+
+A browser keeps a user's token for one address. A quick tunnel gets a new address every run, so a returning player arrives with no token and would become a new user, with the old member's seats and characters out of reach. Instead, the player rejoins as the member they were, and a referee who knows who is at the table approves:
+
+1. With the invite code and no token, the player's browser calls `lookupRejoin(inviteCode)`. It gets the table's name and the members who are offline now (`user_id`, `name`, `color`), and nothing else. The call counts as an invite code attempt.
+2. The player picks their name, and the browser calls `requestRejoin(inviteCode, userId)`. The server keeps a pending request for five minutes, and sends the table's referees a `rejoin_requests` message. A referee's snapshot has `rejoin_requests` too. The browser keeps the ticket's `request_id` and `secret`.
+3. The browser polls `rejoinStatus(requestId, secret)` every few seconds while the status is `pending`.
+4. A referee calls `approveRejoin(tableId, requestId)` or `declineRejoin(tableId, requestId)`. On approval, the server gives the existing user a new token and retires the old one, closes the user's other connections with `auth_failed`, and posts a `member_rejoined` notice. The next poll returns `approved` with the token and the user, once, and the SDK stores the token. Later polls read `claimed`.
+
+A request ends as `declined`, `expired`, or `cancelled`, the last when the member comes online or leaves the table first. The rules:
+
+- A member who is online can't be asked for (409 `rejoin_member_online`).
+- One request at a time per address and per member (409 `rejoin_pending`). Each address may make 5 requests every 10 minutes and poll 120 times a minute.
+- A referee never approves or declines a request to rejoin as themselves (403 `forbidden`), so reclaiming a referee needs another referee. A table whose only referee is asked for refuses the request (409 `rejoin_no_approver`).
+- A decided or ended request can't be decided again (409 `rejoin_not_pending`). A wrong secret or an unknown request gets 404 `not_found`.
+
+The last referee is never the one who needs this, because the host runs their own table at `http://127.0.0.1:<port>`, an address that doesn't change, so their browser keeps its token. A host who signed in through the public address instead should promote a second referee before the address changes.
+
 ## WebSocket messages
 
 | Direction | `type` | Contents |
@@ -343,7 +371,7 @@ Each check counts as a change against the per-user write limit, and against its 
 | client to server | `heartbeat` | Nothing. Send one every 20 seconds. `TableConnection` does. |
 | client to server | `ping` | `dungeon_id`, `level_number`, `x`, `y`: a map ping in cell coordinates. |
 | client to server | `resync` | Optionally `feed_after`. Asks for a new snapshot. |
-| server to client | `snapshot` | `user`, `role`, `table`, `presence`, `game`, `declarations`, `feed`, `annotations`, `notes`, `server_time`. |
+| server to client | `snapshot` | `user`, `role`, `table`, `presence`, `game`, `declarations`, `feed`, `annotations`, `notes`, `server_time`, and for a referee `rejoin_requests`. |
 | server to client | `presence` | `presence.online`: the IDs of the connected users. |
 | server to client | `table` | `table`: the whole `TableDetail`. |
 | server to client | `game` | `game`: the whole `GameState` for the recipient's role, or `null` in the lobby. |
@@ -352,6 +380,7 @@ Each check counts as a change against the per-user write limit, and against its 
 | server to client | `annotations` | `annotations`: every annotation of one level that the recipient may see. |
 | server to client | `ping` | A member's map ping, with `user_id` and `at`. Show it for a few seconds. |
 | server to client | `notes` | `notes`: the whole notes document after an edit. |
+| server to client | `rejoin_requests` | `requests`: every pending rejoin request of the table. Referees only. |
 | server to client | `notice` | `code` (`table_changed`, `game_restored`, `game_started`, `game_ended`) and `detail`. |
 | server to client | `heartbeat` | `server_time`. |
 | server to client | `error` | `code` and `detail` for a client message the server couldn't use. |

@@ -99,7 +99,7 @@ describe('text from the QA pass', () => {
     const talk = entries.find((entry) => entry.command_type === 'parley');
     expect(talk?.actor_id).toBe('character-0003');
     expect(talk?.names?.groups).toEqual({
-      'group-0001': { label: 'goblin', label_plural: 'goblins', count: 2 },
+      'group-0001': { label: 'goblin', label_plural: 'goblins', count: 2, size: 2 },
     });
     if (talk === undefined) throw new Error('no talk entry');
     expect(narrate(talk, met.game.scene)[0]).toMatch(/^Osric talks to the goblins\. They .+ now\.$/);

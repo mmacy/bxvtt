@@ -2,12 +2,18 @@ import { z } from 'zod';
 
 /**
  * Response of `GET /api/health`, which needs no token. `status` is `ok` when bxapi answers, and `degraded`
- * otherwise. `bxapi.meta` holds the facts from bxapi's `GET /v1/meta` (versions, auth mode, role, and storage),
- * or `null` when bxapi is unreachable.
+ * otherwise. Anyone gets the status, the version, `host_key_required`, and whether bxapi is reachable.
+ * `bxapi.meta` (versions, auth mode, role, and storage) and the cause in `bxapi.error` go only to a request with
+ * a user's token. Without one, `meta` is `null` and `error` is a general sentence.
  */
 export const Health = z.object({
   status: z.enum(['ok', 'degraded']),
   version: z.string(),
+  /**
+   * Whether creating a table needs the host key, so the home page can show the key field before a first attempt
+   * fails. Optional in the type so that older fixtures still compile. This server always sends it.
+   */
+  host_key_required: z.boolean().optional(),
   uptime_seconds: z.number(),
   bxapi: z.object({
     reachable: z.boolean(),

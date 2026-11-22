@@ -68,7 +68,7 @@ describe('users and authentication', () => {
     );
   });
 
-  it('requires a bearer token on every route except health and user creation', async () => {
+  it('requires a bearer token on every route except health, user creation, and the visitor rejoin routes', async () => {
     const anonymous = new BxvttClient({ baseUrl: server.url });
     expect((await anonymous.health()).bxapi.reachable).toBe(true);
     for (const call of [
@@ -76,6 +76,8 @@ describe('users and authentication', () => {
       () => anonymous.listTables(),
       () => anonymous.rules('classes'),
       () => anonymous.listCharacters(),
+      () => anonymous.listRejoinRequests('tbl_aaaaaaaaaaaaaaaaaaaaaa'),
+      () => anonymous.approveRejoin('tbl_aaaaaaaaaaaaaaaaaaaaaa', 'rjn_x'),
     ]) {
       await expect(call()).rejects.toSatisfy((error) => isProblem(error, 'unauthorized'));
     }

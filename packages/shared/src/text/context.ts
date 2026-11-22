@@ -21,7 +21,7 @@ import {
   spellCatalogName,
   type ItemNoun,
 } from './catalog';
-import { capitalizeFirst, lowerFirst, pluralize, prettifyId, withArticle } from './format';
+import { capitalizeFirst, lowerFirst, placeInSentence, pluralize, prettifyId, withArticle } from './format';
 
 export interface MemberInfo {
   name: string;
@@ -36,6 +36,11 @@ export interface GroupInfo {
   labelPlural: string;
   /** How many are alive, when known. */
   count?: number;
+  /**
+   * The most the group has had alive, so a group whose last member fell still reads as one creature or several:
+   * `the ink-stained clerk`, not `the ink-stained clerks`.
+   */
+  size?: number;
 }
 
 export interface MonsterInfo {
@@ -74,6 +79,47 @@ export interface TextContext {
    * `extendContextWithReferee` fills it from the adventure. Referee clients only.
    */
   triggers?: Record<string, string>;
+  /**
+   * What each adventure flag is, by key such as `priory.sluice`: a name and what sets and reads it.
+   * `extendContextWithReferee` fills it from the adventure's triggers and quests. Referee clients only. A flag the
+   * context doesn't know reads by the words of its key, such as `the priory sluice flag`.
+   */
+  flags?: Record<string, FlagInfo>;
+}
+
+/** What an adventure flag is, for text. */
+export interface FlagInfo {
+  /** What to call the flag in a sentence: `the priory sluice flag`. */
+  name: string;
+  /** What sets it, as phrases such as `entering the sluice room`. */
+  setBy: string[];
+  /** What reads it, as phrases such as `the trigger for entering the toll gate`. */
+  readBy: string[];
+}
+
+/** The name of a flag key in words, when no context names it: `priory.sluice` gives `the priory sluice flag`. */
+function flagWords(key: string): string {
+  return `the ${prettifyId(key.replace(/\./g, ' ')).toLowerCase()} flag`;
+}
+
+/**
+ * Name an adventure flag in a sentence: `the priory sluice flag`. A referee context names it from the adventure,
+ * and any other context from the words of its key, so the text never shows a raw key such as `priory.sluice`.
+ */
+export function flagName(key: string, ctx: TextContext): string {
+  return ctx.flags?.[key]?.name ?? flagWords(key);
+}
+
+/**
+ * A flag's value in words: `on` for true, `off` for false, `cleared` for no value, and any other value as
+ * written, in quotes: `"open"`.
+ */
+export function flagValueText(value: unknown): string {
+  if (value === true) return 'on';
+  if (value === false) return 'off';
+  if (value === null || value === undefined) return 'cleared';
+  if (typeof value === 'number') return String(value);
+  return `"${String(value)}"`;
 }
 
 /** A context that knows nothing. Built-in catalog names still resolve. */
@@ -173,10 +219,13 @@ export function contextFromPlayerView(view: PlayerViewLike, base?: TextContext):
   // While an encounter is open, its groups replace the groups of earlier encounters, so that a monster ID
   // with no known template can take the label of the one kind of monster in the fight. When no encounter is
   // open, the previous groups stay known, because the events of the command that ended the fight name them.
+  const earlier = ctx.groups;
   if (view.encounter?.groups) ctx.groups = {};
   for (const group of view.encounter?.groups ?? []) {
     const info: GroupInfo = { label: group.label, labelPlural: group.label_plural || pluralize(group.label) };
     if (group.count !== undefined) info.count = group.count;
+    const size = Math.max(group.count ?? 0, earlier[group.id]?.size ?? 0, earlier[group.id]?.count ?? 0);
+    if (size > 0) info.size = size;
     ctx.groups[group.id] = info;
   }
   if (view.town_name) ctx.townName = view.town_name;
@@ -278,6 +327,48 @@ function readAdventure(ctx: TextContext, adventure: unknown): void {
     const phrase = isRecord(trigger.when) ? triggerPhrase(trigger.when, ctx) : undefined;
     if (id && phrase) (ctx.triggers ??= {})[id] = phrase;
   }
+  readFlags(ctx, adventure);
+}
+
+/** The flag keys that a JSON value sets with `set_flag`, and those it reads with a flag pattern or condition. */
+function flagUses(value: unknown, sets: Set<string>, reads: Set<string>): void {
+  if (Array.isArray(value)) {
+    for (const entry of value) flagUses(entry, sets, reads);
+    return;
+  }
+  if (!isRecord(value)) return;
+  const key = asString(value.key);
+  if (key && value.command_type === 'set_flag') sets.add(key);
+  if (key && (value.pattern_type === 'flag_set' || value.condition_type === 'flag_equals')) reads.add(key);
+  for (const entry of Object.values(value)) flagUses(entry, sets, reads);
+}
+
+/** Learn what sets and reads each flag from the adventure's triggers and quests. */
+function readFlags(ctx: TextContext, adventure: Record<string, unknown>): void {
+  const info = (key: string): FlagInfo => {
+    const flags = (ctx.flags ??= {});
+    return (flags[key] ??= { name: flagWords(key), setBy: [], readBy: [] });
+  };
+  for (const trigger of asArray(adventure.triggers)) {
+    if (!isRecord(trigger)) continue;
+    const id = asString(trigger.id);
+    const when = id ? ctx.triggers?.[id] : undefined;
+    const sets = new Set<string>();
+    const reads = new Set<string>();
+    flagUses(trigger.consequences, sets, reads);
+    flagUses({ when: trigger.when, conditions: trigger.conditions }, new Set(), reads);
+    for (const key of sets) info(key).setBy.push(when ?? 'an adventure trigger');
+    for (const key of reads) info(key).readBy.push(when ? `the trigger for ${when}` : 'an adventure trigger');
+  }
+  for (const quest of asArray(adventure.quests)) {
+    if (!isRecord(quest)) continue;
+    const name = asString(quest.name) ?? 'a quest';
+    const sets = new Set<string>();
+    const reads = new Set<string>();
+    flagUses(quest, sets, reads);
+    for (const key of sets) info(key).setBy.push(`the quest ${name}`);
+    for (const key of reads) info(key).readBy.push(`the quest ${name}`);
+  }
 }
 
 /** What sets off a trigger, from its `when` pattern: `entering the drain warren`. */
@@ -308,7 +399,7 @@ function triggerPhrase(when: Record<string, unknown>, ctx: TextContext): string 
     }
     case 'flag_set': {
       const key = asString(when.key);
-      return key ? `setting the ${prettifyId(key.replace(/\./g, ' '))} flag` : undefined;
+      return key ? `setting ${flagWords(key)}` : undefined;
     }
     default:
       return undefined;
@@ -316,8 +407,7 @@ function triggerPhrase(when: Record<string, unknown>, ctx: TextContext): string 
 }
 
 function theDungeon(dungeonId: string | undefined, ctx: TextContext): string {
-  const name = dungeonName(dungeonId, ctx);
-  return /^the\s/i.test(name) ? lowerFirst(name) : `the ${lowerFirst(name)}`;
+  return placeInSentence(dungeonName(dungeonId, ctx));
 }
 
 /** Entries from the rules catalogs (`/v1/rules/equipment`, `/magic-items`, `/spells`, `/monsters`). */
@@ -380,6 +470,8 @@ export interface EntryLabelLike {
   label_plural?: string;
   /** For a group, how many of it were alive when the entry was written. */
   count?: number;
+  /** For a group, the most it has had alive. */
+  size?: number;
 }
 
 /** Loose shape of a game feed entry's `names` from the bxvtt server. A protocol `EntryNames` fits it. */
@@ -432,6 +524,7 @@ export function extendContextWithEntryNames(
       ...next.groups[id],
       ...label(entry),
       ...(entry.count === undefined ? {} : { count: entry.count }),
+      ...(entry.size === undefined ? {} : { size: entry.size }),
     };
   }
   for (const [id, name] of Object.entries(names.dungeons ?? {})) {
@@ -711,8 +804,20 @@ export function groupName(
     return 'the monsters';
   }
   if (options.count !== undefined) return countedLabel(known.label, known.labelPlural, options.count);
-  if (isProperLabel(known.label) && known.count !== undefined && known.count <= 1) return known.label;
-  return known.count === 1 ? `the ${known.label}` : `the ${known.labelPlural}`;
+  const one = groupIsSingle(known);
+  // A proper name takes no article: `Mag Corrie`, or `Mag's bodyguards` for several.
+  if (isProperLabel(known.label)) return one === false ? known.labelPlural : known.label;
+  return one === true ? `the ${known.label}` : `the ${known.labelPlural}`;
+}
+
+/**
+ * Whether a group is one creature: `true` when it has one alive, or had one at most; `false` when it has or had
+ * several; `undefined` when the context doesn't know its size.
+ */
+export function groupIsSingle(group: GroupInfo): boolean | undefined {
+  if (group.count !== undefined && group.count > 0) return group.count === 1;
+  if (group.size !== undefined && group.size > 0) return group.size === 1;
+  return undefined;
 }
 
 /**
@@ -737,7 +842,7 @@ export function resolveItemNoun(id: string, ctx: TextContext, options: { name?: 
   if (fromContext) return nounForId(id, fromContext);
   if (options.name) return nounForId(id, options.name);
   if (kind === 'magic-item') return { one: 'magic item', many: 'magic items' };
-  if (kind === 'valuable') return { one: 'gem or jewel', many: 'gems and jewels' };
+  if (kind === 'valuable') return { one: 'gem or jewel', many: 'gems or jewels' };
   const magic = magicItemTemplateName(id);
   if (magic) return { one: magic, many: pluralize(magic) };
   const words = prettifyId(id);
@@ -774,14 +879,25 @@ export interface ItemListOptions {
 
 /** Describe a list of item IDs, one per unit, grouping repeats: `2 torches, a sword, and a rope`. */
 export function itemList(ids: readonly string[], ctx: TextContext, options: ItemListOptions = {}): string[] {
+  // Items count together by what they read as, so four unnamed valuables read `4 gems or jewels`.
   const order: string[] = [];
-  const counts = new Map<string, number>();
+  const groups = new Map<string, { noun: ItemNoun; count: number }>();
   for (const id of ids) {
-    if (!counts.has(id)) order.push(id);
+    const noun = resolveItemNoun(id, ctx);
+    const key = JSON.stringify([noun.one, noun.many, noun.proper === true]);
     const units = options.lots ? (equipmentLotSize(id) ?? 1) : 1;
-    counts.set(id, (counts.get(id) ?? 0) + units);
+    const known = groups.get(key);
+    if (known === undefined) {
+      order.push(key);
+      groups.set(key, { noun, count: units });
+    } else {
+      known.count += units;
+    }
   }
-  return order.map((id) => itemCount(id, counts.get(id) ?? 1, ctx));
+  return order.map((key) => {
+    const group = groups.get(key);
+    return group === undefined ? '' : itemPhrase(group.noun, group.count);
+  });
 }
 
 /** Name of a spell, lower case: `magic missile`. */

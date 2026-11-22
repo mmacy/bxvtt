@@ -8,6 +8,7 @@ import type { Database } from './db';
 import type { FeedStore } from './feed';
 import type { GameService } from './game/service';
 import type { Hub } from './hub';
+import type { RejoinService } from './rejoin';
 import type { RulesCache } from './rules';
 import type { TableStore } from './tables';
 import type { UserStore } from './users';
@@ -28,6 +29,7 @@ export interface Context {
   rules: RulesCache;
   adventures: AdventureCatalog;
   game: GameService;
+  rejoin: RejoinService;
   limits: {
     /** New users, by address. */
     createUser: RateLimiter;
@@ -39,6 +41,10 @@ export interface Context {
     userPosts: RateLimiter;
     /** Character checks, by user. Each check can cost bxapi several requests. */
     characterChecks: RateLimiter;
+    /** New rejoin requests, by address. */
+    rejoin: RateLimiter;
+    /** Polls of a rejoin request's status, by address. */
+    rejoinPolls: RateLimiter;
   };
   startedAt: number;
 }

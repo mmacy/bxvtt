@@ -45,7 +45,11 @@ export interface Config {
     userWrites: RateLimit;
     userPosts: RateLimit;
     characterChecks: RateLimit;
+    rejoin: RateLimit;
+    rejoinPolls: RateLimit;
   };
+  /** How long a rejoin request waits for a referee, in milliseconds. */
+  rejoinTtlMs: number;
   /** Caps on what one user or table can store, so nobody can fill the disk of bxvtt or bxapi. */
   quotas: Quotas;
   /** How long a bxapi request may take before the server gives up, in milliseconds. */
@@ -168,7 +172,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       userWrites: { capacity: 100 * relax, windowMs: 20_000 },
       userPosts: { capacity: 30 * relax, windowMs: 30_000 },
       characterChecks: { capacity: 60 * relax, windowMs: 60_000 },
+      rejoin: { capacity: 5 * relax, windowMs: 10 * 60_000 },
+      rejoinPolls: { capacity: 120 * relax, windowMs: 60_000 },
     },
+    rejoinTtlMs: 5 * 60_000,
     quotas: { ...DEFAULT_QUOTAS },
     bxapiTimeoutMs: 15_000,
   };

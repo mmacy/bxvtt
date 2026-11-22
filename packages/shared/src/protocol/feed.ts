@@ -51,6 +51,8 @@ export const EntryLabel = z.object({
   label_plural: z.string(),
   /** For a group, how many of it were alive when the entry was written. */
   count: z.number().int().optional(),
+  /** For a group, the most it has had alive, so a group whose last member fell still reads as one or several. */
+  size: z.number().int().optional(),
 });
 /** What players called one monster group or monster. */
 export type EntryLabel = z.infer<typeof EntryLabel>;
@@ -133,6 +135,7 @@ export const SystemNoticeCode = z.enum([
   'seat_changed',
   'caller_changed',
   'adventure_uploaded',
+  'member_rejoined',
 ]);
 /** What a system notice reports. */
 export type SystemNoticeCode = z.infer<typeof SystemNoticeCode>;

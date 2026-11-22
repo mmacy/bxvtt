@@ -64,6 +64,18 @@ export class UserStore {
   }
 
   /**
+   * Gives a user a new token and makes the old one useless, for a rejoin request a referee approved.
+   *
+   * @param id - The user ID.
+   * @returns The new token, which the server never shows again.
+   */
+  rotateToken(id: string): string {
+    const token = newToken();
+    this.db.run('UPDATE users SET token_hash = ? WHERE id = ?', hashToken(token), id);
+    return token;
+  }
+
+  /**
    * Changes a user's name or color.
    *
    * @param id - The user ID.

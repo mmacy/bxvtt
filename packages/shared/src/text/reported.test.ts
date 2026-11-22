@@ -5,6 +5,8 @@
 import { describe, expect, it } from 'vitest';
 import codes from './data/codes.json' with { type: 'json' };
 import outcomes from './fixtures/outcomes.json' with { type: 'json' };
+import bell from '../../../../adventures/the-drowned-bell.json' with { type: 'json' };
+import bridge from '../../../../adventures/the-toll-bridge.json' with { type: 'json' };
 import {
   contextFromPlayerView,
   describeEvent,
@@ -15,6 +17,8 @@ import {
   extendContextWithCatalog,
   extendContextWithEntryNames,
   extendContextWithScene,
+  flagName,
+  flagValueText,
   nameInSentence,
   placeInSentence,
   extendContextWithNames,
@@ -824,4 +828,245 @@ describe('group labels that are proper names (sample adventures)', () => {
     )[0]?.text;
     expect(slain).not.toMatch(/prior|\(/i);
   });
+});
+
+describe('flags in words (referee confirmations)', () => {
+  const flagSet = (key: string, value: unknown) =>
+    ({ event_type: 'flag_set', code: 'session.flag.set', visibility: 'referee', key, value }) as never;
+
+  it('names a flag by the words of its key and writes the value in words', () => {
+    // Reported: "The referee sets the flag priory.lever to true".
+    expect(describeEvent(flagSet('priory.lever', true), emptyContext()).text).toBe(
+      'The referee sets the priory lever flag to on.',
+    );
+    expect(flagValueText(false)).toBe('off');
+    expect(flagValueText('laid_to_rest')).toBe('"laid_to_rest"');
+    expect(flagName('quest.bell', emptyContext())).toBe('the quest bell flag');
+  });
+
+  it('says what sets and reads a flag, from the adventure', () => {
+    const priory = extendContextWithReferee(emptyContext(), { adventure: bell.payload } as never);
+    const sluice = describeEvent(flagSet('priory.sluice', 'open'), priory);
+    expect(sluice.text).toBe('The referee sets the priory sluice flag to "open".');
+    expect(sluice.detail).toMatch(/^Entering the sluice room also sets it\./);
+    const toll = extendContextWithReferee(emptyContext(), { adventure: bridge.payload } as never);
+    expect(describeEvent(flagSet('bridge.captain', 'beaten'), toll).detail).toMatch(
+      /The trigger for entering the toll gate reads it\./,
+    );
+  });
+});
+
+describe('The Toll at Crookback Bridge read-through', () => {
+  const placed = (kind: string, id: string, extra: Record<string, unknown> = {}) =>
+    ({
+      event_type: 'location_entered',
+      code: 'exploration.location.entered',
+      visibility: 'player',
+      location_kind: kind,
+      location_id: id,
+      level_number: 1,
+      dungeon_id: kind === 'area' ? 'bridge' : null,
+      narrative: null,
+      via: 'placed',
+      transition_ref: null,
+      ...extra,
+    }) as never;
+
+  it('gives a proper place name no added article', () => {
+    // Reported: "The party is placed in the Crookback Bridge, level 1."
+    const ctx = extendContextWithScene(emptyContext(), { dungeon_names: { bridge: 'Crookback Bridge' } });
+    expect(describeEvent(placed('dungeon', 'bridge'), ctx).text).toBe(
+      'The party is placed in Crookback Bridge, level 1.',
+    );
+    expect(describeEvent(placed('dungeon', 'bridge', { via: 'entrance' }), ctx).text).toMatch(
+      / Crookback Bridge, level 1\.$/,
+    );
+    expect(humanizeMessage('The party enters dungeon bridge (level 1).', ctx)).toBe(
+      'The party enters Crookback Bridge, level 1.',
+    );
+    expect(placeInSentence('Crookback Bridge')).toBe('Crookback Bridge');
+    expect(placeInSentence('The Kingsway')).toBe('the Kingsway');
+    expect(placeInSentence('Chapel of Saint Corvane')).toBe('the chapel of Saint Corvane');
+    expect(placeInSentence("Captain's loft")).toBe("the captain's loft");
+    expect(placeInSentence('Ledge under the arch')).toBe('the ledge under the arch');
+    expect(placeInSentence('Toll gate')).toBe('the toll gate');
+  });
+
+  const loft = {
+    members: { 'character-0003': 'Osric', 'character-0002': 'Mira' },
+    groups: {
+      'group-0001': { label: 'Mag Corrie', label_plural: 'Mag Corries', count: 1, size: 1 },
+      'group-0002': { label: "Mag's bodyguard", label_plural: "Mag's bodyguards", count: 1, size: 1 },
+    },
+    monsters: {},
+    items: {},
+  };
+
+  it('names both groups of a talk', () => {
+    // Reported: "Osric talks to the monsters."
+    const lines = describeGameEntry(
+      {
+        command_type: 'parley',
+        actor_id: 'character-0003',
+        events: [
+          {
+            event_type: 'stance_changed',
+            code: 'encounter.stance.changed',
+            visibility: 'player',
+            stance: 'uncertain',
+          },
+        ] as never,
+        names: loft,
+      },
+      emptyContext(),
+    );
+    expect(lines[0]?.text).toBe("Osric talks to Mag Corrie and Mag's bodyguard. They are uncertain now.");
+  });
+
+  it('counts like items in a drop', () => {
+    // Reported: "...a magic item, a gem or jewel, a gem or jewel, a gem or jewel, and a gem or jewel."
+    const drop = {
+      event_type: 'loot_dropped',
+      code: 'encounter.loot.dropped',
+      visibility: 'player',
+      item_ids: ['magic-item-0001', 'valuable-0001', 'valuable-0002', 'valuable-0003', 'valuable-0004'],
+      coins_gp_value: 0,
+    } as never;
+    expect(describeEvent(drop, emptyContext()).text).toBe(
+      'The fallen leave behind a magic item and 4 gems or jewels.',
+    );
+    const named = extendContextWithNames(emptyContext(), { 'valuable-0001': 'ruby' });
+    expect(describeEvent(drop, named).text).toBe(
+      'The fallen leave behind a magic item, a ruby, and 3 gems or jewels.',
+    );
+  });
+
+  it('says a fizzled attack in plain words, by the size of the group', () => {
+    // Reported: "Mira finds nothing left to strike in the ink-stained clerks" for a group of one.
+    const fizzle = (groupId: string) =>
+      ({
+        event_type: 'declaration_fizzled',
+        code: 'battle.melee.fizzled',
+        visibility: 'player',
+        actor_id: 'character-0002',
+        group_id: groupId,
+        reason: 'battle.declaration.no_target',
+      }) as never;
+    const ctx = extendContextWithEntryNames(emptyContext(), {
+      ...loft,
+      groups: {
+        ...loft.groups,
+        'group-0001': { ...loft.groups['group-0001'], count: 0 },
+        'group-0003': { label: 'ink-stained clerk', label_plural: 'ink-stained clerks', count: 0, size: 1 },
+        'group-0004': { label: 'bandit', label_plural: 'bandits', count: 0, size: 3 },
+      },
+    });
+    expect(describeEvent(fizzle('group-0003'), ctx).text).toBe(
+      'Mira finds nothing left of the ink-stained clerk to strike and makes no attack.',
+    );
+    expect(describeEvent(fizzle('group-0004'), ctx).text).toBe(
+      'Mira finds nothing left of the bandits to strike and makes no attack.',
+    );
+    expect(describeEvent(fizzle('group-0001'), ctx).text).toBe(
+      'Mag Corrie is already down, so Mira makes no attack.',
+    );
+  });
+
+  it('merges identical reaction rolls of several groups', () => {
+    // Reported: "Reaction roll: the monsters are uncertain." twice.
+    const roll = (result: string, value: number) => ({
+      event_type: 'reaction_rolled',
+      code: 'encounter.reaction.rolled',
+      visibility: 'referee',
+      roll: value,
+      modifier: 0,
+      total: value,
+      result,
+      bands: [],
+    });
+    const same = describeEvents([roll('uncertain', 7), roll('uncertain', 8)] as never, emptyContext());
+    expect(same.map((line) => line.text)).toEqual([
+      'Reaction rolls for 2 groups: the monsters are uncertain.',
+    ]);
+    expect(same[0]?.detail).toBe('Rolled 7 +0 = 7 on 2d6. Rolled 8 +0 = 8 on 2d6.');
+    const different = describeEvents([roll('uncertain', 7), roll('hostile', 4)] as never, emptyContext());
+    expect(different).toHaveLength(2);
+  });
+});
+
+describe('every template that names a group, against each kind of label and count', () => {
+  const kinds = [
+    { label: 'goblin', plural: 'goblins' },
+    { label: 'Gashnak One-Ear', plural: 'Gashnak One-Ears' },
+    { label: "Mag's bodyguard", plural: "Mag's bodyguards" },
+  ];
+  const events = (groupId: string) => [
+    { event_type: 'monster_fled', code: 'battle.side.fled', group_id: groupId },
+    { event_type: 'group_moved', code: 'battle.group.moved', group_id: groupId, distance_feet: 5 },
+    {
+      event_type: 'member_moved',
+      code: 'battle.member.moved',
+      character_id: 'character-0001',
+      group_id: groupId,
+      move: 'close',
+      distance_feet: 5,
+    },
+    {
+      event_type: 'morale_checked',
+      code: 'combat.morale.broke',
+      subject: groupId,
+      score: 7,
+      roll: 9,
+      modifier: 0,
+      held: false,
+    },
+    {
+      event_type: 'declaration_fizzled',
+      code: 'battle.melee.fizzled',
+      actor_id: 'character-0001',
+      group_id: groupId,
+      reason: 'battle.declaration.not_in_front_rank',
+    },
+    {
+      event_type: 'attack_rolled',
+      code: 'combat.attack.hit',
+      attacker_id: 'monster-0001',
+      defender_id: 'character-0001',
+      attack_name: 'weapon',
+      roll: 15,
+      modifier: 0,
+      total: 15,
+      required: 12,
+      defender_ac: 5,
+      natural: null,
+      back_stab: false,
+    },
+  ];
+
+  for (const kind of kinds) {
+    for (const count of [1, 2, 5]) {
+      it(`reads "${kind.label}" with ${count} alive`, () => {
+        const ctx = extendContextWithEntryNames(emptyContext(), {
+          members: { 'character-0001': 'Osric' },
+          groups: { 'group-0001': { label: kind.label, label_plural: kind.plural, count, size: count } },
+          monsters: { 'monster-0001': { label: kind.label, label_plural: kind.plural } },
+        });
+        const text = events('group-0001')
+          .map((event) => describeEvent({ visibility: 'player', ...event } as never, ctx).text)
+          .join(' ');
+        const proper = /^[A-Z]/.test(kind.label);
+        if (proper) {
+          // A proper name takes no article. With one alive it takes no plural either.
+          expect(text).not.toMatch(new RegExp(`\\b(a|an|the) ${kind.label}`, 'i'));
+          if (count === 1) expect(text).not.toContain(kind.plural);
+        } else if (count === 1) {
+          expect(text).toContain('the goblin ');
+          expect(text).not.toContain('goblins');
+        } else {
+          expect(text).toContain('the goblins');
+        }
+        expect(text).not.toMatch(/\ba [A-Z]/);
+      });
+    }
+  }
 });

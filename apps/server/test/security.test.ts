@@ -175,6 +175,9 @@ describe('authorization across tables, roles, and seats', () => {
       () => c.getNotes(tableId, 'referee'),
       () => c.updateNotes(tableId, 'party', 'x', 0),
       () => c.generate(tableId, 'monsters', { monster_id: 'goblin' }),
+      () => c.listRejoinRequests(tableId),
+      () => c.approveRejoin(tableId, 'rjn_unknown'),
+      () => c.declineRejoin(tableId, 'rjn_unknown'),
     ];
     for (const call of calls) {
       await expect(call()).rejects.toSatisfy((error) => isProblem(error, 'not_found'));

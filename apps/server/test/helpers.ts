@@ -63,6 +63,8 @@ export async function startServer(
       userWrites: generous,
       userPosts: generous,
       characterChecks: generous,
+      rejoin: generous,
+      rejoinPolls: generous,
       ...overrides.rateLimits,
     },
     quotas: { ...base.quotas, ...overrides.quotas },

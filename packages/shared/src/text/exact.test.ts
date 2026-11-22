@@ -832,7 +832,7 @@ describe('humanizeMessage', () => {
 describe('contexts', () => {
   it('reads members, groups, magic item displays, valuables, and the town from a player view', () => {
     expect(ctx.members['character-0003']).toEqual({ name: 'Wren', classId: 'thief', level: 1 });
-    expect(ctx.groups['group-0001']).toEqual({ label: 'goblin', labelPlural: 'goblins', count: 3 });
+    expect(ctx.groups['group-0001']).toEqual({ label: 'goblin', labelPlural: 'goblins', count: 3, size: 3 });
     expect(ctx.items['magic-item-0001']).toBe('potion');
     expect(ctx.items['valuable-0001']).toBe('ruby');
     expect(ctx.townName).toBe('Threshold');

@@ -88,6 +88,7 @@ export async function buildSnapshot(
         referee: role === 'referee' ? readNotes(ctx, tableId, 'referee') : null,
       },
       server_time: now(),
+      ...(role === 'referee' ? { rejoin_requests: ctx.rejoin.pending(tableId) } : {}),
     };
   });
 }
@@ -182,6 +183,7 @@ export function registerWebSocket(app: FastifyInstance, ctx: Context): void {
       }
       user = found;
       connection = ctx.hub.add(socket, tableId, found.id);
+      ctx.rejoin.memberOnline(tableId, found.id);
       await deliverSnapshot(connection, found, feedAfter);
     };
 

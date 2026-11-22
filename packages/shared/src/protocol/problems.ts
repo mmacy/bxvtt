@@ -53,6 +53,17 @@ export const PROBLEM_CODES = {
   session_busy: 409,
   /** 403 (from bxapi): an adventure that comes with bxapi can't be deleted. */
   adventure_read_only: 403,
+  /** 409: the member is online now, so nobody needs to rejoin as them. The request, if any, has ended. */
+  rejoin_member_online: 409,
+  /** 409: a rejoin request from this address, or for this member, is already pending. Wait for it to end. */
+  rejoin_pending: 409,
+  /** 409: the rejoin request isn't pending anymore: it was decided, it expired, or it was cancelled. */
+  rejoin_not_pending: 409,
+  /**
+   * 409: no referee could approve the request: the member is the table's only referee, and a referee can't approve
+   * their own request. The host keeps their sign-in by opening the server at `http://127.0.0.1:<port>`.
+   */
+  rejoin_no_approver: 409,
   /** 413: the request body or WebSocket message is too large. */
   content_too_large: 413,
   /** 415: the request body isn't JSON. */

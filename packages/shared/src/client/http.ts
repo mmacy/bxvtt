@@ -39,6 +39,10 @@ import type {
   Problem,
   ProblemCode,
   RefereeState,
+  RejoinLookup,
+  RejoinRequestList,
+  RejoinStatus,
+  RejoinTicket,
   ResolveRoundResult,
   Role,
   SaveEntry,
@@ -300,6 +304,95 @@ export class BxvttClient {
    */
   removeMember(tableId: string, userId: string): Promise<TableDetail> {
     return this.request('DELETE', `/api/tables/${enc(tableId)}/members/${enc(userId)}`);
+  }
+
+  // Rejoining a table.
+
+  /**
+   * Reads what a visitor needs to ask to rejoin a table: its name and its offline members. Needs no token. Counts
+   * as an invite code attempt.
+   *
+   * ```ts
+   * const { table_name, members } = await client.lookupRejoin(inviteCode);
+   * ```
+   *
+   * @param inviteCode - The table's invite code.
+   * @throws BxvttProblemError `invite_invalid` for a wrong code, `rate_limited` after too many attempts.
+   */
+  lookupRejoin(inviteCode: string): Promise<RejoinLookup> {
+    return this.request('POST', '/api/rejoin/lookup', { body: { invite_code: inviteCode } });
+  }
+
+  /**
+   * Asks to rejoin a table as one of its offline members. Needs no token. The table's referees hear about it, and
+   * one of them approves or declines. Keep the ticket's `secret` and poll {@link BxvttClient.rejoinStatus}.
+   *
+   * ```ts
+   * const ticket = await client.requestRejoin(inviteCode, member.user_id);
+   * ```
+   *
+   * @param inviteCode - The table's invite code.
+   * @param userId - The member to rejoin as, from {@link BxvttClient.lookupRejoin}.
+   * @throws BxvttProblemError `rejoin_member_online`, `rejoin_pending`, `rejoin_no_approver`, `invite_invalid`,
+   *   `not_found` for a user who isn't a member, or `rate_limited`.
+   */
+  requestRejoin(inviteCode: string, userId: string): Promise<RejoinTicket> {
+    return this.request('POST', '/api/rejoin', { body: { invite_code: inviteCode, user_id: userId } });
+  }
+
+  /**
+   * Reads where a rejoin request stands. Needs no token. Call it every few seconds while the status is
+   * `pending`. On `approved`, the answer carries the member's new token once, and this client stores it, so its
+   * next requests act as that member.
+   *
+   * ```ts
+   * const status = await client.rejoinStatus(ticket.request_id, ticket.secret);
+   * if (status.status === 'approved') saveToken(status.token);
+   * ```
+   *
+   * @param requestId - The ticket's `request_id`.
+   * @param secret - The ticket's `secret`.
+   * @throws BxvttProblemError `not_found` for an unknown request or a wrong secret.
+   */
+  async rejoinStatus(requestId: string, secret: string): Promise<RejoinStatus> {
+    const status = await this.request<RejoinStatus>('POST', `/api/rejoin/${enc(requestId)}/status`, {
+      body: { secret },
+    });
+    if (status.token !== null) this.token = status.token;
+    return status;
+  }
+
+  /**
+   * Lists the table's pending rejoin requests. Referee only. The `rejoin_requests` WebSocket message carries the
+   * same list after each change.
+   *
+   * @param tableId - The table ID.
+   */
+  listRejoinRequests(tableId: string): Promise<RejoinRequestList> {
+    return this.request('GET', `/api/tables/${enc(tableId)}/rejoin-requests`);
+  }
+
+  /**
+   * Approves a rejoin request: the member gets a new token, which the visitor receives, and the old token stops
+   * working. Referee only, and never for a request to rejoin as yourself.
+   *
+   * @param tableId - The table ID.
+   * @param requestId - The request ID.
+   * @throws BxvttProblemError `rejoin_not_pending`, `rejoin_member_online`, `forbidden`, or `referee_required`.
+   */
+  approveRejoin(tableId: string, requestId: string): Promise<RejoinRequestList> {
+    return this.request('POST', `/api/tables/${enc(tableId)}/rejoin-requests/${enc(requestId)}/approve`);
+  }
+
+  /**
+   * Declines a rejoin request. Referee only.
+   *
+   * @param tableId - The table ID.
+   * @param requestId - The request ID.
+   * @throws BxvttProblemError `rejoin_not_pending`, `forbidden`, or `referee_required`.
+   */
+  declineRejoin(tableId: string, requestId: string): Promise<RejoinRequestList> {
+    return this.request('POST', `/api/tables/${enc(tableId)}/rejoin-requests/${enc(requestId)}/decline`);
   }
 
   // Characters.

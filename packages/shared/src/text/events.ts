@@ -15,6 +15,9 @@ import {
   entityName,
   extendContextWithEntryNames,
   extendContextWithEvents,
+  flagName,
+  flagValueText,
+  groupIsSingle,
   groupName,
   isProperLabel,
   idKind,
@@ -829,14 +832,18 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
       const party = isParty(event.actor_id, ctx);
       if (event.code === 'battle.melee.fizzled') {
         const group = event.group_id ? groupName(event.group_id, ctx) : 'the group';
-        const why =
+        const known = event.group_id ? ctx.groups[event.group_id] : undefined;
+        const named = known !== undefined && isProperLabel(known.label) && groupIsSingle(known) !== false;
+        const text =
           event.reason === 'battle.declaration.no_target'
-            ? `finds nothing left to strike in ${group}`
+            ? named
+              ? `${known.label} is already down, so ${actor} makes no attack.`
+              : `${actor} finds nothing left of ${group} to strike and makes no attack.`
             : event.reason === 'battle.declaration.not_in_front_rank'
-              ? `can't get into the front rank against ${group}`
-              : `can't reach ${group}`;
+              ? `${actor} can't get into the front rank against ${group} and makes no attack.`
+              : `${actor} can't reach ${group} and makes no attack.`;
         return {
-          text: `${actor} ${why} and makes no attack.`,
+          text,
           detail,
           category: 'battle',
           tone: party ? 'bad' : 'good',
@@ -1675,13 +1682,20 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
         amount: event.cost_gp,
       };
     }
-    case 'flag_set':
+    case 'flag_set': {
+      const info = ctx.flags?.[event.key];
+      const uses = [
+        ...(info && info.setBy.length > 0 ? [`${capitalizeFirst(joinList(info.setBy))} also sets it.`] : []),
+        ...(info && info.readBy.length > 0 ? [`${capitalizeFirst(joinList(info.readBy))} reads it.`] : []),
+      ];
       return {
-        text: `The referee sets the flag ${event.key} to ${String(event.value)}.`,
+        text: `The referee sets ${flagName(event.key, ctx)} to ${flagValueText(event.value)}.`,
+        detail: uses.length > 0 ? uses.join(' ') : undefined,
         category: 'referee',
         tone: 'info',
         icon: 'flag',
       };
+    }
     case 'monsters_spawned': {
       const label = ctx.monsters[event.monster_ids[0] ?? '']?.label ?? templateLabel(event.template_id);
       const n = event.monster_ids.length;
@@ -1866,8 +1880,10 @@ function countA(n: number, noun: string): string {
 
 function groupIsPlural(groupId: string, ctx: TextContext): boolean {
   const known = ctx.groups[groupId];
-  if (known && isProperLabel(known.label) && (known.count === undefined || known.count <= 1)) return false;
-  return known ? known.count !== 1 : true;
+  if (!known) return true;
+  const one = groupIsSingle(known);
+  if (isProperLabel(known.label)) return one === false;
+  return one !== true;
 }
 
 /**
@@ -2065,6 +2081,30 @@ export function describeEvents(
       // Anything else that happens to a creature, such as healing, can change its hit points.
       for (const id of eventSubjects(event)) lastReport.delete(id);
     }
+    if (dropRedundant && event.event_type === 'reaction_rolled') {
+      // Each group rolls its own reaction, and osrlib's events don't say which group a roll is for. Rolls in a
+      // row with the same result read as one line.
+      let end = index + 1;
+      while (end < list.length) {
+        const next = list[end];
+        if (next?.event_type !== 'reaction_rolled' || next.result !== event.result) break;
+        end += 1;
+      }
+      if (end - index > 1) {
+        const rolls = list.slice(index, end);
+        const line = describeEvent(event, learned, messageOption(index));
+        lines.push({
+          ...line,
+          text: line.text.replace(/^Reaction roll: /, `Reaction rolls for ${end - index} groups: `),
+          detail: rolls
+            .map((roll) => describeEvent(roll, learned).detail)
+            .filter((detail): detail is string => detail !== undefined)
+            .join(' '),
+        });
+        index = end - 1;
+        continue;
+      }
+    }
     if (
       dropRedundant &&
       event.event_type === 'stance_changed' &&
@@ -2206,8 +2246,11 @@ export function describeGameEntry(
   });
   if (entry.command_type !== 'parley' || !entry.actor_id) return lines;
   const speaker = memberName(entry.actor_id, context);
-  const groups = Object.keys(context.groups);
-  const audience = groups.length === 1 ? groupName(groups[0], context) : 'the monsters';
+  const groups = Object.entries(context.groups)
+    .filter(([, group]) => group.count === undefined || group.count > 0)
+    .map(([groupId]) => groupId);
+  const audience =
+    groups.length === 0 ? 'the monsters' : joinList(groups.map((groupId) => groupName(groupId, context)));
   const lead = `${capitalizeFirst(speaker)} talks to ${audience}.`;
   const stance = lines.findIndex((line) => line.category === 'encounter' && /^The monsters /.test(line.text));
   if (stance < 0) {

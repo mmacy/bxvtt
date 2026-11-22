@@ -36,21 +36,35 @@ export function nameInSentence(name: string): string {
   return name.replace(/^the\s+/i, 'the ');
 }
 
+/** Words that end the head of a place name, such as the `of` in `Chapel of Saint Corvane`. */
+const PLACE_LINKS = new Set(['of', 'on', 'in', 'at', 'under', 'by', 'beyond', 'below', 'above', 'to']);
+
 /**
- * A place's name with its article, as it reads in the middle of a sentence after a word such as "enters":
- * `the guardroom`, `the priory on Corvane's Holm`, `the Drain Folk warren`. A name with a leading "The" follows
- * {@link nameInSentence}. A name written in sentence case, such as `Gatehouse stair`, is a common noun and
- * reads `the gatehouse stair`. A name with another capitalized word, such as `Drain Folk warren`, keeps its
- * capitals.
+ * A place's name as it reads in the middle of a sentence after a word such as "enters". The name's head is its
+ * words before a linking word such as "of" or "under". Three kinds of name:
+ *
+ * - **Its own article:** a leading "The" reads "the", as in {@link nameInSentence}: `The priory on Corvane's
+ *   Holm` gives `the priory on Corvane's Holm`, and `The Kingsway` gives `the Kingsway`.
+ * - **A proper name:** a head of two or more words whose last word is capitalized takes no article: `Crookback
+ *   Bridge`, `Hollin Ferry`.
+ * - **A common noun:** anything else takes "the". Its first word reads in lower case unless another word of the
+ *   head is capitalized: `Guardroom` gives `the guardroom`, `Chapel of Saint Corvane` gives `the chapel of Saint
+ *   Corvane`, `Captain's loft` gives `the captain's loft`, and `Drain Folk warren` gives `the Drain Folk warren`.
+ *
+ * A one-word proper name, such as a dungeon called `Blackmoor`, reads as a common noun, because nothing in the
+ * word tells the two apart. Write it with "The", or name it in two words.
  */
 export function placeInSentence(name: string): string {
   const trimmed = name.trim();
   if (/^the\s/i.test(trimmed)) return nameInSentence(trimmed);
-  const proper = trimmed
-    .split(/\s+/)
-    .slice(1)
-    .some((word) => /^\p{Lu}/u.test(word));
-  return `the ${proper ? trimmed : lowerFirst(trimmed)}`;
+  const words = trimmed.split(/\s+/);
+  const link = words.findIndex((word, index) => index > 0 && PLACE_LINKS.has(word.toLowerCase()));
+  const head = link < 0 ? words : words.slice(0, link);
+  const capital = (word: string) => /^\p{Lu}/u.test(word);
+  const last = head[head.length - 1] ?? '';
+  if (head.length >= 2 && capital(last)) return trimmed;
+  const otherCapitals = head.slice(1).some(capital);
+  return `the ${otherCapitals ? trimmed : lowerFirst(trimmed)}`;
 }
 
 /** Turn an ID or enum value such as `magic_user` or `jade-idol` into plain words such as `magic user`. */
