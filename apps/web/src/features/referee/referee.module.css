@@ -1,0 +1,225 @@
+/* Shared styles for the referee tools: forms, outcomes, and the small pieces every section uses. */
+
+.muted {
+  color: var(--color-text-subtle);
+  font-size: var(--text-sm);
+}
+
+.secretMark {
+  color: var(--color-referee);
+  font-size: var(--text-xs);
+}
+
+/* Forms ------------------------------------------------------------------------------------------------- */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.pickRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.fieldset {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  border: var(--border-hair) solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.legend {
+  padding: 0 var(--space-1);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.required {
+  margin-left: var(--space-0-5);
+  color: var(--color-danger);
+}
+
+.groupActions {
+  position: absolute;
+  top: calc(-1 * var(--space-3));
+  right: var(--space-2);
+  background: var(--color-surface-1);
+}
+
+.groupHint {
+  margin: 0;
+  color: var(--color-text-subtle);
+  font-size: var(--text-sm);
+}
+
+.fieldError,
+.formError {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+}
+
+.addOptional {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.optionalGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.triState {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.triLabel {
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.union {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.keyGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--space-24), 1fr));
+  gap: var(--space-2);
+}
+
+.arrayList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.arrayItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.arrayBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.inlineRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.inlineCell {
+  flex: 1 1 var(--space-24);
+  min-width: 0;
+}
+
+.coinRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(calc(var(--space-24) + var(--space-6)), 1fr));
+  gap: var(--space-2);
+}
+
+.coinField {
+  min-width: 0;
+}
+
+.code {
+  font-family: var(--font-numeric);
+  font-size: var(--text-sm);
+}
+
+.suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Outcomes ---------------------------------------------------------------------------------------------- */
+
+.confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-success-subtle);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  animation: settle var(--duration-base) var(--ease-out);
+}
+
+.confirm p {
+  margin: 0;
+}
+
+.confirmIcon {
+  flex: none;
+  margin-top: var(--space-px);
+  color: var(--color-success);
+}
+
+.confirmBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+@keyframes settle {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-1 * var(--space-0-5)));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confirm {
+    animation: none;
+  }
+}

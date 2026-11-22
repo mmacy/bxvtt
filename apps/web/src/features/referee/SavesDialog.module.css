@@ -1,0 +1,186 @@
+/* The saves dialog: a form to save now, the autosave line, and the timeline of saves. */
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.create {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.create > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.create > button {
+  margin-top: calc(var(--text-sm) * var(--leading-normal) + var(--space-1-5));
+}
+
+.autosave {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.autosaveIcon {
+  flex: none;
+  margin-top: var(--space-0-5);
+}
+
+.autosaveText {
+  flex: 1;
+  margin: 0;
+  line-height: var(--leading-normal);
+}
+
+.listHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.count {
+  color: var(--color-text-subtle);
+  font-size: var(--text-sm);
+}
+
+.timeline {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.entry {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--control-sm) minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-3);
+  padding: var(--space-2-5) 0;
+}
+
+/* The line that joins the markers. */
+.entry::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--control-sm) / 2);
+  border-left: var(--border-hair) solid var(--color-border);
+  content: '';
+}
+
+.entry:first-child::before {
+  top: 50%;
+}
+
+.entry:last-child::before {
+  bottom: 50%;
+}
+
+.marker {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--control-sm);
+  height: var(--control-sm);
+  border: var(--border-hair) solid var(--color-border-accent);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-2);
+  color: var(--color-accent);
+}
+
+.entry[data-autosave] .marker {
+  border-color: var(--color-border);
+  background: var(--color-surface-1);
+  color: var(--color-text-subtle);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.titleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1-5);
+}
+
+.title {
+  overflow-wrap: anywhere;
+  color: var(--color-text-strong);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+
+.entry[data-autosave] .title {
+  color: var(--color-text);
+  font-weight: var(--weight-medium);
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1-5);
+  color: var(--color-text-subtle);
+  font-size: var(--text-sm);
+}
+
+.clock {
+  color: var(--color-text);
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
+}
+
+.sep {
+  color: var(--color-text-disabled);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.renameForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1-5);
+}
+
+.renameForm > :first-child {
+  flex: 1 1 var(--space-24);
+}
+
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  color: var(--color-text);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+}
+
+.confirm p {
+  margin: 0;
+}
