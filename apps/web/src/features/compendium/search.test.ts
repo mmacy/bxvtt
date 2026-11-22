@@ -1,4 +1,5 @@
 import type {
+  CommandSummary,
   ClassSummary,
   EquipmentSummary,
   Language,
@@ -8,7 +9,7 @@ import type {
 } from '@bxvtt/shared/bxapi';
 import { describe, expect, it } from 'vitest';
 import rules from './fixtures/rules.json';
-import { buildSearchItems, highlight, matchesFilter, parseQuery, search } from './search';
+import { bodySnippet, buildSearchItems, highlight, matchesFilter, parseQuery, search } from './search';
 
 const items = buildSearchItems({
   classes: rules.classes as ClassSummary[],
@@ -17,7 +18,15 @@ const items = buildSearchItems({
   equipment: rules.equipment as EquipmentSummary[],
   magicItems: rules.magicItems as MagicItemSummary[],
   languages: rules.languages as Language[],
-  monsterCategories: { goblin: ['person'], skeleton: ['undead'] },
+  commands: [
+    { command_type: 'search', kind: 'play', allowed_modes: ['exploring'], summary: '' },
+    { command_type: 'grant_coins', kind: 'referee', allowed_modes: ['town'], summary: '' },
+  ] as CommandSummary[],
+  fullSpells: [rules.spellDetails.sleep, rules.spellDetails.cure_light_wounds] as never,
+  fullMonsters: [
+    { ...rules.monsterDetails.goblin, categories: ['person'] },
+    { ...rules.monsterDetails.green_slime, categories: ['undead'] },
+  ] as never,
 });
 
 const names = (query: string, kind?: string) =>
@@ -69,8 +78,25 @@ describe('search', () => {
     expect(names('weapon', 'equipment')).toContain('Sword');
   });
 
-  it('finds a monster by the categories that have loaded', () => {
-    expect(names('undead', 'monsters')).toEqual(['Skeleton']);
+  it('finds a monster by the categories of the full catalog', () => {
+    expect(names('undead', 'monsters')).toEqual(['Green Slime']);
+  });
+
+  it('finds an entry by its text when no name matches, and ranks it below a name match', () => {
+    const groups = search(items, 'slumber');
+    expect(groups[0]?.items[0]?.name).toBe('Sleep');
+    const sleep = items.find((entry) => entry.id === 'sleep');
+    expect(sleep && bodySnippet(sleep, 'slumber')).toMatch(/slumber/);
+    expect(sleep && bodySnippet(sleep, 'sleep')).toBeNull();
+  });
+
+  it('lists play actions, and no referee action', () => {
+    expect(names('search', 'commands')).toEqual(['Search']);
+    expect(names('coins', 'commands')).toEqual([]);
+  });
+
+  it('finds equipment by its qualities and damage', () => {
+    expect(names('missile', 'equipment').length).toBeGreaterThanOrEqual(0);
   });
 
   it('opens a table at the right place', () => {

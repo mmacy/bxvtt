@@ -1,6 +1,7 @@
 import { Button, Card, Icon, Kbd } from '@/ui';
 import type { CompendiumCatalogs } from './catalogs';
 import { SECTIONS, type SectionId } from './model';
+import { isPlayCommand } from './search';
 import { useNavigation } from './navigation';
 import { RecentList } from './SearchResults';
 import type { Row } from './rows';
@@ -24,6 +25,8 @@ function countFor(section: SectionId, catalogs: CompendiumCatalogs): number | nu
       return catalogs.languages.data?.length ?? null;
     case 'tables':
       return 4;
+    case 'commands':
+      return catalogs.commands.data?.filter(isPlayCommand).length ?? null;
   }
 }
 

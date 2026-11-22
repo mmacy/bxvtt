@@ -1,6 +1,7 @@
-import { useEquipmentCatalog, useMonsterCatalog, useRulesEntry, type MagicItemDetail } from '@/app';
+import { useEquipmentCatalog, useMonsterCatalog, type MagicItemDetail } from '@/app';
 import { classLabel, formatDice, joinList, signed } from '@bxvtt/shared/text';
 import { Badge } from '@/ui';
+import { useEntry } from '../catalogs';
 import { EntryFrame } from '../Frame';
 import { Block, EntryLink, EntryPage, Inline, Prose, Stat } from '../Parts';
 import { TreasureLines } from '../tables/TreasureTables';
@@ -35,7 +36,7 @@ function UsableBy({ usable }: { usable: MagicItemDetail['usable_by'] }) {
 
 /** A magic item with its bonuses, restrictions, and the full text of its page. */
 export function MagicItemEntry({ id }: { id: string }) {
-  const result = useRulesEntry<MagicItemDetail>(`magic-items/${id}`);
+  const result = useEntry('magic-items', id);
   const monsters = useMonsterCatalog();
   const equipment = useEquipmentCatalog();
   const equipmentName = (baseId: string) =>

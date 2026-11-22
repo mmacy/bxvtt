@@ -67,12 +67,13 @@ export function countText(shown: number, total: number, noun: string): string {
 }
 
 /** Tells the reader that a filter matched nothing, and how to widen it. */
-export function NoMatches({ onClear }: { onClear: () => void }) {
+export function NoMatches({ onClear, message }: { onClear: () => void; message?: string }) {
   return (
     <EmptyState
       icon="search"
       size="compact"
       title="Nothing matches those filters"
+      description={message}
       action={
         <Button size="sm" variant="secondary" onClick={onClear}>
           Clear filters

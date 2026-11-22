@@ -1,7 +1,8 @@
-import { useEquipmentCatalog, useRulesEntry, type ClassDetail } from '@/app';
+import { useEquipmentCatalog } from '@/app';
 import type { ClassDefinition } from '@bxvtt/shared/bxapi';
 import { abilityLabel, formatInteger, languageLabel, ordinal, saveLabel } from '@bxvtt/shared/text';
 import { Button, Icon, classIconNames } from '@/ui';
+import { useEntry } from '../catalogs';
 import { EntryFrame } from '../Frame';
 import { useIndexState } from '../indexState';
 import { Block, EntryLink, EntryPage, Inline, Nothing, Prose, ScrollTable, Stat } from '../Parts';
@@ -224,7 +225,7 @@ function experienceTable(definition: ClassDefinition) {
 
 /** A class with its requirements, abilities, and level progression. */
 export function ClassEntry({ id }: { id: string }) {
-  const result = useRulesEntry<ClassDetail>(`classes/${id}`);
+  const result = useEntry('classes', id);
   const equipment = useEquipmentCatalog();
   const { go } = useNavigation();
   const setIndex = useIndexState((s) => s.set);

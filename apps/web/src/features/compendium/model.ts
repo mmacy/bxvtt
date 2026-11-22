@@ -1,11 +1,11 @@
 import type { CompendiumEntry } from '@/app';
 import type { IconName } from '@/ui';
 
-/** The kinds of entry the compendium shows. `commands` has no section of its own, only entries. */
+/** The kinds of entry the compendium shows. */
 export type EntryKind = CompendiumEntry['kind'];
 
 /** The sections of the rulebook, in the order of the tab strip. */
-export type SectionId = Exclude<EntryKind, 'commands'>;
+export type SectionId = EntryKind;
 
 export interface SectionInfo {
   id: SectionId;
@@ -66,6 +66,13 @@ export const SECTIONS: readonly SectionInfo[] = [
     icon: 'scroll',
     blurb: 'Abilities, combat, encounters, and treasure.',
   },
+  {
+    id: 'commands',
+    label: 'Actions',
+    singular: 'Action',
+    icon: 'hand',
+    blurb: 'What the party can do, and when.',
+  },
 ];
 
 export function sectionInfo(id: SectionId): SectionInfo {
@@ -123,7 +130,6 @@ export function normalizeEntryId(kind: EntryKind, id: string): string {
  * An entry without an ID opens its section.
  */
 export function routeFromEntry(entry: CompendiumEntry): Route {
-  if (entry.kind === 'commands') return entry.id ? { page: 'entry', kind: 'commands', id: entry.id } : HOME;
   if (!entry.id) return { page: 'section', section: entry.kind };
   if (entry.kind === 'tables') {
     const [id = '', anchor] = entry.id.split('/');
@@ -157,7 +163,7 @@ export function routeKey(route: Route): string {
 /** The section tab a route belongs under, or `null` on the home page. */
 export function sectionOfRoute(route: Route): SectionId | null {
   if (route.page === 'section') return route.section;
-  if (route.page === 'entry' && route.kind !== 'commands') return route.kind;
+  if (route.page === 'entry') return route.kind;
   return null;
 }
 

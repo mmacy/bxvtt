@@ -8,6 +8,7 @@ import {
   useRef,
   useState,
   type KeyboardEvent,
+  type RefObject,
 } from 'react';
 import { useBookStore } from './bookStore';
 import { useCatalogs } from './catalogs';
@@ -37,6 +38,7 @@ import { buildRows, recentRows, type Row } from './rows';
 import { LISTBOX_ID, SearchResults, optionId, type CatalogStatus } from './SearchResults';
 import { search, type ResultKind } from './search';
 import { ClassesSection } from './sections/ClassesSection';
+import { CommandsSection } from './sections/CommandsSection';
 import { EquipmentSection } from './sections/EquipmentSection';
 import { LanguagesSection } from './sections/LanguagesSection';
 import { MagicItemsSection } from './sections/MagicItemsSection';
@@ -58,6 +60,7 @@ export interface CompendiumProps {
  * the cached catalog hooks. The shell renders it, and any feature opens it with `useTableUi().openCompendium()`.
  */
 export function Compendium({ open, onOpenChange, entry }: CompendiumProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
   const [idle, setIdle] = useState(false);
   // Load the catalogs shortly after the table opens, so the first search is instant.
   useEffect(() => {
@@ -74,9 +77,11 @@ export function Compendium({ open, onOpenChange, entry }: CompendiumProps) {
         hideTitle
         flush
         width="min(900px, 88vw)"
+        dimmed={false}
+        initialFocus={inputRef}
         className={styles.drawer}
       >
-        <Book entry={entry} />
+        <Book entry={entry} inputRef={inputRef} />
       </Drawer>
     </>
   );
@@ -84,7 +89,7 @@ export function Compendium({ open, onOpenChange, entry }: CompendiumProps) {
 
 /** Starts the catalog requests. It renders nothing. */
 function Prefetch() {
-  useCatalogs(false);
+  useCatalogs(true);
   return null;
 }
 
@@ -110,6 +115,8 @@ function PageView({ route }: { route: Route }) {
           return <LanguagesSection />;
         case 'tables':
           return <TablesSection />;
+        case 'commands':
+          return <CommandsSection />;
       }
       return null;
     case 'entry':
@@ -149,7 +156,13 @@ function statusOf(
   return { label, loading: catalog.loading, failed: catalog.error !== null, retry: catalog.retry };
 }
 
-function Book({ entry }: { entry: CompendiumEntry | null }) {
+function Book({
+  entry,
+  inputRef,
+}: {
+  entry: CompendiumEntry | null;
+  inputRef: RefObject<HTMLInputElement | null>;
+}) {
   const nav = useNavigationState(entry ? routeFromEntry(entry) : HOME);
   const { route, go, back, forward } = nav;
   const catalogs = useCatalogs(true);
@@ -163,16 +176,14 @@ function Book({ entry }: { entry: CompendiumEntry | null }) {
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const [expanded, setExpanded] = useState<ReadonlySet<ResultKind>>(new Set());
-  const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const shownKey = useRef<string | null>(null);
   const positions = useRef(new Map<string, number>());
   const currentKey = routeKey(route);
 
-  // A fresh book starts with unfiltered indexes and the search box ready.
+  // A fresh book starts with unfiltered indexes.
   useEffect(() => {
     resetIndex();
-    const timer = setTimeout(() => inputRef.current?.focus(), 30);
-    return () => clearTimeout(timer);
   }, [resetIndex]);
 
   // Opening the book at another entry while it is open turns to that page.
@@ -199,15 +210,19 @@ function Book({ entry }: { entry: CompendiumEntry | null }) {
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  }, [query]);
+  }, [query, inputRef]);
 
   // Each page keeps its scroll position, and a new page starts at the top.
   useLayoutEffect(() => {
     const element = scrollRef.current;
     if (!element) return;
     element.scrollTop = positions.current.get(currentKey) ?? 0;
-    if (document.activeElement !== inputRef.current) element.focus({ preventScroll: true });
-  }, [currentKey]);
+    // The first page leaves focus where the drawer put it. A later page takes focus, so a link that went away
+    // doesn't leave it on the page behind.
+    const turned = shownKey.current !== null && shownKey.current !== currentKey;
+    shownKey.current = currentKey;
+    if (turned && document.activeElement !== inputRef.current) element.focus({ preventScroll: true });
+  }, [currentKey, inputRef]);
 
   const statuses: CatalogStatus[] = [
     statusOf('classes', catalogs.classes),
@@ -292,6 +307,13 @@ function Book({ entry }: { entry: CompendiumEntry | null }) {
   const tabValue = searching ? 'search' : (section ?? 'home');
   const expandedList = rows.length > 0;
 
+  // A narrow drawer scrolls its tab strip, so bring the current section's tab into view.
+  useEffect(() => {
+    document
+      .querySelector('[role="tab"][data-state="active"]')
+      ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [tabValue]);
+
   return (
     <NavigationProvider value={nav}>
       <div className={styles.book} onKeyDown={onBookKeyDown}>
@@ -319,7 +341,7 @@ function Book({ entry }: { entry: CompendiumEntry | null }) {
             size="lg"
             className={styles.searchInput}
             wrapperClassName={styles.search}
-            placeholder="Search the rules: sleep, goblin, 3rd level, plate mail"
+            placeholder="Search spells, monsters, items"
             aria-label="Search the rules"
             role="combobox"
             aria-expanded={expandedList}

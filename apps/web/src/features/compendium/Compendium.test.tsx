@@ -5,7 +5,7 @@ import type { CompendiumEntry } from '@/app';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { createFakeApi, renderWithTable, type FakeApi } from '@/app/testing/renderWithTable';
 import { resetBookStore } from './bookStore';
-import { resetCategoryStore } from './catalogs';
+import { resetFullCatalogs } from './catalogs';
 import { Compendium } from './Compendium';
 import rules from './fixtures/rules.json';
 import { useIndexState } from './indexState';
@@ -21,6 +21,19 @@ const lists: Lists = {
   'magic-items': rules.magicItems,
   languages: rules.languages,
   tables: rules.tableNames,
+  commands: [
+    { command_type: 'search', kind: 'play', allowed_modes: ['exploring'], summary: 'Search.' },
+    { command_type: 'enter_dungeon', kind: 'play', allowed_modes: ['town'], summary: 'Enter.' },
+    { command_type: 'move_party', kind: 'play', allowed_modes: ['exploring'], summary: 'Move.' },
+    { command_type: 'grant_coins', kind: 'referee', allowed_modes: ['town', 'exploring'], summary: 'Grant.' },
+  ],
+};
+const fullCatalogs: Record<string, unknown[]> = {
+  classes: Object.values(rules.classDetails),
+  spells: Object.values(rules.spellDetails),
+  monsters: Object.values(rules.monsterDetails),
+  equipment: Object.values(rules.equipmentDetails),
+  'magic-items': Object.values(rules.magicItemDetails),
 };
 const entries: Entries = {
   classes: rules.classDetails,
@@ -33,6 +46,10 @@ const entries: Entries = {
 
 /** Answers the rules routes from the captured catalogs, like the server does. */
 function stubRules(api: FakeApi, overrides: Record<string, () => unknown> = {}) {
+  api.fullCatalog.mockImplementation(((name: string) => {
+    const items = fullCatalogs[name] ?? [];
+    return Promise.resolve({ catalog: name, total: items.length, items });
+  }) as never);
   api.rules.mockImplementation((path: string, query?: Record<string, string | number | undefined>) => {
     const override = overrides[path];
     if (override) return Promise.resolve(override()) as never;
@@ -73,11 +90,9 @@ function setup(options: { role?: 'player' | 'referee'; entry?: CompendiumEntry |
 const search = () => screen.getByRole('combobox', { name: 'Search the rules' });
 
 beforeEach(() => {
-  // jsdom doesn't scroll.
-  Element.prototype.scrollIntoView = vi.fn();
   localStorage.clear();
   resetBookStore();
-  resetCategoryStore();
+  resetFullCatalogs();
   useIndexState.getState().reset();
 });
 
@@ -206,6 +221,32 @@ describe('Compendium pages', () => {
     expect(await screen.findByRole('heading', { name: rules.license.name })).toBeInTheDocument();
     const text = screen.getByLabelText('License text');
     expect(text.textContent).toBe(rules.license.text);
+  });
+});
+
+describe('Compendium actions', () => {
+  it('lists the party actions and hides the referee actions from a player', async () => {
+    const { user } = setup({ role: 'player' });
+    await user.click(screen.getByRole('tab', { name: 'Actions' }));
+    expect(await screen.findByRole('button', { name: 'Search' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Enter the dungeon' })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: 'Referee actions' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Grant coins')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('radio', { name: 'In town' }));
+    expect(screen.queryByRole('button', { name: 'Search' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Enter the dungeon' })).toBeInTheDocument();
+  });
+
+  it('lets a referee switch to the referee actions', async () => {
+    const { user } = setup({ role: 'referee' });
+    await user.click(screen.getByRole('tab', { name: 'Actions' }));
+    await user.click(await screen.findByRole('radio', { name: 'Referee actions' }));
+    expect(await screen.findByRole('button', { name: 'Grant coins' })).toBeInTheDocument();
+  });
+
+  it('opens an action by deep link', async () => {
+    setup({ entry: { kind: 'commands', id: 'search' } });
+    expect(await screen.findByRole('heading', { name: 'Search' })).toBeInTheDocument();
   });
 });
 

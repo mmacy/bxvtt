@@ -1,12 +1,12 @@
 /**
  * What the compendium remembers in this browser: the entries a person opened lately, and whether a player has
- * accepted the spoiler notice for magic items. Storage can fail in a private window, so the store keeps working
- * from memory when it does.
+ * accepted the spoiler notice for magic items.
  */
+import { scopedStorage } from '@/app';
 import { create } from 'zustand';
 import type { Route } from './model';
 
-const STORAGE_KEY = 'bxvtt.compendium';
+const storage = scopedStorage('compendium');
 const MAX_RECENTS = 12;
 
 export interface RecentEntry {
@@ -22,32 +22,24 @@ interface StoredBook {
 }
 
 function read(): StoredBook {
-  try {
-    const raw: unknown = JSON.parse(globalThis.localStorage?.getItem(STORAGE_KEY) ?? 'null');
-    if (typeof raw === 'object' && raw !== null) {
-      const record = raw as Partial<StoredBook>;
-      const recents = Array.isArray(record.recents)
-        ? record.recents.filter(
-            (entry): entry is RecentEntry =>
-              typeof entry === 'object' &&
-              entry !== null &&
-              (entry.kind === 'license' || (entry.kind === 'entry' && typeof entry.id === 'string')),
-          )
-        : [];
-      return { recents: recents.slice(0, MAX_RECENTS), spoilersAccepted: record.spoilersAccepted === true };
-    }
-  } catch {
-    // Unreadable storage means an empty book.
+  const raw = storage.read('book');
+  if (typeof raw === 'object' && raw !== null) {
+    const record = raw as Partial<StoredBook>;
+    const recents = Array.isArray(record.recents)
+      ? record.recents.filter(
+          (entry): entry is RecentEntry =>
+            typeof entry === 'object' &&
+            entry !== null &&
+            (entry.kind === 'license' || (entry.kind === 'entry' && typeof entry.id === 'string')),
+        )
+      : [];
+    return { recents: recents.slice(0, MAX_RECENTS), spoilersAccepted: record.spoilersAccepted === true };
   }
   return { recents: [], spoilersAccepted: false };
 }
 
 function write(book: StoredBook): void {
-  try {
-    globalThis.localStorage?.setItem(STORAGE_KEY, JSON.stringify(book));
-  } catch {
-    // The book lives in memory for this page.
-  }
+  storage.write('book', book);
 }
 
 interface BookState extends StoredBook {

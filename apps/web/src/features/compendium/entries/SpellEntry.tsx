@@ -1,8 +1,8 @@
-import { useMonsterCatalog, useRulesEntry, type SpellDetail } from '@/app';
+import { useMonsterCatalog, type SpellDetail } from '@/app';
 import type { SpellMode } from '@bxvtt/shared/bxapi';
 import { ordinal } from '@bxvtt/shared/text';
 import { Button } from '@/ui';
-import { useEntries } from '../catalogs';
+import { useEntry, useFullCatalog } from '../catalogs';
 import { EntryFrame } from '../Frame';
 import { useIndexState } from '../indexState';
 import { Block, EntryLink, EntryPage, Inline, Prose, Stat } from '../Parts';
@@ -11,9 +11,6 @@ import { spellListLabel } from '../search';
 import styles from '../book.module.css';
 import { proseLines, stripMarkup } from '../typeset';
 import { MonsterBody } from './MonsterEntry';
-import type { ClassDefinition } from '@bxvtt/shared/bxapi';
-
-const CLASS_IDS = ['cleric', 'dwarf', 'elf', 'fighter', 'halfling', 'magic_user', 'thief'];
 
 function Modes({ modes }: { modes: readonly SpellMode[] }) {
   return (
@@ -41,11 +38,9 @@ function bodyFor(spell: SpellDetail): { intro: string[]; modes: SpellMode[] } {
 
 /** A spell with its list and level, range, duration, usages, and reversed form. */
 export function SpellEntry({ id }: { id: string }) {
-  const result = useRulesEntry<SpellDetail>(`spells/${id}`);
+  const result = useEntry('spells', id);
   const monsters = useMonsterCatalog();
-  const classes = useEntries<ClassDefinition>(
-    result.data ? CLASS_IDS.map((classId) => `classes/${classId}`) : null,
-  );
+  const classes = useFullCatalog('classes');
   const { go } = useNavigation();
   const setIndex = useIndexState((s) => s.set);
 
@@ -54,7 +49,7 @@ export function SpellEntry({ id }: { id: string }) {
       {(spell) => {
         const body = bodyFor(spell);
         const reversed = spell.reversed_form;
-        const casters = Object.values(classes.data).filter((definition) =>
+        const casters = (classes.data ?? []).filter((definition) =>
           definition.abilities.some((ability) => ability.params['spell_list'] === spell.spell_list),
         );
         const listName = spellListLabel(spell.spell_list);

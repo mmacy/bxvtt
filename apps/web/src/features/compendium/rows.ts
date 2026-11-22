@@ -83,6 +83,8 @@ export function recentRows(
           nameNorm: '',
           words: [],
           tags: [],
+          bodyWords: [],
+          bodyText: '',
         },
       });
       continue;

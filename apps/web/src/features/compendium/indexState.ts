@@ -7,6 +7,7 @@ export interface IndexState {
   equipment: { type: string; query: string };
   magicItems: { category: string; query: string };
   languages: { query: string };
+  commands: { query: string; when: string; scope: string };
   set: (patch: Partial<Omit<IndexState, 'set' | 'reset'>>) => void;
   reset: () => void;
 }
@@ -17,6 +18,7 @@ const INITIAL = {
   equipment: { type: 'all', query: '' },
   magicItems: { category: 'all', query: '' },
   languages: { query: '' },
+  commands: { query: '', when: 'all', scope: 'play' },
 };
 
 export const useIndexState = create<IndexState>()((set) => ({

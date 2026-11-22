@@ -101,7 +101,7 @@ export function MonstersSection() {
   }, [monsters.data, filter, catalogs.monsterCategories]);
 
   const clear = () => set({ query: '', alignment: 'all', category: 'all', hitDice: 'all' });
-  const typesReady = !catalogs.categoriesLoading && categoryOptions.length > 0;
+  const typesReady = catalogs.fullMonsters !== null && categoryOptions.length > 0;
 
   const toolbar = (
     <>
@@ -142,7 +142,7 @@ export function MonstersSection() {
         aria-label="Kind of creature"
         value={filter.category}
         disabled={!typesReady}
-        placeholder={catalogs.categoriesLoading ? 'Loading kinds' : 'Any kind'}
+        placeholder={catalogs.fullMonsters === null ? 'Loading kinds' : 'Any kind'}
         onValueChange={(category) => set({ category })}
         options={[
           { value: 'all', label: 'Any kind' },
@@ -172,6 +172,7 @@ export function MonstersSection() {
               rowKey={(row) => row.id}
               defaultSort={{ key: 'name', direction: 'ascending' }}
               density="comfortable"
+              className={styles.monstersTable}
               onRowClick={(row) => go({ page: 'entry', kind: 'monsters', id: row.id })}
             />
           )

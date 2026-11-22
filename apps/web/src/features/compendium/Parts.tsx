@@ -1,4 +1,4 @@
-import { Link, Parchment, cx, type BadgeProps } from '@/ui';
+import { LinkButton, Parchment, cx, type BadgeProps } from '@/ui';
 import { Badge } from '@/ui';
 import { useEffect, useRef, type ReactNode } from 'react';
 import styles from './book.module.css';
@@ -24,16 +24,13 @@ export function EntryLink({
 }) {
   const { go } = useNavigation();
   return (
-    <Link asChild tone={tone}>
-      <button
-        type="button"
-        className={styles.entryLink}
-        title={title}
-        onClick={() => go({ page: 'entry', kind, id, ...(anchor ? { anchor } : {}) })}
-      >
-        {children}
-      </button>
-    </Link>
+    <LinkButton
+      tone={tone}
+      title={title}
+      onClick={() => go({ page: 'entry', kind, id, ...(anchor ? { anchor } : {}) })}
+    >
+      {children}
+    </LinkButton>
   );
 }
 
@@ -41,11 +38,9 @@ export function EntryLink({
 export function SectionLink({ section, children }: { section: SectionId; children?: ReactNode }) {
   const { go } = useNavigation();
   return (
-    <Link asChild tone="inline">
-      <button type="button" className={styles.entryLink} onClick={() => go({ page: 'section', section })}>
-        {children ?? sectionInfo(section).label}
-      </button>
-    </Link>
+    <LinkButton onClick={() => go({ page: 'section', section })}>
+      {children ?? sectionInfo(section).label}
+    </LinkButton>
   );
 }
 

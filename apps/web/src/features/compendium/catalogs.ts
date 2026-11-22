@@ -2,65 +2,73 @@ import {
   getApi,
   loadCatalog,
   useClassCatalog,
+  useCommandCatalog,
   useEquipmentCatalog,
   useLanguageCatalog,
   useMagicItemCatalog,
   useMonsterCatalog,
+  useRulesEntry,
   useSpellCatalog,
-  type MonsterDetail,
+  type CatalogResult,
 } from '@/app';
-import { useEffect, useMemo, useState } from 'react';
+import type { FullCatalogEntries, FullCatalogName } from '@bxvtt/shared/protocol';
+import { useEffect, useMemo } from 'react';
 import { create } from 'zustand';
 import { buildSearchItems, type SearchItem } from './search';
 
-interface CategoryStore {
-  categories: Record<string, readonly string[]>;
-  status: 'idle' | 'loading' | 'done';
+type FullItems = { [K in FullCatalogName]?: FullCatalogEntries[K][] };
+
+interface FullStore {
+  items: FullItems;
+  failed: Partial<Record<FullCatalogName, boolean>>;
 }
 
-const useCategoryStore = create<CategoryStore>()(() => ({ categories: {}, status: 'idle' }));
-
-const WORKERS = 6;
+const useFullStore = create<FullStore>()(() => ({ items: {}, failed: {} }));
 
 /**
- * Loads every monster's detail in the background, through the shared catalog cache, so each stat block opens
- * at once later and the monster filters can offer the categories that only the detail has.
+ * Loads one catalog whole, in one request. The server caches it, and so does `loadCatalog`. Every full entry is
+ * what the entry route returns, so a stat block or a class page needs no second request.
  */
-function loadMonsterCategories(ids: readonly string[]): void {
-  if (useCategoryStore.getState().status !== 'idle') return;
-  useCategoryStore.setState({ status: 'loading' });
-  const queue = [...ids];
-  let pending: Record<string, readonly string[]> = {};
-  let sinceFlush = 0;
-  const flush = () => {
-    if (sinceFlush === 0) return;
-    const batch = pending;
-    pending = {};
-    sinceFlush = 0;
-    useCategoryStore.setState((state) => ({ categories: { ...state.categories, ...batch } }));
-  };
-  const worker = async () => {
-    for (let id = queue.shift(); id !== undefined; id = queue.shift()) {
-      try {
-        const detail = await loadCatalog(`entry:monsters/${id}`, () =>
-          getApi().rules<MonsterDetail>(`monsters/${id}`),
-        );
-        pending[id] = detail.categories;
-        if (++sinceFlush >= 40) flush();
-      } catch {
-        // A monster that fails to load only lacks its categories.
-      }
-    }
-  };
-  void Promise.all(Array.from({ length: WORKERS }, worker)).then(() => {
-    flush();
-    useCategoryStore.setState({ status: 'done' });
-  });
+function ensureFull(name: FullCatalogName): void {
+  if (useFullStore.getState().items[name] !== undefined) return;
+  useFullStore.setState((state) => ({ failed: { ...state.failed, [name]: false } }));
+  loadCatalog(`full:${name}`, () => getApi().fullCatalog(name)).then(
+    (catalog) => useFullStore.setState((state) => ({ items: { ...state.items, [name]: catalog.items } })),
+    () => useFullStore.setState((state) => ({ failed: { ...state.failed, [name]: true } })),
+  );
 }
 
-/** Clears the monster categories. Tests call it between cases. */
-export function resetCategoryStore(): void {
-  useCategoryStore.setState({ categories: {}, status: 'idle' });
+/** Clears the full catalogs. Tests call it between cases. */
+export function resetFullCatalogs(): void {
+  useFullStore.setState({ items: {}, failed: {} });
+}
+
+/** A catalog's full entries, or `null` until they load. Pass `load: false` to read without starting a request. */
+export function useFullCatalog<K extends FullCatalogName>(
+  name: K,
+  load = true,
+): { data: FullCatalogEntries[K][] | null; failed: boolean; retry: () => void } {
+  const data = useFullStore((s) => s.items[name]) as FullCatalogEntries[K][] | undefined;
+  const failed = useFullStore((s) => s.failed[name] === true);
+  useEffect(() => {
+    if (load && data === undefined && !failed) ensureFull(name);
+  }, [load, data, failed, name]);
+  return { data: data ?? null, failed, retry: () => ensureFull(name) };
+}
+
+/**
+ * One entry of a catalog. It comes from the full catalog when that has loaded, and from a request for the one
+ * entry until then.
+ */
+export function useEntry<K extends FullCatalogName>(
+  catalog: K,
+  id: string,
+): CatalogResult<FullCatalogEntries[K]> {
+  const full = useFullStore((s) => s.items[catalog]) as FullCatalogEntries[K][] | undefined;
+  const hit = full?.find((entry) => (entry as { id: string }).id === id);
+  const fetched = useRulesEntry<FullCatalogEntries[K]>(hit === undefined ? `${catalog}/${id}` : null);
+  if (hit !== undefined) return { data: hit, error: null, loading: false, retry: () => {} };
+  return fetched;
 }
 
 export interface CompendiumCatalogs {
@@ -70,16 +78,18 @@ export interface CompendiumCatalogs {
   equipment: ReturnType<typeof useEquipmentCatalog>;
   magicItems: ReturnType<typeof useMagicItemCatalog>;
   languages: ReturnType<typeof useLanguageCatalog>;
-  /** Monster categories by ID, filling in as the details load. */
+  commands: ReturnType<typeof useCommandCatalog>;
+  fullMonsters: FullCatalogEntries['monsters'][] | null;
+  /** Monster categories by ID, once the full monster catalog has loaded. */
   monsterCategories: Record<string, readonly string[]>;
-  categoriesLoading: boolean;
   /** The search index over every catalog that has loaded. */
   items: SearchItem[];
 }
 
 /**
- * Every catalog, loaded once through the cached hooks, and the search index over them. The monster details
- * start loading in the background when `warm` is true.
+ * Every catalog, loaded once through the cached hooks, and the search index over them. The lists load at once.
+ * The full classes, equipment, monsters, and spells load too when `warm` is true, so search can read their text.
+ * Magic items stay out of the full load, so a player's search never reads what an item does.
  */
 export function useCatalogs(warm: boolean): CompendiumCatalogs {
   const classes = useClassCatalog();
@@ -88,29 +98,46 @@ export function useCatalogs(warm: boolean): CompendiumCatalogs {
   const equipment = useEquipmentCatalog();
   const magicItems = useMagicItemCatalog();
   const languages = useLanguageCatalog();
-  const categories = useCategoryStore((s) => s.categories);
-  const status = useCategoryStore((s) => s.status);
+  const commands = useCommandCatalog();
+  const fullClasses = useFullCatalog('classes', warm).data;
+  const fullSpells = useFullCatalog('spells', warm).data;
+  const fullMonsters = useFullCatalog('monsters', warm).data;
+  const fullEquipment = useFullCatalog('equipment', warm).data;
 
-  const monsterList = monsters.data;
-  useEffect(() => {
-    if (!warm || monsterList === null) return;
-    const ids = monsterList.map((m) => m.id);
-    const handle = setTimeout(() => loadMonsterCategories(ids), 600);
-    return () => clearTimeout(handle);
-  }, [warm, monsterList]);
+  const monsterCategories = useMemo(() => {
+    const byId: Record<string, readonly string[]> = {};
+    for (const monster of fullMonsters ?? []) byId[monster.id] = monster.categories;
+    return byId;
+  }, [fullMonsters]);
 
   const items = useMemo(
     () =>
       buildSearchItems({
         classes: classes.data,
         spells: spells.data,
-        monsters: monsterList,
+        monsters: monsters.data,
         equipment: equipment.data,
         magicItems: magicItems.data,
         languages: languages.data,
-        monsterCategories: categories,
+        commands: commands.data,
+        fullClasses,
+        fullSpells,
+        fullMonsters,
+        fullEquipment,
       }),
-    [classes.data, spells.data, monsterList, equipment.data, magicItems.data, languages.data, categories],
+    [
+      classes.data,
+      spells.data,
+      monsters.data,
+      equipment.data,
+      magicItems.data,
+      languages.data,
+      commands.data,
+      fullClasses,
+      fullSpells,
+      fullMonsters,
+      fullEquipment,
+    ],
   );
 
   return {
@@ -120,44 +147,9 @@ export function useCatalogs(warm: boolean): CompendiumCatalogs {
     equipment,
     magicItems,
     languages,
-    monsterCategories: categories,
-    categoriesLoading: status === 'loading',
+    commands,
+    fullMonsters,
+    monsterCategories,
     items,
   };
-}
-
-/**
- * Loads several entries, such as every class definition, through the shared catalog cache. The result fills in
- * as each entry arrives. Pass `null` to load nothing.
- */
-export function useEntries<T>(paths: readonly string[] | null): {
-  data: Record<string, T>;
-  loading: boolean;
-} {
-  const key = paths === null ? null : paths.join('|');
-  const [state, setState] = useState<{ key: string | null; data: Record<string, T> }>({
-    key: null,
-    data: {},
-  });
-  useEffect(() => {
-    if (key === null || key === '') return;
-    let cancelled = false;
-    for (const path of key.split('|')) {
-      loadCatalog(`entry:${path}`, () => getApi().rules<T>(path)).then(
-        (value) => {
-          if (cancelled) return;
-          setState((current) => ({
-            key,
-            data: { ...(current.key === key ? current.data : {}), [path]: value },
-          }));
-        },
-        () => {},
-      );
-    }
-    return () => {
-      cancelled = true;
-    };
-  }, [key]);
-  const data = state.key === key ? state.data : {};
-  return { data, loading: paths !== null && Object.keys(data).length < paths.length };
 }

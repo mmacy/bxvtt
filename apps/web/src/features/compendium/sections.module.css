@@ -214,17 +214,6 @@
   gap: var(--space-1) var(--space-3);
 }
 
-@media (max-width: 640px) {
-  .classGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .toolbar {
-    margin-inline: calc(var(--space-3) * -1);
-    padding-inline: var(--space-3);
-  }
-}
-
 .section td button,
 .nameGrid li button {
   color: var(--color-accent-text);
@@ -235,4 +224,50 @@
 .nameGrid li button:hover {
   color: var(--color-text-strong);
   text-decoration: underline;
+}
+
+.toolbar > * {
+  max-width: 100%;
+}
+
+.toolbar [role='radiogroup'] {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.actionWhen {
+  display: none;
+  flex-basis: 100%;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-regular);
+}
+
+.actionName {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1-5);
+}
+
+@media (max-width: 640px) {
+  .monstersTable th:nth-child(5),
+  .monstersTable td:nth-child(5),
+  .actionsTable th:nth-child(3),
+  .actionsTable td:nth-child(3) {
+    display: none;
+  }
+
+  .actionWhen {
+    display: block;
+  }
+
+  .classGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar {
+    margin-inline: calc(var(--space-3) * -1);
+    padding-inline: var(--space-3);
+  }
 }
