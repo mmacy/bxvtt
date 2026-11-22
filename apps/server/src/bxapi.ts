@@ -236,7 +236,20 @@ export function toApiError(error: unknown, options: { passNotFound?: boolean } =
       }
       return new ApiError(code as 'validation_error', detail, extras, { status });
     }
-    if (code === 'rate_limited' || code === 'database_busy' || code === 'storage_full') {
+    if (code === 'storage_full') {
+      // Waiting doesn't free storage, so this isn't a busy bxapi.
+      return new ApiError(
+        'bxapi_storage_full',
+        "bxapi's storage for bxvtt is full, so it can't store anything new. Delete old tables and saves, or raise BXAPI_MAX_CLIENT_BYTES.",
+        {
+          ...(typeof extras.used_bytes === 'number' ? { used_bytes: extras.used_bytes } : {}),
+          ...(typeof extras.max_bytes === 'number' || extras.max_bytes === null
+            ? { max_bytes: extras.max_bytes }
+            : {}),
+        },
+      );
+    }
+    if (code === 'rate_limited' || code === 'database_busy') {
       return new ApiError('bxapi_unavailable', `bxapi is busy (${code}). Try again in a moment.`);
     }
     return new ApiError('bxapi_error', `bxapi answered ${status} ${code}: ${detail}`);

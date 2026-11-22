@@ -20,7 +20,7 @@ describe('the database layout', () => {
   it('upgrades a version 1 database and keeps its rows', () => {
     new Database(dir).close();
     const raw = new DatabaseSync(join(dir, 'bxvtt.db'));
-    raw.exec(`DROP TABLE target_handles; DROP TABLE retired_tokens; PRAGMA user_version = 1;
+    raw.exec(`DROP TABLE target_handles; DROP TABLE retired_tokens; DROP TABLE bxapi_garbage; PRAGMA user_version = 1;
       INSERT INTO users (id, name, color, token_hash, created_at) VALUES ('usr_1', 'Rhea', '#e69f00', 'h', 'now');
       INSERT INTO users (id, name, color, token_hash, created_at) VALUES ('usr_2', 'Wine', '#882255', 'h2', 'now');`);
     raw.close();

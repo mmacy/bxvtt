@@ -194,12 +194,8 @@ export class AdventureCatalog {
    */
   async removeAll(tableId: string): Promise<void> {
     for (const row of this.ctx.db.all('SELECT id FROM adventures WHERE table_id = ?', tableId)) {
-      await this.deleteFromBxapi(str(row, 'id')).catch((error: unknown) => {
-        this.ctx.log.warn(
-          { err: error, adventure: str(row, 'id') },
-          'could not delete an adventure from bxapi',
-        );
-      });
+      // A deletion that fails is remembered and tried again later.
+      await this.ctx.janitor.remove('adventure', str(row, 'id'));
     }
   }
 

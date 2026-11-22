@@ -8,6 +8,7 @@ import { AdventureCatalog, registerAdventureRoutes } from './adventures';
 import { registerAnnotationRoutes } from './annotations';
 import { Auth } from './auth';
 import { registerCatalogRoutes } from './catalogs';
+import { BxapiJanitor } from './cleanup';
 import { BxapiClient } from './bxapi';
 import { CharacterStore, registerCharacterRoutes } from './characters';
 import type { Config } from './config';
@@ -146,6 +147,7 @@ export async function createServer(config: Config): Promise<Server> {
   ctx.adventures = new AdventureCatalog(ctx);
   ctx.game = new GameService(ctx);
   ctx.rejoin = new RejoinService(ctx);
+  ctx.janitor = new BxapiJanitor(ctx);
 
   app.addHook('onRequest', async (request, reply) => {
     reply.header('X-Request-Id', request.id);
@@ -226,6 +228,19 @@ export async function createServer(config: Config): Promise<Server> {
   registerNotesRoutes(app, ctx);
   registerRejoinRoutes(app, ctx);
   registerWebSocket(app, ctx);
+
+  // Clean up what bxapi no longer needs, at startup and every hour, without holding up the start.
+  const janitorRun = () =>
+    void ctx.janitor
+      .sweep()
+      .then((deleted) => {
+        if (deleted > 0) app.log.info({ deleted }, 'deleted bxapi resources that bxvtt no longer needs');
+      })
+      .catch((error: unknown) => app.log.warn({ err: error }, 'could not clean up bxapi'));
+  app.addHook('onReady', async () => janitorRun());
+  const janitorTimer = setInterval(janitorRun, 60 * 60_000);
+  janitorTimer.unref();
+  app.addHook('onClose', async () => clearInterval(janitorTimer));
 
   app.addHook('preClose', async () => {
     ctx.hub.closeAll();

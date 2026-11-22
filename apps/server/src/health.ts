@@ -77,3 +77,41 @@ export function registerHealthRoute(app: FastifyInstance, ctx: Context): void {
       .send(user === null ? publicHealth(health) : health);
   });
 }
+
+/** The share of bxapi's storage limit past which the server warns the host. */
+const STORAGE_WARNING_SHARE = 0.8;
+
+/**
+ * A warning for the host when bxapi's storage for bxvtt is over 80 percent of its limit, or `null`.
+ *
+ * @param health - The full health, with bxapi's storage figures.
+ */
+export function storageWarning(health: Health): string | null {
+  const storage = health.bxapi.meta?.storage;
+  if (storage === undefined || storage.max_bytes === null || storage.max_bytes <= 0) return null;
+  const share = storage.used_bytes / storage.max_bytes;
+  if (share < STORAGE_WARNING_SHARE) return null;
+  const percent = Math.round(share * 100);
+  return `bxapi's storage for bxvtt is ${percent} percent full (${storage.used_bytes} of ${storage.max_bytes} bytes). When it is full, nobody can create characters, start games, send commands, or save. Delete old tables and saves, or raise BXAPI_MAX_CLIENT_BYTES.`;
+}
+
+/**
+ * Checks bxapi's storage now and every `intervalMs`, and logs a warning while it is over 80 percent full.
+ *
+ * The timer doesn't keep the process alive. Call it after the server listens.
+ *
+ * @param app - The Fastify instance, whose logger it uses.
+ * @param ctx - The server's services.
+ * @param intervalMs - How often to check.
+ * @returns A function that stops the checks.
+ */
+export function watchStorage(app: FastifyInstance, ctx: Context, intervalMs = 10 * 60_000): () => void {
+  const check = async () => {
+    const warning = storageWarning(await checkHealth(ctx));
+    if (warning !== null) app.log.warn(warning);
+  };
+  void check();
+  const timer = setInterval(() => void check(), intervalMs);
+  timer.unref();
+  return () => clearInterval(timer);
+}

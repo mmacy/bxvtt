@@ -78,10 +78,32 @@ export async function startServer(
     wsUrl: `ws://127.0.0.1:${port}/ws`,
     config,
     close: async () => {
+      // A test that keeps its data directory starts another server on it, which needs the data in bxapi.
+      if (!keep) await removeFromBxapi(server);
       await server.app.close();
       if (!keep) await rm(dataDir, { recursive: true, force: true });
     },
   };
+}
+
+/**
+ * Deletes what a test server stored in the shared development bxapi: its tables' sessions, saves, and uploads,
+ * its users' characters, and its sample uploads. Without this, test runs fill bxapi's per-client storage.
+ *
+ * @param server - The server.
+ */
+async function removeFromBxapi(server: Server): Promise<void> {
+  const { ctx } = server;
+  try {
+    for (const row of ctx.db.all('SELECT id FROM tables')) await ctx.game.deleteTable(String(row.id));
+    for (const row of ctx.db.all('SELECT id FROM characters'))
+      await ctx.janitor.remove('character', String(row.id));
+    for (const row of ctx.db.all('SELECT adventure_id FROM samples')) {
+      await ctx.janitor.remove('adventure', String(row.adventure_id));
+    }
+  } catch {
+    // A test that stopped bxapi, or closed the database already, has nothing more to clean.
+  }
 }
 
 /** A user with an SDK client whose HTTP response bodies are recorded. */

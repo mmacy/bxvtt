@@ -397,6 +397,28 @@ Every error is an RFC 9457 problem document with the media type `application/pro
 
 The SDK also makes two codes of its own. When a response that should be a problem document isn't JSON, such as the HTML error page the Vite proxy or a tunnel sends while the bxvtt server is down, the SDK throws a `BxvttProblemError` instead of a `SyntaxError`: `server_unavailable` for status 502, 503, or 504, and the code that matches the status otherwise, such as `content_too_large` for 413. A successful response whose body isn't JSON throws `invalid_response`. A request that never reaches a server still rejects with the `TypeError` that `fetch` throws.
 
+## When bxapi's storage fills up
+
+bxapi limits how much each client stores, 1 GiB by default (`BXAPI_MAX_CLIENT_BYTES`). bxvtt stores everything as one bxapi client, so every table on the server shares that space. When it's full, bxapi refuses anything that stores something new, and bxvtt answers 507 `bxapi_storage_full` with `used_bytes` and `max_bytes`: nobody can create a character, start or restore a game, send a command, or save. Waiting doesn't help.
+
+What uses the space:
+
+- **Games:** bxapi keeps each game as a save document that it rewrites after every accepted command, and a long game's document grows with its event log.
+- **Saves:** each save, autosaves included, is a full copy of the game. The server keeps the newest 10 autosaves of each table.
+- **Characters and uploaded adventures:** each one is a document of its own.
+- **Command responses:** bxvtt sends every command with an `Idempotency-Key`, so bxapi keeps each command's response, with the views it returns, for 24 hours, so that a retry gets the same answer.
+
+bxvtt deletes what nobody can reach any more:
+
+- **Deleted tables:** their sessions, saves, and uploaded adventures.
+- **Replaced and ended games:** the session a restore replaced, and the session of a game a referee ended. A save outlives its session, so every save still restores.
+- **Deleted characters:** a character its owner deleted.
+- **Failed deletions:** a deletion that fails while bxapi is down is retried at startup and every hour.
+
+To see the usage, call `GET /api/health` with a user's token and read `bxapi.meta.storage`. The server logs a warning at startup and every 10 minutes while the usage is over 80 percent.
+
+To free space, delete tables you no longer play, and old saves you won't restore, in bxvtt. Deleting a table deletes its games and saves in bxapi. To raise the limit, restart bxapi with a larger `BXAPI_MAX_CLIENT_BYTES`, or set it to `0` to remove the limit.
+
 ## Security
 
 `docs/security.md` states the trust model, what the server guarantees and which tests check it, and a checklist for hosts. In short:
