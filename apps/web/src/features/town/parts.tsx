@@ -34,13 +34,18 @@ export function SeatOwner({ memberId, className }: { memberId: string; className
   );
 }
 
-/** A member's token, from their class and name. */
+/** A member's token, from their class, ringed in the color of the player who plays them. */
 export function MemberToken({ member, size = 40 }: { member: MemberView; size?: TokenSize }) {
   const status = memberStatus(member);
+  const seats = useSeats();
+  const members = useMembers();
+  const ownerId = seats.find((seat) => seat.member_id === member.id)?.user_id;
+  const color = ownerId ? members.find((candidate) => candidate.user_id === ownerId)?.color : undefined;
   return (
     <TokenPortrait
       name={member.name}
       characterClass={tokenClass(member.class_id)}
+      color={color}
       size={size}
       state={status.dead ? 'dead' : 'normal'}
       decorative
@@ -105,11 +110,11 @@ export function MemberChooser({
           >
             <MemberToken member={member} size={32} />
             <span className={styles.choiceText}>
-              <span className={styles.choiceName}>{member.name}</span>
+              <span className={styles.choiceName}>{member.name}</span>{' '}
               <span className={styles.choiceMeta}>
                 {meta ? meta(member) : status.dead ? 'Dead' : classLine(member)}
               </span>
-            </span>
+            </span>{' '}
             {badge?.(member)}
           </button>
         );

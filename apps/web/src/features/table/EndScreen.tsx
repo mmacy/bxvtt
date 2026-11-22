@@ -2,7 +2,9 @@ import type { SaveEntry } from '@bxvtt/shared/protocol';
 import {
   classLabel,
   conditionLabel,
-  formatDurationRounds,
+  SECONDS_PER_ROUND,
+  count,
+  formatInteger,
   formatGameClock,
   joinList,
   sessionModeDescription,
@@ -26,33 +28,97 @@ import styles from './table.module.css';
 /** How many recent saves the end screen lists. The saves dialog lists every one. */
 const RECENT_SAVES = 3;
 
+/**
+ * How long the game ran, as a person would say it: "1 day, 10 hours, and 20 minutes". The engine counts in days,
+ * turns, and rounds, but nobody at the table counts hours in turns.
+ */
+export function gameTimeText(rounds: number): string {
+  const seconds = Math.max(0, Math.round(rounds)) * SECONDS_PER_ROUND;
+  const days = Math.floor(seconds / 86_400);
+  const hours = Math.floor((seconds % 86_400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const parts: string[] = [];
+  if (days > 0) parts.push(count(days, 'day'));
+  if (hours > 0) parts.push(count(hours, 'hour'));
+  if (minutes > 0) parts.push(count(minutes, 'minute'));
+  if (parts.length === 0) parts.push(count(seconds % 60, 'second'));
+  return joinList(parts);
+}
+
+/** When a save was made, in the reader's own short date and time: "Nov 22, 2026, 4:25 AM". */
+function savedAtText(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+}
+
 function saveTitle(save: SaveEntry): string {
   return save.label ?? (save.autosave ? 'Autosave' : 'Saved game');
 }
 
-/**
- * What the game that ended achieved, from its own feed entries: the quests the party completed, in order, and the
- * adventure's closing words from the `adventure_completed` event. Entries of the table's earlier games don't count.
- */
-function useGameOutcome(sessionId: string | null): { quests: string[]; closing: string | null } {
-  const feed = useFeed();
-  return useMemo(() => {
-    const quests: string[] = [];
-    let closing: string | null = null;
-    for (const entry of feed) {
-      if (entry.kind !== 'game' || entry.session_id !== sessionId) continue;
-      for (const event of entry.events) {
-        if (event.event_type === 'quest_completed') {
-          const name = (event as { name?: unknown }).name;
-          if (typeof name === 'string' && !quests.includes(name)) quests.push(name);
-        } else if (event.event_type === 'adventure_completed') {
-          const narrative = (event as { narrative?: unknown }).narrative;
-          if (typeof narrative === 'string' && narrative.trim() !== '') closing = narrative;
-        }
+interface GameOutcome {
+  quests: string[];
+  closing: string | null;
+}
+
+/** Reads the quests the party completed, in order, and the adventure's closing words, from a list of events. */
+function outcomeOf(
+  events: Iterable<{ event_type?: unknown; name?: unknown; narrative?: unknown }>,
+): GameOutcome {
+  const quests: string[] = [];
+  let closing: string | null = null;
+  for (const event of events) {
+    if (event.event_type === 'quest_completed') {
+      if (typeof event.name === 'string' && event.name !== '' && !quests.includes(event.name)) {
+        quests.push(event.name);
       }
+    } else if (event.event_type === 'adventure_completed') {
+      if (typeof event.narrative === 'string' && event.narrative.trim() !== '') closing = event.narrative;
     }
-    return { quests, closing };
-  }, [feed, sessionId]);
+  }
+  return { quests, closing };
+}
+
+/** How many pages of the event log the end screen reads at most, 500 events each. */
+const MAX_EVENT_PAGES = 40;
+
+/**
+ * What the game that ended achieved: the quests the party completed, in order, and the adventure's closing words.
+ *
+ * It reads the game's event log, which a restored game inherits from its save, so the quests the party completed
+ * before the save count too, and the table's earlier adventures don't. Until the log arrives, or if it can't be
+ * read, it counts the game's own entries in the feed.
+ */
+function useGameOutcome(tableId: string, sessionId: string | null, revision: number): GameOutcome {
+  const feed = useFeed();
+  const fromFeed = useMemo(
+    () =>
+      outcomeOf(
+        feed.flatMap((entry) =>
+          entry.kind === 'game' && entry.session_id === sessionId ? entry.events : [],
+        ),
+      ),
+    [feed, sessionId],
+  );
+  const [fromLog, setFromLog] = useState<{ key: string; outcome: GameOutcome } | null>(null);
+  const key = `${sessionId}:${revision}`;
+  useEffect(() => {
+    if (sessionId === null) return;
+    let cancelled = false;
+    void (async () => {
+      const events: { event_type?: unknown; name?: unknown; narrative?: unknown }[] = [];
+      let after = 0;
+      for (let page = 0; page < MAX_EVENT_PAGES; page += 1) {
+        const result = await getApi().listEvents(tableId, { after, limit: 500, visibility: 'player' });
+        events.push(...(result.events as typeof events));
+        if (result.events.length === 0 || result.next_after >= result.total) break;
+        after = result.next_after;
+      }
+      if (!cancelled) setFromLog({ key, outcome: outcomeOf(events) });
+    })().catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [tableId, sessionId, key]);
+  return fromLog !== null && fromLog.key === key ? fromLog.outcome : fromFeed;
 }
 
 /** The referee's way back: restore one of the newest saves, see every save, or return the table to its lobby. */
@@ -105,11 +171,11 @@ function RefereeChoices() {
                 <p className={styles.endMeta}>
                   <span>
                     {formatGameClock(save.clock.rounds)}
-                    <span className="visually-hidden">,</span>
+                    <span className="visually-hidden-inline">,</span>
                   </span>
                   <span>
-                    <span className="visually-hidden">saved </span>
-                    {new Date(save.created_at).toLocaleString()}
+                    <span className="visually-hidden-inline">saved </span>
+                    {savedAtText(save.created_at)}
                   </span>
                 </p>
               </div>
@@ -165,7 +231,8 @@ export function EndScreen() {
   const game = useGame();
   const party = useParty();
   const referee = useIsReferee();
-  const { quests, closing } = useGameOutcome(game?.session_id ?? null);
+  const tableId = useTableId();
+  const { quests, closing } = useGameOutcome(tableId, game?.session_id ?? null, game?.revision ?? 0);
   if (game === null) return null;
   const victory = game.mode === 'victory';
   const fallen = party.filter((member) => member.conditions.includes('dead')).map((member) => member.name);
@@ -181,7 +248,7 @@ export function EndScreen() {
           <div className={styles.endFact}>
             <dt>Game time</dt>
             <dd>
-              {formatDurationRounds(game.view.clock_rounds)}, ending at{' '}
+              {gameTimeText(game.view.clock_rounds)} of game time, ending at{' '}
               {formatGameClock(game.view.clock_rounds)}
             </dd>
           </div>
@@ -212,9 +279,9 @@ export function EndScreen() {
                   <p className={styles.endMeta}>
                     <span>
                       Level {member.level} {classLabel(member.class_id).toLowerCase()}
-                      <span className="visually-hidden">,</span>
+                      <span className="visually-hidden-inline">,</span>
                     </span>
-                    <span>{member.xp} XP</span>
+                    <span>{formatInteger(member.xp)} XP</span>
                   </p>
                 </div>
                 <div className={styles.endHp}>

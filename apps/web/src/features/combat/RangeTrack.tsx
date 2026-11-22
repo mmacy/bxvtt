@@ -29,8 +29,9 @@ const STACK = 3;
 /** Vertical room for one stacked token with its hit point bar. */
 const ROW = 42;
 /** Vertical room for one group's token and labels, for groups that stand at the same distance. */
-const GROUP_HEIGHT = 74;
-const GROUP_HEIGHT_COMPACT = 58;
+/** A group's token, its name, its distance, and a condition line, with a small gap below. */
+const GROUP_HEIGHT = 86;
+const GROUP_HEIGHT_COMPACT = 76;
 
 /** A tick spacing that gives four to eight ticks across the span. */
 function tickStep(span: number): number {
@@ -136,7 +137,7 @@ export function RangeTrack({
   const laneStyle: CSSProperties | undefined =
     extra > 0
       ? ({
-          height: `calc(${compact ? 104 : 156}px + ${extra}px)`,
+          height: `calc(${compact ? 118 : 156}px + ${extra}px)`,
           '--center': `calc(${compact ? 58 : 86}px + ${extra / 2}px)`,
         } as CSSProperties)
       : undefined;

@@ -309,7 +309,7 @@ export function PartyPanel() {
                     tone="quiet"
                     className={styles.spellMarker}
                     onClick={() => openSheet(member.id, 'spells')}
-                    aria-label={`${member.name} has no spells memorized. Open the Spells tab.`}
+                    aria-label={`No spells memorized for ${member.name}. Open the Spells tab.`}
                   >
                     <Icon name="spell" size={12} />
                     No spells memorized
@@ -350,10 +350,9 @@ function MemberRow({ member, rank, color, controller, light, effects, onOpen }: 
   const down = member.current_hp <= 0;
   const conditions = member.conditions.filter((c) => c !== 'dead');
   const detailId = useId();
-  const nameId = useId();
-  const controllerId = useId();
-  const metaId = useId();
   const details = [
+    controller ? controller.label : 'empty seat',
+    `level ${member.level} ${classLabel(member.class_id).toLowerCase()}`,
     `${member.current_hp} of ${member.max_hp} hit points`,
     `armour class ${member.armour_class}`,
     ...(dead ? ['dead'] : []),
@@ -361,18 +360,14 @@ function MemberRow({ member, rank, color, controller, light, effects, onOpen }: 
     ...(light ? [lightRowText(light).toLowerCase()] : []),
     ...effects.map((e) => effectLabel(e.kind).toLowerCase()),
   ];
+  // Only the name is inside the button, so its accessible name is exactly the text it shows. The button's
+  // hit area stretches over the whole row, and the rest of the row reaches screen readers as its description.
   return (
     <>
       <span id={detailId} className="visually-hidden">
         {`${details.join(', ')}. Opens the character sheet.`}
       </span>
-      <button
-        type="button"
-        className={cx(styles.row, dead && styles.deadRow)}
-        onClick={onOpen}
-        aria-labelledby={`${nameId} ${controllerId} ${metaId}`}
-        aria-describedby={detailId}
-      >
+      <div className={cx(styles.row, dead && styles.deadRow)}>
         <span className={styles.rank} aria-hidden="true">
           {rank}
         </span>
@@ -386,23 +381,26 @@ function MemberRow({ member, rank, color, controller, light, effects, onOpen }: 
         />
         <span className={styles.body}>
           <span className={styles.topLine}>
-            <span id={nameId} className={styles.name}>
+            <button
+              type="button"
+              className={cx(styles.name, styles.nameButton)}
+              onClick={onOpen}
+              aria-describedby={detailId}
+            >
               {member.name}
-            </span>
+            </button>
             {controller ? (
-              <span className={styles.controller}>
+              <span className={styles.controller} aria-hidden="true">
                 <Avatar name={controller.name} color={color} size="xs" decorative />
-                <span id={controllerId} className={styles.controllerName}>
-                  {controller.label}
-                </span>
+                <span className={styles.controllerName}>{controller.label}</span>
               </span>
             ) : (
-              <span id={controllerId} className={styles.empty}>
+              <span className={styles.empty} aria-hidden="true">
                 Empty seat
               </span>
             )}
           </span>
-          <span id={metaId} className={styles.meta}>
+          <span className={styles.meta} aria-hidden="true">
             Level {member.level} {classLabel(member.class_id).toLowerCase()}
           </span>
           {light && (
@@ -439,7 +437,7 @@ function MemberRow({ member, rank, color, controller, light, effects, onOpen }: 
         <span className={styles.ac} aria-hidden="true">
           <AcShield value={member.armour_class} size="sm" />
         </span>
-      </button>
+      </div>
     </>
   );
 }

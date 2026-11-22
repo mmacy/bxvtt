@@ -199,11 +199,13 @@ test.describe('exploration', () => {
     let lines = await feedLines(sam.page);
     expect(lines.join('\n')).toMatch(/trap/i);
     expect(lines.join('\n')).toMatch(/iron key/i);
-    // The marching order row names the member and describes her hit points.
+    // The marching order row's button names the member, and its description gives her hit points.
     await sam.page.getByRole('tab', { name: 'Party' }).click();
     await expect(
-      sam.page.getByRole('list', { name: 'Marching order' }).getByRole('button', { name: /^Brenna\b/ }),
-    ).toHaveAccessibleDescription(/^[1-9] of 10 hit points/);
+      sam.page
+        .getByRole('list', { name: 'Marching order' })
+        .getByRole('button', { name: 'Brenna', exact: true }),
+    ).toHaveAccessibleDescription(/, [1-9] of 10 hit points/);
 
     // The chapel altar has no trap.
     await place(17, 12, 'east');

@@ -20,7 +20,7 @@ import {
 } from '@/ui';
 import { classMagic, spellSlotsAt } from '../wizard/tables';
 import { useMemberCommand } from './actions';
-import { spellDuration, spellRange } from './spellText';
+import { spellDuration, spellRange, withoutPointers } from './spellText';
 import { RuleLink } from './RuleLink';
 import type { SheetModel } from './model';
 import styles from './sheet.module.css';
@@ -53,10 +53,10 @@ export function SpellDetailBody({ spellId }: { spellId: string }) {
           </>
         )}
       </dl>
-      {spell.intro && <p className={styles.detailProse}>{spell.intro}</p>}
+      {spell.intro && <p className={styles.detailProse}>{withoutPointers(spell.intro)}</p>}
       {spell.modes.map((mode) => (
         <p key={mode.key} className={styles.detailProse}>
-          {mode.prose}
+          {withoutPointers(mode.prose)}
         </p>
       ))}
     </div>
@@ -512,7 +512,9 @@ function modeLabel(
   modes: ReadonlyArray<{ key: string; prose: string }>,
 ): string {
   const distinct = new Set(modes.map((m) => m.prose)).size === modes.length;
-  return distinct && mode.prose ? mode.prose : capitalizeFirst(mode.key.replaceAll('_', ' '));
+  return distinct && mode.prose
+    ? withoutPointers(mode.prose)
+    : capitalizeFirst(mode.key.replaceAll('_', ' '));
 }
 
 /** Casts a memorized spell outside battle, with its usage and targets. */
@@ -632,7 +634,7 @@ function CastDialog({
             />
           </Field>
         )}
-        {modes.length === 1 && mode && <p className={styles.detailProse}>{mode.prose}</p>}
+        {modes.length === 1 && mode && <p className={styles.detailProse}>{withoutPointers(mode.prose)}</p>}
         {mode && targeting === 'self' && <p className={styles.note}>The spell affects {member.name}.</p>}
         {mode && targeting === 'single' && (
           <Field label="Target">

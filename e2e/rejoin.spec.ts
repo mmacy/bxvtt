@@ -77,8 +77,12 @@ async function expectSeat(page: Page): Promise<void> {
   await expect(page.getByRole('banner').getByText('In town', { exact: true })).toBeVisible();
   await page.getByRole('tablist', { name: 'Table panels' }).getByRole('tab', { name: 'Party' }).click();
   const order = page.getByRole('list', { name: 'Marching order' });
-  await expect(order.getByRole('button', { name: /^Brenna\W+You\W+Level 1 fighter/ })).toBeVisible();
-  await expect(order.getByRole('button', { name: /^Osric\W+Ruth\W/ })).toBeVisible();
+  await expect(order.getByRole('button', { name: 'Brenna', exact: true })).toHaveAccessibleDescription(
+    /^You, level 1 fighter/,
+  );
+  await expect(order.getByRole('button', { name: 'Osric', exact: true })).toHaveAccessibleDescription(
+    /^Ruth, /,
+  );
 }
 
 /** Sam closes his browser, and Ruth's top bar shows him offline. */

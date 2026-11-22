@@ -76,8 +76,10 @@ export function isEntryVisible(entry: FeedEntry, selfId: string | null, lens: bo
     return entry.user_id === selfId;
   if (entry.kind === 'game') {
     if (entry.visibility === 'referees') return false;
-    // A talk shows who spoke even when the monsters' reaction is hidden, so it counts as visible.
+    // The text layer gives a talk and a wait a line of their own when their events are hidden or there are none,
+    // so the reader still sees who spoke and that the party waited.
     if (entry.command_type === 'parley' && entry.actor_id) return true;
+    if (entry.command_type === 'wait') return true;
     return visibleEvents(entry, false).length > 0;
   }
   return entry.visibility !== 'referees' || entry.user_id === selfId;

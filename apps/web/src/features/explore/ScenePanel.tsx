@@ -1,7 +1,7 @@
 import type { GameEvent, SceneHere, SceneTrap } from '@bxvtt/shared/protocol';
 import { describeEvent, directionLabel, type TextContext } from '@bxvtt/shared/text';
 import { useEffect, useId, useState, type ReactNode } from 'react';
-import { scopedStorage, usePlayerView, useScene, useTextContext } from '@/app';
+import { UNKEYED_PLACE_TITLE, scopedStorage, usePlayerView, useScene, useTextContext } from '@/app';
 import { Button, DropdownMenu, Icon, IconButton, Parchment, cx, type IconName, type MenuEntry } from '@/ui';
 import {
   cacheEntries,
@@ -40,7 +40,7 @@ export function enteredText(areaId: string, here: SceneHere, ctx: TextContext): 
 }
 
 /** The title where the adventure keys no area: a corridor, a bridge deck, or open ground. */
-export const UNNAMED_PLACE = 'On the way';
+export const UNNAMED_PLACE = UNKEYED_PLACE_TITLE;
 
 /** How long the full card stays after the party enters an area, in milliseconds. */
 export const RECEDE_MS = 10_000;

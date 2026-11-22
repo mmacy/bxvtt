@@ -98,7 +98,7 @@ export function StartGamePanel({ table, adventure, ruleset }: StartGamePanelProp
         <p className={styles.metaLine}>
           <span>
             {table.roster.length === 1 ? '1 character' : `${table.roster.length} characters`}
-            <span className="visually-hidden">,</span>
+            <span className="visually-hidden-inline">,</span>
           </span>
           <span>
             {changedRules === 0

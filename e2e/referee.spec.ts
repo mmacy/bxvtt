@@ -146,11 +146,11 @@ test.describe('referee tools', () => {
       .poll(async () => brennaGold((await sam.client.getGame(tableId)).view.party))
       .toBe(goldBefore + 25);
 
-    // Sam reads both on Brenna's sheet. The row's name says who plays her.
+    // Sam reads both on Brenna's sheet. The row's description says who plays her.
     await sam.page.getByRole('tablist', { name: 'Table panels' }).getByRole('tab', { name: 'Party' }).click();
     await sam.page
       .getByRole('list', { name: 'Marching order' })
-      .getByRole('button', { name: /^Brenna\W+You\W+Level 1 fighter/ })
+      .getByRole('button', { name: 'Brenna', exact: true })
       .click();
     const sheet = sam.page.getByRole('dialog', { name: /Brenna/ });
     await expect(sheet).toBeVisible();
@@ -164,7 +164,7 @@ test.describe('referee tools', () => {
       .click();
     await ruth.page
       .getByRole('list', { name: 'Marching order' })
-      .getByRole('button', { name: /^Brenna\W+Sam\W/ })
+      .getByRole('button', { name: 'Brenna', exact: true })
       .click();
     const refereeSheet = ruth.page.getByRole('dialog', { name: /Brenna/ });
     await expect(refereeSheet).toBeVisible();

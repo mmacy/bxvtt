@@ -32,6 +32,7 @@ import {
 import { effectLabel, effectRemaining, useMemberCommand } from './actions';
 import { ItemDetailButton } from './ItemDetail';
 import { RuleLink } from './RuleLink';
+import { withoutPointers } from './spellText';
 import { equippedEntries, type InventoryEntry, type Purse, type SheetModel } from './model';
 import styles from './sheet.module.css';
 import { useSpellDetail } from './catalogs';
@@ -646,7 +647,7 @@ function UseItemDialog({
                   options={spell.data.modes.map((m) => ({
                     value: m.key,
                     label: capitalizeFirst(m.key.replaceAll('_', ' ')),
-                    description: m.prose,
+                    description: withoutPointers(m.prose),
                   }))}
                 />
               </Field>

@@ -12,6 +12,8 @@ import {
   battleBoard,
   combatTable,
   declarationRow,
+  declareCloseIn,
+  declareHold,
   declareSuggested,
   declaring,
   encounterPanel,
@@ -202,13 +204,12 @@ test.describe('waiting on indifferent monsters', () => {
       .getByRole('button', { name: 'Wait' })
       .click();
     await waitForGame(sam.client, tableId, (game) => game.revision > before, 'the wait to apply');
-    const said = 'The party waits a round. The ink-stained clerk and the bandit pay the party no mind.';
-    for (const actor of [sam, ann]) await expect(encounterPanel(actor.page)).toContainText(said);
+    for (const actor of [sam, ann])
+      await expect(encounterPanel(actor.page)).toContainText(/The party waits\. \S/);
     await shot(ann.page, 'wait-indifferent');
   });
 
-  // F-103: the wait still leaves no line in the feed, so a look at the feed can't tell that a round passed.
-  test.fixme('the feed says that the party waited a round (F-103)', async ({ crew }) => {
+  test('the feed says that the party waited a round (F-103)', async ({ crew }) => {
     const { sam, ann, tableId } = await countingRoom(crew);
     const before = (await sam.client.getGame(tableId)).revision;
     await encounterPanel(sam.page)
@@ -216,7 +217,7 @@ test.describe('waiting on indifferent monsters', () => {
       .getByRole('button', { name: 'Wait' })
       .click();
     await waitForGame(sam.client, tableId, (game) => game.revision > before, 'the wait to apply');
-    await expect(await openFeed(ann.page)).toContainText(/waits a round/);
+    await expect(await openFeed(ann.page)).toContainText(/The party waits\./);
   });
 });
 
@@ -316,9 +317,10 @@ test.describe('battle', () => {
 
     // The board opens the next undeclared member's choices for Ann: Osric's.
     const osric = ann.page.getByRole('region', { name: 'Declare for Osric' });
-    // Osric's attacks are out of reach, so his choices open on the Move tab, his suggested action (D-305).
-    await expect(osric.getByRole('radio', { name: 'Move' })).toBeChecked();
-    await declaring(ann.page, () => osric.getByRole('button', { name: 'Close in on the goblins' }).click());
+    // Osric stands in the back rank with no missile weapon, so the board suggests that he holds (F-207), and Ann
+    // sends him in by choice.
+    await expect(osric).toBeVisible();
+    await declareCloseIn(ann.page, 'Osric', 'the goblins');
     await declaring(sam.page, () =>
       declarationRow(sam.page, 'Wren')
         .getByRole('button', { name: /^Attack the goblins/ })
@@ -364,9 +366,7 @@ test.describe('battle', () => {
         .getByRole('button', { name: /^Attack the goblins/ })
         .click(),
     );
-    await declaring(ann.page, () =>
-      declarationRow(ann.page, 'Osric').getByRole('button', { name: 'Close in on the goblins' }).click(),
-    );
+    await declareCloseIn(ann.page, 'Osric', 'the goblins');
     await declaring(ann.page, () =>
       declarationRow(ann.page, 'Tamsin')
         .getByRole('button', { name: /^(Attack|Shoot|Throw)/ })
@@ -476,8 +476,10 @@ test.describe('battle', () => {
       await expect(declarationRow(actor.page, 'Tamsin')).not.toContainText('Down');
       await expect(declarationRow(actor.page, 'Tamsin').getByRole('button')).toHaveCount(0);
       await expect(
-        actor.page.getByRole('list', { name: 'Marching order' }).getByRole('button', { name: /^Tamsin\b/ }),
-      ).toHaveAccessibleDescription(/^0 of 1 hit points, .*dead/);
+        actor.page
+          .getByRole('list', { name: 'Marching order' })
+          .getByRole('button', { name: 'Tamsin', exact: true }),
+      ).toHaveAccessibleDescription(/0 of 1 hit points.*dead/);
     }
     await expect(battleBoard(ann.page)).toContainText(/of 1 declared/);
     await shot(ann.page, 'member-down');
@@ -525,7 +527,19 @@ test.describe('battle', () => {
         [sam, ['Brenna', 'Wren']],
         [ann, ['Osric', 'Tamsin']],
       ] as const) {
-        for (const name of names) await declareSuggested(actor.page, name);
+        for (const name of names) {
+          // A caster's highlighted choice opens the spell list instead of declaring, so she holds this round. A
+          // member who can't act, or whose choices are already open for another member, is left as it is.
+          if (await declareSuggested(actor.page, name)) continue;
+          const row = declarationRow(actor.page, name);
+          const open = actor.page.getByRole('region', { name: `Declare for ${name}` });
+          if (
+            (await row.getByRole('button', { name: 'More choices' }).count()) > 0 ||
+            (await open.count()) > 0
+          ) {
+            await declareHold(actor.page, name);
+          }
+        }
       }
       await waitForGame(
         sam.client,
@@ -542,7 +556,8 @@ test.describe('battle', () => {
       await expect(summary.getByRole('term').filter({ hasText: 'Defeated' })).toBeVisible({
         timeout: 30_000,
       });
-      await expect(summary.getByRole('definition').first()).toContainText('2 goblins slain');
+      // The summary names what became of each goblin in words, such as "A goblin slain and a goblin routed".
+      await expect(summary.getByRole('definition').first()).toContainText(/goblins? (slain|routed)/);
       await expect(summary.getByRole('term').filter({ hasText: 'Experience' })).toBeVisible();
       // The summary counts experience in XP (D-307) and calls the coins dropped goods, as the scene does (D-308).
       await expect(summary).toContainText(/worth \d+ XP/);

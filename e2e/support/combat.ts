@@ -207,7 +207,7 @@ export async function declareSuggested(page: Page, name: string): Promise<boolea
     await close.click();
     await expect(close).toHaveCount(0);
   }
-  const quick = row.getByRole('button', { name: /^(Close in|Attack|Shoot|Throw)/ }).first();
+  const quick = row.getByRole('button', { name: /^(Close in|Attack|Shoot|Throw|Cast|Hold)/ }).first();
   try {
     await quick.waitFor({ timeout: 2000 });
   } catch {
@@ -216,6 +216,46 @@ export async function declareSuggested(page: Page, name: string): Promise<boolea
   if (!(await quick.isEnabled())) return false;
   await declaring(page, () => quick.click());
   return true;
+}
+
+/**
+ * Declares that a member closes in on a group, through the member's choices. The board's highlighted choice is
+ * conservative, so a back-rank member's row offers Hold rather than closing in, and a test that wants the member in
+ * melee says so explicitly.
+ *
+ * @param page - The page of a user who may declare for the member.
+ * @param name - The member's name.
+ * @param monsters - How the board names the group, such as "the goblins".
+ */
+export async function declareCloseIn(page: Page, name: string, monsters: string): Promise<void> {
+  const composer = page.getByRole('region', { name: `Declare for ${name}` });
+  if ((await composer.count()) === 0) {
+    await declarationRow(page, name).getByRole('button', { name: 'More choices' }).click();
+  }
+  await composer
+    .getByRole('radiogroup', { name: `What ${name} does this round` })
+    .getByRole('radio', { name: 'Move' })
+    .click();
+  await declaring(page, () => composer.getByRole('button', { name: `Close in on ${monsters}` }).click());
+}
+
+/**
+ * Declares that a member holds, through the member's choices. Use it after `declareSuggested` returns `false`,
+ * such as for a caster whose highlighted choice is "Choose a spell", which opens the choices instead of declaring.
+ *
+ * @param page - The page of a user who may declare for the member.
+ * @param name - The member's name.
+ */
+export async function declareHold(page: Page, name: string): Promise<void> {
+  const composer = page.getByRole('region', { name: `Declare for ${name}` });
+  if ((await composer.count()) === 0) {
+    await declarationRow(page, name).getByRole('button', { name: 'More choices' }).click();
+  }
+  await composer
+    .getByRole('radiogroup', { name: `What ${name} does this round` })
+    .getByRole('radio', { name: 'Hold' })
+    .click();
+  await declaring(page, () => composer.getByRole('button', { name: /^Hold/ }).first().click());
 }
 
 /** The dock tab that shows the feed, and the feed's entries. */
