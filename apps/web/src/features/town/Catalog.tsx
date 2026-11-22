@@ -134,7 +134,7 @@ export function Catalog({
           return (
             <Button
               size="sm"
-              variant="secondary"
+              variant="ghost"
               icon="plus"
               disabled={disabled}
               aria-label={`Add ${name} to the cart`}

@@ -126,7 +126,7 @@ export function CartPanel({
       {(copyTargets > 0 && lines.length > 0) || othersWithCarts > 0 ? (
         <div className={styles.party}>
           {copyTargets > 0 && lines.length > 0 && (
-            <Button variant="secondary" size="sm" icon="copy" onClick={onCopy}>
+            <Button variant="ghost" size="sm" icon="copy" onClick={onCopy}>
               Same for everyone you shop for
             </Button>
           )}

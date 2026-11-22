@@ -79,7 +79,7 @@
 
 .count {
   min-width: 2ch;
-  color: var(--color-accent-text);
+  color: var(--color-text-strong);
   font-family: var(--font-numeric);
   font-size: var(--text-lg);
   font-variant-numeric: tabular-nums;

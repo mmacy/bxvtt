@@ -6,9 +6,9 @@ import { count, describeEvents, formatGameClock } from '@bxvtt/shared/text';
 import type { FeedEntry } from '@bxvtt/shared/protocol';
 import { useMemo } from 'react';
 import { useFeed, useMember, useParty, usePlayerView, useTextContext } from '@/app';
-import { Badge, Button, ConditionChip, EmptyState, HpBar, Icon, Panel, type IconName } from '@/ui';
+import { Badge, Button, EmptyState, Icon, Panel, type IconName } from '@/ui';
 import { gaps, readinessChecklist } from './checklist';
-import { MemberToken, PurseOf, SeatOwner, classLine } from './parts';
+import { MemberToken, PurseOf, SeatOwner } from './parts';
 import { memberStatus } from './members';
 import { useTownServices } from './hooks';
 import { parseService, sectionOf } from './services';
@@ -81,41 +81,24 @@ export function ServicesPanel() {
   );
 }
 
-/** The party at a glance: hit points, purse, status, and who plays each character. */
+/** What the dock's party list doesn't show: each member's coins, and who plays them. */
 export function PartyGlance() {
   const party = useParty();
   const buyerId = useTownUi((s) => s.buyerId);
   return (
-    <Panel title="The party" meta={count(party.length, 'adventurer')}>
+    <Panel title="Purses and players" meta={count(party.length, 'adventurer')}>
       <ul className={styles.party}>
         {party.map((member) => {
           const status = memberStatus(member);
           return (
             <li key={member.id} className={styles.member}>
-              <MemberToken member={member} size={40} />
+              <MemberToken member={member} size={32} />
               <div className={styles.memberBody}>
                 <div className={styles.memberHead}>
                   <h3 className={styles.memberName}>{member.name}</h3>
-                  <span className={styles.memberClass}>{classLine(member)}</span>
-                  {buyerId === member.id && <Badge tone="accent">You are shopping</Badge>}
+                  {buyerId === member.id && <Badge tone="neutral">You are shopping</Badge>}
                   {status.dead && <Badge tone="danger">Dead</Badge>}
                 </div>
-                {!status.dead && (
-                  <HpBar
-                    current={member.current_hp}
-                    max={member.max_hp}
-                    size="sm"
-                    showValue
-                    label={`${member.name}'s hit points`}
-                  />
-                )}
-                {status.afflictions.length > 0 && (
-                  <div className={styles.chips}>
-                    {status.afflictions.map((label) => (
-                      <ConditionChip key={label} label={label} tone="harm" />
-                    ))}
-                  </div>
-                )}
                 <div className={styles.memberFoot}>
                   <PurseOf member={member} />
                   <SeatOwner memberId={member.id} />
