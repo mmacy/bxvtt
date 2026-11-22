@@ -145,6 +145,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     }
   }
   const webDist = path(env.BXVTT_WEB_DIST ?? 'apps/web/dist');
+  // Automated tests create users and send commands far faster than people do.
+  const relax = env.BXVTT_RELAX_LIMITS === 'true' ? 100 : 1;
   return {
     host: env.BXVTT_HOST ?? '127.0.0.1',
     port,
@@ -158,12 +160,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     logLevel: env.BXVTT_LOG_LEVEL ?? 'info',
     allowCharacterSeeds: env.BXVTT_ALLOW_CHARACTER_SEEDS === 'true',
     rateLimits: {
-      createUser: { capacity: 10, windowMs: 10 * 60_000 },
-      join: { capacity: 20, windowMs: 10 * 60_000 },
-      failedAuth: { capacity: 30, windowMs: 10 * 60_000 },
+      createUser: { capacity: 10 * relax, windowMs: 10 * 60_000 },
+      join: { capacity: 20 * relax, windowMs: 10 * 60_000 },
+      failedAuth: { capacity: 30 * relax, windowMs: 10 * 60_000 },
       failedHostKey: { capacity: 10, windowMs: 10 * 60_000 },
-      userWrites: { capacity: 100, windowMs: 20_000 },
-      userPosts: { capacity: 30, windowMs: 30_000 },
+      userWrites: { capacity: 100 * relax, windowMs: 20_000 },
+      userPosts: { capacity: 30 * relax, windowMs: 30_000 },
     },
     quotas: { ...DEFAULT_QUOTAS },
     bxapiTimeoutMs: 15_000,

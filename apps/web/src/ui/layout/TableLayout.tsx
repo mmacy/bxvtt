@@ -166,6 +166,8 @@ export function ModeBadge({ mode }: { mode: GameMode }) {
 }
 
 export interface GameClockProps {
+  /** The game time as text, such as `Day 2, 10:40` from `formatGameClock`. */
+  time?: string;
   /** Turns of 10 minutes since the party entered the dungeon. */
   turn?: number;
   /** Rounds of 10 seconds in the current battle. */
@@ -173,11 +175,16 @@ export interface GameClockProps {
   className?: string;
 }
 
-/** Game time in turns and, during battle, rounds. */
-export function GameClock({ turn, round, className }: GameClockProps) {
+/** Game time as a clock reading, in turns, and, during battle, in rounds. */
+export function GameClock({ time, turn, round, className }: GameClockProps) {
   return (
     <span className={cx(styles.clock, className)}>
       <Icon name="hourglass" size={14} className={styles.clockIcon} />
+      {time !== undefined && (
+        <span className={styles.clockPart}>
+          <span className={styles.clockValue}>{time}</span>
+        </span>
+      )}
       {turn !== undefined && (
         <span className={styles.clockPart}>
           <span className={styles.clockLabel}>Turn</span>

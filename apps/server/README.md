@@ -49,6 +49,7 @@ The server reads its settings from environment variables. A relative path resolv
 | `BXVTT_WEB_DIST` | `apps/web/dist` | The built web client. The server serves it only when `index.html` exists there. |
 | `BXVTT_ADVENTURES_DIR` | `adventures` | The sample adventure documents the server offers every table. |
 | `BXVTT_LOG_LEVEL` | `info` | pino log level, such as `debug` or `silent`. |
+| `BXVTT_RELAX_LIMITS` | `false` | Set `true` to multiply the rate limits by 100 for automated tests on your own machine. Never set it on a server that other people can reach. |
 | `BXVTT_ALLOW_CHARACTER_SEEDS` | `false` | Set `true` to let users pass `seed` when they roll abilities or create a character. Tests set it. |
 
 The server logs one JSON line per request with the method, the path without its query string, the status, the time in milliseconds, the user ID, and the client's IP address. It never logs a token. On SIGINT or SIGTERM it closes the WebSockets and the database and exits.

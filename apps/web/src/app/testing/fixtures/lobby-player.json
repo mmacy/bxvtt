@@ -1,0 +1,113 @@
+{
+  "type": "snapshot",
+  "user": {
+    "id": "usr_9w3ahkA7vgakA72hGmdhNg",
+    "name": "Sam",
+    "color": "#44aa99",
+    "created_at": "2026-11-22T05:18:27Z"
+  },
+  "role": "player",
+  "table": {
+    "id": "tbl_5qEk4DHN80IfFswxhZiI9w",
+    "name": "Thursday at the Drowned Bell",
+    "invite_code": "NP36E-A62JC-CA5M4-N7EH8",
+    "phase": "lobby",
+    "settings": {
+      "party_control": "caller",
+      "caller_user_id": null,
+      "auto_resolve": true,
+      "autosave": true
+    },
+    "members": [
+      {
+        "user_id": "usr_yyi4I1GsY3UtjRmjiFUNRQ",
+        "name": "Ruth",
+        "color": "#882255",
+        "role": "referee",
+        "joined_at": "2026-11-22T05:18:27Z"
+      },
+      {
+        "user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
+        "name": "Sam",
+        "color": "#44aa99",
+        "role": "player",
+        "joined_at": "2026-11-22T05:18:27Z"
+      }
+    ],
+    "roster": [
+      {
+        "id": "ros_f1QvLMo30JY91p1QlHyXbQ",
+        "character_id": "chr_rk5wfak0OsbJn7qFjVn8xA",
+        "owner_user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
+        "name": "Brenna",
+        "class_id": "fighter",
+        "level": 1,
+        "added_at": "2026-11-22T05:18:27Z"
+      },
+      {
+        "id": "ros_HfOQGGMALyxZ1U_Vmfdlqw",
+        "character_id": "chr_wl8QukajXCXggNkY7nta3g",
+        "owner_user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
+        "name": "Wren",
+        "class_id": "thief",
+        "level": 1,
+        "added_at": "2026-11-22T05:18:27Z"
+      },
+      {
+        "id": "ros_WwWuMureACugZKUauuUGJg",
+        "character_id": "chr_RAtgYKsftVHwxz20cUV9oA",
+        "owner_user_id": "usr_yyi4I1GsY3UtjRmjiFUNRQ",
+        "name": "Osric",
+        "class_id": "cleric",
+        "level": 1,
+        "added_at": "2026-11-22T05:18:27Z"
+      },
+      {
+        "id": "ros_T4GRDiICG84isplH0VmJwg",
+        "character_id": "chr_Be1f3MigrYdWlDIgPWQifQ",
+        "owner_user_id": "usr_yyi4I1GsY3UtjRmjiFUNRQ",
+        "name": "Tamsin",
+        "class_id": "fighter",
+        "level": 1,
+        "added_at": "2026-11-22T05:18:27Z"
+      }
+    ],
+    "game": null,
+    "created_by": "usr_yyi4I1GsY3UtjRmjiFUNRQ",
+    "created_at": "2026-11-22T05:18:27Z"
+  },
+  "presence": {
+    "online": ["usr_9w3ahkA7vgakA72hGmdhNg"]
+  },
+  "game": null,
+  "declarations": null,
+  "feed": {
+    "entries": [
+      {
+        "seq": 5,
+        "created_at": "2026-11-22T05:18:27Z",
+        "user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
+        "visibility": "everyone",
+        "to": [],
+        "kind": "system",
+        "code": "member_joined",
+        "params": {
+          "user_id": "usr_9w3ahkA7vgakA72hGmdhNg"
+        }
+      }
+    ],
+    "has_more": false
+  },
+  "annotations": null,
+  "notes": {
+    "party": {
+      "kind": "party",
+      "text": "",
+      "version": 0,
+      "updated_by": null,
+      "updated_at": null
+    },
+    "referee": null
+  },
+  "server_time": "2026-11-22T05:18:27Z"
+}

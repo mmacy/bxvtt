@@ -1,0 +1,1057 @@
+{
+  "type": "snapshot",
+  "user": {
+    "id": "usr_9w3ahkA7vgakA72hGmdhNg",
+    "name": "Sam",
+    "color": "#44aa99",
+    "created_at": "2026-11-22T05:18:27Z"
+  },
+  "role": "player",
+  "table": {
+    "id": "tbl_5qEk4DHN80IfFswxhZiI9w",
+    "name": "Thursday at the Drowned Bell",
+    "invite_code": "NP36E-A62JC-CA5M4-N7EH8",
+    "phase": "playing",
+    "settings": {
+      "party_control": "caller",
+      "caller_user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
+      "auto_resolve": true,
+      "autosave": true
+    },
+    "members": [
+      {
+        "user_id": "usr_yyi4I1GsY3UtjRmjiFUNRQ",
+        "name": "Ruth",
+        "color": "#882255",
+        "role": "referee",
+        "joined_at": "2026-11-22T05:18:27Z"
+      },
+      {
+        "user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
+        "name": "Sam",
+        "color": "#44aa99",
+        "role": "player",
+        "joined_at": "2026-11-22T05:18:27Z"
+      }
+    ],
+    "roster": [
+      {
+        "id": "ros_f1QvLMo30JY91p1QlHyXbQ",
+        "character_id": "chr_rk5wfak0OsbJn7qFjVn8xA",
+        "owner_user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
+        "name": "Brenna",
+        "class_id": "fighter",
+        "level": 1,
+        "added_at": "2026-11-22T05:18:27Z"
+      },
+      {
+        "id": "ros_HfOQGGMALyxZ1U_Vmfdlqw",
+        "character_id": "chr_wl8QukajXCXggNkY7nta3g",
+        "owner_user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
+        "name": "Wren",
+        "class_id": "thief",
+        "level": 1,
+        "added_at": "2026-11-22T05:18:27Z"
+      },
+      {
+        "id": "ros_WwWuMureACugZKUauuUGJg",
+        "character_id": "chr_RAtgYKsftVHwxz20cUV9oA",
+        "owner_user_id": "usr_yyi4I1GsY3UtjRmjiFUNRQ",
+        "name": "Osric",
+        "class_id": "cleric",
+        "level": 1,
+        "added_at": "2026-11-22T05:18:27Z"
+      },
+      {
+        "id": "ros_T4GRDiICG84isplH0VmJwg",
+        "character_id": "chr_Be1f3MigrYdWlDIgPWQifQ",
+        "owner_user_id": "usr_yyi4I1GsY3UtjRmjiFUNRQ",
+        "name": "Tamsin",
+        "class_id": "fighter",
+        "level": 1,
+        "added_at": "2026-11-22T05:18:27Z"
+      }
+    ],
+    "game": {
+      "session_id": "ses_5nMCFWdwzzy4PAVtuyn7tg",
+      "adventure_id": "sample:the-drowned-bell",
+      "adventure_name": "The Drowned Bell",
+      "mode": "encounter",
+      "ended": false,
+      "started_at": "2026-11-22T05:18:27Z"
+    },
+    "created_by": "usr_yyi4I1GsY3UtjRmjiFUNRQ",
+    "created_at": "2026-11-22T05:18:27Z"
+  },
+  "presence": {
+    "online": ["usr_9w3ahkA7vgakA72hGmdhNg"]
+  },
+  "game": {
+    "table_id": "tbl_5qEk4DHN80IfFswxhZiI9w",
+    "session_id": "ses_5nMCFWdwzzy4PAVtuyn7tg",
+    "adventure_id": "sample:the-drowned-bell",
+    "adventure_name": "The Drowned Bell",
+    "mode": "encounter",
+    "ended": false,
+    "revision": 3,
+    "view": {
+      "adventure_name": "The Drowned Bell",
+      "adventure_description": "On still nights, the people of Hollin Ferry hear a bell tolling under the Grey Mere, from the sunken priory on Corvane's Holm. Since it began, the drowned dead have been seen walking on the causeway. An introductory adventure for three to six characters of first level.",
+      "town_name": "Hollin Ferry",
+      "town_description": "A huddle of reed-thatched houses and smokehouses on the shore of the Grey Mere. A flat-bottomed ferry crosses to Corvane's Holm when the ferryman can be paid to go. The temple of the Lantern stands at the top of the street, and its own bell has hung silent since the drowned bell began to toll.",
+      "town_services": [
+        "Ostler's store: weapons, armour, and adventuring gear",
+        "Temple of the Lantern: cure light wounds, cure serious wounds, cure disease, neutralize poison, remove curse, and raise dead",
+        "Widow Marl, moneychanger: buys gems, jewellery, and coin",
+        "The Smoked Eel: beds, hot food, and a quiet corner to study spells"
+      ],
+      "town_healing_prices": {
+        "cure_light_wounds": 20,
+        "cure_serious_wounds": 100,
+        "cure_disease": 150,
+        "neutralize_poison": 150,
+        "remove_curse": 200,
+        "raise_dead": 1000
+      },
+      "party": [
+        {
+          "id": "character-0001",
+          "name": "Brenna",
+          "class_id": "fighter",
+          "level": 1,
+          "current_hp": 5,
+          "max_hp": 5,
+          "conditions": [],
+          "inventory": {
+            "items": [
+              {
+                "instance_type": "item",
+                "template": {
+                  "item_type": "gear",
+                  "id": "torch",
+                  "name": "Torches (6)",
+                  "cost_gp": 1,
+                  "lot_size": 6,
+                  "capacity_coins": null,
+                  "combat": {
+                    "damage": "1d4",
+                    "qualities": ["melee"],
+                    "missile_ranges": null
+                  },
+                  "params": {
+                    "brightness": "flame",
+                    "burn_turns": 6,
+                    "light_radius_feet": 30
+                  },
+                  "overrides_applied": []
+                },
+                "quantity": 6
+              }
+            ],
+            "purse": {
+              "pp": 0,
+              "gp": 59,
+              "ep": 0,
+              "sp": 0,
+              "cp": 0
+            },
+            "valuables": [],
+            "worn_armour": {
+              "instance_type": "item",
+              "template": {
+                "item_type": "armour",
+                "id": "leather",
+                "name": "Leather",
+                "cost_gp": 20,
+                "weight_coins": 200,
+                "ac": 7,
+                "ac_ascending": 12,
+                "ac_bonus": null,
+                "category": "light",
+                "overrides_applied": []
+              },
+              "quantity": 1
+            },
+            "shield": null,
+            "wielded": [
+              {
+                "instance_type": "item",
+                "template": {
+                  "item_type": "weapon",
+                  "id": "sword",
+                  "name": "Sword",
+                  "cost_gp": 10,
+                  "weight_coins": 60,
+                  "damage": "1d8",
+                  "qualities": ["melee"],
+                  "missile_ranges": null,
+                  "material": "standard",
+                  "overrides_applied": []
+                },
+                "quantity": 1
+              }
+            ],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 30,
+          "race": "human",
+          "alignment": "lawful",
+          "title": "Veteran",
+          "xp": 0,
+          "xp_next_level": 2000,
+          "scores": {
+            "str": 7,
+            "int": 11,
+            "wis": 9,
+            "dex": 8,
+            "con": 17,
+            "cha": 14
+          },
+          "effective_strength": 7,
+          "melee_modifier": -1,
+          "missile_modifier": -1,
+          "initiative_modifier": -1,
+          "hit_point_modifier": 2,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 1,
+          "open_doors_chance": 1,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 8,
+          "armour_class_ascending": 11,
+          "saves": {
+            "death": 12,
+            "wands": 13,
+            "paralysis": 14,
+            "breath": 15,
+            "spells": 16
+          },
+          "movement_rate_feet": 90,
+          "languages": ["alignment_lawful", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        },
+        {
+          "id": "character-0002",
+          "name": "Wren",
+          "class_id": "thief",
+          "level": 1,
+          "current_hp": 3,
+          "max_hp": 3,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": {
+              "pp": 0,
+              "gp": 73,
+              "ep": 0,
+              "sp": 0,
+              "cp": 0
+            },
+            "valuables": [],
+            "worn_armour": {
+              "instance_type": "item",
+              "template": {
+                "item_type": "armour",
+                "id": "leather",
+                "name": "Leather",
+                "cost_gp": 20,
+                "weight_coins": 200,
+                "ac": 7,
+                "ac_ascending": 12,
+                "ac_bonus": null,
+                "category": "light",
+                "overrides_applied": []
+              },
+              "quantity": 1
+            },
+            "shield": null,
+            "wielded": [
+              {
+                "instance_type": "item",
+                "template": {
+                  "item_type": "weapon",
+                  "id": "short_sword",
+                  "name": "Short sword",
+                  "cost_gp": 7,
+                  "weight_coins": 30,
+                  "damage": "1d6",
+                  "qualities": ["melee"],
+                  "missile_ranges": null,
+                  "material": "standard",
+                  "overrides_applied": []
+                },
+                "quantity": 1
+              }
+            ],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 30,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Apprentice",
+          "xp": 0,
+          "xp_next_level": 1200,
+          "scores": {
+            "str": 12,
+            "int": 7,
+            "wis": 12,
+            "dex": 9,
+            "con": 11,
+            "cha": 16
+          },
+          "effective_strength": 12,
+          "melee_modifier": 0,
+          "missile_modifier": 0,
+          "initiative_modifier": 0,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 1,
+          "open_doors_chance": 2,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 7,
+          "armour_class_ascending": 12,
+          "saves": {
+            "death": 13,
+            "wands": 14,
+            "paralysis": 13,
+            "breath": 16,
+            "spells": 15
+          },
+          "movement_rate_feet": 90,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {
+            "climb_sheer_surfaces": 87,
+            "find_remove_treasure_traps": 10,
+            "hear_noise": 2,
+            "hide_in_shadows": 10,
+            "move_silently": 20,
+            "open_locks": 15,
+            "pick_pockets": 20
+          }
+        },
+        {
+          "id": "character-0003",
+          "name": "Osric",
+          "class_id": "cleric",
+          "level": 1,
+          "current_hp": 4,
+          "max_hp": 4,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": {
+              "pp": 0,
+              "gp": 45,
+              "ep": 0,
+              "sp": 0,
+              "cp": 0
+            },
+            "valuables": [],
+            "worn_armour": {
+              "instance_type": "item",
+              "template": {
+                "item_type": "armour",
+                "id": "leather",
+                "name": "Leather",
+                "cost_gp": 20,
+                "weight_coins": 200,
+                "ac": 7,
+                "ac_ascending": 12,
+                "ac_bonus": null,
+                "category": "light",
+                "overrides_applied": []
+              },
+              "quantity": 1
+            },
+            "shield": null,
+            "wielded": [
+              {
+                "instance_type": "item",
+                "template": {
+                  "item_type": "weapon",
+                  "id": "mace",
+                  "name": "Mace",
+                  "cost_gp": 5,
+                  "weight_coins": 30,
+                  "damage": "1d6",
+                  "qualities": ["blunt", "melee"],
+                  "missile_ranges": null,
+                  "material": "standard",
+                  "overrides_applied": []
+                },
+                "quantity": 1
+              }
+            ],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 30,
+          "race": "human",
+          "alignment": "lawful",
+          "title": "Acolyte",
+          "xp": 0,
+          "xp_next_level": 1500,
+          "scores": {
+            "str": 13,
+            "int": 11,
+            "wis": 14,
+            "dex": 14,
+            "con": 10,
+            "cha": 7
+          },
+          "effective_strength": 13,
+          "melee_modifier": 1,
+          "missile_modifier": 1,
+          "initiative_modifier": 1,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 1,
+          "npc_reaction_modifier": -1,
+          "open_doors_chance": 3,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 6,
+          "armour_class_ascending": 13,
+          "saves": {
+            "death": 11,
+            "wands": 12,
+            "paralysis": 14,
+            "breath": 16,
+            "spells": 15
+          },
+          "movement_rate_feet": 90,
+          "languages": ["alignment_lawful", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        },
+        {
+          "id": "character-0004",
+          "name": "Tamsin",
+          "class_id": "fighter",
+          "level": 1,
+          "current_hp": 4,
+          "max_hp": 4,
+          "conditions": [],
+          "inventory": {
+            "items": [
+              {
+                "instance_type": "item",
+                "template": {
+                  "item_type": "gear",
+                  "id": "torch",
+                  "name": "Torches (6)",
+                  "cost_gp": 1,
+                  "lot_size": 6,
+                  "capacity_coins": null,
+                  "combat": {
+                    "damage": "1d4",
+                    "qualities": ["melee"],
+                    "missile_ranges": null
+                  },
+                  "params": {
+                    "brightness": "flame",
+                    "burn_turns": 6,
+                    "light_radius_feet": 30
+                  },
+                  "overrides_applied": []
+                },
+                "quantity": 6
+              }
+            ],
+            "purse": {
+              "pp": 0,
+              "gp": 126,
+              "ep": 0,
+              "sp": 0,
+              "cp": 0
+            },
+            "valuables": [],
+            "worn_armour": {
+              "instance_type": "item",
+              "template": {
+                "item_type": "armour",
+                "id": "leather",
+                "name": "Leather",
+                "cost_gp": 20,
+                "weight_coins": 200,
+                "ac": 7,
+                "ac_ascending": 12,
+                "ac_bonus": null,
+                "category": "light",
+                "overrides_applied": []
+              },
+              "quantity": 1
+            },
+            "shield": null,
+            "wielded": [
+              {
+                "instance_type": "item",
+                "template": {
+                  "item_type": "weapon",
+                  "id": "spear",
+                  "name": "Spear",
+                  "cost_gp": 3,
+                  "weight_coins": 30,
+                  "damage": "1d6",
+                  "qualities": ["brace", "melee", "missile"],
+                  "missile_ranges": {
+                    "short": {
+                      "min_feet": 5,
+                      "max_feet": 20
+                    },
+                    "medium": {
+                      "min_feet": 21,
+                      "max_feet": 40
+                    },
+                    "long": {
+                      "min_feet": 41,
+                      "max_feet": 60
+                    }
+                  },
+                  "material": "standard",
+                  "overrides_applied": []
+                },
+                "quantity": 1
+              }
+            ],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 30,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Veteran",
+          "xp": 0,
+          "xp_next_level": 2000,
+          "scores": {
+            "str": 8,
+            "int": 11,
+            "wis": 12,
+            "dex": 16,
+            "con": 11,
+            "cha": 12
+          },
+          "effective_strength": 8,
+          "melee_modifier": -1,
+          "missile_modifier": 2,
+          "initiative_modifier": 1,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 0,
+          "open_doors_chance": 1,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 5,
+          "armour_class_ascending": 14,
+          "saves": {
+            "death": 12,
+            "wands": 13,
+            "paralysis": 14,
+            "breath": 15,
+            "spells": 16
+          },
+          "movement_rate_feet": 90,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        }
+      ],
+      "location": {
+        "kind": "dungeon",
+        "dungeon_id": "priory",
+        "level_number": 1,
+        "position": [14, 22],
+        "facing": "north"
+      },
+      "clock_rounds": 180,
+      "mode": "encounter",
+      "explored": [
+        {
+          "dungeon_id": "priory",
+          "level_number": 1,
+          "cells": [
+            [14, 23],
+            [14, 22]
+          ],
+          "edges": {
+            "14,23:north": {
+              "kind": "open",
+              "door_open": null,
+              "door_wedged": null
+            },
+            "15,23:west": {
+              "kind": "open",
+              "door_open": null,
+              "door_wedged": null
+            },
+            "14,24:north": {
+              "kind": "wall",
+              "door_open": null,
+              "door_wedged": null
+            },
+            "14,23:west": {
+              "kind": "open",
+              "door_open": null,
+              "door_wedged": null
+            },
+            "14,22:north": {
+              "kind": "open",
+              "door_open": null,
+              "door_wedged": null
+            },
+            "15,22:west": {
+              "kind": "open",
+              "door_open": null,
+              "door_wedged": null
+            },
+            "14,22:west": {
+              "kind": "open",
+              "door_open": null,
+              "door_wedged": null
+            }
+          }
+        }
+      ],
+      "piles": {},
+      "emptied_caches": [],
+      "effects": [],
+      "fatigued": false,
+      "exhausted": false,
+      "deprivation": {},
+      "journal": [
+        {
+          "text": "The ferry grounds at the landing stage of Corvane's Holm. As you step ashore, a bell tolls once, somewhere beneath your feet.",
+          "rounds": 180
+        },
+        {
+          "text": "As the ferry grounds, the ferryman tells you about the priory's relic, the Hand of Saint Corvane, lost in the flood. The temple would pay well to have it back.",
+          "rounds": 180
+        }
+      ],
+      "quests": [
+        {
+          "id": "red_thumbs",
+          "name": "Break the Red Thumbs",
+          "narrative": "Reeve Tamsin Hale has posted a bounty on the ferry house door: 100 gp for the death of Gashnak One-Ear, the hobgoblin whose goblins rob the ferry and the eel traps.",
+          "speaker": "Reeve Tamsin Hale",
+          "objectives": [
+            {
+              "id": "kill_gashnak",
+              "name": "Kill Gashnak One-Ear",
+              "state": "incomplete"
+            },
+            {
+              "id": "report_to_reeve",
+              "name": "Report to Reeve Tamsin Hale",
+              "state": "incomplete"
+            }
+          ]
+        },
+        {
+          "id": "saints_hand",
+          "name": "The Hand of Saint Corvane",
+          "narrative": "As the ferry grounds, the ferryman tells you about the priory's relic, the Hand of Saint Corvane, lost in the flood. The temple would pay well to have it back.",
+          "speaker": "the ferryman",
+          "objectives": [
+            {
+              "id": "find_hand",
+              "name": "Recover the Hand",
+              "state": "incomplete"
+            },
+            {
+              "id": "return_hand",
+              "name": "Return the Hand to the temple",
+              "state": "incomplete"
+            }
+          ]
+        },
+        {
+          "id": "silence_the_bell",
+          "name": "Silence the drowned bell",
+          "narrative": "Mother Aldis asks you to cross to the priory on Corvane's Holm, find the bell that tolls under the water, and bring back its tongue so the temple can melt it down.",
+          "speaker": "Mother Aldis",
+          "objectives": [
+            {
+              "id": "find_belfry",
+              "name": "Find the drowned belfry",
+              "state": "incomplete"
+            },
+            {
+              "id": "take_tongue",
+              "name": "Take the tongue of Mercy",
+              "state": "incomplete"
+            },
+            {
+              "id": "bring_tongue",
+              "name": "Bring the tongue to Hollin Ferry",
+              "state": "incomplete"
+            }
+          ]
+        }
+      ],
+      "encounter": {
+        "groups": [
+          {
+            "id": "group-0001",
+            "label": "goblin",
+            "label_plural": "goblins",
+            "family_id": "goblin",
+            "categories": ["person"],
+            "count": 3,
+            "distance_feet": 40,
+            "visible_conditions": [],
+            "condition_counts": {},
+            "fled": false,
+            "member_distance_feet": {},
+            "front_rank": [],
+            "lit": null,
+            "seen_by": []
+          }
+        ],
+        "stance": "indifferent",
+        "in_battle": false,
+        "battle_round": null,
+        "pursuit_gap_feet": null,
+        "declarers": ["character-0001", "character-0002", "character-0003", "character-0004"],
+        "front_rank": ["character-0001", "character-0002", "character-0003", "character-0004"],
+        "immobile": [],
+        "reloading": [],
+        "advance_feet": {},
+        "formation_width": 6,
+        "party_free_round": false
+      }
+    },
+    "commands": [
+      {
+        "command_type": "drop_items",
+        "kind": "play",
+        "class": "member",
+        "member_field": "character_id"
+      },
+      {
+        "command_type": "give_items",
+        "kind": "play",
+        "class": "member",
+        "member_field": "character_id"
+      },
+      {
+        "command_type": "use_item",
+        "kind": "play",
+        "class": "member",
+        "member_field": "character_id"
+      },
+      {
+        "command_type": "parley",
+        "kind": "play",
+        "class": "party",
+        "member_field": null
+      },
+      {
+        "command_type": "evade",
+        "kind": "play",
+        "class": "party",
+        "member_field": null
+      },
+      {
+        "command_type": "engage_battle",
+        "kind": "play",
+        "class": "party",
+        "member_field": null
+      },
+      {
+        "command_type": "wait",
+        "kind": "play",
+        "class": "party",
+        "member_field": null
+      },
+      {
+        "command_type": "turn_undead",
+        "kind": "play",
+        "class": "member",
+        "member_field": "character_id"
+      }
+    ],
+    "seats": [
+      {
+        "member_id": "character-0001",
+        "name": "Brenna",
+        "user_id": "usr_9w3ahkA7vgakA72hGmdhNg"
+      },
+      {
+        "member_id": "character-0002",
+        "name": "Wren",
+        "user_id": "usr_9w3ahkA7vgakA72hGmdhNg"
+      },
+      {
+        "member_id": "character-0003",
+        "name": "Osric",
+        "user_id": "usr_yyi4I1GsY3UtjRmjiFUNRQ"
+      },
+      {
+        "member_id": "character-0004",
+        "name": "Tamsin",
+        "user_id": "usr_yyi4I1GsY3UtjRmjiFUNRQ"
+      }
+    ],
+    "caller_user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
+    "scene": {
+      "levels": [
+        {
+          "dungeon_id": "priory",
+          "level_number": 1,
+          "areas": [
+            {
+              "id": "gatehouse_stair",
+              "name": "Gatehouse stair",
+              "description": "A flight of worn steps runs down from the roofless gatehouse into the undercroft of the priory. A stone statue of a hooded monk lies face down across the bottom steps, broken at the knees. Lake water drips from the vault, and the air smells of reeds and old smoke. A wide archway opens to the north.",
+              "cells": [
+                [14, 22],
+                [14, 23]
+              ]
+            }
+          ],
+          "transitions": [],
+          "traps": [],
+          "caches": [],
+          "features": [
+            {
+              "id": "fallen_statue",
+              "kind": "custom",
+              "description": "The statue is Saint Corvane, holding up a lantern. Someone has chipped the glass out of the lantern to see whether there was silver inside it.",
+              "area_id": "gatehouse_stair",
+              "position": null
+            }
+          ],
+          "piles": []
+        }
+      ],
+      "here": {
+        "dungeon_id": "priory",
+        "level_number": 1,
+        "position": [14, 22],
+        "area": {
+          "id": "gatehouse_stair",
+          "name": "Gatehouse stair",
+          "description": "A flight of worn steps runs down from the roofless gatehouse into the undercroft of the priory. A stone statue of a hooded monk lies face down across the bottom steps, broken at the knees. Lake water drips from the vault, and the air smells of reeds and old smoke. A wide archway opens to the north.",
+          "cells": [
+            [14, 22],
+            [14, 23]
+          ]
+        },
+        "caches": [],
+        "features": [
+          {
+            "id": "fallen_statue",
+            "kind": "custom",
+            "description": "The statue is Saint Corvane, holding up a lantern. Someone has chipped the glass out of the lantern to see whether there was silver inside it.",
+            "area_id": "gatehouse_stair",
+            "position": null
+          }
+        ],
+        "transitions": [],
+        "traps": [],
+        "pile": false
+      },
+      "names": {
+        "leather": "Leather",
+        "mace": "Mace",
+        "short_sword": "Short sword",
+        "spear": "Spear",
+        "sword": "Sword",
+        "torch": "Torches (6)"
+      }
+    },
+    "referee": null
+  },
+  "declarations": null,
+  "feed": {
+    "entries": [
+      {
+        "seq": 5,
+        "created_at": "2026-11-22T05:18:27Z",
+        "user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
+        "visibility": "everyone",
+        "to": [],
+        "kind": "system",
+        "code": "member_joined",
+        "params": {
+          "user_id": "usr_9w3ahkA7vgakA72hGmdhNg"
+        }
+      },
+      {
+        "seq": 6,
+        "created_at": "2026-11-22T05:18:27Z",
+        "user_id": "usr_yyi4I1GsY3UtjRmjiFUNRQ",
+        "visibility": "everyone",
+        "to": [],
+        "kind": "system",
+        "code": "game_started",
+        "params": {
+          "session_id": "ses_5nMCFWdwzzy4PAVtuyn7tg",
+          "adventure_name": "The Drowned Bell"
+        }
+      },
+      {
+        "seq": 7,
+        "created_at": "2026-11-22T05:18:28Z",
+        "user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
+        "visibility": "everyone",
+        "to": [],
+        "kind": "game",
+        "command_type": "enter_dungeon",
+        "revision": 1,
+        "session_id": "ses_5nMCFWdwzzy4PAVtuyn7tg",
+        "events": [
+          {
+            "code": "exploration.location.entered",
+            "visibility": "player",
+            "event_type": "location_entered",
+            "location_kind": "dungeon",
+            "location_id": "priory",
+            "level_number": 1,
+            "dungeon_id": null,
+            "narrative": null,
+            "via": "entrance",
+            "transition_ref": null
+          },
+          {
+            "code": "exploration.location.entered",
+            "visibility": "player",
+            "event_type": "location_entered",
+            "location_kind": "area",
+            "location_id": "gatehouse_stair",
+            "level_number": 1,
+            "dungeon_id": "priory",
+            "narrative": null,
+            "via": null,
+            "transition_ref": null
+          },
+          {
+            "code": "session.journal.entry_added",
+            "visibility": "player",
+            "event_type": "journal_entry_added",
+            "text": "The ferry grounds at the landing stage of Corvane's Holm. As you step ashore, a bell tolls once, somewhere beneath your feet.",
+            "rounds": 180
+          },
+          {
+            "code": "session.quest.activated",
+            "visibility": "player",
+            "event_type": "quest_activated",
+            "quest_id": "saints_hand",
+            "name": "The Hand of Saint Corvane",
+            "narrative": "As the ferry grounds, the ferryman tells you about the priory's relic, the Hand of Saint Corvane, lost in the flood. The temple would pay well to have it back."
+          }
+        ],
+        "messages": [
+          "The party enters dungeon priory (level 1).",
+          "The party enters area gatehouse_stair (level 1).",
+          "Journal: The ferry grounds at the landing stage of Corvane's Holm. As you step ashore, a bell tolls once, somewhere beneath your feet.",
+          "A new quest: The Hand of Saint Corvane. As the ferry grounds, the ferryman tells you about the priory's relic, the Hand of Saint Corvane, lost in the flood. The temple would pay well to have it back."
+        ]
+      },
+      {
+        "seq": 8,
+        "created_at": "2026-11-22T05:18:28Z",
+        "user_id": null,
+        "visibility": "everyone",
+        "to": [],
+        "kind": "system",
+        "code": "save_created",
+        "params": {
+          "save_id": "sav_5SclM40vHF9GH6TPFGO4Yg",
+          "label": "Autosave: Entered The priory on Corvane's Holm",
+          "autosave": true
+        }
+      },
+      {
+        "seq": 9,
+        "created_at": "2026-11-22T05:18:28Z",
+        "user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
+        "visibility": "everyone",
+        "to": [],
+        "kind": "game",
+        "command_type": "move_party",
+        "revision": 2,
+        "session_id": "ses_5nMCFWdwzzy4PAVtuyn7tg",
+        "events": [
+          {
+            "code": "exploration.party.moved",
+            "visibility": "player",
+            "event_type": "party_moved",
+            "x": 14,
+            "y": 22,
+            "facing": "north",
+            "narrative": null
+          }
+        ],
+        "messages": ["The party moves to (14, 22), facing north."]
+      },
+      {
+        "seq": 10,
+        "created_at": "2026-11-22T05:18:28Z",
+        "user_id": "usr_yyi4I1GsY3UtjRmjiFUNRQ",
+        "visibility": "everyone",
+        "to": [],
+        "kind": "game",
+        "command_type": null,
+        "revision": 3,
+        "session_id": "ses_5nMCFWdwzzy4PAVtuyn7tg",
+        "events": [
+          {
+            "code": "encounter.started",
+            "visibility": "player",
+            "event_type": "encounter_started",
+            "monster_name": "goblin",
+            "monster_name_plural": "goblins",
+            "count": 3,
+            "distance_feet": 40,
+            "party_surprised": false,
+            "monsters_surprised": false
+          },
+          {
+            "code": "encounter.stance.changed",
+            "visibility": "player",
+            "event_type": "stance_changed",
+            "stance": "indifferent"
+          }
+        ],
+        "messages": ["Encounter: 3 goblins at 40'.", "The monsters' bearing: indifferent."]
+      },
+      {
+        "seq": 11,
+        "created_at": "2026-11-22T05:18:28Z",
+        "user_id": null,
+        "visibility": "everyone",
+        "to": [],
+        "kind": "system",
+        "code": "save_created",
+        "params": {
+          "save_id": "sav_DSEsteOI4k7MqFtd18Xdlw",
+          "label": "Autosave: Before the battle in The priory on Corvane's Holm, level 1",
+          "autosave": true
+        }
+      }
+    ],
+    "has_more": false
+  },
+  "annotations": {
+    "dungeon_id": "priory",
+    "level_number": 1,
+    "items": []
+  },
+  "notes": {
+    "party": {
+      "kind": "party",
+      "text": "",
+      "version": 0,
+      "updated_by": null,
+      "updated_at": null
+    },
+    "referee": null
+  },
+  "server_time": "2026-11-22T05:18:28Z"
+}
