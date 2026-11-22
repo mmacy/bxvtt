@@ -3466,7 +3466,7 @@
                 "encounter": {
                   "monsters": [
                     {
-                      "template_id": "hobgoblin",
+                      "template_id": "gashnak",
                       "count_dice": null,
                       "count_fixed": 1
                     },
@@ -10917,6 +10917,128 @@
           "undead"
         ],
         "overrides_applied": []
+      },
+      {
+        "id": "gashnak",
+        "name": "Gashnak One-Ear",
+        "display_name": "Gashnak One-Ear",
+        "display_name_plural": "Gashnak One-Ears",
+        "family_id": "hobgoblin",
+        "page": "",
+        "intro": "The hobgoblin with a ragged left ear who leads the Red Thumb goblins.",
+        "ac": 6,
+        "ac_ascending": 13,
+        "ac_alternates": [],
+        "attack_roll_required": true,
+        "hit_dice": {
+          "count": 1,
+          "die": 8,
+          "modifier": 1,
+          "asterisks": 0,
+          "average_hp": 5,
+          "fixed_hp": null
+        },
+        "attacks": [
+          {
+            "attacks": [
+              {
+                "count": 1,
+                "name": "weapon",
+                "damage": "1d8",
+                "fixed_damage": null,
+                "fixed_damage_options": [],
+                "by_weapon": true,
+                "by_weapon_modifier": 0,
+                "effects": []
+              }
+            ],
+            "use": "primary"
+          }
+        ],
+        "thac0": 18,
+        "attack_bonus": 1,
+        "movement": [
+          {
+            "rate_feet": 90,
+            "encounter_rate_feet": 30,
+            "descriptor": null
+          }
+        ],
+        "saves": {
+          "values": {
+            "death": 12,
+            "wands": 13,
+            "paralysis": 14,
+            "breath": 15,
+            "spells": 16
+          },
+          "save_as": "1"
+        },
+        "morale": 8,
+        "morale_alternates": [
+          {
+            "score": 10,
+            "condition": "with king"
+          }
+        ],
+        "alignment": {
+          "options": [
+            "chaotic"
+          ],
+          "usual": null
+        },
+        "xp": 15,
+        "xp_notes": [
+          {
+            "role": "bodyguard",
+            "xp": 75
+          },
+          {
+            "role": "king",
+            "xp": 175
+          }
+        ],
+        "number_appearing": {
+          "dungeon": {
+            "dice": "1d6",
+            "fixed": null,
+            "see_below": false
+          },
+          "lair": {
+            "dice": "4d6",
+            "fixed": null,
+            "see_below": false
+          }
+        },
+        "treasure": {
+          "letters": [
+            "D"
+          ],
+          "parenthetical": [],
+          "extra_gp": 0,
+          "multiplier": 1,
+          "special": [],
+          "see_below": false
+        },
+        "abilities": [
+          {
+            "tag": "hobgoblin_king_and_bodyguards",
+            "name": "Hobgoblin king and bodyguards",
+            "prose": "A 5HD (22hp) king and 1d4 4HD (3d6hp) bodyguards live in the hobgoblin lair. The king gains a +2 bonus to damage rolls. A thoul may sometimes be found among the king’s bodyguards.",
+            "manual": true,
+            "params": {}
+          }
+        ],
+        "defenses": {
+          "harmed_only_by": [],
+          "reductions": [],
+          "energy": {},
+          "condition_immunities": []
+        },
+        "categories": [
+          "person"
+        ],
+        "overrides_applied": []
       }
     ],
     "items": [
@@ -11004,7 +11126,7 @@
         "id": "gashnak_falls",
         "when": {
           "pattern_type": "monster_defeated",
-          "template_id": "hobgoblin"
+          "template_id": "gashnak"
         },
         "conditions": [],
         "repeatable": false,
@@ -11187,7 +11309,7 @@
             "when": {
               "pattern": {
                 "pattern_type": "monster_defeated",
-                "template_id": "hobgoblin"
+                "template_id": "gashnak"
               },
               "conditions": []
             },

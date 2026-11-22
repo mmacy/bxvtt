@@ -12,6 +12,8 @@ for (const name of readdirSync(join(root, 'src'))
   .filter((entry) => entry.endsWith('.mjs'))
   .sort()) {
   const { file, document } = await import(join(root, 'src', name));
+  // A module without a document holds shared content, like named-monsters.mjs.
+  if (!document) continue;
   writeFileSync(join(root, file), JSON.stringify(document, null, 2) + '\n');
   console.log(`wrote adventures/${file}`);
   if (showMaps) {

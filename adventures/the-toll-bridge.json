@@ -1373,7 +1373,7 @@
                 "encounter": {
                   "monsters": [
                     {
-                      "template_id": "medium",
+                      "template_id": "toll_clerk",
                       "count_dice": null,
                       "count_fixed": 1
                     },
@@ -1488,12 +1488,12 @@
                 "encounter": {
                   "monsters": [
                     {
-                      "template_id": "veteran_2",
+                      "template_id": "mag_corrie",
                       "count_dice": null,
                       "count_fixed": 1
                     },
                     {
-                      "template_id": "berserker",
+                      "template_id": "mags_bodyguard",
                       "count_dice": null,
                       "count_fixed": 1
                     }
@@ -2360,12 +2360,372 @@
               1,
               6
             ],
-            "guidance": "Play the bandits as lazy and greedy rather than cruel. The toll collectors at the gate would rather take a bribe than fight, and they run when Mag Corrie falls. Mag is clever and proud. She will bargain for her life, and she will lie. The river is the bridge's real danger: anyone who steps off the ledge is swept downstream to the shingle beach. Keep things moving, because the whole adventure should fit in an hour."
+            "guidance": "Play the bandits as lazy and greedy rather than cruel. The toll collectors at the gate would rather take a bribe than fight, and they run when Mag Corrie falls. The clerk in the counting room is a hedge-wizard, and the players should learn that only when he casts. Mag is clever and proud. She will bargain for her life, and she will lie. The river is the bridge's real danger: anyone who steps off the ledge is swept downstream to the shingle beach. Keep things moving, because the whole adventure should fit in an hour."
           }
         ]
       }
     ],
-    "monsters": [],
+    "monsters": [
+      {
+        "id": "mag_corrie",
+        "name": "Mag Corrie",
+        "display_name": "Mag Corrie",
+        "display_name_plural": "Mag Corries",
+        "family_id": "veteran",
+        "page": "",
+        "intro": "The self-styled captain of Crookback Bridge: a hard, clever fighter who leads the toll bandits.",
+        "ac": 2,
+        "ac_ascending": 17,
+        "ac_alternates": [],
+        "attack_roll_required": true,
+        "hit_dice": {
+          "count": 2,
+          "die": 8,
+          "modifier": 0,
+          "asterisks": 0,
+          "average_hp": 9,
+          "fixed_hp": null
+        },
+        "attacks": [
+          {
+            "attacks": [
+              {
+                "count": 1,
+                "name": "weapon",
+                "damage": "1d8",
+                "fixed_damage": null,
+                "fixed_damage_options": [],
+                "by_weapon": true,
+                "by_weapon_modifier": 0,
+                "effects": []
+              }
+            ],
+            "use": "primary"
+          }
+        ],
+        "thac0": 19,
+        "attack_bonus": 0,
+        "movement": [
+          {
+            "rate_feet": 60,
+            "encounter_rate_feet": 20,
+            "descriptor": null
+          }
+        ],
+        "saves": {
+          "values": {
+            "death": 12,
+            "wands": 13,
+            "paralysis": 14,
+            "breath": 15,
+            "spells": 16
+          },
+          "save_as": "F1 to F3"
+        },
+        "morale": 9,
+        "morale_alternates": [],
+        "alignment": {
+          "options": [
+            "lawful",
+            "neutral",
+            "chaotic"
+          ],
+          "usual": null
+        },
+        "xp": 20,
+        "xp_notes": [],
+        "number_appearing": {
+          "dungeon": {
+            "dice": "2d4",
+            "fixed": null,
+            "see_below": false
+          },
+          "lair": {
+            "dice": "2d6",
+            "fixed": null,
+            "see_below": false
+          }
+        },
+        "treasure": {
+          "letters": [
+            "V"
+          ],
+          "parenthetical": [],
+          "extra_gp": 0,
+          "multiplier": 1,
+          "special": [],
+          "see_below": false
+        },
+        "abilities": [
+          {
+            "tag": "level_and_alignment",
+            "name": "Level and alignment",
+            "prose": "A group may all be of the same level and alignment, or these may be determined randomly, per individual.",
+            "manual": true,
+            "params": {}
+          }
+        ],
+        "defenses": {
+          "harmed_only_by": [],
+          "reductions": [],
+          "energy": {},
+          "condition_immunities": []
+        },
+        "categories": [
+          "person"
+        ],
+        "overrides_applied": []
+      },
+      {
+        "id": "mags_bodyguard",
+        "name": "Mag Corrie's bodyguard",
+        "display_name": "Mag's bodyguard",
+        "display_name_plural": "Mag's bodyguards",
+        "family_id": "berserker",
+        "page": "",
+        "intro": "A huge, bare-chested man with a meat cleaver who fights in a rage and never leaves the captain.",
+        "ac": 7,
+        "ac_ascending": 12,
+        "ac_alternates": [],
+        "attack_roll_required": true,
+        "hit_dice": {
+          "count": 1,
+          "die": 8,
+          "modifier": 1,
+          "asterisks": 1,
+          "average_hp": 5,
+          "fixed_hp": null
+        },
+        "attacks": [
+          {
+            "attacks": [
+              {
+                "count": 1,
+                "name": "weapon",
+                "damage": "1d8",
+                "fixed_damage": null,
+                "fixed_damage_options": [],
+                "by_weapon": true,
+                "by_weapon_modifier": 0,
+                "effects": []
+              }
+            ],
+            "use": "primary"
+          }
+        ],
+        "thac0": 18,
+        "attack_bonus": 1,
+        "movement": [
+          {
+            "rate_feet": 120,
+            "encounter_rate_feet": 40,
+            "descriptor": null
+          }
+        ],
+        "saves": {
+          "values": {
+            "death": 12,
+            "wands": 13,
+            "paralysis": 14,
+            "breath": 15,
+            "spells": 16
+          },
+          "save_as": "1"
+        },
+        "morale": 12,
+        "morale_alternates": [],
+        "alignment": {
+          "options": [
+            "neutral"
+          ],
+          "usual": null
+        },
+        "xp": 19,
+        "xp_notes": [],
+        "number_appearing": {
+          "dungeon": {
+            "dice": "1d6",
+            "fixed": null,
+            "see_below": false
+          },
+          "lair": {
+            "dice": "3d10",
+            "fixed": null,
+            "see_below": false
+          }
+        },
+        "treasure": {
+          "letters": [
+            "P"
+          ],
+          "parenthetical": [
+            "B"
+          ],
+          "extra_gp": 0,
+          "multiplier": 1,
+          "special": [],
+          "see_below": false
+        },
+        "abilities": [
+          {
+            "tag": "battle_rage",
+            "name": "Battle rage",
+            "prose": "+2 to hit humans and similar humanoids (e.g. orcs, goblins). Rage sometimes makes them attack their allies.",
+            "manual": true,
+            "params": {}
+          },
+          {
+            "tag": "hoard",
+            "name": "Hoard",
+            "prose": "Only have treasure type B when encountered in the wilderness.",
+            "manual": true,
+            "params": {}
+          }
+        ],
+        "defenses": {
+          "harmed_only_by": [],
+          "reductions": [],
+          "energy": {},
+          "condition_immunities": []
+        },
+        "categories": [
+          "person"
+        ],
+        "overrides_applied": []
+      },
+      {
+        "id": "toll_clerk",
+        "name": "Toll clerk",
+        "display_name": "ink-stained clerk",
+        "display_name_plural": "ink-stained clerks",
+        "family_id": "normal_human",
+        "page": "",
+        "intro": "The bandits' bookkeeper, a wizened hedge-wizard who passes for a clerk until he starts to cast.",
+        "ac": 9,
+        "ac_ascending": 10,
+        "ac_alternates": [],
+        "attack_roll_required": true,
+        "hit_dice": {
+          "count": 1,
+          "die": 8,
+          "modifier": 0,
+          "asterisks": 2,
+          "average_hp": 4,
+          "fixed_hp": null
+        },
+        "attacks": [
+          {
+            "attacks": [
+              {
+                "count": 1,
+                "name": "dagger",
+                "damage": "1d4",
+                "fixed_damage": null,
+                "fixed_damage_options": [],
+                "by_weapon": false,
+                "by_weapon_modifier": 0,
+                "effects": []
+              }
+            ],
+            "use": "primary"
+          },
+          {
+            "attacks": [
+              {
+                "count": 1,
+                "name": "spell",
+                "damage": null,
+                "fixed_damage": null,
+                "fixed_damage_options": [],
+                "by_weapon": false,
+                "by_weapon_modifier": 0,
+                "effects": []
+              }
+            ],
+            "use": "special"
+          }
+        ],
+        "thac0": 19,
+        "attack_bonus": 0,
+        "movement": [
+          {
+            "rate_feet": 120,
+            "encounter_rate_feet": 40,
+            "descriptor": null
+          }
+        ],
+        "saves": {
+          "values": {
+            "death": 13,
+            "wands": 14,
+            "paralysis": 13,
+            "breath": 16,
+            "spells": 15
+          },
+          "save_as": "Magic-user 1"
+        },
+        "morale": 7,
+        "morale_alternates": [],
+        "alignment": {
+          "options": [
+            "lawful",
+            "neutral",
+            "chaotic"
+          ],
+          "usual": null
+        },
+        "xp": 16,
+        "xp_notes": [],
+        "number_appearing": {
+          "dungeon": {
+            "dice": "1d4",
+            "fixed": null,
+            "see_below": false
+          },
+          "lair": {
+            "dice": "1d12",
+            "fixed": null,
+            "see_below": false
+          }
+        },
+        "treasure": {
+          "letters": [
+            "V"
+          ],
+          "parenthetical": [],
+          "extra_gp": 0,
+          "multiplier": 1,
+          "special": [],
+          "see_below": false
+        },
+        "abilities": [
+          {
+            "tag": "spells",
+            "name": "Spells",
+            "prose": "Each individual has one 1st level arcane spell memorized. (Choose or select at random.)",
+            "manual": true,
+            "params": {}
+          },
+          {
+            "tag": "master",
+            "name": "Master",
+            "prose": "50% of groups are led by a magic-user of 3rd level. The master has two 1st level spells and one 2nd level spell. (Choose or select at random.)",
+            "manual": true,
+            "params": {}
+          }
+        ],
+        "defenses": {
+          "harmed_only_by": [],
+          "reductions": [],
+          "energy": {},
+          "condition_immunities": []
+        },
+        "categories": [
+          "person"
+        ],
+        "overrides_applied": []
+      }
+    ],
     "items": [
       {
         "item_type": "gear",
@@ -2508,7 +2868,7 @@
         "id": "mag_falls",
         "when": {
           "pattern_type": "monster_defeated",
-          "template_id": "veteran_2"
+          "template_id": "mag_corrie"
         },
         "conditions": [],
         "repeatable": false,
@@ -2581,7 +2941,7 @@
             "when": {
               "pattern": {
                 "pattern_type": "monster_defeated",
-                "template_id": "veteran_2"
+                "template_id": "mag_corrie"
               },
               "conditions": []
             },

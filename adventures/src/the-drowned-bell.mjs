@@ -15,6 +15,7 @@ import {
   valuable,
   wanderingTable,
 } from '../tools/lib.mjs';
+import { named } from './named-monsters.mjs';
 
 const DUNGEON = 'priory';
 
@@ -226,7 +227,7 @@ level1
     description:
       'A cramped room with a real bed and a carved chair. Gashnak One-Ear, the hobgoblin who leads the Red Thumbs, keeps his best plunder here. An iron-bound chest stands at the foot of the bed.',
     encounter: monsters([
-      ['hobgoblin', 1],
+      ['gashnak', 1],
       ['goblin', 2],
     ]),
     features: [
@@ -1019,7 +1020,17 @@ const payload = {
       ],
     },
   ],
-  monsters: [drownedPrior],
+  monsters: [
+    drownedPrior,
+    named('hobgoblin', {
+      id: 'gashnak',
+      name: 'Gashnak One-Ear',
+      display_name: 'Gashnak One-Ear',
+      display_name_plural: 'Gashnak One-Ears',
+      family_id: 'hobgoblin',
+      intro: 'The hobgoblin with a ragged left ear who leads the Red Thumb goblins.',
+    }),
+  ],
   items: [
     gear('priors_iron_key', "Prior's iron key"),
     gear('hand_of_saint_corvane', 'Hand of Saint Corvane'),
@@ -1040,7 +1051,7 @@ const payload = {
     }),
     triggerSpec(
       'gashnak_falls',
-      { pattern_type: 'monster_defeated', template_id: 'hobgoblin' },
+      { pattern_type: 'monster_defeated', template_id: 'gashnak' },
       [{ command_type: 'set_flag', source: null, key: 'priory.gashnak', value: 'dead' }],
       {
         fired:
@@ -1129,7 +1140,7 @@ const payload = {
         objective(
           'kill_gashnak',
           'Kill Gashnak One-Ear',
-          clause({ pattern_type: 'monster_defeated', template_id: 'hobgoblin' }),
+          clause({ pattern_type: 'monster_defeated', template_id: 'gashnak' }),
           {
             narrative: { progress: 'Gashnak One-Ear will rob no more ferries.' },
           },
