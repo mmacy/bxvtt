@@ -1,3 +1,5 @@
+import type { PlayerView } from '@bxvtt/shared/bxapi';
+import { contextFromPlayerView } from '@bxvtt/shared/text';
 import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { cartCount, cartLines, cartTotal, purchaseItemIds } from './cartLines';
@@ -8,25 +10,22 @@ import { neediestFirst, memberStatus } from './members';
 import { buildCommand, missingRequired, readFields } from './schemaForm';
 import { parseService, placeName, sectionOf, townListsService } from './services';
 
-function shopItem(id: string, name: string, cost: number, lotSize?: number): ShopItem {
-  return {
-    summary: { id, name, item_type: 'gear', cost_gp: cost },
-    detail:
-      lotSize === undefined
-        ? null
-        : ({
-            item_type: 'gear',
-            id,
-            name,
-            cost_gp: cost,
-            lot_size: lotSize,
-            capacity_coins: null,
-            combat: null,
-            params: {},
-            overrides_applied: [],
-          } as unknown as ShopItem['detail']),
-  };
+function shopItem(id: string, name: string, cost: number, lotSize = 1): ShopItem {
+  const detail = {
+    item_type: 'gear',
+    id,
+    name,
+    cost_gp: cost,
+    lot_size: lotSize,
+    capacity_coins: null,
+    combat: null,
+    params: {},
+    overrides_applied: [],
+  } as unknown as ShopItem['detail'];
+  return { summary: { id, name, item_type: 'gear', cost_gp: cost }, detail };
 }
+
+const CTX = contextFromPlayerView(fixtureSnapshot('town', 'player').game?.view as PlayerView);
 
 describe('the cart', () => {
   const torch = shopItem('torch', 'Torches (6)', 1, 6);
@@ -45,11 +44,11 @@ describe('the cart', () => {
   });
 
   it('explains a purchase lot in plain words', () => {
-    expect(lotSentence(torch)).toBe('1 lot is 6 torches');
-    expect(lotSentence(torch, 3)).toBe('3 lots are 18 torches');
-    expect(lotSentence(rope)).toBeNull();
-    expect(lotSentence(shopItem('rations_standard', 'Rations (standard, 7 days)', 5, 7))).toBe(
-      '1 lot is rations (standard, 7 days)',
+    expect(lotSentence(torch, 1, CTX)).toBe('1 lot is 6 torches');
+    expect(lotSentence(torch, 3, CTX)).toBe('3 lots are 18 torches');
+    expect(lotSentence(rope, 1, CTX)).toBeNull();
+    expect(lotSentence(shopItem('rations_standard', 'Rations (standard, 7 days)', 5, 7), 1, CTX)).toBe(
+      '1 lot is 7 standard rations',
     );
   });
 });

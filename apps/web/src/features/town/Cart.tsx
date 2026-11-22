@@ -1,8 +1,8 @@
 /** The outfitter's cart for the chosen buyer, and the cards that show what each purchase changed. */
 import type { MemberView } from '@bxvtt/shared/bxapi';
-import { formatCoins } from '@bxvtt/shared/text';
+import { formatCoins, joinList } from '@bxvtt/shared/text';
 import { useState } from 'react';
-import { usePartyMember, useSendCommand } from '@/app';
+import { usePartyMember, useSendCommand, useTextContext } from '@/app';
 import { Badge, Banner, Button, CoinPurse, IconButton } from '@/ui';
 import { cartLines, cartTotal } from './cartLines';
 import { isEquippable, lotSentence, type ShopItem } from './equipment';
@@ -25,6 +25,8 @@ export interface CartPanelProps {
   onBuyEveryone: () => void;
   /** Members this cart could be copied to. */
   copyTargets: number;
+  /** Names of members the copy skips because they can't shop. */
+  skipped: string[];
   onCopy: () => void;
 }
 
@@ -41,8 +43,10 @@ export function CartPanel({
   othersWithCarts,
   onBuyEveryone,
   copyTargets,
+  skipped,
   onCopy,
 }: CartPanelProps) {
+  const ctx = useTextContext();
   const lines = cartLines(cart, items);
   const total = cartTotal(lines);
   const gold = buyer ? goldIn(readPurse(buyer)) : 0;
@@ -97,7 +101,7 @@ export function CartPanel({
       ) : (
         <ul className={styles.lines} aria-label="Cart">
           {lines.map((line) => {
-            const lot = lotSentence(line.item, line.lots);
+            const lot = lotSentence(line.item, line.lots, ctx);
             return (
               <li key={line.item.summary.id} className={styles.line}>
                 <div className={styles.lineText}>
@@ -125,6 +129,11 @@ export function CartPanel({
             <Button variant="secondary" size="sm" icon="copy" onClick={onCopy}>
               Same for everyone you shop for
             </Button>
+          )}
+          {copyTargets > 0 && lines.length > 0 && skipped.length > 0 && (
+            <p
+              className={styles.skipped}
+            >{`Skips ${joinList(skipped)}, who ${skipped.length === 1 ? 'is' : 'are'} dead.`}</p>
           )}
           {othersWithCarts > 0 && (
             <Button variant="secondary" size="sm" icon="users" loading={pending} onClick={onBuyEveryone}>

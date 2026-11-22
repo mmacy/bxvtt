@@ -1,5 +1,6 @@
 /** The outfitter's catalog: search, a type filter, sortable columns, and a way to put lots in the cart. */
 import { itemTypeLabel } from '@bxvtt/shared/text';
+import { useTextContext } from '@/app';
 import { useMemo, useState } from 'react';
 import {
   Banner,
@@ -62,6 +63,7 @@ export function Catalog({
   onSelect,
   disabled,
 }: CatalogProps) {
+  const ctx = useTextContext();
   const [type, setType] = useState('all');
   const rows = useMemo(
     () =>
@@ -87,7 +89,9 @@ export function Catalog({
           </span>
           <span className={styles.nameText}>
             <span className={styles.name}>{item.summary.name}</span>
-            <span className={styles.sub}>{rowSummary(item) || itemTypeLabel(item.summary.item_type)}</span>
+            <span className={styles.sub}>
+              {rowSummary(item, ctx) || itemTypeLabel(item.summary.item_type)}
+            </span>
           </span>
         </button>
       ),
@@ -108,10 +112,7 @@ export function Catalog({
       cell: (item) => {
         const weight = weightCoins(item);
         return weight === null ? (
-          <span
-            className={styles.none}
-            title={item.detail === null ? 'Loading' : 'The catalog lists no weight'}
-          >
+          <span className={styles.none} title="The catalog lists no weight">
             -
           </span>
         ) : (

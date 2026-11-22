@@ -85,20 +85,12 @@ const DETAILS: Record<string, unknown> = {
   },
 };
 
-/** Makes `api.rules` answer the equipment list and each item's entry, and nothing else. */
+/** Makes `api.fullCatalog` return the small equipment catalog, and `api.listAdventures` return the adventures. */
 export function stubCatalog(api: FakeApi, adventures?: unknown): void {
-  api.rules.mockImplementation(async (path: string) => {
-    if (path === 'equipment') {
-      const items = Object.values(DETAILS).map((entry) => {
-        const detail = entry as { id: string; name: string; item_type: string; cost_gp: number };
-        return { id: detail.id, name: detail.name, item_type: detail.item_type, cost_gp: detail.cost_gp };
-      });
-      return { items, total: items.length, limit: 200, offset: 0 } as never;
-    }
-    const match = /^equipment\/(.+)$/.exec(path);
-    const entry = match?.[1] ? DETAILS[match[1]] : undefined;
-    if (entry !== undefined) return entry as never;
-    throw new Error(`The test did not stub ${path}.`);
+  const items = Object.values(DETAILS);
+  api.fullCatalog.mockImplementation(async (catalog: string) => {
+    if (catalog !== 'equipment') throw new Error(`The test did not stub the ${catalog} catalog.`);
+    return { catalog, total: items.length, items } as never;
   });
   if (adventures !== undefined) api.listAdventures.mockResolvedValue(adventures as never);
 }

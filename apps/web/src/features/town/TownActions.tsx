@@ -1,6 +1,15 @@
+import { useState } from 'react';
 import { formatShortcut, useAction, useShortcut } from '@/app';
-import { ActionBarDivider, ActionBarItem, Button, Kbd, type IconName } from '@/ui';
-import { useLeaveAccess, useTownServices } from './hooks';
+import {
+  ActionBarDivider,
+  ActionBarItem,
+  ActionBarMenu,
+  Button,
+  Kbd,
+  type IconName,
+  type MenuEntry,
+} from '@/ui';
+import { useLeaveAccess, usePartyAccess, useTownServices } from './hooks';
 import { useRest } from './RestAndPrepare';
 import { useTownUi, type TownSection } from './townUi';
 import styles from './TownActions.module.css';
@@ -66,20 +75,21 @@ export function TownActions() {
     icon: 'gem',
     enabled: services.treasure,
   };
-  const restPlace: Destination = {
-    id: 'rest',
-    section: 'rest',
-    keys: 'shift+r',
-    label: 'Rest and prepare',
-    icon: 'rest',
-    enabled: services.rest,
-  };
 
   const shortcutsOn = !leaveOpen;
   usePlaceShortcut(outfitter, shortcutsOn);
   usePlaceShortcut(temple, shortcutsOn);
   usePlaceShortcut(treasure, shortcutsOn);
-  usePlaceShortcut(restPlace, shortcutsOn);
+  const restAccess = usePartyAccess('rest');
+  const [restOpen, setRestOpen] = useState(false);
+  useShortcut({
+    id: 'town.rest',
+    keys: 'shift+r',
+    label: 'Rest or prepare',
+    group: 'Town',
+    enabled: services.rest && shortcutsOn,
+    run: () => setRestOpen(true),
+  });
   useShortcut({
     id: 'town.leave',
     keys: 'g',
@@ -122,6 +132,33 @@ export function TownActions() {
     },
   });
 
+  const restNow = (kind: string) => {
+    setSection('rest');
+    void rest(kind);
+  };
+  const restItems: MenuEntry[] = [
+    {
+      label: 'Rest one turn',
+      icon: 'hourglass',
+      disabled: !restAccess.allowed || pending,
+      onSelect: () => restNow('turn'),
+    },
+    {
+      label: 'Rest a night',
+      icon: 'moon',
+      disabled: !restAccess.allowed || pending,
+      onSelect: () => restNow('night'),
+    },
+    {
+      label: 'Rest a full day',
+      icon: 'sun',
+      disabled: !restAccess.allowed || pending,
+      onSelect: () => restNow('day'),
+    },
+    { type: 'separator' },
+    { label: 'Open rest and prepare', icon: 'rest', onSelect: () => setSection('rest') },
+  ];
+
   const reason = (enabled: boolean) => (enabled ? undefined : "The party can't do that right now.");
   const button = (place: Destination) => (
     <ActionBarItem key={place.id}>
@@ -147,7 +184,15 @@ export function TownActions() {
       {button(temple)}
       {button(treasure)}
       <ActionBarDivider />
-      {button(restPlace)}
+      <ActionBarMenu
+        label="Rest"
+        icon="rest"
+        shortcut={['Shift', 'R']}
+        items={restItems}
+        disabled={!services.rest}
+        open={restOpen}
+        onOpenChange={setRestOpen}
+      />
       <ActionBarDivider />
       <ActionBarItem>
         <Button

@@ -1,52 +1,39 @@
 /**
- * The outfitter's catalog: bxapi's equipment list joined with each item's details.
- *
- * The list route gives an item's name, type, and price. Damage, qualities, armour class, weight, and the size of
- * a purchase lot live in each item's own entry, so `useEquipmentDetails` loads every entry once, a few at a time,
- * through the shared catalog cache.
+ * The outfitter's catalog. bxapi's bulk equipment catalog gives every item's price, damage, qualities, armour
+ * class, weight, and purchase lot size in one cached response, so the outfitter needs one request.
  */
-import { useEffect, useMemo, useState } from 'react';
-import { getApi, loadCatalog, useEquipmentCatalog, type EquipmentDetail } from '@/app';
+import {
+  itemPhrase,
+  resolveItemNoun,
+  weaponQualityDescription,
+  weaponQualityLabel,
+} from '@bxvtt/shared/text';
+import type { TextContext } from '@bxvtt/shared/text';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { describeProblem, getApi, loadCatalog, type EquipmentDetail } from '@/app';
 import type { EquipmentSummary } from '@bxvtt/shared/bxapi';
 import type { IconName } from '@/ui';
 
-/** An item the outfitter sells, with its details once they load. */
+/** An item the outfitter sells: its list entry and its full catalog entry. */
 export interface ShopItem {
   summary: EquipmentSummary;
-  detail: EquipmentDetail | null;
+  detail: EquipmentDetail;
 }
 
-const PARALLEL_LOADS = 6;
+const CATALOG_KEY = 'full:equipment';
 
-/** Loads the details of every item, `PARALLEL_LOADS` at a time. Failures leave the item without details. */
-async function loadDetails(
-  ids: readonly string[],
-  onLoaded: (id: string, detail: EquipmentDetail) => void,
-  isCancelled: () => boolean,
-): Promise<void> {
-  let next = 0;
-  async function worker(): Promise<void> {
-    while (!isCancelled()) {
-      const id = ids[next];
-      next += 1;
-      if (id === undefined) return;
-      try {
-        const detail = await loadCatalog<EquipmentDetail>(`entry:equipment/${id}`, () =>
-          getApi().rules<EquipmentDetail>(`equipment/${id}`),
-        );
-        if (!isCancelled()) onLoaded(id, detail);
-      } catch {
-        // The item stays in the list with its price. Its details appear on a later visit.
-      }
-    }
-  }
-  await Promise.all(Array.from({ length: PARALLEL_LOADS }, worker));
+/** Turns the bulk catalog's entries into shop items. */
+function toShopItems(entries: readonly EquipmentDetail[]): ShopItem[] {
+  return entries.map((detail) => ({
+    summary: { id: detail.id, name: detail.name, item_type: detail.item_type, cost_gp: detail.cost_gp },
+    detail,
+  }));
 }
 
 /**
- * The equipment catalog with each item's details.
+ * The equipment catalog with every item's details, from one request.
  *
- * @returns The items in catalog order, whether the list is loading, an error for the list, and `retry`.
+ * @returns The items in catalog order, whether the catalog is loading, an error sentence, and `retry`.
  */
 export function useShopItems(): {
   items: ShopItem[];
@@ -54,108 +41,67 @@ export function useShopItems(): {
   error: string | null;
   retry: () => void;
 } {
-  const catalog = useEquipmentCatalog();
-  const [details, setDetails] = useState<Record<string, EquipmentDetail>>({});
-  const list = catalog.data;
+  const [entries, setEntries] = useState<EquipmentDetail[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    if (list === null) return;
     let cancelled = false;
-    // Entries arrive one at a time, so gather them and update the table about every 100 ms, not 51 times.
-    let batch: Record<string, EquipmentDetail> = {};
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const flush = () => {
-      timer = null;
-      const arrived = batch;
-      batch = {};
-      if (!cancelled) setDetails((previous) => ({ ...previous, ...arrived }));
-    };
-    void loadDetails(
-      list.map((item) => item.id),
-      (id, detail) => {
-        batch[id] = detail;
-        timer ??= setTimeout(flush, 100);
+    loadCatalog(CATALOG_KEY, () => getApi().fullCatalog('equipment')).then(
+      (catalog) => {
+        if (cancelled) return;
+        setEntries(catalog.items);
+        setError(null);
       },
-      () => cancelled,
-    ).then(() => {
-      if (timer !== null) clearTimeout(timer);
-      flush();
-    });
+      (failure: unknown) => {
+        if (cancelled) return;
+        const problem = describeProblem(failure);
+        setError(`${problem.title}. ${problem.detail}`);
+      },
+    );
     return () => {
       cancelled = true;
-      if (timer !== null) clearTimeout(timer);
     };
-  }, [list]);
+  }, [attempt]);
 
-  const items = useMemo(
-    () => (list ?? []).map((summary) => ({ summary, detail: details[summary.id] ?? null })),
-    [list, details],
-  );
-  return {
-    items,
-    loading: catalog.loading,
-    error: catalog.error ? `${catalog.error.title}. ${catalog.error.detail}` : null,
-    retry: catalog.retry,
-  };
+  const items = useMemo(() => toShopItems(entries ?? []), [entries]);
+  const retry = useCallback(() => {
+    setError(null);
+    setAttempt((n) => n + 1);
+  }, []);
+  return { items, loading: entries === null && error === null, error, retry };
 }
 
-/** What the weapon-quality words mean at the table, in one clause each. */
-const QUALITIES: Record<string, { label: string; meaning: string }> = {
-  melee: { label: 'Melee', meaning: 'Used hand to hand.' },
-  missile: { label: 'Missile', meaning: 'Used at range.' },
-  two_handed: { label: 'Two-handed', meaning: "Takes both hands, so it can't be used with a shield." },
-  slow: { label: 'Slow', meaning: 'The wielder acts after everyone not using a slow weapon.' },
-  blunt: { label: 'Blunt', meaning: 'A crushing weapon rather than an edged one.' },
-  brace: { label: 'Brace', meaning: 'Damage doubles when set against a charging enemy.' },
-  charge: { label: 'Charge', meaning: 'Damage doubles when the wielder charges.' },
-  reload: { label: 'Reload', meaning: 'Takes a round to reload between shots.' },
-  splash: { label: 'Splash', meaning: 'Thrown to burst on the target.' },
-};
-
-/** The label and meaning of a weapon quality such as `two_handed`. */
+/** The label and meaning of a weapon quality such as `two_handed`, from the text layer. */
 export function qualityText(quality: string): { label: string; meaning: string } {
-  const known = QUALITIES[quality];
-  if (known) return known;
-  const label = quality.replace(/_/g, ' ');
-  return { label: label.charAt(0).toUpperCase() + label.slice(1), meaning: '' };
+  return { label: weaponQualityLabel(quality), meaning: weaponQualityDescription(quality) };
 }
 
 /** The size of one purchase lot: how many units the listed price buys. Weapons and armour sell one at a time. */
 export function lotSize(item: ShopItem): number {
   const detail = item.detail;
-  if (detail === null) return 1;
   return 'lot_size' in detail && typeof detail.lot_size === 'number' ? Math.max(1, detail.lot_size) : 1;
 }
 
-/** The item's name with its first letter in lower case, for the middle of a sentence. */
-function lowerName(name: string): string {
-  return name.charAt(0).toLowerCase() + name.slice(1);
-}
-
 /**
- * A plain sentence about a purchase lot, such as "1 lot is 6 torches", or `null` for an item that sells singly.
- * A name that carries its own count, such as "Torches (6)", reads as "6 torches". Any other name stays whole, as in
- * "1 lot is rations (standard, 7 days)".
+ * A plain sentence about a purchase lot, such as "1 lot is 6 torches" or "2 lots are 12 torches", or `null` for
+ * an item that sells singly.
  *
  * @param item - The shop item.
- * @param lots - How many lots, when more than one.
+ * @param lots - How many lots.
+ * @param ctx - The text context, which names what a unit of the item is.
  */
-export function lotSentence(item: ShopItem, lots = 1): string | null {
+export function lotSentence(item: ShopItem, lots: number, ctx: TextContext): string | null {
   const size = lotSize(item);
   if (size <= 1) return null;
-  const name = item.summary.name;
-  const counted = /^(.*?)\s*\(\d+\)\s*(.*)$/.exec(name);
-  if (counted) {
-    const noun = lowerName(`${counted[1] ?? ''} ${counted[2] ?? ''}`.trim());
-    return lots <= 1 ? `1 lot is ${size} ${noun}` : `${lots} lots are ${size * lots} ${noun}`;
-  }
-  return lots <= 1 ? `1 lot is ${lowerName(name)}` : `${lots} lots of ${lowerName(name)}`;
+  const noun = resolveItemNoun(item.summary.id, ctx, { name: item.summary.name });
+  const what = itemPhrase(noun, size * lots);
+  return lots <= 1 ? `1 lot is ${what}` : `${lots} lots are ${what}`;
 }
 
 /** The weight in coins when the entry lists one. Gear lists none. */
 export function weightCoins(item: ShopItem): number | null {
   const detail = item.detail;
-  if (detail === null) return null;
   return 'weight_coins' in detail && typeof detail.weight_coins === 'number' ? detail.weight_coins : null;
 }
 
@@ -200,14 +146,14 @@ function rangeText(ranges: unknown): string | null {
  * Describes an item from its catalog entry: damage and qualities for weapons, armour class for armour, light
  * and capacity for gear, and what a lot holds.
  *
- * @param item - The shop item. Without a loaded entry, only the lot sentence appears.
+ * @param item - The shop item.
+ * @param ctx - The text context, for the lot sentence.
  */
-export function describeItem(item: ShopItem): ItemFacts {
+export function describeItem(item: ShopItem, ctx: TextContext): ItemFacts {
   const out: ItemFacts = { facts: [], qualities: [], notes: [] };
   const detail = item.detail;
-  const lot = lotSentence(item);
+  const lot = lotSentence(item, 1, ctx);
   if (lot) out.notes.push(`${lot}.`);
-  if (detail === null) return out;
   if (detail.item_type === 'weapon') {
     out.facts.push({ label: 'Damage', value: detail.damage });
     out.qualities = detail.qualities.map(qualityText);
@@ -246,9 +192,8 @@ export function describeItem(item: ShopItem): ItemFacts {
 }
 
 /** A short line for a catalog row: damage and first quality for weapons, armour class for armour. */
-export function rowSummary(item: ShopItem): string {
+export function rowSummary(item: ShopItem, ctx: TextContext): string {
   const detail = item.detail;
-  if (detail === null) return '';
   if (detail.item_type === 'weapon') {
     const qualities = detail.qualities.map((quality) => qualityText(quality).label.toLowerCase());
     return `${detail.damage}, ${qualities.join(', ')}`;
@@ -257,8 +202,7 @@ export function rowSummary(item: ShopItem): string {
     if (detail.ac !== null) return `Armour class ${detail.ac}`;
     if (detail.ac_bonus !== null) return `Armour class +${detail.ac_bonus}`;
   }
-  const lot = lotSentence(item);
-  return lot ?? '';
+  return lotSentence(item, 1, ctx) ?? '';
 }
 
 const ITEM_ICONS: Record<string, IconName> = {

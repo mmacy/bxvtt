@@ -90,7 +90,17 @@ function spellCounts(member: MemberView): { book: number; prepared: number } {
 }
 
 /** Commands this page has a control for elsewhere in town. */
-const HANDLED = new Set(['rest', 'enter_dungeon', 'purchase_equipment', 'sell_treasure', 'purchase_healing']);
+const HANDLED = new Set([
+  'rest',
+  'enter_dungeon',
+  'purchase_equipment',
+  'sell_treasure',
+  'purchase_healing',
+  // Preparing, learning, and casting spells have proper controls on the character sheet.
+  'prepare_spells',
+  'learn_spell',
+  'cast_spell',
+]);
 
 function RestPanel() {
   const access = usePartyAccess('rest');
@@ -162,7 +172,8 @@ function SheetPanel() {
   return (
     <Panel title="Prepare and manage gear" meta="On the character sheet">
       <p className={styles.lead}>
-        Open a sheet to prepare or learn spells, wield and wear gear, and move items between packs.
+        Open a sheet and choose its Spells tab to prepare, learn, or cast spells. The Inventory tab wields and
+        wears gear and moves items between packs.
       </p>
       <ul className={styles.members}>
         {party.map((member) => {

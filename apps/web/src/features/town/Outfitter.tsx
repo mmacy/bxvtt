@@ -10,6 +10,7 @@ import { usePlayerView } from '@/app';
 import { ChecklistPanel } from './Glance';
 import { ItemDetails } from './ItemDetails';
 import { readInventory } from './inventory';
+import { memberStatus } from './members';
 import { MemberChooser, PlaceHeader } from './parts';
 import { placeName } from './services';
 import { usePurchase } from './purchase';
@@ -36,6 +37,9 @@ export function Outfitter() {
   const cart = buyer ? (carts[buyer.id] ?? {}) : {};
   const selected = items.find((item) => item.summary.id === selectedId) ?? null;
   const others = shoppers.filter((member) => member.id !== buyer?.id);
+  // A dead member can't shop, so a copied cart skips them. bxapi still decides what any purchase may do.
+  const copyTargets = others.filter((member) => !memberStatus(member).dead);
+  const skipped = others.filter((member) => memberStatus(member).dead).map((member) => member.name);
   const othersWithCarts = others.filter((member) => cartCount(carts[member.id] ?? {}) > 0);
   const carrying = useMemo(() => (buyer ? readInventory(buyer).items : []), [buyer]);
 
@@ -132,11 +136,12 @@ export function Outfitter() {
                   ...othersWithCarts.map((member) => member.id),
                 ])
               }
-              copyTargets={others.length}
+              copyTargets={copyTargets.length}
+              skipped={skipped}
               onCopy={() =>
                 copyCart(
                   buyer.id,
-                  others.map((member) => member.id),
+                  copyTargets.map((member) => member.id),
                 )
               }
             />

@@ -5,14 +5,7 @@
  */
 import { commandFieldOptionLabel, commandFieldText, commandInfo, describeEvents } from '@bxvtt/shared/text';
 import { useMemo, useState } from 'react';
-import {
-  useCommandSchema,
-  useParty,
-  useSendCommand,
-  useSpellCatalog,
-  useTableUi,
-  useTextContext,
-} from '@/app';
+import { useCommandSchema, useParty, useSendCommand, useSpellCatalog, useTextContext } from '@/app';
 import {
   Banner,
   Button,
@@ -40,15 +33,11 @@ const COIN_NAMES: Record<(typeof COIN_ORDER)[number], string> = {
   cp: 'Copper',
 };
 
-/** Commands whose fields are easier to fill in on the character sheet. */
-const SHEET_COMMANDS = new Set(['prepare_spells', 'cast_spell', 'learn_spell']);
-
 export function CommandForm({ commandType }: { commandType: string }) {
   const schema = useCommandSchema(commandType);
   const party = useParty();
   const shoppers = useShoppers();
   const spells = useSpellCatalog();
-  const openSheet = useTableUi((s) => s.openCharacterSheet);
   const ctx = useTextContext();
   const { send, pending } = useSendCommand();
   const [values, setValues] = useState<Record<string, FieldValue>>({});
@@ -302,14 +291,6 @@ export function CommandForm({ commandType }: { commandType: string }) {
           </Field>
         );
       })}
-      {SHEET_COMMANDS.has(commandType) && actor !== null && (
-        <p className={styles.note}>
-          The character sheet is the easier place for this.{' '}
-          <Button variant="ghost" size="sm" onClick={() => openSheet(actor.id)}>
-            Open {actor.name}&apos;s sheet
-          </Button>
-        </p>
-      )}
       {outcome !== null && (
         <Banner tone={outcome.tone}>
           {outcome.text.map((line) => (

@@ -33,12 +33,6 @@ function setup(snapshot: Snapshot = fixtureSnapshot('town', 'player')) {
   return { ...renderWithTable(<TownStage />, { snapshot, api }), api, snapshot };
 }
 
-// jsdom lacks the pointer-capture and scroll methods that the kit's Select uses to open.
-Element.prototype.hasPointerCapture ??= () => false;
-Element.prototype.setPointerCapture ??= () => {};
-Element.prototype.releasePointerCapture ??= () => {};
-Element.prototype.scrollIntoView ??= () => {};
-
 beforeEach(() => {
   useTownUi.getState().reset();
   resetDungeonCache();
@@ -239,6 +233,21 @@ describe('the outfitter', () => {
     await waitFor(() => expect(api.sendCommand).toHaveBeenCalledTimes(4), { timeout: 3000 });
     const ids = api.sendCommand.mock.calls.map((call) => (call[1] as { character_id?: string }).character_id);
     expect(ids).toEqual(['character-0001', 'character-0002', 'character-0003', 'character-0004']);
+  });
+
+  it('copies a cart only to members who can shop, and says who it skipped', async () => {
+    const snapshot = fixtureSnapshot('town', 'referee');
+    const osric = snapshot.game?.view.party.find((member) => member.name === 'Osric');
+    if (!osric) throw new Error('No Osric.');
+    osric.conditions = ['dead'];
+    osric.current_hp = 0;
+    const { user } = setup(snapshot);
+    await user.click(screen.getByRole('tab', { name: 'Outfitter' }));
+    await user.click(await screen.findByRole('button', { name: 'Add Rope (50’) to the cart' }));
+    await user.click(screen.getByRole('button', { name: 'Same for everyone you shop for' }));
+    expect(screen.getByText('Skips Osric, who is dead.')).toBeInTheDocument();
+    expect(useTownUi.getState().carts['character-0003']).toBeUndefined();
+    expect(useTownUi.getState().carts['character-0004']).toEqual({ rope: 1 });
   });
 
   it("offers only the viewer's own members as buyers", async () => {
@@ -462,6 +471,7 @@ describe('shortcuts', () => {
     await user.keyboard('m');
     expect(screen.getByRole('tab', { name: 'Treasure buyers', selected: true })).toBeInTheDocument();
     await user.keyboard('{Shift>}r{/Shift}');
+    await user.click(await screen.findByRole('menuitem', { name: 'Open rest and prepare' }));
     expect(screen.getByRole('tab', { name: 'Rest and prepare', selected: true })).toBeInTheDocument();
     await user.keyboard('g');
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
@@ -472,29 +482,25 @@ describe('the generic command form', () => {
   it('builds a form from the schema and sends the command it describes', async () => {
     const api = createFakeApi();
     stubCatalog(api, ADVENTURES);
-    const base = api.rules.getMockImplementation();
-    api.rules.mockImplementation(
-      async (path: string, query?: Record<string, string | number | undefined>) => {
-        if (path === 'commands/light_source') {
-          return {
-            command_type: 'light_source',
-            kind: 'play',
-            allowed_modes: ['town'],
-            summary: 'Light a source.',
-            json_schema: {
-              required: ['character_id', 'item_id'],
-              properties: {
-                command_type: { const: 'light_source' },
-                character_id: { type: 'string' },
-                item_id: { type: 'string' },
-              },
+    api.rules.mockImplementation(async (path: string) => {
+      if (path === 'commands/light_source') {
+        return {
+          command_type: 'light_source',
+          kind: 'play',
+          allowed_modes: ['town'],
+          summary: 'Light a source.',
+          json_schema: {
+            required: ['character_id', 'item_id'],
+            properties: {
+              command_type: { const: 'light_source' },
+              character_id: { type: 'string' },
+              item_id: { type: 'string' },
             },
-          } as never;
-        }
-        if (base === undefined) throw new Error('No catalog.');
-        return base(path, query);
-      },
-    );
+          },
+        } as never;
+      }
+      throw new Error(`The test did not stub ${path}.`);
+    });
     const { store, user } = renderWithTable(<TownStage />, {
       snapshot: fixtureSnapshot('town', 'player'),
       api,
