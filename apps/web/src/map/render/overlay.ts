@@ -16,7 +16,7 @@ import {
   type Measurement,
 } from '../overlays';
 import type { Scene } from '../scene';
-import { fitLabel, type FittedLabel, type LabelSpot } from '../labels';
+import { fitLabel, placeLabels, type FittedLabel, type LabelRequest, type LabelSpot } from '../labels';
 import { labelFont, type MapTheme } from '../themes';
 import { createCanvas, mulberry32, parseColor, rgba, type Ctx2D } from './util';
 
@@ -91,52 +91,31 @@ export function drawLabels(
 ): void {
   const { zoom, dpr } = view;
   if (zoom < 7) return;
-  const numberPx = Math.round(Math.min(26, Math.max(11, zoom * 0.44)) * dpr);
-  const namePx = Math.round(Math.min(15, Math.max(10, zoom * 0.24)) * dpr);
-  const showNames = zoom >= 26;
+  const labels = layoutLabels(ctx, view, scene, theme, showMarkers, avoid);
   ctx.save();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.lineJoin = 'round';
-  for (const area of scene.map.areas) {
-    if (area.label === '') {
-      drawNameLabel(ctx, view, scene, area, theme, namePx, avoid);
-      continue;
-    }
-    const spot = scene.labelSpots.get(area.id) ?? {
-      x: area.anchor.x,
-      y: area.anchor.y,
-      width: 1,
-      inside: 1,
-      twoLines: false,
-    };
-    const name = showNames && area.name ? fitAreaName(ctx, view, theme, area, spot, namePx, 600) : null;
-    const lineHeight = name ? name.px * 1.12 : 0;
-    const blockHeight = numberPx + (name ? name.lines.length * lineHeight : 0);
-    ctx.font = labelFont(theme, name?.px ?? numberPx, 600);
-    const blockWidth = Math.max(numberPx, ...(name?.lines ?? []).map((line) => ctx.measureText(line).width));
-    const p = clearOfToken(
-      view,
-      scene,
-      spot,
-      view.toDevice(spot.x, spot.y),
-      blockWidth / 2 + 3 * dpr,
-      blockHeight / 2,
-      avoid,
-    );
+  for (const label of labels) {
+    const p = view.toDevice(label.x, label.y);
     if (p.x < -200 * dpr || p.y < -80 * dpr || p.x > view.width + 200 * dpr || p.y > view.height + 80 * dpr)
       continue;
+    const { area, name } = label;
     ctx.globalAlpha = area.known ? 1 : 0.72;
-    let y = p.y - blockHeight / 2 + numberPx / 2;
-    ctx.font = labelFont(theme, numberPx, 800);
-    ctx.lineWidth = Math.max(3 * dpr, numberPx * 0.22);
     ctx.strokeStyle = theme.label.halo;
-    ctx.strokeText(area.label, p.x, y);
     ctx.fillStyle = theme.label.color;
-    ctx.fillText(area.label, p.x, y);
-    y += numberPx / 2;
+    let y = p.y - label.height / 2 + dpr;
+    if (label.numbered) {
+      ctx.font = labelFont(theme, label.numberPx, 800);
+      ctx.lineWidth = Math.max(3 * dpr, label.numberPx * 0.22);
+      y += label.numberPx / 2;
+      ctx.strokeText(area.label, p.x, y);
+      ctx.fillText(area.label, p.x, y);
+      y += label.numberPx / 2;
+    }
     if (name) {
-      ctx.font = labelFont(theme, name.px, 600);
+      const lineHeight = name.px * 1.12;
+      ctx.font = labelFont(theme, name.px, label.numbered ? 600 : 650);
       ctx.lineWidth = Math.max(3 * dpr, name.px * 0.3);
       for (const line of name.lines) {
         y += lineHeight / 2;
@@ -145,63 +124,111 @@ export function drawLabels(
         y += lineHeight / 2;
       }
     }
-    if (showMarkers && zoom >= 15) drawAreaMarkers(ctx, area, p.x, y + 9 * dpr, dpr, theme);
+    if (label.markers) drawAreaMarkers(ctx, area, p.x, y + 9 * dpr, dpr, theme);
   }
   ctx.restore();
 }
 
-/**
- * Moves a label block above or below the party token when the token would cover it. `at` is the block's centre
- * in device pixels, and the halves are its half width and half height.
- */
-function clearOfToken(
-  view: FrameView,
-  scene: Scene,
-  spot: LabelSpot,
-  at: { x: number; y: number },
-  halfWidth: number,
-  halfHeight: number,
-  avoid: Point | null,
-): { x: number; y: number } {
-  if (avoid === null) return at;
-  const { dpr } = view;
-  const token = view.toDevice(avoid.x, avoid.y);
-  // The token's radius, as drawParty draws it, with a little room.
-  const radius = Math.min(26 * dpr, Math.max(8.5 * dpr, view.scale * 0.31)) + 2 * dpr;
-  const covers = (p: { x: number; y: number }) =>
-    Math.abs(token.x - p.x) < halfWidth + radius && Math.abs(token.y - p.y) < halfHeight + radius;
-  if (!covers(at)) return at;
-  const above = view.toDevice(spot.x, avoid.y - 0.5);
-  above.y -= radius + halfHeight;
-  const below = view.toDevice(spot.x, avoid.y + 0.5);
-  below.y += radius + halfHeight;
-  // Above reads first. Below wins when above is under the token or on a symbol and below is clear.
-  const blocked = (p: { x: number; y: number }) => symbolUnder(view, scene, p, halfWidth, halfHeight);
-  if (covers(above) || (blocked(above) && !blocked(below))) return below;
-  return above;
+interface PlacedLabel {
+  area: MapArea;
+  /** The block's centre in world coordinates. */
+  x: number;
+  y: number;
+  numbered: boolean;
+  numberPx: number;
+  name: FittedLabel | null;
+  markers: boolean;
+  /** The block's height in device pixels. */
+  height: number;
 }
 
-/** Whether a label block, centred at a device point, overlaps a cell that holds stairs or a feature. */
-function symbolUnder(
+/** The last layout for each scene, reused while the zoom and the party token stay put, such as during a pan. */
+const layouts = new WeakMap<Scene, { key: string; labels: PlacedLabel[] }>();
+
+/**
+ * Lays every label out: its text fitted to its best spot, then a place for the block that keeps clear of the
+ * party token, doors, passages, symbols, and the labels placed before it. The party's own area goes first.
+ */
+function layoutLabels(
+  ctx: Ctx2D,
   view: FrameView,
   scene: Scene,
-  at: { x: number; y: number },
-  halfWidth: number,
-  halfHeight: number,
-): boolean {
-  const origin = view.toDevice(0, 0);
-  const x0 = Math.floor((at.x - halfWidth - origin.x) / view.scale);
-  const x1 = Math.floor((at.x + halfWidth - origin.x) / view.scale);
-  const y0 = Math.floor((at.y - halfHeight - origin.y) / view.scale);
-  const y1 = Math.floor((at.y + halfHeight - origin.y) / view.scale);
-  for (let y = y0; y <= y1; y++) {
-    for (let x = x0; x <= x1; x++) {
-      const k = `${x},${y}`;
-      if (scene.featuresByCell.has(k)) return true;
-      if ((scene.transitionsByCell.get(k) ?? []).some((t) => t.kind !== 'passage')) return true;
+  theme: MapTheme,
+  showMarkers: boolean,
+  avoid: Point | null,
+): PlacedLabel[] {
+  const { zoom, dpr, scale } = view;
+  const key = [
+    zoom.toFixed(3),
+    dpr,
+    theme.name,
+    showMarkers,
+    avoid ? `${avoid.x.toFixed(2)},${avoid.y.toFixed(2)}` : '-',
+  ].join('|');
+  const cached = layouts.get(scene);
+  if (cached?.key === key) return cached.labels;
+
+  const numberPx = Math.round(Math.min(26, Math.max(11, zoom * 0.44)) * dpr);
+  const namePx = Math.round(Math.min(15, Math.max(10, zoom * 0.24)) * dpr);
+  const showNames = zoom >= 26;
+  // The token, as drawParty draws it, with its facing pointer and a little room, in cells.
+  const tokenR = avoid ? (Math.min(26 * dpr, Math.max(8.5 * dpr, scale * 0.31)) * 1.35 + 3 * dpr) / scale : 0;
+  const fixed = avoid
+    ? [{ x0: avoid.x - tokenR, y0: avoid.y - tokenR, x1: avoid.x + tokenR, y1: avoid.y + tokenR }]
+    : [];
+  const partyCell = avoid ? { x: Math.floor(avoid.x), y: Math.floor(avoid.y) } : null;
+  const inParty = (area: MapArea) =>
+    partyCell !== null && area.cells.some(([x, y]) => x === partyCell.x && y === partyCell.y);
+  const areas = [...scene.map.areas].sort((a, b) => Number(inParty(b)) - Number(inParty(a)));
+
+  const requests: LabelRequest[] = [];
+  const pending = new Map<string, Omit<PlacedLabel, 'x' | 'y'>>();
+  for (const area of areas) {
+    const numbered = area.label !== '';
+    if (!numbered && (zoom < PLAYER_NAME_ZOOM || !area.name)) continue;
+    const spots = scene.labelSpots.get(area.id) ?? [];
+    const best = spots[0] ?? { x: area.anchor.x, y: area.anchor.y, width: 1, inside: 1, twoLines: false };
+    const weight = numbered ? 600 : 650;
+    const name =
+      area.name && (!numbered || showNames)
+        ? fitAreaName(ctx, view, theme, area, best, namePx, weight)
+        : null;
+    let width = numbered ? numberPx : 0;
+    if (name) {
+      ctx.font = labelFont(theme, name.px, weight);
+      for (const line of name.lines) width = Math.max(width, ctx.measureText(line).width);
     }
+    const markers =
+      numbered && showMarkers && zoom >= 15 && (area.encounter || area.treasure || area.trap) !== null;
+    const height =
+      (numbered ? numberPx : 0) +
+      (name ? name.lines.length * name.px * 1.12 : 0) +
+      (markers ? 20 * dpr : 0) +
+      2 * dpr;
+    const w = (width + 6 * dpr) / scale;
+    const h = height / scale;
+    const candidates = [
+      ...(spots.length > 0 ? spots : [best]).map((spot) => ({ x: spot.x, y: spot.y })),
+      { x: best.x, y: best.y - 1 },
+      { x: best.x, y: best.y + 1 },
+    ];
+    if (avoid) {
+      candidates.push({ x: best.x, y: avoid.y - tokenR - h / 2 - 0.05 });
+      candidates.push({ x: best.x, y: avoid.y + tokenR + h / 2 + 0.05 });
+    }
+    candidates.push({ x: best.x, y: area.bounds.minY - h / 2 - 0.08 });
+    candidates.push({ x: best.x, y: area.bounds.maxY + h / 2 + 0.08 });
+    requests.push({ id: area.id, width: w, height: h, candidates });
+    pending.set(area.id, { area, numbered, numberPx, name, markers, height });
   }
-  return false;
+  const placed = placeLabels(requests, (r) => scene.labelObstacles.near(r), fixed);
+  const labels: PlacedLabel[] = [];
+  for (const [id, at] of placed) {
+    const meta = pending.get(id);
+    if (meta) labels.push({ ...meta, x: at.x, y: at.y });
+  }
+  layouts.set(scene, { key, labels });
+  return labels;
 }
 
 /** The zoom, in CSS pixels per cell, from which a player map names its areas. */
@@ -233,48 +260,6 @@ function fitAreaName(
   if (!within.lines.some((line) => line.endsWith('…'))) return within;
   const maxWidth = Math.max(view.scale * spot.width - 6 * view.dpr, 24 * view.dpr);
   return fitLabel(area.name, maxWidth, measure, { px, minPx: Math.round(9 * view.dpr) }, twoLines);
-}
-
-/**
- * A player area's name, at its label spot. The name keeps clear of stairs and features, and moves above or below
- * the party token when the token would cover it.
- */
-function drawNameLabel(
-  ctx: Ctx2D,
-  view: FrameView,
-  scene: Scene,
-  area: MapArea,
-  theme: MapTheme,
-  namePx: number,
-  avoid: Point | null,
-): void {
-  const { zoom, dpr } = view;
-  if (zoom < PLAYER_NAME_ZOOM || !area.name) return;
-  const spot = scene.labelSpots.get(area.id) ?? {
-    x: area.anchor.x,
-    y: area.anchor.y,
-    width: 1,
-    inside: 1,
-    twoLines: false,
-  };
-  ctx.globalAlpha = 1;
-  const fitted = fitAreaName(ctx, view, theme, area, spot, namePx, 650);
-  ctx.font = labelFont(theme, fitted.px, 650);
-  const lineHeight = fitted.px * 1.12;
-  const halfWidth = Math.max(...fitted.lines.map((line) => ctx.measureText(line).width)) / 2 + 3 * dpr;
-  const halfHeight = (lineHeight * fitted.lines.length) / 2 + 2 * dpr;
-  const p = clearOfToken(view, scene, spot, view.toDevice(spot.x, spot.y), halfWidth, halfHeight, avoid);
-  if (p.x < -200 * dpr || p.y < -80 * dpr || p.x > view.width + 200 * dpr || p.y > view.height + 80 * dpr)
-    return;
-  ctx.lineWidth = Math.max(3 * dpr, fitted.px * 0.3);
-  ctx.strokeStyle = theme.label.halo;
-  ctx.fillStyle = theme.label.color;
-  let y = p.y - (lineHeight * (fitted.lines.length - 1)) / 2;
-  for (const line of fitted.lines) {
-    ctx.strokeText(line, p.x, y);
-    ctx.fillText(line, p.x, y);
-    y += lineHeight;
-  }
 }
 
 function drawAreaMarkers(

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { fixture } from './fixtures/fixtures';
-import { fitLabel, labelSpot, splitInTwo } from './labels';
+import { LabelObstacles, fitLabel, labelSpot, labelSpotsRanked, placeLabels, splitInTwo } from './labels';
 import { fromPlayerView } from './model';
 import { Scene } from './scene';
 
@@ -74,5 +74,110 @@ describe('labelSpot', () => {
     // The run 16 to 20 is longer than 13 to 14, and the label stops short of the stairs at 15.
     expect(spot.x).toBe(18.5);
     expect(spot.x - spot.width / 2).toBeGreaterThanOrEqual(16);
+  });
+});
+
+describe('labelSpotsRanked', () => {
+  const view = fixture('showcase-explored').view;
+
+  it('still finds room when the only known cell of an area holds a feature', () => {
+    // The party knows one cell of the area, and a feature stands on it, as at the priory's gatehouse stair.
+    const map = fromPlayerView(view, undefined, {
+      extras: {
+        areas: [{ id: 'stair', name: 'Gatehouse stair', cells: [[16, 15]] }],
+        features: [{ id: 'statue', kind: 'custom', x: 16, y: 15 }],
+      },
+    });
+    if (!map) throw new Error('no map');
+    const scene = new Scene(map);
+    const area = map.areas[0];
+    if (!area) throw new Error('no area');
+    const [spot] = labelSpotsRanked(scene, area);
+    expect(spot).toMatchObject({ x: 16.5, y: 15.5, inside: 1 });
+    // The name may run two cells past the cell on each side, over the corridor walls.
+    expect(spot?.width).toBe(5);
+  });
+});
+
+describe('placeLabels', () => {
+  const none = () => [];
+
+  it('takes the first candidate that overlaps nothing', () => {
+    const placed = placeLabels(
+      [
+        {
+          id: 'a',
+          width: 2,
+          height: 0.5,
+          candidates: [
+            { x: 5, y: 5 },
+            { x: 5, y: 4 },
+          ],
+        },
+      ],
+      none,
+      [{ x0: 4.6, y0: 4.6, x1: 5.4, y1: 5.4 }],
+    );
+    // The token covers the first spot, so the label moves to the row above.
+    expect(placed.get('a')).toEqual({ x: 5, y: 4 });
+  });
+
+  it('keeps a label off a door and off a label placed before it', () => {
+    const door = { x0: 4, y0: 2.85, x1: 6, y1: 3.15 };
+    const placed = placeLabels(
+      [
+        { id: 'first', width: 3, height: 0.6, candidates: [{ x: 5, y: 5 }] },
+        {
+          id: 'second',
+          width: 3,
+          height: 0.6,
+          candidates: [
+            { x: 5.5, y: 5 },
+            { x: 5, y: 3 },
+            { x: 5, y: 6 },
+          ],
+        },
+      ],
+      (r) => (r.y0 < door.y1 && r.y1 > door.y0 ? [door] : []),
+      [],
+    );
+    expect(placed.get('first')).toEqual({ x: 5, y: 5 });
+    expect(placed.get('second')).toEqual({ x: 5, y: 6 });
+  });
+
+  it('takes the least overlap when nothing is clear', () => {
+    const wall = { x0: 0, y0: 0, x1: 10, y1: 10 };
+    const placed = placeLabels(
+      [
+        {
+          id: 'a',
+          width: 2,
+          height: 2,
+          candidates: [
+            { x: 5, y: 5 },
+            { x: 0, y: 0 },
+          ],
+        },
+      ],
+      () => [wall],
+      [],
+    );
+    expect(placed.get('a')).toEqual({ x: 0, y: 0 });
+  });
+});
+
+describe('LabelObstacles', () => {
+  it('marks doors, an open door’s leaf, and symbol cells', () => {
+    const explored = fixture('showcase-explored');
+    const map = fromPlayerView(explored.view);
+    if (!map) throw new Error('no map');
+    const obstacles = new LabelObstacles(new Scene(map));
+    // The wedged, open door on the north side of 16,9: its bar on the edge and its leaf below it.
+    expect(obstacles.near({ x0: 16.4, y0: 8.9, x1: 16.6, y1: 9.1 }).length).toBeGreaterThan(0);
+    expect(obstacles.near({ x0: 16.2, y0: 9.2, x1: 16.3, y1: 9.4 }).some((r) => r.y1 > 9.3)).toBe(true);
+    // The dropped pile's cell at 6,9.
+    expect(
+      obstacles.near({ x0: 6.4, y0: 9.4, x1: 6.6, y1: 9.6 }).some((r) => r.x0 <= 6.4 && r.x1 >= 6.6),
+    ).toBe(true);
   });
 });

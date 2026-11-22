@@ -3,7 +3,7 @@
  * tester read cells, edges, and features through a `Scene` instead of searching the arrays.
  */
 import { cellKey, edgeKey, type Direction } from './geometry';
-import { labelSpots, type LabelSpot } from './labels';
+import { LabelObstacles, labelSpots, type LabelSpot } from './labels';
 import type { Bounds, LevelMap, MapEdge, MapFeature, MapTransition } from './model';
 
 /** Cell flags. */
@@ -48,7 +48,8 @@ export class Scene {
   private readonly wallBuckets = new Map<string, number[]>();
   /** A hash of everything static, so the renderer can tell a party move from a map change. */
   readonly signature: string;
-  private spots: Map<string, LabelSpot> | null = null;
+  private spots: Map<string, LabelSpot[]> | null = null;
+  private obstacles: LabelObstacles | null = null;
 
   constructor(map: LevelMap) {
     this.map = map;
@@ -102,10 +103,16 @@ export class Scene {
     this.signature = signatureOf(map);
   }
 
-  /** Where each area's label goes, keyed by area id, worked out on first use. */
-  get labelSpots(): Map<string, LabelSpot> {
+  /** Where each area's label may go, best first, keyed by area id, worked out on first use. */
+  get labelSpots(): Map<string, LabelSpot[]> {
     this.spots ??= labelSpots(this);
     return this.spots;
+  }
+
+  /** What labels must keep clear of: doors, passages, and symbols, worked out on first use. */
+  get labelObstacles(): LabelObstacles {
+    this.obstacles ??= new LabelObstacles(this);
+    return this.obstacles;
   }
 
   index(x: number, y: number): number {

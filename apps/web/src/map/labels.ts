@@ -27,21 +27,21 @@ function occupied(scene: Scene, x: number, y: number): boolean {
   return (scene.transitionsByCell.get(k) ?? []).some((t) => t.kind !== 'passage');
 }
 
-/**
- * The best spot for an area's label: the centre of the widest horizontal run of the area's cells that holds no
- * stairs or feature, nearest the area's anchor when runs tie. The label may run past the run's ends over cells
- * that hold no symbol, up to two cells each side.
- */
-export function labelSpot(scene: Scene, area: MapArea): LabelSpot {
+interface Run {
+  y: number;
+  start: number;
+  end: number;
+}
+
+/** The horizontal runs of consecutive cells in a list, row by row. */
+function runsOfCells(cells: readonly (readonly [number, number])[]): Run[] {
   const rows = new Map<number, number[]>();
-  for (const [x, y] of area.cells) {
-    if (occupied(scene, x, y)) continue;
+  for (const [x, y] of cells) {
     const list = rows.get(y);
     if (list) list.push(x);
     else rows.set(y, [x]);
   }
-  let best: { y: number; start: number; end: number } | null = null;
-  let bestScore = -Infinity;
+  const runs: Run[] = [];
   for (const [y, xs] of rows) {
     xs.sort((a, b) => a - b);
     let start = xs[0] ?? 0;
@@ -49,44 +49,209 @@ export function labelSpot(scene: Scene, area: MapArea): LabelSpot {
       const x = xs[i];
       const prev = xs[i - 1] ?? start;
       if (x !== undefined && x === prev + 1) continue;
-      const end = prev;
-      const length = end - start + 1;
-      const cx = (start + end + 1) / 2;
-      const distance = Math.hypot(cx - area.anchor.x, y + 0.5 - area.anchor.y);
-      // Longer runs win. Among runs of equal length, the one nearest the anchor wins.
-      const score = length * 1000 - distance;
-      if (score > bestScore) {
-        bestScore = score;
-        best = { y, start, end };
-      }
+      runs.push({ y, start, end: prev });
       if (x !== undefined) start = x;
     }
   }
-  if (!best) return { x: area.anchor.x, y: area.anchor.y, width: 1, inside: 1, twoLines: false };
-  const free = (x: number) => !occupied(scene, x, best.y);
+  return runs;
+}
+
+function spotOfRun(scene: Scene, run: Run): LabelSpot {
+  const free = (x: number) => !occupied(scene, x, run.y);
   let left = 0;
-  while (left < OVERHANG && free(best.start - left - 1)) left++;
+  while (left < OVERHANG && free(run.start - left - 1)) left++;
   let right = 0;
-  while (right < OVERHANG && free(best.end + right + 1)) right++;
+  while (right < OVERHANG && free(run.end + right + 1)) right++;
   const extra = Math.min(left, right);
-  const x0 = best.start - extra;
-  const x1 = best.end + extra;
+  const x0 = run.start - extra;
+  const x1 = run.end + extra;
   let twoLines = true;
   for (let x = x0; x <= x1 && twoLines; x++) {
-    if (occupied(scene, x, best.y - 1) || occupied(scene, x, best.y + 1)) twoLines = false;
+    if (occupied(scene, x, run.y - 1) || occupied(scene, x, run.y + 1)) twoLines = false;
   }
   return {
-    x: (best.start + best.end + 1) / 2,
-    y: best.y + 0.5,
+    x: (run.start + run.end + 1) / 2,
+    y: run.y + 0.5,
     width: x1 - x0 + 1,
-    inside: best.end - best.start + 1,
+    inside: run.end - run.start + 1,
     twoLines,
   };
 }
 
-/** Every area's label spot, keyed by area id. */
-export function labelSpots(scene: Scene): Map<string, LabelSpot> {
-  return new Map(scene.map.areas.map((area) => [area.id, labelSpot(scene, area)]));
+/**
+ * The spots for an area's label, best first: the centres of the widest horizontal runs of the area's cells that
+ * hold no stairs or feature, nearest the area's anchor when runs tie. A label may run past a run's ends over cells
+ * that hold no symbol, up to two cells each side. When every known cell of the area holds a symbol, as when the
+ * party knows one cell and a feature stands on it, the runs include those cells, so the label still has room to
+ * run past them.
+ */
+export function labelSpotsRanked(scene: Scene, area: MapArea, limit = 4): LabelSpot[] {
+  const free = area.cells.filter(([x, y]) => !occupied(scene, x, y));
+  const runs = runsOfCells(free.length > 0 ? free : area.cells);
+  const score = (run: Run) => {
+    const cx = (run.start + run.end + 1) / 2;
+    // Longer runs win. Among runs of equal length, the one nearest the anchor wins.
+    return (run.end - run.start + 1) * 1000 - Math.hypot(cx - area.anchor.x, run.y + 0.5 - area.anchor.y);
+  };
+  runs.sort((a, b) => score(b) - score(a));
+  return runs.slice(0, limit).map((run) => spotOfRun(scene, run));
+}
+
+/** The best spot for an area's label. See `labelSpotsRanked`. */
+export function labelSpot(scene: Scene, area: MapArea): LabelSpot {
+  return (
+    labelSpotsRanked(scene, area, 1)[0] ?? {
+      x: area.anchor.x,
+      y: area.anchor.y,
+      width: 1,
+      inside: 1,
+      twoLines: false,
+    }
+  );
+}
+
+/** A rectangle in world coordinates (cells). */
+export interface WorldRect {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+}
+
+export function overlapArea(a: WorldRect, b: WorldRect): number {
+  const w = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0);
+  const h = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0);
+  return w > 0 && h > 0 ? w * h : 0;
+}
+
+const OBSTACLE_BUCKET = 4;
+
+/**
+ * What a label must not cover: door and passage symbols on edges (an open door's leaf too), the S of a secret
+ * door the party hasn't found, and cells that hold stairs, a trapdoor, a chute, a feature, or the entrance mark.
+ */
+export class LabelObstacles {
+  private readonly buckets = new Map<string, WorldRect[]>();
+
+  constructor(scene: Scene) {
+    const add = (r: WorldRect) => {
+      for (let by = Math.floor(r.y0 / OBSTACLE_BUCKET); by <= Math.floor(r.y1 / OBSTACLE_BUCKET); by++) {
+        for (let bx = Math.floor(r.x0 / OBSTACLE_BUCKET); bx <= Math.floor(r.x1 / OBSTACLE_BUCKET); bx++) {
+          const key = `${bx},${by}`;
+          const list = this.buckets.get(key);
+          if (list) list.push(r);
+          else this.buckets.set(key, [r]);
+        }
+      }
+    };
+    // An edge rectangle from offsets along the edge (u) and across it (v, positive into the keyed cell).
+    const edgeRect = (
+      x: number,
+      y: number,
+      side: 'north' | 'west',
+      u0: number,
+      u1: number,
+      v0: number,
+      v1: number,
+    ) =>
+      side === 'north'
+        ? { x0: x + u0, x1: x + u1, y0: y + v0, y1: y + v1 }
+        : { x0: x + v0, x1: x + v1, y0: y + u0, y1: y + u1 };
+    for (const edge of scene.edges.values()) {
+      if (edge.kind === 'door' && edge.door) {
+        const hidden = edge.door.secret === true && edge.door.discovered === false;
+        if (hidden) add(edgeRect(edge.x, edge.y, edge.side, 0.25, 0.75, -0.25, 0.25));
+        else {
+          add(edgeRect(edge.x, edge.y, edge.side, 0.18, 0.82, -0.16, 0.16));
+          if (edge.door.open) add(edgeRect(edge.x, edge.y, edge.side, 0.14, 0.36, 0, 0.55));
+        }
+      } else if (edge.kind === 'passage') {
+        add(edgeRect(edge.x, edge.y, edge.side, 0.1, 0.9, -0.32, 0.32));
+      }
+    }
+    const cell = (x: number, y: number) => add({ x0: x + 0.1, y0: y + 0.1, x1: x + 0.9, y1: y + 0.9 });
+    for (const key of scene.featuresByCell.keys()) {
+      const [x, y] = key.split(',').map(Number);
+      if (x !== undefined && y !== undefined) cell(x, y);
+    }
+    for (const [key, list] of scene.transitionsByCell) {
+      if (!list.some((t) => t.kind !== 'passage')) continue;
+      const [x, y] = key.split(',').map(Number);
+      if (x !== undefined && y !== undefined) cell(x, y);
+    }
+    const entrance = scene.map.entrance;
+    if (entrance)
+      add({ x0: entrance[0] + 0.25, y0: entrance[1] + 0.4, x1: entrance[0] + 0.75, y1: entrance[1] + 0.9 });
+  }
+
+  /** The obstacles near a rectangle. */
+  near(r: WorldRect): WorldRect[] {
+    const out = new Set<WorldRect>();
+    for (let by = Math.floor(r.y0 / OBSTACLE_BUCKET); by <= Math.floor(r.y1 / OBSTACLE_BUCKET); by++) {
+      for (let bx = Math.floor(r.x0 / OBSTACLE_BUCKET); bx <= Math.floor(r.x1 / OBSTACLE_BUCKET); bx++) {
+        for (const o of this.buckets.get(`${bx},${by}`) ?? []) out.add(o);
+      }
+    }
+    return [...out];
+  }
+}
+
+export interface LabelRequest {
+  id: string;
+  /** The label block's size in cells. */
+  width: number;
+  height: number;
+  /** Where the block's centre may go, best first. */
+  candidates: readonly { x: number; y: number }[];
+}
+
+/**
+ * Places labels one after another. Each takes its first candidate whose block overlaps no obstacle, no fixed
+ * rectangle (such as the party token), and no label placed before it. When every candidate overlaps something, it
+ * takes the one with the least overlap.
+ */
+export function placeLabels(
+  requests: readonly LabelRequest[],
+  obstacles: (r: WorldRect) => readonly WorldRect[],
+  fixed: readonly WorldRect[],
+): Map<string, { x: number; y: number }> {
+  const placed: WorldRect[] = [];
+  const result = new Map<string, { x: number; y: number }>();
+  for (const request of requests) {
+    let best: { x: number; y: number } | null = null;
+    let bestCost = Infinity;
+    for (const c of request.candidates) {
+      const rect = {
+        x0: c.x - request.width / 2,
+        y0: c.y - request.height / 2,
+        x1: c.x + request.width / 2,
+        y1: c.y + request.height / 2,
+      };
+      let cost = 0;
+      for (const o of obstacles(rect)) cost += overlapArea(rect, o);
+      for (const o of fixed) cost += overlapArea(rect, o) * 4;
+      for (const o of placed) cost += overlapArea(rect, o) * 4;
+      if (cost < bestCost) {
+        bestCost = cost;
+        best = c;
+        if (cost === 0) break;
+      }
+    }
+    if (!best) continue;
+    result.set(request.id, best);
+    placed.push({
+      x0: best.x - request.width / 2,
+      y0: best.y - request.height / 2,
+      x1: best.x + request.width / 2,
+      y1: best.y + request.height / 2,
+    });
+  }
+  return result;
+}
+
+/** Every area's label spots, best first, keyed by area id. */
+export function labelSpots(scene: Scene): Map<string, LabelSpot[]> {
+  return new Map(scene.map.areas.map((area) => [area.id, labelSpotsRanked(scene, area)]));
 }
 
 export interface FittedLabel {
