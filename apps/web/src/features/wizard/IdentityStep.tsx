@@ -18,6 +18,7 @@ import { spellDuration, spellRange } from '../sheet/spellText';
 import { ALIGNMENTS, type Alignment } from './draft';
 import { suggestName } from './names';
 import type { ClassMagic } from './tables';
+import { RuleLink } from '../sheet/RuleLink';
 import styles from './wizard.module.css';
 import { useSpellDetail } from '../sheet/catalogs';
 
@@ -91,6 +92,9 @@ function SpellCard({
             {detail.data.modes.map((mode) => (
               <p key={mode.key}>{mode.prose}</p>
             ))}
+            <p>
+              <RuleLink entry={{ kind: 'spells', id: spell.id }}>{spell.name}</RuleLink>
+            </p>
           </div>
         )}
       </Popover>

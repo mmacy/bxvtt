@@ -4,6 +4,7 @@ import { tokenClass, type ClassDetail } from '@/app';
 import { Accordion, Badge, Checkbox, Skeleton, TokenPortrait, cx, formatModifier } from '@/ui';
 import { requirementGap } from './RollStep';
 import { xpModifierFor, type Scores } from './tables';
+import { RuleLink } from '../sheet/RuleLink';
 import styles from './wizard.module.css';
 import { useClassDetail } from '../sheet/catalogs';
 
@@ -181,7 +182,11 @@ export function ClassStep({
       {selected.data && (
         <section className={styles.classDetail} aria-labelledby="class-detail-title">
           <h3 id="class-detail-title" className={styles.subTitle}>
-            What a {classLabel(selected.data.id).toLowerCase()} can do
+            What a{' '}
+            <RuleLink entry={{ kind: 'classes', id: selected.data.id }}>
+              {classLabel(selected.data.id).toLowerCase()}
+            </RuleLink>{' '}
+            can do
           </h3>
           {selected.data.abilities.length === 0 ? (
             <p className={styles.muted}>

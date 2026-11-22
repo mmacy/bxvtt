@@ -13,6 +13,7 @@ import { Badge, Banner, CoinPurse, Parchment, StatBox, formatModifier } from '@/
 import type { WizardDraft } from './draft';
 import { cartPhrase, type CartLine } from './kits';
 import { ABILITIES, headlineModifier, xpModifierFor, type Scores } from './tables';
+import { RuleLink } from '../sheet/RuleLink';
 import styles from './wizard.module.css';
 
 export interface ReviewStepProps {
@@ -71,7 +72,12 @@ export function ReviewStep({
         <div>
           <h3 className={styles.reviewName}>{draft.name.trim() || 'Unnamed adventurer'}</h3>
           <p className={styles.reviewClass}>
-            Level 1 {detail ? classLabel(detail.id).toLowerCase() : ''}
+            Level 1{' '}
+            {detail ? (
+              <RuleLink entry={{ kind: 'classes', id: detail.id }}>
+                {classLabel(detail.id).toLowerCase()}
+              </RuleLink>
+            ) : null}
             {title ? ` · ${title}` : ''} ·{' '}
             {draft.alignment ? alignmentLabel(draft.alignment) : 'No alignment'}
           </p>
@@ -105,7 +111,7 @@ export function ReviewStep({
         <section className={styles.reviewSection} aria-label="Combat">
           <h4 className={styles.reviewHeading}>Hit points</h4>
           <p className={styles.reviewText}>
-            The rules engine rolls them when you create the character: a d{detail?.hit_die ?? '?'}
+            A d{detail?.hit_die ?? '?'}
             {con !== undefined && con !== 0 ? `, ${formatModifier(con)} for Constitution` : ''}
             {draft.hpReroll ? ', rerolling a 1 or 2' : ''}.
           </p>
@@ -128,8 +134,8 @@ export function ReviewStep({
                 {worn.length > 0
                   ? `You go out wearing and wielding ${joinList(worn)}. `
                   : 'You go out with nothing worn or wielded. '}
-                The rules engine works out armour class from this gear and your Dexterity when it makes the
-                character.
+                The rules engine rolls hit points and works out armour class when it creates the character,
+                and the finished sheet shows both.
               </p>
             </>
           )}
@@ -147,7 +153,14 @@ export function ReviewStep({
             <>
               <h4 className={styles.reviewHeading}>Spell book</h4>
               <p className={styles.reviewText}>
-                {draft.spells.map((id) => spells?.find((s) => s.id === id)?.name ?? id).join(', ')}
+                {draft.spells.map((id, index) => (
+                  <span key={id}>
+                    {index > 0 && ', '}
+                    <RuleLink entry={{ kind: 'spells', id }}>
+                      {spells?.find((s) => s.id === id)?.name ?? id}
+                    </RuleLink>
+                  </span>
+                ))}
               </p>
             </>
           )}

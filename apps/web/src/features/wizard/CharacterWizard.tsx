@@ -13,6 +13,7 @@ import {
   useSpellCatalog,
 } from '@/app';
 import { Banner, Button, ConfirmDialog, Dialog, Stepper, type StepperStep } from '@/ui';
+import { RuleLinksContext } from '../sheet/RuleLink';
 import { StoredSheet } from '../sheet/StoredSheet';
 import { AdjustStep, type CheckState } from './AdjustStep';
 import { ClassStep } from './ClassStep';
@@ -650,7 +651,10 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
       footer={footer}
       className={styles.dialog}
     >
-      <div className={styles.wizard}>{body}</div>
+      {/* The lobby and the home page render the rules reference, so names in the wizard open it. */}
+      <RuleLinksContext.Provider value={true}>
+        <div className={styles.wizard}>{body}</div>
+      </RuleLinksContext.Provider>
       <ConfirmDialog
         open={confirmReset}
         onOpenChange={setConfirmReset}
