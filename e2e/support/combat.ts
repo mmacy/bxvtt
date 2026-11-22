@@ -6,7 +6,7 @@ import type { BxvttClient } from '@bxvtt/shared/client';
 import type { GameState } from '@bxvtt/shared/protocol';
 import { expect, type Locator, type Page } from '@playwright/test';
 import type { Actor, Crew } from './fixtures';
-import { enterDungeon, send, setupTable, waitForGame, type MemberSpec } from './table';
+import { enterDungeon, placeParty, send, setupTable, waitForGame, type MemberSpec } from './table';
 
 /** A table with a referee (Ruth) and two players (Sam and Ann) in a game of The Drowned Bell. */
 export interface CombatTable {
@@ -105,6 +105,41 @@ export async function walkIntoGuardroom(caller: BxvttClient, tableId: string): P
 }
 
 /**
+ * Brings the party to Gashnak One-Ear in the warden's cell: the referee places it in the dorter, north of the
+ * cell's stuck door, Brenna forces the door until it gives way, and the party steps south into the cell, where
+ * Gashnak and two goblins wait.
+ */
+export async function walkIntoWardensCell(table: CombatTable): Promise<GameState> {
+  const { ruth, sam, tableId, memberId } = table;
+  await placeParty(ruth.client, tableId, { dungeon: 'priory', level: 1, x: 26, y: 15, facing: 'south' });
+  let game = await sam.client.getGame(tableId);
+  for (let attempt = 0; attempt < 10 && game.mode === 'exploring'; attempt += 1) {
+    const result = await sam.client.sendCommand(
+      tableId,
+      { command_type: 'force_door', direction: 'south', character_id: memberId('Brenna') },
+      game.revision,
+    );
+    game = result.game;
+    if (result.accepted && doorOpen(game, 26, 16, 'north')) break;
+  }
+  expect(game.mode).toBe('exploring');
+  game = await send(sam.client, tableId, { command_type: 'move_party', direction: 'south' });
+  expect(game.mode).not.toBe('exploring');
+  return game;
+}
+
+/** Whether the party's map shows a door open on one edge of a cell. */
+function doorOpen(game: GameState, x: number, y: number, side: string): boolean {
+  const location = game.view.location;
+  if (location.kind !== 'dungeon') return false;
+  const level = game.view.explored.find(
+    (candidate) =>
+      candidate.dungeon_id === location.dungeon_id && candidate.level_number === location.level_number,
+  );
+  return level?.edges[`${x},${y}:${side}`]?.door_open === true;
+}
+
+/**
  * Moves the party one cell with an arrow key on the map, and waits until the map's position text shows the new
  * cell. The client drops a key press while the previous move is still settling, as it should, so this presses
  * again only when the map still shows the old cell after two seconds.
@@ -172,7 +207,7 @@ export async function declareSuggested(page: Page, name: string): Promise<boolea
     await close.click();
     await expect(close).toHaveCount(0);
   }
-  const quick = row.getByRole('button', { name: /^(Close in|Attack|Shoot)/ }).first();
+  const quick = row.getByRole('button', { name: /^(Close in|Attack|Shoot|Throw)/ }).first();
   try {
     await quick.waitFor({ timeout: 2000 });
   } catch {

@@ -4,6 +4,7 @@
  */
 import type { Page } from '@playwright/test';
 import { expect, test } from './support/fixtures';
+import { stagedTable } from './support/states';
 import { openTable } from './support/table';
 import { AFTER_DELVE, purseOf, returnToTown, townTable } from './support/town';
 
@@ -24,6 +25,14 @@ function squareMember(page: Page, name: string) {
     .getByRole('tabpanel', { name: 'Town square' })
     .getByRole('listitem')
     .filter({ has: page.getByRole('heading', { name, level: 3 }) });
+}
+
+/** A member's row in the Party panel's marching order. Its description gives the hit points. */
+function marchingRow(page: Page, name: string) {
+  return page
+    .getByRole('tabpanel', { name: 'Party' })
+    .getByRole('list', { name: 'Marching order' })
+    .getByRole('button', { name: new RegExp(`^${name}\\b`) });
 }
 
 test.describe('town', () => {
@@ -106,8 +115,7 @@ test.describe('town', () => {
 
     // Cure light wounds costs 20 gp: Brenna's 19 gp and 1 gp from Wren.
     await sam.page.getByRole('button', { name: 'Buy cure light wounds for Brenna' }).click();
-    const brenna = alice.page.getByRole('button', { name: /^Brenna, level 1 fighter, \d+ of 10 hit points/ });
-    await expect(brenna).not.toHaveAccessibleName(/^Brenna, level 1 fighter, 7 of 10/);
+    await expect(marchingRow(alice.page, 'Brenna')).toHaveAccessibleDescription(/^(8|9|10) of 10 hit points/);
     const game = await sam.client.getGame(table.table.id);
     expect(purseOf(game, 'Brenna')).toBe(0);
     expect(purseOf(game, 'Wren')).toBe(AFTER_DELVE.purses.Wren - 1);
@@ -153,9 +161,7 @@ test.describe('town', () => {
     await sam.page.getByRole('button', { name: 'Rest a full day' }).click();
     await expect(clock(alice.page)).not.toHaveText(before ?? '');
     // A full day of rest heals Brenna's wounds a little.
-    await expect(
-      alice.page.getByRole('button', { name: /^Brenna, level 1 fighter, (8|9|10) of 10 hit points/ }),
-    ).toBeVisible();
+    await expect(marchingRow(alice.page, 'Brenna')).toHaveAccessibleDescription(/^(8|9|10) of 10 hit points/);
 
     // Only the caller sets out.
     const aliceSetOut = alice.page
@@ -178,5 +184,21 @@ test.describe('town', () => {
       await expect(page.getByRole('banner').getByText('Exploring')).toBeVisible({ timeout: 20_000 });
       await expect(page.getByRole('application', { name: /^Dungeon map/ })).toBeVisible();
     }
+  });
+
+  test('a caster’s button on the rest page opens the sheet at its Spells tab', async ({ crew }) => {
+    // Tamsin is a magic-user with Sleep in her spell book. Osric is a first-level cleric, who has no spells yet.
+    const staged = await stagedTable(crew, 'town');
+    const { page } = staged.ruth;
+    await openTable(page, staged.path);
+    await openTownTab(page, 'Rest and prepare');
+    const rest = page.getByRole('tabpanel', { name: 'Rest and prepare' });
+    await expect(rest.getByRole('button', { name: "Open Osric's sheet" })).toBeVisible();
+    await rest.getByRole('button', { name: "Open Tamsin's spells" }).click();
+    const sheet = page.getByRole('dialog', { name: 'Tamsin' });
+    await expect(sheet.getByRole('tab', { name: 'Spells' })).toHaveAttribute('aria-selected', 'true');
+    await expect(sheet.getByRole('tabpanel', { name: 'Spells' })).toContainText('Sleep');
+    await sheet.getByRole('button', { name: 'Close' }).click();
+    await expect(sheet).toHaveCount(0);
   });
 });

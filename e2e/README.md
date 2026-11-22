@@ -58,6 +58,7 @@ These environment variables change the defaults:
 | `E2E_SERVER_ENTRY` | `apps/server/dist/main.js` | The built server, in production mode. |
 | `E2E_WORKERS` | `3` | How many tests run at once. |
 | `E2E_OUTPUT` | `test-results` | Playwright's output directory. Give each copy of the suite its own. |
+| `E2E_HOST_KEY_PORT` | `8689` | Port of the second server that `host-key.spec.ts` starts with `BXVTT_HOST_KEY` set. That server serves a built client, so in development mode the spec runs only when `E2E_WEB_DIST` names a build. |
 | `E2E_KEEP_DATA` | unset | Set `1` to keep the server's temporary data directory after the run. |
 | `E2E_SERVER_LOG_LEVEL` | `warn` | The server's log level. |
 | `BXAPI_URL` | `http://127.0.0.1:8651` | The bxapi the server calls. Never use the one on port 8640. |

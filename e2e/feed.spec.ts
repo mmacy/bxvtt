@@ -5,7 +5,7 @@
 import type { Page } from '@playwright/test';
 import { SCREENS_DIR } from './support/env';
 import { expect, expectNoRawText, readFeedLines, test, type Actor, type Crew } from './support/fixtures';
-import { dungeonTable, partyActions, pickFromMenu, scenePanel } from './support/map';
+import { dungeonTable, lightTorch, openScene, partyActions, pickFromMenu, scenePanel } from './support/map';
 import { enterDungeon, openTable, placeParty, send, setupTable } from './support/table';
 
 /** Opens the feed tab. */
@@ -143,8 +143,8 @@ test.describe('feed', () => {
     const scene = scenePanel(sam.page);
 
     // Light, a refused search, a found secret door, a sprung trap, treasure, referee gifts, rest, and chat.
-    await pickFromMenu(partyActions(sam.page).getByRole('button', { name: 'Light' }), /^Brenna lights/);
-    await expect(sam.page.getByRole('status').filter({ hasText: "Brenna's light" })).toBeVisible();
+    await lightTorch(sam.page);
+    await openScene(sam.page);
     await place(15, 12, 'east');
     for (const member of ['Brenna', 'Wren']) {
       if (await scene.getByText(/A door to the east/).isVisible()) break;
@@ -186,6 +186,8 @@ test.describe('feed', () => {
       const lines = await readFeedLines(person.page);
       expect(lines.length).toBeGreaterThan(15);
       expectNoRawText(lines, `${person.name}'s feed`);
+      // The player reads the dungeon's name, as the referee does (D-210).
+      expect(lines).toContain("The party is placed in the priory on Corvane's Holm, level 1.");
       // Each filter shows only its kind of entry and still reads as sentences.
       for (const filter of ['Game', 'Chat', 'Rolls', 'All']) {
         await person.page
@@ -206,6 +208,7 @@ test.describe('journal', () => {
   }) => {
     const setup = await dungeonTable(crew, { seed: 1981 });
     const { sam, ruth, table } = setup;
+    await openScene(sam.page);
     await openJournal(sam.page, 'Quests');
     const hand = sam.page.getByRole('article', { name: 'The Hand of Saint Corvane' });
     await expect(
@@ -298,4 +301,8 @@ test('entering the dungeon writes the landing to the journal and the feed', asyn
   ).toBeVisible();
   await openFeed(sam.page);
   await expect(feed(sam.page).getByText(/a bell tolls once/)).toBeVisible();
+  // The autosave line reads as one sentence (D-208).
+  await expect(
+    feed(sam.page).getByText("The server saved the game: entered the priory on Corvane's Holm."),
+  ).toBeVisible();
 });

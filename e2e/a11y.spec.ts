@@ -39,8 +39,7 @@ test.describe('axe finds no serious or critical violations', () => {
     expect(describeViolations(await seriousViolations(visitor.page, testInfo, 'home-first-run'))).toEqual([]);
   });
 
-  // D-002
-  test.fixme('home with tables', async ({ crew }, testInfo) => {
+  test('home with tables', async ({ crew }, testInfo) => {
     const ruth = await crew.person('Ruth');
     await ruth.client.createTable({ name: 'Thursday' });
     await ruth.page.goto('/');
@@ -54,13 +53,16 @@ test.describe('axe finds no serious or critical violations', () => {
     const table = await ruth.client.createTable({ name: 'Thursday' });
     const visitor = await crew.person('Visitor', { signedIn: false });
     await visitor.page.goto(`/join/${table.invite_code}`);
-    await expect(visitor.page.getByRole('form', { name: "You're invited to a table" })).toBeVisible();
+    // Ruth is offline, so the page offers both the new player's form and the returning player's choices.
+    await expect(visitor.page.getByRole('heading', { name: "I'm new here" })).toBeVisible();
+    await expect(
+      visitor.page.getByRole('heading', { name: "I've played at this table before" }),
+    ).toBeVisible();
     await shoot(visitor.page, 'join');
     expect(describeViolations(await seriousViolations(visitor.page, testInfo, 'join'))).toEqual([]);
   });
 
-  // D-002, D-003
-  test.fixme('lobby, referee and player', async ({ crew }, testInfo) => {
+  test('lobby, referee and player', async ({ crew }, testInfo) => {
     const staged = await stagedTable(crew, 'lobby');
     const found: string[] = [];
     for (const [who, actor] of [
@@ -89,8 +91,7 @@ test.describe('axe finds no serious or critical violations', () => {
     ).toEqual([]);
   });
 
-  // D-004, D-005, D-006
-  test.fixme('town, every part of town', async ({ crew }, testInfo) => {
+  test('town, every part of town', async ({ crew }, testInfo) => {
     const staged = await stagedTable(crew, 'town');
     const { page } = staged.sam;
     await openTable(page, staged.path);
@@ -112,8 +113,7 @@ test.describe('axe finds no serious or critical violations', () => {
     expect(found).toEqual([]);
   });
 
-  // D-005, D-007
-  test.fixme('exploring, player and referee', async ({ crew }, testInfo) => {
+  test('exploring, player and referee', async ({ crew }, testInfo) => {
     const staged = await stagedTable(crew, 'exploring');
     const found: string[] = [];
     for (const [who, actor] of [
@@ -132,8 +132,7 @@ test.describe('axe finds no serious or critical violations', () => {
     expect(found).toEqual([]);
   });
 
-  // D-005, D-007, D-008, D-009
-  test.fixme('dock tabs, character sheet, rules reference, and dialogs', async ({ crew }, testInfo) => {
+  test('dock tabs, character sheet, rules reference, and dialogs', async ({ crew }, testInfo) => {
     const staged = await stagedTable(crew, 'exploring');
     const { page } = staged.ruth;
     await openTable(page, staged.path);
@@ -153,7 +152,10 @@ test.describe('axe finds no serious or critical violations', () => {
     await check('journal');
 
     await page.getByRole('tab', { name: 'Party' }).click();
-    await page.getByRole('button', { name: /^Brenna, level 1 fighter/ }).click();
+    await page
+      .getByRole('list', { name: 'Marching order' })
+      .getByRole('button', { name: /^Brenna/ })
+      .click();
     await check('character-sheet');
     await page.keyboard.press('Escape');
 
@@ -162,7 +164,7 @@ test.describe('axe finds no serious or critical violations', () => {
     await page.keyboard.press('Escape');
 
     await page.getByRole('button', { name: 'Table menu' }).click();
-    await page.getByRole('menuitem', { name: /save/i }).first().click();
+    await page.getByRole('menuitem', { name: 'Saves', exact: true }).click();
     await check('saves');
     await page.keyboard.press('Escape');
 
@@ -177,15 +179,8 @@ test.describe('axe finds no serious or critical violations', () => {
     expect(found).toEqual([]);
   });
 
-  // Known defects that fail each stage. Remove an entry after its defects are fixed.
-  const knownByStage: Record<string, string> = {
-    encounter: 'D-005, D-007',
-    battle: 'D-005, D-007',
-    game_over: 'D-005, D-010',
-  };
   for (const stage of ['encounter', 'battle', 'game_over'] as const) {
     test(`${stage.replace('_', ' ')}`, async ({ crew }, testInfo) => {
-      test.fixme(stage in knownByStage, knownByStage[stage]);
       const staged = await stagedTable(crew, stage);
       const { page } = staged.sam;
       await openTable(page, staged.path);
@@ -202,11 +197,73 @@ test.describe('axe finds no serious or critical violations', () => {
   }
 });
 
+test.describe('axe on the screens added in the fix round', () => {
+  test('rejoining: the visitor waits, and the referee sees the request', async ({ crew }, testInfo) => {
+    const staged = await stagedTable(crew, 'town');
+    await openTable(staged.ruth.page, staged.path);
+    const visitor = await crew.person('Visitor', { signedIn: false });
+    await visitor.page.goto(`/join/${staged.table.invite_code}`);
+    await visitor.page.getByRole('button', { name: 'Come back in as Sam' }).click();
+    await expect(
+      visitor.page.getByRole('heading', { name: /Waiting for a referee to let you in as Sam/ }),
+    ).toBeVisible();
+    await shoot(visitor.page, 'rejoin-waiting');
+    const found = describeViolations(await seriousViolations(visitor.page, testInfo, 'rejoin-waiting'));
+
+    const requests = staged.ruth.page.getByRole('region', { name: 'Requests to come back in' });
+    await expect(requests).toBeVisible();
+    await shoot(staged.ruth.page, 'rejoin-request');
+    found.push(...describeViolations(await seriousViolations(staged.ruth.page, testInfo, 'rejoin-request')));
+    await requests.getByRole('button', { name: 'Not now' }).click();
+    await expect(requests).toBeHidden();
+    expect(found).toEqual([]);
+  });
+
+  test('the lobby offers to continue from a save', async ({ crew }, testInfo) => {
+    const staged = await stagedTable(crew, 'town');
+    await staged.ruth.client.createSave(staged.tableId, 'Before the ferry');
+    await staged.ruth.client.endGame(staged.tableId);
+    const { page } = staged.ruth;
+    await openTable(page, staged.path);
+    await settle(page, 'lobby');
+    await page.getByRole('button', { name: 'Continue from a save' }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await page.waitForTimeout(600);
+    await shoot(page, 'lobby-continue');
+    expect(describeViolations(await seriousViolations(page, testInfo, 'lobby-continue'))).toEqual([]);
+  });
+});
+
+test.describe('user colors', () => {
+  // R-002: the darkest user color is too dark to read as a name on the feed.
+  test.fixme('every user color reads as a name in the feed', async ({ crew }, testInfo) => {
+    const staged = await stagedTable(crew, 'exploring');
+    const { ruth } = staged;
+    const { USER_COLORS } = await import('@bxvtt/shared/protocol');
+    await openTable(ruth.page, staged.path);
+    await ruth.page.getByRole('tab', { name: /^Feed/ }).click();
+    const failing: string[] = [];
+    for (const color of USER_COLORS) {
+      await ruth.client.updateMe({ color });
+      await ruth.client.postFeed(staged.tableId, { text: `Written in ${color}.` });
+      await expect(ruth.page.getByRole('region', { name: 'Feed entries' })).toContainText(
+        `Written in ${color}.`,
+      );
+      const violations = await seriousViolations(
+        ruth.page,
+        testInfo,
+        `color-${color.slice(1)}`,
+        '[aria-label="Feed entries"]',
+      );
+      if (violations.some((violation) => violation.id === 'color-contrast')) failing.push(color);
+    }
+    expect(failing, 'user colors whose names fail contrast in the feed').toEqual([]);
+  });
+});
+
 test.describe('keyboard', () => {
   for (const stage of ['lobby', 'town', 'exploring', 'battle'] as const) {
     test(`tabbing through the ${stage} screen shows each focus and never traps it`, async ({ crew }) => {
-      // D-011: the map shows no focus ring.
-      test.fixme(stage === 'exploring' || stage === 'battle', 'D-011');
       const staged = await stagedTable(crew, stage);
       const { page } = staged.sam;
       await openTable(page, staged.path);

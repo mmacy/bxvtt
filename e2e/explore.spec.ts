@@ -12,6 +12,10 @@ import {
   dungeonMap,
   dungeonTable,
   expectPartyAt,
+  lightStatus,
+  lightTorch,
+  mapOptions,
+  openScene,
   partyActions,
   pickFromMenu,
   scenePanel,
@@ -26,12 +30,6 @@ const PRIORY = 'priory';
 function placer({ ruth, table }: DungeonTable) {
   return (x: number, y: number, facing: 'north' | 'south' | 'east' | 'west', level = 1) =>
     placeParty(ruth.client, table.id, { dungeon: PRIORY, level, x, y, facing });
-}
-
-/** Lights Brenna's torch through the light menu. */
-async function lightTorch(page: Page): Promise<void> {
-  await pickFromMenu(partyActions(page).getByRole('button', { name: 'Light' }), /^Brenna lights/);
-  await expect(page.getByRole('status').filter({ hasText: "Brenna's light" })).toBeVisible();
 }
 
 /** Opens the feed tab and returns its lines. */
@@ -51,11 +49,20 @@ test.describe('exploration', () => {
     const { sam, ruth, table } = await dungeonTable(crew);
     await expectPartyAt(sam.page, 14, 23);
 
+    // The map's label and its description both say that the arrow keys move the party (D-204).
+    await expect(dungeonMap(sam.page)).toHaveAccessibleName(/The arrow keys move the party/);
+    await expect(dungeonMap(sam.page)).toHaveAccessibleDescription(/^Arrow keys move the party\. Shift and/);
+
     // The arrow keys move the party while the map has focus, and the referee sees the move.
     await dungeonMap(sam.page).focus();
     await sam.page.keyboard.press('ArrowUp');
     await expectPartyAt(sam.page, 14, 22);
     await expectPartyAt(ruth.page, 14, 22);
+
+    // W, A, S, and D no longer move the party.
+    await sam.page.keyboard.press('w');
+    await sam.page.waitForTimeout(800);
+    await expectPartyAt(sam.page, 14, 22);
 
     // A click on the square beside the party moves it there.
     await clickSquare(sam.page, -1, 0);
@@ -82,6 +89,7 @@ test.describe('exploration', () => {
     const scene = scenePanel(sam.page);
     const door = scene.getByRole('button', { name: 'Door' });
     await lightTorch(sam.page);
+    await openScene(sam.page);
 
     // The chapter house's south door, from the corridor below it.
     await place(12, 15, 'north');
@@ -93,7 +101,10 @@ test.describe('exploration', () => {
     await place(12, 9, 'south');
     await expect(scene.getByText('A door to the south, closed.')).toBeVisible();
     await pickFromMenu(door, 'Open it');
-    await expect(sam.page.getByText('The door is stuck. Have a strong member force it open.')).toBeVisible();
+    // The refusal shows beside the party, and the map's live region speaks the same words.
+    await expect(
+      sam.page.getByText('The door is stuck. Have a strong member force it open.').first(),
+    ).toBeVisible();
     await expect(scene.getByText('It is stuck.')).toBeVisible();
     for (let attempt = 0; attempt < 6; attempt += 1) {
       if (await scene.getByText('A door to the south, open.').isVisible()) break;
@@ -133,6 +144,7 @@ test.describe('exploration', () => {
     const scene = scenePanel(sam.page);
     const door = scene.getByRole('button', { name: 'Door' });
     await lightTorch(sam.page);
+    await openScene(sam.page);
 
     // The cellarer's store, south of the kitchen.
     await placer(setup)(2, 18, 'south');
@@ -151,6 +163,8 @@ test.describe('exploration', () => {
     const { sam, ruth } = setup;
     const scene = scenePanel(sam.page);
     await lightTorch(sam.page);
+    await openScene(sam.page);
+    await openScene(ruth.page);
 
     // The chapter house's east wall hides the way into the chapel.
     await placer(setup)(15, 12, 'east');
@@ -175,6 +189,7 @@ test.describe('exploration', () => {
     const { sam } = setup;
     const place = placer(setup);
     const scene = scenePanel(sam.page);
+    await openScene(sam.page);
 
     // The warden's iron chest is trapped.
     await place(26, 17, 'east');
@@ -184,10 +199,11 @@ test.describe('exploration', () => {
     let lines = await feedLines(sam.page);
     expect(lines.join('\n')).toMatch(/trap/i);
     expect(lines.join('\n')).toMatch(/iron key/i);
+    // The marching order row names the member and describes her hit points.
     await sam.page.getByRole('tab', { name: 'Party' }).click();
     await expect(
-      sam.page.getByRole('button', { name: /^Brenna, level 1 fighter, [1-9] of 10 hit points/ }),
-    ).toBeVisible();
+      sam.page.getByRole('list', { name: 'Marching order' }).getByRole('button', { name: /^Brenna\b/ }),
+    ).toHaveAccessibleDescription(/^[1-9] of 10 hit points/);
 
     // The chapel altar has no trap.
     await place(17, 12, 'east');
@@ -234,13 +250,24 @@ test.describe('exploration', () => {
     const setup = await dungeonTable(crew, { seed: 1981 });
     const { sam, ruth, table } = setup;
     await lightTorch(sam.page);
-    const status = (text: string | RegExp) => sam.page.getByRole('status').filter({ hasText: text });
-    await expect(status(/Brenna's light, .*6 turns left/)).toBeVisible();
+    const status = lightStatus(sam.page);
+    const light = mapOptions(sam.page).getByRole('button', { name: /^Light: / });
+    await expect(status).toHaveText("Brenna's torch, about 6 turns left");
+    await expect(light).toHaveText('6 turns');
+    // The party panel uses the same words as the map (D-207).
+    await sam.page.getByRole('tab', { name: 'Party' }).click();
+    await expect(sam.page.getByRole('region', { name: 'The party', exact: true })).toContainText(
+      "Brenna's torch, about 6 turns left",
+    );
 
     await send(ruth.client, table.id, { command_type: 'advance_time', n: 3, unit: 'turn' });
-    await expect(status(/Brenna's light, .*3 turns left/)).toBeVisible();
+    await expect(status).toHaveText("Brenna's torch, about 3 turns left");
     await send(ruth.client, table.id, { command_type: 'advance_time', n: 3, unit: 'turn' });
-    await expect(status('No light. The party is in the dark.')).toBeVisible();
+    await expect(status).toHaveText('The party has no light.');
+    await expect(light).toHaveAccessibleName('Light: The party has no light.');
+    await expect(sam.page.getByRole('region', { name: 'The party', exact: true })).toContainText(
+      'The party has no light.',
+    );
     const lines = await feedLines(sam.page);
     expect(lines.join('\n')).toMatch(/torch/i);
   });
@@ -359,7 +386,7 @@ test.describe('exploration', () => {
     await expect(dungeonMap(sam.page)).toBeVisible();
     await expectPartyAt(sam.page, 12, 12);
     await expect(scenePanel(sam.page).getByRole('heading', { name: 'Chapter house' })).toBeVisible();
-    await expect(sam.page.getByRole('status').filter({ hasText: "Brenna's light" })).toBeVisible();
+    await expect(lightStatus(sam.page)).toHaveText(/^Brenna's torch/);
     await expect(sam.page.getByRole('banner').getByText('Exploring')).toBeVisible();
     const after = await feedLines(sam.page);
     for (const line of before.filter((text) => /Brenna lights a torch|is placed/.test(text))) {

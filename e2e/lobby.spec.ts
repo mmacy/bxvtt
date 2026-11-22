@@ -6,7 +6,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { REPO_ROOT } from './support/env';
 import { expect, test } from './support/fixtures';
-import { createCharacter } from './support/table';
+import { stagedTable } from './support/states';
+import { createCharacter, openTable, placeParty } from './support/table';
 
 test.describe('first run and lobby', () => {
   test('a new visitor picks a name and creates a table', async ({ crew }) => {
@@ -23,7 +24,8 @@ test.describe('first run and lobby', () => {
     await page.getByRole('textbox', { name: 'Your name' }).fill('Ruth');
     await form.getByRole('button', { name: 'Continue' }).click();
     await expect(page.getByRole('heading', { name: 'Your tables', level: 1 })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Your profile: Ruth' })).toBeVisible();
+    // The name reads "Ruth , your profile" with a stray space for now (R-101), so the space is optional.
+    await expect(page.getByRole('button', { name: /^Ruth ?, your profile$/ })).toBeVisible();
 
     await page.getByRole('textbox', { name: 'Table name' }).fill('Thursday at the bell');
     await page.getByRole('button', { name: 'Create table' }).click();
@@ -285,5 +287,64 @@ test.describe('first run and lobby', () => {
       .getByRole('radio', { name: /^The Toll, our copy/ });
     await expect(radio).toBeVisible();
     await expect(radio).toContainText('Uploaded');
+  });
+
+  test('the referee continues from a save, and everyone lands in the saved game', async ({ crew }) => {
+    const staged = await stagedTable(crew, 'exploring');
+    const { ruth, sam, tableId } = staged;
+    await openTable(ruth.page, staged.path);
+    await openTable(sam.page, staged.path);
+
+    // Play a little: the party walks into the priory's entrance hall.
+    const saved = await placeParty(ruth.client, tableId, { dungeon: 'priory', level: 1, x: 17, y: 12 });
+    await expect(ruth.page.getByRole('application', { name: /^Dungeon map/ })).toBeVisible();
+
+    // Ruth saves the game from the table menu.
+    await ruth.page.getByRole('button', { name: 'Table menu' }).click();
+    await ruth.page.getByRole('menuitem', { name: 'Saves', exact: true }).click();
+    const saves = ruth.page.getByRole('dialog', { name: 'Saves' });
+    await saves.getByRole('textbox', { name: 'Save the game now' }).fill('In the chapel');
+    await saves.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(saves.getByRole('list', { name: 'Saves, newest first' })).toContainText('In the chapel');
+    await saves.getByRole('button', { name: 'Close' }).click();
+
+    // The party moves on after the save, so the save and the latest state differ.
+    await placeParty(ruth.client, tableId, { dungeon: 'priory', level: 1, x: 14, y: 23 });
+
+    await ruth.page.getByRole('button', { name: 'Table menu' }).click();
+    await ruth.page.getByRole('menuitem', { name: 'Return to the lobby' }).click();
+    await ruth.page
+      .getByRole('alertdialog', { name: 'Return the table to its lobby?' })
+      .getByRole('button', { name: /lobby/i })
+      .click();
+    for (const page of [ruth.page, sam.page]) {
+      await expect(page.getByRole('heading', { name: 'Party', level: 2 })).toBeVisible({ timeout: 20_000 });
+    }
+
+    // Sam learns that the referee can continue. Only Ruth gets the button.
+    await expect(sam.page.getByText(/from earlier games\. The referee can continue from one/)).toBeVisible();
+    await expect(sam.page.getByRole('button', { name: 'Continue from a save' })).toHaveCount(0);
+    await ruth.page.getByRole('button', { name: 'Continue from a save' }).click();
+    const lobbySaves = ruth.page.getByRole('dialog', { name: 'Continue from a save' });
+    await expect(lobbySaves.getByRole('textbox', { name: 'Save the game now' })).toHaveCount(0);
+    await lobbySaves.getByRole('button', { name: 'Restore In the chapel' }).click();
+    const confirm = ruth.page.getByRole('alertdialog', { name: 'Restore “In the chapel”?' });
+    await expect(confirm).toContainText('The party plays on as it was saved');
+    await confirm.getByRole('button', { name: 'Restore' }).click();
+
+    // Both people leave the lobby for the saved moment: exploring the priory, where the party stood.
+    for (const page of [ruth.page, sam.page]) {
+      await expect(page.getByRole('banner').getByText('Exploring')).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByRole('application', { name: /^Dungeon map/ })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Start the game' })).toHaveCount(0);
+    }
+    const game = await sam.client.getGame(tableId);
+    expect(game.mode).toBe('exploring');
+    expect(game.view.location).toEqual(saved.view.location);
+    expect(game.view.party.map((member) => member.name)).toEqual(['Brenna', 'Wren', 'Osric', 'Tamsin']);
+    // Sam still plays his own characters.
+    await expect(
+      sam.page.getByRole('list', { name: 'Marching order' }).getByRole('button', { name: /^Brenna\b/ }),
+    ).toContainText('You');
   });
 });

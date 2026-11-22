@@ -1,6 +1,8 @@
 # Defects found by the end-to-end suite
 
-Each entry describes one product defect that the end-to-end suite or exploratory play found. A test that fails because of a defect is marked `test.fixme` with the entry's ID in a comment, so the suite passes. After you fix a defect, remove the `fixme` from the tests that name its ID and run them.
+This report lists the product defects that are open after the second, verification pass of the end-to-end suite and of exploratory play. The fixed defects from both passes are listed by title in "Fixed" at the end. Each open entry gives the steps, or the spec that shows it, what happens, what should happen, and a screenshot under `.data/screens/e2e/` when one helps (that folder is ignored by Git, so run the spec to regenerate it).
+
+A test that fails because of an open defect is marked `test.fixme` with the entry's ID in a comment, so the suite passes. After you fix a defect, remove the `fixme` from the tests that name its ID and run them.
 
 Severity:
 
@@ -9,524 +11,675 @@ Severity:
 - **Minor**: Something works incorrectly or confusingly in a way players notice.
 - **Polish**: Wording, layout, or consistency.
 
-Screenshots are under `.data/screens/e2e/`, which is ignored by Git, so regenerate them by running the spec named in the entry.
-
-IDs are grouped by the part of the suite that found them: `D-0xx` for the lobby, accessibility, layout, and performance; `D-1xx` for the wizard and town; `D-2xx` for exploration, the feed, and the journal; `D-3xx` for encounters, battle, and the whole-game run; and `D-4xx` for referee tools, privacy, and resilience.
+IDs that start with `D-` come from the first pass, and IDs that start with `R-` from the second.
 
 ## Status
 
-Every entry is open unless its **Status** line says otherwise. On 2026-11-22, each open entry was checked again against the working tree, by rerunning its spec (with any `fixme` removed) or by finding the code it describes. D-302 is fixed, and D-401 is partly fixed. Every other entry still reproduces.
+On 2026-11-22, at commit `4bc4349`, 55 defects are open: 0 blockers, 0 majors, 21 minors, and 34 polish. Every open entry was found or confirmed on that tree. The suite passes in development mode and against the production build, with 3 tests marked `fixme` (R-002, R-301 with R-302, and R-303).
 
-## Defects
+## Open defects by owner
 
-### D-001: The Party panel warns about darkness while the party is in town
+### adventures
 
-- **Severity**: Polish
-- **Owner**: sheet
-- **Steps**: Start a game of The Drowned Bell and look at the Party tab of the dock in town.
-- **What happens**: The panel shows "No light. The party is in darkness unless someone lights a torch." while the party stands in Hollin Ferry.
-- **What should happen**: The light warning should appear only in a dungeon.
+- R-514 (Polish): One of Wethercote's services has no name, so its whole sentence becomes a heading
 
-### D-002: The profile button's accessible name doesn't match its visible text
+### app/shell
+
+- R-004 (Minor): The play screen takes about four times longer to become usable since the bundle was split
+- R-201 (Minor): The map pick prompt covers the map's toolbar
+- R-301 (Minor): The end screen's restore buttons are all named "Restore"
+- R-303 (Minor): The victory screen leaves out the adventure's closing text
+- R-528 (Minor): The victory screen lists a quest from the table's previous adventure
+- R-101 (Polish): Accessible names built from separate elements have a stray space before a comma
+- R-302 (Polish): The restore confirmation lowercases the save's label, place names included
+
+### combat
+
+- R-517 (Minor): Waiting on indifferent monsters gives no feedback, and the panel shows an empty "What happened" box
+- R-518 (Minor): "Pick up the dropped goods" takes nothing after the aftermath said coins were left behind
+- R-304 (Polish): A second monster group in melee is drawn at 15 feet on the range track
+- R-306 (Polish): A player who isn't the caller sees the same refusal four times in the encounter panel
+- R-523 (Polish): A single monster is written as plural and as "×1"
+- R-524 (Polish): A long aftermath title pushes the Close button onto its own line, and a room label sits outside its room
+- R-526 (Polish): The action bar keeps offering "Attack" while the composer has Cast selected
+
+### compendium
+
+- R-106 (Polish): The rules reference's class cards repeat the class name as the race
+
+### explore
+
+- R-203 (Minor): The darkness overlay hides the map's focus ring while the party has no light (D-011 partly fixed)
+- R-206 (Minor): During an encounter the encounter panel covers the party on the map
+- R-207 (Polish): The folded scene bar shows two chevron buttons side by side
+- R-208 (Polish): The Pins list crowds its rows and clips the focus ring
+- R-525 (Polish): The bridge deck is called "A corridor"
+
+### feed
+
+- R-002 (Minor): The darkest user color is unreadable as a name in the feed
+- R-503 (Minor): A run of moves renders as a broken feed group with a stray "Sam," and an entry with no name
+- R-531 (Polish): A level up only appears as a feed line
+
+### lobby
+
+- R-104 (Minor): At phone width the lobby is wider than the screen
+- R-501 (Minor): The join page offers to bring a stranger back in as the referee, and its text assumes the visitor played before
+- R-530 (Minor): Returning to the lobby quietly resets every character to how it was created
+- R-109 (Polish): The rejoin card tells every visitor that the table's address changed
+- R-510 (Polish): Each party row in the lobby has two buttons that open the same sheet
+
+### map
+
+- R-204 (Polish): Area names are still cut off while the party has seen only one cell (D-201 still open)
+- R-205 (Polish): Map labels run into the party token and into doors on The Toll at Crookback Bridge
+
+### referee
+
+- R-103 (Minor): The "Change" button for autosave does nothing in the lobby's saves dialog
+- R-527 (Minor): Placing the party in a keyed area skips its encounter and triggers without saying so
+- R-529 (Minor): After a total party kill, the referee can still complete the quest that ends the adventure
+- R-111 (Polish): Every save in the lobby is badged "Earlier game"
+- R-202 (Polish): The pick prompts tell the referee to click, although the keyboard picks too
+- R-407 (Polish): An unavailable quick action is named "End the encounter Not now"
+- R-519 (Polish): The referee's wandering monster table shows one row per die face
+- R-532 (Polish): Small wording slips in the referee panel, the readiness card, and the end screen
+
+### server
+
+- R-003 (Minor): The production server sends scripts and styles uncompressed
+- R-513 (Minor): The server autosaves "before the battle" when the party only meets indifferent monsters
+
+### shared text
+
+- R-504 (Polish): The feed writes a memorized spell's name in lower case
+- R-505 (Polish): A full day's rest fills the feed with 13 lines, most of which say nothing happened
+- R-521 (Polish): Slain monsters "wake up" in the feed
+
+### sheet
+
+- R-520 (Minor): The new prepare dialog closes when bxapi refuses, and lets a player pick more copies than slots
+
+### town
+
+- R-107 (Polish): The catalog still shows weights two ways
+- R-506 (Polish): "Recently in town" headlines a rest with a burnt-out torch, and its "+13 more" can't be opened
+- R-522 (Polish): The temple names a dead member's button "Osric Dead Dead"
+
+### wizard
+
+- R-102 (Minor): The wizard's "Wear it" and "Wield it" checkboxes have names that leave out their visible label
+- R-105 (Polish): A refused ability trade tells the player to lower a score it just said can't be lowered
+- R-108 (Polish): The wizard's starting gold keeps the coin glyph in its text
+- R-110 (Polish): The wizard's review says a character goes out "wearing and wielding" a dagger
+- R-112 (Polish): Class feature names and a few sheet labels are in title case
+- R-113 (Polish): The roll step lists the qualifying classes before the dice land
+- R-509 (Polish): The first spell list writes ranges two ways
+
+## Open defect entries
+
+### R-002: The darkest user color is unreadable as a name in the feed
+
+- **Severity**: Minor
+- **Owner**: feed
+- **Steps**: `e2e/a11y.spec.ts`, "every user color reads as a name in the feed" (marked `fixme`). Set a user's color to `#882255` (one of the 12 colors the server assigns at random) and post a message.
+- **What happens**: axe reports `color-contrast` (serious) on the author's name in the feed: the wine color on the feed's dark background is far below 4.5:1. Each new user has a 1 in 12 chance of this color, so a run of the dock tabs test fails at random in production mode.
+- **What should happen**: Every user color should be readable as text where the feed uses it, for example by lightening the name color on dark surfaces (keep the user's color for the avatar) or by replacing `#882255` in `USER_COLORS`.
+
+### R-003: The production server sends scripts and styles uncompressed
+
+- **Severity**: Minor
+- **Owner**: server
+- **Steps**: `e2e/performance.spec.ts`, "a first visit to the home page downloads only the home page", or `curl -s -D - -o /dev/null -H 'Accept-Encoding: gzip, br' http://127.0.0.1:<port>/assets/index-<hash>.js` against `npm start`.
+- **What happens**: The response has no `Content-Encoding` and a `Content-Length` of 322,565 bytes for a file that gzips to about 99 KB. A first visit to the home page transfers 692 KB of script, which is its full decoded size. The catalog routes compress, but the static client doesn't.
+- **What should happen**: Serve the built client compressed, for example with precompressed `.br` and `.gz` files from the build and `preCompressed: true` in `@fastify/static`, so a first visit transfers about a third as much.
+
+### R-004: The play screen takes about four times longer to become usable since the bundle was split
 
 - **Severity**: Minor
 - **Owner**: app/shell
-- **Steps**: `e2e/a11y.spec.ts`, "home with tables" and "lobby, referee and player".
-- **What happens**: axe reports `label-content-name-mismatch` (serious) on the profile button in the top bar. Its name is "Your profile: Ruth", but its visible text is the avatar initial and the name ("R Ruth"), so a speech-input user who says "click R Ruth" misses it.
-- **What should happen**: The accessible name should contain the visible text in order, for example by hiding the avatar initial from the accessibility tree and naming the button "Ruth, your profile".
-- **Screenshot**: `.data/screens/e2e/a11y-home.png`
+- **Steps**: `e2e/performance.spec.ts`, "the play screen becomes usable quickly", against the production build (same machine and seed as the first round).
+- **What happens**: On the final run, the party could act 972 ms after a cold load (498 ms before the split) and a median of 1,023 ms after a warm reload with everything cached (217 ms before). An earlier run measured 936 ms and 858 ms. The screen stays empty for the first 400 ms while the browser fetches the play screen's chunks one after another (`index`, then `PlayShell`, then `store` and `MapStage`). Over a tunnel, each step of that chain adds a round trip.
+- **What should happen**: A player who opens a table should fetch the play screen's chunks in parallel, for example with `<link rel="modulepreload">` for `PlayShell`, `store`, and `MapStage` when the route is a table, or by importing the play screen as soon as the identity loads. The home page's own load is fine (152 ms, and it fetches no play screen chunks).
 
-### D-003: The "Hooks" heading in the adventure picker fails color contrast
+### R-101: Accessible names built from separate elements have a stray space before a comma
+
+- **Severity**: Polish
+- **Owner**: app/shell, sheet, town
+- **Steps**: Read the accessibility tree of the home page's profile button, the Party panel's marching order, the Outfitter or wizard catalog, and the character sheet's class line. `e2e/lobby.spec.ts` and `e2e/shell.spec.ts` match the profile button with an optional space for now.
+- **What happens**: Chrome joins the button's separate spans with a space, so the names read "Ruth , your profile", "Brenna , Sam , Level 1 fighter" (marching order row), "Battle axe 1d8, melee, slow, two-handed , show details" (catalog item button), and ", Veteran , Lawful" (sheet class line). A screen reader pauses at the wrong place, and the names don't match the intended "Ruth, your profile".
+- **What should happen**: Put the comma inside the same text node as the word before it, or build the name with `aria-label` or `aria-labelledby`, so each name reads "Ruth, your profile" and "Battle axe, 1d8, melee, slow, two-handed, show details".
+- **Screenshot**: `town-party-panel.yml`, `town-outfitter.yml`, `sheet-brenna.yml`
+
+### R-102: The wizard's "Wear it" and "Wield it" checkboxes have names that leave out their visible label
+
+- **Severity**: Minor
+- **Owner**: wizard
+- **Steps**: Create a character, add chainmail and a dagger on the outfit step, and inspect the cart lines.
+- **What happens**: The checkbox shows "Wear it" (or "Wield it"), but its accessible name is "Wear the suit of chainmail" because the visible text is `aria-hidden` and the name comes from visually hidden text. A speech-input user who says "click Wear it" reaches nothing (WCAG 2.5.3, label in name).
+- **What should happen**: Keep the visible words at the start of the name, for example "Wear it: the suit of chainmail", or show "Wear the chainmail" as the visible label.
+- **Screenshot**: `wizard-5-outfit-cart.png`
+
+### R-103: The "Change" button for autosave does nothing in the lobby's saves dialog
+
+- **Severity**: Minor
+- **Owner**: referee, lobby
+- **Steps**: End a game that has saves, so the table is back in its lobby. As the referee, choose "Continue from a save", then choose "Change" next to "Autosave is on".
+- **What happens**: Nothing happens. `SavesDialog` calls `setSettingsOpen(true)`, but only `PlayShell` renders `TableSettingsDialog`, so no settings dialog opens in the lobby. The lobby's own "Table settings" card already has the "Save automatically" switch.
+- **What should happen**: In the lobby, hide the button or have it close the dialog and move focus to the lobby's "Save automatically" switch.
+- **Screenshot**: `lobby-saves-change.png`
+
+### R-104: At phone width the lobby is wider than the screen
+
+- **Severity**: Minor
+- **Owner**: lobby, app/shell
+- **Steps**: Open a lobby at a 390 px wide viewport. Read `document.documentElement.scrollWidth`.
+- **What happens**: The page is 419 px wide in a 390 px viewport, so it scrolls sideways. The page header holds the logo, "Your tables" (which wraps onto two lines), the new "Rules reference" button, and the profile button, and the profile name runs off the right edge. The home page at the same width fits (390 px), and both pages fit at 600 px.
+- **What should happen**: The header should fit at phone width, for example by showing the rules reference as an icon button below 480 px.
+- **Screenshot**: `lobby-phone.png`
+
+### R-105: A refused ability trade tells the player to lower a score it just said can't be lowered
+
+- **Severity**: Polish
+- **Owner**: wizard, shared text
+- **Steps**: Roll for a magic-user (seed 9), choose the class, and on "Adjust scores" choose "Lower Dexterity" once.
+- **What happens**: The alert reads "Dexterity can't be lowered. Only Strength, Intelligence, and Wisdom can be traded for points. Scores are lowered in steps of 2, so Dexterity can't be lowered by 1. Lower it by an even number." The last two sentences contradict the first. Every score also offers Lower and Raise buttons, although the step's own text says only Strength, Intelligence, and Wisdom can be lowered and only the prime requisite raised.
+- **What should happen**: Report one reason per score: when a score can't be lowered at all, drop the step-of-2 sentence for it.
+- **Screenshot**: `wizard-edge-lower-dex.png`
+
+### R-106: The rules reference's class cards repeat the class name as the race
+
+- **Severity**: Polish
+- **Owner**: compendium
+- **Steps**: Open the rules reference from the lobby and choose the Classes tab. Spec: `e2e/compendium.spec.ts`, "the rules reference opens from the home page and from the lobby" (screenshot only).
+- **What happens**: Human classes show "Human" under the name, but the demihumans show "Dwarf" under "Dwarf", "Elf" under "Elf", and "Halfling" under "Halfling". The wizard's class cards were fixed to show "Demihuman" (D-104).
+- **What should happen**: Show "Demihuman", as the wizard and B/X do.
+- **Screenshot**: `.data/screens/e2e/compendium-lobby.png`
+
+### R-107: The catalog still shows weights two ways
+
+- **Severity**: Polish
+- **Owner**: town, wizard
+- **Steps**: Open the town's Outfitter or the wizard's outfit step and look at the Weight column.
+- **What happens**: The wizard and the Outfitter now share one catalog table (most of D-107 is fixed), but gear rows still show "-" while ammunition rows show "0". "Sling stones" also costs "0 gp".
+- **What should happen**: Show weights the same way for every item, for example "-" whenever the catalog lists no weight or a weight of zero.
+- **Screenshot**: `town-outfitter-cart.png`, `wizard-5-outfit-cart.png`
+
+### R-108: The wizard's starting gold keeps the coin glyph in its text
+
+- **Severity**: Polish
+- **Owner**: wizard
+- **Steps**: Reach the outfit step and copy the "Starting gold" line.
+- **What happens**: The coins lists in town and on the sheet now read "19 gp (gold)" (D-111 is fixed there). The wizard's starting gold still renders the coin as a "g" letter in a span (`styles.goldCoin`), hidden from assistive technology but still in the text, so copied text reads "Starting gold g180gp".
+- **What should happen**: Draw the coin with CSS or an SVG, as the coins lists now do.
+- **Screenshot**: `wizard-5-outfit-cart.png`
+
+### R-109: The rejoin card tells every visitor that the table's address changed
+
+- **Severity**: Polish
+- **Owner**: lobby, app/shell
+- **Steps**: As a visitor with no identity in this browser, open a table's invite link while the table has members.
+- **What happens**: The "I've played at this table before" card says "The table's address changed since you last played, so this browser doesn't remember you." That is also shown to a player on a new device or after clearing the browser, when the address didn't change. The "I'm new here" card above reads "Pick the name The bell tolls sees", which puts a table name in the middle of a sentence without quotes.
+- **What should happen**: State the situation without guessing the cause, such as "If this browser doesn't remember you, pick your name and a referee lets you back in." Write the other line as "Pick the name the table sees" or quote the table name.
+- **Screenshot**: `rejoin-join-page.png`
+
+### R-110: The wizard's review says a character goes out "wearing and wielding" a dagger
+
+- **Severity**: Polish
+- **Owner**: wizard
+- **Steps**: Create a magic-user with only a dagger and reach the review.
+- **What happens**: The review reads "You go out wearing and wielding a dagger." `ReviewStep` uses one sentence for any mix of worn and wielded items, so a weapon-only or armour-only outfit reads wrongly.
+- **What should happen**: Name each part: "You go out wielding a dagger.", "You go out wearing leather armour and wielding a sword."
+- **Screenshot**: `wizard-6-review.png`
+
+### R-111: Every save in the lobby is badged "Earlier game"
+
+- **Severity**: Polish
+- **Owner**: referee
+- **Steps**: In the lobby, open "Continue from a save".
+- **What happens**: Each row carries an "Earlier game" badge, because no game is running and `current` compares against a missing session. In the lobby every save is from an earlier game, so the badge repeats on every row and says nothing.
+- **What should happen**: Show the badge only while a game is running.
+- **Screenshot**: `lobby-saves-change.png`
+
+### R-112: Class feature names and a few sheet labels are in title case
+
+- **Severity**: Polish
+- **Owner**: wizard, sheet, shared text
+- **Steps**: Open the wizard's class step, and the character sheet's Modifiers section.
+- **What happens**: The class cards list "Detect Construction Tricks", "Turning the Undead", "Immunity to Ghoul Paralysis", and "Initiative Bonus (Optional Rule)". The sheet lists "Hit points per Hit Die".
+- **What should happen**: Use sentence case, as the project's writing rules ask: "Detect construction tricks", "Hit points per hit die".
+- **Screenshot**: `wizard-2-class.png`, `sheet-brenna.png`
+
+### R-113: The roll step lists the qualifying classes before the dice land
+
+- **Severity**: Polish
+- **Owner**: wizard
+- **Steps**: Roll ability scores without reduced motion.
+- **What happens**: While the Strength dice are still tumbling and the other five scores are empty, "Classes this roll qualifies for" already shows the final list, and Continue is already enabled.
+- **What should happen**: Reveal the list when the last score lands, or when the player chooses Skip.
+- **Screenshot**: `wizard-1-roll-after.png`
+
+### R-201: The map pick prompt covers the map's toolbar
+
+- **Severity**: Minor
+- **Owner**: app/shell
+- **Steps**: As the referee at 1440 by 900, open the Referee tab, Quick actions, "Place the party", choose "A cell", and press "Pick a cell on the map". The same happens with "Pick a door on the map" in "Change a door".
+- **What happens**: The prompt "Click the cell to place the party on." with its Cancel button sits at the top centre of the stage, on top of the "Map view options" toolbar. It hides the level switcher (only "el 1" shows to the right of Cancel) and the left edge of the map style buttons. A referee who wants to pick a cell on another level has to reach the level switcher under the prompt.
+- **What should happen**: The prompt should sit clear of the toolbar, for example below it, so the level switcher stays usable during a pick.
+- **Screenshot**: `.data/screens/e2e/tour-b-bell-pick-prompt.png`
+
+### R-202: The pick prompts tell the referee to click, although the keyboard picks too
+
+- **Severity**: Polish
+- **Owner**: referee
+- **Steps**: Start any map pick from the referee panel: "Pick a cell on the map" in "Place the party", or "Pick a door on the map" in "Change a door" or the command console.
+- **What happens**: The prompts read "Click the cell to place the party on.", "Click the door to change.", and "Click the cell to use." The map now has a keyboard cursor for picks (arrow keys, E for the side, Enter to pick), but the prompt a sighted keyboard user reads mentions only clicking. The map's live region does explain the keys, so screen reader users hear them.
+- **What should happen**: Name both ways, such as "Pick the cell to place the party on. Click it, or use the arrow keys and press Enter."
+- **Spec**: `e2e/map.spec.ts`, "the referee picks a cell and a door on the map with the keyboard alone".
+
+### R-203: The darkness overlay hides the map's focus ring while the party has no light (D-011 partly fixed)
+
+- **Severity**: Minor
+- **Owner**: explore
+- **Steps**: Enter the priory without lighting a torch, which is how every game starts. Press Tab from the tool rail until the map has focus.
+- **What happens**: The map has focus and its `:focus-visible` outline applies, but nothing changes on screen. The darkness layer (`.darkness::before` in `explore.module.css`, a 4800-pixel radial gradient drawn above the canvas) covers the outline at the stage's edges with 84 percent of the stage color. After Brenna lights a torch, the same Tab shows a clear orange ring.
+- **What should happen**: The focus ring should show in the dark too, for example by drawing it on an element above the projected layer.
+- **Screenshot**: `.data/screens/e2e/tour-b-map-focus-ring.png` (dark, no ring) and `.data/screens/e2e/tour-b-map-focus-ring-lit.png` (lit, ring shows)
+
+### R-204: Area names are still cut off while the party has seen only one cell (D-201 still open)
+
+- **Severity**: Polish
+- **Owner**: map
+- **Steps**: `e2e/explore.spec.ts`, "stairs take the party to the next level", or enter the priory without light and look at the label above the party.
+- **What happens**: Without light the party knows only its own cell, and the area label squeezes into that cell's width on two lines: "Gateh… / stair" at the entrance and "Foot… / night…" at the foot of the night stair. Once a torch lights the room, the same labels show in full.
+- **What should happen**: The label should show the whole name at the zoom the map opens at, even when the known part of the area is one cell wide.
+- **Screenshot**: `.data/screens/e2e/explore-level-2.png`, `.data/screens/e2e/tour-b-map-focus-ring.png`
+
+### R-205: Map labels run into the party token and into doors on The Toll at Crookback Bridge
+
+- **Severity**: Polish
+- **Owner**: map
+- **Steps**: Start The Toll at Crookback Bridge, enter the bridge, light a torch, and press the right arrow twice so the party stands in the toll gate.
+- **What happens**: On the player's map, "The Kingsway" and "Toll gate" are drawn on one line through the party's square, and the party token covers the "T" of "Toll gate". On the referee's map at the same moment, the toll gate's area number "2" is drawn on top of a door.
+- **What should happen**: Labels and area numbers should move clear of the party token and of doors, as the map README says they do for stairs and features.
+- **Screenshot**: `.data/screens/e2e/tour-b-toll-walk.png`, `.data/screens/e2e/tour-b-toll-walk-referee.png`
+
+### R-206: During an encounter the encounter panel covers the party on the map
+
+- **Severity**: Minor
+- **Owner**: explore
+- **Steps**: In The Toll at Crookback Bridge, walk east into the toll gate so the bandits' encounter starts. Look at the referee's map, then the player's.
+- **What happens**: The map keeps the party at the centre of the whole stage, and the encounter panel at the bottom centre covers that point. On the referee's screen, whose panel is taller because of "Monsters and referee tools", the party token is hidden under the panel. On the player's screen the token sits on the panel's top edge.
+- **What should happen**: While a bottom overlay holds the stage, the camera should keep the party in the visible part of the map above it.
+- **Screenshot**: `.data/screens/e2e/tour-b-toll-walk-referee.png`, `.data/screens/e2e/tour-b-toll-walk.png`
+
+### R-207: The folded scene bar shows two chevron buttons side by side
+
+- **Severity**: Polish
+- **Owner**: explore
+- **Steps**: Stand in a corridor with a door, or wait 10 seconds in a room, so the scene panel folds to its title bar.
+- **What happens**: The bar shows "1 thing here" with a down chevron, and right beside it the "Show the description" button with another down chevron. The two look like one control drawn twice, although one opens a menu of actions and the other unfolds the card.
+- **What should happen**: Give the two controls different looks, for example an expand icon on the fold button, or put the count inside the bar's unfold button and the actions in a separate menu button.
+- **Screenshot**: `.data/screens/e2e/scene-folded.png`
+
+### R-208: The Pins list crowds its rows and clips the focus ring
+
+- **Severity**: Polish
+- **Owner**: explore
+- **Steps**: `e2e/map.spec.ts`, "a player adds a pin from the Pins list, and the referee finds and reads it there". Open the Pins list with one pin and press Tab twice.
+- **What happens**: The "Show" button sits directly against the end of the note ("The statue hides a loose step Show"), and the focused "Open" button's focus ring is cut off by the panel's right edge.
+- **What should happen**: Leave a gap between the note and the buttons (or put the buttons on their own line for a long note), and keep the focus ring inside the panel's padding.
+- **Screenshot**: `.data/screens/e2e/map-pins-list.png`
+
+### R-301: The end screen's restore buttons are all named "Restore"
+
+- **Severity**: Minor
+- **Owner**: app/shell
+- **Steps**: `e2e/end-screen.spec.ts`, "the end screen names each save in its restore button and its confirmation as written" (marked `fixme`). Win or lose a game as the referee and look at "Continue from a save" on the end screen.
+- **What happens**: Each save row has a button named only "Restore". A screen reader user who tabs through the list hears "Restore, button" three times with no save name, and a test can reach a row's button only through the row's text. The saves dialog names the same action "Restore <save name>".
+- **What should happen**: Name each button for its save, such as "Restore On the Kingsway", as the saves dialog does (a visually hidden suffix keeps the visible label short).
+- **Screenshot**: `.data/screens/e2e/end-victory-referee.png`
+
+### R-302: The restore confirmation lowercases the save's label, place names included
+
+- **Severity**: Polish
+- **Owner**: app/shell
+- **Steps**: `e2e/end-screen.spec.ts`, same `fixme` test as R-301. On the end screen, the referee clicks Restore on "Autosave: Entered Crookback Bridge".
+- **What happens**: The confirmation reads "Restore autosave: entered crookback bridge?". `EndScreen.tsx` calls `saveTitle(restoring).toLowerCase()`, which lowercases proper nouns ("Crookback Bridge", "Corvane's Holm", "Kingsway") and a referee's own label.
+- **What should happen**: Show the label as written, for example "Restore “Autosave: Entered Crookback Bridge”?" or "Restore this save?" with the label in the description.
+- **Screenshot**: `.data/screens/e2e/probe-restore-dialog.png` (taken while the dialog was still fading in)
+
+### R-303: The victory screen leaves out the adventure's closing text
+
+- **Severity**: Minor
+- **Owner**: app/shell
+- **Steps**: `e2e/end-screen.spec.ts`, "after a victory, the end screen tells how the adventure ends in its own words" (marked `fixme`). Win The Toll at Crookback Bridge (the referee can complete "Open the Kingsway") and read the end screen.
+- **What happens**: The end screen says only "The party has finished the adventure." The quest's completion text, "By evening the first carts are rolling over Crookback Bridge, and the drovers cheer you all the way down to Wethercote. The reeve pays out of his own purse.", appears in the feed but not on the end screen. bxapi's `AdventureCompletedEvent` carries that text so a client can show it on a closing screen.
+- **What should happen**: The victory screen should tell the ending in the adventure's own words, under the heading, from the `adventure_completed` event (or the concluding quest's completion text).
+- **Screenshot**: `.data/screens/e2e/end-victory-player.png`
+
+### R-304: A second monster group in melee is drawn at 15 feet on the range track
+
+- **Severity**: Polish
+- **Owner**: combat
+- **Steps**: Climb to the captain's loft in The Toll at Crookback Bridge (Mag Corrie and her bodyguard both stand 5 feet from the party), or any battle where two groups stand at the same distance. Look at the range track.
+- **What happens**: Mag Corrie sits over the 5-foot tick, and Mag's bodyguard sits between the 10-foot and 15-foot ticks, although both labels say "In melee" and the referee's roster says 5 feet for both. The fix for D-309 offsets groups at the same distance by a fixed width (`groupOffset` in `RangeTrack.tsx`), which moves the second token along the feet scale.
+- **What should happen**: Groups at the same distance should share the distance's position, for example stacked vertically as the party's members are, so the track's scale stays true.
+- **Screenshot**: `.data/screens/e2e/probe-loft-ref.png`, `.data/screens/e2e/smoke-captains-loft.png`
+
+### R-306: A player who isn't the caller sees the same refusal four times in the encounter panel
+
+- **Severity**: Polish
+- **Owner**: combat
+- **Steps**: `e2e/smoke.spec.ts`, the toll gate. Look at the encounter panel as Ann, who isn't the caller.
+- **What happens**: Talk, Wait, Flee, and Fight each replace their explanation with "Only the caller or the referee can act for the whole party.", so the sentence fills the panel four times and the choices' explanations are gone.
+- **What should happen**: State the reason once above the choices (naming the caller, such as "Sam is the caller, so Sam or the referee chooses for the party."), and keep each choice's own explanation.
+- **Screenshot**: `.data/screens/e2e/smoke-toll-gate.png`
+
+### R-407: An unavailable quick action is named "End the encounter Not now"
+
+- **Severity**: Polish
+- **Owner**: referee
+- **Steps**: As a referee while the party explores with no encounter, open Quick actions and list the buttons with a screen reader.
+- **What happens**: The accordion trigger's name runs the label and the badge together: "End the encounter Not now". It reads like a command, and "Not now" is also the label of the button that declines a rejoin request.
+- **What should happen**: Name the trigger "End the encounter" and give the state as a description, or write the badge as "Not available now" so the name reads "End the encounter, not available now".
+
+### R-501: The join page offers to bring a stranger back in as the referee, and its text assumes the visitor played before
 
 - **Severity**: Minor
 - **Owner**: lobby
-- **Steps**: `e2e/a11y.spec.ts`, "lobby, referee and player". Open a lobby as the referee and look at The Drowned Bell's card.
-- **What happens**: axe reports `color-contrast` (serious) on the small uppercase "HOOKS" title inside the selected adventure card.
-- **What should happen**: The title should meet a 4.5:1 contrast ratio against the selected card's background.
-- **Screenshot**: `.data/screens/e2e/a11y-lobby-referee.png`
+- **Steps**: Create a table as Ruth (the only referee). Open its invite link in a new browser.
+- **What happens**: Next to "I'm new here", the page shows "I've played at this table before" with a "Come back in as Ruth" button. Its text says "The table's address changed since you last played, so this browser doesn't remember you. Pick your name, and a referee at the table lets you back in." For a first-time visitor the address didn't change, and the visitor picks a member, not a name. Clicking "Come back in as Ruth" answers 409 and shows "No referee can let this member back in. A referee can't approve their own request.", and the browser logs "Failed to load resource: the server responded with a status of 409". Once players go offline, the list also offers them ("Come back in as Sam") to anyone who has the link.
+- **What should happen**: Leave out a member whom nobody can approve (the table's only referee), so no button leads to a certain refusal. Word the section for someone who may or may not have played ("Played here before? Pick who you were, and a referee lets you back in."), and avoid the console error.
+- **Screenshot**: `.data/screens/e2e/explore-round2-rejoin-referee-offered.png`, `.data/screens/e2e/explore-round2-rejoin-referee-refused.png`
 
-### D-004: Action bar buttons leave their shortcut key out of their accessible name
-
-- **Severity**: Minor
-- **Owner**: kit
-- **Steps**: `e2e/a11y.spec.ts`, "town, every part of town". Any action bar in town, such as Outfitter, Temple, Treasure buyers, and Set out.
-- **What happens**: axe reports `label-content-name-mismatch` (serious): the button's visible text is "Outfitter O" (the label and a key hint), but `aria-label` is "Outfitter". The town's current-place marker (`styles.here` in `TownActions`) has the same mismatch.
-- **What should happen**: Hide the key hint from the accessible name with `aria-hidden` and expose it with `aria-keyshortcuts`, so the name and the visible label agree.
-- **Screenshot**: `.data/screens/e2e/a11y-town-town-square.png`
-
-### D-005: Marching order rows have a name that leaves out what they show
+### R-503: A run of moves renders as a broken feed group with a stray "Sam," and an entry with no name
 
 - **Severity**: Minor
-- **Owner**: sheet
-- **Steps**: `e2e/a11y.spec.ts`, every play screen test ("exploring", "encounter", "battle", "game over", and the dock tabs test).
-- **What happens**: axe reports `label-content-name-mismatch` (serious) on each row of the Party tab's marching order. The name is "Brenna, level 1 fighter, 10 of 10 hit points, armour class 4. Open the character sheet.", but the row also shows the player's name or "You", which the name omits, and it shows the numbers in another order.
-- **What should happen**: The accessible name should start with the visible text, or the row should use `aria-describedby` for the extra detail and keep the visible text as its name.
-- **Screenshot**: `.data/screens/e2e/a11y-exploring-player.png`
-
-### D-006: Outfitter item buttons are named "Details for …" while they show the item and its summary
-
-- **Severity**: Minor
-- **Owner**: town
-- **Steps**: `e2e/a11y.spec.ts`, "town, every part of town", Outfitter tab.
-- **What happens**: axe reports `label-content-name-mismatch` (serious) on every item name button in the catalog. The button shows "Battle axe" and a summary line, but its name is "Details for Battle axe".
-- **What should happen**: The name should begin with the visible item name, such as "Battle axe, show details".
-- **Screenshot**: `.data/screens/e2e/a11y-town-outfitter.png`
-
-### D-007: The dungeon map renders an empty tooltip with no accessible name
-
-- **Severity**: Minor
-- **Owner**: map
-- **Steps**: `e2e/a11y.spec.ts`, any screen with the dungeon map.
-- **What happens**: axe reports `aria-tooltip-name` (serious): `DungeonMap` keeps a `div[role="tooltip"]` in the page even when no tooltip shows, and it has no text or name.
-- **What should happen**: Render the tooltip element only while it has content, or give it the content's text.
-- **Screenshot**: `.data/screens/e2e/a11y-exploring-player.png`
-
-### D-008: The journal's scrolling body can't be reached from the keyboard
-
-- **Severity**: Minor
-- **Owner**: journal
-- **Steps**: `e2e/a11y.spec.ts`, "dock tabs, character sheet, rules reference, and dialogs", Journal tab.
-- **What happens**: axe reports `scrollable-region-focusable` (serious) on the journal body: it scrolls, but neither it nor anything inside it takes focus, so a keyboard user can't scroll it.
-- **What should happen**: Give the scrolling region `tabIndex={0}` and an accessible name, as the feed's list has.
-- **Screenshot**: `.data/screens/e2e/a11y-journal.png`
-
-### D-009: The saves dialog's list contains elements other than list items
-
-- **Severity**: Minor
-- **Owner**: referee
-- **Steps**: `e2e/a11y.spec.ts`, "dock tabs, character sheet, rules reference, and dialogs", saves dialog.
-- **What happens**: axe reports `list` (serious): the saves list (`ul` with class `list`) has direct children that aren't `li`, so screen readers announce a wrong item count.
-- **What should happen**: Wrap each row in an `li`, or render the list with the kit's `List` component.
-- **Screenshot**: `.data/screens/e2e/a11y-saves.png`
-
-### D-010: The "Dead" badge on the end screen fails color contrast
-
-- **Severity**: Minor
-- **Owner**: app/shell
-- **Steps**: `e2e/a11y.spec.ts`, "game over". Lose every party member and look at the end screen.
-- **What happens**: axe reports `color-contrast` (serious) on the red "Dead" condition text in the end screen's party list.
-- **What should happen**: The text should reach a 4.5:1 contrast ratio against its badge.
-- **Screenshot**: `.data/screens/e2e/a11y-game_over.png`
-
-### D-011: The dungeon map shows no focus ring when it has keyboard focus
-
-- **Severity**: Minor
-- **Owner**: map
-- **Steps**: `e2e/a11y.spec.ts`, "tabbing through the exploring screen" and "tabbing through the battle screen". Press Tab on the play screen until the map has focus.
-- **What happens**: The map's appearance doesn't change at all. `DungeonMap` sets a `focusRing` state from `:focus-visible`, but nothing visible results, so a keyboard user can't tell that the arrow keys now move the party.
-- **What should happen**: The map should draw a visible focus outline while it has keyboard focus, as AGENTS.md requires for every interactive element.
-- **Screenshot**: `.data/screens/e2e/map-focused-no-ring.png`
-
-### D-012: The battle board's round number disagrees with the top bar
-
-- **Severity**: Minor
-- **Owner**: combat
-- **Steps**: Start a battle (for example, spawn two goblins near the party in The Drowned Bell, which attack at once) and look at the play screen before anyone declares.
-- **What happens**: The top bar shows "Round 1", which matches `view.encounter.battle_round` (1), but the battle board's heading says "Round 2".
-- **What should happen**: Both should show the same round number, the one the party is declaring for.
-- **Screenshot**: `.data/screens/e2e/round-mismatch.png`
-
-### D-013: The end screen adds a second level-one heading
-
-- **Severity**: Polish
-- **Owner**: app/shell
-- **Steps**: Reach `game_over` and read the headings.
-- **What happens**: The top bar's table name is an `h1`, and the end screen's "The party has fallen" is a second `h1`.
-- **What should happen**: The page should have one `h1`. Make the end screen's title an `h2`, as the town's "Hollin Ferry" is.
-
-### D-014: The built client is a single 1.7 MB script that includes the design-system gallery
-
-- **Severity**: Minor
-- **Owner**: app/shell
-- **Steps**: `e2e/performance.spec.ts`, "the built client is reasonably small", or `npm run build`.
-- **What happens**: Vite emits one JavaScript chunk of 1,694 KB (499 KB gzipped) and warns that it exceeds 500 KB. `App.tsx` imports the `/kit` gallery and the table mock eagerly, so every player downloads development pages. The home page and the join page load the whole play screen, map renderer, and compendium before they show a name field.
-- **What should happen**: Load `/kit` and `/kit/table` with `React.lazy`, and split the play screen (map, compendium, referee tools) from the home and lobby pages, so a first visit downloads well under 500 KB of script.
-
-### D-015: The same "no light" state is described two ways, and the Party panel's version also shows outside the dungeon
-
-- **Severity**: Polish
-- **Owner**: explore and sheet
-- **Steps**: Enter a dungeon without lighting a torch.
-- **What happens**: The map's status pill says "No light. The party is in the dark." and the Party panel says "No light. The party is in darkness unless someone lights a torch." at the same time. The Party panel's version also stays on the end screen (see D-001 for town).
-- **What should happen**: One message in one place, or the same wording in both, shown only while the party is in a dungeon.
-- **Screenshot**: `.data/screens/e2e/a11y-exploring-player.png`
-
-### D-016: The encounter panel and the action bar offer the same four choices with different labels
-
-- **Severity**: Polish
-- **Owner**: combat
-- **Steps**: Meet the kobolds in the drain warren (or any encounter) and compare the encounter panel with the action bar.
-- **What happens**: The panel has "Talk", "Wait", "Flee", and "Fight" buttons with explanations, and the action bar below repeats them as "Talk (Osric)", "Wait", "Flee", and "Fight". Two sets of controls for one decision, one of which names the speaker and one of which doesn't, invite the question of whether they differ.
-- **What should happen**: Keep one primary set (the panel) and let the action bar show only the shortcuts, or name the speaker in both.
-- **Screenshot**: `.data/screens/e2e/a11y-encounter.png`
-
-### D-017: The character sheet shows an empty "Referee only" box
-
-- **Severity**: Polish
-- **Owner**: sheet
-- **Steps**: As the referee with the lens on, open any character sheet that has no hidden state.
-- **What happens**: A pink "Referee only" box at the bottom says "The referee state adds nothing hidden for Brenna."
-- **What should happen**: Show the box only when the referee state has something to add.
-- **Screenshot**: `.data/screens/e2e/a11y-character-sheet.png`
-
-### D-018: Scrolling a long feed blocks the main thread for 50 to 80 ms per step
-
-- **Severity**: Polish
 - **Owner**: feed
-- **Steps**: `e2e/performance.spec.ts`, "a feed with thousands of entries stays responsive" (2,000 chat messages, production build).
-- **What happens**: Each scroll step of 1,500 px back through the feed produces a long task of 51 to 78 ms, and posting one message after that produces four long tasks of 67 to 88 ms. The median frame stays at 17 ms, so scrolling works, but it stutters.
-- **What should happen**: Scrolling and posting should stay under the 50 ms long-task threshold, for example by memoizing row text and measuring rows less often.
+- **Steps**: In the dungeon, light a torch from the action bar, then press the right arrow key twice. Open the Feed tab. Later, walk back with two left arrows and choose "Return to town".
+- **What happens**: The first "The party moves east." is drawn in the header position of a row, with Sam's avatar and the timestamp at its right, and the next row's header reads "Move the party" with no name. In the feed's text the groups read "S / Game time / Day 1, 00:10" with no name or command, followed by "Sam, / Move the party", with a trailing comma after the name. The same happens before "Return to town".
+- **What should happen**: Every group should have one header with the sender and the command ("Sam · Move the party"), and each move should be a line inside it, as other commands are.
+- **Screenshot**: `.data/screens/e2e/explore-round2-feed-move-header.png`
 
-### D-020: An action clicked while another command is on its way, or just after a run of moves, is dropped without a word
-
-- **Severity**: Major
-- **Owner**: app/shell
-- **Steps**: `e2e/shell.spec.ts`, "an action clicked while a move is on its way is sent or explained, never dropped silently" (marked `fixme`). In the dungeon, press an arrow key, and while the move is still on its way (the spec holds it for 2 seconds, as a slow connection would), choose Rest from the action bar.
-- **What happens**: Nothing. No request goes out, no toast appears, and the Rest choice is gone. `useSendCommand` in `apps/web/src/app/commands.ts` returns `skipped` with reason `busy` while a command is in flight, and `throttled` after 4 sends in a second, and shows nothing for either, because the pacing was built for held arrow keys. The same thing happens to a deliberate click right after a few quick moves: on the production build, the smoke spec's "Open it" on a door is the fifth command within a second, so the door stays closed and the player has to guess why. With a tunnel's latency of 100 to 300 ms per command, players will hit this often.
-- **What should happen**: Drop extra key repeats silently, but treat a click or a menu choice differently: queue it until the command in flight lands, or show a short notice such as "Another action is still on its way." The same applies to every feature that calls `send` from a button.
-
-### D-101: Armour and weapons picked one by one in the wizard start unworn, and the review never shows armour class
-
-- **Severity**: Minor
-- **Owner**: wizard
-- **Steps**: Create a fighter in the wizard. On the outfit step, add plate mail, a shield, and a sword to the cart one at a time with their Add buttons, and leave the cart lines as they are. Continue to the review and create the character. Spec: `e2e/wizard.spec.ts`, "a fighter trades Intelligence for Strength, is refused for overspending, and shops within the gold" (the test checks the boxes itself).
-- **What happens**: Each hand-picked cart line's "Wear it" or "Wield it" checkbox starts unchecked, whereas the "Fill with the … kit" button checks them. The review says "Armour class depends on what you wear, so it appears once the character exists", so nothing warns the player. The stored fighter has armour class 9 (ascending 10) and wields nothing, although they paid 80 gp for plate, shield, and sword.
-- **What should happen**: The first armour, shield, and weapon the class can use should be worn and wielded when the player adds them, as the kit does, and the review should state the armour class the character will have (the character preview can compute it).
-- **Screenshot**: `.data/screens/e2e/wizard-review-step.png`
-
-### D-102: The wizard's roll step says the same thing twice
+### R-504: The feed writes a memorized spell's name in lower case
 
 - **Severity**: Polish
-- **Owner**: wizard
-- **Steps**: Open the wizard from the lobby ("Create a character") before rolling.
-- **What happens**: The step's subtitle reads "Roll 3d6 for each ability, in order." and the paragraph under it starts again with "Roll 3d6 for each ability, in order: Strength, Intelligence, …".
-- **What should happen**: Keep one of the two sentences, so the step reads once.
-- **Screenshot**: `.data/screens/e2e/wizard-roll-step.png`
+- **Owner**: shared text
+- **Steps**: Rest a full day in town, then prepare Sleep for a magic-user. Read the feed.
+- **What happens**: The line reads "Tamsin memorizes sleep." The sheet, the wizard, and the rules reference all write "Sleep".
+- **What should happen**: "Tamsin memorizes Sleep."
+- **Screenshot**: `.data/screens/e2e/explore-round2-feed-rest.png`
 
-### D-103: Wizard controls have long or repeated accessible names
-
-- **Severity**: Minor
-- **Owner**: wizard
-- **Steps**: `e2e/wizard.spec.ts` selects these. Open the class step, then the outfit step with two armour items in the cart, and inspect the accessibility tree.
-- **What happens**: Each class card is one button whose name is the whole card, about 50 words ("Cleric Human Requires Nothing Prime requisite WIS · −10% XP Hit die d6 Armour …"). Cart quantity buttons read "Decrease How many of A suit of plate mail", with a capital letter in the middle. Every armour line's checkbox is named "Wear it", and every weapon line's "Wield it", so a screen reader user hears several identical checkboxes. On the treasure buyers tab, the same happens with two "Silver altar candlestick" checkboxes for two members.
-- **What should happen**: Name a class card by the class ("Cleric") and attach the details with `aria-describedby`. Name the quantity buttons "Fewer suits of plate mail" and "More suits of plate mail", and the checkboxes "Wear the plate mail" and "Wield the sword". Name a treasure checkbox with its carrier, such as "Brenna's silver altar candlestick".
-- **Screenshot**: `.data/screens/e2e/wizard-class-step.png`
-
-### D-104: Demihuman class cards repeat the race as "Demihuman: dwarf"
+### R-505: A full day's rest fills the feed with 13 lines, most of which say nothing happened
 
 - **Severity**: Polish
-- **Owner**: wizard
-- **Steps**: Open the class step.
-- **What happens**: Human classes show "Human" under the name, but the demihumans show "Demihuman: dwarf", "Demihuman: elf", and "Demihuman: halfling" under "Dwarf", "Elf", and "Halfling".
-- **What should happen**: Show "Demihuman" alone, as B/X does, so the line doesn't repeat the class name.
-- **Screenshot**: `.data/screens/e2e/wizard-class-step.png`
+- **Owner**: shared text, feed
+- **Steps**: In town, press "Rest a full day" with four members, three of them unhurt. Read the feed.
+- **What happens**: The rest group lists eight lines such as "Brenna eats the day's food." and "Brenna drinks the day's water.", then "Osric regains no hit points.", "Tamsin regains no hit points.", and "Wren regains no hit points." The one line that matters, "Brenna regains 3 hit points.", is lost in the middle.
+- **What should happen**: Summarize upkeep in one line ("The party eats and drinks the day's rations.") and leave out members who regain nothing.
+- **Screenshot**: `.data/screens/e2e/explore-round2-feed-rest.png`
 
-### D-105: The first spell list shows durations that point at missing text
+### R-506: "Recently in town" headlines a rest with a burnt-out torch, and its "+13 more" can't be opened
+
+- **Severity**: Polish
+- **Owner**: town
+- **Steps**: Rest a full day in town (with a torch still lit from the dungeon) and look at "Recently in town" on the town square.
+- **What happens**: The only row reads "Sam · The torch that Brenna carries burns out. +13 more". The rest itself ("The party rests for a full day.") isn't the summary, and "+13 more" is plain text, not a button, so nobody can see the rest.
+- **What should happen**: Summarize the action ("Sam: the party rested a full day. Brenna regained 3 hit points.") and make "+13 more" open the details, or link to the feed.
+- **Screenshot**: `.data/screens/e2e/explore-round2-recently-in-town.png`
+
+### R-509: The first spell list writes ranges two ways
 
 - **Severity**: Polish
 - **Owner**: wizard
 - **Steps**: Create a magic-user and reach the "First spell" section of the identity step.
-- **What happens**: Charm Person reads "Range 120’ · One or more days (see below)", but nothing below explains it. Self-only spells read "Range The caster", which isn't a sentence.
-- **What should happen**: Drop the "(see below)" reference (or link to the spell's entry), and write the range of a self-only spell as "Range: the caster" or "On the caster".
-- **Screenshot**: `.data/screens/e2e/wizard-identity-magic-user.png`
+- **What happens**: Most spells read "Range 120’ · One or more days", but self-only spells read "Range: the caster · 6 turns", with a colon the others lack. D-105 fixed the wording but not the punctuation.
+- **What should happen**: One form for every spell, such as "Range 120’" and "Range: the caster" with the colon on both, or "On the caster".
 
-### D-106: The wizard's review lists every coin denomination, even at zero
-
-- **Severity**: Polish
-- **Owner**: wizard
-- **Steps**: Reach the review step with gold left over.
-- **What happens**: The equipment section lists "0 pp (platinum)", "29 gp (gold)", "0 ep (electrum)", "0 sp (silver)", and "0 cp (copper)". The town and the character sheet show only the coins a character has.
-- **What should happen**: Show only the nonzero denominations, as everywhere else.
-
-### D-107: The wizard's shop and the town's Outfitter are two different shops for the same job
+### R-510: Each party row in the lobby has two buttons that open the same sheet
 
 - **Severity**: Polish
-- **Owner**: wizard, town
-- **Steps**: Compare the wizard's outfit step with the town's Outfitter tab.
-- **What happens**: The wizard shop is a list with an "About X" button, no weights, and a search box named "Search the shop". The Outfitter is a sortable table with weights, a "Details for X" button, and a search box whose placeholder says "Search the shelves" while its accessible name is "Search equipment". The cart in the wizard has quantity steppers and wear checkboxes, but the Outfitter's cart has neither. Gear weights show "-" while ammunition weights show "0".
-- **What should happen**: Use one catalog and cart component for both, with one set of names, and show weights the same way for every item.
-- **Screenshot**: `.data/screens/e2e/wizard-outfit-step.png`, `.data/screens/e2e/town-outfitter.png`
+- **Owner**: lobby
+- **Steps**: Add characters to the party in the lobby and read a row.
+- **What happens**: Every row has a "Brenna , open the character sheet" button (the whole card) and a separate scroll icon button, "Open Brenna's sheet", that does the same thing. A keyboard user tabs through both for every member.
+- **What should happen**: One control per row for the sheet.
+- **Screenshot**: `.data/screens/e2e/explore-round2-lobby-two-sheet-buttons.png`
 
-### D-108: The temple writes the same price two ways
-
-- **Severity**: Polish
-- **Owner**: town
-- **Steps**: `e2e/town.spec.ts`, "the temple heals a wounded member, and the party pays the fee". On the Temple tab, buy raise dead for a living member.
-- **What happens**: The service list shows "1000 gp", and the refusal banner says "That costs 1,000 gp".
-- **What should happen**: Format prices the same way everywhere, with a thousands separator.
-
-### D-109: The rest options repeat their length, and the turn option gives a dungeon rule in town
-
-- **Severity**: Polish
-- **Owner**: town
-- **Steps**: Open the town's "Rest and prepare" tab.
-- **What happens**: Each option states its length twice: "Rest for one turn, which is 10 minutes." and then "1 turn (10 minutes) of game time". The turn option also says "A party needs this breather once every six turns", which is a rule for dungeon exploration and doesn't apply in town.
-- **What should happen**: State the length once, and drop the six-turn note in town.
-- **Screenshot**: `.data/screens/e2e/town-rest.png`
-
-### D-110: The town shows the game clock twice
-
-- **Severity**: Polish
-- **Owner**: town
-- **Steps**: Open any town tab.
-- **What happens**: The top bar shows "Day 1, 01:10", and the town masthead shows the same clock again in a pill on the right.
-- **What should happen**: Show the clock once. The top bar already shows it on every screen.
-- **Screenshot**: `.data/screens/e2e/town-treasure-buyers.png`
-
-### D-111: Coin amounts read with a stray letter for screen readers and in copied text
-
-- **Severity**: Polish
-- **Owner**: kit
-- **Steps**: `e2e/town.spec.ts` matches around it. Read the text content of any coins list, such as a member on the town square.
-- **What happens**: The coin icon is a "g" glyph in the text, so the content reads "g70gp (gold)". The accessibility tree reads "70 gp (gold)", but copied text and the wizard's "Starting gold" line ("Starting goldg110gp") include the glyph.
-- **What should happen**: Mark the coin glyph `aria-hidden` and keep it out of the text flow (a CSS pseudo-element or an SVG), so the text reads "70 gp".
-
-### D-201: Area names on the map are cut off with an ellipsis at the default zoom
-
-- **Severity**: Polish
-- **Owner**: map
-- **Steps**: `e2e/explore.spec.ts`, "stairs take the party to the next level". Take the night stair to level 2, or stand on the gatehouse stair at the entrance.
-- **What happens**: The label over the party reads "Foot of the nig..." and "Gatehouse...", although the map around the party is empty and has room for the whole name.
-- **What should happen**: The label should show the whole area name, or wrap it, at the zoom the map opens at. The hover tooltip isn't a substitute, because touch and keyboard users never see it.
-- **Screenshot**: `.data/screens/e2e/explore-level-2.png`
-
-### D-202: The minimap draws the unexplored level as a flat light-blue block
-
-- **Severity**: Polish
-- **Owner**: map
-- **Steps**: `e2e/explore.spec.ts`, any test. Enter the priory and look at the minimap in the bottom right corner.
-- **What happens**: The minimap fills the whole level's bounding box with one light-blue color and marks the party with a red dot. The main map shows the same unexplored squares as dark fog, so the minimap looks like a solid tile with nothing on it until the party has explored a lot.
-- **What should happen**: The minimap should draw unexplored squares in the main map's fog color, so it shows the explored shape.
-- **Screenshot**: `.data/screens/e2e/explore-level-2.png`
-
-### D-203: The scene panel announces areas without an article
-
-- **Severity**: Polish
-- **Owner**: explore
-- **Steps**: `e2e/explore.spec.ts`, "stairs take the party to the next level". Walk or be placed into any keyed area and read the scene panel's live region (the text a screen reader speaks).
-- **What happens**: The panel announces "The party enters Kitchen." and "The party enters Foot of the night stair." (`ScenePanel.tsx`, `setAnnouncement`). The feed, from the text layer, says "The party enters the gatehouse stair."
-- **What should happen**: The announcement should read as a sentence and match the feed, such as "The party enters the kitchen."
-
-### D-204: The map's screen reader description says the arrow keys pan the map, while they move the party
+### R-513: The server autosaves "before the battle" when the party only meets indifferent monsters
 
 - **Severity**: Minor
-- **Owner**: explore
-- **Steps**: Enter the priory as the caller and read the map canvas's accessible description.
-- **What happens**: The canvas's label says "The arrow keys move the party", and they do. Its `aria-describedby` text says "Arrow keys pan the map. Plus and minus zoom. Zero fits the explored map." `MapStage` handles the arrow keys itself and never passes `arrowKeys="move"` to `DungeonMap`, so the map describes its default behavior.
-- **What should happen**: The description should agree with the label: arrow keys move the party, and Shift with an arrow key pans.
-
-### D-205: Pins, drawings, and pings exist only on the canvas, so keyboard and screen reader users can't reach them
-
-- **Severity**: Minor
-- **Owner**: explore
-- **Steps**: `e2e/explore.spec.ts`, "pings, drawings, and pins reach the other person". Sam pins a note; Ruth tries to read it.
-- **What happens**: The only way to open a pin is to click its marker on the canvas, and the marker's head is drawn above and to the left of the point it marks, so a click on the marked square misses it. No list of pins exists, a pin can't be focused, and nothing announces another member's new pin, drawing, or ping. The spec has to click the drawn head at an offset of (0.8, 1.3) squares.
-- **What should happen**: Each pin should be reachable by role and name (for example, a "Pins on this level" list or focusable markers), and a ping or new pin from someone else should be announced in a polite live region.
-
-### D-206: The ruler's measurement is never stated in text
-
-- **Severity**: Minor
-- **Owner**: map
-- **Steps**: Choose "Measure" on the map tool rail and point at a square a few squares away.
-- **What happens**: The distance appears only on the canvas. The map's live region keeps saying "The party is at x, y, facing …", and the prompt "Point at a square to measure…" never changes to a result.
-- **What should happen**: The measurement, such as "3 squares, 30 feet", should also appear in the map's status text or in the ruler's status line.
-
-### D-207: The party's light is described two different ways at once
-
-- **Severity**: Polish
-- **Owner**: sheet
-- **Steps**: Light Brenna's torch in the priory and look at the Party tab and the map together.
-- **What happens**: The Party tab says "Light from Brenna (6 turns left)". The map's light status says "Brenna's light, about 6 turns left".
-- **What should happen**: Both should use one wording. The map's phrasing reads better.
-
-### D-208: The autosave notice capitalizes "The" in the middle of a sentence
-
-- **Severity**: Polish
-- **Owner**: feed
-- **Steps**: Enter The Drowned Bell's priory with autosave on, then open the Feed tab.
-- **What happens**: The system line reads "Autosaved: Entered The priory on Corvane's Holm."
-- **What should happen**: The label should read as a sentence, such as "Autosaved: entered the priory on Corvane's Holm."
-
-### D-209: The referee map's wandering-monster chip says "level table"
-
-- **Severity**: Polish
-- **Owner**: explore
-- **Steps**: Enter the priory as the referee and read the chip at the bottom left of the map.
-- **What happens**: The chip reads "Wandering monsters: 1 in 6 every 2 turns, level table". "level table" doesn't tell the referee which table.
-- **What should happen**: Name the table, as the adventure does ("Priory undercroft"), or drop the phrase.
-
-### D-210: A player's game log names the dungeon by its ID, while the town and the referee use its name
-
-- **Severity**: Polish
-- **Owner**: shared text
-- **Steps**: `e2e/feed.spec.ts`, "the game log reads as sentences after a busy stretch of play". Compare Sam's and Ruth's feeds.
-- **What happens**: Sam's feed says "The party enters the priory, level 1." and "The party is placed in the priory, level 1.", which is the dungeon ID `priory` made readable. Ruth's feed says "The party is placed in the priory on Corvane's Holm, level 1.", and the town's road list shows Sam "The priory on Corvane's Holm".
-- **What should happen**: Players should read the dungeon's name, which they already see in town, so the same place has one name everywhere.
-- **Screenshot**: `.data/screens/e2e/feed-busy-sam.png`, `.data/screens/e2e/feed-busy-ruth.png`
-
-### D-211: A feature marker on the player's map covers an area name
-
-- **Severity**: Polish
-- **Owner**: map
-- **Steps**: `e2e/feed.spec.ts`, "the game log reads as sentences after a busy stretch of play". Look at the chapter house on Sam's map after the search.
-- **What happens**: The diamond marker for the chapter house's relief map is drawn on top of the area label, so it reads "Chap◇ter house".
-- **What should happen**: The label should move clear of feature markers, as the map README says it does for stairs and features.
-- **Screenshot**: `.data/screens/e2e/feed-busy-sam.png`
-
-### D-301: A thrown dagger is described as shooting
-
-- **Severity**: Polish
-- **Owner**: combat
-- **Steps**: In the guardroom battle, open Tamsin's (magic-user with a dagger) choices.
-- **What happens**: The Attack tile reads "Shoot: Goblins, 30 feet away" and "Shoots with a dagger from 30 feet."
-- **What should happen**: A thrown weapon should read "Throw" and "Throws a dagger 30 feet."
-
-### D-302: A refused battle declaration doesn't say whose declaration it is (fixed)
-
-- **Severity**: Major
 - **Owner**: server
-- **Status**: Fixed in the working tree during the run. The server now probes each declaration (`attributeRefusals` in `apps/server/src/game/battle.ts`) and the board marks Brenna's row with "The target is 30 feet away, too far for a melee attack." `e2e/combat.spec.ts`, "the refusal names the member whose declaration bxapi refused", now passes without `fixme`.
-- **Steps**: With `auto_resolve` off, start the guardroom battle in The Drowned Bell, declare an attack for Brenna on the goblins 30 feet away without closing in, have everyone else hold, and resolve the round.
-- **What happened**: `declarations.refusals` was `[{ "member_id": null, "code": "combat.attack.out_of_reach", ... }]`, so the board could only show a general banner.
-- **What should happen**: Each refusal names the member whose declaration bxapi refused, and the board marks that row.
+- **Steps**: With autosave on, walk into the toll gate of The Toll at Crookback Bridge, where four indifferent bandits wait.
+- **What happens**: The feed says "The server saved the game: before the battle in Crookback Bridge, level 1." No battle has started: the encounter panel says the bandits take no interest in the party, and talking or waiting may avoid a fight.
+- **What should happen**: Label the save for what happened, such as "met 4 bandits in Crookback Bridge", so a referee restoring it knows the party hasn't fought yet.
 
-### D-303: Popovers are dialogs without an accessible name
-
-- **Severity**: Minor
-- **Owner**: kit
-- **Steps**: `e2e/combat.spec.ts`, "walking into a keyed room…". In an encounter, the caller clicks Talk (or Flee).
-- **What happens**: The popover is a `dialog` with no accessible name. Its visible title ("Who speaks for the party?", "Flee") is a plain paragraph that isn't linked with `aria-labelledby`, so a screen reader announces only "dialog", and a test can't find it by role and name.
-- **What should happen**: The kit's `Popover` should name its content by its title.
-
-### D-304: The feed entry for talking doesn't say who spoke, and the encounter's opening lines contradict each other
-
-- **Severity**: Minor
-- **Owner**: shared text
-- **Steps**: `e2e/combat.spec.ts`, "walking into a keyed room…". Walk into the guardroom, then have the caller talk with Osric as the speaker. Read the feed.
-- **What happens**: The encounter entry says "The monsters are uncertain." and then "The monsters pay the party no mind." in the same entry, while the encounter panel shows the bearing "Indifferent". The talk entry, headed "Talk to the monsters", says only "The monsters are uncertain." and doesn't name Osric.
-- **What should happen**: The opening entry should state one bearing, the one the panel shows (or say that the bearing changed). The talk entry should name the speaker, such as "Osric talks to the goblins. They are uncertain now."
-
-### D-305: A member's choices open on the Attack tab when every attack is out of reach
-
-- **Severity**: Polish
-- **Owner**: combat
-- **Steps**: In the guardroom battle, declare for Tamsin. The board opens Osric's choices next.
-- **What happens**: Osric's choices open on Attack, whose only tile is disabled ("Out of reach: 30 feet away, and Osric moves 20 feet a round."). The useful choice, closing in, is on the Move tab.
-- **What should happen**: The choices should open on the tab of the suggested action (the one the row's quick button offers), here Move.
-
-### D-306: The same fallen member is "Down" on the battle board and "Dead" in the Party panel
-
-- **Severity**: Polish
-- **Owner**: combat
-- **Steps**: `e2e/combat.spec.ts`, "a party member dies…". Let the goblins kill Tamsin (seed 110, 1 hit point).
-- **What happens**: Tamsin's row on the battle board reads "Down", while the Party panel and the end screen show a red "Dead" badge.
-- **What should happen**: The board should use the member's condition the way the sheet does: "Dead" for a dead member, and "Down" (or "Unconscious") only for a member who is alive at 0 hit points.
-- **Screenshot**: `.data/screens/e2e/combat-member-down.png`
-
-### D-307: The after-fight summary is titled "Victory", the same word as winning the adventure
-
-- **Severity**: Polish
-- **Owner**: combat
-- **Steps**: `e2e/combat.spec.ts`, "the party wins through the board…". Win the guardroom fight.
-- **What happens**: The aftermath card over the map is titled "Victory", which is also the title of the end screen when the adventure is won and the name of the `victory` game mode. Its experience line reads "worth 10 experience for the party".
-- **What should happen**: Title the card for the fight, such as "The goblins are beaten", and write "10 XP" or "10 experience points".
-- **Screenshot**: `.data/screens/e2e/combat-aftermath-victory.png`
-
-### D-308: The pile of dropped treasure has three names
-
-- **Severity**: Polish
-- **Owner**: combat
-- **Steps**: Win the guardroom fight and read the aftermath and the scene panel.
-- **What happens**: The aftermath says "Coins worth 7 gp, in a pile where the party stands." The scene panel says "Dropped goods lie here." and offers "Pick up the dropped goods". The action bar offers "Treasure".
-- **What should happen**: Use one name for the pile everywhere, such as "the goblins' coins" or "the pile".
-
-### D-309: Party tokens overlap the "Party line" label on the battle track
-
-- **Severity**: Polish
-- **Owner**: combat
-- **Steps**: Start the guardroom battle with four members and look at the range track.
-- **What happens**: The third member's hit point bar is drawn through the "Party line" label, so the label reads as struck through. When two monster groups stand in melee, the second group's token covers the first group's condition label (only "ep" of "asleep" shows).
-- **What should happen**: Labels should sit clear of the tokens.
-- **Screenshot**: `.data/screens/e2e/combat-battle-playback.png`
-
-### D-310: The battle composer requests rules entries that don't exist, and the browser logs 404 errors
-
-- **Severity**: Minor
-- **Owner**: combat
-- **Steps**: `e2e/combat.spec.ts`, "declaring against a monster whose family isn't a catalog entry requests nothing that fails" (marked `fixme`). In The Toll at Crookback Bridge, open a member's choices in the battle with Mag Corrie (`veteran_2`).
-- **What happens**: `useGazeGroups` in `Composer.tsx` requests `/api/rules/monsters/<family_id>` for each group. The family `veteran` isn't a monster ID, so the request answers 404 and the console logs "Failed to load resource" for every player. A family that isn't a catalog entry also can't be checked for a gaze.
-- **What should happen**: Look gaze attacks up from data that exists for every group (for example, the full monster catalog by `family_id`, or a field in the player view), and request nothing that 404s.
-
-### D-311: The referee's "They came to terms" dialog nests block elements inside a paragraph
-
-- **Severity**: Minor
-- **Owner**: combat
-- **Steps**: `e2e/combat.spec.ts`, "the referee ends an encounter by coming to terms without a console error" (marked `fixme`). As the referee, open "Monsters and referee tools" in an encounter and click "They came to terms".
-- **What happens**: React logs "In HTML, <p> cannot be a descendant of <p>" and "<div> cannot be a descendant of <p>". `RefereeActions` passes a `<p>` and a `Checkbox` as the `description` of `ConfirmDialog`, which renders the description inside Radix's `AlertDialog.Description` paragraph.
-- **What should happen**: Put the checkbox in the dialog body rather than the description, or let `ConfirmDialog` render a block description, so the markup is valid and the console stays clean.
-
-### D-312: Mag Corrie appears as "veteran" in the fight that the quest names her for
+### R-514: One of Wethercote's services has no name, so its whole sentence becomes a heading
 
 - **Severity**: Polish
 - **Owner**: adventures
-- **Steps**: `e2e/smoke.spec.ts`. Climb to the captain's loft in The Toll at Crookback Bridge.
-- **What happens**: The quest objective reads "Beat Mag Corrie", and the area description names Mag Corrie and her bodyguard, but the battle board calls them "veteran" and "berserker", the monster templates' names, and bxapi's encounter message reads "2 veterans".
-- **What should happen**: The adventure should give the captain's loft monsters display names (as The Drowned Bell does for its drowned prior), such as "Mag Corrie" and "the bodyguard", so the fight matches the story.
-- **Screenshot**: `.data/screens/e2e/smoke-captains-loft.png`
+- **Steps**: Start The Toll at Crookback Bridge and look at "What the town offers".
+- **What happens**: Three services read as a name and a line ("Hob Tanner's smithy and store" / "weapons, armour, and gear"), but the third heading is the sentence "Old Nan Colley buys gems and jewellery", with no description, because the adventure writes it without the "name: description" form.
+- **What should happen**: The adventure should write it as "Old Nan Colley: buys gems and jewellery", as The Drowned Bell writes "Widow Marl, moneychanger: buys gems, jewellery, and coin".
 
-### D-401: The referee panel shows raw feature IDs, flag keys, and cell coordinates
-
-- **Severity**: Polish
-- **Owner**: referee
-- **Status**: Partly fixed. The status strip now shows the area's name instead of `gatehouse_stair`. The rest is still open.
-- **Steps**: Start The Drowned Bell, enter the priory, and open the Referee tab. Look at the status strip, the "Here and now" section, and the "Quests, flags, and triggers" section.
-- **What happens**: The status strip still ends with "cell 14, 23" (`RefereePanel.tsx`). Each feature in "Here and now" shows its ID next to its title, such as "Feature fallen_statue" (`AreaDetails.tsx`, `styles.idMark`). The objective "Report to Reeve Tamsin Hale" reads "Done when: The party returns to Hollin Ferry, while the flag priory.gashnak is “dead”" (`model/describe.ts`).
-- **What should happen**: The referee interface should name things in words. AGENTS.md forbids raw codes and IDs in the main interface. If the IDs and flag keys help a referee who writes adventures, they should sit behind a details toggle.
-- **Screenshot**: `.data/screens/e2e/referee-now.png`
-
-### D-402: Picking a cell or a door on the map needs a mouse
+### R-517: Waiting on indifferent monsters gives no feedback, and the panel shows an empty "What happened" box
 
 - **Severity**: Minor
-- **Owner**: map
-- **Steps**: As a referee, open Quick actions, then "Place the party", choose "A cell", and press "Pick a cell on the map". Try to pick a cell with the keyboard. Do the same with "Change a door" and "Pick a door on the map".
-- **What happens**: The map enters pick mode, but only a pointer click picks. The arrow keys pan the map, and Enter does nothing. The map's README lists no keyboard path for `pick-cell` or `pick-edge`.
-- **What should happen**: In pick mode the arrow keys should move a highlighted cell (or edge) and Enter should pick it, as the ruler does with `startMeasure`. "An area" and the typed door fields work as keyboard alternatives today, but a cell that isn't an area's centre can't be chosen without a mouse.
-- **Spec**: `e2e/referee.spec.ts` "the referee places the party by picking a cell, and changes a door" clicks the canvas by pixel offset.
+- **Owner**: combat, shared text
+- **Steps**: In The Toll at Crookback Bridge, enter the counting room, where the clerk and a bandit are indifferent. As the caller, press Wait in the encounter panel, twice.
+- **What happens**: The command is accepted (`wait`, revision 43 to 44), but bxapi returns no events, so the feed shows nothing and the encounter panel grows an empty "What happened" box. The caller can't tell whether the round passed.
+- **What should happen**: Say what the wait did, such as "The party waits a round. The clerk and the bandit pay the party no mind.", in the panel and in the feed, and never render an empty "What happened" box.
+- **Screenshot**: `.data/screens/e2e/explore-round2-wait-empty.png`
 
-### D-403: Every save row's restore button is named "Restore"
+### R-518: "Pick up the dropped goods" takes nothing after the aftermath said coins were left behind
+
+- **Severity**: Minor
+- **Owner**: combat, server
+- **Steps**: In The Toll at Crookback Bridge, win the bunkroom fight. The aftermath card says "Left behind: Coins worth 2 gp, now among the dropped goods here." Press "Pick up the dropped goods".
+- **What happens**: A turn passes, and the feed's "Take treasure" group says "Brenna takes nothing.", "Osric takes nothing.", "Tamsin takes nothing.", "Wren takes nothing." The toast says "Brenna takes nothing." The dropped goods then vanish from the scene panel. The 2 gp may have gone into the sea chest's share, which the next "Take the treasure" split, but nothing says so.
+- **What should happen**: Picking up dropped goods should take the coins the aftermath named and say so ("Brenna picks up 2 gp."). If the goods merged into the room's treasure, the aftermath shouldn't offer two buttons.
+- **Note**: In The Drowned Bell's guardroom, where the room has no treasure of its own, the same button worked ("Brenna takes 2 gp in coin." and so on), so the failure seems to need a room that also holds a treasure cache.
+- **Screenshot**: `.data/screens/e2e/explore-round2-pickup-nothing.png`
+
+### R-519: The referee's wandering monster table shows one row per die face
 
 - **Severity**: Polish
 - **Owner**: referee
-- **Steps**: Make two saves, open the table menu, choose Saves, and list the buttons with a screen reader.
-- **What happens**: Each row has a button named "Restore", so a screen reader's button list reads "Restore, Restore, Restore". The row's menu button is named "More for <save name>", which is unique.
-- **What should happen**: Name the button for its save, such as "Restore Before the guardroom", or give it an `aria-describedby` that points at the save's title.
+- **Steps**: Enter Crookback Bridge and open the Referee tab's "Here and now".
+- **What happens**: The "Crookback Bridge" table has 20 rows: "1 Bandits on their rounds 1d4" through "6 Bandits on their rounds 1d4", then three rows of giant bats, and so on. The referee scrolls through repeated rows to read a table the adventure writes as six ranges.
+- **What should happen**: One row per entry with its range, such as "1 to 6", "Bandits on their rounds", "1d4".
+- **Screenshot**: `.data/screens/e2e/explore-round2-referee-wandering-rows.png`
 
-### D-404: Dungeon names starting with "The" are capitalized in the middle of sentences
+### R-520: The new prepare dialog closes when bxapi refuses, and lets a player pick more copies than slots
 
-- **Severity**: Polish
-- **Owner**: server
-- **Steps**: Start The Drowned Bell. In town, press "Set out" in the action bar. Then enter the dungeon and open the table menu's Saves dialog.
-- **What happens**: The set-out dialog asks "Set out for The priory on Corvane's Holm?", and the autosave is labeled "Entered The priory on Corvane's Holm".
-- **What should happen**: A name that starts with "The" should read "the" inside a sentence ("Set out for the priory on Corvane's Holm?"). The autosave label comes from the server, and the dialog title from the town feature, so both need the same rule, ideally in `@bxvtt/shared/text`.
-- **Screenshot**: `.data/screens/e2e/referee-saves.png`
-
-### D-405: The pin dialog says everyone sees the pin while "Only referees see this pin" is checked
-
-- **Severity**: Polish
-- **Owner**: explore
-- **Steps**: As a referee, choose "Pin a note" in the map tools, click the map, and check "Only referees see this pin".
-- **What happens**: The dialog's description still reads "Everyone at the table sees the pin and its note on this level."
-- **What should happen**: The description should change with the checkbox, for example "Only referees see this pin and its note." The pin itself stays private: the privacy spec confirms that the player's browser never receives it.
-
-### D-019: The character sheet repeats the name and formats the class line oddly
-
-- **Severity**: Polish
+- **Severity**: Minor
 - **Owner**: sheet
-- **Steps**: Open any character sheet from the Party tab.
-- **What happens**: The sheet shows the "Brenna" heading twice. The class line's accessible text reads "fighter (open in the rules reference)" with a lowercase class name, and the line has a stray space before a comma (", Veteran , Lawful").
-- **What should happen**: One heading, and a class line such as "Level 1 fighter, Veteran, Lawful" whose link is named "Fighter in the rules reference".
-- **Screenshot**: `.data/screens/e2e/a11y-character-sheet.png`
+- **Steps**: After commit 6acad72, open a magic-user's Spells tab with nothing memorized and press "Prepare spells" in the new prompt. The dialog opens with one copy of Sleep already chosen ("Slots used: 1 of 1"). Press "More copies of Sleep", then "Prepare spells".
+- **What happens**: "More copies of Sleep" stays enabled at 1 of 1, so the count goes to 2. On "Prepare spells" the dialog closes, and the refusal appears behind it on the sheet: "This caster has 1 slot for level 1 spells, but 2 were chosen." Before this commit the refusal stayed inside the dialog, where the player could fix the count.
+- **What should happen**: Keep the dialog open with the refusal in it, and disable "More copies" when every slot of that level is used (the dialog already shows "Slots used: 1 of 1").
+- **Screenshot**: `.data/screens/e2e/explore-round2-prepare-refused-closed.png`
+
+### R-521: Slain monsters "wake up" in the feed
+
+- **Severity**: Polish
+- **Owner**: shared text, server
+- **Steps**: Put three bandits to sleep with Sleep, kill them while they sleep, and read the feed. The same happens with the two goblins in The Drowned Bell's guardroom.
+- **What happens**: After "A bandit is slain." three times, the referee sees "The sleep effect on a bandit ends early. A bandit wakes up." three times. The players see the "wakes up" lines too: Tess's feed reads "A goblin is slain. A goblin is slain. The fallen leave behind 7 gp in coin. A goblin wakes up. A goblin wakes up." (`.data/screens/e2e/explore-round2-820-feed.png`).
+- **What should happen**: Leave out the wake-up lines for a dead monster, or word them as the effect ending ("The sleep on the slain bandits ends.").
+
+### R-522: The temple names a dead member's button "Osric Dead Dead"
+
+- **Severity**: Polish
+- **Owner**: town
+- **Steps**: With a dead member, open the town's Temple tab and read the "Who is treated" buttons.
+- **What happens**: The dead member's button is named "Osric Dead Dead", while the others read "Brenna 6 of 6 hp". The same tab also offers "Buy cure light wounds for Osric" and four other services that can't help a dead member, each with an enabled Buy button, and a "Temple cleric's level (optional)" field that only a referee would know how to fill.
+- **What should happen**: "Osric, dead". For a dead member, show raise dead first and explain that the other services need a living patient.
+- **Screenshot**: `.data/screens/e2e/explore-round2-temple-dead.png`
+
+### R-523: A single monster is written as plural and as "×1"
+
+- **Severity**: Polish
+- **Owner**: combat
+- **Steps**: Fight the ink-stained clerk and the bandit in the counting room.
+- **What happens**: The encounter panel lists "Ink-stained clerk ×1" and "Bandit ×1". After the clerk dies, the battlefield's description reads "The ink-stained clerks, slain", plural for one clerk.
+- **What should happen**: Show a count only above one, and use the singular for one slain monster ("The ink-stained clerk, slain").
+
+### R-524: A long aftermath title pushes the Close button onto its own line, and a room label sits outside its room
+
+- **Severity**: Polish
+- **Owner**: combat, map
+- **Steps**: Win the counting room fight in The Toll at Crookback Bridge.
+- **What happens**: The aftermath title "The ink-stained clerk and the bandit are beaten" plus the "2 rounds" badge fill the header, so "Close" drops to a second line under the title. On the map behind it, the "Counting room" label is drawn on the bridge corridor below the room, not inside it.
+- **What should happen**: Keep Close at the top right and let the title wrap beside it, and place the label inside its area.
+- **Screenshot**: `.data/screens/e2e/explore-round2-aftermath-title-wrap.png`
+
+### R-525: The bridge deck is called "A corridor"
+
+- **Severity**: Polish
+- **Owner**: explore, adventures
+- **Steps**: In The Toll at Crookback Bridge, walk east from the toll gate onto the bridge.
+- **What happens**: The scene panel's title is "A corridor" for the open deck of a bridge over a gorge.
+- **What should happen**: An unkeyed cell should take a neutral name ("Between rooms" or "On the way"), or the adventure should key the deck ("Crookback Bridge deck").
+- **Screenshot**: `.data/screens/e2e/explore-round2-bridge-corridor.png`
+
+### R-526: The action bar keeps offering "Attack" while the composer has Cast selected
+
+- **Severity**: Polish
+- **Owner**: combat
+- **Steps**: In a battle, open a magic-user's "More choices" and choose the Cast tab and a spell.
+- **What happens**: The composer shows Cast and Sleep, but the action bar at the bottom still reads "Tamsin: Attack the bandits" with the shortcut A, so pressing A declares an attack, not the spell the player is looking at.
+- **What should happen**: While the composer is open, the action bar should follow it, or step aside.
+- **Screenshot**: `.data/screens/e2e/explore-round2-actionbar-vs-composer.png`
+
+### R-527: Placing the party in a keyed area skips its encounter and triggers without saying so
+
+- **Severity**: Minor
+- **Owner**: referee
+- **Steps**: In The Drowned Bell, open the Referee tab, then Quick actions, "Place the party", "An area", and choose "Drain Folk warren". Place the party.
+- **What happens**: The scene panel says "The party enters the Drain Folk warren." and describes kobolds watching with their spears held low, but no encounter starts. The area's trigger doesn't fire either: the kobolds' journal line never appears, and the hidden objective "Learn where the brothers hid the Hand", which the warren should reveal, stays hidden. The feed says only "The party is placed in the priory on Corvane's Holm, level 1." The form's help text says only "The party lands on the cell nearest the middle of the area."
+- **What should happen**: The form should say what placing skips ("Placing the party doesn't start the area's monsters or fire its triggers. Walk in to start them."), or offer to run the area's arrival. The feed should name the area the party lands in.
+- **Screenshot**: `.data/screens/e2e/explore-round2-place-no-trigger.png`
+
+### R-528: The victory screen lists a quest from the table's previous adventure
+
+- **Severity**: Minor
+- **Owner**: app/shell
+- **Steps**: Play The Toll at Crookback Bridge to its end, return the table to its lobby, start The Drowned Bell, and reach its victory screen (I used the referee's "Complete a quest" on "Silence the drowned bell").
+- **What happens**: "Quests completed" reads "Open the Kingsway and Silence the drowned bell". "Open the Kingsway" belongs to The Toll at Crookback Bridge. `useCompletedQuests` in `EndScreen.tsx` collects every `quest_completed` event in the table's feed, from every session, and only from the part of the feed that has loaded.
+- **What should happen**: Count only the quests of the session that ended, for example by filtering on `session_id` or by reading the quests from the game view.
+- **Screenshot**: `.data/screens/e2e/explore-round2-victory-wrong-quest.png`
+
+### R-529: After a total party kill, the referee can still complete the quest that ends the adventure
+
+- **Severity**: Minor
+- **Owner**: referee, server
+- **Steps**: Lose every member in The Toll at Crookback Bridge. On the end screen, open the Referee tab, then "Every referee command", "Complete a quest", choose "Open the Kingsway", and press "Complete quest".
+- **What happens**: The command succeeds. The panel shows "Quest complete: Open the Kingsway. By evening the first carts are rolling over Crookback Bridge, and the drovers cheer you all the way down to Wethercote.", while the end screen above still reads "The party has fallen" and now lists "Quests completed: Open the Kingsway".
+- **What should happen**: Once the game is over, list commands that change the story as "Not now", as the panel already does for "End the encounter", and point the referee at restoring a save.
+- **Screenshot**: `.data/screens/e2e/explore-round2-quest-after-tpk.png`
+
+### R-530: Returning to the lobby quietly resets every character to how it was created
+
+- **Severity**: Minor
+- **Owner**: lobby
+- **Steps**: Finish a game (here, a total party kill after the party earned 77 to 81 XP each and some coins), press "Return the table to its lobby", and open Brenna's sheet in the lobby.
+- **What happens**: Brenna is alive with 0 of 2,000 XP and her starting purse. The lobby still lists the four characters, ready to start again, and the dialog only said "The game ends and the saves stay." Nothing tells the players that the XP, treasure, and deaths of the last game stay with that game.
+- **What should happen**: Say it where the players see it, for example in the return dialog and on the lobby's party card ("Characters start each new game as they were created. To keep playing these versions, continue from a save.").
+- **Screenshot**: `.data/screens/e2e/explore-round2-lobby-reset-xp.png`
+
+### R-531: A level up only appears as a feed line
+
+- **Severity**: Polish
+- **Owner**: feed, sheet
+- **Steps**: As the referee, award 2,600 XP to every living member at level 1.
+- **What happens**: All four members reach level 2. Players see only a "4" badge on the Feed tab and, in the party panel, "Level 2" in place of "Level 1". There is no toast or highlight on the member, and the sheet doesn't point out a new spell slot for the magic-user.
+- **What should happen**: A short notice, such as a toast "Tamsin reaches level 2 and gains 2 hit points. Tamsin has a new spell slot.", for the owner of each member.
+- **Screenshot**: `.data/screens/e2e/explore-round2-level-up-silent.png`
+
+### R-532: Small wording slips in the referee panel, the readiness card, and the end screen
+
+- **Severity**: Polish
+- **Owner**: referee, town, app/shell
+- **Steps**: Read the Toll's quest in the Referee tab's "Quests, flags, and triggers", the Bell's town readiness card with an unprepared caster, the referee command forms, and the end screen.
+- **What happens**:
+  - The strongbox objective reads "Done when: A member gains a miller Aske's strongbox." and the portcullis objective "The flag set when the party enters East gatehouse is set to “raised”."
+  - The readiness card's spell line reads "Spells to prepare: nobody has it yet", a phrase built for items.
+  - Every referee command form has a "Source" field, "A note about who or what issued the command.", a bxapi field that a referee has no use for.
+  - The end screen writes "2730 XP", while the feed writes "2,730 experience points".
+  - The battle composer's summary for Sleep, in its "One creature" form, reads "A single creature with 4+1 Hit Dice (see Hit point modifiers).", a reference to text the composer doesn't show, and the composer's button reads "Cast sleep".
+- **What should happen**: "Done when: a member picks up Miller Aske's strongbox.", "Done when: the party enters the east gatehouse.", "Spells to prepare: Tamsin has none memorized", no Source field (or one under an "Advanced" toggle), "2,730 XP", no dangling reference, and "Cast Sleep".
+
+## Fixed
+
+These defects were fixed in the working tree and confirmed by a passing test or, where the entry had no test, by exploratory play. A defect fixed in part names the open entry that carries the rest.
+
+- D-001: The Party panel warns about darkness while the party is in town.
+- D-002: The profile button's accessible name doesn't match its visible text.
+- D-003: The "Hooks" heading in the adventure picker fails color contrast.
+- D-004: Action bar buttons leave their shortcut key out of their accessible name.
+- D-005: Marching order rows have a name that leaves out what they show.
+- D-006: Outfitter item buttons are named "Details for …" while they show the item and its summary.
+- D-007: The dungeon map renders an empty tooltip with no accessible name.
+- D-008: The journal's scrolling body can't be reached from the keyboard.
+- D-009: The saves dialog's list contains elements other than list items.
+- D-010: The "Dead" badge on the end screen fails color contrast.
+- D-011: The dungeon map shows no focus ring when it has keyboard focus. Fixed in part; the rest is R-203.
+- D-012: The battle board's round number disagrees with the top bar.
+- D-013: The end screen adds a second level-one heading.
+- D-014: The built client is a single 1.7 MB script that includes the design-system gallery.
+- D-015: The same "no light" state is described two ways, and the Party panel's version also shows outside the dungeon.
+- D-016: The encounter panel and the action bar offer the same four choices with different labels.
+- D-017: The character sheet shows an empty "Referee only" box.
+- D-018: Scrolling a long feed blocks the main thread for 50 to 80 ms per step.
+- D-019: The character sheet repeats the name and formats the class line oddly. Fixed in part; the rest is R-101.
+- D-020: An action clicked while another command is on its way, or just after a run of moves, is dropped without a word.
+- D-101: Armour and weapons picked one by one in the wizard start unworn, and the review never shows armour class.
+- D-102: The wizard's roll step says the same thing twice.
+- D-103: Wizard controls have long or repeated accessible names. Fixed in part; the rest is R-102.
+- D-104: Demihuman class cards repeat the race as "Demihuman: dwarf".
+- D-105: The first spell list shows durations that point at missing text.
+- D-106: The wizard's review lists every coin denomination, even at zero.
+- D-107: The wizard's shop and the town's Outfitter are two different shops for the same job. Fixed in part; the rest is R-107.
+- D-108: The temple writes the same price two ways.
+- D-109: The rest options repeat their length, and the turn option gives a dungeon rule in town.
+- D-110: The town shows the game clock twice.
+- D-111: Coin amounts read with a stray letter for screen readers and in copied text. Fixed in part; the rest is R-108.
+- D-201: Area names on the map are cut off with an ellipsis at the default zoom. Fixed in part; the rest is R-204.
+- D-202: The minimap draws the unexplored level as a flat light-blue block.
+- D-203: The scene panel announces areas without an article.
+- D-204: The map's screen reader description says the arrow keys pan the map, while they move the party.
+- D-205: Pins, drawings, and pings exist only on the canvas, so keyboard and screen reader users can't reach them.
+- D-206: The ruler's measurement is never stated in text.
+- D-207: The party's light is described two different ways at once.
+- D-208: The autosave notice capitalizes "The" in the middle of a sentence.
+- D-209: The referee map's wandering-monster chip says "level table".
+- D-210: A player's game log names the dungeon by its ID, while the town and the referee use its name.
+- D-211: A feature marker on the player's map covers an area name.
+- D-301: A thrown dagger is described as shooting.
+- D-302: A refused battle declaration doesn't say whose declaration it is.
+- D-303: Popovers are dialogs without an accessible name.
+- D-304: The feed entry for talking doesn't say who spoke, and the encounter's opening lines contradict each other.
+- D-305: A member's choices open on the Attack tab when every attack is out of reach.
+- D-306: The same fallen member is "Down" on the battle board and "Dead" in the Party panel.
+- D-307: The after-fight summary is titled "Victory", the same word as winning the adventure.
+- D-308: The pile of dropped treasure has three names.
+- D-309: Party tokens overlap the "Party line" label on the battle track. Fixed, but the fix caused R-304.
+- D-310: The battle composer requests rules entries that don't exist, and the browser logs 404 errors.
+- D-311: The referee's "They came to terms" dialog nests block elements inside a paragraph.
+- D-312: Mag Corrie appears as "veteran" in the fight that the quest names her for.
+- D-401: The referee panel shows raw feature IDs, flag keys, and cell coordinates.
+- D-402: Picking a cell or a door on the map needs a mouse.
+- D-403: Every save row's restore button is named "Restore". Fixed in part; the rest is R-301.
+- D-404: Dungeon names starting with "The" are capitalized in the middle of sentences.
+- D-405: The pin dialog says everyone sees the pin while "Only referees see this pin" is checked.
+- R-401: "Stop waiting" leaves the request waiting, so a referee can let in a visitor who left.
+- R-402: Two players on one network can't ask to come back in at the same time.
+- R-403: A browser opened after a rejoin says the server forgot the user, and offers to make a duplicate.
+- R-404: One failed poll ends the wait on the page while the request still waits on the server.
+- R-405: The "signed in from another browser" screen offers a name field that isn't there.
+- R-502: A new magic-user can't cast in the first fight, and nothing says why.
 
 ## Notes that aren't defects
 
-- bxapi has no command that grants a gem or a piece of jewellery, so the referee's grant tool can only give items and coins. The town spec gets treasure by having the referee place the party in the chapel of The Drowned Bell and take the altar's candlesticks. If the referee should be able to hand out treasure, bxapi needs a `grant_valuable` command first.
+- bxapi has no command that grants a gem or a piece of jewellery, so the referee's grant tool can only give items and coins. The town spec gets treasure by having the referee place the party in The Drowned Bell's chapel and take the altar's candlesticks. If the referee should be able to hand out treasure, bxapi needs a `grant_valuable` command first.
+- The Toll at Crookback Bridge is very hard for a party of four first-level characters with 2 to 6 hit points each: exploratory play ended in two total party kills in Mag Corrie's loft. That is B/X working as intended, but a referee running it as a first game should know.

@@ -39,6 +39,17 @@ export async function openRefereeSection(
   return panel;
 }
 
+/**
+ * Turns the referee panel's "Show IDs" switch on or off. The panel names everything in words, and shows IDs and
+ * cell coordinates only while the switch is on.
+ */
+export async function showIds(page: Page, on: boolean): Promise<void> {
+  const toggle = page.getByRole('tabpanel', { name: 'Referee' }).getByRole('switch', { name: 'Show IDs' });
+  if ((await toggle.isChecked()) !== on) await toggle.click();
+  if (on) await expect(toggle).toBeChecked();
+  else await expect(toggle).not.toBeChecked();
+}
+
 /** Opens one quick action of the referee tab, such as "Spawn monsters", and returns its region. */
 export async function openQuickAction(page: Page, name: string): Promise<Locator> {
   const panel = await openRefereeSection(page, 'actions');
@@ -86,7 +97,8 @@ export async function clickMapOffset(page: Page, dx: number, dy: number, cellPx 
 /** Opens a dialog from the table menu, such as "Saves" or "Seats and caller", and returns it. */
 export async function openFromTableMenu(page: Page, item: string, dialogName = item): Promise<Locator> {
   await page.getByRole('button', { name: 'Table menu' }).click();
-  await page.getByRole('menuitem', { name: item }).click();
+  // An exact match, because a looser one for "Saves" would also pick "Save the game".
+  await page.getByRole('menuitem', { name: item, exact: true }).click();
   const dialog = page.getByRole('dialog', { name: dialogName });
   await expect(dialog).toBeVisible();
   return dialog;

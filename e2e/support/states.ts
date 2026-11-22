@@ -47,6 +47,9 @@ export async function stagedTable(
 ): Promise<StagedTable> {
   const ruth = await crew.person('Ruth', options);
   const sam = await crew.person('Sam', options);
+  // The server picks each user's color at random. Fixed colors keep screenshots and contrast checks repeatable.
+  await ruth.client.updateMe({ color: '#e69f00' });
+  await sam.client.updateMe({ color: '#56b4e9' });
   const party: MemberSpec[] =
     stage === 'game_over'
       ? [{ owner: sam, name: 'Brenna', classId: 'fighter', seed: 106 }]

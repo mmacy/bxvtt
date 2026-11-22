@@ -1,10 +1,12 @@
 /**
- * Privacy: a player's browser never receives referee data. The test plays The Drowned Bell from town into the
- * dungeon and through two fights, while the referee writes private notes, places a referee-only pin, and rolls in
- * secret. It records every API response body and WebSocket frame the player's browser receives, and scans them
- * for markers of referee-only content.
+ * Privacy: a player's browser never receives referee data. The first test plays The Drowned Bell from town into
+ * the dungeon and through two fights, while the referee writes private notes, places a referee-only pin, and
+ * rolls in secret. It records every API response body and WebSocket frame the player's browser receives, and
+ * scans them for markers of referee-only content. The second test does the same while a returning player asks
+ * to come back in: the requests go to referees alone, and the visitor learns nothing but the table's name, the
+ * offline members, and, once let in, their own new sign-in.
  */
-import { expect, test } from './support/fixtures';
+import { expect, sdkClient, test } from './support/fixtures';
 import { BELL_MARKERS, STRUCTURAL_MARKERS, findLeaks } from './support/privacy';
 import { searchFor } from './support/party-actions';
 import { clickMapOffset, openRefereeSection } from './support/referee';
@@ -161,4 +163,91 @@ test('a player receives no referee data through a whole game of The Drowned Bell
     ROLL_MARKER,
   ]);
   expect(leaks.map((leak) => `${leak.marker} … ${leak.context}`)).toEqual([]);
+});
+
+test('rejoin requests reach referees alone, and a visitor learns only what the join page needs', async ({
+  crew,
+}) => {
+  const ruth = await crew.person('Ruth');
+  const sam = await crew.person('Sam');
+  const pat = await crew.person('Pat', { record: true });
+  const { table, path } = await setupTable({
+    referee: ruth,
+    players: [sam, pat],
+    party: [
+      { owner: sam, name: 'Brenna', classId: 'fighter' },
+      { owner: pat, name: 'Wren', classId: 'thief' },
+      { owner: ruth, name: 'Osric', classId: 'cleric' },
+    ],
+  });
+  const oldToken = sam.token ?? '';
+  await openTable(ruth.page, path);
+  await openTable(pat.page, path);
+  // Ruth and Pat count as online only once their sockets open, and the join page lists offline members alone.
+  await expect(ruth.page.getByRole('img', { name: /^Pat, online/ })).toBeVisible();
+  await expect(pat.page.getByRole('img', { name: /^Ruth, referee, online/ })).toBeVisible();
+
+  // Sam's browser lost its sign-in. He opens the invite link in a new one and asks to come back in, twice.
+  const visitor = await crew.person('Sam in a new browser', { signedIn: false, record: true });
+  await visitor.page.goto(`/join/${table.invite_code}`);
+  const members = visitor.page.getByRole('list', { name: 'Members who can come back in' });
+  await expect(members.getByRole('button')).toHaveCount(1);
+  await members.getByRole('button', { name: 'Come back in as Sam' }).click();
+  const prompt = ruth.page.getByRole('region', { name: 'Requests to come back in' });
+  await prompt.getByRole('button', { name: 'Not now' }).click();
+  await expect(
+    visitor.page.getByRole('alert').filter({ hasText: "The referee didn't let you in" }),
+  ).toBeVisible({
+    timeout: 15_000,
+  });
+  const visitorBefore = [...visitor.received];
+  await members.getByRole('button', { name: 'Come back in as Sam' }).click();
+  await prompt.getByRole('button', { name: 'Let them in' }).click();
+  await expect(visitor.page).toHaveURL(new RegExp(`${path}$`), { timeout: 15_000 });
+  await expect(visitor.page.getByRole('banner').getByText('In town', { exact: true })).toBeVisible();
+  const raw = await visitor.page.evaluate(() => localStorage.getItem('bxvtt.identity'));
+  const newToken = (JSON.parse(raw ?? '{}') as { token?: string }).token ?? '';
+  expect(newToken).not.toBe('');
+  expect((await sdkClient(newToken).me()).id).toBe(sam.id);
+  await expect(pat.page.getByRole('region', { name: 'Requests to come back in' })).toHaveCount(0);
+
+  // The other player received no request, no request ID or secret, and neither of Sam's tokens.
+  const rejoinMarkers = ['"rejoin_requests"', 'rjn_', 'rjs_', oldToken, newToken];
+  const patLeaks = findLeaks(pat.received, [...STRUCTURAL_MARKERS, ...BELL_MARKERS, ...rejoinMarkers]);
+  expect(patLeaks.map((leak) => `${leak.marker} … ${leak.context}`)).toEqual([]);
+  expect(pat.received.length, 'the recorder should have captured traffic').toBeGreaterThan(5);
+
+  // Before the referee let Sam in, the visitor received the lookup, its own tickets, and the request's status.
+  const lookup = visitorBefore
+    .map((text) => {
+      try {
+        return JSON.parse(text) as unknown;
+      } catch {
+        return null;
+      }
+    })
+    .find(
+      (body): body is { table_name: string; members: Record<string, unknown>[] } =>
+        typeof body === 'object' && body !== null && 'table_name' in body,
+    );
+  expect(lookup, 'the visitor should have received the lookup').toBeDefined();
+  expect(Object.keys(lookup ?? {}).sort()).toEqual(['members', 'table_name']);
+  expect(lookup?.members.map((member) => Object.keys(member).sort())).toEqual([['color', 'name', 'user_id']]);
+  const visitorLeaks = findLeaks(visitorBefore, [
+    ...STRUCTURAL_MARKERS,
+    ...BELL_MARKERS,
+    '"rejoin_requests"',
+    oldToken,
+    table.invite_code,
+    '"role"',
+    'Osric',
+    'Brenna',
+  ]);
+  expect(visitorLeaks.map((leak) => `${leak.marker} … ${leak.context}`)).toEqual([]);
+
+  // Once in, the visitor is Sam, a player, and receives no referee data and no request list. The request IDs it
+  // received are its own tickets.
+  const visitorLeaksAfter = findLeaks(visitor.received, [...STRUCTURAL_MARKERS, ...BELL_MARKERS, oldToken]);
+  expect(visitorLeaksAfter.map((leak) => `${leak.marker} … ${leak.context}`)).toEqual([]);
+  expect(visitor.received.some((text) => text.includes('"rejoin_requests":['))).toBe(false);
 });

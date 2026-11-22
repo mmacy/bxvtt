@@ -19,6 +19,7 @@ import {
   openFeed,
   stepParty,
   walkIntoGuardroom,
+  walkIntoWardensCell,
 } from './support/combat';
 import { SCREENS_DIR } from './support/env';
 import { ADVENTURES, openTable, send, setupTable, waitForGame } from './support/table';
@@ -45,6 +46,13 @@ test.describe('encounters', () => {
       await expect(actor.page.getByRole('banner').getByText('Encounter', { exact: true })).toBeVisible();
     }
     await shot(sam.page, 'encounter-caller');
+    // The panel and the action bar offer the same four choices under the same labels (D-016).
+    const bar = sam.page.getByRole('toolbar', { name: 'Party actions' });
+    const panelChoices = encounterPanel(sam.page).getByRole('list', { name: "The party's choices" });
+    for (const label of ['Talk', 'Wait', 'Flee', 'Fight']) {
+      await expect(panelChoices.getByRole('button', { name: label, exact: true })).toBeVisible();
+      await expect(bar.getByRole('button', { name: new RegExp(`^${label}\\b`) })).toBeVisible();
+    }
     // Only the caller and the referee act for the party. Ann sees why her buttons are off.
     const annChoices = encounterPanel(ann.page).getByRole('list', { name: "The party's choices" });
     await expect(annChoices.getByRole('button', { name: 'Fight' })).toBeDisabled();
@@ -55,15 +63,15 @@ test.describe('encounters', () => {
     const samChoices = encounterPanel(sam.page).getByRole('list', { name: "The party's choices" });
     const before = (await sam.client.getGame(table.tableId)).revision;
     await samChoices.getByRole('button', { name: 'Talk' }).click();
-    // D-303: the popover is an unnamed dialog, so find it by its title text.
+    // The popover is a dialog named by its title (D-303), and the speakers are options of a list box.
     await sam.page
-      .getByRole('dialog')
-      .filter({ hasText: 'Who speaks for the party?' })
-      .getByRole('button', { name: /^Osric/ })
+      .getByRole('dialog', { name: 'Who speaks for the party?' })
+      .getByRole('option', { name: /^Osric/ })
       .click();
     await waitForGame(sam.client, table.tableId, (game) => game.revision > before, 'the parley to apply');
+    // The talk entry names the speaker and the monsters (D-304).
     const feed = await openFeed(ann.page);
-    await expect(feed).toContainText('Talk to the monsters');
+    await expect(feed).toContainText('Osric talks to the goblins.');
     await expect(encounterPanel(ann.page).or(battleBoard(ann.page)).first()).toBeVisible();
   });
 
@@ -88,9 +96,8 @@ test.describe('encounters', () => {
       .getByRole('button', { name: 'Flee' })
       .click();
     await sam.page
-      .getByRole('dialog')
-      .filter({ hasText: 'Flee' })
-      .getByRole('button', { name: /^Just run/ })
+      .getByRole('dialog', { name: 'Flee' })
+      .getByRole('option', { name: /^Just run/ })
       .click();
 
     for (const actor of [sam, ann]) {
@@ -142,9 +149,9 @@ test.describe('encounters', () => {
   });
 });
 
-test.describe('known console errors', () => {
-  // D-311: the dialog's description nests a paragraph and a checkbox inside a paragraph, and React logs it.
-  test.fixme('the referee ends an encounter by coming to terms without a console error', async ({ crew }) => {
+test.describe('console errors fixed in the first round', () => {
+  // D-311: the dialog's description nested a paragraph and a checkbox inside a paragraph, and React logged it.
+  test('the referee ends an encounter by coming to terms without a console error', async ({ crew }) => {
     const table = await combatTable(crew);
     const { ruth, sam, tableId } = table;
     await walkIntoGuardroom(sam.client, tableId);
@@ -152,14 +159,14 @@ test.describe('known console errors', () => {
     const panel = encounterPanel(ruth.page);
     await panel.getByText('Monsters and referee tools').click();
     await panel.getByRole('button', { name: 'They came to terms' }).click();
-    const dialog = ruth.page.getByRole('alertdialog', { name: 'The monsters and the party came to terms' });
+    const dialog = ruth.page.getByRole('alertdialog', { name: 'The party came to terms with the goblins' });
     await dialog.getByRole('checkbox', { name: "Keep this area's monsters peaceful" }).click();
     await dialog.getByRole('button', { name: 'End the encounter' }).click();
     await expect(panel).toHaveCount(0);
   });
 
-  // D-310: the composer looks up `monsters/<family_id>`, and a family such as `veteran` isn't a catalog entry.
-  test.fixme('declaring against a monster whose family isn’t a catalog entry requests nothing that fails', async ({
+  // D-310: the composer looked up `monsters/<family_id>`, and a family such as `veteran` isn't a catalog entry.
+  test('declaring against a monster whose family isn’t a catalog entry requests nothing that fails', async ({
     crew,
   }) => {
     const ruth = await crew.person('Ruth');
@@ -200,6 +207,8 @@ test.describe('battle', () => {
     await encounterPanel(sam.page).getByRole('button', { name: 'Fight' }).click();
     for (const actor of [sam, ann, ruth]) {
       await expect(battleBoard(actor.page).getByRole('heading', { name: 'Round 1' })).toBeVisible();
+      // The top bar and the board agree on the round (D-012).
+      await expect(actor.page.getByRole('banner')).toContainText(/Round\s*1(?!\d)/);
     }
 
     // Each player declares only for their own seats.
@@ -214,9 +223,13 @@ test.describe('battle', () => {
     await expect(declarationRow(ann.page, 'Brenna')).toContainText('Close in on the goblins');
     await expect(battleBoard(ann.page)).toContainText('1 of 4 declared');
 
-    // Ann aims Tamsin's magic missile at the second goblin.
+    // Ann opens Tamsin's choices. Her dagger is thrown, so the attack reads as a throw (D-301).
     await declarationRow(ann.page, 'Tamsin').getByRole('button', { name: 'More choices' }).click();
     const composer = ann.page.getByRole('region', { name: 'Declare for Tamsin' });
+    await expect(composer.getByRole('radio', { name: 'Attack' })).toBeChecked();
+    await expect(composer.getByRole('button', { name: 'Throw: the goblins, 30 feet away' })).toBeVisible();
+    await expect(composer).not.toContainText(/shoot/i);
+    // She aims her magic missile at the second goblin instead.
     await composer
       .getByRole('radiogroup', { name: 'What Tamsin does this round' })
       .getByRole('radio', { name: 'Cast' })
@@ -232,8 +245,9 @@ test.describe('battle', () => {
 
     // The board opens the next undeclared member's choices for Ann: Osric's.
     const osric = ann.page.getByRole('region', { name: 'Declare for Osric' });
-    await osric.getByRole('radio', { name: 'Move' }).click();
-    await declaring(ann.page, () => osric.getByRole('button', { name: /^Close in on Goblins/ }).click());
+    // Osric's attacks are out of reach, so his choices open on the Move tab, his suggested action (D-305).
+    await expect(osric.getByRole('radio', { name: 'Move' })).toBeChecked();
+    await declaring(ann.page, () => osric.getByRole('button', { name: 'Close in on the goblins' }).click());
     await declaring(sam.page, () =>
       declarationRow(sam.page, 'Wren')
         .getByRole('button', { name: /^Attack the goblins/ })
@@ -284,7 +298,7 @@ test.describe('battle', () => {
     );
     await declaring(ann.page, () =>
       declarationRow(ann.page, 'Tamsin')
-        .getByRole('button', { name: /^(Attack|Shoot)/ })
+        .getByRole('button', { name: /^(Attack|Shoot|Throw)/ })
         .first()
         .click(),
     );
@@ -302,11 +316,54 @@ test.describe('battle', () => {
     await declarationRow(sam.page, 'Brenna').getByRole('button', { name: 'Change' }).click();
     const composer = sam.page.getByRole('region', { name: 'Declare for Brenna' });
     await composer.getByRole('radio', { name: 'Move' }).click();
-    await declaring(sam.page, () => composer.getByRole('button', { name: /^Close in on Goblins/ }).click());
+    await declaring(sam.page, () =>
+      composer.getByRole('button', { name: 'Close in on the goblins' }).click(),
+    );
     await battleBoard(sam.page).getByRole('button', { name: 'Resolve the round' }).click();
     await expect(battleBoard(ann.page).getByRole('heading', { name: 'Round 2' })).toBeVisible({
       timeout: 30_000,
     });
+  });
+
+  test('a magic missile at Gashnak One-Ear names him in the target list and in the feed', async ({
+    crew,
+  }) => {
+    const table = await combatTable(crew);
+    const { sam, ann, tableId } = table;
+    const game = await walkIntoWardensCell(table);
+    if (game.mode === 'encounter') await send(sam.client, tableId, { command_type: 'engage_battle' });
+    for (const actor of [sam, ann]) await openTable(actor.page, table.path);
+
+    // The board names Gashnak by his own label, without an article or a count.
+    await expect(battleBoard(ann.page)).toContainText('Gashnak One-Ear');
+    await declarationRow(ann.page, 'Tamsin').getByRole('button', { name: 'More choices' }).click();
+    const composer = ann.page.getByRole('region', { name: 'Declare for Tamsin' });
+    await composer.getByRole('radio', { name: 'Cast' }).click();
+    const monsters = composer.getByRole('group', { name: 'Monsters' });
+    await expect(monsters.getByRole('button', { name: 'Gashnak One-Ear', exact: true })).toBeVisible();
+    await expect(monsters.getByRole('button', { name: /^Goblin \d$/ })).toHaveCount(2);
+    await monsters.getByRole('button', { name: 'Gashnak One-Ear', exact: true }).click();
+    await shot(ann.page, 'spell-at-gashnak');
+    await declaring(ann.page, () =>
+      composer.getByRole('button', { name: 'Cast magic missile at Gashnak One-Ear' }).click(),
+    );
+    await expect(declarationRow(sam.page, 'Tamsin')).toContainText(/magic missile at Gashnak One-Ear/i);
+
+    // Everyone else holds, and the round resolves.
+    const before = (await sam.client.getGame(tableId)).revision;
+    for (const [actor, name] of [
+      [sam, 'Brenna'],
+      [sam, 'Wren'],
+      [ann, 'Osric'],
+    ] as const) {
+      await actor.client.declare(tableId, table.memberId(name), { action: 'hold' });
+    }
+    await waitForGame(sam.client, tableId, (next) => next.revision > before, 'the round to resolve');
+    const feed = await openFeed(sam.page);
+    await expect(feed).toContainText(/Tamsin casts magic missile/i);
+    await expect(feed.getByText(/magic missile/i).first()).toBeVisible();
+    await expect(feed).toContainText(/Gashnak One-Ear/);
+    await expect(feed).not.toContainText(/the Gashnak|Gashnak One-Ears|hobgoblin/i);
   });
 
   test('the refusal names the member whose declaration bxapi refused', async ({ crew }) => {
@@ -343,13 +400,13 @@ test.describe('battle', () => {
     expect(tamsin?.current_hp).toBeLessThanOrEqual(0);
 
     for (const actor of [sam, ann]) {
-      await expect(declarationRow(actor.page, 'Tamsin')).toContainText(/Down|dead/i, { timeout: 30_000 });
+      // The board and the party panel use the same word for a dead member (D-306).
+      await expect(declarationRow(actor.page, 'Tamsin')).toContainText('Dead', { timeout: 30_000 });
+      await expect(declarationRow(actor.page, 'Tamsin')).not.toContainText('Down');
       await expect(declarationRow(actor.page, 'Tamsin').getByRole('button')).toHaveCount(0);
       await expect(
-        actor.page
-          .getByRole('list', { name: 'Marching order' })
-          .getByRole('button', { name: /^Tamsin,.*0 of 1 hit points/ }),
-      ).toBeVisible();
+        actor.page.getByRole('list', { name: 'Marching order' }).getByRole('button', { name: /^Tamsin\b/ }),
+      ).toHaveAccessibleDescription(/^0 of 1 hit points, .*dead/);
     }
     await expect(battleBoard(ann.page)).toContainText(/of 1 declared/);
     await shot(ann.page, 'member-down');
@@ -365,7 +422,7 @@ test.describe('battle', () => {
     const game = await fightThroughSdk(table);
     expect(game.mode).toBe('game_over');
     for (const actor of [sam, ann, ruth]) {
-      await expect(actor.page.getByRole('heading', { name: 'The party has fallen', level: 1 })).toBeVisible({
+      await expect(actor.page.getByRole('heading', { name: 'The party has fallen', level: 2 })).toBeVisible({
         timeout: 30_000,
       });
       const party = actor.page.getByRole('list', { name: 'The party' });
@@ -409,17 +466,24 @@ test.describe('battle', () => {
     await waitForGame(sam.client, tableId, (game) => game.mode === 'exploring', 'the battle to end');
 
     for (const actor of [sam, ann]) {
-      const summary = actor.page.getByRole('region', { name: 'Victory' });
+      const summary = actor.page.getByRole('region', { name: 'The goblins are beaten' });
       await expect(summary).toBeVisible({ timeout: 30_000 });
       await expect(summary.getByRole('term').filter({ hasText: 'Defeated' })).toBeVisible({
         timeout: 30_000,
       });
       await expect(summary.getByRole('definition').first()).toContainText('2 goblins slain');
       await expect(summary.getByRole('term').filter({ hasText: 'Experience' })).toBeVisible();
+      // The summary counts experience in XP (D-307) and calls the coins dropped goods, as the scene does (D-308).
+      await expect(summary).toContainText(/worth \d+ XP/);
+      await expect(summary).toContainText('now among the dropped goods here');
+      await expect(summary.getByRole('button', { name: 'Pick up the dropped goods' })).toBeVisible();
       await expect(battleBoard(actor.page)).toHaveCount(0);
     }
     await shot(sam.page, 'aftermath-victory');
-    await sam.page.getByRole('region', { name: 'Victory' }).getByRole('button', { name: 'Close' }).click();
-    await expect(sam.page.getByRole('region', { name: 'Victory' })).toHaveCount(0);
+    await sam.page
+      .getByRole('region', { name: 'The goblins are beaten' })
+      .getByRole('button', { name: 'Close' })
+      .click();
+    await expect(sam.page.getByRole('region', { name: 'The goblins are beaten' })).toHaveCount(0);
   });
 });

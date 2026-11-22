@@ -3,16 +3,18 @@
  * placing the party, doors, ending an encounter), a generator, the full command console, saves, and seats and the
  * caller. Each test has a referee (Ruth) and a player (Sam) in their own browsers.
  */
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
+import { seriousViolations, describeViolations } from './support/a11y';
+import { findRawText } from './support/feed-text';
 import { expect, test, type Actor, type Crew } from './support/fixtures';
 import {
   choose,
-  clickMapOffset,
   openFromTableMenu,
   openQuickAction,
   openRefereeSection,
   screenshot,
   search,
+  showIds,
 } from './support/referee';
 import {
   enterDungeon,
@@ -55,6 +57,12 @@ function brennaGold(party: { inventory: Record<string, unknown> }[]): number {
   return purse?.gp ?? 0;
 }
 
+/** The lines of a panel's text that read like code: IDs, snake_case keys, and coordinates. */
+async function rawLines(panel: Locator): Promise<string[]> {
+  const text = await panel.innerText();
+  return findRawText(text.split('\n')).map((found) => `${found.kind} "${found.match}" in: ${found.line}`);
+}
+
 /** The mode badge in the top bar, such as "Exploring". */
 function modeBadge(page: Page, mode: string) {
   return page.getByRole('banner').getByText(mode, { exact: true });
@@ -77,13 +85,27 @@ test.describe('referee tools', () => {
     await placeParty(ruth.client, tableId, { dungeon: 'priory', level: 1, x: 12, y: 12 });
     await expect(dock).toContainText('Chapter house');
     await expect(now).toContainText('An eight-sided hall');
+    // D-401: with "Show IDs" off, the panel names everything in words.
+    expect(await rawLines(now), 'Here and now should read in words').toEqual([]);
+    await expect(dock).not.toContainText('cell 12, 12');
     const key = await openRefereeSection(ruth.page, 'key');
     await expect(key.getByRole('heading', { name: /^Chapter house.*Party/ })).toBeVisible();
     await screenshot(ruth.page, 'referee-key');
-    await openRefereeSection(ruth.page, 'story');
+    const story = await openRefereeSection(ruth.page, 'story');
+    await expect(story).toContainText('Report to Reeve Tamsin Hale');
+    expect(await rawLines(story), 'Quests, flags, and triggers should read in words').toEqual([]);
     await screenshot(ruth.page, 'referee-story');
-    await openRefereeSection(ruth.page, 'log');
+    const log = await openRefereeSection(ruth.page, 'log');
+    expect(await rawLines(log), 'The log behind the screen should read in words').toEqual([]);
     await screenshot(ruth.page, 'referee-log');
+    // The switch shows the IDs and the cell for a referee who wants them.
+    await showIds(ruth.page, true);
+    await expect(dock).toContainText('cell 12, 12');
+    await openRefereeSection(ruth.page, 'story');
+    await expect(story).toContainText('priory.gashnak');
+    await screenshot(ruth.page, 'referee-story-ids');
+    await showIds(ruth.page, false);
+    await expect(dock).not.toContainText('cell 12, 12');
 
     // With the lens off, the referee sees what the players see.
     const lens = ruth.page.getByRole('switch', { name: 'Referee lens' });
@@ -119,12 +141,30 @@ test.describe('referee tools', () => {
       .poll(async () => brennaGold((await sam.client.getGame(tableId)).view.party))
       .toBe(goldBefore + 25);
 
-    // Sam reads both on Brenna's sheet.
-    await sam.page.getByRole('button', { name: /^Brenna, level 1 fighter/ }).click();
+    // Sam reads both on Brenna's sheet. The row's name says who plays her.
+    await sam.page.getByRole('tablist', { name: 'Table panels' }).getByRole('tab', { name: 'Party' }).click();
+    await sam.page
+      .getByRole('list', { name: 'Marching order' })
+      .getByRole('button', { name: /^Brenna\W+You\W+Level 1 fighter/ })
+      .click();
     const sheet = sam.page.getByRole('dialog', { name: /Brenna/ });
     await expect(sheet).toBeVisible();
     await sheet.getByRole('tab', { name: 'Inventory' }).click();
     await expect(sheet.getByRole('tabpanel', { name: 'Inventory' }).getByText(/rope/i).first()).toBeVisible();
+
+    // D-017: the referee's copy of a sheet with nothing hidden has no empty "Referee only" box.
+    await ruth.page
+      .getByRole('tablist', { name: 'Table panels' })
+      .getByRole('tab', { name: 'Party' })
+      .click();
+    await ruth.page
+      .getByRole('list', { name: 'Marching order' })
+      .getByRole('button', { name: /^Brenna\W+Sam\W/ })
+      .click();
+    const refereeSheet = ruth.page.getByRole('dialog', { name: /Brenna/ });
+    await expect(refereeSheet).toBeVisible();
+    await expect(refereeSheet.getByText('Referee only')).toHaveCount(0);
+    await expect(refereeSheet).not.toContainText('adds nothing hidden');
   });
 
   test('the referee spawns monsters, and ends the encounter by coming to terms', async ({ crew }) => {
@@ -153,13 +193,28 @@ test.describe('referee tools', () => {
     const { ruth, sam, tableId } = await bellTable(crew);
     const place = await openQuickAction(ruth.page, 'Place the party');
     await place.getByRole('radio', { name: 'A cell' }).click();
-    await place.getByRole('button', { name: 'Pick a cell on the map' }).click();
+    // A keyboard user presses the button, and the pick focuses the map with its cursor on the party's cell. Two
+    // cells north is still the gatehouse stair.
+    const pick = place.getByRole('button', { name: 'Pick a cell on the map' });
+    await pick.focus();
+    await ruth.page.keyboard.press('Enter');
     await expect(ruth.page.getByText('Click the cell to place the party on.')).toBeVisible();
-    // Two cells north of the party, still in the gatehouse stair.
-    await clickMapOffset(ruth.page, 0, -2);
-    const picked = place.getByText(/^Level 1, cell \d+, \d+$/);
+    const map = ruth.page.getByRole('application', { name: /^Dungeon map/ });
+    await expect(map).toBeFocused();
+    await expect(ruth.page.getByText(/Press Enter to choose this square/)).toBeAttached();
+    await ruth.page.keyboard.press('ArrowUp');
+    await ruth.page.keyboard.press('ArrowUp');
+    await expect(ruth.page.getByText(/2 squares north of the party/)).toBeAttached();
+    await ruth.page.keyboard.press('Enter');
+    await expect(ruth.page.getByText('Click the cell to place the party on.')).toHaveCount(0);
+    // The pick reads in words, and "Show IDs" adds the cell.
+    await expect(place.getByText(/^Level 1, (Gatehouse stair|a corridor)$/)).toBeVisible();
+    await showIds(ruth.page, true);
+    const picked = place.getByText(/^Level 1, .+ · cell \d+, \d+$/);
     await expect(picked).toBeVisible();
     const [, x, y] = /cell (\d+), (\d+)/.exec((await picked.textContent()) ?? '') ?? [];
+    expect([x, y]).toEqual(['14', '21']);
+    await showIds(ruth.page, false);
     await place.getByRole('button', { name: 'Place the party' }).click();
     const moved = await waitForGame(
       sam.client,
@@ -176,6 +231,17 @@ test.describe('referee tools', () => {
     // The stuck door between the cloister walk and the chapter house, entered by its cell and side.
     await screenshot(ruth.page, 'referee-place-party');
     const door = await openQuickAction(ruth.page, 'Change a door');
+    // The door pick works from the keyboard too: Enter picks the side of the party's cell under the cursor.
+    await door.getByRole('button', { name: 'Pick a door on the map' }).focus();
+    await ruth.page.keyboard.press('Enter');
+    await expect(ruth.page.getByText('Click the door to change.')).toBeVisible();
+    await expect(ruth.page.getByRole('application', { name: /^Dungeon map/ })).toBeFocused();
+    await expect(ruth.page.getByText(/North side: .*Enter to choose it/)).toBeAttached();
+    await ruth.page.keyboard.press('Enter');
+    await expect(door.getByRole('spinbutton', { name: 'Column' })).toHaveValue('14');
+    await expect(door.getByRole('spinbutton', { name: 'Row' })).toHaveValue('21');
+    await expect(door.getByRole('combobox', { name: 'Side of the cell' })).toContainText('North');
+    // Then the referee types the stuck door's cell and side instead.
     await choose(ruth.page, door.getByRole('combobox', { name: 'Dungeon' }), /priory/);
     await door.getByRole('spinbutton', { name: 'Level' }).fill('1');
     await door.getByRole('spinbutton', { name: 'Column' }).fill('12');
@@ -212,9 +278,12 @@ test.describe('referee tools', () => {
     await expect(sam.page.getByRole('region', { name: 'Feed entries' })).not.toContainText('three eels');
   });
 
-  test('the referee creates, renames, exports, and restores a save', async ({ crew }) => {
+  test('the referee creates, renames, exports, and restores a save', async ({ crew }, testInfo) => {
     const { ruth, sam, tableId } = await bellTable(crew);
     const saves = await openFromTableMenu(ruth.page, 'Saves');
+    // D-404: the autosave from entering the priory names it in the middle of a sentence.
+    await expect(saves.getByText("Entered the priory on Corvane's Holm", { exact: true })).toBeVisible();
+    await expect(saves.getByText("Entered The priory on Corvane's Holm", { exact: true })).toHaveCount(0);
     await saves.getByRole('textbox', { name: 'Save the game now' }).fill('At the gatehouse');
     await saves.getByRole('button', { name: 'Save', exact: true }).click();
     const list = saves.getByRole('list', { name: 'Saves, newest first' });
@@ -228,6 +297,15 @@ test.describe('referee tools', () => {
     const renamed = list.getByRole('listitem').filter({ hasText: 'Before the guardroom' });
     await expect(renamed).toBeVisible();
     await screenshot(ruth.page, 'referee-saves');
+    // D-403: each restore button names its save.
+    await expect(list.getByRole('button', { name: 'Restore', exact: true })).toHaveCount(0);
+    await expect(list.getByRole('button', { name: 'Restore Before the guardroom' })).toBeVisible();
+    await expect(
+      list.getByRole('button', { name: "Restore Entered the priory on Corvane's Holm" }),
+    ).toBeVisible();
+    // D-009: the list holds list items only, so axe finds nothing serious in the dialog.
+    const violations = await seriousViolations(ruth.page, testInfo, 'saves', '[role="dialog"]');
+    expect(describeViolations(violations)).toEqual([]);
     await expect
       .poll(async () => (await sam.client.listSaves(tableId)).items.map((s) => s.label))
       .toContain('Before the guardroom');
@@ -243,13 +321,9 @@ test.describe('referee tools', () => {
     await placeParty(ruth.client, tableId, { dungeon: 'priory', level: 1, x: 12, y: 12 });
     await expect(sam.page.getByText('The party is at 12, 12')).toBeAttached();
     const again = await openFromTableMenu(ruth.page, 'Saves');
-    await again
-      .getByRole('listitem')
-      .filter({ hasText: 'Before the guardroom' })
-      .getByRole('button', { name: 'Restore' })
-      .click();
-    const confirm = ruth.page.getByRole('alertdialog', { name: /Restore/ });
-    await confirm.getByRole('button', { name: 'Restore' }).click();
+    await again.getByRole('button', { name: 'Restore Before the guardroom' }).click();
+    const confirm = ruth.page.getByRole('alertdialog', { name: 'Restore “Before the guardroom”?' });
+    await confirm.getByRole('button', { name: 'Restore', exact: true }).click();
     await expect(confirm).toHaveCount(0);
     await waitForGame(
       sam.client,

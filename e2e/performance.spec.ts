@@ -157,6 +157,41 @@ test.describe('performance', () => {
     expect(totalScriptGzipKb, 'gzipped JavaScript, in KB').toBeLessThan(900);
   });
 
+  test('a first visit to the home page downloads only the home page', async ({ crew }, testInfo) => {
+    test.skip(!PROD, 'Needs the production build. Run with E2E_PROD=1.');
+    const visitor = await crew.person('Visitor', { signedIn: false });
+    const { page } = visitor;
+    const started = Date.now();
+    await page.goto('/');
+    await expect(page.getByRole('textbox', { name: 'Your name' })).toBeVisible();
+    const readyMs = Date.now() - started;
+    const scripts = await page.evaluate(() =>
+      performance
+        .getEntriesByType('resource')
+        .filter((entry) => entry.name.endsWith('.js'))
+        .map((entry) => ({
+          file: entry.name.split('/').pop() ?? entry.name,
+          transferKb: Math.round(((entry as PerformanceResourceTiming).transferSize ?? 0) / 1024),
+          decodedKb: Math.round(((entry as PerformanceResourceTiming).decodedBodySize ?? 0) / 1024),
+        })),
+    );
+    const transferKb = scripts.reduce((sum, script) => sum + script.transferKb, 0);
+    const decodedKb = scripts.reduce((sum, script) => sum + script.decodedKb, 0);
+    await report(testInfo, 'home-first-visit', {
+      readyMs,
+      scriptFiles: scripts.length,
+      transferKb,
+      decodedKb,
+      scripts,
+    });
+    // The play screen's chunks shouldn't load before anyone needs them.
+    expect(
+      scripts
+        .map((script) => script.file)
+        .filter((file) => /^(PlayShell|MapStage|RefereePanel|compendium)-/.test(file)),
+    ).toEqual([]);
+  });
+
   test('a feed with thousands of entries stays responsive', async ({ crew }, testInfo) => {
     test.setTimeout(300_000);
     const staged = await stagedTable(crew, 'exploring');

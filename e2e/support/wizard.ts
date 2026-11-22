@@ -4,15 +4,15 @@
  */
 import { expect, type Locator, type Page } from '@playwright/test';
 
-/** The class card's accessible name starts with the class name and its race line. */
+/** The class card's accessible name is the class name. Its details are the card's description. */
 export const CLASS_CARDS = {
-  cleric: /^Cleric Human/,
-  dwarf: /^Dwarf Demihuman/,
-  elf: /^Elf Demihuman/,
-  fighter: /^Fighter Human/,
-  halfling: /^Halfling Demihuman/,
-  magic_user: /^Magic-User Human/,
-  thief: /^Thief Human/,
+  cleric: 'Cleric',
+  dwarf: 'Dwarf',
+  elf: 'Elf',
+  fighter: 'Fighter',
+  halfling: 'Halfling',
+  magic_user: 'Magic-User',
+  thief: 'Thief',
 } as const;
 
 /** A class the wizard offers. */
@@ -92,7 +92,7 @@ export function classLabelText(classId: WizardClass): string {
 
 /** Picks a class on the class step and continues. */
 export async function chooseClass(dialog: Locator, classId: WizardClass): Promise<void> {
-  await dialog.getByRole('button', { name: CLASS_CARDS[classId] }).click();
+  await dialog.getByRole('button', { name: CLASS_CARDS[classId], exact: true }).click();
   await next(dialog);
   await expect(dialog.getByRole('heading', { name: 'Adjust scores', level: 3 })).toBeVisible();
 }

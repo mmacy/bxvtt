@@ -118,18 +118,18 @@ test.describe('character wizard', () => {
     // Two suits of plate mail cost more than the 110 gp this roll gives a fighter.
     const shop = cart(dialog);
     await expect(shop).toContainText('110 gp');
-    await addToCart(dialog, ['Plate mail', 'Plate mail']);
+    await addToCart(dialog, ['Plate mail']);
+    await shop.getByRole('button', { name: 'Add one suit of plate mail' }).click();
     await expect(shop.getByRole('alert')).toContainText("there isn't enough gold");
     await expect(dialog.getByRole('contentinfo').getByRole('button', { name: 'Continue' })).toBeDisabled();
 
-    await shop.getByRole('button', { name: 'Take 2 suits of plate mail out of the cart' }).click();
+    await shop.getByRole('button', { name: 'Remove Plate mail from the cart' }).click();
     await addToCart(dialog, ['Plate mail', 'Sword', 'Shield', 'Torches (6)']);
     await expect(shop).toContainText('81 gp spent, 29 gp left');
-    // Bought armour and weapons start unworn (D-101), so wear and wield them.
-    const line = (text: string) => shop.getByRole('listitem').filter({ hasText: text });
-    await line('A suit of plate mail').getByRole('checkbox', { name: 'Wear it' }).check();
-    await line('A shield').getByRole('checkbox', { name: 'Wear it' }).check();
-    await line('A sword').getByRole('checkbox', { name: 'Wield it' }).check();
+    // The first armour, shield, and weapon the class can use go on as they're added (D-101).
+    await expect(shop.getByRole('checkbox', { name: 'Wear the suit of plate mail' })).toBeChecked();
+    await expect(shop.getByRole('checkbox', { name: 'Wear the shield' })).toBeChecked();
+    await expect(shop.getByRole('checkbox', { name: 'Wield the sword' })).toBeChecked();
     await expect(shop).toContainText('The shop and your class accept this outfit.');
     await next(dialog);
 
@@ -184,17 +184,19 @@ test.describe('character wizard', () => {
     await expect(spells).toContainText('1 of 1 chosen');
     await next(dialog);
 
-    // The class decides what the character may wear. The cart says so before anything is bought.
+    // The class decides what the character may wear. The wizard puts the chainmail on, the rules engine refuses,
+    // and the wizard takes it off again with a note.
     const shop = cart(dialog);
     await addToCart(dialog, ['Chainmail']);
-    await shop
-      .getByRole('listitem')
-      .filter({ hasText: 'chainmail' })
-      .getByRole('checkbox', { name: 'Wear it' })
-      .check();
+    await expect(dialog.getByRole('region', { name: 'The shelves' })).toContainText(
+      "Magic-users can't wear armour. The suit of chainmail stays in the pack.",
+    );
+    await expect(shop.getByRole('checkbox', { name: 'Wear the suit of chainmail' })).not.toBeChecked();
+    // Putting it on by hand gets the refusal in the cart.
+    await shop.getByRole('checkbox', { name: 'Wear the suit of chainmail' }).check();
     await expect(shop.getByRole('alert')).toContainText("Magic-users can't wear armour.");
     await expect(dialog.getByRole('contentinfo').getByRole('button', { name: 'Continue' })).toBeDisabled();
-    await shop.getByRole('button', { name: 'Take A suit of chainmail out of the cart' }).click();
+    await shop.getByRole('button', { name: 'Remove Chainmail from the cart' }).click();
     await addToCart(dialog, ['Dagger']);
     await next(dialog);
 
