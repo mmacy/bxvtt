@@ -530,3 +530,36 @@ describe('milestones', () => {
     expect(narrateEntry(entry, ctx, { lens: false }).weight).toBe('milestone');
   });
 });
+
+describe('entries without player events', () => {
+  it('shows a wait that changed nothing, once', () => {
+    const wait = game(SAM, 'wait', []);
+    wait.names = {
+      members: {},
+      groups: { 'group-0001': { label: 'goblin', label_plural: 'goblins' } },
+      monsters: {},
+      items: {},
+    };
+    expect(isEntryVisible(wait, SAM, false)).toBe(true);
+    const narration = narrateEntry(wait, ctx, { lens: false });
+    expect(narration.items).toHaveLength(1);
+    expect(narration.text).toContain('The party waits.');
+  });
+
+  it('says when an award was capped at one level', () => {
+    const award = game(RUTH, 'award_xp', [
+      {
+        event_type: 'xp_awarded',
+        code: 'session.xp.awarded',
+        visibility: 'player',
+        character_id: 'character-0001',
+        award: 5000,
+        modified_award: 5000,
+      },
+    ]);
+    award.xp_gained = { 'character-0001': 2399 };
+    expect(narrateEntry(award, ctx, { lens: false }).text).toContain(
+      'Brenna gains 2,399 experience points. One award raises a character only one level, so the rest is lost.',
+    );
+  });
+});
