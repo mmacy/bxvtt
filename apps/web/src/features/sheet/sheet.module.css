@@ -557,14 +557,3 @@ fieldset.section {
   padding: 0;
   border: 0;
 }
-
-.actionMenu {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-0-5);
-  margin: calc(var(--space-1) * -1);
-}
-
-.actionItem {
-  justify-content: flex-start;
-}

@@ -1,10 +1,11 @@
 import type { ClassSummary, EquipmentSummary } from '@bxvtt/shared/bxapi';
-import { abilityLabel, classLabel, itemNoun, joinList, emptyContext } from '@bxvtt/shared/text';
-import { tokenClass, useRulesEntry, type ClassDetail } from '@/app';
+import { abilityLabel, classLabel, emptyContext, joinList, resolveItemNoun } from '@bxvtt/shared/text';
+import { tokenClass, type ClassDetail } from '@/app';
 import { Accordion, Badge, Checkbox, Skeleton, TokenPortrait, cx, formatModifier } from '@/ui';
 import { requirementGap } from './RollStep';
 import { xpModifierFor, type Scores } from './tables';
 import styles from './wizard.module.css';
+import { useClassDetail } from '../sheet/catalogs';
 
 const RACES: Record<string, string> = {
   human: 'Human',
@@ -32,7 +33,7 @@ export function armourText(detail: ClassDetail): string {
 export function weaponText(detail: ClassDetail, equipment: readonly EquipmentSummary[] | null): string {
   const ctx = emptyContext();
   const names = detail.weapons.weapon_ids.map(
-    (id) => equipment?.find((item) => item.id === id)?.name.toLowerCase() ?? itemNoun(id, ctx),
+    (id) => resolveItemNoun(id, ctx, { name: equipment?.find((item) => item.id === id)?.name }).one,
   );
   switch (detail.weapons.kind) {
     case 'any':
@@ -56,7 +57,7 @@ interface CardProps {
 }
 
 function ClassCard({ summary, scores, eligible, selected, onSelect, equipment }: CardProps) {
-  const entry = useRulesEntry<ClassDetail>(`classes/${summary.id}`);
+  const entry = useClassDetail(summary.id);
   const detail = entry.data;
   const gap = requirementGap(summary, scores);
   const xp = detail ? xpModifierFor(detail, scores) : null;
@@ -154,7 +155,7 @@ export function ClassStep({
   onHpReroll,
   equipment,
 }: ClassStepProps) {
-  const selected = useRulesEntry<ClassDetail>(classId ? `classes/${classId}` : null);
+  const selected = useClassDetail(classId ? classId : null);
   if (classes === null) return <Skeleton shape="block" height={360} />;
   const sorted = [...classes].sort(
     (a, b) => Number(eligible.includes(b.id)) - Number(eligible.includes(a.id)),

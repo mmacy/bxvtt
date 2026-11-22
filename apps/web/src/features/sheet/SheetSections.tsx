@@ -27,6 +27,7 @@ import {
   type ConditionTone,
 } from '@/ui';
 import type { SheetModel } from './model';
+import { RuleLink } from './RuleLink';
 import styles from './sheet.module.css';
 
 const ABILITY_ORDER = ['str', 'int', 'wis', 'dex', 'con', 'cha'] as const;
@@ -88,22 +89,20 @@ export function SheetHeader({ model, color, controller, actions }: SheetHeaderPr
       <div className={styles.headerText}>
         <h2 className={styles.name}>{model.name}</h2>
         <p className={styles.classLine}>
-          {[
-            `Level ${model.level} ${classLabel(model.classId).toLowerCase()}`,
-            model.title,
-            alignmentLabel(model.alignment),
-          ]
+          <span>
+            Level {model.level}{' '}
+            <RuleLink entry={{ kind: 'classes', id: model.classId }}>
+              {classLabel(model.classId).toLowerCase()}
+            </RuleLink>
+          </span>
+          {[model.title, alignmentLabel(model.alignment)]
             .filter((part): part is string => Boolean(part))
-            .map((part, index) => (
+            .map((part) => (
               <span key={part}>
-                {index > 0 && (
-                  <>
-                    <span className={styles.dot} aria-hidden="true">
-                      ·
-                    </span>
-                    <span className="visually-hidden">, </span>
-                  </>
-                )}
+                <span className={styles.dot} aria-hidden="true">
+                  ·
+                </span>
+                <span className="visually-hidden">, </span>
                 {part}
               </span>
             ))}

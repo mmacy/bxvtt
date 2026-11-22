@@ -4,7 +4,6 @@
  * functions only look a score up in a table row, the way a player reads the table in the rulebook.
  */
 import type { AbilityTables } from '@bxvtt/shared/bxapi';
-import type { ParamMap, ParamValue } from '@bxvtt/shared/text';
 import type { ClassDetail } from '@/app';
 
 /** The six abilities in the order B/X lists them, which is also the order bxapi rolls them. */
@@ -204,20 +203,4 @@ export function classMagic(detail: ClassDetail | null | undefined): ClassMagic |
 export function spellSlotsAt(detail: ClassDetail | null | undefined, level: number): number[] {
   const row = detail?.progression.find((entry) => entry.level === level);
   return row?.spell_slots ?? [];
-}
-
-function isParamValue(value: unknown): value is ParamValue {
-  if (typeof value === 'string' || typeof value === 'number') return true;
-  return Array.isArray(value) && value.every((item) => typeof item === 'string' || typeof item === 'number');
-}
-
-/**
- * Keeps the params of a rejection that the text layer reads: strings, numbers, and lists of them.
- *
- * @param params - The rejection's params.
- */
-export function toParamMap(params: Record<string, unknown> | undefined): ParamMap {
-  const map: Record<string, ParamValue> = {};
-  for (const [key, value] of Object.entries(params ?? {})) if (isParamValue(value)) map[key] = value;
-  return map;
 }

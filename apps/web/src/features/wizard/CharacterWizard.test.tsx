@@ -1,5 +1,10 @@
 import { BxvttProblemError } from '@bxvtt/shared/client';
-import type { CharacterRequest, Problem, StoredCharacter } from '@bxvtt/shared/protocol';
+import type {
+  CharacterCheckRequest,
+  CharacterRequest,
+  Problem,
+  StoredCharacter,
+} from '@bxvtt/shared/protocol';
 import { screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
@@ -8,7 +13,6 @@ import catalog from './__fixtures__/catalog.json';
 import stored from './__fixtures__/stored.json';
 import { CharacterWizard } from './CharacterWizard';
 import { draftKey, emptyDraft } from './draft';
-import { DRY_RUN_SENTINEL } from './server';
 
 const ROLL = {
   id: 'rol_test',
@@ -33,8 +37,8 @@ function page<T>(items: T[]) {
   return { items, total: items.length, limit: 200, offset: 0 };
 }
 
-/** A fake API that serves the catalogs and plays bxapi's creation with 60 gp of starting gold. */
-function wizardApi(options: { finalRefusal?: BxvttProblemError } = {}): FakeApi {
+/** A fake API that serves the catalogs and answers checks with 60 gp of starting gold. */
+function wizardApi(options: { refusal?: BxvttProblemError } = {}): FakeApi {
   const api = createFakeApi();
   api.rules.mockImplementation(async (path: string) => {
     if (path === 'classes') return page(catalog.classes.items);
@@ -49,19 +53,40 @@ function wizardApi(options: { finalRefusal?: BxvttProblemError } = {}): FakeApi 
     throw new Error(`No fixture for ${path}`);
   });
   api.rollAbilities.mockResolvedValue(ROLL);
-  api.createCharacter.mockImplementation(async (request: CharacterRequest) => {
-    const dry = request.equip_item_ids?.includes(DRY_RUN_SENTINEL) ?? false;
-    const lots =
-      request.purchases?.reduce((sum, p) => sum + (p.item_id === 'torch' ? (p.quantity ?? 1) : 0), 0) ?? 0;
-    if (lots > 60) {
-      throw invalid({
-        rejections: [{ code: 'items.purchase.insufficient_funds', params: { item: 'torch', cost_gp: lots } }],
-      });
+  api.fullCatalog.mockImplementation(async (name) => {
+    if (name === 'classes') {
+      const items = Object.values(catalog.details);
+      return { catalog: name, total: items.length, items } as never;
     }
-    if (dry) throw invalid({ field: 'equip_item_ids', id: DRY_RUN_SENTINEL, index: 0 });
-    if (options.finalRefusal) throw options.finalRefusal;
-    return { ...(stored as unknown as StoredCharacter), name: request.name };
+    return { catalog: name, total: 0, items: [] } as never;
   });
+  api.checkCharacter.mockImplementation(async (request: CharacterCheckRequest) => {
+    const lots =
+      request.purchases?.reduce(
+        (sum, p) =>
+          sum + (catalog.equipment.items.find((e) => e.id === p.item_id)?.cost_gp ?? 0) * (p.quantity ?? 1),
+        0,
+      ) ?? 0;
+    if (lots > 60) {
+      return {
+        valid: false,
+        gold_gp: 60,
+        problem: invalid({
+          rejections: [
+            { code: 'items.purchase.insufficient_funds', params: { item: 'plate_mail', cost_gp: lots } },
+          ],
+        }).problem,
+      };
+    }
+    if (options.refusal) {
+      return { valid: false, gold_gp: 60, problem: options.refusal.problem };
+    }
+    return { valid: true, problem: null, gold_gp: 60 };
+  });
+  api.createCharacter.mockImplementation(async (request: CharacterRequest) => ({
+    ...(stored as unknown as StoredCharacter),
+    name: request.name,
+  }));
   return api;
 }
 
@@ -111,14 +136,14 @@ describe('CharacterWizard', () => {
       ability_roll_id: 'rol_test',
       purchases: [{ item_id: 'sword' }],
     });
-    expect(body?.equip_item_ids ?? []).not.toContain(DRY_RUN_SENTINEL);
+    expect(api.checkCharacter).toHaveBeenCalled();
     expect(await screen.findByText('Wren is ready')).toBeInTheDocument();
     expect(localStorage.getItem(draftKey(null))).toBeNull();
   });
 
   it('takes the player to the step a refusal belongs to', async () => {
     const api = wizardApi({
-      finalRefusal: invalid({
+      refusal: invalid({
         rejections: [
           { code: 'items.equip.armour_not_allowed', params: { class: 'magic_user', item: 'leather' } },
         ],

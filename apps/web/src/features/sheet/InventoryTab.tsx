@@ -1,4 +1,4 @@
-import type { MemberView, SpellSummary } from '@bxvtt/shared/bxapi';
+import type { MemberView } from '@bxvtt/shared/bxapi';
 import { capitalizeFirst, groupName } from '@bxvtt/shared/text';
 import { useMemo, useState, type ReactNode } from 'react';
 import {
@@ -8,30 +8,33 @@ import {
   useScene,
   useSendCommand,
   useSpellCatalog,
-  useRulesEntry,
   useTextContext,
-  type SpellDetail,
+  type CompendiumEntry,
 } from '@/app';
 import {
   Badge,
   Banner,
   Button,
   Checkbox,
+  Combobox,
   CoinPurse,
   ConditionChip,
   Dialog,
+  DropdownMenu,
+  IconButton,
   Field,
   Icon,
   NumberInput,
   Select,
   cx,
-  type SelectGroup,
+  type MenuEntry,
 } from '@/ui';
 import { effectLabel, effectRemaining, useMemberCommand } from './actions';
-import { ActionMenu, type ActionMenuItem } from './ActionMenu';
 import { ItemDetailButton } from './ItemDetail';
+import { RuleLink } from './RuleLink';
 import { equippedEntries, type InventoryEntry, type Purse, type SheetModel } from './model';
 import styles from './sheet.module.css';
+import { useSpellDetail } from './catalogs';
 
 const COINS: Array<keyof Purse> = ['pp', 'gp', 'ep', 'sp', 'cp'];
 const COIN_NAMES: Record<keyof Purse, string> = {
@@ -64,12 +67,25 @@ function entryFacts(entry: InventoryEntry): string | null {
   return null;
 }
 
-function EntryName({ entry }: { entry: InventoryEntry }) {
+/** The rules entry an inventory entry opens. An unidentified magic item opens nothing, so it stays a mystery. */
+export function entryRule(entry: InventoryEntry): CompendiumEntry | null {
+  if (entry.catalogId === null || !entry.identified) return null;
+  if (entry.kind === 'item') return { kind: 'equipment', id: entry.catalogId };
+  if (entry.kind === 'magic') return { kind: 'magic-items', id: entry.catalogId };
+  return null;
+}
+
+function EntryName({ entry, link = false }: { entry: InventoryEntry; link?: boolean }) {
+  const className = cx(styles.itemName, entry.kind === 'magic' && !entry.identified && styles.masked);
   return (
     <span className={styles.itemMain}>
-      <span className={cx(styles.itemName, entry.kind === 'magic' && !entry.identified && styles.masked)}>
-        {entry.name}
-      </span>
+      {link ? (
+        <RuleLink entry={entryRule(entry)} className={className}>
+          {entry.name}
+        </RuleLink>
+      ) : (
+        <span className={className}>{entry.name}</span>
+      )}
       {entry.kind === 'magic' && (
         <Badge tone="magic" appearance="outline">
           {entry.identified ? 'Magic' : 'Unidentified'}
@@ -112,8 +128,8 @@ export function InventoryTab({ member, model }: TabProps) {
   );
   const reason = blocked && !blocked.permission.allowed ? blocked.permission.reason : null;
 
-  const menuFor = (entry: InventoryEntry): ActionMenuItem[] => {
-    const items: ActionMenuItem[] = [];
+  const menuFor = (entry: InventoryEntry): MenuEntry[] => {
+    const items: MenuEntry[] = [];
     if (equip.legal && offersEquip(entry))
       items.push({
         label: 'Equip',
@@ -158,16 +174,24 @@ export function InventoryTab({ member, model }: TabProps) {
     const menu = entry.slot === 'pack' ? menuFor(entry) : [];
     return (
       <li key={entry.key} className={styles.itemRow}>
-        <EntryName entry={entry} />
-        {entry.quantity > 1 && (
-          <span className={styles.qty} aria-label={`${entry.quantity} of them`}>
-            {entry.quantity}
-          </span>
-        )}
+        <EntryName entry={entry} link />
         <span className={styles.itemActions}>
           <ItemDetailButton entry={entry} />
           {trailing}
-          {menu.length > 0 && <ActionMenu label={`Actions for ${entry.name}`} items={menu} />}
+          {menu.length > 0 && (
+            <DropdownMenu
+              align="end"
+              items={menu}
+              trigger={
+                <IconButton
+                  icon="more-vertical"
+                  label={`Actions for ${entry.name}`}
+                  variant="ghost"
+                  size="sm"
+                />
+              }
+            />
+          )}
         </span>
       </li>
     );
@@ -470,9 +494,7 @@ function TransferDialog({ mode, member, model, initialKey, onClose }: TransferPr
                   </span>
                   {entry.quantity > 1 || entry.kind === 'item' ? (
                     <NumberInput
-                      aria-label={`How many ${entry.name}`}
-                      incrementLabel={`One more ${entry.name}`}
-                      decrementLabel={`One fewer ${entry.name}`}
+                      aria-label={`How many ${entry.units}`}
                       value={counts[entry.key] ?? 0}
                       min={0}
                       max={entry.quantity}
@@ -498,8 +520,6 @@ function TransferDialog({ mode, member, model, initialKey, onClose }: TransferPr
             {COINS.filter((c) => model.inventory.purse[c] > 0).map((c) => (
               <Field key={c} label={`${COIN_NAMES[c]} (${model.inventory.purse[c]})`}>
                 <NumberInput
-                  incrementLabel={`One more ${COIN_NAMES[c].toLowerCase()} piece`}
-                  decrementLabel={`One fewer ${COIN_NAMES[c].toLowerCase()} piece`}
                   value={coins[c]}
                   min={0}
                   max={model.inventory.purse[c]}
@@ -516,22 +536,6 @@ function TransferDialog({ mode, member, model, initialKey, onClose }: TransferPr
       </div>
     </Dialog>
   );
-}
-
-/** Spells grouped by list and level, for a select. */
-function spellGroups(spells: readonly SpellSummary[]): SelectGroup[] {
-  const groups = new Map<string, SelectGroup>();
-  for (const spell of [...spells].sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))) {
-    const list =
-      spell.spell_list === 'magic_user'
-        ? 'Magic-user'
-        : capitalizeFirst(spell.spell_list.replaceAll('_', ' '));
-    const label = `${list}, level ${spell.level}`;
-    const group = groups.get(label) ?? { label, options: [] };
-    group.options.push({ value: spell.id, label: spell.name });
-    groups.set(label, group);
-  }
-  return [...groups.values()];
 }
 
 /** Uses a magic item: drinks a potion, reads a scroll, or works a wand, staff, or rod. */
@@ -555,7 +559,7 @@ function UseItemDialog({
   const [targets, setTargets] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const scroll = /scroll/i.test(entry.name);
-  const spell = useRulesEntry<SpellDetail>(scroll && spellId ? `spells/${spellId}` : null);
+  const spell = useSpellDetail(scroll && spellId ? spellId : null);
 
   const targetOptions = [
     { value: 'self', label: `${member.name} (the user)` },
@@ -615,14 +619,18 @@ function UseItemDialog({
         {scroll && (
           <>
             <Field label="Spell to read" hint="Leave it empty to read the first spell on the scroll.">
-              <Select
-                value={spellId ?? ''}
-                onValueChange={(value) => {
+              <Combobox
+                value={spellId}
+                onChange={(value) => {
                   setSpellId(value);
                   setMode('');
                 }}
-                placeholder="The first spell on the scroll"
-                options={spellGroups(spells.data ?? [])}
+                placeholder="Search spells"
+                options={(spells.data ?? []).map((spell) => ({
+                  value: spell.id,
+                  label: spell.name,
+                  description: `${spell.spell_list === 'magic_user' ? 'Magic-user' : capitalizeFirst(spell.spell_list.replaceAll('_', ' '))}, level ${spell.level}`,
+                }))}
               />
             </Field>
             {spell.data && spell.data.modes.length > 1 && (

@@ -1,7 +1,7 @@
 import type { EquipmentSummary } from '@bxvtt/shared/bxapi';
 import { itemTypeLabel } from '@bxvtt/shared/text';
 import { useMemo, useState } from 'react';
-import { useRulesEntry, type EquipmentDetail } from '@/app';
+
 import {
   Badge,
   Banner,
@@ -21,8 +21,9 @@ import {
 import { ItemDetailBody } from '../sheet/ItemDetail';
 import { readEntry } from '../sheet/model';
 import type { CheckState } from './AdjustStep';
-import { kitLabel, type CartLine } from './kits';
+import { cartPhrase, kitLabel, type CartLine } from './kits';
 import styles from './wizard.module.css';
+import { useEquipmentDetail } from '../sheet/catalogs';
 
 /** What the wizard knows about the starting gold. */
 export type GoldState =
@@ -59,7 +60,7 @@ export function cartCost(cart: readonly CartLine[], equipment: readonly Equipmen
 
 function EquipmentInfo({ item }: { item: EquipmentSummary }) {
   const [open, setOpen] = useState(false);
-  const detail = useRulesEntry<EquipmentDetail>(open ? `equipment/${item.id}` : null);
+  const detail = useEquipmentDetail(open ? item.id : null);
   const entry = detail.data
     ? readEntry({ instance_type: 'item', template: detail.data, quantity: 1 }, 'pack', 0)
     : null;
@@ -231,7 +232,7 @@ export function OutfitStep({
             {cart.map((line) => {
               const item = equipment?.find((e) => e.id === line.itemId);
               const equippable = item?.item_type === 'weapon' || item?.item_type === 'armour';
-              const name = item?.name ?? line.itemId;
+              const name = cartPhrase(line.itemId, line.quantity, item?.name);
               return (
                 <li key={line.itemId} className={styles.cartRow}>
                   <span className={styles.cartMain}>
@@ -250,8 +251,6 @@ export function OutfitStep({
                   </span>
                   <NumberInput
                     aria-label={`How many of ${name}`}
-                    incrementLabel={`One more ${name}`}
-                    decrementLabel={`One fewer ${name}`}
                     value={line.quantity}
                     min={0}
                     max={99}

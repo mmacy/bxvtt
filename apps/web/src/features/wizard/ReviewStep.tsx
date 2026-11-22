@@ -3,7 +3,7 @@ import { abilityLabel, alignmentLabel, classLabel, languageLabel, saveLabel } fr
 import type { ClassDetail } from '@/app';
 import { Badge, CoinPurse, Parchment, StatBox, formatModifier } from '@/ui';
 import type { WizardDraft } from './draft';
-import type { CartLine } from './kits';
+import { cartPhrase, type CartLine } from './kits';
 import { ABILITIES, headlineModifier, xpModifierFor, type Scores } from './tables';
 import styles from './wizard.module.css';
 
@@ -23,7 +23,7 @@ function cartNames(cart: CartLine[], equip: string[], equipment: EquipmentSummar
     const item = equipment?.find((e) => e.id === line.itemId);
     return {
       key: line.itemId,
-      name: item?.name ?? line.itemId,
+      name: cartPhrase(line.itemId, line.quantity, item?.name),
       quantity: line.quantity,
       equipped: equip.includes(line.itemId),
       kind: item?.item_type,
@@ -151,7 +151,6 @@ export function ReviewStep({
           <ul className={styles.reviewGear}>
             {gear.map((item) => (
               <li key={item.key}>
-                {item.quantity > 1 ? `${item.quantity} × ` : ''}
                 {item.name}
                 {item.equipped && (
                   <Badge tone="neutral" appearance="outline">

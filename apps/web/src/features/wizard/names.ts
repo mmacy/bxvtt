@@ -76,10 +76,18 @@ const NAMES: Record<string, readonly string[]> = {
  * @param race - The race of the chosen class, such as `dwarf`. An unknown race uses the human names.
  * @param current - The name the field holds now, which the suggestion avoids.
  * @param random - A number from 0 up to 1, such as `Math.random()`.
+ * @param taken - Names the player's other characters already have, which the suggestion avoids when it can.
  */
-export function suggestName(race: string | null | undefined, current: string, random: number): string {
+export function suggestName(
+  race: string | null | undefined,
+  current: string,
+  random: number,
+  taken: readonly string[] = [],
+): string {
   const list = NAMES[race ?? 'human'] ?? NAMES.human ?? [];
-  const options = list.filter((name) => name !== current.trim());
+  const avoid = new Set([current.trim(), ...taken]);
+  const fresh = list.filter((name) => !avoid.has(name));
+  const options = fresh.length > 0 ? fresh : list.filter((name) => name !== current.trim());
   const pool = options.length > 0 ? options : list;
   return pool[Math.min(pool.length - 1, Math.floor(random * pool.length))] ?? 'Wren';
 }

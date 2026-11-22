@@ -3,6 +3,13 @@
  * server still checks every purchase and every item to equip when the character is made.
  */
 import type { EquipmentSummary } from '@bxvtt/shared/bxapi';
+import {
+  capitalizeFirst,
+  emptyContext,
+  equipmentLotSize,
+  itemPhrase,
+  resolveItemNoun,
+} from '@bxvtt/shared/text';
 
 /** One line of a kit: the first option the purse covers is bought. */
 interface KitLine {
@@ -154,4 +161,16 @@ export function applyKit(
     if (line.equip) result.equip.push(choice);
   }
   return result;
+}
+
+/**
+ * How a cart line reads: "12 torches" for two lots of torches, "a sword" for one.
+ *
+ * @param itemId - The equipment ID.
+ * @param lots - The number of purchase lots.
+ * @param name - The catalog name, for an ID the text layer doesn't know.
+ */
+export function cartPhrase(itemId: string, lots: number, name?: string): string {
+  const units = lots * (equipmentLotSize(itemId) ?? 1);
+  return capitalizeFirst(itemPhrase(resolveItemNoun(itemId, emptyContext(), { name }), units));
 }

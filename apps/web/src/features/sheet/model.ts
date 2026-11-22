@@ -8,10 +8,9 @@ import type { StoredCharacter } from '@bxvtt/shared/protocol';
 import {
   capitalizeFirst,
   emptyContext,
-  equipmentNoun,
-  itemNoun,
+  itemPhrase,
   magicItemTemplateName,
-  stripArticle,
+  resolveItemNoun,
   type TextContext,
 } from '@bxvtt/shared/text';
 
@@ -36,6 +35,8 @@ export interface InventoryEntry {
   kind: 'item' | 'magic' | 'valuable';
   /** The name to show. An unidentified magic item keeps its masked name, such as "A potion". */
   name: string;
+  /** What one unit is called in the plural, for a count control: "torches". */
+  units: string;
   quantity: number;
   slot: ItemSlot;
   /** `weapon`, `armour`, `gear`, or `ammunition` for a mundane item. */
@@ -168,6 +169,7 @@ export function readEntry(
       commandId: instanceId,
       kind: 'magic',
       name: capitalizeFirst(shown),
+      units: shown,
       quantity,
       slot,
       itemType: null,
@@ -187,6 +189,7 @@ export function readEntry(
       commandId: instanceId,
       kind: 'valuable',
       name: capitalizeFirst(str(value.name) ?? (kind === 'jewellery' ? 'Jewellery' : 'Gem')),
+      units: str(value.name) ?? (kind === 'jewellery' ? 'jewellery' : 'gem'),
       quantity: 1,
       slot,
       itemType: kind,
@@ -201,16 +204,10 @@ export function readEntry(
   const template = isRecord(value.template) ? value.template : null;
   const id = str(template?.id) ?? str(value.template_id) ?? str(value.id);
   if (id === null) return null;
-  // The built-in catalog's noun reads well with a count ("6 torches"), so it wins over a display name.
-  const noun = equipmentNoun(id);
-  const name = noun
-    ? quantity === 1
-      ? noun.one
-      : noun.many
-    : ctx.items[id]
-      ? stripArticle(ctx.items[id])
-      : (str(template?.name) ?? itemNoun(id, ctx, quantity));
+  const noun = resolveItemNoun(id, ctx, { name: str(template?.name) ?? undefined });
+  const name = itemPhrase(noun, quantity);
   return {
+    units: noun.many,
     key: `${slot}:${id}:${index}`,
     commandId: id,
     kind: 'item',

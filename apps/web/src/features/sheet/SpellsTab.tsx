@@ -1,20 +1,13 @@
 import type { MemberView, SpellSummary } from '@bxvtt/shared/bxapi';
 import { capitalizeFirst, ordinal, prettifyId, spellCatalogName } from '@bxvtt/shared/text';
 import { useMemo, useState } from 'react';
-import {
-  useParty,
-  usePartyLocation,
-  useRulesEntry,
-  useSendCommand,
-  useSpellCatalog,
-  type ClassDetail,
-  type SpellDetail,
-} from '@/app';
+import { useParty, usePartyLocation, useSendCommand, useSpellCatalog } from '@/app';
 import {
   Badge,
   Banner,
   Button,
   Checkbox,
+  Combobox,
   Dialog,
   EmptyState,
   Field,
@@ -27,8 +20,10 @@ import {
 } from '@/ui';
 import { classMagic, spellSlotsAt } from '../wizard/tables';
 import { useMemberCommand } from './actions';
+import { RuleLink } from './RuleLink';
 import type { SheetModel } from './model';
 import styles from './sheet.module.css';
+import { useClassDetail, useSpellDetail } from './catalogs';
 
 /** A spell's name from the catalog, or the built-in name. */
 function nameOf(id: string, catalog: readonly SpellSummary[] | null): string {
@@ -37,7 +32,7 @@ function nameOf(id: string, catalog: readonly SpellSummary[] | null): string {
 
 /** A spell's full text: the introduction and each way to cast it. */
 export function SpellDetailBody({ spellId }: { spellId: string }) {
-  const entry = useRulesEntry<SpellDetail>(`spells/${spellId}`);
+  const entry = useSpellDetail(spellId);
   if (entry.loading) return <Skeleton lines={4} />;
   if (!entry.data) return <p className={styles.detailProse}>The rules reference doesn't have this spell.</p>;
   const spell = entry.data;
@@ -84,7 +79,7 @@ function SpellInfo({ spellId, name }: { spellId: string; name: string }) {
  * spells when bxapi offers those commands.
  */
 export function SpellsTab({ member, model }: { member: MemberView; model: SheetModel }) {
-  const classEntry = useRulesEntry<ClassDetail>(`classes/${model.classId}`);
+  const classEntry = useClassDetail(model.classId);
   const catalog = useSpellCatalog();
   const magic = classMagic(classEntry.data);
   const slots = spellSlotsAt(classEntry.data, model.level);
@@ -161,7 +156,7 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
                 <div key={`${copy.spellId}:${copy.reversed}`} className={styles.spellCard}>
                   <div className={styles.spellTop}>
                     <span className={styles.spellName}>
-                      {name}
+                      <RuleLink entry={{ kind: 'spells', id: copy.spellId }}>{name}</RuleLink>
                       {copy.reversed && ' (reversed)'}
                     </span>
                     {copy.count > 1 && <Badge tone="magic">×{copy.count}</Badge>}
@@ -222,7 +217,9 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
                 return (
                   <div key={id} className={styles.spellCard}>
                     <div className={styles.spellTop}>
-                      <span className={styles.spellName}>{name}</span>
+                      <span className={styles.spellName}>
+                        <RuleLink entry={{ kind: 'spells', id }}>{name}</RuleLink>
+                      </span>
                       <SpellInfo spellId={id} name={name} />
                     </div>
                     {summary && (
@@ -270,7 +267,7 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
 
 /** Whether a member has any magic to show a spells tab for. */
 export function useHasSpells(model: Pick<SheetModel, 'classId' | 'spellBook' | 'memorized'> | null): boolean {
-  const classEntry = useRulesEntry<ClassDetail>(model ? `classes/${model.classId}` : null);
+  const classEntry = useClassDetail(model ? model.classId : null);
   if (!model) return false;
   return model.spellBook.length > 0 || model.memorized.length > 0 || classMagic(classEntry.data) !== null;
 }
@@ -295,7 +292,7 @@ function PrepareRow({
   counts: Record<string, number>;
   setCount: (key: string, value: number) => void;
 }) {
-  const detail = useRulesEntry<SpellDetail>(arcane ? `spells/${spell.id}` : null);
+  const detail = useSpellDetail(arcane ? spell.id : null);
   const reversible = arcane && detail.data?.reversed_form;
   return (
     <li className={styles.pickRow}>
@@ -305,8 +302,6 @@ function PrepareRow({
       </span>
       <NumberInput
         aria-label={`Copies of ${spell.name}`}
-        incrementLabel={`One more copy of ${spell.name}`}
-        decrementLabel={`One fewer copy of ${spell.name}`}
         value={counts[`${spell.id}:false`] ?? 0}
         min={0}
         max={9}
@@ -315,8 +310,6 @@ function PrepareRow({
       {reversible && (
         <NumberInput
           aria-label={`Copies of ${detail.data?.reversed_form?.name ?? 'the reversed form'}`}
-          incrementLabel={`One more reversed copy of ${spell.name}`}
-          decrementLabel={`One fewer reversed copy of ${spell.name}`}
           value={counts[`${spell.id}:true`] ?? 0}
           min={0}
           max={9}
@@ -468,7 +461,7 @@ function CastDialog({
   arcane: boolean;
   onClose: () => void;
 }) {
-  const entry = useRulesEntry<SpellDetail>(`spells/${copy.spellId}`);
+  const entry = useSpellDetail(copy.spellId);
   const party = useParty();
   const location = usePartyLocation();
   const { send, pending } = useSendCommand();
@@ -621,15 +614,10 @@ function LearnDialog({
   const { send, pending } = useSendCommand();
   const [spellId, setSpellId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const options = [1, 2, 3, 4, 5, 6]
-    .map((level) => ({
-      label: `${ordinal(level)} level`,
-      options: (catalog.data ?? [])
-        .filter((s) => s.level === level && s.spell_list === spellList && !model.spellBook.includes(s.id))
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((s) => ({ value: s.id, label: s.name })),
-    }))
-    .filter((group) => group.options.length > 0);
+  const options = (catalog.data ?? [])
+    .filter((s) => s.spell_list === spellList && !model.spellBook.includes(s.id))
+    .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
+    .map((s) => ({ value: s.id, label: s.name, description: `${ordinal(s.level)} level` }));
 
   const submit = async () => {
     if (!spellId) return;
@@ -675,12 +663,7 @@ function LearnDialog({
           </Banner>
         )}
         <Field label="Spell">
-          <Select
-            value={spellId ?? ''}
-            onValueChange={setSpellId}
-            options={options}
-            placeholder="Choose a spell"
-          />
+          <Combobox value={spellId} onChange={setSpellId} options={options} placeholder="Search spells" />
         </Field>
         {spellId && <SpellDetailBody spellId={spellId} />}
       </div>

@@ -2,6 +2,7 @@ import { capitalizeFirst, magicItemTemplateName, prettifyId } from '@bxvtt/share
 import { useRefereeState } from '@/app';
 import { Badge, Banner } from '@/ui';
 import { compactDuration, effectLabel } from './actions';
+import { RuleLink } from './RuleLink';
 import styles from './sheet.module.css';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -10,6 +11,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 interface MagicFact {
   id: string;
+  templateId: string;
   name: string;
   identified: boolean;
   charges: number | null;
@@ -31,6 +33,7 @@ function magicFacts(inventory: unknown): MagicFact[] {
     return [
       {
         id: typeof entry.instance_id === 'string' ? entry.instance_id : templateId,
+        templateId,
         name: capitalizeFirst(magicItemTemplateName(templateId) ?? prettifyId(templateId)),
         identified: entry.identified === true,
         charges: typeof entry.charges_remaining === 'number' ? entry.charges_remaining : null,
@@ -64,7 +67,9 @@ export function RefereeNotes({ memberId }: { memberId: string }) {
         <ul className={styles.refereeList}>
           {items.map((item) => (
             <li key={item.id}>
-              {item.name}
+              <RuleLink entry={item.templateId ? { kind: 'magic-items', id: item.templateId } : null}>
+                {item.name}
+              </RuleLink>
               {!item.identified && ' (the players see it unidentified)'}
               {item.charges !== null && `, ${item.charges} ${item.charges === 1 ? 'charge' : 'charges'} left`}
               {item.cursed && (

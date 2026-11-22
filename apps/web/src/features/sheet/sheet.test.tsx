@@ -8,6 +8,7 @@ import { StoredCharacterCard } from './StoredCharacterCard';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { createFakeApi, renderWithTable } from '@/app/testing/renderWithTable';
 import { CharacterSheet } from './CharacterSheet';
+import { entryRule } from './InventoryTab';
 import { readInventory } from './model';
 import { PartyPanel, moveTo } from './PartyPanel';
 
@@ -46,7 +47,7 @@ describe('readInventory', () => {
     });
     expect(inventory.pack.map((e) => [e.name, e.commandId, e.identified])).toEqual([
       ['A potion', 'magic-item-0001', false],
-      ['Torches', 'torch', true],
+      ['6 torches', 'torch', true],
     ]);
     expect(inventory.wielded[0]?.commandId).toBe('sword');
     expect(inventory.valuables[0]).toMatchObject({ name: 'Gem', valueGp: 50, commandId: 'valuable-0001' });
@@ -149,9 +150,9 @@ describe('CharacterSheet', () => {
     await user.click(await screen.findByRole('tab', { name: 'Inventory' }));
     await user.click(screen.getByRole('button', { name: 'Give' }));
     const dialog = await screen.findByRole('dialog', { name: /Give from/ });
-    await user.click(within(dialog).getByRole('button', { name: 'One more Torches' }));
-    await user.click(within(dialog).getByRole('button', { name: 'One more Torches' }));
-    await user.click(within(dialog).getByRole('button', { name: 'One more gold piece' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Increase How many torches' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Increase How many torches' }));
+    await user.click(within(dialog).getByRole('button', { name: /^Increase Gold/ }));
     await user.click(within(dialog).getByRole('button', { name: 'Give' }));
     await waitFor(() => expect(api.sendCommand).toHaveBeenCalled());
     const command = api.sendCommand.mock.calls[0]?.[1] as Record<string, unknown>;
@@ -191,5 +192,31 @@ describe('StoredCharacterCard', () => {
     expect(api.deleteCharacter).not.toHaveBeenCalled();
     await user.click(within(confirm).getByRole('button', { name: 'Delete character' }));
     await waitFor(() => expect(api.deleteCharacter).toHaveBeenCalledWith(character.id));
+  });
+});
+
+describe('rules links', () => {
+  it('opens the compendium from the class name', async () => {
+    const snapshot = fixtureSnapshot('exploring', 'player');
+    const brenna = snapshot.game?.view.party[0];
+    const { user } = renderWithTable(<CharacterSheet memberId={brenna?.id ?? null} onClose={() => {}} />, {
+      snapshot,
+    });
+    await user.click(await screen.findByRole('button', { name: /fighter.*open in the rules reference/i }));
+    expect(useTableUi.getState().compendiumEntry).toEqual({ kind: 'classes', id: 'fighter' });
+  });
+
+  it('never links a masked magic item', () => {
+    const [entry] = readInventory({
+      items: [
+        {
+          instance_type: 'magic_item',
+          instance_id: 'magic-item-0001',
+          display: 'a potion',
+          identified: false,
+        },
+      ],
+    }).pack;
+    expect(entry && entryRule(entry)).toBeNull();
   });
 });
