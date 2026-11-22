@@ -5,7 +5,17 @@
 import type { GameEntry } from '@bxvtt/shared/protocol';
 import { describeGameEntry, extendContextWithEntryNames, idKind, type EventLine } from '@bxvtt/shared/text';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useEncounter, useFeed, useReduceMotion, useRefereeLens, useRefereeState, useTableId } from '@/app';
+import type { MemberView } from '@bxvtt/shared/bxapi';
+import {
+  useCombatStage,
+  useEncounter,
+  useFeed,
+  useReduceMotion,
+  useRefereeLens,
+  useRefereeState,
+  useTableId,
+  type PlaybackMemberState,
+} from '@/app';
 import { learnMonsterGroups, snapshotBefore, useCombatMemory } from './memory';
 import {
   buildBeats,
@@ -245,4 +255,48 @@ export function usePlayback(options: PlaybackOptions): PlaybackView {
   const track =
     current !== null && current.start !== null ? (current.states[beatIndex] ?? current.start) : null;
   return { current, beat, beatIndex, track, last, playing: current !== null, skip, replay };
+}
+
+/**
+ * Tells the shell about a playback: whether it runs, so the end screen and the party panel wait for it; the round
+ * and clock it shows, for the top bar; and each member's hit points and conditions at the beat on screen, for the
+ * party panel. Everything clears when the playback ends or the component unmounts.
+ *
+ * @param playback - The playback.
+ * @param party - The party's sheets, for each member's maximum hit points.
+ */
+export function usePublishPlayback(playback: PlaybackView, party: readonly MemberView[]): void {
+  const setPlaying = useCombatStage((s) => s.setPlaying);
+  const setMoment = useCombatStage((s) => s.setMoment);
+  const setMemberStates = useCombatStage((s) => s.setMemberStates);
+  useEffect(() => setPlaying(playback.playing), [playback.playing, setPlaying]);
+  const round = playback.current?.digest.round ?? null;
+  const clock = playback.current?.clockBefore ?? null;
+  useEffect(() => {
+    if (playback.playing && clock !== null) setMoment({ round, clockRounds: clock });
+    else setMoment(null);
+  }, [playback.playing, round, clock, setMoment]);
+  const beatMembers = playback.playing ? (playback.track?.members ?? null) : null;
+  useEffect(() => {
+    if (beatMembers === null) {
+      setMemberStates(null);
+      return;
+    }
+    const states: Record<string, PlaybackMemberState> = {};
+    for (const member of party) {
+      const shown = beatMembers[member.id];
+      if (!shown) continue;
+      const dead = shown.down && shown.conditions.includes('dead');
+      states[member.id] = { hp: shown.hp, maxHp: member.max_hp, conditions: shown.conditions, dead };
+    }
+    setMemberStates(states);
+  }, [beatMembers, party, setMemberStates]);
+  useEffect(
+    () => () => {
+      setPlaying(false);
+      setMoment(null);
+      setMemberStates(null);
+    },
+    [setPlaying, setMoment, setMemberStates],
+  );
 }

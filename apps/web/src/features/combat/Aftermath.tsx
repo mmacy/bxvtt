@@ -8,6 +8,7 @@ import {
   useGameMode,
   useReduceMotion,
   useRevision,
+  useParty,
   useScene,
   useSendCommand,
   type TableStore,
@@ -17,7 +18,7 @@ import { fightEvents, summarizeFight, xpSentence } from './fight';
 import { PlaybackStrip } from './PlaybackStrip';
 import { RangeTrack } from './RangeTrack';
 import { useCombatPeople } from './people';
-import { usePlayback } from './usePlayback';
+import { usePlayback, usePublishPlayback } from './usePlayback';
 import styles from './combat.module.css';
 import { useCombatText } from './text';
 
@@ -42,6 +43,8 @@ export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
   const revision = useRevision();
   const accept = useCallback((entry: GameEntry) => entry.revision === endRevision, [endRevision]);
   const playback = usePlayback({ afterSeq, accept });
+  // The party panel and the top bar follow the last round while it plays here, and settle when it ends.
+  usePublishPlayback(playback, useParty());
   const end = feed.find((e) => e.kind === 'game' && e.revision === endRevision && e.seq > afterSeq);
   const summary = useMemo(() => {
     if (!end) return null;

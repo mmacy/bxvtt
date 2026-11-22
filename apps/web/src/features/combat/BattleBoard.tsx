@@ -3,9 +3,8 @@ import type { DeclarationBody, DeclarationsState, GameEntry } from '@bxvtt/share
 import { conditionLabel, joinList, memberName, type TextContext } from '@bxvtt/shared/text';
 import { useEffect, useMemo, useState } from 'react';
 import {
+  battleRound,
   tokenClass,
-  useCombatStage,
-  type PlaybackMemberState,
   useCanDeclare,
   useCanResolveRound,
   useDeclarations,
@@ -50,7 +49,7 @@ import { trackFromView, type TrackMember } from './playback';
 import { RangeTrack } from './RangeTrack';
 import { MonsterRoster, RefereeActions } from './RefereeTools';
 import { useCombatUi } from './state';
-import { usePlayback } from './usePlayback';
+import { usePlayback, usePublishPlayback } from './usePlayback';
 import styles from './combat.module.css';
 import { useCombatText } from './text';
 
@@ -182,42 +181,8 @@ export function BattleBoard() {
     setPlayback(playback.playing, playback.playing ? playback.skip : null);
   }, [playback.playing, playback.skip, setPlayback]);
   useEffect(() => () => setPlayback(false, null), [setPlayback]);
-  // The shell holds its end screen while the round that ended the game plays back.
-  const setStagePlaying = useCombatStage((s) => s.setPlaying);
-  const setMoment = useCombatStage((s) => s.setMoment);
-  useEffect(() => setStagePlaying(playback.playing), [playback.playing, setStagePlaying]);
-  // The top bar shows the round and the clock of the round playing back, so it agrees with the board.
-  const momentRound = playback.current?.digest.round ?? null;
-  const momentClock = playback.current?.clockBefore ?? null;
-  useEffect(() => {
-    if (playback.playing && momentClock !== null) setMoment({ round: momentRound, clockRounds: momentClock });
-    else setMoment(null);
-  }, [playback.playing, momentRound, momentClock, setMoment]);
-  // The party panel shows each member as the beat on the board shows them.
-  const setMemberStates = useCombatStage((s) => s.setMemberStates);
-  const beatMembers = playback.playing ? (playback.track?.members ?? null) : null;
-  useEffect(() => {
-    if (beatMembers === null) {
-      setMemberStates(null);
-      return;
-    }
-    const states: Record<string, PlaybackMemberState> = {};
-    for (const member of party) {
-      const shown = beatMembers[member.id];
-      if (!shown) continue;
-      const dead = shown.down && shown.conditions.includes('dead');
-      states[member.id] = { hp: shown.hp, maxHp: member.max_hp, conditions: shown.conditions, dead };
-    }
-    setMemberStates(states);
-  }, [beatMembers, party, setMemberStates]);
-  useEffect(
-    () => () => {
-      setStagePlaying(false);
-      setMoment(null);
-      setMemberStates(null);
-    },
-    [setStagePlaying, setMoment, setMemberStates],
-  );
+  // The shell holds its end screen, the top bar shows the playing round, and the party panel follows the beats.
+  usePublishPlayback(playback, party);
 
   // When the fight ends, the shell unmounts this board. The aftermath plays the last round and sums up the fight
   // in the same place over the map.
@@ -243,11 +208,7 @@ export function BattleBoard() {
   const holding = liveEncounter === null;
   // While a round plays back, the heading names that round, as the top bar does. Then it names the next one.
   const playingRound = playback.playing ? (playback.current?.digest.round ?? null) : null;
-  const round =
-    playingRound ??
-    (holding
-      ? (playback.last?.digest.round ?? encounter.battle_round ?? 0)
-      : (encounter.battle_round ?? 0) + 1);
+  const round = playingRound ?? battleRound(encounter) ?? 1;
   const declarers = declarations?.declarers ?? encounter.declarers;
   const declared = declarations?.declared ?? [];
   const mine = declarers.filter((id) => people.isMine(id));
