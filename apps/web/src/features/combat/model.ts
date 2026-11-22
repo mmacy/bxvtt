@@ -40,6 +40,8 @@ export interface WeaponInfo {
    * weapon, such as a dagger or a spear, or a one-handed missile weapon that isn't a sling, such as a javelin.
    */
   thrown: boolean;
+  /** Whether it's a gear item that works as a weapon, such as a torch, rather than a weapon. */
+  improvised: boolean;
   /** The far end of the weapon's long range band, in feet, or `null` for a weapon with no ranges. */
   longRangeFeet: number | null;
 }
@@ -130,6 +132,7 @@ export function memberGear(member: MemberView, ctx: TextContext): MemberGear {
         missile: qualities.includes('missile'),
         reload: qualities.includes('reload'),
         thrown: isThrown(qualities),
+        improvised: false,
         longRangeFeet: longRange(record.missile_ranges),
       });
       continue;
@@ -149,6 +152,7 @@ export function memberGear(member: MemberView, ctx: TextContext): MemberGear {
       missile: qualities.includes('missile') && !qualities.includes('splash'),
       reload: qualities.includes('reload'),
       thrown: isThrown(qualities),
+      improvised: asString(template.item_type) !== 'weapon',
       longRangeFeet: longRange(template.missile_ranges ?? combat?.missile_ranges),
     });
   }
@@ -364,6 +368,93 @@ export function quickAttack(
   return { plan, declaration: plan.kind === 'out_of_reach' ? null : attackDeclaration(plan) };
 }
 
+// The suggested action -------------------------------------------------------------------------------------------
+
+/**
+ * The row's highlighted one-click choice. It is a default, never a rule: bxapi still decides what is legal, and
+ * every other choice stays one click away under "More choices".
+ *
+ * - `melee`: attack a group the member already stands against. Read from each group's `front_rank`.
+ * - `missile`: shoot or throw a wielded missile weapon at a group it reaches. Read from each group's
+ *   `member_distance_feet`, the weapon's `missile_ranges`, and `reloading`.
+ * - `cast`: open the Cast tab for a member with a spell memorized (`memorized_spells`). It never casts for them.
+ * - `close`: close in and attack, or close in, only for a member who looks like a front-line fighter by facts the
+ *   view states: in the party's front rank (`encounter.front_rank`), wielding a real melee weapon (the
+ *   inventory's `wielded`), wearing armour or a shield (`worn_armour`, `shield`), and of a class that casts no
+ *   spells at any level (the class catalog's magic abilities). Also needs the member to be able to move
+ *   (`immobile`).
+ * - `hold`: anyone else, with a line that says why.
+ */
+export type Suggestion =
+  | { kind: 'melee' | 'missile' | 'close'; body: DeclarationBody; plan: AttackPlan; reason: null }
+  | { kind: 'cast'; body: null; plan: null; reason: null }
+  | { kind: 'hold'; body: DeclarationBody; plan: null; reason: string };
+
+export interface SuggestionFacts {
+  /** Whether the member's class casts spells (a magic ability in the class catalog), at any level. */
+  casts: boolean;
+}
+
+/** Chooses the row's highlighted choice from what the view and the catalogs state. */
+export function suggestAction(
+  member: MemberView,
+  encounter: EncounterView | null,
+  gear: MemberGear,
+  facts: SuggestionFacts,
+): Suggestion | null {
+  if (encounter === null) return null;
+  const groups = liveGroups(encounter);
+  if (groups.length === 0) return null;
+  const byDistance = [...groups].sort((a, b) => memberDistance(a, member.id) - memberDistance(b, member.id));
+  // Already in melee: strike the group the member stands against.
+  const engaged = byDistance.find((g) => g.front_rank.includes(member.id));
+  if (engaged) {
+    const plan = planAttack(member, encounter, engaged, gear);
+    if (plan.kind === 'melee') return { kind: 'melee', body: attackDeclaration(plan), plan, reason: null };
+  }
+  // A missile weapon that reaches the nearest group it can.
+  for (const group of byDistance) {
+    const plan = planAttack(member, encounter, group, gear);
+    if (plan.kind === 'missile')
+      return { kind: 'missile', body: attackDeclaration(plan), plan, reason: null };
+  }
+  // A caster with a spell ready picks it on the Cast tab.
+  if (memorizedSpells(member).length > 0) return { kind: 'cast', body: null, plan: null, reason: null };
+  // Closing to melee, only for a member who looks like a front-line fighter.
+  const fighter =
+    encounter.front_rank.includes(member.id) &&
+    gear.wielded.some((w) => w.melee && !w.improvised) &&
+    hasArmour(member) &&
+    !facts.casts &&
+    !encounter.immobile.includes(member.id);
+  const nearest = byDistance[0];
+  if (fighter && nearest) {
+    const plan = planAttack(member, encounter, nearest, gear);
+    if (plan.kind === 'close' || plan.kind === 'melee')
+      return {
+        kind: plan.kind === 'melee' ? 'melee' : 'close',
+        body: attackDeclaration(plan),
+        plan,
+        reason: null,
+      };
+    if (plan.kind === 'out_of_reach') {
+      // Too far to strike this round: close in without attacking.
+      const body: DeclarationBody = { action: 'move', move: 'close', target_group_id: nearest.id };
+      return { kind: 'close', body, plan, reason: null };
+    }
+  }
+  const missile = gear.wielded.some((w) => w.missile);
+  const reason = !encounter.front_rank.includes(member.id)
+    ? `${member.name} is in the back rank with no missile weapon${missile ? ' in range' : ''}.`
+    : `${member.name} has no missile weapon${missile ? ' in range' : ''}. Close in from More choices if you mean to.`;
+  return { kind: 'hold', body: { action: 'hold' }, plan: null, reason };
+}
+
+function hasArmour(member: MemberView): boolean {
+  const inventory = asRecord(member.inventory);
+  return asRecord(inventory?.worn_armour) !== null || asRecord(inventory?.shield) !== null;
+}
+
 // Words for declarations ---------------------------------------------------------------------------------------
 
 function targetPhrase(ids: readonly string[], ctx: TextContext): string {
@@ -485,6 +576,23 @@ export function repeatProblem(
     if (!group || group.fled || group.count === 0) {
       return `${capitalize(groupName(d.target_group_id, ctx))} ${group?.fled ? 'have fled' : 'are gone'}.`;
     }
+  }
+  // An attack only repeats as it was: from where the member stands now, it must still be the same kind of attack.
+  // A melee attack whose member fell back, or a shot that no longer reaches, doesn't repeat.
+  if (d.action === 'attack' && d.target_group_id && encounter) {
+    const group = encounter.groups.find((g) => g.id === d.target_group_id);
+    if (group) {
+      const plan = planAttack(member, encounter, group, gear, d.weapon_id ?? null);
+      const where = groupName(d.target_group_id, ctx);
+      if (plan.kind === 'out_of_reach') return plan.reason;
+      if (plan.kind === 'close' && d.move !== 'close')
+        return `${member.name} is no longer in reach of ${where}.`;
+    }
+  }
+  if (d.action === 'move' && d.move === 'close' && d.target_group_id && encounter) {
+    const group = encounter.groups.find((g) => g.id === d.target_group_id);
+    if (group && group.front_rank.includes(member.id))
+      return `${member.name} already stands in melee with ${groupName(d.target_group_id, ctx)}.`;
   }
   if (d.action === 'cast' && d.spell_id) {
     const memorized = member.memorized_spells.some((s) => asRecord(s)?.spell_id === d.spell_id);

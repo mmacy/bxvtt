@@ -10,6 +10,7 @@ import {
   planAttack,
   quickAttack,
   refusalTexts,
+  suggestAction,
   repeatProblem,
   usableItems,
 } from './model';
@@ -281,5 +282,81 @@ describe('monster targets by handle', () => {
         ctx,
       ),
     ).toBe('Cast Magic Missile at Goblin 2');
+  });
+});
+
+describe('suggestAction', () => {
+  const facts = { casts: false };
+  const unarmoured = (m: MemberView): MemberView => ({
+    ...m,
+    inventory: { ...m.inventory, worn_armour: null, shield: null },
+  });
+
+  it('strikes the group a member already stands against', () => {
+    const { encounter, party } = battle();
+    const brenna = member(party, 'Brenna');
+    const engaged = withGroup(encounter, {
+      front_rank: [brenna.id],
+      member_distance_feet: { [brenna.id]: 5 },
+    });
+    expect(suggestAction(brenna, engaged, memberGear(brenna, emptyContext()), facts)?.kind).toBe('melee');
+  });
+
+  it('shoots with a missile weapon in range before anything else', () => {
+    const { encounter, party } = battle();
+    const wren = member(party, 'Wren');
+    const armed = { ...wren, inventory: { ...wren.inventory, wielded: [sling] } };
+    const suggestion = suggestAction(armed, encounter, memberGear(armed, emptyContext()), facts);
+    expect(suggestion?.kind).toBe('missile');
+    expect(suggestion?.body).toEqual({ action: 'attack', target_group_id: 'group-0001' });
+  });
+
+  it('offers the Cast tab to a caster with a spell ready, and never casts for them', () => {
+    const { encounter, party } = battle();
+    const osric = {
+      ...member(party, 'Osric'),
+      memorized_spells: [{ spell_id: 'cure_light_wounds', reversed: false }],
+    };
+    const suggestion = suggestAction(osric, encounter, memberGear(osric, emptyContext()), { casts: true });
+    expect(suggestion).toMatchObject({ kind: 'cast', body: null });
+  });
+
+  it('closes in only for an armoured front-line fighter who casts no spells', () => {
+    const { encounter, party } = battle();
+    const brenna = { ...member(party, 'Brenna'), encounter_rate_feet: 40 };
+    const gear = memberGear(brenna, emptyContext());
+    expect(suggestAction(brenna, encounter, gear, facts)?.kind).toBe('close');
+    // The same member without armour, or of a class that casts, holds instead.
+    expect(
+      suggestAction(unarmoured(brenna), encounter, memberGear(unarmoured(brenna), emptyContext()), facts)
+        ?.kind,
+    ).toBe('hold');
+    expect(suggestAction(brenna, encounter, gear, { casts: true })?.kind).toBe('hold');
+  });
+
+  it('holds a back-rank member with no missile weapon, and says why', () => {
+    const { encounter, party } = battle();
+    const brenna = member(party, 'Brenna');
+    const back = { ...encounter, front_rank: ['character-0002'] };
+    const suggestion = suggestAction(brenna, back, memberGear(brenna, emptyContext()), facts);
+    expect(suggestion).toMatchObject({ kind: 'hold', body: { action: 'hold' } });
+    expect(suggestion?.reason).toBe('Brenna is in the back rank with no missile weapon.');
+  });
+});
+
+describe('repeating last round after the situation changed', () => {
+  it('refuses to repeat a melee attack once the member has fallen back', () => {
+    const { view, encounter, party } = battle();
+    const ctx = contextFromPlayerView(view);
+    const brenna = { ...member(party, 'Brenna'), encounter_rate_feet: 40 };
+    expect(
+      repeatProblem(
+        { action: 'attack', target_group_id: 'group-0001' },
+        brenna,
+        encounter,
+        memberGear(brenna, ctx),
+        ctx,
+      ),
+    ).toBe('Brenna is no longer in reach of the goblins.');
   });
 });

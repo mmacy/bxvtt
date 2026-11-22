@@ -71,3 +71,15 @@ export function useCasting(member: MemberView): CastingState {
     return { caster, reason: noSpellsReason(member.name, castEverySpell(feed, member.id)) };
   }, [entry, member, feed]);
 }
+
+/**
+ * Whether a member's class is a spellcasting class at all (a magic ability in the class catalog), or has a spell
+ * book, whatever their level. The row's suggestion keeps such members out of melee by default.
+ */
+export function useMemberCasts(member: MemberView | null): boolean {
+  const entry = useRulesEntry<ClassDetail>(member ? `classes/${member.class_id}` : null).data;
+  if (member === null) return false;
+  const abilities = Array.isArray(entry?.abilities) ? entry.abilities : [];
+  const magic = abilities.some((a) => a.tag === 'arcane_magic' || a.tag === 'divine_magic');
+  return magic || (member.spell_book ?? []).length > 0;
+}

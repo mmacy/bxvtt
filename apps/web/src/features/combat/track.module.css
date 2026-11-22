@@ -15,7 +15,8 @@
 
 .compact .lane {
   --center: 58px;
-  height: 104px;
+  /* Room under the tokens for a group's three label lines, clear of the label row below. */
+  height: 118px;
 }
 
 .labels {

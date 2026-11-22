@@ -1,6 +1,6 @@
 import type { EncounterView, MemberView } from '@bxvtt/shared/bxapi';
 import type { DeclarationBody, DeclarationsState, GameEntry } from '@bxvtt/shared/protocol';
-import { conditionLabel, joinList, memberName, type TextContext } from '@bxvtt/shared/text';
+import { conditionLabel, groupName, joinList, memberName, type TextContext } from '@bxvtt/shared/text';
 import { useEffect, useMemo, useState } from 'react';
 import {
   battleRound,
@@ -30,15 +30,19 @@ import {
   Icon,
   IconButton,
   TokenPortrait,
+  type IconName,
 } from '@/ui';
 import { showAftermath } from './Aftermath';
+import { useMemberCasts } from './casting';
 import { Composer } from './Composer';
 import { previousDeclaration, recordSnapshot, rememberDeclarations, useCombatMemory } from './memory';
 import {
   declarationBody,
   describeDeclaration,
   memberGear,
-  quickAttack,
+  suggestAction,
+  type Suggestion,
+  type SuggestionFacts,
   refusalTexts,
   repeatProblem,
   type MemberGear,
@@ -68,35 +72,52 @@ function isRound(entry: GameEntry): boolean {
   );
 }
 
-/** The quick action for a member: attack the nearest group, or close in when it's out of reach. */
+/** The row's highlighted choice, from {@link suggestAction}, in words for its button. */
+export interface QuickAction {
+  kind: Suggestion['kind'];
+  label: string;
+  /** What the button declares, or `null` for a choice that opens the composer (a spell). */
+  body: DeclarationBody | null;
+  /** Why the suggestion is to hold, shown under the member's name. */
+  reason: string | null;
+}
+
+/**
+ * The quick action for a member: a melee attack for a member already in melee, a missile attack in range, the
+ * Cast tab for a member with a spell ready, closing in only for a front-line fighter, and otherwise holding.
+ */
 export function quickAction(
   member: MemberView,
   encounter: EncounterView | null,
   gear: MemberGear,
   ctx: TextContext,
-): { label: string; body: DeclarationBody | null; reason: string | null } | null {
-  const quick = quickAttack(member, encounter, gear);
-  if (quick === null) return null;
-  if (quick.declaration !== null)
-    return {
-      label: describeDeclaration(quick.declaration, ctx, gear),
-      body: quick.declaration,
-      reason: null,
-    };
-  if (encounter !== null && !encounter.immobile.includes(member.id)) {
-    const body: DeclarationBody = { action: 'move', move: 'close', target_group_id: quick.plan.group.id };
-    return { label: describeDeclaration(body, ctx, gear), body, reason: quick.plan.reason };
-  }
-  return {
-    label: describeDeclaration(attackBody(quick.plan.group.id), ctx, gear),
-    body: null,
-    reason: quick.plan.reason,
-  };
+  facts: SuggestionFacts,
+): QuickAction | null {
+  const suggestion = suggestAction(member, encounter, gear, facts);
+  if (suggestion === null) return null;
+  if (suggestion.kind === 'cast') return { kind: 'cast', label: 'Choose a spell', body: null, reason: null };
+  if (suggestion.kind === 'hold')
+    return { kind: 'hold', label: 'Hold', body: suggestion.body, reason: suggestion.reason };
+  // A missile attack says how it attacks, so a thrown dagger never reads like a melee attack.
+  const weapon = suggestion.plan.weapon;
+  const group = groupName(suggestion.plan.group.id, ctx);
+  const label =
+    suggestion.kind === 'missile' && weapon
+      ? weapon.thrown
+        ? `Throw ${weapon.name} at ${group}`
+        : `Shoot at ${group} with ${weapon.name}`
+      : describeDeclaration(suggestion.body, ctx, gear);
+  return { kind: suggestion.kind, label, body: suggestion.body, reason: null };
 }
 
-function attackBody(groupId: string): DeclarationBody {
-  return { action: 'attack', target_group_id: groupId };
-}
+/** The icon of each kind of suggestion. */
+export const QUICK_ICONS: Record<QuickAction['kind'], IconName> = {
+  melee: 'weapon-sword',
+  missile: 'weapon-bow',
+  cast: 'spell',
+  close: 'footprints',
+  hold: 'pause',
+};
 
 /** Repeats last round's declaration for each of the given members that has one and still fits. */
 export function useRepeatLastRound(): {
@@ -416,7 +437,9 @@ function MemberRow({
   const hp = shown ? shown.hp : member.current_hp;
   const dead = shown ? shown.down && shown.conditions.includes('dead') : member.conditions.includes('dead');
   const down = shown ? shown.down || shown.hp <= 0 : dead || member.current_hp <= 0;
-  const quick = mine && canAct && !declaration ? quickAction(member, encounter, gear, ctx) : null;
+  const casts = useMemberCasts(member);
+  const suggestion = canAct && !declaration ? quickAction(member, encounter, gear, ctx, { casts }) : null;
+  const quick = mine ? suggestion : null;
   const again = mine && canAct && !declaration ? repeat.candidates([member.id])[0] : undefined;
   const [error, setError] = useState<string | null>(null);
 
@@ -442,6 +465,8 @@ function MemberRow({
   } else if (mine || composing) {
     status = composing ? (
       <span className={styles.statusChoosing}>Choosing…</span>
+    ) : quick?.reason ? (
+      <span className={styles.statusMuted}>{quick.reason}</span>
     ) : quick ? null : (
       <span className={styles.statusChoosing}>Not declared yet</span>
     );
@@ -507,11 +532,9 @@ function MemberRow({
             <Button
               size="sm"
               variant="secondary"
-              icon={quick.body?.action === 'move' ? 'footprints' : 'weapon-sword'}
+              icon={QUICK_ICONS[quick.kind]}
               loading={pending}
-              disabled={quick.body === null}
-              title={quick.reason ?? undefined}
-              onClick={() => quick.body && void send(quick.body)}
+              onClick={() => (quick.body ? void send(quick.body) : onCompose(true))}
             >
               {quick.label}
             </Button>
@@ -555,7 +578,7 @@ function MemberRow({
           gear={gear}
           current={declaration ? declarationBody(declaration) : null}
           suggested={
-            canAct && !declaration ? (quickAction(member, encounter, gear, ctx)?.body ?? null) : null
+            suggestion ? (suggestion.body ?? (suggestion.kind === 'cast' ? { action: 'cast' } : null)) : null
           }
           refusals={refusals}
           onDeclared={onDeclared}

@@ -12,7 +12,8 @@ import {
   useTableSettings,
 } from '@/app';
 import { ActionBarDivider, ActionBarItem, Button, Kbd } from '@/ui';
-import { quickAction, useRepeatLastRound } from './BattleBoard';
+import { QUICK_ICONS, quickAction, useRepeatLastRound } from './BattleBoard';
+import { useMemberCasts } from './casting';
 import { memberGear } from './model';
 import { useCombatPeople } from './people';
 import { useCombatUi } from './state';
@@ -202,17 +203,22 @@ function BattleActions() {
   const mine = declarers.filter((id) => people.isMine(id));
   const next = mine.find((id) => !declared.includes(id)) ?? null;
   const nextMember = party.find((m) => m.id === next) ?? null;
+  const casts = useMemberCasts(nextMember);
   const quick = useMemo(
-    () => (nextMember ? quickAction(nextMember, encounter, memberGear(nextMember, ctx), ctx) : null),
-    [nextMember, encounter, ctx],
+    () =>
+      nextMember ? quickAction(nextMember, encounter, memberGear(nextMember, ctx), ctx, { casts }) : null,
+    [nextMember, encounter, ctx, casts],
   );
   const repeatable = repeat.candidates(mine.filter((id) => !declared.includes(id)));
   const everyone = declarers.length > 0 && declarers.every((id) => declared.includes(id));
   const auto = settings?.auto_resolve ?? true;
   const showResolve = canResolve.allowed && !auto;
 
+  // The bar offers the same highlighted choice as the member's row: it declares it, or opens the Cast tab.
   const attack = () => {
-    if (next && quick?.body) void declare(next, quick.body);
+    if (!next || !quick) return;
+    if (quick.body) void declare(next, quick.body);
+    else openComposer(next);
   };
   const again = () => {
     if (repeatable.length > 0) void repeat.run(mine);
@@ -224,7 +230,7 @@ function BattleActions() {
   useShortcut({
     id: 'combat.quick',
     keys: 'a',
-    label: 'Attack the nearest monsters',
+    label: "Take the next character's suggested action",
     group,
     enabled: composing === null,
     run: attack,
@@ -271,12 +277,12 @@ function BattleActions() {
       ))}
       {composing === null && nextMember && quick && (
         <ActionButton
-          label={quick.body ? `${nextMember.name}: ${quick.label}` : `${nextMember.name} can't reach anyone`}
+          label={`${nextMember.name}: ${quick.label}`}
           keys="a"
-          icon={quick.body?.action === 'move' ? 'footprints' : 'weapon-sword'}
+          icon={QUICK_ICONS[quick.kind]}
           onClick={attack}
-          disabled={quick.body === null || pending}
-          reason={quick.reason}
+          disabled={pending}
+          detail={quick.reason ?? undefined}
         />
       )}
       {repeatable.length > 0 && (

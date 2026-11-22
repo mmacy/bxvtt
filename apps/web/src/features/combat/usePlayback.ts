@@ -188,10 +188,14 @@ export function usePlayback(options: PlaybackOptions): PlaybackView {
           return matches.length === 1 ? (matches[0]?.id ?? null) : null;
         };
         // A parley is narrated as a whole by the text layer, with the speaker the entry names.
-        const beats =
+        // A parley, and an entry whose events say nothing (a wait while the monsters hold back), are narrated as
+        // a whole by the text layer, so the panel and the feed say the same sentence.
+        const whole = () => linesToBeats(describeGameEntry(entry, ctx, lens ? {} : { only: 'player' }));
+        const built =
           entry.command_type === 'parley'
-            ? linesToBeats(describeGameEntry(entry, ctx, lens ? {} : { only: 'player' }))
+            ? whole()
             : buildBeats(events, named, { includeReferee: lens, messages: entry.messages, lookup: local });
+        const beats = built.length > 0 ? built : whole();
         const start = before ? trackFromView(before.encounter, before.party) : null;
         return {
           seq: entry.seq,
