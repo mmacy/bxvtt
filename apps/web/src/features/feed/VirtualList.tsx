@@ -1,5 +1,6 @@
 import {
   forwardRef,
+  memo,
   useCallback,
   useEffect,
   useImperativeHandle,
@@ -47,6 +48,24 @@ export interface VirtualListProps<T> extends Omit<HTMLAttributes<HTMLDivElement>
   bodyProps?: HTMLAttributes<HTMLDivElement>;
 }
 
+interface RowProps<T> {
+  rowKey: string;
+  item: T;
+  renderItem: (item: T) => ReactNode;
+  measure: (element: HTMLDivElement | null) => (() => void) | undefined;
+}
+
+function RowInner<T>({ rowKey, item, renderItem, measure }: RowProps<T>) {
+  return (
+    <div data-row-key={rowKey} ref={measure}>
+      {renderItem(item)}
+    </div>
+  );
+}
+
+/** One row. It renders again only when its item changes, so a scroll or a measurement leaves the rest alone. */
+const Row = memo(RowInner) as typeof RowInner;
+
 /**
  * A scrolling list that renders only the rows near the viewport. Rows measure themselves, the list keeps the row
  * at the top of the viewport still when rows above it change (such as older entries loading), and it sticks to
@@ -69,13 +88,15 @@ function VirtualListInner<T>(
   const scroller = useRef<HTMLDivElement | null>(null);
   const headerElement = useRef<HTMLDivElement | null>(null);
   const [model] = useState(() => new ListModel());
-  const version = useSyncExternalStore(model.subscribe, model.getVersion, model.getVersion);
+  useSyncExternalStore(model.subscribe, model.getVersion, model.getVersion);
+  const measureVersion = model.measureVersion;
 
   const keys = useMemo(() => items.map(getKey), [items, getKey]);
-  // `version` changes when a row is measured, so the offsets are recomputed with the new height.
+  // `measureVersion` changes when a row is measured, so the offsets are recomputed with the new height. A scroll
+  // doesn't change it, so scrolling reuses the offsets.
   const offsets = useMemo(
-    () => (version >= 0 ? model.offsets(items, keys, estimateSize) : []),
-    [model, items, keys, estimateSize, version],
+    () => (measureVersion >= 0 ? model.offsets(items, keys, estimateSize) : []),
+    [model, items, keys, estimateSize, measureVersion],
   );
   const total = offsets[items.length] ?? 0;
   const targetTop = model.targetTop(keys, offsets, followOutput);
@@ -104,11 +125,18 @@ function VirtualListInner<T>(
     onScrollStateChange?.({ atBottom, scrollTop: element.scrollTop });
   }, [model, keys, offsets, onScrollStateChange]);
 
-  // Put the viewport where it belongs after layout and before paint, so the reader never sees a jump.
+  // Put the viewport where it belongs after layout and before paint, so the reader never sees a jump. A render
+  // from a scroll alone leaves the rows where they are, so it skips this: reading the scroll position forces the
+  // browser to lay out the page at once.
+  const placed = useRef<{ offsets: readonly number[]; follow: boolean; height: number } | null>(null);
   useLayoutEffect(() => {
     const element = scroller.current;
     if (!element) return;
-    if (model.atBottom && followOutput) {
+    const follow = model.atBottom && followOutput;
+    const last = placed.current;
+    if (last?.offsets === offsets && last.follow === follow && last.height === viewportHeight) return;
+    placed.current = { offsets, follow, height: viewportHeight };
+    if (follow) {
       element.scrollTop = element.scrollHeight;
     } else if (Math.abs(element.scrollTop - targetTop) >= 1) {
       element.scrollTop = targetTop;
@@ -217,11 +245,7 @@ function VirtualListInner<T>(
         {padTop > 0 && <div aria-hidden="true" style={{ height: padTop }} />}
         {items.slice(start, end).map((item, offset) => {
           const key = keys[start + offset] ?? String(start + offset);
-          return (
-            <div key={key} data-row-key={key} ref={measure}>
-              {renderItem(item)}
-            </div>
-          );
+          return <Row key={key} rowKey={key} item={item} renderItem={renderItem} measure={measure} />;
         })}
         {padBottom > 0 && <div aria-hidden="true" style={{ height: padBottom }} />}
       </div>

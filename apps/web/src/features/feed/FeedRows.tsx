@@ -462,8 +462,8 @@ const MovesRow = memo(function MovesRow({
   );
 });
 
-/** Renders one row of the feed list. */
-export function FeedRowView({ row }: { row: FeedRow }) {
+/** Renders one row of the feed list. A row object that didn't change skips rendering. */
+export const FeedRowView = memo(function FeedRowView({ row }: { row: FeedRow }) {
   switch (row.type) {
     case 'day':
       return <DayDivider label={row.label} />;
@@ -480,4 +480,4 @@ export function FeedRowView({ row }: { row: FeedRow }) {
     case 'moves':
       return <MovesRow entries={row.entries} steps={row.steps} checks={row.checks} userId={row.userId} />;
   }
-}
+});

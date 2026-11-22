@@ -42,16 +42,19 @@ export function systemSentence(entry: SystemEntry, nameOf: NameOf, ctx: TextCont
     case 'game_ended':
       return `${actor} ended the game, and the table is back in its lobby.`;
     case 'save_created': {
+      // The label is a save's name, so it is quoted as a name rather than run into the sentence.
       const label = param(entry, 'label');
       if (entry.params.autosave === true) {
-        return label ? `Autosaved: ${label.replace(AUTOSAVE_PREFIX, '')}.` : 'The server saved the game.';
+        return label
+          ? `The server saved the game as “${label.replace(AUTOSAVE_PREFIX, '')}”.`
+          : 'The server saved the game.';
       }
-      return label ? `${actor} saved the game: ${label}.` : `${actor} saved the game.`;
+      return label ? `${actor} saved the game as “${label}”.` : `${actor} saved the game.`;
     }
     case 'save_restored': {
       const label = param(entry, 'label');
       return label
-        ? `${actor} restored a save: ${label.replace(AUTOSAVE_PREFIX, '')}.`
+        ? `${actor} restored the save “${label.replace(AUTOSAVE_PREFIX, '')}”.`
         : `${actor} restored a save.`;
     }
     case 'seat_changed': {

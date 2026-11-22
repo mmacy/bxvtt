@@ -20,6 +20,10 @@
   flex: 1;
 }
 
+.body:focus-visible {
+  outline-offset: -2px;
+}
+
 .body {
   flex: 1;
   min-height: 0;

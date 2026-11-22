@@ -6,6 +6,7 @@ import { addDie, EMPTY_TRAY, parseDiceExpression, rollSentence, rollView, trayEx
 import { markupText, parseMarkup } from './markup';
 import { movementRunText, movementSteps, narrateEntry } from './narrate';
 import { buildRows, isEntryVisible, type FeedRow, type RowOptions } from './rows';
+import { systemSentence } from './text';
 import { soundFor } from '../sounds';
 
 const RUTH = 'usr_ruthruthruthruthruthr';
@@ -461,5 +462,21 @@ describe('recorded names', () => {
     const after = narrateEntry(entry, ctx, { lens: false }).text;
     expect(before).toContain('A monster misses Brenna');
     expect(after).toContain('A goblin misses Brenna');
+  });
+});
+
+describe('save notices', () => {
+  it('quotes a save label as a name', () => {
+    const nameOf = () => 'Ruth';
+    expect(
+      systemSentence(
+        system('save_created', { label: "Autosave: Entered The priory on Corvane's Holm", autosave: true }),
+        nameOf,
+        ctx,
+      ),
+    ).toBe("The server saved the game as “Entered The priory on Corvane's Holm”.");
+    expect(
+      systemSentence(system('save_created', { label: 'Before the crypt', autosave: false }), nameOf, ctx),
+    ).toBe('Ruth saved the game as “Before the crypt”.');
   });
 });

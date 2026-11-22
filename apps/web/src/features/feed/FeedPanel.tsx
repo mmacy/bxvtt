@@ -24,7 +24,7 @@ import {
   useMediaQuery,
   type SegmentedOption,
 } from '@/ui';
-import { buildRows, estimateRowHeight, type FeedFilter, type FeedRow } from './model/rows';
+import { buildRows, estimateRowHeight, RowCache, type FeedFilter, type FeedRow } from './model/rows';
 import { readLastSeen, writeLastSeen } from './model/storage';
 import { announcementFor } from './announce';
 import { usePageVisible } from './usePageVisible';
@@ -56,6 +56,7 @@ const FILTER_EMPTY: Record<FeedFilter, { title: string; description: string }> =
 };
 
 const getKey = (row: FeedRow) => row.key;
+const renderRow = (row: FeedRow) => <FeedRowView row={row} />;
 
 /** The feed tab of the dock: chat, whispers, dice rolls, and the game log, with a message box. */
 export function FeedPanel() {
@@ -138,19 +139,19 @@ export function FeedPanel() {
     (entry: FeedEntry) => searchText(entry, { ctx, lens, nameOf }),
     [ctx, lens, nameOf],
   );
-  const rows = useMemo(
-    () =>
-      buildRows(feed, {
-        selfId,
-        lens,
-        filter: activeFilter,
-        query: searchOpen ? query : '',
-        textOf,
-        unreadAfter,
-        now: new Date(),
-      }),
-    [feed, selfId, lens, activeFilter, searchOpen, query, textOf, unreadAfter],
-  );
+  const [rowCache] = useState(() => new RowCache());
+  const rows = useMemo(() => {
+    const built = buildRows(feed, {
+      selfId,
+      lens,
+      filter: activeFilter,
+      query: searchOpen ? query : '',
+      textOf,
+      unreadAfter,
+      now: new Date(),
+    });
+    return rowCache.reuse(built);
+  }, [rowCache, feed, selfId, lens, activeFilter, searchOpen, query, textOf, unreadAfter]);
 
   const view: FeedView = useMemo(
     () => ({
@@ -332,7 +333,7 @@ export function FeedPanel() {
               items={rows}
               getKey={getKey}
               estimateSize={estimateRowHeight}
-              renderItem={(row) => <FeedRowView row={row} />}
+              renderItem={renderRow}
               followOutput
               onScrollStateChange={onScrollStateChange}
               header={header}

@@ -97,13 +97,36 @@ export function foldText(text: string): string {
   return text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 }
 
+const dayFormats = new Map<string, Intl.DateTimeFormat>();
+
+/** A formatter for the day of a date, made once per time zone: building one for every entry is slow. */
+function dayFormat(timeZone: string | undefined): Intl.DateTimeFormat {
+  const key = timeZone ?? '';
+  let format = dayFormats.get(key);
+  if (!format) {
+    format = new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    dayFormats.set(key, format);
+  }
+  return format;
+}
+
+const dayKeys = new Map<string, string>();
+
 function dayKey(date: Date, timeZone: string | undefined): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(date);
+  // Entries keep their timestamps, so each one's day is formatted once.
+  const cacheKey = `${timeZone ?? ''}|${date.getTime()}`;
+  let key = dayKeys.get(cacheKey);
+  if (key === undefined) {
+    key = dayFormat(timeZone).format(date);
+    if (dayKeys.size > 20_000) dayKeys.clear();
+    dayKeys.set(cacheKey, key);
+  }
+  return key;
 }
 
 /**
@@ -286,5 +309,60 @@ export function lastSeqOf(row: FeedRow): number | null {
       return row.entry?.seq ?? null;
     default:
       return null;
+  }
+}
+
+function sameEntries(a: readonly FeedEntry[], b: readonly FeedEntry[]): boolean {
+  return a.length === b.length && a.every((entry, index) => entry === b[index]);
+}
+
+function sameRow(a: FeedRow, b: FeedRow): boolean {
+  if (a.type !== b.type || a.key !== b.key) return false;
+  switch (a.type) {
+    case 'day':
+      return b.type === 'day' && a.label === b.label;
+    case 'unread':
+      return true;
+    case 'session':
+      return b.type === 'session' && a.entry === b.entry && a.sessionId === b.sessionId;
+    case 'system':
+      return b.type === 'system' && a.entry === b.entry;
+    case 'game':
+      return b.type === 'game' && a.entry === b.entry && a.compact === b.compact;
+    case 'messages':
+      return b.type === 'messages' && a.userId === b.userId && sameEntries(a.entries, b.entries);
+    case 'moves':
+      return (
+        b.type === 'moves' &&
+        a.userId === b.userId &&
+        a.checks === b.checks &&
+        sameEntries(a.entries, b.entries)
+      );
+  }
+}
+
+/**
+ * Keeps the row objects that didn't change since the last build, so the list's memoized rows skip rendering when
+ * one entry arrives at the bottom of a long feed.
+ *
+ * @param previous - The rows of the last build.
+ * @param next - The rows just built.
+ */
+export function reuseRows(previous: readonly FeedRow[], next: FeedRow[]): FeedRow[] {
+  if (previous.length === 0) return next;
+  const byKey = new Map(previous.map((row) => [row.key, row]));
+  return next.map((row) => {
+    const old = byKey.get(row.key);
+    return old !== undefined && sameRow(old, row) ? old : row;
+  });
+}
+
+/** Remembers the last rows, so each build keeps the row objects that didn't change. */
+export class RowCache {
+  private last: FeedRow[] = [];
+
+  reuse(next: FeedRow[]): FeedRow[] {
+    this.last = reuseRows(this.last, next);
+    return this.last;
   }
 }

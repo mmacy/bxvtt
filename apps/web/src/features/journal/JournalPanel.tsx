@@ -37,6 +37,8 @@ export function JournalPanel() {
       <div
         className={styles.body}
         role="region"
+        // The body scrolls, so it takes focus for keyboard scrolling, as the feed's list does.
+        tabIndex={0}
         aria-label={
           choices.section === 'quests' ? 'Quests' : choices.section === 'journal' ? 'Journal' : 'Party notes'
         }
