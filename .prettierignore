@@ -1,0 +1,10 @@
+node_modules
+dist
+.data
+package-lock.json
+packages/shared/src/bxapi/openapi.json
+packages/shared/src/bxapi/schema.d.ts
+adventures/*.json
+playwright-report
+test-results
+*.md

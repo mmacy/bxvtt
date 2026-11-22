@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.data/
+*.db
+*.db-shm
+*.db-wal
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
+coverage/
+playwright-report/
+test-results/
+.playwright-cli/
+*.tsbuildinfo
