@@ -96,6 +96,7 @@ describe('the scene', () => {
       names: expect.any(Object),
       can_travel_to_town: false,
       targets: [],
+      dungeon_names: {},
     });
     const entered = await alice.client.sendCommand(tableId, {
       command_type: 'enter_dungeon',

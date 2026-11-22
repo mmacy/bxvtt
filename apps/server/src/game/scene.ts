@@ -154,6 +154,22 @@ export function templateNames(
 }
 
 /**
+ * The names of the dungeons the party has entered: those on its map, and the one it stands in.
+ *
+ * @param view - The player view.
+ * @param adventure - The adventure.
+ */
+export function enteredDungeonNames(view: PlayerView, adventure: Adventure): Record<string, string> {
+  const ids = new Set(view.explored.map((known) => known.dungeon_id));
+  if (view.location.kind === 'dungeon' && view.location.dungeon_id != null) ids.add(view.location.dungeon_id);
+  const names: Record<string, string> = {};
+  for (const dungeon of adventure.dungeons) {
+    if (ids.has(dungeon.id) && dungeon.name) names[dungeon.id] = dungeon.name;
+  }
+  return names;
+}
+
+/**
  * Builds the scene for a game from the player view and the referee view's adventure and dungeon overlay. See
  * the protocol's `Scene` for the rules. The function errs toward hiding: it reveals only what osrlib marks as
  * known to the party, and leaves the rest for the referee to describe.
@@ -362,5 +378,6 @@ export function buildScene(view: PlayerView, source: SceneSource, names: Map<str
     // The condition of osrlib's `_handle_travel_to_town`, in a mode where the command is allowed.
     can_travel_to_town: view.mode === 'exploring' && here?.at_entrance === true,
     targets: [],
+    dungeon_names: enteredDungeonNames(view, source.adventure),
   };
 }

@@ -59,11 +59,23 @@ For the scene, add the names after you read the player view:
 ctx = extendContextWithNames(contextFromPlayerView(game.view, ctx), game.scene.names);
 ```
 
-For a game entry from the feed, add the entry's own names, so a battle that ended reads "A goblin hits Osric" as it did live:
+For a game entry from the feed, call `describeGameEntry`. It adds the entry's own names, so a battle that ended reads "A goblin hits Osric" as it did live, and it tells the command's side where the events leave out who acted, so a talk reads "Osric talks to the goblins. They are uncertain now.":
 
 ```ts
-const lines = describeEvents(entry.events, extendContextWithEntryNames(ctx, entry.names));
+ctx = extendContextWithScene(contextFromPlayerView(game.view, ctx), game.scene); // item and dungeon names
+const lines = describeGameEntry(entry, ctx, { only: 'player' });
 ```
+
+`extendContextWithScene(ctx, scene)` adds `scene.names` and `scene.dungeon_names`, so a player reads "the priory on Corvane's Holm" where a dungeon would otherwise read by its ID.
+
+## Names in sentences
+
+One rule covers every name with a leading article: a leading "The" reads "the" in the middle of a sentence, and the rest of the name keeps its capitals. At the start of a sentence, use the name as written.
+
+- `nameInSentence(name)`: "Set out for ${nameInSentence(dungeon.name)}?" gives "Set out for the priory on Corvane's Holm?". A name without a leading "The" is returned as written.
+- `placeInSentence(name)`: adds the article a place needs after a verb such as "enters": `the guardroom`, `the Drain Folk warren`, `the priory on Corvane's Holm`. A name in sentence case reads in lower case, and a name with another capitalized word keeps its capitals.
+
+A group label is a proper name when the adventure capitalizes it, such as `Mag Corrie` or `Gashnak One-Ear`. A proper name takes no article and no plural: "Mag Corrie hits Osric", "Mag Corrie flees". `isProperLabel(label)` tells the two apart, and `countedLabel(label, plural, count)` writes a group in a list (`2 goblins`, `an ink-stained clerk`, `Mag Corrie`). osrlib's event for an encounter's start names only the first group and counts every monster, so the text lists the groups the context knows: "The party meets Mag Corrie and Mag's bodyguard, 20 feet away."
 
 ## Name items
 

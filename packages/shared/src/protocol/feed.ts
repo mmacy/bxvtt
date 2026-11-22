@@ -49,6 +49,8 @@ export const EntryLabel = z.object({
   label: z.string(),
   /** What to call several: `goblins`. */
   label_plural: z.string(),
+  /** For a group, how many of it were alive when the entry was written. */
+  count: z.number().int().optional(),
 });
 /** What players called one monster group or monster. */
 export type EntryLabel = z.infer<typeof EntryLabel>;
@@ -58,7 +60,9 @@ export type EntryLabel = z.infer<typeof EntryLabel>;
  * a client narrates the entry later as it read live: after the fight ended and the encounter left the player
  * view, or in a new browser. Pass it to `extendContextWithEntryNames` from `@bxvtt/shared/text`.
  *
- * Each record holds only the IDs that the entry's events name. A monster has its group's label as the player
+ * Each record holds only the IDs that the entry's events name, except `groups`, which also holds every group of
+ * the encounter open when the command ran, with its size, so a talk or the start of an encounter can name the
+ * monsters. A monster has its group's label as the player
  * view showed it, such as `robed corpse`, never its template's true name. An item has the name the party knew,
  * so an unidentified magic item keeps its masked name.
  */
@@ -71,6 +75,11 @@ export const EntryNames = z.object({
   monsters: z.record(z.string(), EntryLabel),
   /** Item display names by item ID, as in `scene.names`. */
   items: z.record(z.string(), z.string()),
+  /**
+   * Dungeon names by dungeon ID, for the dungeons the events name that the party has entered, as in
+   * `scene.dungeon_names`. Optional in the type so that older fixtures still compile.
+   */
+  dungeons: z.record(z.string(), z.string()).optional(),
 });
 /** The display names for the IDs in a game entry's events. */
 export type EntryNames = z.infer<typeof EntryNames>;
@@ -102,6 +111,13 @@ export const GameEntry = FeedEntryBase.extend({
    * fixtures still compile.
    */
   names: EntryNames.optional(),
+  /**
+   * The party member who acted: the member a member command names, or the speaker of a `parley` and the
+   * searcher of a `search`. `null` for a command that names no member, and in a player's copy of a referee
+   * command. `describeGameEntry` from `@bxvtt/shared/text` uses it, for example to name who talked. Optional in
+   * the type so that older fixtures still compile.
+   */
+  actor_id: z.string().nullable().optional(),
 });
 
 /** What a system notice reports. The client writes the sentence from `code` and `params`. */

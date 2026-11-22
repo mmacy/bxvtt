@@ -116,7 +116,10 @@ describe('names on feed entries', () => {
       );
     }
     const backfilled = await battleEntries(alice, tableId);
-    expect(backfilled.map((entry) => entry.names)).toEqual(entries.map((entry) => entry.names));
+    // The server still knows the members and each monster's label. The groups of an encounter that has ended,
+    // which only an entry written at the time holds, are gone.
+    const known = (entry: GameEntry) => ({ members: entry.names?.members, monsters: entry.names?.monsters });
+    expect(backfilled.map(known)).toEqual(entries.map(known));
   });
 
   it('stores the label players see for a disguised monster, never its true name', async () => {
@@ -151,7 +154,7 @@ describe('names on feed entries', () => {
     const labels = names.flatMap((entry) => Object.values(entry.monsters).map((label) => label.label));
     expect(labels).toContain('robed corpse');
     const stored = JSON.stringify(names);
-    expect(stored).not.toMatch(/prior/i);
+    expect(stored).not.toMatch(/drowned[ _]prior/i);
     expect(findRefereeData([stored, ...alice.received], ['Drowned Prior'])).toEqual([]);
   });
 

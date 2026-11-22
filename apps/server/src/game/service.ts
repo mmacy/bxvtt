@@ -17,6 +17,7 @@ import type {
   User,
 } from '@bxvtt/shared/protocol';
 import { REFEREE_VIEW_OMITTED_FIELDS } from '@bxvtt/shared/protocol';
+import { nameInSentence } from '@bxvtt/shared/text';
 import { BxapiProblem, BxapiUnreachable, callBxapi, toApiError } from '../bxapi';
 import type { Context } from '../context';
 import { str } from '../db';
@@ -63,6 +64,8 @@ export interface CommandMeta {
   userId: string | null;
   commandType: string;
   class: CommandInfo['class'];
+  /** The party member who acted, when the command names one. */
+  actorId?: string | null;
 }
 
 /** The most attempts the server makes at one command when bxapi is busy or the connection drops. */
@@ -497,7 +500,7 @@ export class GameService {
       this.ctx.hub.broadcast(tableId, {
         type: 'notice',
         code: 'game_started',
-        detail: `The game of ${session.adventure_name} has started.`,
+        detail: `The game of ${nameInSentence(session.adventure_name)} has started.`,
       });
       this.ctx.tables.broadcastTable(tableId);
       await this.pushStateLocked(tableId);
@@ -634,10 +637,12 @@ export class GameService {
       const outcome = await this.executeLocked(live, resolved, requestId, user.id);
       if (role !== 'referee' && !outcome.accepted) maskTrapRejections(command, outcome);
       if (outcome.accepted) {
+        const actor = command[info.memberField ?? 'character_id'];
         await this.afterAcceptedLocked(live, outcome, {
           userId: user.id,
           commandType: command.command_type,
           class: info.class,
+          actorId: typeof actor === 'string' ? actor : null,
         });
       } else if (outcome.view !== undefined) {
         live.view = outcome.view;
@@ -947,7 +952,12 @@ export class GameService {
         events: forPlayers.events,
         messages: forPlayers.messages,
         clock_rounds: live.view.clock_rounds,
-        names: entryNames(forPlayers.events, live.labels, live.names),
+        names: entryNames(forPlayers.events, live.labels, live.names, {
+          view: live.view,
+          dungeons: live.scene.dungeon_names,
+          actorId: meta.class === 'referee' ? null : meta.actorId,
+        }),
+        actor_id: meta.class === 'referee' ? null : (meta.actorId ?? null),
       },
       referee: {
         kind: 'game',
@@ -957,7 +967,12 @@ export class GameService {
         events: outcome.events,
         messages: outcome.messages,
         clock_rounds: live.view.clock_rounds,
-        names: entryNames(outcome.events, live.labels, live.names),
+        names: entryNames(outcome.events, live.labels, live.names, {
+          view: live.view,
+          dungeons: live.scene.dungeon_names,
+          actorId: meta.actorId,
+        }),
+        actor_id: meta.actorId ?? null,
       },
     });
     this.battle.afterAcceptedLocked(live);
@@ -1064,7 +1079,7 @@ export class GameService {
   namesFor(tableId: string, sessionId: string, events: GameEvent[]): EntryNames | undefined {
     const live = this.live.get(tableId);
     if (live === undefined || live.sessionId !== sessionId) return undefined;
-    return entryNames(events, live.labels, live.names);
+    return entryNames(events, live.labels, live.names, { dungeons: live.scene.dungeon_names });
   }
 
   /**

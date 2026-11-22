@@ -378,6 +378,8 @@ export function extendContextWithNames(
 export interface EntryLabelLike {
   label: string;
   label_plural?: string;
+  /** For a group, how many of it were alive when the entry was written. */
+  count?: number;
 }
 
 /** Loose shape of a game feed entry's `names` from the bxvtt server. A protocol `EntryNames` fits it. */
@@ -386,6 +388,8 @@ export interface EntryNamesLike {
   groups?: Readonly<Record<string, EntryLabelLike>>;
   monsters?: Readonly<Record<string, EntryLabelLike>>;
   items?: Readonly<Record<string, string>>;
+  /** Dungeon names by dungeon ID, for the dungeons the party has entered. */
+  dungeons?: Readonly<Record<string, string>>;
 }
 
 /**
@@ -423,7 +427,15 @@ export function extendContextWithEntryNames(
     if (name.trim() !== '') next.members[id] = { ...next.members[id], name };
   }
   for (const [id, entry] of Object.entries(names.groups ?? {})) {
-    if (entry.label.trim() !== '') next.groups[id] = { ...next.groups[id], ...label(entry) };
+    if (entry.label.trim() === '') continue;
+    next.groups[id] = {
+      ...next.groups[id],
+      ...label(entry),
+      ...(entry.count === undefined ? {} : { count: entry.count }),
+    };
+  }
+  for (const [id, name] of Object.entries(names.dungeons ?? {})) {
+    if (name.trim() !== '') next.dungeons[id] = name;
   }
   for (const [id, entry] of Object.entries(names.monsters ?? {})) {
     if (entry.label.trim() !== '') next.monsters[id] = { ...next.monsters[id], ...label(entry) };
@@ -432,6 +444,29 @@ export function extendContextWithEntryNames(
     Object.entries(names.items ?? {}).filter(([id]) => next.items[id] === undefined),
   );
   return extendContextWithNames(next, unknownItems);
+}
+
+/** Loose shape of the parts of a bxvtt scene that name things. A protocol `Scene` fits it. */
+export interface SceneNamesLike {
+  names?: Readonly<Record<string, string>>;
+  dungeon_names?: Readonly<Record<string, string>>;
+}
+
+/**
+ * Add what a bxvtt scene names: item names from `scene.names`, read as in
+ * [`extendContextWithNames`][extendContextWithNames], and the names of the dungeons the party has entered from
+ * `scene.dungeon_names`, so a player's text reads "the priory on Corvane's Holm" where it would read "the priory".
+ *
+ * ```ts
+ * ctx = extendContextWithScene(contextFromPlayerView(game.view, ctx), game.scene);
+ * ```
+ */
+export function extendContextWithScene(ctx: TextContext, scene: SceneNamesLike): TextContext {
+  const next = extendContextWithNames(ctx, scene.names ?? {});
+  for (const [id, name] of Object.entries(scene.dungeon_names ?? {})) {
+    if (name.trim() !== '') next.dungeons[id] = name;
+  }
+  return next;
 }
 
 /** Shape of any event that the context can learn from. */
@@ -461,13 +496,11 @@ export function extendContextWithEvents(ctx: TextContext, events: readonly Learn
       case 'monster_defeated': {
         const monsterId = asString(event.monster_id);
         const templateId = asString(event.template_id);
-        if (monsterId && templateId && ctx.monsters[monsterId] === undefined) {
-          const labels = monsterTemplateLabels(templateId);
-          edit().monsters[monsterId] = {
-            label: labels?.label ?? prettifyId(templateId),
-            labelPlural: labels?.labelPlural ?? pluralize(prettifyId(templateId)),
-            templateId,
-          };
+        // Only a built-in template names what the players saw. An adventure's own template, such as the
+        // disguised `drowned_prior`, can show the players another name, so its ID teaches nothing.
+        const labels = templateId ? monsterTemplateLabels(templateId) : undefined;
+        if (monsterId && templateId && labels && ctx.monsters[monsterId] === undefined) {
+          edit().monsters[monsterId] = { label: labels.label, labelPlural: labels.labelPlural, templateId };
         }
         break;
       }
@@ -615,7 +648,7 @@ export function memberClass(id: string, ctx: TextContext): string | undefined {
 function npcName(id: string, ctx: TextContext): string {
   const known = ctx.monsters[id];
   if (known?.name) return known.name;
-  if (known) return withArticle(known.label);
+  if (known) return oneOf(known.label);
   return 'an adventurer';
 }
 
@@ -633,9 +666,37 @@ export function monsterName(id: string | null | undefined, ctx: TextContext): st
   if (!id) return 'a monster';
   const known = ctx.monsters[id];
   if (known?.name) return known.name;
-  if (known) return withArticle(known.label);
+  if (known) return oneOf(known.label);
   const sole = soleGroupLabel(ctx);
-  return sole ? withArticle(sole) : 'a monster';
+  return sole ? oneOf(sole) : 'a monster';
+}
+
+/**
+ * Whether a group label is a proper name, such as `Mag Corrie`, `Gashnak One-Ear`, or `Mag's bodyguard`: the
+ * adventure writes it with a capital letter. A proper name takes no article and no plural. A common noun, such
+ * as `goblin` or `robed corpse`, is written in lower case.
+ */
+export function isProperLabel(label: string): boolean {
+  return /^\p{Lu}/u.test(label.trim());
+}
+
+/** One creature by its label: `a goblin`, or `Mag Corrie` for a proper name. */
+function oneOf(label: string): string {
+  return isProperLabel(label) ? label : withArticle(label);
+}
+
+/**
+ * A group by its label and size, as it reads in a list: `2 goblins`, `a robed corpse`, or `Mag Corrie` for a
+ * proper name, which takes no count.
+ *
+ * @param label - What to call one of them.
+ * @param labelPlural - What to call several.
+ * @param count - How many there are.
+ */
+export function countedLabel(label: string, labelPlural: string | undefined, count: number): string {
+  if (isProperLabel(label) && count <= 1) return label;
+  if (count === 1) return withArticle(label);
+  return `${count} ${labelPlural && labelPlural !== '' ? labelPlural : pluralize(label)}`;
 }
 
 /** Name of a monster group: `the goblins`. Pass `count` to include a number: `3 goblins`. */
@@ -649,9 +710,8 @@ export function groupName(
     if (options.count !== undefined) return options.count === 1 ? 'a monster' : `${options.count} monsters`;
     return 'the monsters';
   }
-  if (options.count !== undefined) {
-    return options.count === 1 ? withArticle(known.label) : `${options.count} ${known.labelPlural}`;
-  }
+  if (options.count !== undefined) return countedLabel(known.label, known.labelPlural, options.count);
+  if (isProperLabel(known.label) && known.count !== undefined && known.count <= 1) return known.label;
   return known.count === 1 ? `the ${known.label}` : `the ${known.labelPlural}`;
 }
 

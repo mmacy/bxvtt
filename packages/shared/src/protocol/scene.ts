@@ -219,6 +219,13 @@ export const Scene = z.object({
    * Optional in the type so that older fixtures still compile. This server always sends it.
    */
   targets: z.array(SceneTarget).optional(),
+  /**
+   * The names of the dungeons the party has entered, by dungeon ID, such as `priory` to `The priory on
+   * Corvane's Holm`, so a player's text names a dungeon the way the town and the referee do. Pass the scene to
+   * `extendContextWithScene` from `@bxvtt/shared/text`. Optional in the type so that older fixtures still
+   * compile. This server always sends it.
+   */
+  dungeon_names: z.record(z.string(), z.string()).optional(),
 });
 /** The scene. */
 export type Scene = z.infer<typeof Scene>;

@@ -804,8 +804,8 @@ describe('humanizeMessage', () => {
       'character-0001 fumbles with the tinder box \u2014 no flame.',
       'Brenna fumbles with the tinder box, no flame.',
     ],
-    ['The party enters dungeon barrow (level 1).', 'The party enters The Barrow (level 1).'],
-    ['The party enters area guard_room (level 1).', 'The party enters the guard room (level 1).'],
+    ['The party enters dungeon barrow (level 1).', 'The party enters the Barrow, level 1.'],
+    ['The party enters area guard_room (level 1).', 'The party enters the guard room.'],
     [
       'A trap springs (hollow:1:pit_room) on character-0003!',
       'A trap springs (the trap in the pit room) on Wren!',

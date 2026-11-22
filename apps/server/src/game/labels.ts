@@ -76,17 +76,31 @@ export function entryNames(
   events: readonly GameEvent[],
   book: LabelBook,
   items: ReadonlyMap<string, string>,
+  context: { view?: PlayerView; dungeons?: Readonly<Record<string, string>>; actorId?: string | null } = {},
 ): EntryNames {
-  const names: EntryNames = { members: {}, groups: {}, monsters: {}, items: {} };
+  const names: EntryNames = { members: {}, groups: {}, monsters: {}, items: {}, dungeons: {} };
+  // The member who acted, whom the events may leave out, such as the speaker of a talk.
+  const actor = context.actorId == null ? undefined : book.members.get(context.actorId);
+  if (context.actorId != null && actor !== undefined) names.members[context.actorId] = actor;
+  // The groups of the open encounter, with their sizes, so a talk or an encounter's start can name the monsters.
+  for (const group of context.view?.encounter?.groups ?? []) {
+    names.groups[group.id] = {
+      label: group.label,
+      label_plural: group.label_plural === '' ? `${group.label}s` : group.label_plural,
+      count: group.count,
+    };
+  }
   for (const id of strings(events, new Set())) {
     const member = book.members.get(id);
     if (member !== undefined) names.members[id] = member;
     const group = book.groups.get(id);
-    if (group !== undefined) names.groups[id] = group;
+    if (group !== undefined && names.groups[id] === undefined) names.groups[id] = group;
     const monster = book.monsters.get(id);
     if (monster !== undefined) names.monsters[id] = monster;
     const item = items.get(id);
     if (item !== undefined) names.items[id] = item;
+    const dungeon = context.dungeons?.[id];
+    if (dungeon !== undefined && names.dungeons !== undefined) names.dungeons[id] = dungeon;
   }
   return names;
 }

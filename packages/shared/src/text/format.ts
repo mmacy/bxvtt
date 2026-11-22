@@ -20,6 +20,39 @@ export function lowerFirst(text: string): string {
   return text.length === 0 ? text : text.charAt(0).toLowerCase() + text.slice(1);
 }
 
+/**
+ * A name as it reads in the middle of a sentence. A leading "The" is an article, so it reads "the", and the rest
+ * of the name keeps its capitals: `The priory on Corvane's Holm` gives `the priory on Corvane's Holm`, and
+ * `The Barrow` gives `the Barrow`. Every other name is returned as written.
+ *
+ * This is the one rule for names with a leading article, for dungeons, areas, towns, and adventure titles. At
+ * the start of a sentence, use the name as written.
+ *
+ * ```ts
+ * `Set out for ${nameInSentence('The priory on Corvane\'s Holm')}?`; // "Set out for the priory on Corvane's Holm?"
+ * ```
+ */
+export function nameInSentence(name: string): string {
+  return name.replace(/^the\s+/i, 'the ');
+}
+
+/**
+ * A place's name with its article, as it reads in the middle of a sentence after a word such as "enters":
+ * `the guardroom`, `the priory on Corvane's Holm`, `the Drain Folk warren`. A name with a leading "The" follows
+ * {@link nameInSentence}. A name written in sentence case, such as `Gatehouse stair`, is a common noun and
+ * reads `the gatehouse stair`. A name with another capitalized word, such as `Drain Folk warren`, keeps its
+ * capitals.
+ */
+export function placeInSentence(name: string): string {
+  const trimmed = name.trim();
+  if (/^the\s/i.test(trimmed)) return nameInSentence(trimmed);
+  const proper = trimmed
+    .split(/\s+/)
+    .slice(1)
+    .some((word) => /^\p{Lu}/u.test(word));
+  return `the ${proper ? trimmed : lowerFirst(trimmed)}`;
+}
+
 /** Turn an ID or enum value such as `magic_user` or `jade-idol` into plain words such as `magic user`. */
 export function prettifyId(value: string): string {
   return value.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();

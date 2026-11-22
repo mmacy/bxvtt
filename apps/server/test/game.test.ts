@@ -172,7 +172,7 @@ describe('a game with a referee and two players', () => {
     expect(entry.entry).toMatchObject({ kind: 'game', command_type: 'enter_dungeon', user_id: alice.id });
     // The table setting autosave is on, so entering the dungeon made an autosave.
     const saves = await alice.client.listSaves(tableId);
-    expect(saves.items.some((save) => save.autosave && save.label === 'Autosave: Entered The Barrow')).toBe(
+    expect(saves.items.some((save) => save.autosave && save.label === 'Autosave: Entered the Barrow')).toBe(
       true,
     );
     game = result.game;

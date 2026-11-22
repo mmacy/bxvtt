@@ -7,8 +7,25 @@
  */
 
 import { equipmentNoun, magicItemTemplateName, monsterTemplateLabels, spellCatalogName } from './catalog';
-import { areaName, dungeonName, ENTITY_ID_PATTERN, entityName, itemNoun, type TextContext } from './context';
-import { capitalizeFirst, lowerFirst, prettifyId, withArticle } from './format';
+import {
+  areaName,
+  countedLabel,
+  dungeonName,
+  ENTITY_ID_PATTERN,
+  entityName,
+  isProperLabel,
+  itemNoun,
+  type TextContext,
+} from './context';
+import {
+  capitalizeFirst,
+  count,
+  joinList,
+  placeInSentence,
+  prettifyId,
+  singularize,
+  withArticle,
+} from './format';
 
 const SNAKE_OR_KEBAB_TOKEN = /\b[a-z][a-z0-9]*(?:[_-][a-z0-9]+)+\b/g;
 const MONSTER_WITH_TEMPLATE = /\b(monster-\d{4,}) \(([a-z0-9_:]+)\)/g;
@@ -20,9 +37,22 @@ const ENTERS_LEVEL = /\bThe party enters level ([a-z][a-z0-9_-]*) \(level (\d+)\
 const MOVES_TO_CELL = /\bThe party moves to \(-?\d+, -?\d+\), facing ([a-z]+)\./g;
 const DOOR_OF_CELL = /\b([Tt])he door ([a-z]+) of \(-?\d+, -?\d+\)/g;
 const NOTHING_LISTED = /\b(acquires|drops|gives) (?=\.| to )/g;
+const ENTERS_PLACE = /\bThe party enters (dungeon|area) ([a-z][a-z0-9_-]*) \(level (\d+)\)\./g;
+const ENCOUNTER = /\bEncounter: (\d+) (.+?) at (\d+)'/g;
 
-function withThe(name: string): string {
-  return /^the\s/i.test(name) ? lowerFirst(name) : `the ${lowerFirst(name)}`;
+/**
+ * Who the party meets, for osrlib's `Encounter: 3 goblins at 60'`. osrlib names the first group and counts every
+ * monster, so the groups the context knows replace it when their sizes add up, and a proper name such as `Mag
+ * Corrie` never takes a plural.
+ */
+function encounterCompany(total: number, named: string, ctx: TextContext): string {
+  const groups = Object.values(ctx.groups).filter((group) => group.count !== undefined && group.count > 0);
+  if (groups.length > 0 && groups.reduce((sum, group) => sum + (group.count ?? 0), 0) === total) {
+    return joinList(groups.map((group) => countedLabel(group.label, group.labelPlural, group.count ?? 1)));
+  }
+  if (!isProperLabel(named)) return `${total} ${named}`;
+  const one = total === 1 ? named : singularize(named);
+  return total <= 1 ? one : `${one} and ${count(total - 1, 'other')}`;
 }
 
 function nameForToken(token: string, ctx: TextContext): string {
@@ -54,11 +84,21 @@ export function removeDashes(text: string): string {
 function tidyWording(text: string, ctx: TextContext): string {
   return (
     text
+      .replace(ENTERS_PLACE, (_match, kind: string, id: string, level: string) =>
+        kind === 'dungeon'
+          ? `The party enters ${placeInSentence(dungeonName(id, ctx))}, level ${level}.`
+          : `The party enters ${placeInSentence(areaName(id, ctx))}.`,
+      )
+      .replace(
+        ENCOUNTER,
+        (_match, total: string, named: string, feet: string) =>
+          `Encounter: ${encounterCompany(Number(total), named, ctx)} at ${feet}'`,
+      )
       .replace(ENTERS_TOWN, () => `The party arrives in ${ctx.townName ?? 'town'}.`)
       .replace(
         ENTERS_LEVEL,
         (_match, dungeon: string, level: string) =>
-          `The party reaches level ${level} of ${withThe(dungeonName(dungeon, ctx))}.`,
+          `The party reaches level ${level} of ${placeInSentence(dungeonName(dungeon, ctx))}.`,
       )
       .replace(MOVES_TO_CELL, (_match, facing: string) => `The party moves ${facing}.`)
       .replace(DOOR_OF_CELL, (_match, t: string, side: string) => `${t}he ${side} door`)
@@ -84,20 +124,22 @@ function capitalizeSentences(text: string): string {
 export function humanizeMessage(message: string, ctx: TextContext): string {
   let text = tidyWording(message, ctx);
   text = text.replace(MONSTER_WITH_TEMPLATE, (_match, id: string, template: string) => {
+    // The template ID never reaches the text. A built-in template is what the players saw. An adventure's own
+    // template can disguise the monster, so the monster reads by what the context knows of it.
     const known = ctx.monsters[id];
     if (known) return entityName(id, ctx);
     const labels = monsterTemplateLabels(template);
-    return withArticle(labels?.label ?? prettifyId(template));
+    return labels ? withArticle(labels.label) : entityName(id, ctx);
   });
   text = text.replace(EFFECT_WITH_KIND, (_match, kind: string) => `The ${prettifyId(kind)} effect`);
   text = text.replace(ENTITY_ID_PATTERN, (id) => entityName(id, ctx));
   text = text.replace(
     TRAP_REF,
     (_match, dungeon: string, level: string, area: string) =>
-      `the trap in ${withThe(areaName(area, ctx, dungeon, Number(level)))}`,
+      `the trap in ${placeInSentence(areaName(area, ctx, dungeon, Number(level)))}`,
   );
   text = text.replace(DUNGEON_OR_AREA, (_match, kind: string, id: string) =>
-    kind === 'dungeon' ? dungeonName(id, ctx) : withThe(areaName(id, ctx)),
+    kind === 'dungeon' ? dungeonName(id, ctx) : placeInSentence(areaName(id, ctx)),
   );
   text = text.replace(SNAKE_OR_KEBAB_TOKEN, (token) => nameForToken(token, ctx));
   return capitalizeSentences(removeDashes(text));

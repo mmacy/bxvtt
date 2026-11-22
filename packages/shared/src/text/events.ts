@@ -10,10 +10,13 @@
 import { itemNounByName, magicItemCategory, magicItemTemplateName } from './catalog';
 import {
   areaName,
+  countedLabel,
   dungeonName,
   entityName,
+  extendContextWithEntryNames,
   extendContextWithEvents,
   groupName,
+  isProperLabel,
   idKind,
   itemList,
   itemName,
@@ -33,6 +36,7 @@ import {
   formatInteger,
   formatRealTime,
   joinList,
+  placeInSentence,
   lowerFirst,
   pluralize,
   prettifyId,
@@ -1297,9 +1301,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
 
     // Encounters --------------------------------------------------------------------------------------------------
     case 'encounter_started': {
-      const plural = event.monster_name_plural || pluralize(event.monster_name);
-      const what = event.count === 1 ? withArticle(event.monster_name) : `${event.count} ${plural}`;
-      let text = `The party meets ${what}, ${formatFeet(event.distance_feet)} away.`;
+      let text = `The party meets ${encounterCompany(event, ctx)}, ${formatFeet(event.distance_feet)} away.`;
       if (event.party_surprised && event.monsters_surprised) text += ' Both sides are surprised.';
       else if (event.party_surprised) text += ' The party is surprised.';
       else if (event.monsters_surprised) text += ' The monsters are surprised.';
@@ -1312,8 +1314,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
       };
     }
     case 'encounter_group_joined': {
-      const plural = event.label_plural || pluralize(event.label);
-      const what = event.count === 1 ? withArticle(event.label) : `${event.count} ${plural}`;
+      const what = countedLabel(event.label, event.label_plural, event.count);
       return {
         text: `${capitalizeFirst(what)} ${event.count === 1 ? 'joins' : 'join'} the encounter, ${formatFeet(event.distance_feet)} away.`,
         category: 'encounter',
@@ -1492,6 +1493,16 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
       };
     case 'monsters_left_behind': {
       const known = ctx.groups[event.group_id];
+      if (known && isProperLabel(known.label) && event.count === 1) {
+        return {
+          text: `${known.label} is left behind, helpless.`,
+          category: 'battle',
+          tone: 'good',
+          icon: 'monsters',
+          ids: [event.group_id, event.source_group_id],
+          amount: event.count,
+        };
+      }
       const noun = known
         ? event.count === 1
           ? known.label
@@ -1675,7 +1686,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
       const label = ctx.monsters[event.monster_ids[0] ?? '']?.label ?? templateLabel(event.template_id);
       const n = event.monster_ids.length;
       return {
-        text: `The referee spawns ${n === 1 ? withArticle(label) : `${n} ${pluralize(label)}`}.`,
+        text: `The referee spawns ${countedLabel(label, pluralize(label), n)}.`,
         category: 'referee',
         tone: 'info',
         icon: 'monsters',
@@ -1855,7 +1866,30 @@ function countA(n: number, noun: string): string {
 
 function groupIsPlural(groupId: string, ctx: TextContext): boolean {
   const known = ctx.groups[groupId];
+  if (known && isProperLabel(known.label) && (known.count === undefined || known.count <= 1)) return false;
   return known ? known.count !== 1 : true;
+}
+
+/**
+ * Who the party meets when an encounter starts. osrlib's event names only the first group and counts every
+ * monster, so the text lists each group the context knows, when their sizes add up to the event's count: "Mag
+ * Corrie and Mag's bodyguard", "2 goblins and a hobgoblin". Otherwise it reads the event alone, and a proper
+ * name with company reads "Mag Corrie and 2 others".
+ */
+function encounterCompany(
+  event: { monster_name: string; monster_name_plural?: string; count: number },
+  ctx: TextContext,
+): string {
+  const groups = Object.values(ctx.groups).filter((group) => group.count !== undefined && group.count > 0);
+  const total = groups.reduce((sum, group) => sum + (group.count ?? 0), 0);
+  if (groups.length > 0 && total === event.count) {
+    return joinList(groups.map((group) => countedLabel(group.label, group.labelPlural, group.count ?? 1)));
+  }
+  if (isProperLabel(event.monster_name)) {
+    const others = event.count - 1;
+    return others <= 0 ? event.monster_name : `${event.monster_name} and ${count(others, 'other')}`;
+  }
+  return countedLabel(event.monster_name, event.monster_name_plural, event.count);
 }
 
 function normalizeUnit(unit: string): 'round' | 'turn' | 'day' {
@@ -1893,10 +1927,6 @@ function templateLabel(templateId: string): string {
   return lowerFirst(prettifyId(templateId));
 }
 
-function theName(name: string): string {
-  return /^the\s/i.test(name) ? lowerFirst(name) : `the ${lowerFirst(name)}`;
-}
-
 function describeLocation(
   event: Extract<GameEvent, { event_type: 'location_entered' }>,
   ctx: TextContext,
@@ -1922,10 +1952,10 @@ function describeLocation(
       };
     }
     case 'area': {
-      const name = theName(areaName(event.location_id, ctx, event.dungeon_id, level));
+      const name = placeInSentence(areaName(event.location_id, ctx, event.dungeon_id, level));
       const place =
         level !== null && level !== undefined
-          ? `Level ${level}${event.dungeon_id ? ` of ${theName(dungeonName(event.dungeon_id, ctx))}` : ''}.`
+          ? `Level ${level}${event.dungeon_id ? ` of ${placeInSentence(dungeonName(event.dungeon_id, ctx))}` : ''}.`
           : undefined;
       return {
         text: withNarrative(`The party enters ${name}.`, event.narrative),
@@ -1936,7 +1966,7 @@ function describeLocation(
       };
     }
     case 'level': {
-      const dungeon = theName(dungeonName(event.location_id, ctx));
+      const dungeon = placeInSentence(dungeonName(event.location_id, ctx));
       const how = verbs[via] ?? 'goes';
       return {
         text: withNarrative(`The party ${how} to level ${level} of ${dungeon}.`, event.narrative),
@@ -1946,7 +1976,7 @@ function describeLocation(
       };
     }
     default: {
-      const dungeon = theName(dungeonName(event.location_id, ctx));
+      const dungeon = placeInSentence(dungeonName(event.location_id, ctx));
       const levelText = level !== null && level !== undefined ? `, level ${level}` : '';
       const how =
         via === 'placed'
@@ -1973,8 +2003,9 @@ export interface DescribeEventsOptions {
   mergeAttacks?: boolean;
   /**
    * Drop lines that repeat what another line says: a `dead` condition that a death event repeats, a `turned`
-   * condition that ends with the monster's defeat, and a hit point report that states the same numbers as the
-   * last report for that creature. Defaults to true.
+   * condition that ends with the monster's defeat, a hit point report that states the same numbers as the
+   * last report for that creature, and a change of the monsters' bearing that a later change in the same list
+   * replaces, so the list states the bearing the encounter ends up with. Defaults to true.
    */
   dropRedundant?: boolean;
   /** Collapse a run of wandering-monster checks that found nothing into one line. Defaults to true. */
@@ -2033,6 +2064,13 @@ export function describeEvents(
     } else if (!REPORT_KEEPING_EVENTS.has(event.event_type)) {
       // Anything else that happens to a creature, such as healing, can change its hit points.
       for (const id of eventSubjects(event)) lastReport.delete(id);
+    }
+    if (
+      dropRedundant &&
+      event.event_type === 'stance_changed' &&
+      list.slice(index + 1).some((later) => later.event_type === 'stance_changed')
+    ) {
+      continue;
     }
     if (dropRedundant && event.event_type === 'condition_removed' && event.condition === 'turned') {
       const target = event.target_id;
@@ -2131,6 +2169,69 @@ export function describeEvents(
     lines.push(describeEvent(event, learned, messageOption(index)));
   }
   return lines;
+}
+
+/** The parts of a bxvtt game feed entry that its text needs. A protocol `GameEntry` fits it. */
+export interface GameEntryLike {
+  command_type: string | null;
+  /** The party member who acted, such as the speaker of a `parley`. */
+  actor_id?: string | null;
+  events: ReadonlyArray<GameEvent | LooseEvent>;
+  messages?: readonly string[];
+  names?: Parameters<typeof extendContextWithEntryNames>[1];
+}
+
+/**
+ * Describe a game entry of the bxvtt feed: its events, named with the names the entry recorded (see
+ * [`extendContextWithEntryNames`][extendContextWithEntryNames]), and told from the command's side where the
+ * events leave out who acted. A talk names its speaker: "Osric talks to the goblins. They are uncertain now."
+ *
+ * ```ts
+ * const lines = describeGameEntry(entry, ctx, { only: 'player' });
+ * ```
+ *
+ * @param entry - The entry.
+ * @param ctx - The context, which isn't changed.
+ * @param options - As for [`describeEvents`][describeEvents]. The entry's own `messages` are used.
+ */
+export function describeGameEntry(
+  entry: GameEntryLike,
+  ctx: TextContext,
+  options: Omit<DescribeEventsOptions, 'messages'> = {},
+): EventLine[] {
+  const context = extendContextWithEntryNames(ctx, entry.names);
+  const lines = describeEvents(entry.events, context, {
+    ...options,
+    ...(entry.messages === undefined ? {} : { messages: entry.messages }),
+  });
+  if (entry.command_type !== 'parley' || !entry.actor_id) return lines;
+  const speaker = memberName(entry.actor_id, context);
+  const groups = Object.keys(context.groups);
+  const audience = groups.length === 1 ? groupName(groups[0], context) : 'the monsters';
+  const lead = `${capitalizeFirst(speaker)} talks to ${audience}.`;
+  const stance = lines.findIndex((line) => line.category === 'encounter' && /^The monsters /.test(line.text));
+  if (stance < 0) {
+    const line: EventLine = {
+      text: lead,
+      category: 'encounter',
+      tone: 'info',
+      icon: 'monsters',
+      actorIds: [entry.actor_id],
+      code: 'bxvtt.parley.spoke',
+      eventType: 'parley',
+      visibility: 'player',
+    };
+    return [line, ...lines];
+  }
+  return lines.map((line, index) =>
+    index === stance
+      ? {
+          ...line,
+          text: `${lead} ${line.text.replace(/^The monsters /, 'They ').replace(/\.$/, ' now.')}`,
+          actorIds: [entry.actor_id ?? '', ...(line.actorIds ?? [])].filter((id) => id !== ''),
+        }
+      : line,
+  );
 }
 
 function isQuietCheck(event: GameEvent | LooseEvent | undefined): boolean {

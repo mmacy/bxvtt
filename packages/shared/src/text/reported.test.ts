@@ -10,9 +10,13 @@ import {
   describeEvent,
   describeEvents,
   equipmentNoun,
+  describeGameEntry,
   emptyContext,
   extendContextWithCatalog,
   extendContextWithEntryNames,
+  extendContextWithScene,
+  nameInSentence,
+  placeInSentence,
   extendContextWithNames,
   extendContextWithReferee,
   humanizeMessage,
@@ -621,5 +625,203 @@ describe('monster names in feed history (reported)', () => {
 
   it('leaves the context alone without names', () => {
     expect(extendContextWithEntryNames(party, undefined)).toBe(party);
+  });
+});
+
+describe('names with a leading article (D-404, D-208)', () => {
+  it('reads a leading "The" as "the" in the middle of a sentence, and keeps the rest', () => {
+    expect(nameInSentence("The priory on Corvane's Holm")).toBe("the priory on Corvane's Holm");
+    expect(nameInSentence('The Barrow')).toBe('the Barrow');
+    expect(nameInSentence('Hollin Ferry')).toBe('Hollin Ferry');
+    expect(placeInSentence("The priory on Corvane's Holm")).toBe("the priory on Corvane's Holm");
+    expect(placeInSentence('Gatehouse stair')).toBe('the gatehouse stair');
+    expect(placeInSentence('Drain Folk warren')).toBe('the Drain Folk warren');
+  });
+});
+
+describe('dungeon names for players (D-210)', () => {
+  const entered = {
+    event_type: 'location_entered',
+    code: 'exploration.location.entered',
+    visibility: 'player',
+    location_kind: 'dungeon',
+    location_id: 'priory',
+    level_number: 1,
+    dungeon_id: null,
+    narrative: null,
+    via: 'placed',
+    transition_ref: null,
+  } as unknown as Parameters<typeof describeEvent>[0];
+
+  it('names the dungeon from the scene, as the town and the referee do', () => {
+    // Reported: a player's log read "The party is placed in the priory, level 1."
+    expect(describeEvent(entered, emptyContext()).text).toBe('The party is placed in the priory, level 1.');
+    const ctx = extendContextWithScene(emptyContext(), {
+      names: {},
+      dungeon_names: { priory: "The priory on Corvane's Holm" },
+    });
+    expect(describeEvent(entered, ctx).text).toBe(
+      "The party is placed in the priory on Corvane's Holm, level 1.",
+    );
+    expect(humanizeMessage('The party enters dungeon priory (level 1).', ctx)).toBe(
+      "The party enters the priory on Corvane's Holm, level 1.",
+    );
+  });
+});
+
+describe('talking and the bearing (D-304)', () => {
+  const stance = (value: string) => ({
+    event_type: 'stance_changed',
+    code: 'encounter.stance.changed',
+    visibility: 'player',
+    stance: value,
+  });
+  const names = {
+    members: { 'character-0003': 'Osric' },
+    groups: { 'group-0001': { label: 'goblin', label_plural: 'goblins', count: 2 } },
+    monsters: {},
+    items: {},
+  };
+
+  it('names the speaker of a talk', () => {
+    // Reported: the talk entry said only "The monsters are uncertain."
+    const lines = describeGameEntry(
+      { command_type: 'parley', actor_id: 'character-0003', events: [stance('uncertain')] as never, names },
+      emptyContext(),
+    );
+    expect(lines.map((line) => line.text)).toEqual(['Osric talks to the goblins. They are uncertain now.']);
+  });
+
+  it('states one bearing when the bearing changes within one entry', () => {
+    // Reported: "The monsters are uncertain." and then "The monsters pay the party no mind." in one entry.
+    const lines = describeEvents([stance('uncertain'), stance('indifferent')] as never, emptyContext());
+    expect(lines.map((line) => line.text)).toEqual(['The monsters pay the party no mind.']);
+  });
+});
+
+describe('group labels that are proper names (sample adventures)', () => {
+  const started = (name: string, plural: string, count: number) =>
+    ({
+      event_type: 'encounter_started',
+      code: 'encounter.started',
+      visibility: 'player',
+      monster_name: name,
+      monster_name_plural: plural,
+      count,
+      distance_feet: 30,
+      party_surprised: false,
+      monsters_surprised: false,
+    }) as unknown as Parameters<typeof describeEvent>[0];
+  const loft = extendContextWithEntryNames(emptyContext(), {
+    members: { 'character-0001': 'Osric' },
+    groups: {
+      'group-0001': { label: 'Mag Corrie', label_plural: 'Mag Corries', count: 1 },
+      'group-0002': { label: "Mag's bodyguard", label_plural: "Mag's bodyguards", count: 1 },
+    },
+    monsters: {
+      'monster-0001': { label: 'Mag Corrie', label_plural: 'Mag Corries' },
+      'monster-0002': { label: "Mag's bodyguard", label_plural: "Mag's bodyguards" },
+    },
+  });
+
+  it('lists each group when an encounter starts', () => {
+    // Reported: "Encounter: 2 Mag Corries".
+    expect(describeEvent(started('Mag Corrie', 'Mag Corries', 2), loft).text).toBe(
+      "The party meets Mag Corrie and Mag's bodyguard, 30 feet away.",
+    );
+    expect(humanizeMessage("Encounter: 2 Mag Corries at 30'.", loft)).toBe(
+      "Encounter: Mag Corrie and Mag's bodyguard at 30'.",
+    );
+    const clerk = extendContextWithEntryNames(emptyContext(), {
+      groups: {
+        'group-0001': { label: 'ink-stained clerk', label_plural: 'ink-stained clerks', count: 1 },
+        'group-0002': { label: 'bandit', label_plural: 'bandits', count: 1 },
+      },
+    });
+    expect(describeEvent(started('ink-stained clerk', 'ink-stained clerks', 2), clerk).text).toBe(
+      'The party meets an ink-stained clerk and a bandit, 30 feet away.',
+    );
+  });
+
+  it('never pluralizes a proper name without the groups', () => {
+    // Reported: "3 Gashnak One-Ears". The event counts every monster, under the first group's label.
+    expect(describeEvent(started('Gashnak One-Ear', 'Gashnak One-Ears', 3), emptyContext()).text).toBe(
+      'The party meets Gashnak One-Ear and 2 others, 30 feet away.',
+    );
+    expect(humanizeMessage("Encounter: 3 Gashnak One-Ears at 30'.", emptyContext())).toBe(
+      "Encounter: Gashnak One-Ear and 2 others at 30'.",
+    );
+    expect(describeEvent(started('robed corpse', 'robed corpses', 3), emptyContext()).text).toBe(
+      'The party meets 3 robed corpses, 30 feet away.',
+    );
+  });
+
+  it('puts no article before a proper name in attacks, flight, and morale', () => {
+    const attack = {
+      event_type: 'attack_rolled',
+      code: 'combat.attack.hit',
+      visibility: 'player',
+      attacker_id: 'monster-0001',
+      defender_id: 'character-0001',
+      attack_name: 'weapon',
+      roll: 15,
+      modifier: 0,
+      total: 15,
+      required: 12,
+      defender_ac: 5,
+      natural: null,
+      back_stab: false,
+    };
+    expect(describeEvents([attack] as never, loft)[0]?.text).toMatch(/^Mag Corrie hits Osric/);
+    expect(
+      describeEvent(
+        {
+          event_type: 'monster_fled',
+          code: 'battle.side.fled',
+          visibility: 'player',
+          group_id: 'group-0001',
+        } as never,
+        loft,
+      ).text,
+    ).toBe('Mag Corrie flees.');
+    const morale = describeEvent(
+      {
+        event_type: 'morale_checked',
+        code: 'combat.morale.broke',
+        visibility: 'player',
+        subject: 'group-0002',
+        score: 8,
+        roll: 10,
+        modifier: 0,
+        held: false,
+      } as never,
+      loft,
+    ).text;
+    expect(morale).toMatch(/^Mag's bodyguard/);
+    expect(morale).not.toMatch(/\bthe Mag/);
+  });
+
+  it("never shows a slain monster's template ID to a player", () => {
+    const message = 'monster-0001 (drowned_prior) is slain.';
+    const corpse = extendContextWithEntryNames(emptyContext(), {
+      monsters: { 'monster-0001': { label: 'robed corpse', label_plural: 'robed corpses' } },
+    });
+    expect(humanizeMessage(message, corpse)).toBe('A robed corpse is slain.');
+    expect(humanizeMessage(message, emptyContext())).toBe('A monster is slain.');
+    const slain = describeEvents(
+      [
+        {
+          event_type: 'monster_defeated',
+          code: 'battle.monster.defeated',
+          visibility: 'player',
+          monster_id: 'monster-0001',
+          template_id: 'drowned_prior',
+          outcome: 'slain',
+          xp: 50,
+        },
+      ] as never,
+      emptyContext(),
+    )[0]?.text;
+    expect(slain).not.toMatch(/prior|\(/i);
   });
 });
