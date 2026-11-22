@@ -29,8 +29,14 @@ export interface Context {
   adventures: AdventureCatalog;
   game: GameService;
   limits: {
+    /** New users, by address. */
     createUser: RateLimiter;
+    /** Invite code attempts, by address. */
     join: RateLimiter;
+    /** Wrong host keys, by address. */
+    failedHostKey: RateLimiter;
+    /** Feed posts and new annotations, by user. */
+    userPosts: RateLimiter;
   };
   startedAt: number;
 }

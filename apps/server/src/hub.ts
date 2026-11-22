@@ -2,6 +2,9 @@ import type { WebSocket } from 'ws';
 import type { Presence, Role, ServerMessage } from '@bxvtt/shared/protocol';
 import { WS_CLOSE_CODES } from '@bxvtt/shared/protocol';
 
+/** The most bytes the server queues for one slow connection before it drops the connection. */
+const MAX_BUFFERED_BYTES = 8 * 1024 * 1024;
+
 /** One authenticated WebSocket connection to a table. */
 export interface Connection {
   /** A process-unique ID. */
@@ -195,7 +198,27 @@ export class Hub {
     return false;
   }
 
+  /**
+   * Counts a user's connections to a table.
+   *
+   * @param tableId - The table.
+   * @param userId - The user.
+   */
+  connectionsOf(tableId: string, userId: string): number {
+    let count = 0;
+    for (const connection of this.byTable.get(tableId) ?? []) if (connection.userId === userId) count += 1;
+    return count;
+  }
+
   private write(connection: Connection, data: string): void {
-    if (connection.socket.readyState === connection.socket.OPEN) connection.socket.send(data);
+    const socket = connection.socket;
+    if (socket.readyState !== socket.OPEN) return;
+    // A client that stops reading would make the server buffer every message for it. Past the limit, the server
+    // drops the connection, and the client reconnects and gets a snapshot.
+    if (socket.bufferedAmount > MAX_BUFFERED_BYTES) {
+      socket.terminate();
+      return;
+    }
+    socket.send(data);
   }
 }

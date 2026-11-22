@@ -49,6 +49,7 @@ The server reads its settings from environment variables. A relative path resolv
 | `BXVTT_WEB_DIST` | `apps/web/dist` | The built web client. The server serves it only when `index.html` exists there. |
 | `BXVTT_ADVENTURES_DIR` | `adventures` | The sample adventure documents the server offers every table. |
 | `BXVTT_LOG_LEVEL` | `info` | pino log level, such as `debug` or `silent`. |
+| `BXVTT_RELAX_LIMITS` | `false` | Set `true` to multiply the rate limits by 100 for automated tests on your own machine. Never set it on a server that other people can reach. |
 | `BXVTT_ALLOW_CHARACTER_SEEDS` | `false` | Set `true` to let users pass `seed` when they roll abilities or create a character. Tests set it. |
 
 The server logs one JSON line per request with the method, the path without its query string, the status, the time in milliseconds, the user ID, and the client's IP address. It never logs a token. On SIGINT or SIGTERM it closes the WebSockets and the database and exits.
@@ -118,7 +119,7 @@ bxapi's player view draws the map's cells and edges, but it names no areas, show
 - `scene.levels` lists, for each level on the party's map, the entered areas, the transitions on known cells, the known traps, the caches, the features, and the piles, so the map can draw them.
 - `scene.names` maps item, magic item, and valuable IDs from player events and the inventory to display names. An unidentified magic item keeps its masked name, such as `a potion`.
 
-The server reveals only what osrlib marks as known to the party. An area appears after the party walks into it. A cache never shows its contents or its authored description, and no cache appears while an encounter or battle is open. A trap appears only after the party found it, it sprang, or a thief removed it. A construction trick appears only after a search found it. A transition shows which way it leads (`up`, `down`, `same_level`, or `elsewhere`) and never where it lands. The scene has no edges, so a secret door stays a wall until the player view shows it as a door.
+The server reveals only what osrlib marks as known to the party. An area appears after the party walks into it. A cache never shows its contents or its authored description, and no cache appears while an encounter or battle is open. A cache on a cell appears only once the cell is on the party's map, and a lair hoard appears only after its monsters were slain or routed. A player's `take_treasure`, `inspect_treasure`, or `remove_treasure_trap` that names a cache missing from `scene.here.caches` is refused with `exploration.feature.unknown`, and a refused `remove_treasure_trap` on a visible cache reads `exploration.trap.not_found` whether or not the cache is trapped. A trap appears only after the party found it, it sprang, or a thief removed it. A construction trick appears only after a search found it. A transition shows which way it leads (`up`, `down`, `same_level`, or `elsewhere`) and never where it lands. The scene has no edges, so a secret door stays a wall until the player view shows it as a door.
 
 ## Who may do what
 
@@ -140,6 +141,7 @@ The server reveals only what osrlib marks as known to the party. An area appears
 | Create a save | Any member. |
 | Relabel or delete a save | The member who made it, or a referee. |
 | Secret dice roll, referees-only pin, referee notes, referee events, the adventure, save export, generators | A referee. |
+| Read, receive, or make annotations and pings on a level | A referee on any level. A player only on a level on the party's map, so a referee's plans for other levels stay private. A player gets an empty list for any other level, and 403 `forbidden` for a new mark there. |
 | Erase an annotation | Its author, or a referee. |
 | Character data | Its owner, and a referee of a table whose roster has the character. |
 
@@ -245,7 +247,7 @@ The rules proxy serves `classes`, `monsters`, `spells`, `equipment`, `magic-item
 
 An adventure's `id` in the list is a bxapi ID for a built-in or uploaded adventure, and `sample:<file name>` for a sample from `adventures/`. The server uploads a sample to bxapi the first time a table plays it and skips a sample file that bxapi refuses, with a warning in the log.
 
-A request body is at most 64 KiB, except an adventure document, which is at most 8 MiB.
+A request body is at most 64 KiB, except an adventure document, which is at most 8 MiB. A JSON body may nest at most 64 levels.
 
 ## WebSocket messages
 
@@ -269,7 +271,7 @@ A request body is at most 64 KiB, except an adventure document, which is at most
 | server to client | `error` | `code` and `detail` for a client message the server couldn't use. |
 | server to client | `removed` | `reason` (`left`, `kicked`, `table_deleted`). The server then closes the socket. |
 
-A client message is at most 16 KiB, and a connection may send about 20 messages a second and 5 pings in 2 seconds. The close codes are in `WS_CLOSE_CODES`. `TableConnection` stops reconnecting after `auth_failed` (4001) and `removed` (4003), and reconnects at once after `resync` (4010), which the server sends when a member's role changes.
+A client message is at most 16 KiB, and a connection may send about 20 messages a second, 5 pings in 2 seconds, and 3 `resync` requests in 10 seconds. A player receives a `ping` only on a level on the party's map. The server drops a connection that has 8 MiB of messages it hasn't read. The close codes are in `WS_CLOSE_CODES`. `TableConnection` stops reconnecting after `auth_failed` (4001) and `removed` (4003), and reconnects at once after `resync` (4010), which the server sends when a member's role changes.
 
 ## Errors
 
@@ -277,11 +279,16 @@ Every error is an RFC 9457 problem document with the media type `application/pro
 
 ## Security
 
-- The server limits each IP address: 10 new users and 20 invite code attempts every 10 minutes, and 30 unknown tokens every 10 minutes, after which a request with an unknown token gets 429 with `Retry-After`. A valid token always works.
+`docs/security.md` states the trust model, what the server guarantees and which tests check it, and a checklist for hosts. In short:
+
+- The server limits each IP address (an IPv6 address by its /64 prefix): 10 new users, 20 invite code attempts, 30 unknown tokens, and 10 wrong host keys every 10 minutes. After that, the request gets 429 `rate_limited` with `Retry-After`. A valid token always works, but a blocked address can't create a table even with the right host key.
+- Each user may send 100 requests that change something every 20 seconds, and 30 feed posts and new annotations every 30 seconds.
+- Quotas cap what one user or table stores: 50 tables per user, 200 characters per user, 100 saves per table (autosaves aside), 20 uploaded adventures per table, and 20,000 annotations per table. A request over a quota gets 403 `forbidden`, or 413 `content_too_large` for annotations.
 - The server trusts `CF-Connecting-IP` and then the last `X-Forwarded-For` entry only from a peer on the same machine, such as `cloudflared` or the Vite proxy.
-- An invite code has 100 random bits. The server stores only a SHA-256 hash of each token.
-- The WebSocket handshake must come from the server's own origin, a `localhost` or loopback origin, or an origin in `BXVTT_PUBLIC_ORIGINS`. A handshake with no `Origin` (a program rather than a page) is allowed and still has to authenticate.
-- The web client gets a Content Security Policy that allows scripts, styles, fonts, and connections only to the server itself, plus `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, and `X-Content-Type-Options: nosniff`. API responses have `Cache-Control: no-store` unless they set their own caching.
+- An invite code has 100 random bits, and removing a member replaces it. The server stores only a SHA-256 hash of each token.
+- The WebSocket handshake must come from the server's own origin, a `localhost` or loopback origin, or an origin in `BXVTT_PUBLIC_ORIGINS`. A handshake with no `Origin` (a program rather than a page) is allowed and still has to authenticate. A user may hold 10 connections to a table, and one address may hold 20 sockets that haven't authenticated yet. A further socket is closed with `rate_limited` (4008).
+- The web client gets a Content Security Policy that allows scripts, styles, fonts, and connections only to the server itself, plus `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, and `X-Content-Type-Options: nosniff`. A request through an HTTPS tunnel also gets `Strict-Transport-Security`. API responses have `Cache-Control: no-store` unless they set their own caching.
+- A JSON body may nest at most 64 levels. A display name, table name, or save label can't contain a control character or a bidirectional override.
 
 ## Tests
 

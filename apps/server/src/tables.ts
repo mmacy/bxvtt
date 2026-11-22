@@ -24,6 +24,8 @@ import type { Row } from './db';
 import { json, num, str, strOrNull } from './db';
 import { ApiError, notFound, parseBody } from './errors';
 import { newId, newInviteCode, normalizeInviteCode, now, secretsEqual } from './ids';
+import { rateLimited } from './auth';
+import { addressKey } from './util';
 
 /** What the server remembers about a table's current game, in the `game_json` column. */
 export interface GameRecord {
@@ -378,11 +380,27 @@ export function registerTableRoutes(app: FastifyInstance, ctx: Context): void {
   app.post('/api/tables', async (request, reply) => {
     const user = ctx.auth.user(request);
     const body = parseBody(CreateTableRequest, request);
-    if (
-      ctx.config.hostKey !== null &&
-      (body.host_key === undefined || !secretsEqual(body.host_key, ctx.config.hostKey))
-    ) {
-      throw new ApiError('host_key_required', 'Creating a table on this server needs the host key.');
+    if (ctx.config.hostKey !== null) {
+      // The limit applies before the comparison, so an address that has guessed too often can't learn
+      // whether its next guess is right.
+      const key = addressKey(request.clientIp);
+      const blocked = ctx.limits.failedHostKey.peek(key);
+      if (blocked > 0)
+        throw rateLimited('This address has sent too many wrong host keys. Try again later.', blocked);
+      if (body.host_key === undefined || !secretsEqual(body.host_key, ctx.config.hostKey)) {
+        if (body.host_key !== undefined) ctx.limits.failedHostKey.take(key);
+        throw new ApiError('host_key_required', 'Creating a table on this server needs the host key.');
+      }
+    }
+    const created = num(
+      ctx.db.get('SELECT count(*) AS n FROM tables WHERE created_by = ?', user.id) ?? { n: 0 },
+      'n',
+    );
+    if (created >= ctx.config.quotas.tablesPerUser) {
+      throw new ApiError(
+        'forbidden',
+        `You have created ${created} tables, the most this server allows. Delete one you no longer use.`,
+      );
     }
     const id = tables.create(body.name, user);
     request.log.info({ table: id, user: user.id }, 'table created');
@@ -438,9 +456,7 @@ export function registerTableRoutes(app: FastifyInstance, ctx: Context): void {
     const { tableId } = TableParams.parse(request.params);
     const user = ctx.auth.user(request);
     tables.requireReferee(tableId, user);
-    await ctx.game.deleteTableData(tableId);
-    ctx.db.run('DELETE FROM tables WHERE id = ?', tableId);
-    ctx.hub.removeUser(tableId, null, 'table_deleted');
+    await ctx.game.deleteTable(tableId);
     request.log.info({ table: tableId, user: user.id }, 'table deleted');
     return reply.status(204).send();
   });
@@ -455,15 +471,8 @@ export function registerTableRoutes(app: FastifyInstance, ctx: Context): void {
 
   app.post('/api/join', async (request) => {
     const user = ctx.auth.user(request);
-    const retry = ctx.limits.join.take(request.clientIp);
-    if (retry > 0) {
-      throw new ApiError(
-        'rate_limited',
-        'This address has tried too many invite codes. Try again later.',
-        { retry_after: retry },
-        { headers: { 'Retry-After': String(retry) } },
-      );
-    }
+    const retry = ctx.limits.join.take(addressKey(request.clientIp));
+    if (retry > 0) throw rateLimited('This address has tried too many invite codes. Try again later.', retry);
     const body = parseBody(JoinTableRequest, request);
     const row = ctx.db.get(
       'SELECT id FROM tables WHERE invite_code = ?',
@@ -491,9 +500,7 @@ export function registerTableRoutes(app: FastifyInstance, ctx: Context): void {
     const role = tables.requireMember(tableId, user);
     const memberCount = tables.members(tableId).length;
     if (memberCount === 1) {
-      await ctx.game.deleteTableData(tableId);
-      ctx.db.run('DELETE FROM tables WHERE id = ?', tableId);
-      ctx.hub.removeUser(tableId, null, 'table_deleted');
+      await ctx.game.deleteTable(tableId);
       return reply.status(204).send();
     }
     if (role === 'referee' && tables.refereeCount(tableId) === 1) {
@@ -547,6 +554,8 @@ export function registerTableRoutes(app: FastifyInstance, ctx: Context): void {
     }
     if (tables.roleOf(tableId, userId) === null) notFound('member', userId);
     tables.removeMember(tableId, userId);
+    // The removed member saw the invite code, so a new one keeps them from joining again with it.
+    ctx.db.run('UPDATE tables SET invite_code = ? WHERE id = ?', newInviteCode(), tableId);
     ctx.feed.system(tableId, user.id, 'member_removed', { user_id: userId });
     ctx.hub.removeUser(tableId, userId, 'kicked');
     tables.broadcastTable(tableId);

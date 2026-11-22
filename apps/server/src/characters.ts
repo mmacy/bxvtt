@@ -133,6 +133,16 @@ export function registerCharacterRoutes(app: FastifyInstance, ctx: Context): voi
     const user = ctx.auth.user(request);
     const body = parseBody(CharacterRequest, request);
     checkSeed(ctx, body.seed);
+    const owned = num(
+      db.get('SELECT count(*) AS n FROM characters WHERE owner_user_id = ?', user.id) ?? { n: 0 },
+      'n',
+    );
+    if (owned >= ctx.config.quotas.charactersPerUser) {
+      throw new ApiError(
+        'forbidden',
+        `You have ${owned} characters, the most this server keeps for one user. Delete one you no longer play.`,
+      );
+    }
     if (body.ability_roll_id !== undefined) {
       const owns = db.get(
         'SELECT 1 FROM ability_rolls WHERE id = ? AND owner_user_id = ?',

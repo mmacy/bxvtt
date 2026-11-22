@@ -5,7 +5,12 @@ import { defineProject } from 'vitest/config';
 export default defineProject({
   plugins: [react()],
   resolve: {
-    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+    // `@/app` names the app layer's barrel. Spelled out, because on a case-insensitive disk `src/app` would
+    // otherwise resolve to `src/App.tsx`.
+    alias: [
+      { find: /^@\/app$/, replacement: fileURLToPath(new URL('./src/app/index.ts', import.meta.url)) },
+      { find: '@', replacement: fileURLToPath(new URL('./src', import.meta.url)) },
+    ],
   },
   test: {
     name: 'web',

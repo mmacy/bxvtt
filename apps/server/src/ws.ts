@@ -9,7 +9,7 @@ import { ApiError } from './errors';
 import type { Connection } from './hub';
 import { now } from './ids';
 import { readNotes } from './notes';
-import { RateLimiter } from './util';
+import { addressKey, RateLimiter } from './util';
 
 /** How long a client has to send its `auth` message after the socket opens. */
 const AUTH_TIMEOUT_MS = 10_000;
@@ -123,6 +123,9 @@ export function registerWebSocket(app: FastifyInstance, ctx: Context): void {
     }
   };
 
+  // Sockets that haven't authenticated yet, by address key.
+  const pendingByAddress = new Map<string, number>();
+
   app.get(WS_PATH, { websocket: true, preValidation: checkOrigin }, (socket, request) => {
     sockets.add(socket);
     alive.set(socket, true);
@@ -131,6 +134,24 @@ export function registerWebSocket(app: FastifyInstance, ctx: Context): void {
     let user: User | null = null;
     const messages = new RateLimiter({ capacity: 40, windowMs: 2000 });
     const pings = new RateLimiter({ capacity: 5, windowMs: 2000 });
+    const resyncs = new RateLimiter({ capacity: 3, windowMs: 10_000 });
+    const addressId = addressKey(request.clientIp);
+    let pending = true;
+    const settle = () => {
+      if (!pending) return;
+      pending = false;
+      const left = (pendingByAddress.get(addressId) ?? 1) - 1;
+      if (left <= 0) pendingByAddress.delete(addressId);
+      else pendingByAddress.set(addressId, left);
+    };
+    const waiting = (pendingByAddress.get(addressId) ?? 0) + 1;
+    pendingByAddress.set(addressId, waiting);
+    if (waiting > ctx.config.quotas.pendingSocketsPerAddress) {
+      settle();
+      socket.close(WS_CLOSE_CODES.rate_limited, 'too many sockets waiting to authenticate');
+      sockets.delete(socket);
+      return;
+    }
     const authTimer = setTimeout(
       () => socket.close(WS_CLOSE_CODES.auth_failed, 'no auth message'),
       AUTH_TIMEOUT_MS,
@@ -152,6 +173,11 @@ export function registerWebSocket(app: FastifyInstance, ctx: Context): void {
       if (found === null || ctx.tables.roleOf(tableId, found.id) === null) {
         fail('unauthorized', 'The token is unknown, or the user is not a member of the table.');
         socket.close(WS_CLOSE_CODES.auth_failed, 'auth failed');
+        return;
+      }
+      if (ctx.hub.connectionsOf(tableId, found.id) >= ctx.config.quotas.connectionsPerUser) {
+        fail('rate_limited', 'You have too many connections to this table. Close a tab and try again.');
+        socket.close(WS_CLOSE_CODES.rate_limited, 'too many connections');
         return;
       }
       user = found;
@@ -200,10 +226,14 @@ export function registerWebSocket(app: FastifyInstance, ctx: Context): void {
           return;
         }
         clearTimeout(authTimer);
+        settle();
         void authenticate(message.token, message.table_id, message.feed_after);
         return;
       }
       const current = connection;
+      // A member removed a moment ago may still have frames in flight. They go nowhere.
+      const role = ctx.tables.roleOf(current.tableId, current.userId);
+      if (role === null) return;
       switch (message.type) {
         case 'auth':
           fail('bad_request', 'The connection is already authenticated.');
@@ -212,6 +242,11 @@ export function registerWebSocket(app: FastifyInstance, ctx: Context): void {
           send({ type: 'heartbeat', server_time: now() });
           return;
         case 'resync':
+          // Each snapshot reads the game under the table's lock, so a client may ask only now and then.
+          if (resyncs.take('socket') > 0) {
+            fail('rate_limited', 'Ask for a new snapshot less often.');
+            return;
+          }
           void deliverSnapshot(current, user, message.feed_after);
           return;
         case 'ping': {
@@ -220,13 +255,17 @@ export function registerWebSocket(app: FastifyInstance, ctx: Context): void {
             return;
           }
           const { type: _type, ...ping } = message;
-          ctx.hub.broadcast(current.tableId, { type: 'ping', ...ping, user_id: current.userId, at: now() });
+          const out = { type: 'ping' as const, ...ping, user_id: current.userId, at: now() };
+          // A player sees a ping only on a level the party has mapped, like the annotations there.
+          const known = ctx.game.levelKnown(current.tableId, ping);
+          ctx.hub.send(current.tableId, (recipient) => (recipient.role === 'referee' || known ? out : null));
           return;
         }
       }
     });
 
     socket.on('close', () => {
+      settle();
       clearTimeout(authTimer);
       sockets.delete(socket);
       if (connection !== null) ctx.hub.remove(connection);

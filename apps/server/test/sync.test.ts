@@ -182,7 +182,11 @@ describe('persistence', () => {
       const first = await startServer({ dataDir });
       const referee = await createUser(first, 'Ref');
       const alice = await createUser(first, 'Alice');
-      const { tableId, game } = await startGame(referee, [alice]);
+      const { tableId } = await startGame(referee, [alice]);
+      // A player marks only a level the party has mapped.
+      const game = (
+        await alice.client.sendCommand(tableId, { command_type: 'enter_dungeon', dungeon_id: 'barrow' })
+      ).game;
       await alice.client.postFeed(tableId, { text: 'before the restart' });
       await alice.client.updateNotes(tableId, 'party', 'Remember the rope.', 0);
       await alice.client.createAnnotation(tableId, {

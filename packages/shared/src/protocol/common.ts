@@ -1,10 +1,14 @@
 import { z } from 'zod';
 
-/** Whether a string has a control character: U+0000 to U+001F, or U+007F to U+009F. */
+/**
+ * Whether a string has a control character: U+0000 to U+001F, U+007F to U+009F, or a bidirectional embedding,
+ * override, or isolate (U+202A to U+202E, U+2066 to U+2069), which can make a name display as another name.
+ */
 function hasControlCharacter(value: string): boolean {
   for (const character of value) {
     const code = character.codePointAt(0) ?? 0;
     if (code <= 0x1f || (code >= 0x7f && code <= 0x9f)) return true;
+    if ((code >= 0x202a && code <= 0x202e) || (code >= 0x2066 && code <= 0x2069)) return true;
   }
   return false;
 }
@@ -44,7 +48,8 @@ export const LIMITS = {
 } as const;
 
 /**
- * A single-line display string: trimmed, at least one character, at most `max`, with no control character.
+ * A single-line display string: trimmed, at least one character, at most `max`, with no control character and no
+ * bidirectional override.
  *
  * @param max - The most characters the string may have after trimming.
  */

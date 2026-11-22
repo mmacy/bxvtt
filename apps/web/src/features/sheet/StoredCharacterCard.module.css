@@ -1,0 +1,32 @@
+.card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+}
+
+.name {
+  margin: 0;
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-strong);
+}
+
+.meta {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.owner {
+  color: var(--color-text-subtle);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}

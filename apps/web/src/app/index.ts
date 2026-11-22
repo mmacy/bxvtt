@@ -1,0 +1,80 @@
+/**
+ * The app layer: identity, API access, the table store and its hooks, commands, text, rules catalogs, the map
+ * interaction bus, preferences, shell overlays, and keyboard shortcuts. Features import everything from `@/app`.
+ * `apps/web/src/features/README.md` documents each export with an example.
+ */
+export { describeProblem, displayStringProblem, getApi, isNetworkError, reportError, setApi } from './api';
+export type { ProblemMessage } from './api';
+export { useCurrentUser, useIdentity } from './identity';
+export type { IdentityState, IdentityStatus } from './identity';
+export { DEFAULT_PREFERENCES, usePreferences, useReduceMotion } from './preferences';
+export type { DockTabId, MapThemeName, MotionPreference, Preferences } from './preferences';
+export {
+  canActForParty,
+  canControlMember,
+  canDeclare,
+  canResolveRound,
+  canSendCommand,
+  isReferee,
+  seatedMemberIds,
+} from './permissions';
+export type { Permission, PermissionContext } from './permissions';
+export { TableProvider, useTableStore, useTableStoreApi } from './table/context';
+export * from './table/hooks';
+export { useAdventureDocument } from './table/referee';
+export { PING_LIFETIME_MS, RESYNC_INTERVAL_MS, announceNotice, useTableSession } from './table/session';
+export { createTableStore, dataFromSnapshot, levelKey, newerGame, reduceServerMessage } from './table/store';
+export type {
+  RemovedReason,
+  TableConnectionStatus,
+  TableData,
+  TableNotice,
+  TablePing,
+  TableState,
+  TableStore,
+} from './table/store';
+export {
+  COMMANDS_PER_SECOND,
+  useApiAction,
+  useSendCommand,
+  useSendDeclaration,
+  useSendRefereeCommand,
+} from './commands';
+export type {
+  DeclarationResult,
+  ErrorResult,
+  GameCommand,
+  RefusalDisplay,
+  ResolveResult,
+  SendOptions,
+  SendResult,
+  SkipReason,
+} from './commands';
+export { useTextContext } from './text';
+export * from './rules';
+export { resetMyCharacters, useMyCharacters, useStoredCharacter } from './characters';
+export { useMapBus } from './mapBus';
+export type {
+  CellPick,
+  EdgePick,
+  FocusRequest,
+  FocusTarget,
+  MapBusState,
+  MapDirection,
+  MapToolId,
+  PickOptions,
+  PickRequest,
+  PickTarget,
+} from './mapBus';
+export { useTableUi } from './ui';
+export type { CompendiumEntry, TableUiState } from './ui';
+export {
+  ShortcutLayer,
+  formatShortcut,
+  matchesShortcut,
+  useAction,
+  useRegisteredShortcuts,
+  useShortcut,
+} from './shortcuts';
+export type { ActionDefinition, ShortcutDefinition } from './shortcuts';
+export { tokenClass } from './display';

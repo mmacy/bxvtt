@@ -6,6 +6,8 @@ import type { Database, Row } from './db';
 import { num, str } from './db';
 import { ApiError, parseBody } from './errors';
 import { hashToken, newId, newToken, now } from './ids';
+import { rateLimited } from './auth';
+import { addressKey } from './util';
 
 /**
  * Stores users. A user has a display name, a color from {@link USER_COLORS}, and a token, of which the
@@ -96,15 +98,8 @@ function toUser(row: Row): User {
  */
 export function registerUserRoutes(app: FastifyInstance, ctx: Context): void {
   app.post('/api/users', async (request, reply) => {
-    const retry = ctx.limits.createUser.take(request.clientIp);
-    if (retry > 0) {
-      throw new ApiError(
-        'rate_limited',
-        'This address has created too many users. Try again later.',
-        { retry_after: retry },
-        { headers: { 'Retry-After': String(retry) } },
-      );
-    }
+    const retry = ctx.limits.createUser.take(addressKey(request.clientIp));
+    if (retry > 0) throw rateLimited('This address has created too many users. Try again later.', retry);
     const body = parseBody(CreateUserRequest, request);
     const created = ctx.users.create(body.name);
     request.log.info({ user: created.user.id }, 'user created');

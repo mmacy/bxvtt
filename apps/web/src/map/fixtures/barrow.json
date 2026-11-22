@@ -1,0 +1,996 @@
+{
+  "note": "builtin-barrow after entering, lighting a torch, and one step east.",
+  "view": {
+    "adventure_name": "The Barrow of the Forgotten King",
+    "adventure_description": "A plundered barrow outside town, and the idol the temple wants back.",
+    "town_name": "Threshold",
+    "town_description": "A walled market town at the edge of the moors.",
+    "town_services": ["equipment", "temple healing", "treasure buyers"],
+    "town_healing_prices": {
+      "cure_light_wounds": 25,
+      "cure_serious_wounds": 100,
+      "cure_disease": 150,
+      "neutralize_poison": 150,
+      "remove_curse": 200,
+      "raise_dead": 1500
+    },
+    "party": [
+      {
+        "id": "character-0001",
+        "name": "Brenna",
+        "class_id": "fighter",
+        "level": 1,
+        "current_hp": 5,
+        "max_hp": 5,
+        "conditions": [],
+        "inventory": {
+          "items": [
+            {
+              "instance_type": "item",
+              "template": {
+                "item_type": "gear",
+                "id": "torch",
+                "name": "Torches (6)",
+                "cost_gp": 1,
+                "lot_size": 6,
+                "capacity_coins": null,
+                "combat": {
+                  "damage": "1d4",
+                  "qualities": ["melee"],
+                  "missile_ranges": null
+                },
+                "params": {
+                  "brightness": "flame",
+                  "burn_turns": 6,
+                  "light_radius_feet": 30
+                },
+                "overrides_applied": []
+              },
+              "quantity": 11
+            },
+            {
+              "instance_type": "item",
+              "template": {
+                "item_type": "gear",
+                "id": "tinder_box",
+                "name": "Tinder box (flint & steel)",
+                "cost_gp": 3,
+                "lot_size": 1,
+                "capacity_coins": null,
+                "combat": null,
+                "params": {
+                  "light_chance_in_six": 2
+                },
+                "overrides_applied": []
+              },
+              "quantity": 1
+            },
+            {
+              "instance_type": "item",
+              "template": {
+                "item_type": "weapon",
+                "id": "sword",
+                "name": "Sword",
+                "cost_gp": 10,
+                "weight_coins": 60,
+                "damage": "1d8",
+                "qualities": ["melee"],
+                "missile_ranges": null,
+                "material": "standard",
+                "overrides_applied": []
+              },
+              "quantity": 1
+            },
+            {
+              "instance_type": "item",
+              "template": {
+                "item_type": "gear",
+                "id": "iron_spikes",
+                "name": "Iron spikes (12)",
+                "cost_gp": 1,
+                "lot_size": 12,
+                "capacity_coins": null,
+                "combat": null,
+                "params": {
+                  "wedges_doors": true
+                },
+                "overrides_applied": []
+              },
+              "quantity": 12
+            },
+            {
+              "instance_type": "item",
+              "template": {
+                "item_type": "weapon",
+                "id": "dagger",
+                "name": "Dagger",
+                "cost_gp": 3,
+                "weight_coins": 10,
+                "damage": "1d4",
+                "qualities": ["melee", "missile"],
+                "missile_ranges": {
+                  "short": {
+                    "min_feet": 5,
+                    "max_feet": 10
+                  },
+                  "medium": {
+                    "min_feet": 11,
+                    "max_feet": 20
+                  },
+                  "long": {
+                    "min_feet": 21,
+                    "max_feet": 30
+                  }
+                },
+                "material": "standard",
+                "overrides_applied": []
+              },
+              "quantity": 1
+            }
+          ],
+          "purse": {
+            "pp": 0,
+            "gp": 111,
+            "ep": 0,
+            "sp": 0,
+            "cp": 0
+          },
+          "valuables": [],
+          "worn_armour": null,
+          "shield": null,
+          "wielded": [],
+          "rings": []
+        },
+        "memorized_spells": [],
+        "encounter_rate_feet": 40,
+        "race": "human",
+        "alignment": "lawful",
+        "title": "Veteran",
+        "xp": 0,
+        "xp_next_level": 2000,
+        "scores": {
+          "str": 16,
+          "int": 13,
+          "wis": 8,
+          "dex": 7,
+          "con": 11,
+          "cha": 8
+        },
+        "effective_strength": 16,
+        "melee_modifier": 2,
+        "missile_modifier": -1,
+        "initiative_modifier": -1,
+        "hit_point_modifier": 0,
+        "magic_save_modifier": -1,
+        "npc_reaction_modifier": -1,
+        "open_doors_chance": 4,
+        "thac0": 19,
+        "attack_bonus": 0,
+        "armour_class": 10,
+        "armour_class_ascending": 9,
+        "saves": {
+          "death": 12,
+          "wands": 13,
+          "paralysis": 14,
+          "breath": 15,
+          "spells": 16
+        },
+        "movement_rate_feet": 120,
+        "languages": ["alignment_lawful", "common"],
+        "spell_book": [],
+        "thief_skills": {}
+      },
+      {
+        "id": "character-0002",
+        "name": "Durin",
+        "class_id": "dwarf",
+        "level": 1,
+        "current_hp": 5,
+        "max_hp": 5,
+        "conditions": [],
+        "inventory": {
+          "items": [],
+          "purse": {
+            "pp": 0,
+            "gp": 130,
+            "ep": 0,
+            "sp": 0,
+            "cp": 0
+          },
+          "valuables": [],
+          "worn_armour": null,
+          "shield": null,
+          "wielded": [],
+          "rings": []
+        },
+        "memorized_spells": [],
+        "encounter_rate_feet": 40,
+        "race": "dwarf",
+        "alignment": "lawful",
+        "title": "Dwarven Veteran",
+        "xp": 0,
+        "xp_next_level": 2200,
+        "scores": {
+          "str": 16,
+          "int": 13,
+          "wis": 8,
+          "dex": 7,
+          "con": 11,
+          "cha": 8
+        },
+        "effective_strength": 16,
+        "melee_modifier": 2,
+        "missile_modifier": -1,
+        "initiative_modifier": -1,
+        "hit_point_modifier": 0,
+        "magic_save_modifier": -1,
+        "npc_reaction_modifier": -1,
+        "open_doors_chance": 4,
+        "thac0": 19,
+        "attack_bonus": 0,
+        "armour_class": 10,
+        "armour_class_ascending": 9,
+        "saves": {
+          "death": 8,
+          "wands": 9,
+          "paralysis": 10,
+          "breath": 13,
+          "spells": 12
+        },
+        "movement_rate_feet": 120,
+        "languages": ["alignment_lawful", "common", "dwarvish", "gnomish", "goblin", "kobold"],
+        "spell_book": [],
+        "thief_skills": {}
+      },
+      {
+        "id": "character-0003",
+        "name": "Elowen",
+        "class_id": "elf",
+        "level": 1,
+        "current_hp": 5,
+        "max_hp": 5,
+        "conditions": [],
+        "inventory": {
+          "items": [
+            {
+              "instance_type": "item",
+              "template": {
+                "item_type": "weapon",
+                "id": "sword",
+                "name": "Sword",
+                "cost_gp": 10,
+                "weight_coins": 60,
+                "damage": "1d8",
+                "qualities": ["melee"],
+                "missile_ranges": null,
+                "material": "standard",
+                "overrides_applied": []
+              },
+              "quantity": 1
+            }
+          ],
+          "purse": {
+            "pp": 0,
+            "gp": 120,
+            "ep": 0,
+            "sp": 0,
+            "cp": 0
+          },
+          "valuables": [],
+          "worn_armour": null,
+          "shield": null,
+          "wielded": [],
+          "rings": []
+        },
+        "memorized_spells": [],
+        "encounter_rate_feet": 40,
+        "race": "elf",
+        "alignment": "neutral",
+        "title": "Medium/Veteran",
+        "xp": 0,
+        "xp_next_level": 4000,
+        "scores": {
+          "str": 16,
+          "int": 13,
+          "wis": 8,
+          "dex": 7,
+          "con": 11,
+          "cha": 8
+        },
+        "effective_strength": 16,
+        "melee_modifier": 2,
+        "missile_modifier": -1,
+        "initiative_modifier": -1,
+        "hit_point_modifier": 0,
+        "magic_save_modifier": -1,
+        "npc_reaction_modifier": -1,
+        "open_doors_chance": 4,
+        "thac0": 19,
+        "attack_bonus": 0,
+        "armour_class": 10,
+        "armour_class_ascending": 9,
+        "saves": {
+          "death": 12,
+          "wands": 13,
+          "paralysis": 13,
+          "breath": 15,
+          "spells": 15
+        },
+        "movement_rate_feet": 120,
+        "languages": ["alignment_neutral", "common", "elvish", "gnoll", "hobgoblin", "orcish"],
+        "spell_book": ["sleep"],
+        "thief_skills": {}
+      },
+      {
+        "id": "character-0004",
+        "name": "Wren",
+        "class_id": "thief",
+        "level": 1,
+        "current_hp": 3,
+        "max_hp": 3,
+        "conditions": [],
+        "inventory": {
+          "items": [
+            {
+              "instance_type": "item",
+              "template": {
+                "item_type": "weapon",
+                "id": "dagger",
+                "name": "Dagger",
+                "cost_gp": 3,
+                "weight_coins": 10,
+                "damage": "1d4",
+                "qualities": ["melee", "missile"],
+                "missile_ranges": {
+                  "short": {
+                    "min_feet": 5,
+                    "max_feet": 10
+                  },
+                  "medium": {
+                    "min_feet": 11,
+                    "max_feet": 20
+                  },
+                  "long": {
+                    "min_feet": 21,
+                    "max_feet": 30
+                  }
+                },
+                "material": "standard",
+                "overrides_applied": []
+              },
+              "quantity": 1
+            },
+            {
+              "instance_type": "item",
+              "template": {
+                "item_type": "gear",
+                "id": "thieves_tools",
+                "name": "Thieves’ tools",
+                "cost_gp": 25,
+                "lot_size": 1,
+                "capacity_coins": null,
+                "combat": null,
+                "params": {
+                  "required_for": "open_locks"
+                },
+                "overrides_applied": []
+              },
+              "quantity": 1
+            }
+          ],
+          "purse": {
+            "pp": 0,
+            "gp": 102,
+            "ep": 0,
+            "sp": 0,
+            "cp": 0
+          },
+          "valuables": [],
+          "worn_armour": null,
+          "shield": null,
+          "wielded": [],
+          "rings": []
+        },
+        "memorized_spells": [],
+        "encounter_rate_feet": 40,
+        "race": "human",
+        "alignment": "neutral",
+        "title": "Apprentice",
+        "xp": 0,
+        "xp_next_level": 1200,
+        "scores": {
+          "str": 16,
+          "int": 13,
+          "wis": 8,
+          "dex": 7,
+          "con": 11,
+          "cha": 8
+        },
+        "effective_strength": 16,
+        "melee_modifier": 2,
+        "missile_modifier": -1,
+        "initiative_modifier": -1,
+        "hit_point_modifier": 0,
+        "magic_save_modifier": -1,
+        "npc_reaction_modifier": -1,
+        "open_doors_chance": 4,
+        "thac0": 19,
+        "attack_bonus": 0,
+        "armour_class": 10,
+        "armour_class_ascending": 9,
+        "saves": {
+          "death": 13,
+          "wands": 14,
+          "paralysis": 13,
+          "breath": 16,
+          "spells": 15
+        },
+        "movement_rate_feet": 120,
+        "languages": ["alignment_neutral", "common"],
+        "spell_book": [],
+        "thief_skills": {
+          "climb_sheer_surfaces": 87,
+          "find_remove_treasure_traps": 10,
+          "hear_noise": 2,
+          "hide_in_shadows": 10,
+          "move_silently": 20,
+          "open_locks": 15,
+          "pick_pockets": 20
+        }
+      }
+    ],
+    "location": {
+      "kind": "dungeon",
+      "dungeon_id": "barrow",
+      "level_number": 1,
+      "position": [1, 0],
+      "facing": "east"
+    },
+    "clock_rounds": 121,
+    "mode": "exploring",
+    "explored": [
+      {
+        "dungeon_id": "barrow",
+        "level_number": 1,
+        "cells": [
+          [0, 0],
+          [1, 0],
+          [2, 0],
+          [3, 0],
+          [4, 0]
+        ],
+        "edges": {
+          "0,0:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "1,0:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "0,1:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "0,0:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "1,0:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "2,0:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "1,1:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "2,0:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "3,0:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "2,1:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "3,0:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "4,0:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "3,1:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "4,0:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "5,0:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "4,1:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          }
+        }
+      }
+    ],
+    "piles": {},
+    "emptied_caches": [],
+    "effects": [
+      {
+        "character_id": "character-0001",
+        "kind": "light",
+        "remaining_rounds": 359
+      }
+    ],
+    "fatigued": false,
+    "exhausted": false,
+    "deprivation": {},
+    "journal": [
+      {
+        "text": "The temple wants the Jade Idol off the barrow king's altar and back on its own.",
+        "rounds": 120
+      }
+    ],
+    "quests": [
+      {
+        "id": "the-idol",
+        "name": "The Jade Idol",
+        "narrative": "The temple wants the Jade Idol off the barrow king's altar and back on its own.",
+        "speaker": "the temple almoner",
+        "objectives": [
+          {
+            "id": "recover-idol",
+            "name": "Recover the idol",
+            "state": "incomplete"
+          },
+          {
+            "id": "return-home",
+            "name": "Bring it home",
+            "state": "incomplete"
+          }
+        ]
+      }
+    ],
+    "encounter": null
+  },
+  "referee": {
+    "mode": "exploring",
+    "adventure": {
+      "name": "The Barrow of the Forgotten King",
+      "dungeons": [
+        {
+          "id": "barrow",
+          "name": "The Barrow",
+          "levels": [
+            {
+              "number": 1,
+              "width": 5,
+              "height": 1,
+              "edges": {
+                "1,0:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "2,0:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "3,0:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "4,0:west": {
+                  "kind": "open",
+                  "door": null
+                }
+              },
+              "areas": [
+                {
+                  "id": "guard_room",
+                  "name": "Guard room",
+                  "description": "Broken spears and gnawed bones litter the flagstones.",
+                  "cells": [
+                    [2, 0],
+                    [3, 0]
+                  ],
+                  "encounter": {
+                    "monsters": [
+                      {
+                        "template_id": "goblin",
+                        "count_dice": null,
+                        "count_fixed": 2
+                      }
+                    ],
+                    "alignment": null,
+                    "aware": false,
+                    "stance": null,
+                    "hoard": true
+                  },
+                  "features": [],
+                  "trap": null,
+                  "treasure": null
+                },
+                {
+                  "id": "shrine",
+                  "name": "Shrine of the Barrow King",
+                  "description": "A toppled altar; something green glints beneath it.",
+                  "cells": [[4, 0]],
+                  "encounter": null,
+                  "features": [
+                    {
+                      "id": "idol_shrine",
+                      "kind": "treasure_cache",
+                      "description": "The idol rests in a hollow under the altar stone.",
+                      "cell": [4, 0],
+                      "item_ids": ["jade-idol"],
+                      "magic_item_ids": [],
+                      "coins": {
+                        "pp": 0,
+                        "gp": 50,
+                        "ep": 0,
+                        "sp": 0,
+                        "cp": 0
+                      },
+                      "valuables": [],
+                      "trap": null
+                    }
+                  ],
+                  "trap": null,
+                  "treasure": null
+                }
+              ],
+              "features": [],
+              "transitions": [
+                {
+                  "kind": "stairs_down",
+                  "position": [4, 0],
+                  "side": null,
+                  "to_dungeon_id": "barrow",
+                  "to_level_number": 2,
+                  "to_position": [0, 0],
+                  "to_facing": "east",
+                  "requires": null
+                }
+              ],
+              "wandering": {
+                "chance_in_six": 0,
+                "interval_turns": 2,
+                "table": null
+              },
+              "entrance": [0, 0],
+              "guidance": "Grave goods, not treasure: the barrow king was buried, not hoarded. Keep the goblins squalid and the shrine quiet."
+            },
+            {
+              "number": 2,
+              "width": 3,
+              "height": 1,
+              "edges": {
+                "1,0:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "2,0:west": {
+                  "kind": "open",
+                  "door": null
+                }
+              },
+              "areas": [
+                {
+                  "id": "vault",
+                  "name": "Looted vault",
+                  "description": "Empty niches, but one flagstone sits proud of the floor.",
+                  "cells": [[2, 0]],
+                  "encounter": null,
+                  "features": [],
+                  "trap": null,
+                  "treasure": {
+                    "letters": [],
+                    "unguarded": true
+                  }
+                }
+              ],
+              "features": [],
+              "transitions": [
+                {
+                  "kind": "stairs_up",
+                  "position": [0, 0],
+                  "side": null,
+                  "to_dungeon_id": "barrow",
+                  "to_level_number": 1,
+                  "to_position": [4, 0],
+                  "to_facing": "west",
+                  "requires": null
+                }
+              ],
+              "wandering": {
+                "chance_in_six": 6,
+                "interval_turns": 1,
+                "table": {
+                  "id": "barrow_rivals",
+                  "label": "Barrow halls",
+                  "min_level": 2,
+                  "max_level": null,
+                  "rows": [
+                    {
+                      "roll": 1,
+                      "name": "Basic Adventurers",
+                      "entry": {
+                        "kind": "npc_party",
+                        "party_kind": "basic"
+                      },
+                      "count_dice": null,
+                      "count_fixed": 2
+                    },
+                    {
+                      "roll": 2,
+                      "name": "Basic Adventurers",
+                      "entry": {
+                        "kind": "npc_party",
+                        "party_kind": "basic"
+                      },
+                      "count_dice": null,
+                      "count_fixed": 2
+                    },
+                    {
+                      "roll": 3,
+                      "name": "Basic Adventurers",
+                      "entry": {
+                        "kind": "npc_party",
+                        "party_kind": "basic"
+                      },
+                      "count_dice": null,
+                      "count_fixed": 2
+                    },
+                    {
+                      "roll": 4,
+                      "name": "Basic Adventurers",
+                      "entry": {
+                        "kind": "npc_party",
+                        "party_kind": "basic"
+                      },
+                      "count_dice": null,
+                      "count_fixed": 2
+                    },
+                    {
+                      "roll": 5,
+                      "name": "Basic Adventurers",
+                      "entry": {
+                        "kind": "npc_party",
+                        "party_kind": "basic"
+                      },
+                      "count_dice": null,
+                      "count_fixed": 2
+                    },
+                    {
+                      "roll": 6,
+                      "name": "Basic Adventurers",
+                      "entry": {
+                        "kind": "npc_party",
+                        "party_kind": "basic"
+                      },
+                      "count_dice": null,
+                      "count_fixed": 2
+                    },
+                    {
+                      "roll": 7,
+                      "name": "Basic Adventurers",
+                      "entry": {
+                        "kind": "npc_party",
+                        "party_kind": "basic"
+                      },
+                      "count_dice": null,
+                      "count_fixed": 2
+                    },
+                    {
+                      "roll": 8,
+                      "name": "Basic Adventurers",
+                      "entry": {
+                        "kind": "npc_party",
+                        "party_kind": "basic"
+                      },
+                      "count_dice": null,
+                      "count_fixed": 2
+                    },
+                    {
+                      "roll": 9,
+                      "name": "Basic Adventurers",
+                      "entry": {
+                        "kind": "npc_party",
+                        "party_kind": "basic"
+                      },
+                      "count_dice": null,
+                      "count_fixed": 2
+                    },
+                    {
+                      "roll": 10,
+                      "name": "Basic Adventurers",
+                      "entry": {
+                        "kind": "npc_party",
+                        "party_kind": "basic"
+                      },
+                      "count_dice": null,
+                      "count_fixed": 2
+                    },
+                    {
+                      "roll": 11,
+                      "name": "Basic Adventurers",
+                      "entry": {
+                        "kind": "npc_party",
+                        "party_kind": "basic"
+                      },
+                      "count_dice": null,
+                      "count_fixed": 2
+                    },
+                    {
+                      "roll": 12,
+                      "name": "Basic Adventurers",
+                      "entry": {
+                        "kind": "npc_party",
+                        "party_kind": "basic"
+                      },
+                      "count_dice": null,
+                      "count_fixed": 2
+                    },
+                    {
+                      "roll": 13,
+                      "name": "Basic Adventurers",
+                      "entry": {
+                        "kind": "npc_party",
+                        "party_kind": "basic"
+                      },
+                      "count_dice": null,
+                      "count_fixed": 2
+                    },
+                    {
+                      "roll": 14,
+                      "name": "Basic Adventurers",
+                      "entry": {
+                        "kind": "npc_party",
+                        "party_kind": "basic"
+                      },
+                      "count_dice": null,
+                      "count_fixed": 2
+                    },
+                    {
+                      "roll": 15,
+                      "name": "Basic Adventurers",
+                      "entry": {
+                        "kind": "npc_party",
+                        "party_kind": "basic"
+                      },
+                      "count_dice": null,
+                      "count_fixed": 2
+                    },
+                    {
+                      "roll": 16,
+                      "name": "Basic Adventurers",
+                      "entry": {
+                        "kind": "npc_party",
+                        "party_kind": "basic"
+                      },
+                      "count_dice": null,
+                      "count_fixed": 2
+                    },
+                    {
+                      "roll": 17,
+                      "name": "Basic Adventurers",
+                      "entry": {
+                        "kind": "npc_party",
+                        "party_kind": "basic"
+                      },
+                      "count_dice": null,
+                      "count_fixed": 2
+                    },
+                    {
+                      "roll": 18,
+                      "name": "Basic Adventurers",
+                      "entry": {
+                        "kind": "npc_party",
+                        "party_kind": "basic"
+                      },
+                      "count_dice": null,
+                      "count_fixed": 2
+                    },
+                    {
+                      "roll": 19,
+                      "name": "Basic Adventurers",
+                      "entry": {
+                        "kind": "npc_party",
+                        "party_kind": "basic"
+                      },
+                      "count_dice": null,
+                      "count_fixed": 2
+                    },
+                    {
+                      "roll": 20,
+                      "name": "Basic Adventurers",
+                      "entry": {
+                        "kind": "npc_party",
+                        "party_kind": "basic"
+                      },
+                      "count_dice": null,
+                      "count_fixed": 2
+                    }
+                  ],
+                  "overrides_applied": []
+                }
+              },
+              "entrance": null,
+              "guidance": "Somebody else is always down here first. Rivals are rude, not evil."
+            }
+          ]
+        }
+      ]
+    },
+    "dungeon_state": {
+      "location": {
+        "kind": "dungeon",
+        "dungeon_id": "barrow",
+        "level_number": 1,
+        "position": [1, 0],
+        "facing": "east"
+      },
+      "explored": {
+        "barrow:1": [
+          [0, 0],
+          [1, 0]
+        ]
+      },
+      "seen": {
+        "barrow:1": [
+          [0, 0],
+          [1, 0],
+          [2, 0],
+          [3, 0],
+          [4, 0]
+        ]
+      },
+      "doors": {},
+      "sprung_traps": [],
+      "removed_traps": [],
+      "found_traps": [],
+      "found_tricks": [],
+      "emptied_caches": [],
+      "piles": {},
+      "generated_caches": {},
+      "generated_treasure_areas": [],
+      "generated_lair_hoards": [],
+      "resolved_encounters": [],
+      "listen_attempts": {},
+      "search_attempts": {},
+      "inspect_attempts": {},
+      "removal_attempts": {},
+      "lock_failures": {}
+    }
+  }
+}

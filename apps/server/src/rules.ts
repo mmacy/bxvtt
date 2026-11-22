@@ -39,11 +39,22 @@ const RULES_PATH =
  */
 export class RulesCache {
   private readonly entries = new Map<string, CacheEntry>();
+  private size = 0;
 
   /**
    * @param bxapi - The bxapi client.
+   * @param maxBytes - The most bytes of response bodies the cache holds. A user can vary the query string, so the
+   *   cache evicts its least recently stored entries past this budget.
    */
-  constructor(private readonly bxapi: BxapiClient) {}
+  constructor(
+    private readonly bxapi: BxapiClient,
+    private readonly maxBytes = 32 * 1024 * 1024,
+  ) {}
+
+  /** The bytes of response bodies the cache holds. */
+  get bytes(): number {
+    return this.size;
+  }
 
   /**
    * Reads a rules path, from the cache when it's fresh.
@@ -79,13 +90,23 @@ export class RulesCache {
       cacheControl: response.headers.get('cache-control') ?? 'private, max-age=3600',
       checkedAt: Date.now(),
     };
-    this.entries.delete(path);
+    this.forget(path);
+    if (Buffer.byteLength(entry.body) > this.maxBytes) return entry;
     this.entries.set(path, entry);
-    if (this.entries.size > MAX_ENTRIES) {
+    this.size += Buffer.byteLength(entry.body);
+    while (this.entries.size > MAX_ENTRIES || this.size > this.maxBytes) {
       const oldest = this.entries.keys().next().value;
-      if (oldest !== undefined) this.entries.delete(oldest);
+      if (oldest === undefined) break;
+      this.forget(oldest);
     }
     return entry;
+  }
+
+  private forget(path: string): void {
+    const entry = this.entries.get(path);
+    if (entry === undefined) return;
+    this.entries.delete(path);
+    this.size -= Buffer.byteLength(entry.body);
   }
 
   /**

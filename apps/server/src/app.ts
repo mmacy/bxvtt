@@ -1,5 +1,5 @@
 import Fastify, { LogController } from 'fastify';
-import type { FastifyError, FastifyInstance } from 'fastify';
+import type { FastifyError, FastifyInstance, FastifyReply } from 'fastify';
 import websocket from '@fastify/websocket';
 import { randomBytes } from 'node:crypto';
 import { ZodError } from 'zod';
@@ -41,6 +41,28 @@ const BAD_BODY_CODES = new Set([
   'FST_ERR_CTP_INVALID_CONTENT_LENGTH',
 ]);
 
+/** The deepest nesting of arrays and objects a JSON body may have. Adventure documents nest about 15 deep. */
+const MAX_JSON_DEPTH = 64;
+
+/**
+ * Measures how deeply a parsed JSON value nests, without recursion, stopping once it passes the limit.
+ *
+ * @param value - The parsed value.
+ */
+function nestingDepth(value: unknown): number {
+  let deepest = 0;
+  const stack: [unknown, number][] = [[value, 0]];
+  while (stack.length > 0) {
+    const [current, depth] = stack.pop() ?? [null, 0];
+    if (typeof current !== 'object' || current === null) continue;
+    const level = depth + 1;
+    if (level > deepest) deepest = level;
+    if (deepest > MAX_JSON_DEPTH) return deepest;
+    for (const child of Object.values(current)) stack.push([child, level]);
+  }
+  return deepest;
+}
+
 /**
  * Builds the bxvtt server: opens the database, creates the services, and registers every route. Call
  * `app.listen` to start it and `app.close` to stop it, which closes the WebSockets and the database.
@@ -56,10 +78,33 @@ export async function createServer(config: Config): Promise<Server> {
     genReqId: () => `req_${randomBytes(16).toString('base64url')}`,
     return503OnClosing: true,
     forceCloseConnections: true,
+    // A URL that can't be decoded gets a problem document like every other error.
+    frameworkErrors: (_error, _request, reply) => {
+      // The framework types the reply with the route's generics, which no route has here.
+      const plain = reply as unknown as FastifyReply;
+      return sendApiError(plain, new ApiError('bad_request', "The request URL isn't valid."));
+    },
   });
 
-  // Only JSON bodies are accepted, so a text body gets 415 instead of reaching a route as a string.
+  // Only JSON bodies are accepted, so a text body gets 415 instead of reaching a route as a string. The JSON
+  // parser refuses `__proto__` and `constructor.prototype` keys, and a body nested deeper than any request
+  // needs, which would otherwise overflow the stack when the server serializes it.
   app.removeContentTypeParser('text/plain');
+  const parseJson = app.getDefaultJsonParser('error', 'error');
+  app.removeContentTypeParser('application/json');
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, (request, body, done) => {
+    parseJson(request, typeof body === 'string' ? body : body.toString('utf8'), (error, value) => {
+      if (error !== null) {
+        done(error, undefined);
+        return;
+      }
+      if (nestingDepth(value) > MAX_JSON_DEPTH) {
+        done(new ApiError('bad_request', 'The request body nests too deeply.'), undefined);
+        return;
+      }
+      done(null, value);
+    });
+  });
 
   const db = new Database(config.dataDir);
   const bxapi = new BxapiClient(config.bxapiUrl, config.bxapiKey, config.bxapiTimeoutMs, app.log);
@@ -70,12 +115,18 @@ export async function createServer(config: Config): Promise<Server> {
     db,
     bxapi,
     users,
-    auth: new Auth(users, new RateLimiter(config.rateLimits.failedAuth)),
+    auth: new Auth(
+      users,
+      new RateLimiter(config.rateLimits.failedAuth),
+      new RateLimiter(config.rateLimits.userWrites),
+    ),
     limits: {
       createUser: new RateLimiter(config.rateLimits.createUser),
       join: new RateLimiter(config.rateLimits.join),
+      failedHostKey: new RateLimiter(config.rateLimits.failedHostKey),
+      userPosts: new RateLimiter(config.rateLimits.userPosts),
     },
-    rules: new RulesCache(bxapi),
+    rules: new RulesCache(bxapi, config.quotas.rulesCacheBytes),
     startedAt: Date.now(),
   };
   // The services refer to each other through the context, so they are created against the same object.

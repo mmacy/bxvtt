@@ -16,6 +16,7 @@ import type { Row } from './db';
 import { json, num, str, strOrNull } from './db';
 import { ApiError, parseBody, parseQuery } from './errors';
 import { now } from './ids';
+import { rateLimited } from './auth';
 
 /** The fields every feed entry has, which the store fills in. */
 type BaseField = 'seq' | 'created_at' | 'user_id' | 'visibility' | 'to';
@@ -266,6 +267,8 @@ export function registerFeedRoutes(app: FastifyInstance, ctx: Context): void {
     const user = ctx.auth.user(request);
     const role = ctx.tables.requireMember(tableId, user);
     const body = parseBody(PostFeedRequest, request);
+    const retry = ctx.limits.userPosts.take(user.id);
+    if (retry > 0) throw rateLimited('You are posting too fast. Wait a moment.', retry);
     return reply.status(201).send(await ctx.feed.post(tableId, user, role, body, request.id));
   });
 }
