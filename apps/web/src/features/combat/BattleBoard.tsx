@@ -203,10 +203,7 @@ export function BattleBoard() {
     for (const member of party) map[member.id] = memberGear(member, ctx);
     return map;
   }, [party, ctx]);
-  const refusals = useMemo(
-    () => refusalTexts(declarations?.refusals ?? [], ctx, declarations?.declarations ?? {}),
-    [declarations, ctx],
-  );
+  const refusals = useMemo(() => refusalTexts(declarations?.refusals ?? [], ctx), [declarations, ctx]);
 
   if (encounter === null) return null;
   // The game ended in this round, and the shell keeps the board up while the round plays back.
@@ -329,6 +326,18 @@ export function BattleBoard() {
   );
 }
 
+/**
+ * Why a member doesn't declare, in the words the party panel uses: "Dead" for a dead member, the condition for a
+ * member who is alive but can't act, such as "Asleep", and "Unconscious" at 0 hit points with no condition.
+ */
+export function outOfActionText(member: MemberView): string {
+  if (member.conditions.includes('dead')) return conditionLabel('dead');
+  const conditions = member.conditions.map((c) => conditionLabel(c));
+  if (conditions.length > 0) return `${joinList(conditions)}: can't act this round`;
+  if (member.current_hp <= 0) return 'Unconscious';
+  return "Can't act this round";
+}
+
 function WaitingSummary({
   waiting,
   people,
@@ -415,14 +424,7 @@ function MemberRow({
 
   let status: React.ReactNode;
   if (!declarer) {
-    const conditions = member.conditions
-      .filter((c) => c !== 'dead')
-      .map((c) => conditionLabel(c).toLowerCase());
-    status = (
-      <span className={styles.statusMuted}>
-        {down ? 'Down' : `Can't act this round${conditions.length > 0 ? ` (${joinList(conditions)})` : ''}`}
-      </span>
-    );
+    status = <span className={styles.statusMuted}>{outOfActionText(member)}</span>;
   } else if (declaration) {
     status = (
       <span className={styles.statusDeclared}>
@@ -465,7 +467,7 @@ function MemberRow({
           characterClass={tokenClass(member.class_id)}
           color={people.colors[member.id]}
           size={32}
-          state={down ? 'dead' : 'normal'}
+          state={member.conditions.includes('dead') ? 'dead' : down ? 'unconscious' : 'normal'}
           selected={composing}
           decorative
         />
@@ -545,6 +547,9 @@ function MemberRow({
           encounter={encounter}
           gear={gear}
           current={declaration ? declarationBody(declaration) : null}
+          suggested={
+            canAct && !declaration ? (quickAction(member, encounter, gear, ctx)?.body ?? null) : null
+          }
           refusals={refusals}
           onDeclared={onDeclared}
           onClose={() => onCompose(false)}

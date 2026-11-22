@@ -309,7 +309,7 @@ function popsFor(events: AnyEvent[], lookup: MonsterGroupLookup): Pop[] {
           pops.push({
             tokenId: token,
             kind: 'death',
-            text: idKind(token) === 'character' ? 'Down' : 'Slain',
+            text: idKind(token) === 'character' ? 'Dead' : 'Slain',
           });
         break;
       }

@@ -35,8 +35,11 @@ function ActionButton({
   icon,
   primary,
   loading,
+  detail,
 }: {
   label: string;
+  /** More about the action for the tooltip, such as who speaks. */
+  detail?: string;
   keys: string;
   onClick: () => void;
   disabled?: boolean;
@@ -53,7 +56,9 @@ function ActionButton({
         icon={icon}
         disabled={disabled}
         loading={loading}
-        title={disabled ? (reason ?? undefined) : `${label} (${formatShortcut(keys)})`}
+        title={
+          disabled ? (reason ?? undefined) : `${detail ? `${detail} ` : ''}${label} (${formatShortcut(keys)})`
+        }
         aria-keyshortcuts={keys}
         onClick={onClick}
       >
@@ -130,7 +135,8 @@ function EncounterActions() {
     <>
       {!commands.pursuit && (
         <ActionButton
-          label={speaker ? `Talk (${speaker.name})` : 'Talk'}
+          label="Talk"
+          detail={speaker ? `${speaker.name} speaks for the party.` : undefined}
           keys="t"
           icon="message"
           onClick={talk}

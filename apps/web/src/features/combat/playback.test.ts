@@ -270,10 +270,10 @@ describe('summarizeFight', () => {
       }),
     ];
     const summary = summarizeFight(events, contextFromPlayerView(view));
-    expect(summary.title).toBe('Victory');
+    expect(summary.title).toBe('The goblins are beaten');
     expect(summary.rounds).toBe(3);
     expect(summary.defeated.map((d) => d.text)).toEqual(['2 goblins slain', '1 goblin fled']);
-    expect(xpSentence(summary)).toBe('The defeated monsters are worth 15 experience for the party.');
+    expect(xpSentence(summary)).toBe('The defeated monsters are worth 15 XP to the party.');
     expect(summary.loot).toEqual(['coins worth 12 gp', 'a dagger']);
     expect(summary.fallen).toEqual(['Wren']);
   });

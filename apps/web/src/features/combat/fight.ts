@@ -182,10 +182,17 @@ export function summarizeFight(events: readonly AnyEvent[], ctx: TextContext): F
   let title: string;
   let sentence: string;
   switch (outcome) {
-    case 'victory':
-      title = 'Victory';
-      sentence = 'The monsters are beaten.';
+    case 'victory': {
+      // Titled for this fight, so it never reads like winning the adventure.
+      const kinds = new Map<string, number>();
+      for (const d of defeated.values()) kinds.set(d.label, (kinds.get(d.label) ?? 0) + d.count);
+      const names = [...kinds.entries()].map(([label, n]) => (n === 1 ? label : pluralize(label)));
+      const one = kinds.size === 1 && [...kinds.values()][0] === 1;
+      title =
+        names.length > 0 ? `The ${joinList(names)} ${one ? 'is' : 'are'} beaten` : 'The monsters are beaten';
+      sentence = 'The party won the fight.';
       break;
+    }
     case 'defeat':
       title = 'Defeat';
       sentence = 'Nobody in the party is left standing.';
@@ -218,10 +225,9 @@ export function summarizeFight(events: readonly AnyEvent[], ctx: TextContext): F
 /** One sentence about the experience the defeated monsters are worth. */
 export function xpSentence(summary: FightSummary): string | null {
   if (summary.awards.length > 0) {
-    const parts = summary.awards.map((a) => `${a.name} ${a.xp}`);
+    const parts = summary.awards.map((a) => `${a.name} ${a.xp} XP`);
     return `Experience awarded: ${joinList(parts)}.`;
   }
-  if (summary.xpTotal > 0)
-    return `The defeated monsters are worth ${summary.xpTotal} experience for the party.`;
+  if (summary.xpTotal > 0) return `The defeated monsters are worth ${summary.xpTotal} XP to the party.`;
   return null;
 }

@@ -7,6 +7,7 @@ import {
   signed,
   stanceDescription,
   stanceLabel,
+  withArticle,
   type TextContext,
 } from '@bxvtt/shared/text';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
@@ -109,7 +110,7 @@ export function EncounterPanel() {
   const stance = encounter.stance;
   const title = commands.pursuit
     ? `The ${joinList(present.map(groupNoun))} ${present.length === 1 && present[0]?.count === 1 ? 'gives' : 'give'} chase`
-    : `The party meets ${joinList(present.map((g) => `${g.count} ${groupNoun(g)}`))}`;
+    : `The party meets ${joinList(present.map((g) => (g.count === 1 ? withArticle(g.label) : `${g.count} ${groupNoun(g)}`)))}`;
 
   return (
     <div className={styles.board} role="region" aria-label="Encounter">

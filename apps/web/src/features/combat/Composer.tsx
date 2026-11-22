@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   getApi,
   loadCatalog,
+  useMonsterCatalog,
   useRulesEntry,
   useSendDeclaration,
   type ClassDetail,
@@ -59,10 +60,18 @@ interface MonsterEntry {
  * guard only when one is in the fight.
  */
 export function useGazeGroups(encounter: EncounterView | null): string[] {
+  // A family isn't always a monster ID: `veteran` covers `veteran_1` to `veteran_3`. Read the entry of a monster
+  // that the catalog lists for the family, and skip a family it lists nothing for, so no request fails.
+  const catalog = useMonsterCatalog().data;
+  const ids = catalog?.map((m) => m.id) ?? [];
+  const entryFor = (family: string) =>
+    ids.includes(family) ? family : ids.find((id) => id.startsWith(`${family}_`));
   // A string key, so the effect runs when the groups change and not on every new view object.
   const key = liveGroups(encounter)
-    .filter((g) => typeof g.family_id === 'string')
-    .map((g) => `${g.id}=${g.family_id ?? ''}`)
+    .flatMap((g) => {
+      const entry = g.family_id ? entryFor(g.family_id) : undefined;
+      return entry ? [`${g.id}=${entry}`] : [];
+    })
     .join(',');
   const [gazers, setGazers] = useState<string[]>([]);
   useEffect(() => {
@@ -100,6 +109,8 @@ export interface ComposerProps {
   gear: MemberGear;
   /** The member's saved declaration, to start on its tab. */
   current: DeclarationBody | null;
+  /** The row's suggested action, to start on its tab when the member hasn't declared. */
+  suggested?: DeclarationBody | null;
   /** bxapi's reasons for refusing this member's declaration in the last attempt. */
   refusals: readonly string[];
   /** Called after a declaration is saved. */
@@ -111,7 +122,16 @@ export interface ComposerProps {
 /**
  * Builds one member's declaration for the round from the choices the view supports, and saves it.
  */
-export function Composer({ member, encounter, gear, current, refusals, onDeclared, onClose }: ComposerProps) {
+export function Composer({
+  member,
+  encounter,
+  gear,
+  current,
+  suggested = null,
+  refusals,
+  onDeclared,
+  onClose,
+}: ComposerProps) {
   const ctx = useCombatText();
   const { declare, pending } = useSendDeclaration();
   const abilities = useClassAbilities(member.class_id);
@@ -130,7 +150,7 @@ export function Composer({ member, encounter, gear, current, refusals, onDeclare
   if (abilities.turnUndead) tabs.push('turn');
   tabs.push('hold');
 
-  const initial = tabFor(current?.action) ?? tabs[0] ?? 'hold';
+  const initial = tabFor(current?.action ?? suggested?.action) ?? tabs[0] ?? 'hold';
   const [tab, setTab] = useState<ComposerTab>(tabs.includes(initial) ? initial : (tabs[0] ?? 'hold'));
   const [gaze, setGaze] = useState<string>(
     typeof current?.gaze_defense === 'string' ? current.gaze_defense : 'none',
@@ -402,11 +422,19 @@ function AttackChoices({
           const plan = planAttack(member, encounter, group, gear, chosen);
           const conditions = groupConditions(group);
           const verb =
-            plan.kind === 'missile' ? 'Shoot' : plan.kind === 'close' ? 'Close in and attack' : 'Attack';
+            plan.kind === 'missile'
+              ? plan.weapon?.thrown
+                ? 'Throw'
+                : 'Shoot'
+              : plan.kind === 'close'
+                ? 'Close in and attack'
+                : 'Attack';
           return (
             <Tile
               key={group.id}
-              icon={plan.kind === 'missile' ? 'weapon-bow' : 'weapon-sword'}
+              icon={
+                plan.kind === 'missile' ? (plan.weapon?.thrown ? 'target' : 'weapon-bow') : 'weapon-sword'
+              }
               title={groupTitle(group)}
               meta={`×${group.count} · ${formatFeet(plan.distance, 'short')}`}
               note={conditions ? `${plan.note} ${capitalize(conditions)}.` : plan.note}

@@ -26,6 +26,8 @@ const TOKEN = 32;
 const STACK = 3;
 /** Vertical room for one stacked token with its hit point bar. */
 const ROW = 42;
+/** Room for one group's token and labels, for groups that stand at the same distance. */
+const GROUP_WIDTH = 104;
 
 /** A tick spacing that gives four to eight ticks across the span. */
 function tickStep(span: number): number {
@@ -36,7 +38,7 @@ function tickStep(span: number): number {
 function memberLabel(member: TrackMember, meleeWith: readonly string[] = []): string {
   const parts = [member.name, `${member.hp} of ${member.maxHp} hit points`];
   if (meleeWith.length > 0) parts.push(`in melee with the ${meleeWith.join(' and the ')}`);
-  if (member.down) parts.push('down');
+  if (member.down) parts.push(member.conditions.includes('dead') ? 'dead' : 'unconscious');
   else if (member.advance !== null && member.advance !== 0)
     parts.push(
       member.advance > 0 ? `${formatFeet(member.advance)} forward` : `${formatFeet(-member.advance)} back`,
@@ -99,7 +101,11 @@ export function RangeTrack({
   const columns = Math.max(1, ...[...stacks.values()].map((stack) => Math.ceil(stack.length / rows)));
   // Margins in pixels that leave room for the stacked party, the group labels, and the set-aside trays.
   const leftPx = 8 + columns * (TOKEN + 4) + (fallen.length > 0 ? 64 : 0);
-  const rightPx = 104 + (gone.length > 0 ? 64 : 0);
+  const sideBySide = Math.max(
+    1,
+    ...present.map((g) => present.filter((other) => other.distance === g.distance).length),
+  );
+  const rightPx = 104 + (sideBySide - 1) * GROUP_WIDTH + (gone.length > 0 ? 64 : 0);
   const fraction = (feet: number) => (feet - min) / (max - min);
   const at = (feet: number, offsetPx = 0) =>
     `calc(${leftPx + offsetPx}px + (100% - ${leftPx + rightPx}px) * ${fraction(feet)})`;
@@ -113,13 +119,11 @@ export function RangeTrack({
   const meleeOf = (id: string) => present.filter((g) => g.frontRank.includes(id)).map((g) => g.labelPlural);
   const ticks: number[] = [];
   for (let feet = min; feet <= max; feet += step) ticks.push(feet);
-  // Groups at the same distance stand one above another, so their tokens and labels don't overlap.
+  // Groups at the same distance stand side by side, so their tokens and labels don't overlap.
   const groupOffset = (group: TrackGroup): CSSProperties => {
     const same = present.filter((g) => g.distance === group.distance);
-    if (same.length < 2) return {};
     const index = same.indexOf(group);
-    const spread = compact ? 46 : 64;
-    return { transform: `translateY(${(index - (same.length - 1) / 2) * spread}px)` };
+    return index > 0 ? { marginLeft: `${index * GROUP_WIDTH}px` } : {};
   };
   const popsFor = (id: string) => pops.filter((p) => p.tokenId === id);
   const focusSet = new Set(focus);

@@ -221,24 +221,29 @@ describe('refusalTexts', () => {
 });
 
 describe('refusals that name no member', () => {
-  it('go to the only member whose declaration could cause them', () => {
+  it('show on each candidate’s row', () => {
     const { view } = battle();
-    const ctx = contextFromPlayerView(view);
     const texts = refusalTexts(
-      [{ member_id: null, code: 'magic.cast.too_many_targets', params: { allowed: 1, chosen: 2 } }],
-      ctx,
-      { 'character-0001': { action: 'attack' }, 'character-0004': { action: 'cast' } },
+      [
+        {
+          member_id: null,
+          code: 'combat.attack.out_of_reach',
+          params: { distance_feet: 40 },
+          candidates: ['character-0001', 'character-0002'],
+        },
+      ],
+      contextFromPlayerView(view),
     );
-    expect(Object.keys(texts.byMember)).toEqual(['character-0004']);
+    expect(texts.byMember['character-0001']?.[0]).toMatch(/^One of these declarations was refused: /);
+    expect(texts.byMember['character-0002']).toHaveLength(1);
     expect(texts.general).toEqual([]);
   });
 
-  it('stay general when two members could have caused them', () => {
+  it('stay general when there are no candidates', () => {
     const { view } = battle();
     const texts = refusalTexts(
       [{ member_id: null, code: 'combat.attack.out_of_reach', params: { distance_feet: 40 } }],
       contextFromPlayerView(view),
-      { 'character-0001': { action: 'attack' }, 'character-0002': { action: 'attack' } },
     );
     expect(texts.general).toHaveLength(1);
   });

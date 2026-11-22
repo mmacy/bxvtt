@@ -144,28 +144,23 @@ export function RefereeActions() {
           if (!open) setEnding(null);
         }}
         title={ending === 'parley' ? 'The monsters and the party came to terms' : 'One side left the other'}
-        description={
-          <>
-            <p>
-              {ending === 'parley'
-                ? 'The encounter ends peacefully, as after a toll paid or a bluff believed.'
-                : 'The encounter ends because the party walked away or the monsters let it go.'}{' '}
-              Monsters already slain, fled, or turned count as defeated. Monsters still standing give no
-              experience.
-            </p>
-            {fromArea && (
-              <Checkbox
-                label="Keep this area's monsters peaceful"
-                description="They won't appear again when the party walks back in."
-                checked={resolveArea}
-                onCheckedChange={setResolveArea}
-              />
-            )}
-          </>
-        }
+        description={`${
+          ending === 'parley'
+            ? 'The encounter ends peacefully, as after a toll paid or a bluff believed.'
+            : 'The encounter ends because the party walked away or the monsters let it go.'
+        } Monsters already slain, fled, or turned count as defeated. Monsters still standing give no experience.`}
         confirmLabel="End the encounter"
         onConfirm={end}
-      />
+      >
+        {fromArea && (
+          <Checkbox
+            label="Keep this area's monsters peaceful"
+            description="They won't appear again when the party walks back in."
+            checked={resolveArea}
+            onCheckedChange={setResolveArea}
+          />
+        )}
+      </ConfirmDialog>
       {pending && <span className="visually-hidden">Sending</span>}
     </div>
   );

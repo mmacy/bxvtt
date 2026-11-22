@@ -114,7 +114,7 @@ export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
             {summary.loot.length > 0 && (
               <div className={styles.fact}>
                 <dt>Left behind</dt>
-                <dd>{capitalize(joinList(summary.loot))}.</dd>
+                <dd>{capitalize(joinList(summary.loot))}, now among the dropped goods here.</dd>
               </div>
             )}
             {summary.fallen.length > 0 && (

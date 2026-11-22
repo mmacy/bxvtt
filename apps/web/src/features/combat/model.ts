@@ -35,6 +35,11 @@ export interface WeaponInfo {
   missile: boolean;
   /** Whether the weapon has the `reload` quality. */
   reload: boolean;
+  /**
+   * Whether a missile attack throws the weapon rather than shooting from it: a weapon that is also a melee
+   * weapon, such as a dagger or a spear, or a one-handed missile weapon that isn't a sling, such as a javelin.
+   */
+  thrown: boolean;
   /** The far end of the weapon's long range band, in feet, or `null` for a weapon with no ranges. */
   longRangeFeet: number | null;
 }
@@ -85,6 +90,12 @@ function longRange(ranges: unknown): number | null {
   return asNumber(long?.max_feet);
 }
 
+function isThrown(qualities: readonly string[]): boolean {
+  if (!qualities.includes('missile')) return false;
+  if (qualities.includes('melee')) return true;
+  return !qualities.some((q) => q === 'two_handed' || q === 'reload' || q === 'blunt');
+}
+
 /** The kind of a magic item from its catalog ID or its masked display name. */
 export function magicItemKind(templateId: string | null, display: string): ItemKind {
   const text = `${templateId ?? ''} ${display}`.toLowerCase();
@@ -118,6 +129,7 @@ export function memberGear(member: MemberView, ctx: TextContext): MemberGear {
         melee: qualities.includes('melee'),
         missile: qualities.includes('missile'),
         reload: qualities.includes('reload'),
+        thrown: isThrown(qualities),
         longRangeFeet: longRange(record.missile_ranges),
       });
       continue;
@@ -136,6 +148,7 @@ export function memberGear(member: MemberView, ctx: TextContext): MemberGear {
       melee: qualities.includes('melee'),
       missile: qualities.includes('missile') && !qualities.includes('splash'),
       reload: qualities.includes('reload'),
+      thrown: isThrown(qualities),
       longRangeFeet: longRange(template.missile_ranges ?? combat?.missile_ranges),
     });
   }
@@ -289,7 +302,9 @@ export function planAttack(
       ...base,
       kind: 'missile',
       weapon: reaching,
-      note: `Shoots with ${reaching.name} from ${formatFeet(distance)}.`,
+      note: reaching.thrown
+        ? `Throws ${reaching.name} ${formatFeet(distance)}.`
+        : `Shoots with ${reaching.name} from ${formatFeet(distance)}.`,
       reason: null,
     };
   }
@@ -512,43 +527,31 @@ export function seatOwner(
 export function refusalTexts(
   refusals: readonly DeclarationRefusal[],
   ctx: TextContext,
-  declarations: Record<string, { action?: string }> = {},
 ): { byMember: Record<string, string[]>; general: string[] } {
   const byMember: Record<string, string[]> = {};
   const general: string[] = [];
+  const add = (memberId: string, text: string) => {
+    const list = byMember[memberId] ?? [];
+    if (!list.includes(text)) list.push(text);
+    byMember[memberId] = list;
+  };
   for (const refusal of refusals) {
     const text = describeRejection({ code: refusal.code, params: toParamMap(refusal.params) }, ctx);
-    const memberId = refusal.member_id ?? soleSuspect(refusal.code, declarations);
-    if (memberId === null) {
-      if (!general.includes(text)) general.push(text);
-    } else {
-      const list = byMember[memberId] ?? [];
-      if (!list.includes(text)) list.push(text);
-      byMember[memberId] = list;
-    }
+    const candidates = refusal.candidates ?? [];
+    if (refusal.member_id !== null) add(refusal.member_id, text);
+    else if (candidates.length === 1 && candidates[0]) add(candidates[0], text);
+    else if (candidates.length > 1)
+      for (const id of candidates) add(id, `One of these declarations was refused: ${lowerFirst(text)}`);
+    else if (!general.includes(text)) general.push(text);
   }
   return { byMember, general };
 }
 
-/** The declaration action each family of refusal codes can come from. */
-const CODE_ACTIONS: Array<[RegExp, string[]]> = [
-  [/^magic\.(cast|memorize)\./, ['cast']],
-  [/^magic\.turning\./, ['turn_undead']],
-  [/^items\./, ['use_item', 'give_item']],
-  [/^combat\.attack\./, ['attack']],
-];
-
-/**
- * When a refusal names no member, the one member whose declaration could have caused it, or `null` when that
- * isn't clear. bxapi leaves the member out of some codes, such as `magic.cast.too_many_targets`.
- */
-function soleSuspect(code: string, declarations: Record<string, { action?: string }>): string | null {
-  const actions = CODE_ACTIONS.find(([pattern]) => pattern.test(code))?.[1];
-  if (!actions) return null;
-  const suspects = Object.entries(declarations).filter(
-    ([, d]) => d.action !== undefined && actions.includes(d.action),
-  );
-  return suspects.length === 1 ? (suspects[0]?.[0] ?? null) : null;
+function lowerFirst(text: string): string {
+  // Keep a sentence that starts with a name capitalized.
+  return /^(The|A|An|This|That|It|One|Every|No)\b/.test(text)
+    ? text.charAt(0).toLowerCase() + text.slice(1)
+    : text;
 }
 
 // Spells -------------------------------------------------------------------------------------------------------
