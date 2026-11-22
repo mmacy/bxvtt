@@ -173,6 +173,8 @@ export type TargetHandle = z.infer<typeof TargetHandle>;
  * - A handle stays the same for the life of the encounter, also when its monster moves to another group, such
  *   as turned undead that split off. A handle from an encounter that ended, or one the scene doesn't list, is
  *   refused with 422 `target_unknown` and nothing reaches bxapi.
+ * - A monster alone with its label in the encounter reads by the label, such as `Mag Corrie`. Several read with
+ *   their numbers, such as `Goblin 2`, and a label can gain its number when another monster of it joins.
  * - A monster gets its handle and its number the first time the party can see it, so the numbers count the
  *   monsters of one label in the order the party met them, and an invisible monster has no handle until it
  *   shows itself.
@@ -184,7 +186,11 @@ export const SceneTarget = z.object({
   handle: TargetHandle,
   /** The group the monster stands in now, by `view.encounter.groups[i].id`. */
   group_id: z.string(),
-  /** What to call the monster, such as `Goblin 2`: the group's label and the monster's number. */
+  /**
+   * What to call the monster: its group's label alone when it's the only monster of that label in the encounter,
+   * such as `Mag Corrie` or `Ogre`, and the label with its number otherwise, such as `Goblin 2`. When a second
+   * monster of the label joins, the first one's label gains its number, `Ogre 1`, and its handle stays the same.
+   */
   label: z.string(),
   /** The monster's number among the monsters of its label in this encounter, from 1. */
   number: z.number().int(),

@@ -138,7 +138,7 @@ Each entry of `scene.targets` describes one monster:
 | --- | --- |
 | `handle` | An opaque ID such as `tgt_q3Jx0b9KfL2mWv8a`. Put it where a command or declaration takes a monster target. |
 | `group_id` | The group the monster stands in now, as in `view.encounter.groups[i].id`. |
-| `label`, `number` | What to call the monster, such as `Goblin 2`: the group's label and the monster's number among the monsters of that label in this encounter. |
+| `label`, `number` | What to call the monster. `number` counts the monsters of its label in this encounter. `label` is the group's label alone for the only monster of that label, such as `Mag Corrie` or `Ogre`, and the label with the number otherwise, such as `Goblin 2`. When a second monster of the label joins, the first one's label becomes `Ogre 1`, and its handle stays the same. |
 | `defeated` | Whether the monster was slain. A slain monster keeps its handle, so the other labels don't change. |
 | `fled` | Whether the monster's group fled the battle. |
 

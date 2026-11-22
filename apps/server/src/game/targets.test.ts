@@ -75,7 +75,8 @@ describe('target handles', () => {
       'monster-0001': ['invisible'],
     });
     const book = syncTargets(db, 'tbl_1', 'ses_1', hidden.view, hidden.referee);
-    expect(book.targets.map((target) => target.label)).toEqual(['Orc 1']);
+    // Alone with its label, the orc reads without a number.
+    expect(book.targets.map((target) => target.label)).toEqual(['Orc']);
     const shown = views([{ id: 'group-0001', label: 'orc', monsterIds: ['monster-0001', 'monster-0002'] }], {
       'monster-0002': ['dead'],
     });
@@ -135,5 +136,26 @@ describe('target handles', () => {
         spell_id: 'sleep',
       },
     );
+  });
+
+  it('names a lone monster without a number, and numbers it once another of its label joins', () => {
+    const alone = views([
+      { id: 'group-0001', label: 'Mag Corrie', monsterIds: ['monster-0001'] },
+      { id: 'group-0002', label: 'ogre', monsterIds: ['monster-0002'] },
+    ]);
+    const book = syncTargets(db, 'tbl_1', 'ses_1', alone.view, alone.referee);
+    expect(book.targets.map((target) => [target.label, target.number])).toEqual([
+      ['Mag Corrie', 1],
+      ['Ogre', 1],
+    ]);
+    // A referee spawns a second ogre into the encounter.
+    const grown = views([
+      { id: 'group-0001', label: 'Mag Corrie', monsterIds: ['monster-0001'] },
+      { id: 'group-0002', label: 'ogre', monsterIds: ['monster-0002'] },
+      { id: 'group-0003', label: 'ogre', monsterIds: ['monster-0003'] },
+    ]);
+    const later = syncTargets(db, 'tbl_1', 'ses_1', grown.view, grown.referee);
+    expect(later.targets.map((target) => target.label)).toEqual(['Mag Corrie', 'Ogre 1', 'Ogre 2']);
+    expect(later.targets[1]?.handle).toBe(book.targets[1]?.handle);
   });
 });

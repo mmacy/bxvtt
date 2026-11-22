@@ -115,7 +115,7 @@ export function syncTargets(
         book.targets.push({
           handle,
           group_id: group.id,
-          label: `${capitalize(str(row, 'label'))} ${number}`,
+          label: str(row, 'label'),
           number,
           defeated: conditions.has('dead'),
           fled: group.fled,
@@ -123,6 +123,21 @@ export function syncTargets(
       }
     }
   });
+  // A monster alone with its label reads by the label: `Mag Corrie`, or `Ogre`. Two or more with one label read
+  // with their numbers: `Goblin 1`, `Goblin 2`. When a second one joins, the first one's label gains its number,
+  // and its handle stays the same.
+  const shared = new Map<string, number>();
+  for (const row of db.all(
+    'SELECT label, count(*) AS n FROM target_handles WHERE session_id = ? AND encounter_key = ? GROUP BY label',
+    sessionId,
+    encounterKey,
+  )) {
+    shared.set(str(row, 'label'), num(row, 'n'));
+  }
+  for (const target of book.targets) {
+    const name = capitalize(target.label);
+    target.label = (shared.get(target.label) ?? 1) > 1 ? `${name} ${target.number}` : name;
+  }
   return book;
 }
 
