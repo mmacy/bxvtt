@@ -1,4 +1,5 @@
 import type { SceneCache } from '@bxvtt/shared/protocol';
+import { emptyContext } from '@bxvtt/shared/text';
 import { describe, expect, it, vi } from 'vitest';
 import { canSendCommand, type PermissionContext } from '@/app';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
@@ -33,6 +34,7 @@ function context(role: 'player' | 'referee') {
     scene: game.scene,
     can: (type, member) => canSendCommand(permissions, type, member).allowed,
     run,
+    text: emptyContext(),
   };
   return { ctx, run };
 }

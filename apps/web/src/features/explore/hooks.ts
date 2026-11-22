@@ -13,6 +13,7 @@ import {
   useTableId,
   useTableStore,
   useTableStoreApi,
+  useTextContext,
 } from '@/app';
 import type { ActionContext } from './actions';
 import { adventureDungeons, type LevelOption } from './levels';
@@ -28,6 +29,7 @@ export function useActionContext(): ActionContext | null {
   const scene = useScene();
   const permissions = usePermissionContext();
   const { send } = useExploreSend();
+  const text = useTextContext();
   const can = useCallback(
     (commandType: string, memberId?: string) => canSendCommand(permissions, commandType, memberId).allowed,
     [permissions],
@@ -40,11 +42,12 @@ export function useActionContext(): ActionContext | null {
             view,
             scene,
             can,
+            text,
             run: (command, options) => {
               void send(command, options);
             },
           },
-    [view, scene, can, send],
+    [view, scene, can, send, text],
   );
 }
 
@@ -150,25 +153,10 @@ export function levelLabel(
 }
 
 /**
- * Whether the party stands on the cell where it came into the dungeon, where `travel_to_town` works. A referee
- * with the lens on reads the entrance from the adventure. Everyone else knows it once this browser saw the party
- * arrive from town.
- *
- * @returns `true` or `false` when known, and `null` when nobody here knows where the entrance is.
+ * Whether the party can go back to town from where it stands, as the scene states it: it is exploring and stands
+ * on the level's entrance.
  */
-export function useAtEntrance(): boolean | null {
-  const view = usePlayerView();
-  const lore = useSessionLore();
-  const document = useAdventureDocument().data;
-  return useMemo(() => {
-    const location = view?.location;
-    if (location?.kind !== 'dungeon' || !location.position || location.dungeon_id == null) return null;
-    const [x, y] = location.position;
-    const dungeon = adventureDungeons(document)?.dungeons.find((d) => d.id === location.dungeon_id);
-    const level = dungeon?.levels.find((l) => l.number === location.level_number);
-    if (level?.entrance) return level.entrance[0] === x && level.entrance[1] === y;
-    const known = lore.entrances[location.dungeon_id];
-    if (!known) return null;
-    return known.levelNumber === location.level_number && known.x === x && known.y === y;
-  }, [view?.location, lore.entrances, document]);
+export function useCanTravelToTown(): boolean {
+  const scene = useScene();
+  return scene?.can_travel_to_town ?? scene?.here?.at_entrance ?? false;
 }

@@ -82,6 +82,17 @@ describe('buildPlayerLevel', () => {
     expect(door?.stuck).toBeNull();
   });
 
+  it('marks the entrance and names the entered areas from the scene', () => {
+    const game = exploring();
+    const scene = structuredClone(game.scene);
+    const level = scene.levels[0];
+    if (!level) throw new Error('No scene level.');
+    level.entrance = [14, 23];
+    const map = buildPlayerLevel(game.view, scene, 'priory:1');
+    expect(map?.entrance).toEqual([14, 23]);
+    expect(map?.areas.map((area) => area.name)).toEqual(['Gatehouse stair']);
+  });
+
   it('returns null for a level the party hasn’t mapped', () => {
     const game = exploring();
     expect(buildPlayerLevel(game.view, game.scene, 'priory:3')).toBeNull();

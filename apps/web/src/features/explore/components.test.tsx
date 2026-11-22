@@ -40,13 +40,15 @@ function result(game: CommandResult['game'], fields: Partial<CommandResult> = {}
 }
 
 describe('MapStage', () => {
-  it('moves the party with the arrow keys and W, A, S, and D while the map has focus', async () => {
+  it('moves the party with the arrow keys while the map has focus, and leaves letters to the shortcuts', async () => {
     const { snapshot, game } = exploring();
     const api = createFakeApi();
     api.sendCommand.mockResolvedValue(result(game, { events: [] }));
     const { store } = renderWithTable(<MapStage />, { snapshot, api });
-    const map = screen.getByRole('application', { name: /Dungeon map. Arrow keys/ });
+    const map = screen.getByRole('application', { name: /Dungeon map. The arrow keys/ });
     fireEvent.keyDown(map, { key: 'w', code: 'KeyW' });
+    expect(api.sendCommand).not.toHaveBeenCalled();
+    fireEvent.keyDown(map, { key: 'ArrowUp', code: 'ArrowUp' });
     await waitFor(() =>
       expect(api.sendCommand).toHaveBeenCalledWith(
         store.getState().tableId,
@@ -224,14 +226,26 @@ describe('ExploreActions', () => {
     expect(await screen.findByText('Nothing seems to happen.')).toBeInTheDocument();
   });
 
-  it('offers every other legal command under More, and the character sheet for items', async () => {
+  it('offers every other legal command under Other, and the character sheet for items', async () => {
     const { snapshot } = exploring();
     const { user } = renderWithTable(<Bar />, { snapshot });
-    await user.click(screen.getByRole('button', { name: 'More' }));
+    await user.click(screen.getByRole('button', { name: 'Other' }));
     const menu = await screen.findByRole('menu');
     expect(within(menu).getByRole('menuitem', { name: 'Cast a spell…' })).toBeInTheDocument();
     expect(within(menu).getByRole('menuitem', { name: 'Drop items' })).toBeInTheDocument();
     expect(within(menu).queryByRole('menuitem', { name: /Move the party/ })).toBeNull();
+  });
+
+  it('offers the way back to town only where the scene says the party can travel', () => {
+    const { snapshot } = exploring();
+    if (snapshot.game) snapshot.game.scene.can_travel_to_town = false;
+    const { unmount } = renderWithTable(<Bar />, { snapshot });
+    expect(screen.queryByRole('button', { name: 'Return to town' })).toBeNull();
+    unmount();
+    const atEntrance = exploring().snapshot;
+    if (atEntrance.game) atEntrance.game.scene.can_travel_to_town = true;
+    renderWithTable(<Bar />, { snapshot: atEntrance });
+    expect(screen.getByRole('button', { name: 'Return to town' })).toBeInTheDocument();
   });
 
   it('turns Listen off with a reason when no closed door is beside the party', () => {

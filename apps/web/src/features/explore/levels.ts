@@ -104,7 +104,7 @@ function isDirection(value: string | null): value is Direction {
   return value === 'north' || value === 'east' || value === 'south' || value === 'west';
 }
 
-/** What the scene adds to a player's map of one level: transitions, caches, and features. */
+/** What the scene adds to a player's map of one level: transitions, caches, features, and entered areas. */
 export function sceneExtras(level: SceneLevel | null): PlayerMapExtras {
   if (level === null) return {};
   const where = (areaId: string | null, position: [number, number] | null): [number, number] | null => {
@@ -143,6 +143,7 @@ export function sceneExtras(level: SceneLevel | null): PlayerMapExtras {
       side: isDirection(transition.side) ? transition.side : null,
     })),
     features,
+    areas: level.areas.map(({ id, name, description, cells }) => ({ id, name, description, cells })),
   };
 }
 
@@ -205,7 +206,9 @@ export function buildPlayerLevel(
       },
     };
   });
-  return { ...map, features, edges };
+  // The scene states the entrance once its cell is on the party's map, and the map draws it.
+  const entrance = level?.entrance ?? null;
+  return { ...map, features, edges, entrance: entrance ? [entrance[0], entrance[1]] : map.entrance };
 }
 
 /** Builds a referee's map of one level, or `null` when the adventure has no such level. */

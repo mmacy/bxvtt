@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   canSendCommand,
   useAdventureDocument,
+  useCombatStage,
   useGameMode,
   useIsReferee,
   useMapBus,
@@ -26,8 +27,6 @@ import {
 import {
   DungeonMap,
   levelKey,
-  measure,
-  measurementLabel,
   resolveTheme,
   type Direction,
   type DungeonMapHandle,
@@ -41,15 +40,7 @@ import { lightEntries } from './actions';
 import { mapMenuEntries } from './contextMenu';
 import { messageDuration, useMapFeedback } from './feedback';
 import { levelLabel, useActionContext, useDungeonNames, useLoreTracker, useSessionLore } from './hooks';
-import {
-  areaCenterCell,
-  buildPlayerLevel,
-  buildRefereeLevel,
-  levelOptions,
-  refereeSource,
-  sceneLevel,
-  type LevelOption,
-} from './levels';
+import { buildPlayerLevel, buildRefereeLevel, levelOptions, refereeSource, type LevelOption } from './levels';
 import { CameraControls, LayerBadge, LevelSwitcher, MinimapCard, ThemeSwitcher } from './MapChrome';
 import { lightTimeLeft, partyLight } from './party';
 import { NewPinDialog, PinDetailDialog } from './PinDialogs';
@@ -64,10 +55,6 @@ const KEY_DIRECTIONS: Record<string, Direction> = {
   ArrowDown: 'south',
   ArrowLeft: 'west',
   ArrowRight: 'east',
-  KeyW: 'north',
-  KeyS: 'south',
-  KeyA: 'west',
-  KeyD: 'east',
 };
 
 /** The shortest time between two pings from this browser. The server allows 5 pings in 2 seconds. */
@@ -75,12 +62,9 @@ const PING_INTERVAL_MS = 450;
 
 const FALLBACK_COLOR = '#e69f00';
 
-/** The map's container fills the stage. `DungeonMap` sets its own position, so this overrides it. */
-const MAP_STYLE = { position: 'absolute', inset: 0 } as const;
-
-/** The direction an arrow key or W, A, S, or D names, or `null`. */
+/** The direction an arrow key names, or `null`. Letters stay with the app's shortcuts. */
 export function keyDirection(event: Pick<KeyboardEvent, 'key' | 'code'>): Direction | null {
-  return KEY_DIRECTIONS[event.key] ?? KEY_DIRECTIONS[event.code] ?? null;
+  return KEY_DIRECTIONS[event.key] ?? null;
 }
 
 /**
@@ -89,7 +73,7 @@ export function keyDirection(event: Pick<KeyboardEvent, 'key' | 'code'>): Direct
  *
  * - The map shows the viewed level: the party's, or another one the switcher picks. A player sees the party's
  *   map with the scene's stairs, caches, and names. A referee with the lens on sees the whole keyed level.
- * - The arrow keys or W, A, S, and D move the party while the map has focus, and Alt with them turns it. A click
+ * - The arrow keys move the party while the map has focus, and Alt with an arrow key turns it. A click
  *   on a neighbouring square steps there. A click or right-click on a door, the party, or a square offers what
  *   bxapi allows there.
  * - The tool rail's tool, the pick requests of other features, and focus requests come over the map bus.
@@ -131,8 +115,7 @@ export function MapStage() {
   const [menu, setMenu] = useState<{ at: Point; items: MenuEntry[] } | null>(null);
   const [newPin, setNewPin] = useState<Point | null>(null);
   const [pinShown, setPinShown] = useState<string | null>(null);
-  const [measureFrom, setMeasureFrom] = useState<{ x: number; y: number } | null>(null);
-  const [hoverCell, setHoverCell] = useState<{ x: number; y: number } | null>(null);
+  const [measuring, setMeasuring] = useState(false);
   const lastPing = useRef(0);
   const pendingFocus = useRef<Point | 'party' | null>(null);
 
@@ -174,6 +157,9 @@ export function MapStage() {
   const canMove = exploring && can('move_party');
   const canTurn = exploring && can('turn_party');
   const combat = mode === 'encounter' || mode === 'battle';
+  // The after-fight summary takes the bottom of the stage, so the minimap and the light chip step aside.
+  const aftermath = useCombatStage((s) => s.aftermath !== null);
+  const bottomFree = !combat && !aftermath;
 
   // Movement.
   const move = useCallback(
@@ -260,8 +246,8 @@ export function MapStage() {
           ping,
           pin: (point) => setNewPin(point),
           measureFrom: (cell) => {
-            setMeasureFrom(cell);
-            setHoverCell(cell);
+            mapRef.current?.startMeasure(cell);
+            setMeasuring(true);
           },
           move,
         },
@@ -410,44 +396,10 @@ export function MapStage() {
     const direction = directionTo(x, y);
     if (direction && canMove) move(direction);
   };
-  const endMeasure = () => {
-    if (measureFrom === null) return false;
-    setMeasureFrom(null);
-    return true;
-  };
-  useShortcut({
-    id: 'explore.measure.cancel',
-    keys: 'escape',
-    label: 'Stop measuring',
-    group: 'Map',
-    enabled: measureFrom !== null && pick === null,
-    run: () => setMeasureFrom(null),
-  });
-
   // Light and darkness on the party's level.
   const light = view ? partyLight(view) : { lights: [], darkness: false };
   const dark = partyShown && map?.layer === 'player' && (light.lights.length === 0 || light.darkness);
   const memberName = (id: string) => view?.party.find((member) => member.id === id)?.name ?? 'Someone';
-
-  // Area names for a player's map. The referee map draws its own keyed labels.
-  const areaLabels = useMemo(() => {
-    if (map === null || map.layer === 'referee') return [];
-    const level = sceneLevel(scene, map.key);
-    if (level === null) return [];
-    const hereArea = scene?.here?.area?.id ?? null;
-    return level.areas.flatMap((area) => {
-      if (map.party && area.id === hereArea) return [];
-      const cell = areaCenterCell(area);
-      if (!cell) return [];
-      const occupied =
-        map.features.some((f) => f.x === cell[0] && f.y === cell[1]) ||
-        map.transitions.some((t) => t.kind !== 'passage' && t.x === cell[0] && t.y === cell[1]);
-      const trapped = level.traps.some((trap) => trap.kind === 'room' && trap.area_id === area.id);
-      return [
-        { id: area.id, name: area.name, x: cell[0] + 0.5, y: cell[1] + (occupied ? 0.12 : 0.5), trapped },
-      ];
-    });
-  }, [map, scene]);
 
   // Feedback beside the party.
   const message = useMapFeedback((s) => s.message);
@@ -463,19 +415,12 @@ export function MapStage() {
   const pinLabel = annotations.pins.find((pin) => pin.id === pinShown)?.label ?? '';
   const themeData = resolveTheme(theme);
   const levelName = (option: LevelOption) => levelLabel(option, levels, names);
-  const measurement =
-    measureFrom && hoverCell
-      ? measure(
-          { x: measureFrom.x + 0.5, y: measureFrom.y + 0.5 },
-          { x: hoverCell.x + 0.5, y: hoverCell.y + 0.5 },
-        )
-      : null;
   const lightMenu = actions ? lightEntries(actions) : [];
 
   if (view === null) return null;
 
   const ariaLabel = canMove
-    ? 'Dungeon map. Arrow keys or W, A, S, and D move the party. Alt and an arrow key turns it. Shift and an arrow key pans. Shift and F10 opens the actions where the party stands.'
+    ? 'Dungeon map. The arrow keys move the party. Alt and an arrow key turns it. Shift and an arrow key pans. Shift and F10 opens the actions where the party stands.'
     : 'Dungeon map';
 
   return (
@@ -501,9 +446,7 @@ export function MapStage() {
         initialView="party"
         ariaLabel={ariaLabel}
         className={styles.map}
-        style={MAP_STYLE}
         onCellClick={(target, info) => {
-          if (endMeasure()) return;
           if (onParty(target.x, target.y)) {
             openMenu(target, info.screen, info.world);
             return;
@@ -513,7 +456,6 @@ export function MapStage() {
             say('Step one square at a time. Click a square beside the party.', 'info');
         }}
         onEdgeClick={(target, info) => {
-          if (endMeasure()) return;
           if (target.edge.kind === 'passage' && target.direction && canMove) {
             move(target.direction);
             return;
@@ -524,31 +466,25 @@ export function MapStage() {
           }
         }}
         onFeatureClick={(target, info) => {
-          if (endMeasure()) return;
           clickAt(target.feature.x, target.feature.y, target, info.screen, info.world);
         }}
         onTransitionClick={(target, info) => {
-          if (endMeasure()) return;
           clickAt(target.transition.x, target.transition.y, target, info.screen, info.world);
         }}
         onPartyClick={(target, info) => {
-          if (endMeasure()) return;
           openMenu(target, info.screen, info.world);
         }}
         onPinClick={(target) => setPinShown(target.pin.id)}
-        onContextMenu={(target, screen, info) => {
-          setMeasureFrom(null);
-          openMenu(target, screen, info.world);
-        }}
-        onHover={(target) => {
-          if (measureFrom === null) return;
-          if (target?.kind === 'cell') setHoverCell({ x: target.x, y: target.y });
-        }}
+        onContextMenu={(target, screen, info) => openMenu(target, screen, info.world)}
+        onMeasure={() => setMeasuring(false)}
         onPing={ping}
         onStrokeComplete={(stroke) =>
           annotations.addStroke(stroke.points, me?.color ?? FALLBACK_COLOR, stroke.width)
         }
-        onStrokeErase={annotations.erase}
+        onStrokeErase={(ids) => {
+          const refused = annotations.erase(ids);
+          if (refused.length > 0) mapRef.current?.restoreErasedStrokes(refused);
+        }}
         onPinCreate={(point) => setNewPin(point)}
         onPickCell={(target) => {
           if (map)
@@ -575,19 +511,6 @@ export function MapStage() {
 
       <Projected map={mapRef}>
         {dark && party && <div className={styles.darkness} data-wx={party.x + 0.5} data-wy={party.y + 0.5} />}
-        {areaLabels.map((area) => (
-          <div
-            key={area.id}
-            className={styles.areaLabel}
-            data-wx={area.x}
-            data-wy={area.y}
-            data-minzoom={16}
-            style={{ color: themeData.label.color, ['--halo' as string]: themeData.label.halo }}
-          >
-            <span>{area.name}</span>
-            {area.trapped && <Icon name="trap" size={12} />}
-          </div>
-        ))}
         {party && bump && (
           <div key={bump.id} className={styles.bumpAnchor} data-wx={party.x + 0.5} data-wy={party.y + 0.5}>
             <span className={cx(styles.bumpRing, styles[`bumpRing-${bump.direction}`])} />
@@ -605,26 +528,6 @@ export function MapStage() {
               {message.text}
             </span>
           </div>
-        )}
-        {measureFrom && measurement && (
-          <>
-            <svg className={styles.measureSvg}>
-              <line
-                className={styles.measureLine}
-                data-wx1={measureFrom.x + 0.5}
-                data-wy1={measureFrom.y + 0.5}
-                data-wx2={(hoverCell?.x ?? measureFrom.x) + 0.5}
-                data-wy2={(hoverCell?.y ?? measureFrom.y) + 0.5}
-              />
-            </svg>
-            <div
-              className={styles.measureAnchor}
-              data-wx={(hoverCell?.x ?? measureFrom.x) + 0.5}
-              data-wy={(hoverCell?.y ?? measureFrom.y) + 0.5}
-            >
-              <span className={styles.measureLabel}>{measurementLabel(measurement)}</span>
-            </div>
-          </>
         )}
       </Projected>
 
@@ -664,10 +567,10 @@ export function MapStage() {
             </Button>
           </div>
         )}
-        {measureFrom && (
+        {measuring && (
           <div className={styles.offLevel} role="status">
             <Icon name="ruler" size={14} />
-            <span>Point at a square to measure. Click or press Escape to stop.</span>
+            <span>Point at a square to measure. Click or press Enter to keep it, or Escape to stop.</span>
           </div>
         )}
       </div>
@@ -676,13 +579,13 @@ export function MapStage() {
         <CameraControls map={mapRef} follow={follow} onFollowChange={setFollow} partyShown={partyShown} />
       </div>
 
-      {!combat && (
+      {bottomFree && (
         <div className={styles.chromeBottomRight}>
           <MinimapCard map={map} target={mapRef} theme={theme} facing={party?.facing ?? null} />
         </div>
       )}
 
-      {!combat && partyShown && (
+      {bottomFree && partyShown && (
         <div
           className={cx(styles.chromeBottomLeft, map?.layer === 'referee' && styles.chromeBottomLeftRaised)}
         >

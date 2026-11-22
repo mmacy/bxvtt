@@ -5,6 +5,8 @@ import {
   learnFromEvents,
   learnFromFeed,
   learnFromRefusal,
+  readStoredDoors,
+  useLoreStore,
   observeLocation,
   type PartyLocation,
 } from './lore';
@@ -60,13 +62,11 @@ describe('learnFromEvents', () => {
       emptyLore('s'),
       [event({ event_type: 'door', code: 'exploration.door.stuck', x: 3, y: 4, direction: 'east' })],
       at(3, 4),
-      at(3, 4),
     );
     expect(lore.doors['priory:1:4,4:west']?.stuck).toBe(true);
     lore = learnFromEvents(
       lore,
       [event({ event_type: 'door', code: 'exploration.door.forced', x: 3, y: 4, direction: 'east' })],
-      at(3, 4),
       at(3, 4),
     );
     expect(lore.doors['priory:1:4,4:west']?.stuck).toBe(false);
@@ -84,36 +84,17 @@ describe('learnFromEvents', () => {
         }),
       ],
       at(7, 7),
-      at(7, 7),
     );
     expect(lore.doors['priory:1:7,7:north']).toEqual({ heard: 'noise', listened: ['character-0001'] });
   });
 
   it('remembers a failed pick when bxapi accepts it and nothing unlocks', () => {
-    const lore = learnFromEvents(emptyLore('s'), [], at(2, 2), at(2, 2), {
+    const lore = learnFromEvents(emptyLore('s'), [], at(2, 2), {
       command_type: 'pick_lock',
       direction: 'east',
       character_id: 'character-0002',
     });
     expect(lore.doors['priory:1:3,2:west']?.pickFailed).toEqual(['character-0002']);
-  });
-
-  it('records the entrance from an arrival through the entrance', () => {
-    const lore = learnFromEvents(
-      emptyLore('s'),
-      [event({ event_type: 'location_entered', code: 'exploration.location.entered', via: 'entrance' })],
-      { kind: 'town' },
-      at(14, 23),
-    );
-    expect(lore.entrances['priory']).toEqual({ levelNumber: 1, x: 14, y: 23 });
-  });
-});
-
-describe('observeLocation', () => {
-  it('records the entrance when the party arrives from town', () => {
-    let lore = observeLocation(emptyLore('s'), 1, { kind: 'town' });
-    lore = observeLocation(lore, 2, at(14, 23));
-    expect(lore.entrances['priory']).toEqual({ levelNumber: 1, x: 14, y: 23 });
   });
 });
 
@@ -149,5 +130,26 @@ describe('learnFromFeed', () => {
     expect(lore.doors['priory:1:1,1:north']).toEqual({ locked: false, unlocked: true });
     const again = learnFromFeed(lore, [entry(10, 5, [opened])], 's', 5);
     expect(again).toBe(lore);
+  });
+});
+
+describe('stored lore', () => {
+  it('keeps what the table learned across a reload of the page', () => {
+    useLoreStore.setState({ byTable: {} });
+    useLoreStore
+      .getState()
+      .update('tbl', 'ses', (lore) =>
+        learnFromRefusal(
+          lore,
+          { command_type: 'open_door', direction: 'south' },
+          [{ code: 'exploration.door.locked', params: {} }],
+          at(2, 18),
+        ),
+      );
+    // A reload starts with an empty store, and the first update reads what session storage kept.
+    useLoreStore.setState({ byTable: {} });
+    expect(readStoredDoors('tbl', 'ses')).toEqual({ 'priory:1:2,19:north': { locked: true } });
+    useLoreStore.getState().update('tbl', 'ses', (lore) => lore);
+    expect(useLoreStore.getState().byTable['tbl']?.doors['priory:1:2,19:north']).toEqual({ locked: true });
   });
 });

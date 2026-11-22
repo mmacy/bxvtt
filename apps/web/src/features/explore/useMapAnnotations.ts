@@ -55,7 +55,11 @@ export interface MapAnnotations {
   /** Whether the annotations of the level have loaded. */
   loaded: boolean;
   addStroke: (points: readonly (readonly [number, number])[], color: string, width: number) => void;
-  erase: (ids: readonly string[]) => void;
+  /**
+   * Erases the strokes the user may erase. Returns the ones it kept, so the map can show them again: other
+   * people's strokes, and a stroke still on its way to the server.
+   */
+  erase: (ids: readonly string[]) => string[];
   addPin: (x: number, y: number, text: string, refereesOnly: boolean) => Promise<boolean>;
   removePin: (id: string) => Promise<boolean>;
   /** Whether the user may erase an annotation: its author or a referee. */
@@ -76,8 +80,6 @@ export function useMapAnnotations(level: LevelRef | null): MapAnnotations {
   const { run } = useApiAction();
   const [pending, setPending] = useState<MapStroke[]>([]);
   const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
-  // The map hides a stroke the eraser touched until it receives a new list, so a refused erase sends one.
-  const [redraw, setRedraw] = useState(0);
 
   const items = annotations?.items;
   const strokes = useMemo(() => {
@@ -93,8 +95,8 @@ export function useMapAnnotations(level: LevelRef | null): MapAnnotations {
           ]
         : [],
     );
-    return redraw >= 0 && pending.length > 0 ? [...committed, ...pending] : committed;
-  }, [items, hidden, pending, redraw]);
+    return pending.length > 0 ? [...committed, ...pending] : committed;
+  }, [items, hidden, pending]);
 
   const pinRecords = useMemo(() => {
     const map = new Map<string, PinAnnotation>();
@@ -162,20 +164,20 @@ export function useMapAnnotations(level: LevelRef | null): MapAnnotations {
   );
 
   const erase = useCallback(
-    (ids: readonly string[]) => {
+    (ids: readonly string[]): string[] => {
       const records = new Map((items ?? []).map((item) => [item.id, item]));
       const mine = ids.filter((id) => {
         const record = records.get(id);
         return record !== undefined && mayErase(record.author_id);
       });
-      if (mine.length < ids.length) {
-        setRedraw((n) => n + 1);
+      const kept = ids.filter((id) => !mine.includes(id));
+      if (kept.some((id) => records.has(id))) {
         toast.info('You can erase only your own drawings.', {
           id: 'explore-erase-others',
           description: 'The referee can erase anyone’s.',
         });
       }
-      if (mine.length === 0) return;
+      if (mine.length === 0) return kept;
       setHidden((set) => new Set([...set, ...mine]));
       for (const id of mine) {
         void run(() => getApi().deleteAnnotation(store.getState().tableId, id), {
@@ -190,6 +192,7 @@ export function useMapAnnotations(level: LevelRef | null): MapAnnotations {
           }
         });
       }
+      return kept;
     },
     [items, mayErase, run, store],
   );

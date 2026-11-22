@@ -104,9 +104,8 @@ export function useExploreSend(): {
           }
         }
       } else if (result.status === 'accepted') {
-        const after = result.result.game.view.location;
         updateLore(tableId, sessionId, (lore) =>
-          learnFromEvents(lore, result.result.events, location, after, command),
+          learnFromEvents(lore, result.result.events, location, command),
         );
         if (!result.result.events.some((event) => isPlayerVisible(event))) {
           toast.info(options.nothingText ?? NOTHING_HAPPENS, { id: 'explore-nothing' });

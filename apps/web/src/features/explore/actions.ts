@@ -8,7 +8,14 @@
  */
 import type { MemberView } from '@bxvtt/shared/bxapi';
 import type { PlayerView, Scene, SceneCache, SceneTransition } from '@bxvtt/shared/protocol';
-import { directionLabel, restKindLabel, searchKindLabel } from '@bxvtt/shared/text';
+import {
+  directionLabel,
+  itemPhrase,
+  resolveItemNoun,
+  restKindLabel,
+  searchKindLabel,
+  type TextContext,
+} from '@bxvtt/shared/text';
 import type { GameCommand } from '@/app';
 import type { Direction } from '@/map';
 import type { IconName, MenuEntry } from '@/ui';
@@ -26,6 +33,8 @@ export interface ActionContext {
   can: (commandType: string, memberId?: string) => boolean;
   /** Sends a command. */
   run: (command: GameCommand, options?: ExploreSendOptions) => void;
+  /** Names for items and members, from `useTextContext`. */
+  text: TextContext;
 }
 
 /** A party member's name for a menu. */
@@ -239,7 +248,7 @@ export function lightEntries(ctx: ActionContext): MenuEntry[] {
   for (const light of carriedLights(ctx.view.party)) {
     if (!living.has(light.memberId) || !ctx.can('light_source', light.memberId)) continue;
     entries.push({
-      label: `${name(light.memberId)} lights ${light.itemId === 'lantern' ? 'a lantern' : 'a torch'}`,
+      label: `${name(light.memberId)} lights ${itemPhrase(resolveItemNoun(light.itemId, ctx.text, { name: light.name }))}`,
       icon: light.itemId === 'lantern' ? 'lantern' : 'torch',
       onSelect: () =>
         ctx.run(
