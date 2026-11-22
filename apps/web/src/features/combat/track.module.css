@@ -3,21 +3,42 @@
   margin: 0;
   padding: var(--space-2) var(--space-3) var(--space-1);
   border-radius: var(--radius-md);
-  background:
-    linear-gradient(90deg, var(--color-accent-subtle), transparent 30%), var(--color-surface-sunken);
+  background: linear-gradient(90deg, var(--color-surface-1), transparent 30%), var(--color-surface-sunken);
   box-shadow: var(--shadow-inset);
 }
 
 .lane {
   --center: 86px;
   position: relative;
-  /* The bottom 14 px hold the "Party line" label, below every token. */
-  height: 170px;
+  height: 156px;
 }
 
 .compact .lane {
   --center: 58px;
-  height: 118px;
+  height: 104px;
+}
+
+.labels {
+  position: relative;
+  height: var(--space-4);
+  font-size: var(--text-2xs);
+  line-height: var(--space-4);
+  color: var(--color-text-subtle);
+  white-space: nowrap;
+}
+
+.labelStart {
+  position: absolute;
+  left: 0;
+  width: 60px;
+  text-align: center;
+}
+
+.labelEnd {
+  position: absolute;
+  right: 0;
+  width: 60px;
+  text-align: center;
 }
 
 .line {
@@ -29,12 +50,7 @@
 
 .lineLabel {
   position: absolute;
-  bottom: 0;
-  line-height: 1;
-  left: var(--space-1);
-  font-size: var(--text-2xs);
-  color: var(--color-text-subtle);
-  white-space: nowrap;
+  padding-left: var(--space-1);
 }
 
 .tick {
@@ -173,7 +189,7 @@
 
 .focus > :is(svg, span:first-of-type),
 .focus .groupToken {
-  filter: drop-shadow(0 0 6px var(--color-accent));
+  filter: drop-shadow(0 0 6px var(--color-text-strong));
 }
 
 .selected {
@@ -184,7 +200,7 @@
 .gone {
   position: absolute;
   top: var(--space-5);
-  bottom: var(--space-1);
+  bottom: 0;
   display: flex;
   flex-wrap: wrap;
   align-content: center;
@@ -211,17 +227,11 @@
   display: inline-flex;
 }
 
-.trayLabel {
-  flex-basis: 100%;
-  font-size: var(--text-2xs);
-  color: var(--color-text-subtle);
-  text-align: center;
-}
-
 .pops {
   position: absolute;
-  bottom: 100%;
+  bottom: calc(100% + var(--space-1));
   left: 50%;
+  z-index: 1;
   display: grid;
   justify-items: center;
   transform: translateX(-50%);

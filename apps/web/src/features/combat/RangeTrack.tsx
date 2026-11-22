@@ -155,9 +155,7 @@ export function RangeTrack({
       aria-label="Battlefield: the party on the left, the monsters on the right"
     >
       <div className={styles.lane}>
-        <div className={styles.line} style={{ left: at(0) }} aria-hidden="true">
-          <span className={styles.lineLabel}>Party line</span>
-        </div>
+        <div className={styles.line} style={{ left: at(0) }} aria-hidden="true"></div>
         {ticks.map((feet) => (
           <span key={feet} className={styles.tick} style={{ left: at(feet) }} aria-hidden="true">
             {feet === 0 ? '0' : formatFeet(feet, 'short')}
@@ -264,9 +262,6 @@ export function RangeTrack({
                 <Pops pops={popsFor(member.id)} popKey={popKey} />
               </div>
             ))}
-            <span className={styles.trayLabel} aria-hidden="true">
-              Fallen
-            </span>
           </div>
         )}
         {gone.length > 0 && (
@@ -288,10 +283,19 @@ export function RangeTrack({
                 <Pops pops={popsFor(group.id)} popKey={popKey} />
               </div>
             ))}
-            <span className={styles.trayLabel} aria-hidden="true">
-              {gone.every((g) => g.count === 0) ? 'Slain' : gone.every((g) => g.fled) ? 'Fled' : 'Gone'}
-            </span>
           </div>
+        )}
+      </div>
+      {/* Labels have a row of their own under the lane, so no token or number covers them. */}
+      <div className={styles.labels} aria-hidden="true">
+        {fallen.length > 0 && <span className={styles.labelStart}>Fallen</span>}
+        <span className={styles.lineLabel} style={{ left: at(0) }}>
+          Party line
+        </span>
+        {gone.length > 0 && (
+          <span className={styles.labelEnd}>
+            {gone.every((g) => g.count === 0) ? 'Slain' : gone.every((g) => g.fled) ? 'Fled' : 'Gone'}
+          </span>
         )}
       </div>
     </figure>

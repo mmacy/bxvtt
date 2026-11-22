@@ -29,7 +29,7 @@
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
-  color: var(--color-accent-text);
+  color: var(--color-text-muted);
 }
 
 .heading {
@@ -80,7 +80,7 @@
 }
 
 .stripPlaying {
-  border-color: var(--color-border-accent);
+  border-color: var(--color-border-strong);
   cursor: pointer;
 }
 
@@ -123,15 +123,6 @@
   gap: var(--space-0-5);
   min-width: 0;
   animation: beat-in var(--duration-slow) var(--ease-out) both;
-}
-
-.stripTitle {
-  margin: 0;
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  color: var(--color-text-subtle);
 }
 
 .stripLine {
@@ -304,7 +295,8 @@
 }
 
 .statusChoosing {
-  color: var(--color-accent-text);
+  font-style: italic;
+  color: var(--color-text-muted);
 }
 
 .statusWaiting {
@@ -793,11 +785,7 @@
 }
 
 .bearingLabel {
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  color: var(--color-text-subtle);
+  flex: none;
 }
 
 .bearingText {

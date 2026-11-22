@@ -45,7 +45,7 @@ import {
 } from './model';
 import { useCombatPeople, type CombatPeople } from './people';
 import { PlaybackStrip } from './PlaybackStrip';
-import { trackFromView } from './playback';
+import { trackFromView, type TrackMember } from './playback';
 import { RangeTrack } from './RangeTrack';
 import { MonsterRoster, RefereeActions } from './RefereeTools';
 import { useCombatUi } from './state';
@@ -183,8 +183,22 @@ export function BattleBoard() {
   useEffect(() => () => setPlayback(false, null), [setPlayback]);
   // The shell holds its end screen while the round that ended the game plays back.
   const setStagePlaying = useCombatStage((s) => s.setPlaying);
+  const setMoment = useCombatStage((s) => s.setMoment);
   useEffect(() => setStagePlaying(playback.playing), [playback.playing, setStagePlaying]);
-  useEffect(() => () => setStagePlaying(false), [setStagePlaying]);
+  // The top bar shows the round and the clock of the round playing back, so it agrees with the board.
+  const momentRound = playback.current?.digest.round ?? null;
+  const momentClock = playback.current?.clockBefore ?? null;
+  useEffect(() => {
+    if (playback.playing && momentClock !== null) setMoment({ round: momentRound, clockRounds: momentClock });
+    else setMoment(null);
+  }, [playback.playing, momentRound, momentClock, setMoment]);
+  useEffect(
+    () => () => {
+      setStagePlaying(false);
+      setMoment(null);
+    },
+    [setStagePlaying, setMoment],
+  );
 
   // When the fight ends, the shell unmounts this board. The aftermath plays the last round and sums up the fight
   // in the same place over the map.
@@ -208,9 +222,13 @@ export function BattleBoard() {
   if (encounter === null) return null;
   // The game ended in this round, and the shell keeps the board up while the round plays back.
   const holding = liveEncounter === null;
-  const round = holding
-    ? (playback.current?.digest.round ?? playback.last?.digest.round ?? encounter.battle_round ?? 0)
-    : (encounter.battle_round ?? 0) + 1;
+  // While a round plays back, the heading names that round, as the top bar does. Then it names the next one.
+  const playingRound = playback.playing ? (playback.current?.digest.round ?? null) : null;
+  const round =
+    playingRound ??
+    (holding
+      ? (playback.last?.digest.round ?? encounter.battle_round ?? 0)
+      : (encounter.battle_round ?? 0) + 1);
   const declarers = declarations?.declarers ?? encounter.declarers;
   const declared = declarations?.declared ?? [];
   const mine = declarers.filter((id) => people.isMine(id));
@@ -297,6 +315,7 @@ export function BattleBoard() {
                 people={people}
                 ctx={ctx}
                 refusals={refusals.byMember[member.id] ?? []}
+                shown={playback.track?.members[member.id] ?? null}
                 composing={composing === member.id}
                 onCompose={(open) => setComposing(open ? member.id : null)}
                 onDeclared={() => setComposing(nextUndeclared(member.id))}
@@ -379,6 +398,8 @@ function WaitingSummary({
 
 interface MemberRowProps {
   member: MemberView;
+  /** The member as the playback shows them now, or `null` outside playback. */
+  shown: TrackMember | null;
   encounter: EncounterView;
   declarations: DeclarationsState | null;
   gear: MemberGear;
@@ -392,6 +413,7 @@ interface MemberRowProps {
 
 function MemberRow({
   member,
+  shown,
   encounter,
   declarations,
   gear,
@@ -410,7 +432,10 @@ function MemberRow({
   const owner = people.ownerOf(member.id);
   const mine = people.isMine(member.id);
   const canAct = permission.allowed && declarer;
-  const down = member.conditions.includes('dead') || member.current_hp <= 0;
+  // During playback the row follows the beat on screen, and lands on the live state when playback ends.
+  const hp = shown ? shown.hp : member.current_hp;
+  const dead = shown ? shown.down && shown.conditions.includes('dead') : member.conditions.includes('dead');
+  const down = shown ? shown.down || shown.hp <= 0 : dead || member.current_hp <= 0;
   const quick = mine && canAct && !declaration ? quickAction(member, encounter, gear, ctx) : null;
   const again = mine && canAct && !declaration ? repeat.candidates([member.id])[0] : undefined;
   const [error, setError] = useState<string | null>(null);
@@ -424,7 +449,9 @@ function MemberRow({
 
   let status: React.ReactNode;
   if (!declarer) {
-    status = <span className={styles.statusMuted}>{outOfActionText(member)}</span>;
+    // A member who falls this round shows as standing until the beat where they fall.
+    status =
+      shown && !shown.down ? null : <span className={styles.statusMuted}>{outOfActionText(member)}</span>;
   } else if (declaration) {
     status = (
       <span className={styles.statusDeclared}>
@@ -467,7 +494,7 @@ function MemberRow({
           characterClass={tokenClass(member.class_id)}
           color={people.colors[member.id]}
           size={32}
-          state={member.conditions.includes('dead') ? 'dead' : down ? 'unconscious' : 'normal'}
+          state={dead ? 'dead' : down ? 'unconscious' : 'normal'}
           selected={composing}
           decorative
         />
@@ -478,7 +505,7 @@ function MemberRow({
           </span>
           <HpBar
             size="sm"
-            current={Math.max(0, member.current_hp)}
+            current={Math.max(0, hp)}
             max={member.max_hp}
             label={`${member.name}'s hit points`}
           />

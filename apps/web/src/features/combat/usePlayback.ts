@@ -90,6 +90,8 @@ export interface PlaybackItem {
   /** The battlefield before the first beat. */
   start: TrackState | null;
   digest: RoundDigest;
+  /** The game clock, in rounds, before the entry's command ran, when the feed recorded it. */
+  clockBefore: number | null;
 }
 
 export interface PlaybackView {
@@ -189,9 +191,15 @@ export function usePlayback(options: PlaybackOptions): PlaybackView {
           start,
           states: start ? trackStates(start, beats, local) : [],
           digest: digestRound(events, local),
+          clockBefore:
+            feed
+              .filter((e): e is GameEntry => e.kind === 'game' && e.seq < entry.seq)
+              .map((e) => e.clock_rounds)
+              .filter((c): c is number => typeof c === 'number')
+              .at(-1) ?? null,
         };
       }),
-    [entries, ctx, lens, lookup, tableId],
+    [entries, ctx, lens, lookup, tableId, feed],
   );
 
   const current = reduce

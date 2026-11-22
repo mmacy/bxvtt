@@ -29,8 +29,11 @@ import {
   cx,
   Field,
   Icon,
+  List,
+  ListItem,
   NumberInput,
   Popover,
+  SectionLabel,
   Select,
   TokenPortrait,
   type IconName,
@@ -131,7 +134,9 @@ export function EncounterPanel() {
 
       {stance && !commands.pursuit && (
         <div className={cx(styles.bearing, styles[`bearing-${STANCE_TONE[stance] ?? 'neutral'}`])}>
-          <span className={styles.bearingLabel}>Bearing</span>
+          <SectionLabel level="none" className={styles.bearingLabel}>
+            Bearing
+          </SectionLabel>
           <Badge tone={STANCE_TONE[stance] ?? 'neutral'}>{stanceLabel(stance)}</Badge>
           <span className={styles.bearingText}>
             {stanceDescription(stance)} {STANCE_IMPLICATIONS[stance] ?? ''}
@@ -315,25 +320,24 @@ function PartyOptions({
       popover: {
         title: 'Who speaks for the party?',
         content: (close) => (
-          <div className={styles.popoverList}>
+          <List
+            aria-label="Who speaks for the party"
+            onValueChange={(id) => {
+              commands.talk(id);
+              close();
+            }}
+          >
             {sorted.map((member) => (
-              <Button
+              <ListItem
                 key={member.id}
-                size="sm"
-                variant="ghost"
-                block
-                onClick={() => {
-                  commands.talk(member.id);
-                  close();
-                }}
-              >
-                <span className={styles.popoverItem}>
-                  {member.name}
+                value={member.id}
+                title={member.name}
+                trailing={
                   <span className={styles.popoverMeta}>Reaction {signed(member.npc_reaction_modifier)}</span>
-                </span>
-              </Button>
+                }
+              />
             ))}
-          </div>
+          </List>
         ),
       },
     });
@@ -360,7 +364,13 @@ function PartyOptions({
       popover: {
         title: 'Flee',
         content: (close) => (
-          <div className={styles.popoverList}>
+          <List
+            aria-label="How to flee"
+            onValueChange={(drop) => {
+              commands.flee(drop as 'none' | 'treasure' | 'food');
+              close();
+            }}
+          >
             {(
               [
                 ['none', 'Just run', 'Drop nothing.'],
@@ -368,23 +378,9 @@ function PartyOptions({
                 ['food', 'Drop food', 'One ration from each member. Tempts hungry pursuers.'],
               ] as const
             ).map(([drop, label, hint]) => (
-              <Button
-                key={drop}
-                size="sm"
-                variant="ghost"
-                block
-                onClick={() => {
-                  commands.flee(drop);
-                  close();
-                }}
-              >
-                <span className={styles.popoverItem}>
-                  {label}
-                  <span className={styles.popoverMeta}>{hint}</span>
-                </span>
-              </Button>
+              <ListItem key={drop} value={drop} title={label} description={hint} />
             ))}
-          </div>
+          </List>
         ),
       },
     });
@@ -418,23 +414,22 @@ function PartyOptions({
           ? {
               title: 'Who presents the holy symbol?',
               content: (close) => (
-                <div className={styles.popoverList}>
+                <List
+                  aria-label="Who presents the holy symbol"
+                  onValueChange={(id) => {
+                    commands.turn(id);
+                    close();
+                  }}
+                >
                   {turners.map((member) => (
-                    <Button
+                    <ListItem
                       key={member.id}
-                      size="sm"
-                      variant="ghost"
-                      block
+                      value={member.id}
+                      title={member.name}
                       disabled={!commands.can('turn_undead', member.id).allowed}
-                      onClick={() => {
-                        commands.turn(member.id);
-                        close();
-                      }}
-                    >
-                      {member.name}
-                    </Button>
+                    />
                   ))}
-                </div>
+                </List>
               ),
             }
           : undefined,

@@ -8,7 +8,7 @@ import {
   type TextContext,
 } from '@bxvtt/shared/text';
 import { useShortcut } from '@/app';
-import { Badge, Button, cx, Die, Icon, Kbd } from '@/ui';
+import { Badge, Button, cx, Die, Icon, Kbd, SectionLabel } from '@/ui';
 import { lineIcon, type RoundDigest } from './playback';
 import type { PlaybackView } from './usePlayback';
 import styles from './combat.module.css';
@@ -161,9 +161,9 @@ export function PlaybackStrip({ playback, ctx, idle, summaryTitle, shortcuts = t
           <Icon name="battle" size={20} />
         </div>
         <div className={styles.stripText}>
-          <p className={styles.stripTitle}>
+          <SectionLabel level="none">
             {summaryTitle ?? (round !== null ? `Round ${round} result` : 'What happened')}
-          </p>
+          </SectionLabel>
           {chips.length > 0 ? (
             <ul className={styles.chips}>
               {chips.map((chip) => (

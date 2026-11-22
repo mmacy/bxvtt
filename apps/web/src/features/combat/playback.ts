@@ -175,6 +175,8 @@ export function applyEvent(state: TrackState, event: AnyEvent, lookup: MonsterGr
           down: m.down || (gained && (condition === 'dead' || condition === 'petrified')),
         });
       }
+      // A group's dead are counted off its size, not listed as a condition.
+      if (condition === 'dead') return state;
       return withGroup(tokenFor(target, lookup), (g) => {
         const count = Math.max(0, (g.conditions[condition] ?? 0) + (gained ? 1 : -1));
         const conditions = { ...g.conditions };
