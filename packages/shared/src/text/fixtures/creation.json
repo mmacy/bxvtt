@@ -1,0 +1,464 @@
+[
+  {
+    "label": "elf low int",
+    "status": 422,
+    "scores": {
+      "str": 4,
+      "int": 5,
+      "wis": 12,
+      "dex": 12,
+      "con": 8,
+      "cha": 15
+    },
+    "request": {
+      "name": "Low",
+      "class_id": "elf",
+      "alignment": "neutral"
+    },
+    "response": {
+      "code": "character_invalid",
+      "detail": "The ability scores don't meet the requirements of the class 'elf'.",
+      "rejections": [
+        {
+          "code": "creation.class.requirements_not_met",
+          "params": {
+            "class": "elf",
+            "ability": "int",
+            "minimum": 9,
+            "score": 5
+          }
+        }
+      ]
+    }
+  },
+  {
+    "label": "fighter low str",
+    "status": 201,
+    "scores": {
+      "str": 7,
+      "int": 11,
+      "wis": 9,
+      "dex": 8,
+      "con": 17,
+      "cha": 14
+    },
+    "request": {
+      "name": "Weak",
+      "class_id": "fighter",
+      "alignment": "neutral"
+    },
+    "response": {
+      "rejections": null
+    }
+  },
+  {
+    "label": "adjust below floor",
+    "status": 422,
+    "scores": {
+      "str": 15,
+      "int": 14,
+      "wis": 11,
+      "dex": 9,
+      "con": 11,
+      "cha": 10
+    },
+    "request": {
+      "name": "A",
+      "class_id": "fighter",
+      "alignment": "lawful",
+      "adjustment": {
+        "lowered": {
+          "wis": 8
+        },
+        "raised": {
+          "str": 4
+        }
+      }
+    },
+    "response": {
+      "code": "character_invalid",
+      "detail": "The ability adjustment breaks the rules for trading ability points.",
+      "rejections": [
+        {
+          "code": "creation.adjustment.below_floor",
+          "params": {
+            "ability": "wis",
+            "score": 11,
+            "amount": 8
+          }
+        },
+        {
+          "code": "creation.adjustment.above_cap",
+          "params": {
+            "ability": "str",
+            "score": 15,
+            "amount": 4
+          }
+        }
+      ]
+    }
+  },
+  {
+    "label": "adjust not lowerable",
+    "status": 422,
+    "scores": {
+      "str": 15,
+      "int": 14,
+      "wis": 11,
+      "dex": 9,
+      "con": 11,
+      "cha": 10
+    },
+    "request": {
+      "name": "A",
+      "class_id": "fighter",
+      "alignment": "lawful",
+      "adjustment": {
+        "lowered": {
+          "dex": 2
+        },
+        "raised": {
+          "str": 1
+        }
+      }
+    },
+    "response": {
+      "code": "character_invalid",
+      "detail": "The ability adjustment breaks the rules for trading ability points.",
+      "rejections": [
+        {
+          "code": "creation.adjustment.not_lowerable",
+          "params": {
+            "ability": "dex"
+          }
+        },
+        {
+          "code": "creation.adjustment.below_floor",
+          "params": {
+            "ability": "dex",
+            "score": 9,
+            "amount": 2
+          }
+        }
+      ]
+    }
+  },
+  {
+    "label": "adjust odd",
+    "status": 422,
+    "scores": {
+      "str": 15,
+      "int": 14,
+      "wis": 11,
+      "dex": 9,
+      "con": 11,
+      "cha": 10
+    },
+    "request": {
+      "name": "A",
+      "class_id": "fighter",
+      "alignment": "lawful",
+      "adjustment": {
+        "lowered": {
+          "wis": 3
+        },
+        "raised": {
+          "str": 1
+        }
+      }
+    },
+    "response": {
+      "code": "character_invalid",
+      "detail": "The ability adjustment breaks the rules for trading ability points.",
+      "rejections": [
+        {
+          "code": "creation.adjustment.reduction_not_even",
+          "params": {
+            "ability": "wis",
+            "amount": 3
+          }
+        },
+        {
+          "code": "creation.adjustment.below_floor",
+          "params": {
+            "ability": "wis",
+            "score": 11,
+            "amount": 3
+          }
+        }
+      ]
+    }
+  },
+  {
+    "label": "adjust raise non prime",
+    "status": 422,
+    "scores": {
+      "str": 15,
+      "int": 14,
+      "wis": 11,
+      "dex": 9,
+      "con": 11,
+      "cha": 10
+    },
+    "request": {
+      "name": "A",
+      "class_id": "fighter",
+      "alignment": "lawful",
+      "adjustment": {
+        "lowered": {
+          "wis": 2
+        },
+        "raised": {
+          "int": 1
+        }
+      }
+    },
+    "response": {
+      "code": "character_invalid",
+      "detail": "The ability adjustment breaks the rules for trading ability points.",
+      "rejections": [
+        {
+          "code": "creation.adjustment.raise_not_prime_requisite",
+          "params": {
+            "ability": "int"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "label": "adjust points mismatch",
+    "status": 422,
+    "scores": {
+      "str": 15,
+      "int": 14,
+      "wis": 11,
+      "dex": 9,
+      "con": 11,
+      "cha": 10
+    },
+    "request": {
+      "name": "A",
+      "class_id": "fighter",
+      "alignment": "lawful",
+      "adjustment": {
+        "lowered": {
+          "wis": 2
+        },
+        "raised": {
+          "str": 3
+        }
+      }
+    },
+    "response": {
+      "code": "character_invalid",
+      "detail": "The ability adjustment breaks the rules for trading ability points.",
+      "rejections": [
+        {
+          "code": "creation.adjustment.points_mismatch",
+          "params": {
+            "points_available": 1,
+            "points_spent": 3
+          }
+        }
+      ]
+    }
+  },
+  {
+    "label": "adjust prime lowered",
+    "status": 422,
+    "scores": {
+      "str": 15,
+      "int": 14,
+      "wis": 11,
+      "dex": 9,
+      "con": 11,
+      "cha": 10
+    },
+    "request": {
+      "name": "A",
+      "class_id": "fighter",
+      "alignment": "lawful",
+      "adjustment": {
+        "lowered": {
+          "str": 2
+        },
+        "raised": {
+          "str": 1
+        }
+      }
+    },
+    "response": {
+      "code": "character_invalid",
+      "detail": "The ability adjustment breaks the rules for trading ability points.",
+      "rejections": [
+        {
+          "code": "creation.adjustment.prime_requisite_lowered",
+          "params": {
+            "ability": "str"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "label": "too poor",
+    "status": 422,
+    "scores": {
+      "str": 15,
+      "int": 14,
+      "wis": 11,
+      "dex": 9,
+      "con": 11,
+      "cha": 10
+    },
+    "request": {
+      "name": "A",
+      "class_id": "fighter",
+      "alignment": "lawful",
+      "purchases": [
+        {
+          "item_id": "plate_mail"
+        },
+        {
+          "item_id": "plate_mail"
+        },
+        {
+          "item_id": "plate_mail"
+        }
+      ]
+    },
+    "response": {
+      "code": "character_invalid",
+      "detail": "The starting gold doesn't cover the purchases.",
+      "rejections": [
+        {
+          "code": "items.purchase.insufficient_funds",
+          "params": {
+            "item": "plate_mail",
+            "cost_gp": 60
+          }
+        }
+      ]
+    }
+  },
+  {
+    "label": "mu shield",
+    "status": 422,
+    "scores": {
+      "str": 15,
+      "int": 14,
+      "wis": 11,
+      "dex": 9,
+      "con": 11,
+      "cha": 10
+    },
+    "request": {
+      "name": "A",
+      "class_id": "magic_user",
+      "alignment": "lawful",
+      "purchases": [
+        {
+          "item_id": "shield"
+        }
+      ],
+      "equip_item_ids": ["shield"]
+    },
+    "response": {
+      "code": "character_invalid",
+      "detail": "The starting spells don't fit the class's first spell book.",
+      "rejections": [
+        {
+          "code": "magic.book.capacity_mismatch",
+          "params": {
+            "spell_level": 1,
+            "capacity": 1,
+            "chosen": 0
+          }
+        }
+      ]
+    }
+  },
+  {
+    "label": "bad spells",
+    "status": 422,
+    "scores": {
+      "str": 15,
+      "int": 14,
+      "wis": 11,
+      "dex": 9,
+      "con": 11,
+      "cha": 10
+    },
+    "request": {
+      "name": "A",
+      "class_id": "magic_user",
+      "alignment": "lawful",
+      "starting_spell_ids": ["cure_light_wounds"]
+    },
+    "response": {
+      "code": "character_invalid",
+      "detail": "The starting spells don't fit the class's first spell book.",
+      "rejections": [
+        {
+          "code": "magic.book.wrong_list",
+          "params": {
+            "spell": "cure_light_wounds",
+            "list": "cleric"
+          }
+        },
+        {
+          "code": "magic.book.capacity_mismatch",
+          "params": {
+            "spell_level": 1,
+            "capacity": 1,
+            "chosen": 0
+          }
+        }
+      ]
+    }
+  },
+  {
+    "label": "languages",
+    "status": 422,
+    "scores": {
+      "str": 15,
+      "int": 14,
+      "wis": 11,
+      "dex": 9,
+      "con": 11,
+      "cha": 10
+    },
+    "request": {
+      "name": "A",
+      "class_id": "fighter",
+      "alignment": "lawful",
+      "extra_languages": ["common", "elvish", "elvish", "orcish", "ogre", "goblin"]
+    },
+    "response": {
+      "code": "character_invalid",
+      "detail": "The extra languages aren't allowed for this character.",
+      "rejections": [
+        {
+          "code": "creation.languages.too_many",
+          "params": {
+            "allowed": 1,
+            "chosen": 6
+          }
+        },
+        {
+          "code": "creation.languages.not_available",
+          "params": {
+            "language": "common"
+          }
+        },
+        {
+          "code": "creation.languages.duplicate_choice",
+          "params": {
+            "language": "elvish"
+          }
+        }
+      ]
+    }
+  }
+]

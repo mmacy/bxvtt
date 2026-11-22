@@ -1,0 +1,77 @@
+.wordmark {
+  --mark-size: 24px;
+  --word-size: var(--text-2xl);
+
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--mark-size) * 0.28);
+  color: var(--color-accent-text);
+  line-height: 1;
+}
+
+.sm {
+  --mark-size: 22px;
+  --word-size: var(--text-xl);
+}
+
+.md {
+  --mark-size: 28px;
+  --word-size: var(--text-3xl);
+}
+
+.lg {
+  --mark-size: 44px;
+  --word-size: var(--text-5xl);
+}
+
+.xl {
+  --mark-size: 64px;
+  --word-size: var(--text-6xl);
+}
+
+.mark {
+  flex: none;
+  width: var(--mark-size);
+  height: var(--mark-size);
+  overflow: visible;
+}
+
+.markBody {
+  fill: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+}
+
+.markFace {
+  fill: color-mix(in srgb, var(--color-accent) 22%, transparent);
+  stroke: currentColor;
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+}
+
+.markLines {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 0.8;
+  stroke-opacity: 0.55;
+}
+
+.flame {
+  fill: var(--color-focus);
+  filter: drop-shadow(0 0 2px rgb(255 196 94 / 0.8));
+}
+
+.text {
+  font-family: var(--font-display);
+  font-size: var(--word-size);
+  font-variation-settings:
+    'SOFT' 100,
+    'WONK' 1,
+    'opsz' 144;
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.035em;
+  color: var(--color-text-strong);
+  /* Optical alignment: Fraunces lowercase sits high against the mark. */
+  transform: translateY(-0.04em);
+}

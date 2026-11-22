@@ -1,0 +1,426 @@
+/*
+ * bxvtt design tokens.
+ *
+ * Three layers:
+ *   1. Palette (--palette-*): raw pigments. Components never use these directly.
+ *   2. Roles (--color-*): what a color is for. Themes redefine roles only.
+ *   3. Scales (--space-*, --text-*, --radius-*, --shadow-*, --duration-*, --z-*): fixed steps.
+ *
+ * The default theme is "candlelight" (dark). [data-theme='daylight'] on any element
+ * switches the roles inside it to the light theme.
+ */
+
+:root {
+  /* Palette: lampblack and umber for the chrome. */
+  --palette-ink-950: #0f0d0a;
+  --palette-ink-900: #16120f;
+  --palette-ink-850: #1c1814;
+  --palette-ink-800: #231e19;
+  --palette-ink-750: #2b2520;
+  --palette-ink-700: #352e27;
+  --palette-ink-600: #4a4036;
+  --palette-ink-500: #7a6b5a;
+
+  /* Palette: bone for text on the chrome. */
+  --palette-bone-50: #f4ede0;
+  --palette-bone-100: #e7ddcc;
+  --palette-bone-300: #c0b3a0;
+  --palette-bone-400: #9e917d;
+  --palette-bone-500: #7e7262;
+
+  /* Palette: brass and candle flame for the accent. */
+  --palette-brass-200: #f1d9a4;
+  --palette-brass-300: #e8c47c;
+  --palette-brass-400: #dcae62;
+  --palette-brass-500: #c8974a;
+  --palette-brass-600: #a57934;
+  --palette-brass-700: #785724;
+  --palette-brass-900: #2f2312;
+  --palette-candle: #ffc45e;
+
+  /* Palette: vellum and iron-gall ink for paper surfaces. */
+  --palette-vellum-50: #f6eedb;
+  --palette-vellum-100: #eee2c6;
+  --palette-vellum-200: #e1cfa9;
+  --palette-vellum-300: #c9b185;
+  --palette-vellum-400: #a88d62;
+  --palette-gall-900: #2a2017;
+  --palette-gall-700: #4d3e2f;
+  --palette-gall-500: #6e5b46;
+  --palette-rubric: #962c1b;
+
+  /* Palette: event hues. */
+  --palette-blood-300: #f08a74;
+  --palette-blood-400: #e6644c;
+  --palette-blood-600: #b03e2b;
+  --palette-blood-900: #3a1610;
+  --palette-verdigris-300: #8fd3a8;
+  --palette-verdigris-400: #6dbf8c;
+  --palette-verdigris-600: #3d855a;
+  --palette-verdigris-900: #15301f;
+  --palette-ochre-300: #f3c072;
+  --palette-ochre-400: #e8a03c;
+  --palette-ochre-600: #a86a17;
+  --palette-ochre-900: #35230b;
+  --palette-blueline-300: #a6c9e6;
+  --palette-blueline-400: #7fb0d8;
+  --palette-blueline-600: #3f78a6;
+  --palette-blueline-900: #13253a;
+  --palette-arcane-300: #cfc0fa;
+  --palette-arcane-400: #b39cf4;
+  --palette-arcane-600: #7558cf;
+  --palette-arcane-900: #241a40;
+  --palette-gold-300: #f6da8c;
+  --palette-gold-400: #f0c75e;
+  --palette-gold-600: #b48a22;
+  --palette-gold-900: #33270b;
+
+  /* Player colors: twelve pigments from an illuminator's box. */
+  --player-vermilion: #e4572e;
+  --player-saffron: #f29e2e;
+  --player-orpiment: #e3c444;
+  --player-weld: #a4c639;
+  --player-malachite: #3fae6a;
+  --player-verdigris: #2bb3a3;
+  --player-cerulean: #3fa7d6;
+  --player-azurite: #4f84e3;
+  --player-ultramarine: #8676f2;
+  --player-tyrian: #b664da;
+  --player-madder: #e0569a;
+  --player-slate: #8d9cab;
+
+  /* Coin metals for purse displays. */
+  --coin-pp: #dfe3e8;
+  --coin-gp: #f0c75e;
+  --coin-ep: #cfc58a;
+  --coin-sp: #b9c0c8;
+  --coin-cp: #c47a48;
+
+  /* Type families. */
+  --font-display: 'Fraunces Variable', 'Iowan Old Style', 'Palatino Linotype', Georgia, serif;
+  --font-ui: 'Atkinson Hyperlegible Next Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-numeric: 'Rokkitt Variable', Rockwell, 'Roboto Slab', Georgia, serif;
+  --font-display-soft: 'SOFT' 100, 'WONK' 1;
+  --font-display-plain: 'SOFT' 50, 'WONK' 0;
+
+  /* Type scale (rem, 16 px root). The interface base is --text-md (14 px). */
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-md: 0.875rem;
+  --text-lg: 1rem;
+  --text-xl: 1.125rem;
+  --text-2xl: 1.3125rem;
+  --text-3xl: 1.5rem;
+  --text-4xl: 2.25rem;
+  --text-5xl: 3rem;
+  --text-6xl: 3.75rem;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --weight-black: 800;
+
+  --leading-tight: 1.1;
+  --leading-snug: 1.3;
+  --leading-normal: 1.45;
+  --leading-relaxed: 1.6;
+
+  --tracking-tight: -0.015em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.04em;
+
+  /* Spacing on a 4 px grid. */
+  --space-px: 1px;
+  --space-0-5: 2px;
+  --space-1: 4px;
+  --space-1-5: 6px;
+  --space-2: 8px;
+  --space-2-5: 10px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-24: 96px;
+
+  /* Control heights and layout measures. */
+  --control-sm: 28px;
+  --control-md: 32px;
+  --control-lg: 40px;
+  --topbar-height: 44px;
+  --rail-width: 52px;
+  --actionbar-height: 52px;
+  --dock-min: 300px;
+  --dock-default: 380px;
+  --dock-max: 640px;
+  --measure-prose: 68ch;
+  --page-max: 1120px;
+
+  /* Radii grow with the size of the surface. */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-pill: 999px;
+
+  /* Borders. */
+  --border-hair: 1px;
+  --border-thick: 2px;
+
+  /* Motion. */
+  --duration-instant: 80ms;
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 280ms;
+  --duration-slower: 420ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.5, 0, 0.75, 0);
+  --ease-settle: cubic-bezier(0.34, 1.4, 0.64, 1);
+
+  /* Layers. */
+  --z-base: 0;
+  --z-raised: 10;
+  --z-rail: 20;
+  --z-dock: 30;
+  --z-topbar: 40;
+  --z-dropdown: 1000;
+  --z-overlay: 1100;
+  --z-modal: 1200;
+  --z-popover: 1300;
+  --z-toast: 1400;
+  --z-tooltip: 1500;
+}
+
+/* Roles: candlelight theme (default). */
+:root,
+[data-theme='candlelight'] {
+  color-scheme: dark;
+
+  --color-bg-app: var(--palette-ink-900);
+  --color-bg-stage: var(--palette-ink-950);
+  --color-surface-1: var(--palette-ink-850);
+  --color-surface-2: var(--palette-ink-800);
+  --color-surface-3: var(--palette-ink-750);
+  --color-surface-sunken: var(--palette-ink-950);
+  --color-surface-hover: rgb(231 221 204 / 0.06);
+  --color-surface-active: rgb(231 221 204 / 0.1);
+  --color-surface-selected: rgb(220 174 98 / 0.14);
+  --color-overlay: rgb(8 6 4 / 0.66);
+
+  --color-text: var(--palette-bone-100);
+  --color-text-strong: var(--palette-bone-50);
+  --color-text-muted: var(--palette-bone-300);
+  --color-text-subtle: var(--palette-bone-400);
+  --color-text-disabled: var(--palette-bone-500);
+  --color-text-inverse: var(--palette-ink-900);
+
+  --color-border: var(--palette-ink-700);
+  --color-border-strong: var(--palette-ink-600);
+  --color-border-input: var(--palette-ink-500);
+  --color-border-accent: var(--palette-brass-600);
+
+  --color-accent: var(--palette-brass-500);
+  --color-accent-hover: var(--palette-brass-400);
+  --color-accent-active: var(--palette-brass-600);
+  --color-accent-text: var(--palette-brass-300);
+  --color-accent-subtle: var(--palette-brass-900);
+  --color-on-accent: var(--palette-ink-950);
+  --color-focus: var(--palette-candle);
+
+  --color-danger: var(--palette-blood-400);
+  --color-danger-strong: var(--palette-blood-600);
+  --color-danger-subtle: var(--palette-blood-900);
+  --color-success: var(--palette-verdigris-400);
+  --color-success-strong: var(--palette-verdigris-600);
+  --color-success-subtle: var(--palette-verdigris-900);
+  --color-warning: var(--palette-ochre-400);
+  --color-warning-strong: var(--palette-ochre-600);
+  --color-warning-subtle: var(--palette-ochre-900);
+  --color-info: var(--palette-blueline-400);
+  --color-info-strong: var(--palette-blueline-600);
+  --color-info-subtle: var(--palette-blueline-900);
+
+  /* Game events. */
+  --color-damage: var(--palette-blood-400);
+  --color-heal: var(--palette-verdigris-400);
+  --color-magic: var(--palette-arcane-400);
+  --color-magic-subtle: var(--palette-arcane-900);
+  --color-gold: var(--palette-gold-400);
+  --color-gold-subtle: var(--palette-gold-900);
+  --color-referee: var(--palette-blood-300);
+
+  /* Paper: sheets, handouts, the journal. Paper keeps its look in every theme. */
+  --color-paper: var(--palette-vellum-100);
+  --color-paper-raised: var(--palette-vellum-50);
+  --color-paper-sunken: var(--palette-vellum-200);
+  --color-paper-rule: var(--palette-vellum-300);
+  --color-paper-edge: var(--palette-vellum-400);
+  --color-paper-ink: var(--palette-gall-900);
+  --color-paper-ink-muted: var(--palette-gall-700);
+  --color-paper-ink-subtle: var(--palette-gall-500);
+  --color-paper-rubric: var(--palette-rubric);
+
+  /* Dice: bone resin with numerals filled in like crayon. */
+  --color-die-face: #efe5cf;
+  --color-die-facet-light: #f8f1e1;
+  --color-die-facet-mid: #ddcfb1;
+  --color-die-facet-dark: #c3b28e;
+  --color-die-edge: #6b5a42;
+  --color-die-ink: #2a2017;
+
+  /* Shadows: warm, deep, with a faint candlelit top edge on raised surfaces. */
+  --edge-highlight: inset 0 1px 0 rgb(255 222 168 / 0.06);
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.45);
+  --shadow-2: 0 2px 4px rgb(0 0 0 / 0.35), 0 8px 20px -6px rgb(0 0 0 / 0.6);
+  --shadow-3: 0 4px 10px rgb(0 0 0 / 0.4), 0 24px 56px -12px rgb(0 0 0 / 0.75);
+  --shadow-inset: inset 0 1px 3px rgb(0 0 0 / 0.5);
+  --shadow-paper:
+    0 1px 0 rgb(255 255 255 / 0.04), 0 2px 6px rgb(0 0 0 / 0.45), 0 18px 40px -16px rgb(0 0 0 / 0.7);
+  --glow-accent: 0 0 0 1px rgb(220 174 98 / 0.5), 0 0 18px rgb(255 196 94 / 0.25);
+
+  /* Focus: base.css draws a 2 px outline in --color-focus. These shadows are for custom drawings. */
+  --focus-ring: 0 0 0 2px var(--color-bg-app), 0 0 0 4px var(--color-focus);
+  --focus-ring-inset: inset 0 0 0 2px var(--color-focus);
+}
+
+/* Roles: daylight theme (light). A starting point; paper and dice stay the same. */
+[data-theme='daylight'] {
+  color-scheme: light;
+
+  --color-bg-app: #efe8da;
+  --color-bg-stage: #e4dccb;
+  --color-surface-1: #f7f2e8;
+  --color-surface-2: #fffcf5;
+  --color-surface-3: #ffffff;
+  --color-surface-sunken: #e6dece;
+  --color-surface-hover: rgb(42 32 23 / 0.05);
+  --color-surface-active: rgb(42 32 23 / 0.09);
+  --color-surface-selected: rgb(165 121 52 / 0.14);
+  --color-overlay: rgb(42 32 23 / 0.4);
+
+  --color-text: #2c241c;
+  --color-text-strong: #18120c;
+  --color-text-muted: #54473a;
+  --color-text-subtle: #6b5d4e;
+  --color-text-disabled: #9a8d7c;
+  --color-text-inverse: #f4ede0;
+
+  --color-border: #ddd2bf;
+  --color-border-strong: #c4b59c;
+  --color-border-input: #8f7d62;
+  --color-border-accent: #a57934;
+
+  --color-accent: #8a6224;
+  --color-accent-hover: #7a561e;
+  --color-accent-active: #6a4a18;
+  --color-accent-text: #7a541a;
+  --color-accent-subtle: #f1e2c2;
+  --color-on-accent: #fffaf0;
+  --color-focus: #b5651d;
+
+  --color-danger: #b03e2b;
+  --color-danger-strong: #a33826;
+  --color-danger-subtle: #f6ddd5;
+  --color-success: #2f7049;
+  --color-success-strong: #2f7049;
+  --color-success-subtle: #d8ecdf;
+  --color-warning: #8f5a10;
+  --color-warning-strong: #a86a17;
+  --color-warning-subtle: #f6e6c8;
+  --color-info: #2f6591;
+  --color-info-strong: #3f78a6;
+  --color-info-subtle: #dbe8f3;
+
+  --color-damage: #b03e2b;
+  --color-heal: #2f7049;
+  --color-magic: #6448c0;
+  --color-magic-subtle: #e6e0f8;
+  --color-gold: #8a6a12;
+  --color-gold-subtle: #f4e9c6;
+  --color-referee: #a33826;
+
+  --edge-highlight: inset 0 1px 0 rgb(255 255 255 / 0.6);
+  --shadow-1: 0 1px 2px rgb(60 40 20 / 0.12);
+  --shadow-2: 0 2px 4px rgb(60 40 20 / 0.08), 0 8px 20px -6px rgb(60 40 20 / 0.2);
+  --shadow-3: 0 4px 10px rgb(60 40 20 / 0.1), 0 24px 56px -12px rgb(60 40 20 / 0.3);
+  --shadow-inset: inset 0 1px 3px rgb(60 40 20 / 0.12);
+  --shadow-paper: 0 2px 6px rgb(60 40 20 / 0.12), 0 18px 40px -16px rgb(60 40 20 / 0.3);
+  --glow-accent: 0 0 0 1px rgb(138 98 36 / 0.5), 0 0 14px rgb(181 101 29 / 0.2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-instant: 1ms;
+    --duration-fast: 1ms;
+    --duration-base: 1ms;
+    --duration-slow: 1ms;
+    --duration-slower: 1ms;
+  }
+}
+
+/*
+ * Paper scope. Parchment sets this, and any element can opt in with data-surface='paper'.
+ * Components inside read the same roles, so a Field or DataTable on a character sheet
+ * renders in iron-gall ink on vellum without a separate variant.
+ */
+[data-surface='paper'] {
+  color-scheme: light;
+
+  --color-surface-1: var(--palette-vellum-100);
+  --color-surface-2: var(--palette-vellum-50);
+  --color-surface-3: #fbf6e8;
+  --color-surface-sunken: #e6d6b4;
+  --color-surface-hover: rgb(42 32 23 / 0.06);
+  --color-surface-active: rgb(42 32 23 / 0.1);
+  --color-surface-selected: rgb(150 44 27 / 0.1);
+
+  --color-text: var(--palette-gall-900);
+  --color-text-strong: #1c150e;
+  --color-text-muted: var(--palette-gall-700);
+  --color-text-subtle: var(--palette-gall-500);
+  --color-text-disabled: var(--palette-vellum-400);
+  --color-text-inverse: var(--palette-vellum-50);
+
+  --color-border: var(--palette-vellum-300);
+  --color-border-strong: var(--palette-vellum-400);
+  --color-border-input: var(--palette-gall-500);
+  --color-border-accent: var(--palette-rubric);
+
+  --color-accent: #7c5119;
+  --color-accent-hover: #6b4513;
+  --color-accent-active: #5a390f;
+  --color-accent-text: var(--palette-rubric);
+  --color-accent-subtle: rgb(150 44 27 / 0.1);
+  --color-on-accent: var(--palette-vellum-50);
+  --color-focus: #b5651d;
+
+  --color-danger: #a33826;
+  --color-danger-strong: #a33826;
+  --color-danger-subtle: rgb(163 56 38 / 0.12);
+  --color-success: #2f6b45;
+  --color-success-strong: #2f6b45;
+  --color-success-subtle: rgb(47 107 69 / 0.14);
+  --color-warning: #85520c;
+  --color-warning-subtle: rgb(168 106 23 / 0.16);
+  --color-info: #2f6591;
+  --color-info-subtle: rgb(47 101 145 / 0.12);
+  --color-damage: #a33826;
+  --color-heal: #2f6b45;
+  --color-magic: #5d43b5;
+  --color-magic-subtle: rgb(93 67 181 / 0.12);
+  --color-gold: #7d5f0e;
+  --color-gold-subtle: rgb(180 138 34 / 0.18);
+
+  --edge-highlight: inset 0 1px 0 rgb(255 255 255 / 0.5);
+  --shadow-1: 0 1px 1px rgb(60 40 20 / 0.15);
+  --shadow-inset: inset 0 1px 2px rgb(60 40 20 / 0.18);
+  --focus-ring: 0 0 0 2px var(--palette-vellum-50), 0 0 0 4px var(--color-focus);
+
+  color: var(--color-text);
+}

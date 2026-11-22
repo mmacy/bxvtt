@@ -1,0 +1,32 @@
+.divider {
+  flex: none;
+  background: var(--color-border);
+}
+
+.horizontal {
+  height: 1px;
+  width: 100%;
+}
+
+.vertical {
+  width: 1px;
+  align-self: stretch;
+}
+
+.labelled {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+}
+
+.line {
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.text {
+  flex: none;
+}

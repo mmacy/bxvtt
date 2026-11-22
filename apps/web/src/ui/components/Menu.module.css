@@ -1,0 +1,97 @@
+.content {
+  z-index: var(--z-dropdown);
+  min-width: 200px;
+  max-width: 320px;
+  padding: var(--space-1);
+  border: var(--border-hair) solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  box-shadow: var(--edge-highlight), var(--shadow-2);
+  color: var(--color-text);
+  animation: pop var(--duration-fast) var(--ease-out);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--control-md);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  outline: none;
+  cursor: default;
+  user-select: none;
+}
+
+.item[data-highlighted],
+.item[data-state='open'] {
+  background: var(--color-surface-selected);
+  color: var(--color-text-strong);
+}
+
+/* The highlight marks the active item, so the item needs no separate ring. */
+.item:focus-visible {
+  outline: none;
+}
+
+.item[data-disabled] {
+  color: var(--color-text-disabled);
+}
+
+.danger {
+  color: var(--color-danger);
+}
+
+.danger[data-highlighted] {
+  background: var(--color-danger-subtle);
+  color: var(--color-danger);
+}
+
+.iconSlot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 16px;
+  color: var(--color-text-subtle);
+}
+
+.danger .iconSlot {
+  color: inherit;
+}
+
+.itemLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shortcut {
+  margin-inline-start: var(--space-4);
+}
+
+.subChevron {
+  color: var(--color-text-subtle);
+}
+
+.separator {
+  height: 1px;
+  margin: var(--space-1) calc(var(--space-1) * -1);
+  background: var(--color-border);
+}
+
+.label {
+  padding: var(--space-1-5) var(--space-2) var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-subtle);
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}

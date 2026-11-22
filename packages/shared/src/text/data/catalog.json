@@ -1,0 +1,3570 @@
+{
+  "classes": [
+    {
+      "id": "cleric",
+      "name": "Cleric"
+    },
+    {
+      "id": "dwarf",
+      "name": "Dwarf"
+    },
+    {
+      "id": "elf",
+      "name": "Elf"
+    },
+    {
+      "id": "fighter",
+      "name": "Fighter"
+    },
+    {
+      "id": "halfling",
+      "name": "Halfling"
+    },
+    {
+      "id": "magic_user",
+      "name": "Magic-User"
+    },
+    {
+      "id": "thief",
+      "name": "Thief"
+    }
+  ],
+  "languages": [
+    {
+      "id": "bugbear",
+      "name": "Bugbear"
+    },
+    {
+      "id": "common",
+      "name": "Common"
+    },
+    {
+      "id": "doppelganger",
+      "name": "Doppelgänger"
+    },
+    {
+      "id": "dragon",
+      "name": "Dragon"
+    },
+    {
+      "id": "dwarvish",
+      "name": "Dwarvish"
+    },
+    {
+      "id": "elvish",
+      "name": "Elvish"
+    },
+    {
+      "id": "gargoyle",
+      "name": "Gargoyle"
+    },
+    {
+      "id": "gnoll",
+      "name": "Gnoll"
+    },
+    {
+      "id": "gnomish",
+      "name": "Gnomish"
+    },
+    {
+      "id": "goblin",
+      "name": "Goblin"
+    },
+    {
+      "id": "halfling",
+      "name": "Halfling"
+    },
+    {
+      "id": "harpy",
+      "name": "Harpy"
+    },
+    {
+      "id": "hobgoblin",
+      "name": "Hobgoblin"
+    },
+    {
+      "id": "human_dialect",
+      "name": "Human dialect"
+    },
+    {
+      "id": "kobold",
+      "name": "Kobold"
+    },
+    {
+      "id": "lizard_man",
+      "name": "Lizard man"
+    },
+    {
+      "id": "medusa",
+      "name": "Medusa"
+    },
+    {
+      "id": "minotaur",
+      "name": "Minotaur"
+    },
+    {
+      "id": "ogre",
+      "name": "Ogre"
+    },
+    {
+      "id": "orcish",
+      "name": "Orcish"
+    },
+    {
+      "id": "pixie",
+      "name": "Pixie"
+    }
+  ],
+  "equipment": [
+    {
+      "id": "battle_axe",
+      "name": "Battle axe",
+      "type": "weapon",
+      "lot_size": 1,
+      "cost_gp": 7
+    },
+    {
+      "id": "club",
+      "name": "Club",
+      "type": "weapon",
+      "lot_size": 1,
+      "cost_gp": 3
+    },
+    {
+      "id": "crossbow",
+      "name": "Crossbow",
+      "type": "weapon",
+      "lot_size": 1,
+      "cost_gp": 30
+    },
+    {
+      "id": "dagger",
+      "name": "Dagger",
+      "type": "weapon",
+      "lot_size": 1,
+      "cost_gp": 3
+    },
+    {
+      "id": "hand_axe",
+      "name": "Hand axe",
+      "type": "weapon",
+      "lot_size": 1,
+      "cost_gp": 4
+    },
+    {
+      "id": "javelin",
+      "name": "Javelin",
+      "type": "weapon",
+      "lot_size": 1,
+      "cost_gp": 1
+    },
+    {
+      "id": "lance",
+      "name": "Lance",
+      "type": "weapon",
+      "lot_size": 1,
+      "cost_gp": 5
+    },
+    {
+      "id": "long_bow",
+      "name": "Long bow",
+      "type": "weapon",
+      "lot_size": 1,
+      "cost_gp": 40
+    },
+    {
+      "id": "mace",
+      "name": "Mace",
+      "type": "weapon",
+      "lot_size": 1,
+      "cost_gp": 5
+    },
+    {
+      "id": "pole_arm",
+      "name": "Pole arm",
+      "type": "weapon",
+      "lot_size": 1,
+      "cost_gp": 7
+    },
+    {
+      "id": "short_bow",
+      "name": "Short bow",
+      "type": "weapon",
+      "lot_size": 1,
+      "cost_gp": 25
+    },
+    {
+      "id": "short_sword",
+      "name": "Short sword",
+      "type": "weapon",
+      "lot_size": 1,
+      "cost_gp": 7
+    },
+    {
+      "id": "silver_dagger",
+      "name": "Silver dagger",
+      "type": "weapon",
+      "lot_size": 1,
+      "cost_gp": 30
+    },
+    {
+      "id": "sling",
+      "name": "Sling",
+      "type": "weapon",
+      "lot_size": 1,
+      "cost_gp": 2
+    },
+    {
+      "id": "spear",
+      "name": "Spear",
+      "type": "weapon",
+      "lot_size": 1,
+      "cost_gp": 3
+    },
+    {
+      "id": "staff",
+      "name": "Staff",
+      "type": "weapon",
+      "lot_size": 1,
+      "cost_gp": 2
+    },
+    {
+      "id": "sword",
+      "name": "Sword",
+      "type": "weapon",
+      "lot_size": 1,
+      "cost_gp": 10
+    },
+    {
+      "id": "two_handed_sword",
+      "name": "Two-handed sword",
+      "type": "weapon",
+      "lot_size": 1,
+      "cost_gp": 15
+    },
+    {
+      "id": "war_hammer",
+      "name": "War hammer",
+      "type": "weapon",
+      "lot_size": 1,
+      "cost_gp": 5
+    },
+    {
+      "id": "chainmail",
+      "name": "Chainmail",
+      "type": "armour",
+      "lot_size": 1,
+      "cost_gp": 40
+    },
+    {
+      "id": "leather",
+      "name": "Leather",
+      "type": "armour",
+      "lot_size": 1,
+      "cost_gp": 20
+    },
+    {
+      "id": "plate_mail",
+      "name": "Plate mail",
+      "type": "armour",
+      "lot_size": 1,
+      "cost_gp": 60
+    },
+    {
+      "id": "shield",
+      "name": "Shield",
+      "type": "armour",
+      "lot_size": 1,
+      "cost_gp": 10
+    },
+    {
+      "id": "backpack",
+      "name": "Backpack",
+      "type": "gear",
+      "lot_size": 1,
+      "cost_gp": 5
+    },
+    {
+      "id": "crowbar",
+      "name": "Crowbar",
+      "type": "gear",
+      "lot_size": 1,
+      "cost_gp": 10
+    },
+    {
+      "id": "garlic",
+      "name": "Garlic",
+      "type": "gear",
+      "lot_size": 1,
+      "cost_gp": 5
+    },
+    {
+      "id": "grappling_hook",
+      "name": "Grappling hook",
+      "type": "gear",
+      "lot_size": 1,
+      "cost_gp": 25
+    },
+    {
+      "id": "hammer",
+      "name": "Hammer (small)",
+      "type": "gear",
+      "lot_size": 1,
+      "cost_gp": 2
+    },
+    {
+      "id": "holy_symbol",
+      "name": "Holy symbol",
+      "type": "gear",
+      "lot_size": 1,
+      "cost_gp": 25
+    },
+    {
+      "id": "holy_water",
+      "name": "Holy water (vial)",
+      "type": "gear",
+      "lot_size": 1,
+      "cost_gp": 25
+    },
+    {
+      "id": "iron_spikes",
+      "name": "Iron spikes (12)",
+      "type": "gear",
+      "lot_size": 12,
+      "cost_gp": 1
+    },
+    {
+      "id": "lantern",
+      "name": "Lantern",
+      "type": "gear",
+      "lot_size": 1,
+      "cost_gp": 10
+    },
+    {
+      "id": "mirror",
+      "name": "Mirror (hand-sized, steel)",
+      "type": "gear",
+      "lot_size": 1,
+      "cost_gp": 5
+    },
+    {
+      "id": "oil_flask",
+      "name": "Oil (1 flask)",
+      "type": "gear",
+      "lot_size": 1,
+      "cost_gp": 2
+    },
+    {
+      "id": "pole",
+      "name": "Pole (10’ long, wooden)",
+      "type": "gear",
+      "lot_size": 1,
+      "cost_gp": 1
+    },
+    {
+      "id": "rations_iron",
+      "name": "Rations (iron, 7 days)",
+      "type": "gear",
+      "lot_size": 7,
+      "cost_gp": 15
+    },
+    {
+      "id": "rations_standard",
+      "name": "Rations (standard, 7 days)",
+      "type": "gear",
+      "lot_size": 7,
+      "cost_gp": 5
+    },
+    {
+      "id": "rope",
+      "name": "Rope (50’)",
+      "type": "gear",
+      "lot_size": 1,
+      "cost_gp": 1
+    },
+    {
+      "id": "sack_large",
+      "name": "Sack (large)",
+      "type": "gear",
+      "lot_size": 1,
+      "cost_gp": 2
+    },
+    {
+      "id": "sack_small",
+      "name": "Sack (small)",
+      "type": "gear",
+      "lot_size": 1,
+      "cost_gp": 1
+    },
+    {
+      "id": "stakes_and_mallet",
+      "name": "Stakes (3) and mallet",
+      "type": "gear",
+      "lot_size": 1,
+      "cost_gp": 3
+    },
+    {
+      "id": "thieves_tools",
+      "name": "Thieves’ tools",
+      "type": "gear",
+      "lot_size": 1,
+      "cost_gp": 25
+    },
+    {
+      "id": "tinder_box",
+      "name": "Tinder box (flint & steel)",
+      "type": "gear",
+      "lot_size": 1,
+      "cost_gp": 3
+    },
+    {
+      "id": "torch",
+      "name": "Torches (6)",
+      "type": "gear",
+      "lot_size": 6,
+      "cost_gp": 1
+    },
+    {
+      "id": "waterskin",
+      "name": "Waterskin",
+      "type": "gear",
+      "lot_size": 1,
+      "cost_gp": 1
+    },
+    {
+      "id": "wine",
+      "name": "Wine (2 pints)",
+      "type": "gear",
+      "lot_size": 2,
+      "cost_gp": 1
+    },
+    {
+      "id": "wolfsbane",
+      "name": "Wolfsbane (1 bunch)",
+      "type": "gear",
+      "lot_size": 1,
+      "cost_gp": 10
+    },
+    {
+      "id": "arrows",
+      "name": "Arrows (quiver of 20)",
+      "type": "ammunition",
+      "lot_size": 20,
+      "cost_gp": 5
+    },
+    {
+      "id": "crossbow_bolts",
+      "name": "Crossbow bolts (case of 30)",
+      "type": "ammunition",
+      "lot_size": 30,
+      "cost_gp": 10
+    },
+    {
+      "id": "silver_tipped_arrow",
+      "name": "Silver tipped arrow (1)",
+      "type": "ammunition",
+      "lot_size": 1,
+      "cost_gp": 5
+    },
+    {
+      "id": "sling_stones",
+      "name": "Sling stones",
+      "type": "ammunition",
+      "lot_size": 1,
+      "cost_gp": 0
+    }
+  ],
+  "magic_items": [
+    {
+      "id": "amulet_of_protection_against_scrying",
+      "name": "Amulet of Protection Against Scrying",
+      "category": "misc"
+    },
+    {
+      "id": "armour_plus_1",
+      "name": "Armour +1",
+      "category": "armour"
+    },
+    {
+      "id": "armour_plus_2",
+      "name": "Armour +2",
+      "category": "armour"
+    },
+    {
+      "id": "armour_plus_3",
+      "name": "Armour +3",
+      "category": "armour"
+    },
+    {
+      "id": "arrows_plus_1",
+      "name": "Arrows +1 (3d10 arrows)",
+      "category": "weapon"
+    },
+    {
+      "id": "arrows_plus_2",
+      "name": "Arrows +2 (1d6 arrows)",
+      "category": "weapon"
+    },
+    {
+      "id": "axe_plus_1",
+      "name": "Axe +1",
+      "category": "weapon"
+    },
+    {
+      "id": "axe_plus_2",
+      "name": "Axe +2",
+      "category": "weapon"
+    },
+    {
+      "id": "bag_of_devouring",
+      "name": "Bag of Devouring",
+      "category": "misc"
+    },
+    {
+      "id": "bag_of_holding",
+      "name": "Bag of Holding",
+      "category": "misc"
+    },
+    {
+      "id": "boots_of_levitation",
+      "name": "Boots of Levitation",
+      "category": "misc"
+    },
+    {
+      "id": "boots_of_speed",
+      "name": "Boots of Speed",
+      "category": "misc"
+    },
+    {
+      "id": "boots_of_travelling_and_leaping",
+      "name": "Boots of Travelling and Leaping",
+      "category": "misc"
+    },
+    {
+      "id": "bow_plus_1",
+      "name": "Bow +1",
+      "category": "weapon"
+    },
+    {
+      "id": "broom_of_flying",
+      "name": "Broom of Flying",
+      "category": "misc"
+    },
+    {
+      "id": "crossbow_bolts_plus_1",
+      "name": "Crossbow Bolts +1 (2d6 bolts)",
+      "category": "weapon"
+    },
+    {
+      "id": "crossbow_bolts_plus_2",
+      "name": "Crossbow Bolts +2 (1d6 bolts)",
+      "category": "weapon"
+    },
+    {
+      "id": "crystal_ball",
+      "name": "Crystal Ball",
+      "category": "misc"
+    },
+    {
+      "id": "crystal_ball_with_clairaudience",
+      "name": "Crystal Ball with Clairaudience",
+      "category": "misc"
+    },
+    {
+      "id": "crystal_ball_with_esp",
+      "name": "Crystal Ball with ESP",
+      "category": "misc"
+    },
+    {
+      "id": "cursed_armour_ac_9",
+      "name": "Cursed Armour, AC 9 [10]",
+      "category": "armour"
+    },
+    {
+      "id": "cursed_armour_minus_1",
+      "name": "Cursed Armour -1",
+      "category": "armour"
+    },
+    {
+      "id": "cursed_armour_minus_2",
+      "name": "Cursed Armour -2",
+      "category": "armour"
+    },
+    {
+      "id": "cursed_scroll",
+      "name": "Cursed Scroll",
+      "category": "scroll"
+    },
+    {
+      "id": "cursed_shield_ac_9",
+      "name": "Cursed Shield, AC 9 [10]",
+      "category": "armour"
+    },
+    {
+      "id": "cursed_shield_minus_2",
+      "name": "Cursed Shield -2",
+      "category": "armour"
+    },
+    {
+      "id": "dagger_plus_1",
+      "name": "Dagger +1",
+      "category": "weapon"
+    },
+    {
+      "id": "dagger_plus_2_plus_3_vs_orcs_goblins_and_kobolds",
+      "name": "Dagger +2, +3 vs orcs, goblins, and kobolds",
+      "category": "weapon"
+    },
+    {
+      "id": "displacer_cloak",
+      "name": "Displacer Cloak",
+      "category": "misc"
+    },
+    {
+      "id": "drums_of_panic",
+      "name": "Drums of Panic",
+      "category": "misc"
+    },
+    {
+      "id": "efreeti_bottle",
+      "name": "Efreeti Bottle",
+      "category": "misc"
+    },
+    {
+      "id": "elemental_summoning_device_air",
+      "name": "Elemental Summoning Device: Air",
+      "category": "misc"
+    },
+    {
+      "id": "elemental_summoning_device_earth",
+      "name": "Elemental Summoning Device: Earth",
+      "category": "misc"
+    },
+    {
+      "id": "elemental_summoning_device_fire",
+      "name": "Elemental Summoning Device: Fire",
+      "category": "misc"
+    },
+    {
+      "id": "elemental_summoning_device_water",
+      "name": "Elemental Summoning Device: Water",
+      "category": "misc"
+    },
+    {
+      "id": "elven_cloak_and_boots",
+      "name": "Elven Cloak and Boots",
+      "category": "misc"
+    },
+    {
+      "id": "flying_carpet",
+      "name": "Flying Carpet",
+      "category": "misc"
+    },
+    {
+      "id": "gauntlets_of_ogre_power",
+      "name": "Gauntlets of Ogre Power",
+      "category": "misc"
+    },
+    {
+      "id": "girdle_of_giant_strength",
+      "name": "Girdle of Giant Strength",
+      "category": "misc"
+    },
+    {
+      "id": "helm_of_alignment_changing",
+      "name": "Helm of Alignment Changing",
+      "category": "misc"
+    },
+    {
+      "id": "helm_of_reading_languages_and_magic",
+      "name": "Helm of Reading Languages and Magic",
+      "category": "misc"
+    },
+    {
+      "id": "helm_of_telepathy",
+      "name": "Helm of Telepathy",
+      "category": "misc"
+    },
+    {
+      "id": "helm_of_teleportation",
+      "name": "Helm of Teleportation",
+      "category": "misc"
+    },
+    {
+      "id": "horn_of_blasting",
+      "name": "Horn of Blasting",
+      "category": "misc"
+    },
+    {
+      "id": "mace_plus_1",
+      "name": "Mace +1",
+      "category": "weapon"
+    },
+    {
+      "id": "mace_plus_2",
+      "name": "Mace +2",
+      "category": "weapon"
+    },
+    {
+      "id": "mace_plus_3",
+      "name": "Mace +3",
+      "category": "weapon"
+    },
+    {
+      "id": "medallion_of_esp_30",
+      "name": "Medallion of ESP 30’",
+      "category": "misc"
+    },
+    {
+      "id": "medallion_of_esp_90",
+      "name": "Medallion of ESP 90’",
+      "category": "misc"
+    },
+    {
+      "id": "mirror_of_life_trapping",
+      "name": "Mirror of Life Trapping",
+      "category": "misc"
+    },
+    {
+      "id": "potion_of_clairaudience",
+      "name": "Potion of Clairaudience",
+      "category": "potion"
+    },
+    {
+      "id": "potion_of_clairvoyance",
+      "name": "Potion of Clairvoyance",
+      "category": "potion"
+    },
+    {
+      "id": "potion_of_control_animal",
+      "name": "Potion of Control Animal",
+      "category": "potion"
+    },
+    {
+      "id": "potion_of_control_dragon",
+      "name": "Potion of Control Dragon",
+      "category": "potion"
+    },
+    {
+      "id": "potion_of_control_giant",
+      "name": "Potion of Control Giant",
+      "category": "potion"
+    },
+    {
+      "id": "potion_of_control_human",
+      "name": "Potion of Control Human",
+      "category": "potion"
+    },
+    {
+      "id": "potion_of_control_plant",
+      "name": "Potion of Control Plant",
+      "category": "potion"
+    },
+    {
+      "id": "potion_of_control_undead",
+      "name": "Potion of Control Undead",
+      "category": "potion"
+    },
+    {
+      "id": "potion_of_delusion",
+      "name": "Potion of Delusion",
+      "category": "potion"
+    },
+    {
+      "id": "potion_of_diminution",
+      "name": "Potion of Diminution",
+      "category": "potion"
+    },
+    {
+      "id": "potion_of_esp",
+      "name": "Potion of ESP",
+      "category": "potion"
+    },
+    {
+      "id": "potion_of_fire_resistance",
+      "name": "Potion of Fire Resistance",
+      "category": "potion"
+    },
+    {
+      "id": "potion_of_flying",
+      "name": "Potion of Flying",
+      "category": "potion"
+    },
+    {
+      "id": "potion_of_gaseous_form",
+      "name": "Potion of Gaseous Form",
+      "category": "potion"
+    },
+    {
+      "id": "potion_of_giant_strength",
+      "name": "Potion of Giant Strength",
+      "category": "potion"
+    },
+    {
+      "id": "potion_of_growth",
+      "name": "Potion of Growth",
+      "category": "potion"
+    },
+    {
+      "id": "potion_of_healing",
+      "name": "Potion of Healing",
+      "category": "potion"
+    },
+    {
+      "id": "potion_of_heroism",
+      "name": "Potion of Heroism",
+      "category": "potion"
+    },
+    {
+      "id": "potion_of_invisibility",
+      "name": "Potion of Invisibility",
+      "category": "potion"
+    },
+    {
+      "id": "potion_of_invulnerability",
+      "name": "Potion of Invulnerability",
+      "category": "potion"
+    },
+    {
+      "id": "potion_of_levitation",
+      "name": "Potion of Levitation",
+      "category": "potion"
+    },
+    {
+      "id": "potion_of_longevity",
+      "name": "Potion of Longevity",
+      "category": "potion"
+    },
+    {
+      "id": "potion_of_poison",
+      "name": "Potion of Poison",
+      "category": "potion"
+    },
+    {
+      "id": "potion_of_polymorph_self",
+      "name": "Potion of Polymorph Self",
+      "category": "potion"
+    },
+    {
+      "id": "potion_of_speed",
+      "name": "Potion of Speed",
+      "category": "potion"
+    },
+    {
+      "id": "potion_of_treasure_finding",
+      "name": "Potion of Treasure Finding",
+      "category": "potion"
+    },
+    {
+      "id": "ring_of_controlling_animals",
+      "name": "Ring of Controlling Animals",
+      "category": "ring"
+    },
+    {
+      "id": "ring_of_controlling_humans",
+      "name": "Ring of Controlling Humans",
+      "category": "ring"
+    },
+    {
+      "id": "ring_of_controlling_plants",
+      "name": "Ring of Controlling Plants",
+      "category": "ring"
+    },
+    {
+      "id": "ring_of_delusion",
+      "name": "Ring of Delusion",
+      "category": "ring"
+    },
+    {
+      "id": "ring_of_djinni_summoning",
+      "name": "Ring of Djinni Summoning",
+      "category": "ring"
+    },
+    {
+      "id": "ring_of_fire_resistance",
+      "name": "Ring of Fire Resistance",
+      "category": "ring"
+    },
+    {
+      "id": "ring_of_invisibility",
+      "name": "Ring of Invisibility",
+      "category": "ring"
+    },
+    {
+      "id": "ring_of_protection",
+      "name": "Ring of Protection",
+      "category": "ring"
+    },
+    {
+      "id": "ring_of_protection_5_radius",
+      "name": "Ring of Protection, 5’ Radius",
+      "category": "ring"
+    },
+    {
+      "id": "ring_of_regeneration",
+      "name": "Ring of Regeneration",
+      "category": "ring"
+    },
+    {
+      "id": "ring_of_spell_storing",
+      "name": "Ring of Spell Storing",
+      "category": "ring"
+    },
+    {
+      "id": "ring_of_spell_turning",
+      "name": "Ring of Spell Turning",
+      "category": "ring"
+    },
+    {
+      "id": "ring_of_telekinesis",
+      "name": "Ring of Telekinesis",
+      "category": "ring"
+    },
+    {
+      "id": "ring_of_water_walking",
+      "name": "Ring of Water Walking",
+      "category": "ring"
+    },
+    {
+      "id": "ring_of_weakness",
+      "name": "Ring of Weakness",
+      "category": "ring"
+    },
+    {
+      "id": "ring_of_wishes",
+      "name": "Ring of Wishes",
+      "category": "ring"
+    },
+    {
+      "id": "ring_of_x_ray_vision",
+      "name": "Ring of X-Ray Vision",
+      "category": "ring"
+    },
+    {
+      "id": "rod_of_cancellation",
+      "name": "Rod of Cancellation",
+      "category": "rod"
+    },
+    {
+      "id": "rope_of_climbing",
+      "name": "Rope of Climbing",
+      "category": "misc"
+    },
+    {
+      "id": "scarab_of_protection",
+      "name": "Scarab of Protection",
+      "category": "misc"
+    },
+    {
+      "id": "scroll_of_protection_from_elementals",
+      "name": "Scroll of Protection from Elementals",
+      "category": "scroll"
+    },
+    {
+      "id": "scroll_of_protection_from_lycanthropes",
+      "name": "Scroll of Protection from Lycanthropes",
+      "category": "scroll"
+    },
+    {
+      "id": "scroll_of_protection_from_magic",
+      "name": "Scroll of Protection from Magic",
+      "category": "scroll"
+    },
+    {
+      "id": "scroll_of_protection_from_undead",
+      "name": "Scroll of Protection from Undead",
+      "category": "scroll"
+    },
+    {
+      "id": "shield_plus_1",
+      "name": "Shield +1",
+      "category": "armour"
+    },
+    {
+      "id": "shield_plus_2",
+      "name": "Shield +2",
+      "category": "armour"
+    },
+    {
+      "id": "shield_plus_3",
+      "name": "Shield +3",
+      "category": "armour"
+    },
+    {
+      "id": "sling_plus_1",
+      "name": "Sling +1",
+      "category": "weapon"
+    },
+    {
+      "id": "spear_plus_1",
+      "name": "Spear +1",
+      "category": "weapon"
+    },
+    {
+      "id": "spear_plus_2",
+      "name": "Spear +2",
+      "category": "weapon"
+    },
+    {
+      "id": "spear_plus_3",
+      "name": "Spear +3",
+      "category": "weapon"
+    },
+    {
+      "id": "spell_scroll_1",
+      "name": "Spell Scroll (1 spell)",
+      "category": "scroll"
+    },
+    {
+      "id": "spell_scroll_2",
+      "name": "Spell Scroll (2 spells)",
+      "category": "scroll"
+    },
+    {
+      "id": "spell_scroll_3",
+      "name": "Spell Scroll (3 spells)",
+      "category": "scroll"
+    },
+    {
+      "id": "spell_scroll_5",
+      "name": "Spell Scroll (5 spells)",
+      "category": "scroll"
+    },
+    {
+      "id": "spell_scroll_7",
+      "name": "Spell Scroll (7 spells)",
+      "category": "scroll"
+    },
+    {
+      "id": "staff_of_commanding",
+      "name": "Staff of Commanding",
+      "category": "staff"
+    },
+    {
+      "id": "staff_of_healing",
+      "name": "Staff of Healing",
+      "category": "staff"
+    },
+    {
+      "id": "staff_of_power",
+      "name": "Staff of Power",
+      "category": "staff"
+    },
+    {
+      "id": "staff_of_snakes",
+      "name": "Staff of Snakes",
+      "category": "staff"
+    },
+    {
+      "id": "staff_of_striking",
+      "name": "Staff of Striking",
+      "category": "staff"
+    },
+    {
+      "id": "staff_of_withering",
+      "name": "Staff of Withering",
+      "category": "staff"
+    },
+    {
+      "id": "staff_of_wizardry",
+      "name": "Staff of Wizardry",
+      "category": "staff"
+    },
+    {
+      "id": "sword_minus_1_cursed",
+      "name": "Sword -1, Cursed",
+      "category": "sword"
+    },
+    {
+      "id": "sword_minus_2_cursed",
+      "name": "Sword -2, Cursed",
+      "category": "sword"
+    },
+    {
+      "id": "sword_plus_1",
+      "name": "Sword +1",
+      "category": "sword"
+    },
+    {
+      "id": "sword_plus_1_energy_drain",
+      "name": "Sword +1, Energy Drain",
+      "category": "sword"
+    },
+    {
+      "id": "sword_plus_1_flaming",
+      "name": "Sword +1, Flaming",
+      "category": "sword"
+    },
+    {
+      "id": "sword_plus_1_light",
+      "name": "Sword +1, Light",
+      "category": "sword"
+    },
+    {
+      "id": "sword_plus_1_locate_objects",
+      "name": "Sword +1, Locate Objects",
+      "category": "sword"
+    },
+    {
+      "id": "sword_plus_1_plus_2_vs_lycanthropes",
+      "name": "Sword +1, +2 vs Lycanthropes",
+      "category": "sword"
+    },
+    {
+      "id": "sword_plus_1_plus_2_vs_spell_users",
+      "name": "Sword +1, +2 vs Spell Users",
+      "category": "sword"
+    },
+    {
+      "id": "sword_plus_1_plus_3_vs_dragons",
+      "name": "Sword +1, +3 vs Dragons",
+      "category": "sword"
+    },
+    {
+      "id": "sword_plus_1_plus_3_vs_enchanted_creatures",
+      "name": "Sword +1, +3 vs Enchanted Creatures",
+      "category": "sword"
+    },
+    {
+      "id": "sword_plus_1_plus_3_vs_regenerating_creatures",
+      "name": "Sword +1, +3 vs Regenerating Creatures",
+      "category": "sword"
+    },
+    {
+      "id": "sword_plus_1_plus_3_vs_undead",
+      "name": "Sword +1, +3 vs Undead",
+      "category": "sword"
+    },
+    {
+      "id": "sword_plus_1_wishes",
+      "name": "Sword +1, Wishes",
+      "category": "sword"
+    },
+    {
+      "id": "sword_plus_2",
+      "name": "Sword +2",
+      "category": "sword"
+    },
+    {
+      "id": "sword_plus_2_charm_person",
+      "name": "Sword +2, Charm Person",
+      "category": "sword"
+    },
+    {
+      "id": "sword_plus_3",
+      "name": "Sword +3",
+      "category": "sword"
+    },
+    {
+      "id": "treasure_map_i",
+      "name": "Treasure Map: I",
+      "category": "scroll"
+    },
+    {
+      "id": "treasure_map_ii",
+      "name": "Treasure Map: II",
+      "category": "scroll"
+    },
+    {
+      "id": "treasure_map_iii",
+      "name": "Treasure Map: III",
+      "category": "scroll"
+    },
+    {
+      "id": "treasure_map_iv",
+      "name": "Treasure Map: IV",
+      "category": "scroll"
+    },
+    {
+      "id": "treasure_map_ix",
+      "name": "Treasure Map: IX",
+      "category": "scroll"
+    },
+    {
+      "id": "treasure_map_v",
+      "name": "Treasure Map: V",
+      "category": "scroll"
+    },
+    {
+      "id": "treasure_map_vi",
+      "name": "Treasure Map: VI",
+      "category": "scroll"
+    },
+    {
+      "id": "treasure_map_vii",
+      "name": "Treasure Map: VII",
+      "category": "scroll"
+    },
+    {
+      "id": "treasure_map_viii",
+      "name": "Treasure Map: VIII",
+      "category": "scroll"
+    },
+    {
+      "id": "treasure_map_x",
+      "name": "Treasure Map: X",
+      "category": "scroll"
+    },
+    {
+      "id": "treasure_map_xi",
+      "name": "Treasure Map: XI",
+      "category": "scroll"
+    },
+    {
+      "id": "treasure_map_xii",
+      "name": "Treasure Map: XII",
+      "category": "scroll"
+    },
+    {
+      "id": "wand_of_cold",
+      "name": "Wand of Cold",
+      "category": "wand"
+    },
+    {
+      "id": "wand_of_enemy_detection",
+      "name": "Wand of Enemy Detection",
+      "category": "wand"
+    },
+    {
+      "id": "wand_of_fear",
+      "name": "Wand of Fear",
+      "category": "wand"
+    },
+    {
+      "id": "wand_of_fire_balls",
+      "name": "Wand of Fire Balls",
+      "category": "wand"
+    },
+    {
+      "id": "wand_of_illusion",
+      "name": "Wand of Illusion",
+      "category": "wand"
+    },
+    {
+      "id": "wand_of_lightning_bolts",
+      "name": "Wand of Lightning Bolts",
+      "category": "wand"
+    },
+    {
+      "id": "wand_of_magic_detection",
+      "name": "Wand of Magic Detection",
+      "category": "wand"
+    },
+    {
+      "id": "wand_of_metal_detection",
+      "name": "Wand of Metal Detection",
+      "category": "wand"
+    },
+    {
+      "id": "wand_of_negation",
+      "name": "Wand of Negation",
+      "category": "wand"
+    },
+    {
+      "id": "wand_of_paralysation",
+      "name": "Wand of Paralysation",
+      "category": "wand"
+    },
+    {
+      "id": "wand_of_polymorph",
+      "name": "Wand of Polymorph",
+      "category": "wand"
+    },
+    {
+      "id": "wand_of_secret_door_detection",
+      "name": "Wand of Secret Door Detection",
+      "category": "wand"
+    },
+    {
+      "id": "wand_of_trap_detection",
+      "name": "Wand of Trap Detection",
+      "category": "wand"
+    },
+    {
+      "id": "war_hammer_plus_1",
+      "name": "War Hammer +1",
+      "category": "weapon"
+    },
+    {
+      "id": "war_hammer_plus_2",
+      "name": "War Hammer +2",
+      "category": "weapon"
+    },
+    {
+      "id": "war_hammer_plus_3_dwarven_thrower",
+      "name": "War Hammer +3, Dwarven Thrower",
+      "category": "weapon"
+    }
+  ],
+  "spells": [
+    {
+      "id": "animate_dead",
+      "name": "Animate Dead",
+      "list": "magic_user",
+      "level": 5
+    },
+    {
+      "id": "anti_magic_shell",
+      "name": "Anti-Magic Shell",
+      "list": "magic_user",
+      "level": 6
+    },
+    {
+      "id": "bless",
+      "name": "Bless",
+      "list": "cleric",
+      "level": 2
+    },
+    {
+      "id": "charm_monster",
+      "name": "Charm Monster",
+      "list": "magic_user",
+      "level": 4
+    },
+    {
+      "id": "charm_person",
+      "name": "Charm Person",
+      "list": "magic_user",
+      "level": 1
+    },
+    {
+      "id": "clairvoyance",
+      "name": "Clairvoyance",
+      "list": "magic_user",
+      "level": 3
+    },
+    {
+      "id": "cloudkill",
+      "name": "Cloudkill",
+      "list": "magic_user",
+      "level": 5
+    },
+    {
+      "id": "commune",
+      "name": "Commune",
+      "list": "cleric",
+      "level": 5
+    },
+    {
+      "id": "confusion",
+      "name": "Confusion",
+      "list": "magic_user",
+      "level": 4
+    },
+    {
+      "id": "conjure_elemental",
+      "name": "Conjure Elemental",
+      "list": "magic_user",
+      "level": 5
+    },
+    {
+      "id": "contact_higher_plane",
+      "name": "Contact Higher Plane",
+      "list": "magic_user",
+      "level": 5
+    },
+    {
+      "id": "continual_light_c",
+      "name": "Continual Light",
+      "list": "cleric",
+      "level": 3
+    },
+    {
+      "id": "continual_light_mu",
+      "name": "Continual Light",
+      "list": "magic_user",
+      "level": 2
+    },
+    {
+      "id": "control_weather",
+      "name": "Control Weather",
+      "list": "magic_user",
+      "level": 6
+    },
+    {
+      "id": "create_food",
+      "name": "Create Food",
+      "list": "cleric",
+      "level": 5
+    },
+    {
+      "id": "create_water",
+      "name": "Create Water",
+      "list": "cleric",
+      "level": 4
+    },
+    {
+      "id": "cure_disease",
+      "name": "Cure Disease",
+      "list": "cleric",
+      "level": 3
+    },
+    {
+      "id": "cure_light_wounds",
+      "name": "Cure Light Wounds",
+      "list": "cleric",
+      "level": 1
+    },
+    {
+      "id": "cure_serious_wounds",
+      "name": "Cure Serious Wounds",
+      "list": "cleric",
+      "level": 4
+    },
+    {
+      "id": "death_spell",
+      "name": "Death Spell",
+      "list": "magic_user",
+      "level": 6
+    },
+    {
+      "id": "detect_evil_c",
+      "name": "Detect Evil",
+      "list": "cleric",
+      "level": 1
+    },
+    {
+      "id": "detect_evil_mu",
+      "name": "Detect Evil",
+      "list": "magic_user",
+      "level": 2
+    },
+    {
+      "id": "detect_invisible",
+      "name": "Detect Invisible",
+      "list": "magic_user",
+      "level": 2
+    },
+    {
+      "id": "detect_magic_c",
+      "name": "Detect Magic",
+      "list": "cleric",
+      "level": 1
+    },
+    {
+      "id": "detect_magic_mu",
+      "name": "Detect Magic",
+      "list": "magic_user",
+      "level": 1
+    },
+    {
+      "id": "dimension_door",
+      "name": "Dimension Door",
+      "list": "magic_user",
+      "level": 4
+    },
+    {
+      "id": "disintegrate",
+      "name": "Disintegrate",
+      "list": "magic_user",
+      "level": 6
+    },
+    {
+      "id": "dispel_evil",
+      "name": "Dispel Evil",
+      "list": "cleric",
+      "level": 5
+    },
+    {
+      "id": "dispel_magic",
+      "name": "Dispel Magic",
+      "list": "magic_user",
+      "level": 3
+    },
+    {
+      "id": "esp",
+      "name": "ESP",
+      "list": "magic_user",
+      "level": 2
+    },
+    {
+      "id": "feeblemind",
+      "name": "Feeblemind",
+      "list": "magic_user",
+      "level": 5
+    },
+    {
+      "id": "find_traps",
+      "name": "Find Traps",
+      "list": "cleric",
+      "level": 2
+    },
+    {
+      "id": "fire_ball",
+      "name": "Fire Ball",
+      "list": "magic_user",
+      "level": 3
+    },
+    {
+      "id": "floating_disc",
+      "name": "Floating Disc",
+      "list": "magic_user",
+      "level": 1
+    },
+    {
+      "id": "fly",
+      "name": "Fly",
+      "list": "magic_user",
+      "level": 3
+    },
+    {
+      "id": "geas",
+      "name": "Geas",
+      "list": "magic_user",
+      "level": 6
+    },
+    {
+      "id": "growth_of_animal",
+      "name": "Growth of Animal",
+      "list": "cleric",
+      "level": 3
+    },
+    {
+      "id": "growth_of_plants",
+      "name": "Growth of Plants",
+      "list": "magic_user",
+      "level": 4
+    },
+    {
+      "id": "hallucinatory_terrain",
+      "name": "Hallucinatory Terrain",
+      "list": "magic_user",
+      "level": 4
+    },
+    {
+      "id": "haste",
+      "name": "Haste",
+      "list": "magic_user",
+      "level": 3
+    },
+    {
+      "id": "hold_monster",
+      "name": "Hold Monster",
+      "list": "magic_user",
+      "level": 5
+    },
+    {
+      "id": "hold_person_c",
+      "name": "Hold Person",
+      "list": "cleric",
+      "level": 2
+    },
+    {
+      "id": "hold_person_mu",
+      "name": "Hold Person",
+      "list": "magic_user",
+      "level": 3
+    },
+    {
+      "id": "hold_portal",
+      "name": "Hold Portal",
+      "list": "magic_user",
+      "level": 1
+    },
+    {
+      "id": "infravision",
+      "name": "Infravision",
+      "list": "magic_user",
+      "level": 3
+    },
+    {
+      "id": "insect_plague",
+      "name": "Insect Plague",
+      "list": "cleric",
+      "level": 5
+    },
+    {
+      "id": "invisibility",
+      "name": "Invisibility",
+      "list": "magic_user",
+      "level": 2
+    },
+    {
+      "id": "invisibility_10_radius",
+      "name": "Invisibility 10’ Radius",
+      "list": "magic_user",
+      "level": 3
+    },
+    {
+      "id": "invisible_stalker",
+      "name": "Invisible Stalker",
+      "list": "magic_user",
+      "level": 6
+    },
+    {
+      "id": "knock",
+      "name": "Knock",
+      "list": "magic_user",
+      "level": 2
+    },
+    {
+      "id": "know_alignment",
+      "name": "Know Alignment",
+      "list": "cleric",
+      "level": 2
+    },
+    {
+      "id": "levitate",
+      "name": "Levitate",
+      "list": "magic_user",
+      "level": 2
+    },
+    {
+      "id": "light_c",
+      "name": "Light",
+      "list": "cleric",
+      "level": 1
+    },
+    {
+      "id": "light_mu",
+      "name": "Light",
+      "list": "magic_user",
+      "level": 1
+    },
+    {
+      "id": "lightning_bolt",
+      "name": "Lightning Bolt",
+      "list": "magic_user",
+      "level": 3
+    },
+    {
+      "id": "locate_object_c",
+      "name": "Locate Object",
+      "list": "cleric",
+      "level": 3
+    },
+    {
+      "id": "locate_object_mu",
+      "name": "Locate Object",
+      "list": "magic_user",
+      "level": 2
+    },
+    {
+      "id": "lower_water",
+      "name": "Lower Water",
+      "list": "magic_user",
+      "level": 6
+    },
+    {
+      "id": "magic_jar",
+      "name": "Magic Jar",
+      "list": "magic_user",
+      "level": 5
+    },
+    {
+      "id": "magic_missile",
+      "name": "Magic Missile",
+      "list": "magic_user",
+      "level": 1
+    },
+    {
+      "id": "massmorph",
+      "name": "Massmorph",
+      "list": "magic_user",
+      "level": 4
+    },
+    {
+      "id": "mirror_image",
+      "name": "Mirror Image",
+      "list": "magic_user",
+      "level": 2
+    },
+    {
+      "id": "move_earth",
+      "name": "Move Earth",
+      "list": "magic_user",
+      "level": 6
+    },
+    {
+      "id": "neutralize_poison",
+      "name": "Neutralize Poison",
+      "list": "cleric",
+      "level": 4
+    },
+    {
+      "id": "part_water",
+      "name": "Part Water",
+      "list": "magic_user",
+      "level": 6
+    },
+    {
+      "id": "pass_wall",
+      "name": "Pass-Wall",
+      "list": "magic_user",
+      "level": 5
+    },
+    {
+      "id": "phantasmal_force",
+      "name": "Phantasmal Force",
+      "list": "magic_user",
+      "level": 2
+    },
+    {
+      "id": "polymorph_others",
+      "name": "Polymorph Others",
+      "list": "magic_user",
+      "level": 4
+    },
+    {
+      "id": "polymorph_self",
+      "name": "Polymorph Self",
+      "list": "magic_user",
+      "level": 4
+    },
+    {
+      "id": "projected_image",
+      "name": "Projected Image",
+      "list": "magic_user",
+      "level": 6
+    },
+    {
+      "id": "protection_from_evil_10_radius_c",
+      "name": "Protection from Evil 10’ Radius",
+      "list": "cleric",
+      "level": 4
+    },
+    {
+      "id": "protection_from_evil_10_radius_mu",
+      "name": "Protection from Evil 10’ Radius",
+      "list": "magic_user",
+      "level": 3
+    },
+    {
+      "id": "protection_from_evil_c",
+      "name": "Protection from Evil",
+      "list": "cleric",
+      "level": 1
+    },
+    {
+      "id": "protection_from_evil_mu",
+      "name": "Protection from Evil",
+      "list": "magic_user",
+      "level": 1
+    },
+    {
+      "id": "protection_from_normal_missiles",
+      "name": "Protection from Normal Missiles",
+      "list": "magic_user",
+      "level": 3
+    },
+    {
+      "id": "purify_food_and_water",
+      "name": "Purify Food and Water",
+      "list": "cleric",
+      "level": 1
+    },
+    {
+      "id": "quest",
+      "name": "Quest",
+      "list": "cleric",
+      "level": 5
+    },
+    {
+      "id": "raise_dead",
+      "name": "Raise Dead",
+      "list": "cleric",
+      "level": 5
+    },
+    {
+      "id": "read_languages",
+      "name": "Read Languages",
+      "list": "magic_user",
+      "level": 1
+    },
+    {
+      "id": "read_magic",
+      "name": "Read Magic",
+      "list": "magic_user",
+      "level": 1
+    },
+    {
+      "id": "reincarnation",
+      "name": "Reincarnation",
+      "list": "magic_user",
+      "level": 6
+    },
+    {
+      "id": "remove_curse_c",
+      "name": "Remove Curse",
+      "list": "cleric",
+      "level": 3
+    },
+    {
+      "id": "remove_curse_mu",
+      "name": "Remove Curse",
+      "list": "magic_user",
+      "level": 4
+    },
+    {
+      "id": "remove_fear",
+      "name": "Remove Fear",
+      "list": "cleric",
+      "level": 1
+    },
+    {
+      "id": "resist_cold",
+      "name": "Resist Cold",
+      "list": "cleric",
+      "level": 1
+    },
+    {
+      "id": "resist_fire",
+      "name": "Resist Fire",
+      "list": "cleric",
+      "level": 2
+    },
+    {
+      "id": "shield",
+      "name": "Shield",
+      "list": "magic_user",
+      "level": 1
+    },
+    {
+      "id": "silence_15_radius",
+      "name": "Silence 15’ Radius",
+      "list": "cleric",
+      "level": 2
+    },
+    {
+      "id": "sleep",
+      "name": "Sleep",
+      "list": "magic_user",
+      "level": 1
+    },
+    {
+      "id": "snake_charm",
+      "name": "Snake Charm",
+      "list": "cleric",
+      "level": 2
+    },
+    {
+      "id": "speak_with_animals",
+      "name": "Speak with Animals",
+      "list": "cleric",
+      "level": 2
+    },
+    {
+      "id": "speak_with_plants",
+      "name": "Speak with Plants",
+      "list": "cleric",
+      "level": 4
+    },
+    {
+      "id": "sticks_to_snakes",
+      "name": "Sticks to Snakes",
+      "list": "cleric",
+      "level": 4
+    },
+    {
+      "id": "stone_to_flesh",
+      "name": "Stone to Flesh",
+      "list": "magic_user",
+      "level": 6
+    },
+    {
+      "id": "striking",
+      "name": "Striking",
+      "list": "cleric",
+      "level": 3
+    },
+    {
+      "id": "telekinesis",
+      "name": "Telekinesis",
+      "list": "magic_user",
+      "level": 5
+    },
+    {
+      "id": "teleport",
+      "name": "Teleport",
+      "list": "magic_user",
+      "level": 5
+    },
+    {
+      "id": "transmute_rock_to_mud",
+      "name": "Transmute Rock to Mud",
+      "list": "magic_user",
+      "level": 5
+    },
+    {
+      "id": "ventriloquism",
+      "name": "Ventriloquism",
+      "list": "magic_user",
+      "level": 1
+    },
+    {
+      "id": "wall_of_fire",
+      "name": "Wall of Fire",
+      "list": "magic_user",
+      "level": 4
+    },
+    {
+      "id": "wall_of_ice",
+      "name": "Wall of Ice",
+      "list": "magic_user",
+      "level": 4
+    },
+    {
+      "id": "wall_of_stone",
+      "name": "Wall of Stone",
+      "list": "magic_user",
+      "level": 5
+    },
+    {
+      "id": "water_breathing",
+      "name": "Water Breathing",
+      "list": "magic_user",
+      "level": 3
+    },
+    {
+      "id": "web",
+      "name": "Web",
+      "list": "magic_user",
+      "level": 2
+    },
+    {
+      "id": "wizard_eye",
+      "name": "Wizard Eye",
+      "list": "magic_user",
+      "level": 4
+    },
+    {
+      "id": "wizard_lock",
+      "name": "Wizard Lock",
+      "list": "magic_user",
+      "level": 2
+    }
+  ],
+  "monsters": [
+    {
+      "id": "acolyte",
+      "name": "Acolyte",
+      "label": "acolyte",
+      "label_plural": "acolytes",
+      "categories": ["person"]
+    },
+    {
+      "id": "air_elemental_greater",
+      "name": "Air Elemental (Greater)",
+      "label": "air elemental",
+      "label_plural": "air elementals",
+      "categories": ["enchanted"]
+    },
+    {
+      "id": "air_elemental_intermediate",
+      "name": "Air Elemental (Intermediate)",
+      "label": "air elemental",
+      "label_plural": "air elementals",
+      "categories": ["enchanted"]
+    },
+    {
+      "id": "air_elemental_lesser",
+      "name": "Air Elemental (Lesser)",
+      "label": "air elemental",
+      "label_plural": "air elementals",
+      "categories": ["enchanted"]
+    },
+    {
+      "id": "amber_golem",
+      "name": "Amber Golem",
+      "label": "amber golem",
+      "label_plural": "amber golems",
+      "categories": ["enchanted"]
+    },
+    {
+      "id": "ape_white",
+      "name": "Ape, White",
+      "label": "white ape",
+      "label_plural": "white apes",
+      "categories": []
+    },
+    {
+      "id": "bandit",
+      "name": "Bandit",
+      "label": "bandit",
+      "label_plural": "bandits",
+      "categories": ["person"]
+    },
+    {
+      "id": "basilisk",
+      "name": "Basilisk",
+      "label": "basilisk",
+      "label_plural": "basilisks",
+      "categories": []
+    },
+    {
+      "id": "berserker",
+      "name": "Berserker",
+      "label": "berserker",
+      "label_plural": "berserkers",
+      "categories": ["person"]
+    },
+    {
+      "id": "black_bear",
+      "name": "Black Bear",
+      "label": "black bear",
+      "label_plural": "black bears",
+      "categories": []
+    },
+    {
+      "id": "black_dragon",
+      "name": "Black Dragon",
+      "label": "black dragon",
+      "label_plural": "black dragons",
+      "categories": []
+    },
+    {
+      "id": "black_pudding",
+      "name": "Black Pudding",
+      "label": "black pudding",
+      "label_plural": "black puddings",
+      "categories": []
+    },
+    {
+      "id": "black_widow",
+      "name": "Black Widow",
+      "label": "black widow",
+      "label_plural": "black widows",
+      "categories": []
+    },
+    {
+      "id": "blink_dog",
+      "name": "Blink Dog",
+      "label": "blink dog",
+      "label_plural": "blink dogs",
+      "categories": []
+    },
+    {
+      "id": "blue_dragon",
+      "name": "Blue Dragon",
+      "label": "blue dragon",
+      "label_plural": "blue dragons",
+      "categories": []
+    },
+    {
+      "id": "boar",
+      "name": "Boar",
+      "label": "boar",
+      "label_plural": "boars",
+      "categories": []
+    },
+    {
+      "id": "bone_golem",
+      "name": "Bone Golem",
+      "label": "bone golem",
+      "label_plural": "bone golems",
+      "categories": ["enchanted"]
+    },
+    {
+      "id": "brigand",
+      "name": "Brigand",
+      "label": "brigand",
+      "label_plural": "brigands",
+      "categories": ["person"]
+    },
+    {
+      "id": "bronze_golem",
+      "name": "Bronze Golem",
+      "label": "bronze golem",
+      "label_plural": "bronze golems",
+      "categories": ["enchanted"]
+    },
+    {
+      "id": "buccaneer",
+      "name": "Buccaneer",
+      "label": "buccaneer",
+      "label_plural": "buccaneers",
+      "categories": ["person"]
+    },
+    {
+      "id": "bugbear",
+      "name": "Bugbear",
+      "label": "bugbear",
+      "label_plural": "bugbears",
+      "categories": ["person"]
+    },
+    {
+      "id": "bull_shark",
+      "name": "Bull Shark",
+      "label": "bull shark",
+      "label_plural": "bull sharks",
+      "categories": []
+    },
+    {
+      "id": "caecilia",
+      "name": "Caecilia",
+      "label": "caecilia",
+      "label_plural": "caecilias",
+      "categories": []
+    },
+    {
+      "id": "camel",
+      "name": "Camel",
+      "label": "camel",
+      "label_plural": "camels",
+      "categories": []
+    },
+    {
+      "id": "carcass_crawler",
+      "name": "Carcass Crawler",
+      "label": "carcass crawler",
+      "label_plural": "carcass crawlers",
+      "categories": []
+    },
+    {
+      "id": "cave_bear",
+      "name": "Cave Bear",
+      "label": "cave bear",
+      "label_plural": "cave bears",
+      "categories": []
+    },
+    {
+      "id": "cave_locust",
+      "name": "Cave Locust",
+      "label": "cave locust",
+      "label_plural": "cave locusts",
+      "categories": []
+    },
+    {
+      "id": "centaur",
+      "name": "Centaur",
+      "label": "centaur",
+      "label_plural": "centaurs",
+      "categories": []
+    },
+    {
+      "id": "centipede_giant",
+      "name": "Centipede, Giant",
+      "label": "giant centipede",
+      "label_plural": "giant centipedes",
+      "categories": []
+    },
+    {
+      "id": "chimera",
+      "name": "Chimera",
+      "label": "chimera",
+      "label_plural": "chimeras",
+      "categories": []
+    },
+    {
+      "id": "cloud_giant",
+      "name": "Cloud Giant",
+      "label": "cloud giant",
+      "label_plural": "cloud giants",
+      "categories": []
+    },
+    {
+      "id": "cockatrice",
+      "name": "Cockatrice",
+      "label": "cockatrice",
+      "label_plural": "cockatrices",
+      "categories": []
+    },
+    {
+      "id": "crab_giant",
+      "name": "Crab, Giant",
+      "label": "giant crab",
+      "label_plural": "giant crabs",
+      "categories": []
+    },
+    {
+      "id": "crab_spider",
+      "name": "Crab Spider",
+      "label": "crab spider",
+      "label_plural": "crab spiders",
+      "categories": []
+    },
+    {
+      "id": "crystal_living_statue",
+      "name": "Crystal Living Statue",
+      "label": "crystal living statue",
+      "label_plural": "crystal living statues",
+      "categories": ["enchanted"]
+    },
+    {
+      "id": "cyclops",
+      "name": "Cyclops",
+      "label": "cyclops",
+      "label_plural": "cyclopes",
+      "categories": []
+    },
+    {
+      "id": "dervish",
+      "name": "Dervish",
+      "label": "dervish",
+      "label_plural": "dervishes",
+      "categories": ["person"]
+    },
+    {
+      "id": "devil_swine",
+      "name": "Devil Swine",
+      "label": "devil swine",
+      "label_plural": "devil swine",
+      "categories": []
+    },
+    {
+      "id": "dire_wolf",
+      "name": "Dire Wolf",
+      "label": "dire wolf",
+      "label_plural": "dire wolves",
+      "categories": []
+    },
+    {
+      "id": "djinni_lesser",
+      "name": "Djinni (Lesser)",
+      "label": "djinni",
+      "label_plural": "djinn",
+      "categories": ["enchanted"]
+    },
+    {
+      "id": "doppelganger",
+      "name": "Doppelgänger",
+      "label": "doppelgänger",
+      "label_plural": "doppelgängers",
+      "categories": []
+    },
+    {
+      "id": "draco",
+      "name": "Draco",
+      "label": "draco",
+      "label_plural": "dracos",
+      "categories": []
+    },
+    {
+      "id": "draft_horse",
+      "name": "Draft Horse",
+      "label": "draft horse",
+      "label_plural": "draft horses",
+      "categories": []
+    },
+    {
+      "id": "dragon_turtle",
+      "name": "Dragon Turtle",
+      "label": "dragon turtle",
+      "label_plural": "dragon turtles",
+      "categories": []
+    },
+    {
+      "id": "driver_ant",
+      "name": "Driver Ant",
+      "label": "driver ant",
+      "label_plural": "driver ants",
+      "categories": []
+    },
+    {
+      "id": "dryad",
+      "name": "Dryad",
+      "label": "dryad",
+      "label_plural": "dryads",
+      "categories": ["person"]
+    },
+    {
+      "id": "dwarf_monster",
+      "name": "Dwarf (Monster)",
+      "label": "dwarf",
+      "label_plural": "dwarves",
+      "categories": ["person"]
+    },
+    {
+      "id": "earth_elemental_greater",
+      "name": "Earth Elemental (Greater)",
+      "label": "earth elemental",
+      "label_plural": "earth elementals",
+      "categories": ["enchanted"]
+    },
+    {
+      "id": "earth_elemental_intermediate",
+      "name": "Earth Elemental (Intermediate)",
+      "label": "earth elemental",
+      "label_plural": "earth elementals",
+      "categories": ["enchanted"]
+    },
+    {
+      "id": "earth_elemental_lesser",
+      "name": "Earth Elemental (Lesser)",
+      "label": "earth elemental",
+      "label_plural": "earth elementals",
+      "categories": ["enchanted"]
+    },
+    {
+      "id": "efreeti_lesser",
+      "name": "Efreeti (Lesser)",
+      "label": "efreeti",
+      "label_plural": "efreet",
+      "categories": ["enchanted"]
+    },
+    {
+      "id": "elephant",
+      "name": "Elephant",
+      "label": "elephant",
+      "label_plural": "elephants",
+      "categories": []
+    },
+    {
+      "id": "elf_monster",
+      "name": "Elf (Monster)",
+      "label": "elf",
+      "label_plural": "elves",
+      "categories": ["person"]
+    },
+    {
+      "id": "ferret_giant",
+      "name": "Ferret, Giant",
+      "label": "giant ferret",
+      "label_plural": "giant ferrets",
+      "categories": []
+    },
+    {
+      "id": "fire_beetle",
+      "name": "Fire Beetle",
+      "label": "fire beetle",
+      "label_plural": "fire beetles",
+      "categories": []
+    },
+    {
+      "id": "fire_elemental_greater",
+      "name": "Fire Elemental (Greater)",
+      "label": "fire elemental",
+      "label_plural": "fire elementals",
+      "categories": ["enchanted"]
+    },
+    {
+      "id": "fire_elemental_intermediate",
+      "name": "Fire Elemental (Intermediate)",
+      "label": "fire elemental",
+      "label_plural": "fire elementals",
+      "categories": ["enchanted"]
+    },
+    {
+      "id": "fire_elemental_lesser",
+      "name": "Fire Elemental (Lesser)",
+      "label": "fire elemental",
+      "label_plural": "fire elementals",
+      "categories": ["enchanted"]
+    },
+    {
+      "id": "fire_giant",
+      "name": "Fire Giant",
+      "label": "fire giant",
+      "label_plural": "fire giants",
+      "categories": []
+    },
+    {
+      "id": "flame_salamander",
+      "name": "Flame Salamander",
+      "label": "flame salamander",
+      "label_plural": "flame salamanders",
+      "categories": []
+    },
+    {
+      "id": "freshwater_termite",
+      "name": "Freshwater Termite",
+      "label": "freshwater termite",
+      "label_plural": "freshwater termites",
+      "categories": []
+    },
+    {
+      "id": "frost_giant",
+      "name": "Frost Giant",
+      "label": "frost giant",
+      "label_plural": "frost giants",
+      "categories": []
+    },
+    {
+      "id": "frost_salamander",
+      "name": "Frost Salamander",
+      "label": "frost salamander",
+      "label_plural": "frost salamanders",
+      "categories": []
+    },
+    {
+      "id": "gargoyle",
+      "name": "Gargoyle",
+      "label": "gargoyle",
+      "label_plural": "gargoyles",
+      "categories": ["enchanted"]
+    },
+    {
+      "id": "gecko",
+      "name": "Gecko",
+      "label": "gecko",
+      "label_plural": "geckos",
+      "categories": []
+    },
+    {
+      "id": "gelatinous_cube",
+      "name": "Gelatinous Cube",
+      "label": "gelatinous cube",
+      "label_plural": "gelatinous cubes",
+      "categories": []
+    },
+    {
+      "id": "ghoul",
+      "name": "Ghoul",
+      "label": "ghoul",
+      "label_plural": "ghouls",
+      "categories": ["undead"]
+    },
+    {
+      "id": "giant_bass",
+      "name": "Giant Bass",
+      "label": "giant bass",
+      "label_plural": "giant bass",
+      "categories": []
+    },
+    {
+      "id": "giant_bat",
+      "name": "Giant Bat",
+      "label": "giant bat",
+      "label_plural": "giant bats",
+      "categories": []
+    },
+    {
+      "id": "giant_catfish",
+      "name": "Giant Catfish",
+      "label": "giant catfish",
+      "label_plural": "giant catfish",
+      "categories": []
+    },
+    {
+      "id": "giant_crocodile",
+      "name": "Giant Crocodile",
+      "label": "giant crocodile",
+      "label_plural": "giant crocodiles",
+      "categories": []
+    },
+    {
+      "id": "giant_hawk",
+      "name": "Giant Hawk",
+      "label": "giant hawk",
+      "label_plural": "giant hawks",
+      "categories": []
+    },
+    {
+      "id": "giant_piranha",
+      "name": "Giant Piranha",
+      "label": "giant piranha",
+      "label_plural": "giant piranhas",
+      "categories": []
+    },
+    {
+      "id": "giant_rat",
+      "name": "Giant Rat",
+      "label": "giant rat",
+      "label_plural": "giant rats",
+      "categories": []
+    },
+    {
+      "id": "giant_rattler",
+      "name": "Giant Rattler",
+      "label": "giant rattler",
+      "label_plural": "giant rattlers",
+      "categories": []
+    },
+    {
+      "id": "giant_roc",
+      "name": "Giant Roc",
+      "label": "giant roc",
+      "label_plural": "giant rocs",
+      "categories": []
+    },
+    {
+      "id": "giant_rockfish",
+      "name": "Giant Rockfish",
+      "label": "giant rockfish",
+      "label_plural": "giant rockfish",
+      "categories": []
+    },
+    {
+      "id": "giant_sturgeon",
+      "name": "Giant Sturgeon",
+      "label": "giant sturgeon",
+      "label_plural": "giant sturgeon",
+      "categories": []
+    },
+    {
+      "id": "giant_vampire_bat",
+      "name": "Giant Vampire Bat",
+      "label": "giant vampire bat",
+      "label_plural": "giant vampire bats",
+      "categories": []
+    },
+    {
+      "id": "gnoll",
+      "name": "Gnoll",
+      "label": "gnoll",
+      "label_plural": "gnolls",
+      "categories": ["person"]
+    },
+    {
+      "id": "gnome",
+      "name": "Gnome",
+      "label": "gnome",
+      "label_plural": "gnomes",
+      "categories": ["person"]
+    },
+    {
+      "id": "goblin",
+      "name": "Goblin",
+      "label": "goblin",
+      "label_plural": "goblins",
+      "categories": ["person"]
+    },
+    {
+      "id": "gold_dragon",
+      "name": "Gold Dragon",
+      "label": "gold dragon",
+      "label_plural": "gold dragons",
+      "categories": []
+    },
+    {
+      "id": "gorgon",
+      "name": "Gorgon",
+      "label": "gorgon",
+      "label_plural": "gorgons",
+      "categories": []
+    },
+    {
+      "id": "great_white_shark",
+      "name": "Great White Shark",
+      "label": "great white shark",
+      "label_plural": "great white sharks",
+      "categories": []
+    },
+    {
+      "id": "green_dragon",
+      "name": "Green Dragon",
+      "label": "green dragon",
+      "label_plural": "green dragons",
+      "categories": []
+    },
+    {
+      "id": "green_slime",
+      "name": "Green Slime",
+      "label": "green slime",
+      "label_plural": "green slimes",
+      "categories": []
+    },
+    {
+      "id": "grey_ooze",
+      "name": "Grey Ooze",
+      "label": "grey ooze",
+      "label_plural": "grey oozes",
+      "categories": []
+    },
+    {
+      "id": "griffon",
+      "name": "Griffon",
+      "label": "griffon",
+      "label_plural": "griffons",
+      "categories": []
+    },
+    {
+      "id": "grizzly_bear",
+      "name": "Grizzly Bear",
+      "label": "grizzly bear",
+      "label_plural": "grizzly bears",
+      "categories": []
+    },
+    {
+      "id": "halfling_monster",
+      "name": "Halfling (Monster)",
+      "label": "halfling",
+      "label_plural": "halflings",
+      "categories": ["person"]
+    },
+    {
+      "id": "harpy",
+      "name": "Harpy",
+      "label": "harpy",
+      "label_plural": "harpies",
+      "categories": []
+    },
+    {
+      "id": "hellhound_3",
+      "name": "Hellhound (3)",
+      "label": "hellhound",
+      "label_plural": "hellhounds",
+      "categories": []
+    },
+    {
+      "id": "hellhound_4",
+      "name": "Hellhound (4)",
+      "label": "hellhound",
+      "label_plural": "hellhounds",
+      "categories": []
+    },
+    {
+      "id": "hellhound_5",
+      "name": "Hellhound (5)",
+      "label": "hellhound",
+      "label_plural": "hellhounds",
+      "categories": []
+    },
+    {
+      "id": "hellhound_6",
+      "name": "Hellhound (6)",
+      "label": "hellhound",
+      "label_plural": "hellhounds",
+      "categories": []
+    },
+    {
+      "id": "hellhound_7",
+      "name": "Hellhound (7)",
+      "label": "hellhound",
+      "label_plural": "hellhounds",
+      "categories": []
+    },
+    {
+      "id": "hill_giant",
+      "name": "Hill Giant",
+      "label": "hill giant",
+      "label_plural": "hill giants",
+      "categories": []
+    },
+    {
+      "id": "hippogriff",
+      "name": "Hippogriff",
+      "label": "hippogriff",
+      "label_plural": "hippogriffs",
+      "categories": []
+    },
+    {
+      "id": "hobgoblin",
+      "name": "Hobgoblin",
+      "label": "hobgoblin",
+      "label_plural": "hobgoblins",
+      "categories": ["person"]
+    },
+    {
+      "id": "horned_chameleon",
+      "name": "Horned Chameleon",
+      "label": "horned chameleon",
+      "label_plural": "horned chameleons",
+      "categories": []
+    },
+    {
+      "id": "hydra_10",
+      "name": "Hydra (10)",
+      "label": "hydra",
+      "label_plural": "hydras",
+      "categories": []
+    },
+    {
+      "id": "hydra_11",
+      "name": "Hydra (11)",
+      "label": "hydra",
+      "label_plural": "hydras",
+      "categories": []
+    },
+    {
+      "id": "hydra_12",
+      "name": "Hydra (12)",
+      "label": "hydra",
+      "label_plural": "hydras",
+      "categories": []
+    },
+    {
+      "id": "hydra_5",
+      "name": "Hydra (5)",
+      "label": "hydra",
+      "label_plural": "hydras",
+      "categories": []
+    },
+    {
+      "id": "hydra_6",
+      "name": "Hydra (6)",
+      "label": "hydra",
+      "label_plural": "hydras",
+      "categories": []
+    },
+    {
+      "id": "hydra_7",
+      "name": "Hydra (7)",
+      "label": "hydra",
+      "label_plural": "hydras",
+      "categories": []
+    },
+    {
+      "id": "hydra_8",
+      "name": "Hydra (8)",
+      "label": "hydra",
+      "label_plural": "hydras",
+      "categories": []
+    },
+    {
+      "id": "hydra_9",
+      "name": "Hydra (9)",
+      "label": "hydra",
+      "label_plural": "hydras",
+      "categories": []
+    },
+    {
+      "id": "insect_swarm_2",
+      "name": "Insect Swarm (2)",
+      "label": "insect swarm",
+      "label_plural": "insect swarms",
+      "categories": []
+    },
+    {
+      "id": "insect_swarm_3",
+      "name": "Insect Swarm (3)",
+      "label": "insect swarm",
+      "label_plural": "insect swarms",
+      "categories": []
+    },
+    {
+      "id": "insect_swarm_4",
+      "name": "Insect Swarm (4)",
+      "label": "insect swarm",
+      "label_plural": "insect swarms",
+      "categories": []
+    },
+    {
+      "id": "invisible_stalker_monster",
+      "name": "Invisible Stalker (Monster)",
+      "label": "invisible stalker",
+      "label_plural": "invisible stalkers",
+      "categories": ["enchanted"]
+    },
+    {
+      "id": "iron_living_statue",
+      "name": "Iron Living Statue",
+      "label": "iron living statue",
+      "label_plural": "iron living statues",
+      "categories": ["enchanted"]
+    },
+    {
+      "id": "killer_bee",
+      "name": "Killer Bee",
+      "label": "killer bee",
+      "label_plural": "killer bees",
+      "categories": []
+    },
+    {
+      "id": "killer_whale",
+      "name": "Killer Whale",
+      "label": "killer whale",
+      "label_plural": "killer whales",
+      "categories": []
+    },
+    {
+      "id": "kobold",
+      "name": "Kobold",
+      "label": "kobold",
+      "label_plural": "kobolds",
+      "categories": ["person"]
+    },
+    {
+      "id": "large_crocodile",
+      "name": "Large Crocodile",
+      "label": "large crocodile",
+      "label_plural": "large crocodiles",
+      "categories": []
+    },
+    {
+      "id": "large_herd_animal",
+      "name": "Large Herd Animal",
+      "label": "large herd animal",
+      "label_plural": "large herd animals",
+      "categories": []
+    },
+    {
+      "id": "large_roc",
+      "name": "Large Roc",
+      "label": "large roc",
+      "label_plural": "large rocs",
+      "categories": []
+    },
+    {
+      "id": "leech_giant",
+      "name": "Leech, Giant",
+      "label": "giant leech",
+      "label_plural": "giant leeches",
+      "categories": []
+    },
+    {
+      "id": "lion",
+      "name": "Lion",
+      "label": "lion",
+      "label_plural": "lions",
+      "categories": []
+    },
+    {
+      "id": "lizard_man",
+      "name": "Lizard Man",
+      "label": "lizard man",
+      "label_plural": "lizard men",
+      "categories": ["person"]
+    },
+    {
+      "id": "mako_shark",
+      "name": "Mako Shark",
+      "label": "mako shark",
+      "label_plural": "mako sharks",
+      "categories": []
+    },
+    {
+      "id": "manticore",
+      "name": "Manticore",
+      "label": "manticore",
+      "label_plural": "manticores",
+      "categories": []
+    },
+    {
+      "id": "mastodon",
+      "name": "Mastodon",
+      "label": "mastodon",
+      "label_plural": "mastodons",
+      "categories": []
+    },
+    {
+      "id": "medium",
+      "name": "Medium",
+      "label": "medium",
+      "label_plural": "mediums",
+      "categories": ["person"]
+    },
+    {
+      "id": "medium_herd_animal",
+      "name": "Medium Herd Animal",
+      "label": "medium herd animal",
+      "label_plural": "medium herd animals",
+      "categories": []
+    },
+    {
+      "id": "medusa",
+      "name": "Medusa",
+      "label": "medusa",
+      "label_plural": "medusas",
+      "categories": []
+    },
+    {
+      "id": "merchant",
+      "name": "Merchant",
+      "label": "merchant",
+      "label_plural": "merchants",
+      "categories": ["person"]
+    },
+    {
+      "id": "merman",
+      "name": "Merman",
+      "label": "merman",
+      "label_plural": "mermen",
+      "categories": ["person"]
+    },
+    {
+      "id": "minotaur",
+      "name": "Minotaur",
+      "label": "minotaur",
+      "label_plural": "minotaurs",
+      "categories": []
+    },
+    {
+      "id": "mountain_lion",
+      "name": "Mountain Lion",
+      "label": "mountain lion",
+      "label_plural": "mountain lions",
+      "categories": []
+    },
+    {
+      "id": "mule",
+      "name": "Mule",
+      "label": "mule",
+      "label_plural": "mules",
+      "categories": []
+    },
+    {
+      "id": "mummy",
+      "name": "Mummy",
+      "label": "mummy",
+      "label_plural": "mummies",
+      "categories": ["undead"]
+    },
+    {
+      "id": "narwhal",
+      "name": "Narwhal",
+      "label": "narwhal",
+      "label_plural": "narwhals",
+      "categories": []
+    },
+    {
+      "id": "neanderthal_caveman",
+      "name": "Neanderthal (Caveman)",
+      "label": "Neanderthal",
+      "label_plural": "Neanderthals",
+      "categories": ["person"]
+    },
+    {
+      "id": "nixie",
+      "name": "Nixie",
+      "label": "nixie",
+      "label_plural": "nixies",
+      "categories": ["person"]
+    },
+    {
+      "id": "noble",
+      "name": "Noble",
+      "label": "noble",
+      "label_plural": "nobles",
+      "categories": ["person"]
+    },
+    {
+      "id": "nomad",
+      "name": "Nomad",
+      "label": "nomad",
+      "label_plural": "nomads",
+      "categories": ["person"]
+    },
+    {
+      "id": "normal_bat",
+      "name": "Normal Bat",
+      "label": "bat",
+      "label_plural": "bats",
+      "categories": []
+    },
+    {
+      "id": "normal_crocodile",
+      "name": "Normal Crocodile",
+      "label": "crocodile",
+      "label_plural": "crocodiles",
+      "categories": []
+    },
+    {
+      "id": "normal_hawk",
+      "name": "Normal Hawk",
+      "label": "hawk",
+      "label_plural": "hawks",
+      "categories": []
+    },
+    {
+      "id": "normal_human",
+      "name": "Normal Human",
+      "label": "human",
+      "label_plural": "humans",
+      "categories": ["person"]
+    },
+    {
+      "id": "normal_rat",
+      "name": "Normal Rat",
+      "label": "rat",
+      "label_plural": "rats",
+      "categories": []
+    },
+    {
+      "id": "normal_rhinoceros",
+      "name": "Normal Rhinoceros",
+      "label": "rhinoceros",
+      "label_plural": "rhinoceroses",
+      "categories": []
+    },
+    {
+      "id": "normal_wolf",
+      "name": "Normal Wolf",
+      "label": "wolf",
+      "label_plural": "wolves",
+      "categories": []
+    },
+    {
+      "id": "ochre_jelly",
+      "name": "Ochre Jelly",
+      "label": "ochre jelly",
+      "label_plural": "ochre jellies",
+      "categories": []
+    },
+    {
+      "id": "octopus_giant",
+      "name": "Octopus, Giant",
+      "label": "giant octopus",
+      "label_plural": "giant octopuses",
+      "categories": []
+    },
+    {
+      "id": "ogre",
+      "name": "Ogre",
+      "label": "ogre",
+      "label_plural": "ogres",
+      "categories": ["person"]
+    },
+    {
+      "id": "oil_beetle",
+      "name": "Oil Beetle",
+      "label": "oil beetle",
+      "label_plural": "oil beetles",
+      "categories": []
+    },
+    {
+      "id": "orc",
+      "name": "Orc",
+      "label": "orc",
+      "label_plural": "orcs",
+      "categories": ["person"]
+    },
+    {
+      "id": "owl_bear",
+      "name": "Owl Bear",
+      "label": "owl bear",
+      "label_plural": "owl bears",
+      "categories": []
+    },
+    {
+      "id": "panther",
+      "name": "Panther",
+      "label": "panther",
+      "label_plural": "panthers",
+      "categories": []
+    },
+    {
+      "id": "pegasus",
+      "name": "Pegasus",
+      "label": "pegasus",
+      "label_plural": "pegasi",
+      "categories": []
+    },
+    {
+      "id": "pirate",
+      "name": "Pirate",
+      "label": "pirate",
+      "label_plural": "pirates",
+      "categories": ["person"]
+    },
+    {
+      "id": "pit_viper",
+      "name": "Pit Viper",
+      "label": "pit viper",
+      "label_plural": "pit vipers",
+      "categories": []
+    },
+    {
+      "id": "pixie",
+      "name": "Pixie",
+      "label": "pixie",
+      "label_plural": "pixies",
+      "categories": ["person"]
+    },
+    {
+      "id": "polar_bear",
+      "name": "Polar Bear",
+      "label": "polar bear",
+      "label_plural": "polar bears",
+      "categories": []
+    },
+    {
+      "id": "pteranodon",
+      "name": "Pteranodon",
+      "label": "pteranodon",
+      "label_plural": "pteranodons",
+      "categories": []
+    },
+    {
+      "id": "pterodactyl",
+      "name": "Pterodactyl",
+      "label": "pterodactyl",
+      "label_plural": "pterodactyls",
+      "categories": []
+    },
+    {
+      "id": "purple_worm",
+      "name": "Purple Worm",
+      "label": "purple worm",
+      "label_plural": "purple worms",
+      "categories": []
+    },
+    {
+      "id": "red_dragon",
+      "name": "Red Dragon",
+      "label": "red dragon",
+      "label_plural": "red dragons",
+      "categories": []
+    },
+    {
+      "id": "rhagodessa",
+      "name": "Rhagodessa",
+      "label": "rhagodessa",
+      "label_plural": "rhagodessas",
+      "categories": []
+    },
+    {
+      "id": "riding_horse",
+      "name": "Riding Horse",
+      "label": "riding horse",
+      "label_plural": "riding horses",
+      "categories": []
+    },
+    {
+      "id": "robber_fly",
+      "name": "Robber Fly",
+      "label": "robber fly",
+      "label_plural": "robber flies",
+      "categories": []
+    },
+    {
+      "id": "rock_baboon",
+      "name": "Rock Baboon",
+      "label": "rock baboon",
+      "label_plural": "rock baboons",
+      "categories": []
+    },
+    {
+      "id": "rock_living_statue",
+      "name": "Rock Living Statue",
+      "label": "rock living statue",
+      "label_plural": "rock living statues",
+      "categories": ["enchanted"]
+    },
+    {
+      "id": "rock_python",
+      "name": "Rock Python",
+      "label": "rock python",
+      "label_plural": "rock pythons",
+      "categories": []
+    },
+    {
+      "id": "rust_monster",
+      "name": "Rust Monster",
+      "label": "rust monster",
+      "label_plural": "rust monsters",
+      "categories": []
+    },
+    {
+      "id": "sabre_toothed_tiger",
+      "name": "Sabre-Toothed Tiger",
+      "label": "sabre-toothed tiger",
+      "label_plural": "sabre-toothed tigers",
+      "categories": []
+    },
+    {
+      "id": "saltwater_termite",
+      "name": "Saltwater Termite",
+      "label": "saltwater termite",
+      "label_plural": "saltwater termites",
+      "categories": []
+    },
+    {
+      "id": "scorpion_giant",
+      "name": "Scorpion, Giant",
+      "label": "giant scorpion",
+      "label_plural": "giant scorpions",
+      "categories": []
+    },
+    {
+      "id": "sea_dragon",
+      "name": "Sea Dragon",
+      "label": "sea dragon",
+      "label_plural": "sea dragons",
+      "categories": []
+    },
+    {
+      "id": "sea_serpent_lesser",
+      "name": "Sea Serpent (Lesser)",
+      "label": "sea serpent",
+      "label_plural": "sea serpents",
+      "categories": []
+    },
+    {
+      "id": "sea_snake",
+      "name": "Sea Snake",
+      "label": "sea snake",
+      "label_plural": "sea snakes",
+      "categories": []
+    },
+    {
+      "id": "shadow",
+      "name": "Shadow",
+      "label": "shadow",
+      "label_plural": "shadows",
+      "categories": []
+    },
+    {
+      "id": "shrew_giant",
+      "name": "Shrew, Giant",
+      "label": "giant shrew",
+      "label_plural": "giant shrews",
+      "categories": []
+    },
+    {
+      "id": "shrieker",
+      "name": "Shrieker",
+      "label": "shrieker",
+      "label_plural": "shriekers",
+      "categories": []
+    },
+    {
+      "id": "skeleton",
+      "name": "Skeleton",
+      "label": "skeleton",
+      "label_plural": "skeletons",
+      "categories": ["undead"]
+    },
+    {
+      "id": "small_herd_animal_1",
+      "name": "Small Herd Animal (1)",
+      "label": "small herd animal",
+      "label_plural": "small herd animals",
+      "categories": []
+    },
+    {
+      "id": "small_herd_animal_2",
+      "name": "Small Herd Animal (2)",
+      "label": "small herd animal",
+      "label_plural": "small herd animals",
+      "categories": []
+    },
+    {
+      "id": "small_roc",
+      "name": "Small Roc",
+      "label": "small roc",
+      "label_plural": "small rocs",
+      "categories": []
+    },
+    {
+      "id": "spectre",
+      "name": "Spectre",
+      "label": "spectre",
+      "label_plural": "spectres",
+      "categories": ["undead"]
+    },
+    {
+      "id": "sperm_whale",
+      "name": "Sperm Whale",
+      "label": "sperm whale",
+      "label_plural": "sperm whales",
+      "categories": []
+    },
+    {
+      "id": "spitting_cobra",
+      "name": "Spitting Cobra",
+      "label": "spitting cobra",
+      "label_plural": "spitting cobras",
+      "categories": []
+    },
+    {
+      "id": "sprite",
+      "name": "Sprite",
+      "label": "sprite",
+      "label_plural": "sprites",
+      "categories": ["person"]
+    },
+    {
+      "id": "squid_giant",
+      "name": "Squid, Giant",
+      "label": "giant squid",
+      "label_plural": "giant squid",
+      "categories": []
+    },
+    {
+      "id": "stegosaurus",
+      "name": "Stegosaurus",
+      "label": "stegosaurus",
+      "label_plural": "stegosauruses",
+      "categories": []
+    },
+    {
+      "id": "stirge",
+      "name": "Stirge",
+      "label": "stirge",
+      "label_plural": "stirges",
+      "categories": []
+    },
+    {
+      "id": "stone_giant",
+      "name": "Stone Giant",
+      "label": "stone giant",
+      "label_plural": "stone giants",
+      "categories": []
+    },
+    {
+      "id": "storm_giant",
+      "name": "Storm Giant",
+      "label": "storm giant",
+      "label_plural": "storm giants",
+      "categories": []
+    },
+    {
+      "id": "swamp_termite",
+      "name": "Swamp Termite",
+      "label": "swamp termite",
+      "label_plural": "swamp termites",
+      "categories": []
+    },
+    {
+      "id": "tarantella",
+      "name": "Tarantella",
+      "label": "tarantella",
+      "label_plural": "tarantellas",
+      "categories": []
+    },
+    {
+      "id": "thoul",
+      "name": "Thoul",
+      "label": "thoul",
+      "label_plural": "thouls",
+      "categories": []
+    },
+    {
+      "id": "tiger",
+      "name": "Tiger",
+      "label": "tiger",
+      "label_plural": "tigers",
+      "categories": []
+    },
+    {
+      "id": "tiger_beetle",
+      "name": "Tiger Beetle",
+      "label": "tiger beetle",
+      "label_plural": "tiger beetles",
+      "categories": []
+    },
+    {
+      "id": "titanothere",
+      "name": "Titanothere",
+      "label": "titanothere",
+      "label_plural": "titanotheres",
+      "categories": []
+    },
+    {
+      "id": "toad_giant",
+      "name": "Toad, Giant",
+      "label": "giant toad",
+      "label_plural": "giant toads",
+      "categories": []
+    },
+    {
+      "id": "trader",
+      "name": "Trader",
+      "label": "trader",
+      "label_plural": "traders",
+      "categories": ["person"]
+    },
+    {
+      "id": "treant",
+      "name": "Treant",
+      "label": "treant",
+      "label_plural": "treants",
+      "categories": []
+    },
+    {
+      "id": "triceratops",
+      "name": "Triceratops",
+      "label": "triceratops",
+      "label_plural": "triceratops",
+      "categories": []
+    },
+    {
+      "id": "troglodyte",
+      "name": "Troglodyte",
+      "label": "troglodyte",
+      "label_plural": "troglodytes",
+      "categories": ["person"]
+    },
+    {
+      "id": "troll",
+      "name": "Troll",
+      "label": "troll",
+      "label_plural": "trolls",
+      "categories": []
+    },
+    {
+      "id": "tuatara",
+      "name": "Tuatara",
+      "label": "tuatara",
+      "label_plural": "tuataras",
+      "categories": []
+    },
+    {
+      "id": "tyrannosaurus_rex",
+      "name": "Tyrannosaurus Rex",
+      "label": "tyrannosaurus rex",
+      "label_plural": "tyrannosaurus rexes",
+      "categories": []
+    },
+    {
+      "id": "unicorn",
+      "name": "Unicorn",
+      "label": "unicorn",
+      "label_plural": "unicorns",
+      "categories": []
+    },
+    {
+      "id": "vampire_7",
+      "name": "Vampire (7)",
+      "label": "vampire",
+      "label_plural": "vampires",
+      "categories": ["undead"]
+    },
+    {
+      "id": "vampire_8",
+      "name": "Vampire (8)",
+      "label": "vampire",
+      "label_plural": "vampires",
+      "categories": ["undead"]
+    },
+    {
+      "id": "vampire_9",
+      "name": "Vampire (9)",
+      "label": "vampire",
+      "label_plural": "vampires",
+      "categories": ["undead"]
+    },
+    {
+      "id": "veteran_1",
+      "name": "Veteran (1)",
+      "label": "veteran",
+      "label_plural": "veterans",
+      "categories": ["person"]
+    },
+    {
+      "id": "veteran_2",
+      "name": "Veteran (2)",
+      "label": "veteran",
+      "label_plural": "veterans",
+      "categories": ["person"]
+    },
+    {
+      "id": "veteran_3",
+      "name": "Veteran (3)",
+      "label": "veteran",
+      "label_plural": "veterans",
+      "categories": ["person"]
+    },
+    {
+      "id": "war_horse",
+      "name": "War Horse",
+      "label": "war horse",
+      "label_plural": "war horses",
+      "categories": []
+    },
+    {
+      "id": "warp_beast",
+      "name": "Warp Beast",
+      "label": "warp beast",
+      "label_plural": "warp beasts",
+      "categories": []
+    },
+    {
+      "id": "water_elemental_greater",
+      "name": "Water Elemental (Greater)",
+      "label": "water elemental",
+      "label_plural": "water elementals",
+      "categories": ["enchanted"]
+    },
+    {
+      "id": "water_elemental_intermediate",
+      "name": "Water Elemental (Intermediate)",
+      "label": "water elemental",
+      "label_plural": "water elementals",
+      "categories": ["enchanted"]
+    },
+    {
+      "id": "water_elemental_lesser",
+      "name": "Water Elemental (Lesser)",
+      "label": "water elemental",
+      "label_plural": "water elementals",
+      "categories": ["enchanted"]
+    },
+    {
+      "id": "weasel_giant",
+      "name": "Weasel, Giant",
+      "label": "giant weasel",
+      "label_plural": "giant weasels",
+      "categories": []
+    },
+    {
+      "id": "werebear",
+      "name": "Werebear",
+      "label": "werebear",
+      "label_plural": "werebears",
+      "categories": []
+    },
+    {
+      "id": "wereboar",
+      "name": "Wereboar",
+      "label": "wereboar",
+      "label_plural": "wereboars",
+      "categories": []
+    },
+    {
+      "id": "wererat",
+      "name": "Wererat",
+      "label": "wererat",
+      "label_plural": "wererats",
+      "categories": []
+    },
+    {
+      "id": "weretiger",
+      "name": "Weretiger",
+      "label": "weretiger",
+      "label_plural": "weretigers",
+      "categories": []
+    },
+    {
+      "id": "werewolf",
+      "name": "Werewolf",
+      "label": "werewolf",
+      "label_plural": "werewolves",
+      "categories": []
+    },
+    {
+      "id": "white_dragon",
+      "name": "White Dragon",
+      "label": "white dragon",
+      "label_plural": "white dragons",
+      "categories": []
+    },
+    {
+      "id": "wight",
+      "name": "Wight",
+      "label": "wight",
+      "label_plural": "wights",
+      "categories": ["undead"]
+    },
+    {
+      "id": "wild_horse",
+      "name": "Wild Horse",
+      "label": "wild horse",
+      "label_plural": "wild horses",
+      "categories": []
+    },
+    {
+      "id": "wood_golem",
+      "name": "Wood Golem",
+      "label": "wood golem",
+      "label_plural": "wood golems",
+      "categories": ["enchanted"]
+    },
+    {
+      "id": "woolly_rhinoceros",
+      "name": "Woolly Rhinoceros",
+      "label": "woolly rhinoceros",
+      "label_plural": "woolly rhinoceroses",
+      "categories": []
+    },
+    {
+      "id": "wraith",
+      "name": "Wraith",
+      "label": "wraith",
+      "label_plural": "wraiths",
+      "categories": ["undead"]
+    },
+    {
+      "id": "wyvern",
+      "name": "Wyvern",
+      "label": "wyvern",
+      "label_plural": "wyverns",
+      "categories": []
+    },
+    {
+      "id": "yellow_mould",
+      "name": "Yellow Mould",
+      "label": "yellow mould",
+      "label_plural": "yellow moulds",
+      "categories": []
+    },
+    {
+      "id": "zombie",
+      "name": "Zombie",
+      "label": "zombie",
+      "label_plural": "zombies",
+      "categories": ["undead"]
+    }
+  ]
+}

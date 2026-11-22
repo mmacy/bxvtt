@@ -1,0 +1,264 @@
+/* Skeleton */
+.skeletonGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.skeleton {
+  display: block;
+  background: linear-gradient(
+    100deg,
+    var(--color-surface-2) 30%,
+    var(--color-surface-3) 50%,
+    var(--color-surface-2) 70%
+  );
+  background-size: 300% 100%;
+  animation: shimmer 1.6s var(--ease-standard) infinite;
+}
+
+.text {
+  height: 0.8em;
+  border-radius: var(--radius-xs);
+  width: 100%;
+}
+
+.block {
+  border-radius: var(--radius-md);
+  width: 100%;
+  height: 64px;
+}
+
+.circle {
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+/* Empty state */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-2);
+  margin: 0 auto;
+  max-width: 40ch;
+  color: var(--color-text-muted);
+}
+
+.empty-default {
+  padding: var(--space-10) var(--space-6);
+}
+
+.empty-compact {
+  padding: var(--space-6) var(--space-4);
+  gap: var(--space-1-5);
+}
+
+.emptyIcon {
+  display: inline-flex;
+  color: var(--color-accent-text);
+  opacity: 0.8;
+  margin-bottom: var(--space-1);
+}
+
+.emptyTitle {
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-plain);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-strong);
+}
+
+.empty-compact .emptyTitle {
+  font-size: var(--text-lg);
+}
+
+.emptyDescription {
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+}
+
+.emptyAction {
+  margin-top: var(--space-2);
+}
+
+/* Progress */
+.progressWrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+  width: 100%;
+}
+
+.progressLabel {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.progressValue {
+  font-family: var(--font-numeric);
+  font-size: var(--text-md);
+  color: var(--color-text);
+}
+
+.progress {
+  --tone: var(--color-accent);
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunken);
+  box-shadow: var(--shadow-inset);
+}
+
+.progress-sm {
+  height: 4px;
+}
+
+.progress-md {
+  height: 8px;
+}
+
+.tone-accent {
+  --tone: var(--color-accent);
+}
+
+.tone-success {
+  --tone: var(--color-success);
+}
+
+.tone-danger {
+  --tone: var(--color-danger);
+}
+
+.tone-magic {
+  --tone: var(--color-magic);
+}
+
+.tone-gold {
+  --tone: var(--color-gold);
+}
+
+.indicator {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--tone);
+  transition: transform var(--duration-slow) var(--ease-out);
+}
+
+.indeterminate {
+  width: 40%;
+  animation: indeterminate 1.3s var(--ease-standard) infinite;
+}
+
+@keyframes indeterminate {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+/* Banner */
+.banner {
+  --tone: var(--color-info);
+  --tone-bg: var(--color-info-subtle);
+
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  border: var(--border-hair) solid color-mix(in srgb, var(--tone) 35%, transparent);
+  border-inline-start: 3px solid var(--tone);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--tone-bg) 80%, var(--color-surface-1));
+  color: var(--color-text);
+}
+
+.banner-info {
+  --tone: var(--color-info);
+  --tone-bg: var(--color-info-subtle);
+}
+
+.banner-success {
+  --tone: var(--color-success);
+  --tone-bg: var(--color-success-subtle);
+}
+
+.banner-warning {
+  --tone: var(--color-warning);
+  --tone-bg: var(--color-warning-subtle);
+}
+
+.banner-danger {
+  --tone: var(--color-danger);
+  --tone-bg: var(--color-danger-subtle);
+}
+
+.banner-referee {
+  --tone: var(--color-referee);
+  --tone-bg: var(--color-danger-subtle);
+}
+
+.banner-neutral {
+  --tone: var(--color-text-subtle);
+  --tone-bg: var(--color-surface-2);
+}
+
+.bannerIcon {
+  color: var(--tone);
+  margin-top: 1px;
+}
+
+.bannerBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+}
+
+.bannerTitle {
+  font-weight: var(--weight-bold);
+  color: var(--color-text-strong);
+}
+
+.bannerText {
+  color: var(--color-text);
+  line-height: var(--leading-normal);
+}
+
+.bannerActions {
+  display: flex;
+  gap: var(--space-2);
+  align-self: center;
+}
+
+.bannerDismiss {
+  display: inline-flex;
+  padding: var(--space-1);
+  margin: calc(var(--space-1) * -1) 0;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-subtle);
+}
+
+.bannerDismiss:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-strong);
+}

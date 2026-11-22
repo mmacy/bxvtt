@@ -1,0 +1,240 @@
+import { AlertDialog, Dialog as DialogPrimitive } from 'radix-ui';
+import { useState, type ReactElement, type ReactNode } from 'react';
+import { Icon } from '../icons/Icon';
+import { cx } from '../lib/cx';
+import { useReturnFocus } from '../lib/hooks';
+import { Button } from './Button';
+import styles from './Dialog.module.css';
+
+export interface DialogProps {
+  open?: boolean;
+  defaultOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** An element that opens the dialog, usually a Button. */
+  trigger?: ReactElement;
+  title: ReactNode;
+  /** One sentence under the title. Also the dialog's accessible description. */
+  description?: ReactNode;
+  children?: ReactNode;
+  /** Buttons at the bottom, primary action last. */
+  footer?: ReactNode;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  /** Hides the close button. Escape still closes the dialog. */
+  hideClose?: boolean;
+  /** Puts the body on paper, for handouts and sheets. */
+  paper?: boolean;
+  className?: string;
+}
+
+/**
+ * A modal window. Focus moves into it, Tab stays inside, and Escape or the close button closes it.
+ */
+export function Dialog({
+  open,
+  defaultOpen,
+  onOpenChange,
+  trigger,
+  title,
+  description,
+  children,
+  footer,
+  size = 'md',
+  hideClose = false,
+  paper = false,
+  className,
+}: DialogProps) {
+  const focus = useReturnFocus(!trigger);
+  return (
+    <DialogPrimitive.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
+      {trigger && <DialogPrimitive.Trigger asChild>{trigger}</DialogPrimitive.Trigger>}
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className={styles.overlay} />
+        <DialogPrimitive.Content
+          className={cx(styles.dialog, styles[size], className)}
+          data-surface={paper ? 'paper' : undefined}
+          onOpenAutoFocus={focus.onOpenAutoFocus}
+          onCloseAutoFocus={focus.onCloseAutoFocus}
+          {...(description ? {} : { 'aria-describedby': undefined })}
+        >
+          <header className={styles.header}>
+            <div className={styles.headings}>
+              <DialogPrimitive.Title className={styles.title}>{title}</DialogPrimitive.Title>
+              {description && (
+                <DialogPrimitive.Description className={styles.description}>
+                  {description}
+                </DialogPrimitive.Description>
+              )}
+            </div>
+            {!hideClose && (
+              <DialogPrimitive.Close className={styles.close} aria-label="Close">
+                <Icon name="close" size={18} />
+              </DialogPrimitive.Close>
+            )}
+          </header>
+          {children !== undefined && <div className={styles.body}>{children}</div>}
+          {footer && <footer className={styles.footer}>{footer}</footer>}
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
+  );
+}
+
+/** Wraps an element so that activating it closes the surrounding Dialog or Drawer. */
+export function DialogClose({ children }: { children: ReactElement }) {
+  return <DialogPrimitive.Close asChild>{children}</DialogPrimitive.Close>;
+}
+
+export interface ConfirmDialogProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  trigger?: ReactElement;
+  title: ReactNode;
+  /** What happens if the user confirms, in one or two sentences. */
+  description: ReactNode;
+  /** Names the action, such as "Restore save". Never "OK" or "Yes". */
+  confirmLabel: string;
+  cancelLabel?: string;
+  /** "danger" for actions that destroy or cannot be undone. */
+  tone?: 'primary' | 'danger';
+  /** Runs on confirm. If it returns a promise, the button shows a spinner until it settles. */
+  onConfirm: () => void | Promise<void>;
+}
+
+/** Asks the user to confirm an action before it happens. Focus starts on the cancel button. */
+export function ConfirmDialog({
+  open,
+  onOpenChange,
+  trigger,
+  title,
+  description,
+  confirmLabel,
+  cancelLabel = 'Cancel',
+  tone = 'primary',
+  onConfirm,
+}: ConfirmDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const focus = useReturnFocus(!trigger);
+  const isOpen = open ?? internalOpen;
+  const setOpen = (next: boolean) => {
+    if (open === undefined) setInternalOpen(next);
+    onOpenChange?.(next);
+  };
+  const confirm = async () => {
+    const result = onConfirm();
+    if (result instanceof Promise) {
+      setBusy(true);
+      try {
+        await result;
+        setOpen(false);
+      } finally {
+        setBusy(false);
+      }
+    } else {
+      setOpen(false);
+    }
+  };
+  return (
+    <AlertDialog.Root open={isOpen} onOpenChange={setOpen}>
+      {trigger && <AlertDialog.Trigger asChild>{trigger}</AlertDialog.Trigger>}
+      <AlertDialog.Portal>
+        <AlertDialog.Overlay className={styles.overlay} />
+        <AlertDialog.Content
+          className={cx(styles.dialog, styles.sm)}
+          onOpenAutoFocus={focus.onOpenAutoFocus}
+          onCloseAutoFocus={focus.onCloseAutoFocus}
+        >
+          <header className={styles.header}>
+            <div className={styles.headings}>
+              <AlertDialog.Title className={styles.title}>{title}</AlertDialog.Title>
+              <AlertDialog.Description className={styles.description}>{description}</AlertDialog.Description>
+            </div>
+          </header>
+          <footer className={styles.footer}>
+            <AlertDialog.Cancel asChild>
+              <Button variant="ghost">{cancelLabel}</Button>
+            </AlertDialog.Cancel>
+            <Button
+              variant={tone === 'danger' ? 'danger' : 'primary'}
+              loading={busy}
+              onClick={() => {
+                void confirm();
+              }}
+            >
+              {confirmLabel}
+            </Button>
+          </footer>
+        </AlertDialog.Content>
+      </AlertDialog.Portal>
+    </AlertDialog.Root>
+  );
+}
+
+export interface DrawerProps {
+  open?: boolean;
+  defaultOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  trigger?: ReactElement;
+  title: ReactNode;
+  description?: ReactNode;
+  /** Hides the title visually, for drawers whose content has its own heading. */
+  hideTitle?: boolean;
+  side?: 'right' | 'left' | 'bottom';
+  /** Width for side drawers, as a CSS length. Defaults to min(420px, 92vw). */
+  width?: string;
+  children?: ReactNode;
+  footer?: ReactNode;
+  /** Removes padding from the body, for content that manages its own layout. */
+  flush?: boolean;
+  className?: string;
+}
+
+/** A side sheet over the page, such as the dock on a tablet or a monster's stat block. */
+export function Drawer({
+  open,
+  defaultOpen,
+  onOpenChange,
+  trigger,
+  title,
+  description,
+  hideTitle = false,
+  side = 'right',
+  width,
+  children,
+  footer,
+  flush = false,
+  className,
+}: DrawerProps) {
+  const focus = useReturnFocus(!trigger);
+  return (
+    <DialogPrimitive.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
+      {trigger && <DialogPrimitive.Trigger asChild>{trigger}</DialogPrimitive.Trigger>}
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className={styles.overlay} />
+        <DialogPrimitive.Content
+          className={cx(styles.drawer, styles[`drawer-${side}`], className)}
+          style={width ? { width } : undefined}
+          onOpenAutoFocus={focus.onOpenAutoFocus}
+          onCloseAutoFocus={focus.onCloseAutoFocus}
+          {...(description ? {} : { 'aria-describedby': undefined })}
+        >
+          <header className={cx(styles.header, styles.drawerHeader, hideTitle && styles.headerHidden)}>
+            <div className={cx(styles.headings, hideTitle && 'visually-hidden')}>
+              <DialogPrimitive.Title className={styles.title}>{title}</DialogPrimitive.Title>
+              {description && (
+                <DialogPrimitive.Description className={styles.description}>
+                  {description}
+                </DialogPrimitive.Description>
+              )}
+            </div>
+            <DialogPrimitive.Close className={styles.close} aria-label="Close">
+              <Icon name="close" size={18} />
+            </DialogPrimitive.Close>
+          </header>
+          <div className={cx(styles.drawerBody, flush && styles.flush)}>{children}</div>
+          {footer && <footer className={styles.footer}>{footer}</footer>}
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
+  );
+}

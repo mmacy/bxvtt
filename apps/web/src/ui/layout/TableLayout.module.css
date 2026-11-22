@@ -1,0 +1,241 @@
+.table {
+  display: grid;
+  grid-template-rows: var(--topbar-height) minmax(0, 1fr) auto;
+  grid-template-areas:
+    'top top top top'
+    'rail stage split dock'
+    'rail action split dock';
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: var(--color-bg-app);
+  overflow: hidden;
+}
+
+.noRail {
+  grid-template-areas:
+    'top top top'
+    'stage split dock'
+    'action split dock';
+}
+
+.top {
+  grid-area: top;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: 0 var(--space-2) 0 var(--space-3);
+  border-bottom: var(--border-hair) solid var(--color-border);
+  background: var(--color-surface-1);
+  z-index: var(--z-topbar);
+}
+
+.topContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.topEnd {
+  display: flex;
+  align-items: center;
+  padding-inline-start: var(--space-2);
+  border-inline-start: var(--border-hair) solid var(--color-border);
+}
+
+.rail {
+  grid-area: rail;
+  min-height: 0;
+  border-right: var(--border-hair) solid var(--color-border);
+  background: var(--color-surface-1);
+  z-index: var(--z-rail);
+}
+
+.stage {
+  grid-area: stage;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--color-bg-stage);
+}
+
+.action {
+  grid-area: action;
+  container-type: inline-size;
+  min-width: 0;
+  border-top: var(--border-hair) solid var(--color-border);
+  background: var(--color-surface-1);
+}
+
+.splitter {
+  grid-area: split;
+}
+
+.dock {
+  grid-area: dock;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--color-surface-1);
+  z-index: var(--z-dock);
+}
+
+.drawerDock {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding-top: var(--space-1);
+}
+
+/* Top bar */
+.topBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  height: var(--topbar-height);
+}
+
+.topMark {
+  flex: none;
+}
+
+.tableName {
+  min-width: 0;
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-plain);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spacer {
+  flex: 1;
+}
+
+/* Clock */
+.clock {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 24px;
+  padding: 0 var(--space-2);
+  border: var(--border-hair) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  white-space: nowrap;
+}
+
+.clockIcon {
+  color: var(--color-accent-text);
+}
+
+.clockPart {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1);
+}
+
+.clockPart + .clockPart {
+  padding-inline-start: var(--space-2);
+  border-inline-start: var(--border-hair) solid var(--color-border);
+}
+
+.clockLabel {
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+}
+
+.clockValue {
+  font-family: var(--font-numeric);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  color: var(--color-text-strong);
+}
+
+/* Tool rail */
+.toolRail {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  padding: var(--space-2) 0;
+}
+
+.toolGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.toolFooter {
+  padding-top: var(--space-2);
+}
+
+.toolDivider {
+  width: 24px;
+  height: 1px;
+  margin: var(--space-1) 0;
+  background: var(--color-border);
+}
+
+/* Action bar */
+.actionBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: var(--actionbar-height);
+  padding: var(--space-2) var(--space-3);
+  overflow-x: auto;
+}
+
+.actionStatus {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.actionItems {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-inline-start: auto;
+}
+
+@container (max-width: 760px) {
+  .actionStatus span:last-child {
+    display: none;
+  }
+}
+
+.actionDivider {
+  width: 1px;
+  height: 20px;
+  margin: 0 var(--space-1);
+  background: var(--color-border);
+}
+
+/* Dock */
+.dockTabs {
+  flex: 1;
+  min-height: 0;
+}
+
+.dockList {
+  padding: 0 var(--space-1);
+}
+
+.dockContent {
+  overflow-y: auto;
+}

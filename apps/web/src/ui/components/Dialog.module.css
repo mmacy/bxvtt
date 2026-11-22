@@ -1,0 +1,266 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  background: var(--color-overlay);
+  animation: fade var(--duration-base) var(--ease-standard);
+}
+
+.overlay[data-state='closed'] {
+  animation: fadeOut var(--duration-fast) var(--ease-standard) forwards;
+}
+
+.dialog {
+  position: fixed;
+  z-index: var(--z-modal);
+  top: 50%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  width: calc(100vw - var(--space-8));
+  max-height: calc(100dvh - var(--space-12));
+  border: var(--border-hair) solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-1);
+  box-shadow: var(--edge-highlight), var(--shadow-3);
+  color: var(--color-text);
+  transform: translate(-50%, -50%);
+  animation: rise var(--duration-slow) var(--ease-out);
+}
+
+.dialog[data-state='closed'] {
+  animation: sink var(--duration-fast) var(--ease-in) forwards;
+}
+
+.dialog[data-surface='paper'] {
+  background: var(--color-paper);
+}
+
+.sm {
+  max-width: 420px;
+}
+
+.md {
+  max-width: 560px;
+}
+
+.lg {
+  max-width: 760px;
+}
+
+.xl {
+  max-width: 1040px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-5) var(--space-3) var(--space-6);
+}
+
+.headings {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.title {
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-plain);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-snug);
+  color: var(--color-text-strong);
+}
+
+.description {
+  color: var(--color-text-muted);
+  line-height: var(--leading-normal);
+}
+
+.close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--control-md);
+  height: var(--control-md);
+  margin: calc(var(--space-1) * -1) calc(var(--space-1) * -1) 0 0;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-subtle);
+}
+
+.close:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-strong);
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-1) var(--space-6) var(--space-5);
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  border-top: var(--border-hair) solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface-sunken) 40%, transparent);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+/* Drawer */
+.drawer {
+  position: fixed;
+  z-index: var(--z-modal);
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface-1);
+  box-shadow: var(--shadow-3);
+  color: var(--color-text);
+}
+
+.drawer-right,
+.drawer-left {
+  top: 0;
+  bottom: 0;
+  width: min(420px, 92vw);
+}
+
+.drawer-right {
+  right: 0;
+  border-left: var(--border-hair) solid var(--color-border-strong);
+  animation: slideInRight var(--duration-slow) var(--ease-out);
+}
+
+.drawer-right[data-state='closed'] {
+  animation: slideOutRight var(--duration-base) var(--ease-in) forwards;
+}
+
+.drawer-left {
+  left: 0;
+  border-right: var(--border-hair) solid var(--color-border-strong);
+  animation: slideInLeft var(--duration-slow) var(--ease-out);
+}
+
+.drawer-left[data-state='closed'] {
+  animation: slideOutLeft var(--duration-base) var(--ease-in) forwards;
+}
+
+.drawer-bottom {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 85dvh;
+  border-top: var(--border-hair) solid var(--color-border-strong);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  animation: slideInBottom var(--duration-slow) var(--ease-out);
+}
+
+.drawer-bottom[data-state='closed'] {
+  animation: slideOutBottom var(--duration-base) var(--ease-in) forwards;
+}
+
+.drawerHeader {
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-5);
+  border-bottom: var(--border-hair) solid var(--color-border);
+  align-items: center;
+}
+
+.drawerHeader .title {
+  font-size: var(--text-xl);
+}
+
+.headerHidden {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  padding: var(--space-1);
+  border: 0;
+}
+
+.drawerBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-4) var(--space-5);
+}
+
+.flush {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.drawer .footer {
+  border-radius: 0;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 8px)) scale(0.98);
+  }
+}
+
+@keyframes sink {
+  to {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 4px)) scale(0.99);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes slideOutRight {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes slideOutLeft {
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes slideInBottom {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes slideOutBottom {
+  to {
+    transform: translateY(100%);
+  }
+}
