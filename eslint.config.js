@@ -9,6 +9,7 @@ export default tseslint.config(
       '**/dist/**',
       '**/node_modules/**',
       '.data/**',
+      '.bxapi/**',
       'packages/shared/src/bxapi/schema.d.ts',
       'playwright-report/**',
       'test-results/**',

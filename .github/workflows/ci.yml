@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+
+      # The server tests call a real bxapi, so start one from its repository.
+      - uses: actions/checkout@v4
+        with:
+          repository: mmacy/bxapi
+          path: .bxapi
+      - uses: astral-sh/setup-uv@v5
+      - name: Start bxapi
+        run: |
+          cd .bxapi
+          uv sync --locked
+          BXAPI_PORT=8651 BXAPI_DATABASE="$RUNNER_TEMP/bxapi.db" BXAPI_ALLOW_ANONYMOUS=true BXAPI_RATE_LIMIT_PER_MINUTE=0 nohup uv run bxapi > "$RUNNER_TEMP/bxapi.log" 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8651/health > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/bxapi.log"
+          exit 1
+
+      - run: npm test
+      - run: node adventures/tools/check.mjs --no-maps
+      - run: npm run build
