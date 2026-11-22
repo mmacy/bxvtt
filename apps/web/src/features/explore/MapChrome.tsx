@@ -1,0 +1,209 @@
+/**
+ * The quiet controls around the map: the level switcher, the theme, the referee layer badge, the zoom and
+ * camera buttons, the compass, the scale note, and the minimap.
+ */
+import { directionLabel } from '@bxvtt/shared/text';
+import type { RefObject } from 'react';
+import type { MapThemeName } from '@/app';
+import { Minimap, type Direction, type DungeonMapHandle, type LevelMap } from '@/map';
+import { Badge, Button, DropdownMenu, IconButton, SegmentedControl, Tooltip, type MenuEntry } from '@/ui';
+import type { LevelOption } from './levels';
+import styles from './explore.module.css';
+
+const THEME_OPTIONS = [
+  { value: 'blueprint', label: 'Blueprint map', icon: 'map' as const, iconOnly: true },
+  { value: 'torchlit', label: 'Torchlit map', icon: 'torch' as const, iconOnly: true },
+  { value: 'parchment', label: 'Parchment map', icon: 'scroll' as const, iconOnly: true },
+];
+
+function isTheme(value: string): value is MapThemeName {
+  return value === 'blueprint' || value === 'torchlit' || value === 'parchment';
+}
+
+export interface LevelSwitcherProps {
+  levels: readonly LevelOption[];
+  viewedKey: string | null;
+  /** The name of a level for the switcher, such as "Level 2" or "The priory, level 2". */
+  levelName: (option: LevelOption) => string;
+  onSelect: (option: LevelOption) => void;
+}
+
+/** Picks the level the map shows, from every level the viewer may see. */
+export function LevelSwitcher({ levels, viewedKey, levelName, onSelect }: LevelSwitcherProps) {
+  const current = levels.find((level) => level.key === viewedKey) ?? levels[0];
+  if (!current) return null;
+  const items: MenuEntry[] = [
+    { type: 'label', label: 'Show a level' },
+    ...levels.map((level): MenuEntry => ({
+      type: 'checkbox',
+      label: level.partyHere ? `${levelName(level)}, where the party is` : levelName(level),
+      checked: level.key === current.key,
+      onCheckedChange: () => onSelect(level),
+    })),
+  ];
+  return (
+    <DropdownMenu
+      align="end"
+      items={items}
+      trigger={
+        <Button
+          size="sm"
+          variant="secondary"
+          icon="stairs"
+          iconEnd="chevron-down"
+          className={styles.chromeButton}
+          aria-label={`Level shown: ${levelName(current)}. Choose another level.`}
+        >
+          {levelName(current)}
+        </Button>
+      }
+    />
+  );
+}
+
+export interface ThemeSwitcherProps {
+  theme: MapThemeName;
+  onChange: (theme: MapThemeName) => void;
+}
+
+/** Switches the map's look. */
+export function ThemeSwitcher({ theme, onChange }: ThemeSwitcherProps) {
+  return (
+    <SegmentedControl
+      size="sm"
+      aria-label="Map style"
+      options={THEME_OPTIONS}
+      value={theme}
+      onValueChange={(value) => {
+        if (isTheme(value)) onChange(value);
+      }}
+      className={styles.themeSwitch}
+    />
+  );
+}
+
+export interface CameraControlsProps {
+  map: RefObject<DungeonMapHandle | null>;
+  follow: boolean;
+  onFollowChange: (follow: boolean) => void;
+  /** Whether the party stands on the level shown. */
+  partyShown: boolean;
+}
+
+/** Zoom, fit, center on the party, and follow. */
+export function CameraControls({ map, follow, onFollowChange, partyShown }: CameraControlsProps) {
+  return (
+    <div className={styles.cameraControls} role="group" aria-label="Map view">
+      <Tooltip content="Zoom in" shortcut="+" side="left">
+        <IconButton icon="zoom-in" label="Zoom in" size="sm" onClick={() => map.current?.zoomIn()} />
+      </Tooltip>
+      <Tooltip content="Zoom out" shortcut="−" side="left">
+        <IconButton icon="zoom-out" label="Zoom out" size="sm" onClick={() => map.current?.zoomOut()} />
+      </Tooltip>
+      <Tooltip content="Show the whole map" shortcut="0" side="left">
+        <IconButton
+          icon="maximize"
+          label="Show the whole map"
+          size="sm"
+          onClick={() => {
+            onFollowChange(false);
+            map.current?.fitToExplored();
+          }}
+        />
+      </Tooltip>
+      <span className={styles.controlDivider} aria-hidden="true" />
+      <Tooltip content="Center on the party" shortcut="C" side="left">
+        <IconButton
+          icon="target"
+          label="Center on the party"
+          size="sm"
+          disabled={!partyShown}
+          onClick={() => map.current?.centerOnParty()}
+        />
+      </Tooltip>
+      <Tooltip content={follow ? 'Stop following the party' : 'Follow the party'} shortcut="F" side="left">
+        <IconButton
+          icon="footprints"
+          label="Follow the party"
+          size="sm"
+          pressed={follow}
+          disabled={!partyShown}
+          onClick={() => onFollowChange(!follow)}
+        />
+      </Tooltip>
+    </div>
+  );
+}
+
+export interface CompassProps {
+  /** The party's facing, when it stands on the level shown. */
+  facing: Direction | null;
+}
+
+/** North is always up. The needle's notch shows the way the party faces. */
+export function Compass({ facing }: CompassProps) {
+  const angle = { north: 0, east: 90, south: 180, west: 270 }[facing ?? 'north'];
+  return (
+    <div className={styles.compass}>
+      <svg viewBox="-20 -20 40 40" width="36" height="36" aria-hidden="true">
+        <circle r="17" className={styles.compassRing} />
+        <path d="M0 -13 L4 0 L0 13 L-4 0 Z" className={styles.compassBody} />
+        <path d="M0 -13 L4 0 L-4 0 Z" className={styles.compassNorth} />
+        {facing && (
+          <path d="M0 -19 L3 -15 L-3 -15 Z" transform={`rotate(${angle})`} className={styles.compassFacing} />
+        )}
+      </svg>
+      <span className={styles.compassText}>
+        <span className={styles.compassN}>N</span>
+        {facing ? <span>Facing {directionLabel(facing).toLowerCase()}</span> : null}
+      </span>
+    </div>
+  );
+}
+
+export interface MinimapCardProps {
+  map: LevelMap | null;
+  target: RefObject<DungeonMapHandle | null>;
+  theme: MapThemeName;
+  facing: Direction | null;
+}
+
+/** The minimap with the compass and the scale. */
+export function MinimapCard({ map, target, theme, facing }: MinimapCardProps) {
+  return (
+    <div className={styles.minimapCard}>
+      <Minimap
+        map={map}
+        target={target}
+        theme={theme}
+        width={184}
+        height={128}
+        ariaLabel="Minimap. Click or drag to move the map."
+        className={styles.minimap}
+      />
+      <div className={styles.minimapFooter}>
+        <Compass facing={facing} />
+        <span className={styles.scaleNote}>
+          <span className={styles.scaleBar} aria-hidden="true" />1 square is 10 feet
+        </span>
+      </div>
+    </div>
+  );
+}
+
+export interface LayerBadgeProps {
+  layer: 'referee' | 'player';
+}
+
+/** Tells a referee which map they see: the whole keyed map, or what the players see. */
+export function LayerBadge({ layer }: LayerBadgeProps) {
+  return layer === 'referee' ? (
+    <Badge tone="referee" icon="referee">
+      Referee map
+    </Badge>
+  ) : (
+    <Badge tone="neutral" icon="eye">
+      Players&apos; view
+    </Badge>
+  );
+}
