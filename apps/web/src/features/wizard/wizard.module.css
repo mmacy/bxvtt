@@ -381,7 +381,8 @@
   grid-template-areas:
     'name stat'
     'rolled stat'
-    'controls stat';
+    'controls stat'
+    'refusal refusal';
   align-items: center;
   gap: var(--space-1) var(--space-3);
   padding: var(--space-3);
@@ -435,7 +436,7 @@
   text-align: center;
 }
 
-.adjustRow > :last-child {
+.adjustStat {
   grid-area: stat;
 }
 
@@ -905,4 +906,12 @@
 .cartLot {
   font-size: var(--text-xs);
   color: var(--color-text-muted);
+}
+
+.adjustRefusal {
+  grid-area: refusal;
+  margin: 0;
+  color: var(--color-warning);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
 }

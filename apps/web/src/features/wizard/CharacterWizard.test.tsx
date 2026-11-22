@@ -11,6 +11,8 @@ import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { createFakeApi, renderWithTable, type FakeApi } from '@/app/testing/renderWithTable';
 import catalog from './__fixtures__/catalog.json';
 import stored from './__fixtures__/stored.json';
+import type { ClassDetail } from '@/app';
+import { AdjustStep } from './AdjustStep';
 import { CharacterWizard } from './CharacterWizard';
 import { draftKey, emptyDraft } from './draft';
 
@@ -182,5 +184,46 @@ describe('CharacterWizard', () => {
     });
     expect(await screen.findByText('Your character is where you left it')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: /Name/ })).toHaveValue('Wren');
+  });
+});
+
+describe('AdjustStep', () => {
+  it('gates only what the class entry states and shows each refusal next to its score', async () => {
+    const detail = catalog.details.magic_user as unknown as ClassDetail;
+    const onChange = vi.fn();
+    const { rerender } = renderWithTable(
+      <AdjustStep
+        scores={{ str: 12, int: 12, wis: 12, dex: 12, con: 12, cha: 12 }}
+        adjustment={{ lowered: {}, raised: {} }}
+        onChange={onChange}
+        detail={detail}
+        tables={null}
+        check={{ status: 'idle' }}
+      />,
+    );
+    // The class entry lists Intelligence as the prime requisite, which the trade can't lower.
+    expect(screen.getByRole('button', { name: 'Lower Intelligence' })).toBeDisabled();
+    // Nothing bxapi serves rules out lowering Dexterity, so the player may try and the engine answers.
+    expect(screen.getByRole('button', { name: 'Lower Dexterity' })).toBeEnabled();
+    rerender(
+      <AdjustStep
+        scores={{ str: 12, int: 12, wis: 12, dex: 12, con: 12, cha: 12 }}
+        adjustment={{ lowered: { dex: 1 }, raised: {} }}
+        onChange={onChange}
+        detail={detail}
+        tables={null}
+        check={{
+          status: 'invalid',
+          sentences: [],
+          byAbility: {
+            dex: [
+              "Dexterity can't be lowered. Only Strength, Intelligence, and Wisdom can be traded for points.",
+            ],
+          },
+        }}
+      />,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent("Dexterity can't be lowered");
+    expect(screen.queryByText(/even number/)).toBeNull();
   });
 });

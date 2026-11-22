@@ -166,3 +166,29 @@ export function explainCreationError(error: unknown, ctx?: TextContext): WizardP
     sentences: kept.includes(message.code) ? [message.detail, 'Your choices are kept.'] : [message.detail],
   };
 }
+
+/**
+ * Splits the refusals of a trade of ability points by the score each names, so each reason shows next to its
+ * score, and the rest (such as points that don't add up) show once for the whole trade.
+ *
+ * @param problem - The `character_invalid` problem.
+ * @param ctx - Names for the IDs in the rejections.
+ */
+export function explainByAbility(
+  problem: Problem,
+  ctx: TextContext = emptyContext(),
+): { byAbility: Partial<Record<string, string[]>>; general: string[] } {
+  const byAbility: Partial<Record<string, string[]>> = {};
+  const general: string[] = [];
+  for (const rejection of oneReasonPerAbility(problem.rejections ?? [])) {
+    const [sentence] = describeRejections(
+      [{ code: rejection.code, params: toParamMap(rejection.params) }],
+      ctx,
+    );
+    if (!sentence) continue;
+    const ability = rejection.params.ability;
+    if (typeof ability === 'string') (byAbility[ability] ??= []).push(sentence);
+    else general.push(sentence);
+  }
+  return { byAbility, general };
+}
