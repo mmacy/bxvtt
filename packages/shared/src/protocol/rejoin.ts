@@ -14,10 +14,14 @@ import { User } from './users';
  * 2. The visitor picks one and calls `POST /api/rejoin` ({@link CreateRejoinRequest}). The server makes a pending
  *    request that lasts a few minutes, and tells the table's referees with a `rejoin_requests` message. The
  *    visitor keeps the {@link RejoinTicket}, whose `secret` only it has.
- * 3. The visitor polls `POST /api/rejoin/{request_id}/status` with the secret ({@link RejoinStatus}).
+ * 3. The visitor polls `POST /api/rejoin/{request_id}/status` with the secret ({@link RejoinStatus}) every few
+ *    seconds. A request with no poll for 20 seconds is abandoned. `POST /api/rejoin/{request_id}/cancel` ends it at
+ *    once, also from `navigator.sendBeacon` on a closing page.
  * 4. A referee approves with `POST /api/tables/{table_id}/rejoin-requests/{request_id}/approve`, or declines.
- *    On approval the server gives the existing user a new token, which the next poll returns once, and the old
- *    token stops working everywhere. The member's seats, characters, and roles stay theirs.
+ * 5. The visitor's next poll claims the approval: only then does the server give the existing user a new token,
+ *    which that answer carries once, and retire the old token everywhere. An approval nobody claims soon lapses,
+ *    and the old token keeps working. The member's seats, characters, and roles stay theirs. A browser that still
+ *    presents the retired token gets 401 `token_retired`.
  *
  * A referee can't approve a request for themselves, so reclaiming a referee needs another referee. A request ends
  * when it's declined, when it expires, or when the member comes online. The host of a table keeps their own
@@ -88,8 +92,8 @@ export type RejoinStatusRequest = z.infer<typeof RejoinStatusRequest>;
  * - `approved`: a referee approved. This answer carries the new `token` and the `user`, once.
  * - `claimed`: approved, and the token was already handed out. A request is used once.
  * - `declined`: a referee declined.
- * - `expired`: nobody decided in time.
- * - `cancelled`: the member came online, or left the table, before a referee decided.
+ * - `expired`: nobody decided in time, or nobody claimed an approval in time.
+ * - `cancelled`: the visitor cancelled or stopped polling, or the member came online or left the table first.
  */
 export const RejoinState = z.enum(['pending', 'approved', 'claimed', 'declined', 'expired', 'cancelled']);
 /** Where a rejoin request stands. */

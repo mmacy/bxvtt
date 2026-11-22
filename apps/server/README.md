@@ -232,7 +232,7 @@ A message is at most 2,000 characters. `getFeed(tableId, { limit })` returns the
 
 ## Routes
 
-Every route under `/api` needs `Authorization: Bearer <token>`, except `GET /api/health`, `POST /api/users`, and a visitor's rejoin routes (`POST /api/rejoin/lookup`, `POST /api/rejoin`, and `POST /api/rejoin/{request_id}/status`). Paths below omit the `/api` prefix, and `{t}` stands for a table ID.
+Every route under `/api` needs `Authorization: Bearer <token>`, except `GET /api/health`, `POST /api/users`, and a visitor's rejoin routes (`POST /api/rejoin/lookup`, `POST /api/rejoin`, `POST /api/rejoin/{request_id}/status`, and `POST /api/rejoin/{request_id}/cancel`). Paths below omit the `/api` prefix, and `{t}` stands for a table ID.
 
 | Method and path | SDK method | Who | Returns |
 | --- | --- | --- | --- |
@@ -240,6 +240,7 @@ Every route under `/api` needs `Authorization: Bearer <token>`, except `GET /api
 | `POST /rejoin/lookup` | `lookupRejoin` | anyone with the invite code (rate limited) | `RejoinLookup` |
 | `POST /rejoin` | `requestRejoin` | anyone with the invite code (rate limited) | `RejoinTicket` |
 | `POST /rejoin/{request_id}/status` | `rejoinStatus` | the holder of the ticket's secret | `RejoinStatus` |
+| `POST /rejoin/{request_id}/cancel` | `cancelRejoin` | the holder of the ticket's secret | 204 |
 | `GET /tables/{t}/rejoin-requests` | `listRejoinRequests` | referee | `RejoinRequestList` |
 | `POST /tables/{t}/rejoin-requests/{id}/approve` | `approveRejoin` | referee, not the member asked for | `RejoinRequestList` |
 | `POST /tables/{t}/rejoin-requests/{id}/decline` | `declineRejoin` | referee, not the member asked for | `RejoinRequestList` |
@@ -351,13 +352,15 @@ A browser keeps a user's token for one address. A quick tunnel gets a new addres
 
 1. With the invite code and no token, the player's browser calls `lookupRejoin(inviteCode)`. It gets the table's name and the members who are offline now (`user_id`, `name`, `color`), and nothing else. The call counts as an invite code attempt.
 2. The player picks their name, and the browser calls `requestRejoin(inviteCode, userId)`. The server keeps a pending request for five minutes, and sends the table's referees a `rejoin_requests` message. A referee's snapshot has `rejoin_requests` too. The browser keeps the ticket's `request_id` and `secret`.
-3. The browser polls `rejoinStatus(requestId, secret)` every few seconds while the status is `pending`.
-4. A referee calls `approveRejoin(tableId, requestId)` or `declineRejoin(tableId, requestId)`. On approval, the server gives the existing user a new token and retires the old one, closes the user's other connections with `auth_failed`, and posts a `member_rejoined` notice. The next poll returns `approved` with the token and the user, once, and the SDK stores the token. Later polls read `claimed`.
+3. The browser polls `rejoinStatus(requestId, secret)` every few seconds while the status is `pending`. A request that goes 20 seconds without a poll counts as abandoned: the server ends it as `cancelled` and drops it from the referees' list. When the visitor presses "Stop waiting", the browser calls `cancelRejoin(requestId, secret)`, which ends the request at once. A closing page sends the same body with `navigator.sendBeacon`, which the cancel route accepts as `text/plain`.
+4. A referee calls `approveRejoin(tableId, requestId)` or `declineRejoin(tableId, requestId)`. Approval changes nothing yet: the member's old token keeps working.
+5. The browser's next poll claims the approval. Only then does the server give the existing user a new token and retire the old one, close the user's other connections with `auth_failed`, and post a `member_rejoined` notice. That answer is `approved`, with the token and the user, once, and the SDK stores the token. Later polls read `claimed`. An approval that nobody claims within 30 seconds lapses as `expired`, and the old token keeps working.
 
-A request ends as `declined`, `expired`, or `cancelled`, the last when the member comes online or leaves the table first. The rules:
+A request ends as `declined`, `expired`, or `cancelled`, the last when the visitor cancels or stops polling, or when the member comes online or leaves the table first. The rules:
 
 - A member who is online can't be asked for (409 `rejoin_member_online`).
-- One request at a time per address and per member (409 `rejoin_pending`). Each address may make 5 requests every 10 minutes and poll 120 times a minute.
+- One request at a time per member (409 `rejoin_pending`). Asking again from the same address replaces that address's earlier request for the member, so a reload can ask again. One address may have 3 requests waiting at once, so a household can ask for several members. Each address may make 5 requests every 10 minutes and poll or cancel 120 times a minute.
+- The server remembers a retired token for 90 days, and answers a request or a WebSocket `auth` that presents one with 401 `token_retired` (an `error` message with that code on the WebSocket), so the browser can explain that the member signed in elsewhere. A retired token never authenticates.
 - A referee never approves or declines a request to rejoin as themselves (403 `forbidden`), so reclaiming a referee needs another referee. A table whose only referee is asked for refuses the request (409 `rejoin_no_approver`).
 - A decided or ended request can't be decided again (409 `rejoin_not_pending`). A wrong secret or an unknown request gets 404 `not_found`.
 

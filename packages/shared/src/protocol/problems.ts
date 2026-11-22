@@ -9,6 +9,11 @@ export const PROBLEM_CODES = {
   bad_request: 400,
   /** 401: the request has no user token, or the token is unknown. */
   unauthorized: 401,
+  /**
+   * 401: the token was this member's, but a referee let the member back in from another browser, which got a new
+   * token. A retired token never works again. Tell the person they are signed in elsewhere now.
+   */
+  token_retired: 401,
   /** 403: the user isn't allowed to do this, for example a player sending another member's command. `detail` says why. */
   forbidden: 403,
   /** 403: only a referee of this table may do this. */
@@ -55,7 +60,10 @@ export const PROBLEM_CODES = {
   adventure_read_only: 403,
   /** 409: the member is online now, so nobody needs to rejoin as them. The request, if any, has ended. */
   rejoin_member_online: 409,
-  /** 409: a rejoin request from this address, or for this member, is already pending. Wait for it to end. */
+  /**
+   * 409: someone else's rejoin request for this member is already waiting, or this address has 3 requests
+   * waiting. Wait for one to end. Asking again from the same address for the same member replaces its request.
+   */
   rejoin_pending: 409,
   /** 409: the rejoin request isn't pending anymore: it was decided, it expired, or it was cancelled. */
   rejoin_not_pending: 409,

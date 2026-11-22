@@ -167,6 +167,11 @@ export function registerWebSocket(app: FastifyInstance, ctx: Context): void {
       try {
         found = ctx.auth.authenticate(token, request.clientIp);
       } catch (error) {
+        if (error instanceof ApiError && error.code === 'token_retired') {
+          fail('token_retired', error.message);
+          socket.close(WS_CLOSE_CODES.auth_failed, 'token retired');
+          return;
+        }
         fail('rate_limited', error instanceof Error ? error.message : 'Too many attempts.');
         socket.close(WS_CLOSE_CODES.rate_limited, 'rate limited');
         return;

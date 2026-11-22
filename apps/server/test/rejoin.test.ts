@@ -5,9 +5,18 @@ import type { RejoinTicket, TableDetail } from '@bxvtt/shared/protocol';
 import type { TestConnection, TestServer, TestUser } from './helpers';
 import { connect, createCharacter, createTable, createUser, received, startServer, waitFor } from './helpers';
 
-/** A browser at a new address: no token yet. */
-function visitor(server: TestServer): BxvttClient {
-  return new BxvttClient({ baseUrl: server.url });
+/**
+ * A browser with no token yet. Pass `ip` for a browser at another address: the server trusts `CF-Connecting-IP`
+ * from a peer on its own machine, as it does from `cloudflared`.
+ */
+function visitor(server: TestServer, ip?: string): BxvttClient {
+  if (ip === undefined) return new BxvttClient({ baseUrl: server.url });
+  const fetchFrom: typeof fetch = (input, init) =>
+    fetch(input, {
+      ...init,
+      headers: { ...(init?.headers as Record<string, string>), 'CF-Connecting-IP': ip },
+    });
+  return new BxvttClient({ baseUrl: server.url, fetch: fetchFrom });
 }
 
 /** The problem code an SDK call failed with. */
@@ -75,8 +84,8 @@ describe('rejoining a table as an existing member', () => {
     expect((await browser.me()).id).toBe(alice.id);
     expect((await browser.listCharacters()).items.map((item) => item.name)).toEqual(['Brenna']);
     expect((await browser.getTable(table.id)).members.filter((m) => m.name === 'Alice')).toHaveLength(1);
-    // The old token no longer works, and replaying the approval hands out nothing.
-    expect(await failure(alice.client.me())).toBe('unauthorized');
+    // The old token no longer works and says why, and replaying the approval hands out nothing.
+    expect(await failure(alice.client.me())).toBe('token_retired');
     const replay = await browser.rejoinStatus(ticket.request_id, ticket.secret);
     expect(replay).toMatchObject({ status: 'claimed', token: null, user: null });
     expect(await failure(host.client.approveRejoin(table.id, ticket.request_id))).toBe('rejoin_not_pending');
@@ -111,11 +120,101 @@ describe('rejoining a table as an existing member', () => {
     await waitFor(() => !server.server.ctx.hub.presence(table.id).online.includes(bob.id));
   });
 
-  it('keeps one request at a time per address and per member', async () => {
+  it('keeps one request per member, and lets the same address ask again', async () => {
+    const browser = visitor(server);
+    const first = await browser.requestRejoin(table.invite_code, bob.id);
+    // Another visitor, at another address, waits for the first request to end.
+    expect(await failure(visitor(server, '198.51.100.7').requestRejoin(table.invite_code, bob.id))).toBe(
+      'rejoin_pending',
+    );
+    // Asking again from the same address, as after a reload, replaces the earlier request.
+    const again = await visitor(server).requestRejoin(table.invite_code, bob.id);
+    expect((await browser.rejoinStatus(first.request_id, first.secret)).status).toBe('cancelled');
+    expect((await host.client.listRejoinRequests(table.id)).items.map((item) => item.id)).toEqual([
+      again.request_id,
+    ]);
+    await host.client.declineRejoin(table.id, again.request_id);
+  });
+
+  it('ends a request the visitor stops waiting for, at once for the referee too (R-401)', async () => {
     const browser = visitor(server);
     const ticket = await browser.requestRejoin(table.invite_code, bob.id);
-    expect(await failure(visitor(server).requestRejoin(table.invite_code, bob.id))).toBe('rejoin_pending');
-    await host.client.declineRejoin(table.id, ticket.request_id);
+    await received(hostWs, 'rejoin_requests', (m) => m.requests.some((r) => r.id === ticket.request_id));
+    const before = hostWs.messages.length;
+    await browser.cancelRejoin(ticket.request_id, ticket.secret);
+    await waitFor(() =>
+      hostWs.messages
+        .slice(before)
+        .some((m) => m.type === 'rejoin_requests' && !m.requests.some((r) => r.id === ticket.request_id)),
+    );
+    expect((await browser.rejoinStatus(ticket.request_id, ticket.secret)).status).toBe('cancelled');
+    expect(await failure(host.client.approveRejoin(table.id, ticket.request_id))).toBe('rejoin_not_pending');
+    expect((await bob.client.me()).id).toBe(bob.id);
+    // A closing page cancels with navigator.sendBeacon, which sends the JSON as text/plain.
+    const next = await visitor(server).requestRejoin(table.invite_code, bob.id);
+    const beacon = await fetch(`${server.url}/api/rejoin/${next.request_id}/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+      body: JSON.stringify({ secret: next.secret }),
+    });
+    expect(beacon.status).toBe(204);
+    expect((await host.client.listRejoinRequests(table.id)).items).toEqual([]);
+    // Only the cancel route reads text/plain, and only as a JSON object.
+    const elsewhere = await fetch(`${server.url}/api/rejoin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: '{}',
+    });
+    expect(elsewhere.status).toBe(415);
+    const junk = await fetch(`${server.url}/api/rejoin/${next.request_id}/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: 'not json',
+    });
+    expect(junk.status).toBe(400);
+    expect(await failure(visitor(server).cancelRejoin(next.request_id, 'rjs_wrong'))).toBe('not_found');
+  });
+
+  it('caps the requests one address has waiting, so a household can ask for a few members (R-402)', async () => {
+    const extra: TestUser[] = [];
+    for (const name of ['Cara', 'Dov', 'Eli']) {
+      const user = await createUser(server, name);
+      await user.client.joinTable(table.invite_code);
+      extra.push(user);
+    }
+    const house = '203.0.113.9';
+    const tickets: RejoinTicket[] = [];
+    for (const member of [bob, ...extra.slice(0, 2)]) {
+      tickets.push(await visitor(server, house).requestRejoin(table.invite_code, member.id));
+    }
+    const fourth = extra[2];
+    if (fourth === undefined) throw new Error('missing member');
+    expect(await failure(visitor(server, house).requestRejoin(table.invite_code, fourth.id))).toBe(
+      'rejoin_pending',
+    );
+    for (const ticket of tickets) await visitor(server, house).cancelRejoin(ticket.request_id, ticket.secret);
+  });
+
+  it('refuses a retired token on a WebSocket with token_retired (R-403)', async () => {
+    const browser = visitor(server);
+    const ticket = await browser.requestRejoin(table.invite_code, bob.id);
+    await host.client.approveRejoin(table.id, ticket.request_id);
+    const oldToken = bob.token;
+    const approved = await browser.rejoinStatus(ticket.request_id, ticket.secret);
+    expect(approved.status).toBe('approved');
+    expect(await failure(bob.client.me())).toBe('token_retired');
+    const { TableConnection } = await import('@bxvtt/shared/client');
+    const stale = new TableConnection({ url: server.wsUrl, token: oldToken, tableId: table.id });
+    const errors: string[] = [];
+    stale.onAny((message) => {
+      if (message.type === 'error') errors.push(message.code);
+    });
+    stale.connect();
+    await waitFor(() => errors.length > 0);
+    stale.close();
+    expect(errors).toEqual(['token_retired']);
+    bob.client.setToken(approved.token);
+    bob.token = approved.token ?? '';
   });
 
   it('never lets a referee be reclaimed without another referee to approve', async () => {
@@ -160,6 +259,48 @@ describe('a rejoin request that nobody decides', () => {
     expect((await browser.rejoinStatus(ticket.request_id, ticket.secret)).status).toBe('expired');
     expect(await failure(host.client.approveRejoin(table.id, ticket.request_id))).toBe('rejoin_not_pending');
     expect((await host.client.listRejoinRequests(table.id)).items).toEqual([]);
+  });
+});
+
+describe('a rejoin request whose visitor goes away', () => {
+  let server: TestServer;
+
+  beforeAll(async () => {
+    server = await startServer({ rejoinAbandonMs: 300, rejoinClaimMs: 300 });
+  });
+
+  afterAll(async () => {
+    await server.close();
+  });
+
+  it('is abandoned when nobody polls it, and never retires the old token for nobody (R-401)', async () => {
+    const host = await createUser(server, 'Rhea');
+    const alice = await createUser(server, 'Alice');
+    const table = await createTable(host, [alice]);
+    const ticket = await visitor(server).requestRejoin(table.invite_code, alice.id);
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect((await host.client.listRejoinRequests(table.id)).items).toEqual([]);
+    expect(await failure(host.client.approveRejoin(table.id, ticket.request_id))).toBe('rejoin_not_pending');
+    expect((await alice.client.me()).id).toBe(alice.id);
+  });
+
+  it('lets an approval lapse when the visitor never claims it, with no notice in the feed', async () => {
+    const host = await createUser(server, 'Rhea');
+    const alice = await createUser(server, 'Alice');
+    const table = await createTable(host, [alice]);
+    const browser = visitor(server);
+    const ticket = await browser.requestRejoin(table.invite_code, alice.id);
+    await host.client.approveRejoin(table.id, ticket.request_id);
+    // The approval alone changes nothing: the member's token still works.
+    expect((await alice.client.me()).id).toBe(alice.id);
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    const late = await browser.rejoinStatus(ticket.request_id, ticket.secret).catch(() => null);
+    expect(late?.token ?? null).toBeNull();
+    expect((await alice.client.me()).id).toBe(alice.id);
+    const feed = await host.client.getFeed(table.id, { limit: 50 });
+    expect(feed.entries.some((entry) => entry.kind === 'system' && entry.code === 'member_rejoined')).toBe(
+      false,
+    );
   });
 });
 

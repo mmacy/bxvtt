@@ -71,8 +71,33 @@ export class UserStore {
    */
   rotateToken(id: string): string {
     const token = newToken();
-    this.db.run('UPDATE users SET token_hash = ? WHERE id = ?', hashToken(token), id);
+    const row = this.db.get('SELECT token_hash FROM users WHERE id = ?', id);
+    this.db.transaction(() => {
+      // Remember the old token for a while, so a browser that still holds it hears why it stopped working.
+      this.db.run(
+        "DELETE FROM retired_tokens WHERE retired_at < strftime('%Y-%m-%dT%H:%M:%SZ', 'now', ?)",
+        `-${RETIRED_TOKEN_DAYS} days`,
+      );
+      if (row !== undefined) {
+        this.db.run(
+          'INSERT OR REPLACE INTO retired_tokens (token_hash, user_id, retired_at) VALUES (?, ?, ?)',
+          str(row, 'token_hash'),
+          id,
+          now(),
+        );
+      }
+      this.db.run('UPDATE users SET token_hash = ? WHERE id = ?', hashToken(token), id);
+    });
     return token;
+  }
+
+  /**
+   * Whether a token is one a rejoin retired. A retired token never authenticates.
+   *
+   * @param token - The token.
+   */
+  isRetired(token: string): boolean {
+    return this.db.get('SELECT 1 FROM retired_tokens WHERE token_hash = ?', hashToken(token)) !== undefined;
   }
 
   /**
@@ -91,6 +116,9 @@ export class UserStore {
     return user;
   }
 }
+
+/** How long the server remembers a retired token, in days. */
+const RETIRED_TOKEN_DAYS = 90;
 
 /** Converts a `users` row. */
 function toUser(row: Row): User {

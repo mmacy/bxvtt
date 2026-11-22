@@ -341,9 +341,10 @@ export class BxvttClient {
   }
 
   /**
-   * Reads where a rejoin request stands. Needs no token. Call it every few seconds while the status is
-   * `pending`. On `approved`, the answer carries the member's new token once, and this client stores it, so its
-   * next requests act as that member.
+   * Reads where a rejoin request stands. Needs no token. Call it every few seconds while the status is `pending`
+   * or `approved`: a request that goes 20 seconds without a poll counts as abandoned and ends as `cancelled`. The
+   * `approved` answer is the claim: it carries the member's new token once, and only then does the member's old
+   * token stop working. This client stores the new token, so its next requests act as that member.
    *
    * ```ts
    * const status = await client.rejoinStatus(ticket.request_id, ticket.secret);
@@ -360,6 +361,27 @@ export class BxvttClient {
     });
     if (status.token !== null) this.token = status.token;
     return status;
+  }
+
+  /**
+   * Ends a rejoin request: the visitor stopped waiting. The referees' list drops it at once. Needs no token, and
+   * ending a request that already ended does nothing. When the page is closing, send the same body with
+   * `navigator.sendBeacon(url, JSON.stringify({ secret }))`, which the server accepts as `text/plain` on this
+   * route alone.
+   *
+   * ```ts
+   * await client.cancelRejoin(ticket.request_id, ticket.secret);
+   * addEventListener('pagehide', () =>
+   *   navigator.sendBeacon(`/api/rejoin/${ticket.request_id}/cancel`, JSON.stringify({ secret: ticket.secret })),
+   * );
+   * ```
+   *
+   * @param requestId - The ticket's `request_id`.
+   * @param secret - The ticket's `secret`.
+   * @throws BxvttProblemError `not_found` for an unknown request or a wrong secret.
+   */
+  async cancelRejoin(requestId: string, secret: string): Promise<void> {
+    await this.request('POST', `/api/rejoin/${enc(requestId)}/cancel`, { body: { secret } });
   }
 
   /**

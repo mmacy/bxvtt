@@ -50,6 +50,10 @@ export interface Config {
   };
   /** How long a rejoin request waits for a referee, in milliseconds. */
   rejoinTtlMs: number;
+  /** How long a rejoin request lasts without a poll from the visitor before it counts as abandoned. */
+  rejoinAbandonMs: number;
+  /** How long an approved rejoin request waits for the visitor to claim it before the approval lapses. */
+  rejoinClaimMs: number;
   /** Caps on what one user or table can store, so nobody can fill the disk of bxvtt or bxapi. */
   quotas: Quotas;
   /** How long a bxapi request may take before the server gives up, in milliseconds. */
@@ -176,6 +180,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       rejoinPolls: { capacity: 120 * relax, windowMs: 60_000 },
     },
     rejoinTtlMs: 5 * 60_000,
+    rejoinAbandonMs: 20_000,
+    rejoinClaimMs: 30_000,
     quotas: { ...DEFAULT_QUOTAS },
     bxapiTimeoutMs: 15_000,
   };

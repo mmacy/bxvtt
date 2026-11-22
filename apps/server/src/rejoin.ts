@@ -28,9 +28,15 @@ interface PendingRejoin {
   createdAt: number;
   expiresAt: number;
   state: RejoinState;
-  /** The new token, from approval until the visitor reads it. */
-  token: string | null;
+  /** When the visitor's browser last asked about the request. A request nobody asks about is abandoned. */
+  polledAt: number;
+  /** When a referee approved it, and who. The visitor must claim the approval soon after. */
+  approvedAt: number | null;
+  approvedBy: string | null;
 }
+
+/** The most requests one address may have waiting at once, so a household can ask for several members. */
+const MAX_PENDING_PER_ADDRESS = 3;
 
 /** How long the server keeps an ended request, so the visitor's next poll can learn how it ended. */
 const ENDED_KEEP_MS = 10 * 60_000;
@@ -79,11 +85,30 @@ export class RejoinService {
   }
 
   /** Ends the requests whose time ran out, and forgets the ones that ended long ago. */
-  private sweep(): void {
+  /**
+   * Ends what time has ended: expired and abandoned requests, and approvals nobody claimed. The server calls it
+   * every few seconds, so the referees' list drops a closed tab soon after the tab stops asking.
+   */
+  sweep(): void {
     const nowMs = Date.now();
     const changed = new Set<string>();
     for (const [id, pending] of this.requests) {
       if (pending.state === 'pending' && nowMs >= pending.expiresAt) {
+        pending.state = 'expired';
+        changed.add(pending.tableId);
+      } else if (
+        (pending.state === 'pending' || pending.state === 'approved') &&
+        nowMs - pending.polledAt > this.ctx.config.rejoinAbandonMs
+      ) {
+        // The visitor stopped asking: the page closed or reloaded without cancelling.
+        pending.state = 'cancelled';
+        changed.add(pending.tableId);
+      } else if (
+        pending.state === 'approved' &&
+        pending.approvedAt !== null &&
+        nowMs - pending.approvedAt > this.ctx.config.rejoinClaimMs
+      ) {
+        // Nobody claimed the approval in time, so it lapses and the member's token keeps working.
         pending.state = 'expired';
         changed.add(pending.tableId);
       }
@@ -154,11 +179,26 @@ export class RejoinService {
       );
     }
     this.sweep();
+    const waiting = (pending: PendingRejoin) => pending.state === 'pending' || pending.state === 'approved';
     for (const pending of this.requests.values()) {
-      if (pending.state !== 'pending') continue;
-      if (pending.address === address || (pending.tableId === table.id && pending.userId === body.user_id)) {
-        throw new ApiError('rejoin_pending', 'A request to rejoin is already waiting. Wait until it ends.');
+      if (!waiting(pending) || pending.tableId !== table.id || pending.userId !== body.user_id) continue;
+      // Asking again from the same address replaces the earlier request. Anyone else waits for it to end.
+      if (pending.address !== address) {
+        throw new ApiError(
+          'rejoin_pending',
+          'Someone is already asking to rejoin as that member. Wait until it ends.',
+        );
       }
+      pending.state = 'cancelled';
+    }
+    const fromAddress = [...this.requests.values()].filter(
+      (pending) => waiting(pending) && pending.address === address,
+    );
+    if (fromAddress.length >= MAX_PENDING_PER_ADDRESS) {
+      throw new ApiError(
+        'rejoin_pending',
+        'This address has too many requests to rejoin waiting. Wait until one ends.',
+      );
     }
     const secret = `rjs_${randomBytes(32).toString('base64url')}`;
     const nowMs = Date.now();
@@ -171,7 +211,9 @@ export class RejoinService {
       createdAt: nowMs,
       expiresAt: nowMs + this.ctx.config.rejoinTtlMs,
       state: 'pending',
-      token: null,
+      polledAt: nowMs,
+      approvedAt: null,
+      approvedBy: null,
     };
     this.requests.set(pending.id, pending);
     request.log.info({ table: table.id, member: body.user_id, rejoin: pending.id }, 'rejoin requested');
@@ -196,10 +238,9 @@ export class RejoinService {
     const { requestId } = RequestParams.parse(request.params);
     const body = parseBody(RejoinStatusRequest, request);
     this.sweep();
-    const pending = this.requests.get(requestId);
-    if (pending === undefined || pending.secretHash !== hashToken(body.secret))
-      notFound('rejoin request', requestId);
-    if (pending.state === 'pending') this.cancelIfOnline(pending);
+    const pending = this.owned(requestId, body.secret);
+    pending.polledAt = Date.now();
+    if (pending.state === 'pending' || pending.state === 'approved') this.cancelIfOnline(pending);
     const answer: RejoinStatus = {
       status: pending.state,
       expires_at: stamp(pending.expiresAt),
@@ -207,13 +248,46 @@ export class RejoinService {
       token: null,
       user: null,
     };
-    if (pending.state === 'approved' && pending.token !== null) {
-      answer.token = pending.token;
+    if (pending.state === 'approved') {
+      // The claim: only now does the member get a new token and lose the old one, because only now is a browser
+      // there to take it.
+      answer.token = this.ctx.users.rotateToken(pending.userId);
       answer.user = this.ctx.users.get(pending.userId);
-      pending.token = null;
       pending.state = 'claimed';
+      this.ctx.hub.closeUserEverywhere(pending.userId);
+      this.ctx.feed.system(pending.tableId, pending.approvedBy, 'member_rejoined', {
+        user_id: pending.userId,
+        approved_by: pending.approvedBy,
+      });
+      this.ctx.log.info({ table: pending.tableId, member: pending.userId }, 'rejoin claimed');
     }
     return answer;
+  }
+
+  /**
+   * Ends a request at the visitor's word: it pressed "Stop waiting" or left the page. An ended request stays
+   * ended, so a repeat is harmless.
+   *
+   * @param request - The request, for its path, body, and address.
+   * @throws ApiError `not_found` for an unknown request or a wrong secret.
+   */
+  cancel(request: FastifyRequest): void {
+    const retry = this.ctx.limits.rejoinPolls.take(addressKey(request.clientIp));
+    if (retry > 0) throw rateLimited('Ask about the request less often.', retry);
+    const { requestId } = RequestParams.parse(request.params);
+    const body = parseBody(RejoinStatusRequest, request);
+    const pending = this.owned(requestId, body.secret);
+    if (pending.state !== 'pending' && pending.state !== 'approved') return;
+    pending.state = 'cancelled';
+    this.broadcast(pending.tableId);
+  }
+
+  /** Finds a request by its ID and the visitor's secret. A wrong secret reads as an unknown request. */
+  private owned(requestId: string, secret: string): PendingRejoin {
+    const pending = this.requests.get(requestId);
+    if (pending === undefined || pending.secretHash !== hashToken(secret))
+      notFound('rejoin request', requestId);
+    return pending;
   }
 
   /** Cancels a pending request when its member is online or no longer a member. */
@@ -236,7 +310,8 @@ export class RejoinService {
   memberOnline(tableId: string, userId: string): void {
     let changed = false;
     for (const pending of this.requests.values()) {
-      if (pending.state === 'pending' && pending.tableId === tableId && pending.userId === userId) {
+      const waiting = pending.state === 'pending' || pending.state === 'approved';
+      if (waiting && pending.tableId === tableId && pending.userId === userId) {
         pending.state = 'cancelled';
         changed = true;
       }
@@ -309,13 +384,10 @@ export class RejoinService {
     if (this.cancelIfOnline(pending)) {
       throw new ApiError('rejoin_member_online', 'The member came back online, so the request has ended.');
     }
-    pending.token = this.ctx.users.rotateToken(pending.userId);
+    // The member keeps their token until the visitor's browser claims the approval with its next poll.
     pending.state = 'approved';
-    this.ctx.hub.closeUserEverywhere(pending.userId);
-    this.ctx.feed.system(tableId, refereeId, 'member_rejoined', {
-      user_id: pending.userId,
-      approved_by: refereeId,
-    });
+    pending.approvedAt = Date.now();
+    pending.approvedBy = refereeId;
     this.ctx.log.info({ table: tableId, member: pending.userId, referee: refereeId }, 'rejoin approved');
     this.broadcast(tableId);
     return { items: this.pending(tableId) };
@@ -350,9 +422,37 @@ export function registerRejoinRoutes(app: FastifyInstance, ctx: Context): void {
   app.post('/api/rejoin', async (request, reply) => reply.status(201).send(rejoin.create(request)));
   app.post('/api/rejoin/:requestId/status', async (request) => rejoin.status(request));
 
+  // A page that is closing cancels with `navigator.sendBeacon`, which sends a string body as `text/plain`. Only
+  // this route reads that type, as the same small JSON object the JSON parser would accept.
+  void app.register(async (scope) => {
+    scope.addContentTypeParser(
+      'text/plain',
+      { parseAs: 'string', bodyLimit: 1024 },
+      (_request, body, done) => {
+        try {
+          const parsed: unknown = JSON.parse(typeof body === 'string' ? body : body.toString('utf8'));
+          if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed))
+            throw new Error('not an object');
+          done(null, parsed);
+        } catch {
+          done(new ApiError('bad_request', "The request body isn't a JSON object."), undefined);
+        }
+      },
+    );
+    scope.post('/api/rejoin/:requestId/cancel', { bodyLimit: 1024 }, async (request, reply) => {
+      rejoin.cancel(request);
+      return reply.status(204).send();
+    });
+  });
+
+  const sweeper = setInterval(() => rejoin.sweep(), 5000);
+  sweeper.unref();
+  app.addHook('onClose', async () => clearInterval(sweeper));
+
   app.get('/api/tables/:tableId/rejoin-requests', async (request) => {
     const { tableId } = TableParams.parse(request.params);
     ctx.tables.requireReferee(tableId, ctx.auth.user(request));
+    rejoin.sweep();
     return { items: rejoin.pending(tableId) } satisfies RejoinRequestList;
   });
   app.post('/api/tables/:tableId/rejoin-requests/:requestId/approve', async (request) => {
