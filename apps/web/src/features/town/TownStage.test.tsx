@@ -308,7 +308,7 @@ describe('the temple', () => {
       within(group)
         .getAllByRole('button')
         .map((button) => button.textContent?.slice(0, 5)),
-    ).toEqual(['Osric', 'Wren1', 'Brenn', 'Tamsi']);
+    ).toEqual(['Osric', 'Wren ', 'Brenn', 'Tamsi']);
     expect(screen.getByText('20 gp')).toBeInTheDocument();
     expect(screen.getByText('1,000 gp')).toBeInTheDocument();
   });
@@ -682,5 +682,72 @@ describe('recently in town', () => {
     setup(snapshot);
     await screen.findByText("Spells aren't prepared");
     expect(screen.getByText(': Tamsin has none memorized')).toBeInTheDocument();
+  });
+});
+
+/** Lower case, with every run of punctuation and spaces as one space, as axe compares a name with its text. */
+function words(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+describe('member choosers name what they show', () => {
+  function chooserButtons(group: HTMLElement) {
+    return within(group).getAllByRole('button');
+  }
+
+  it('keeps every visible word, in order, in the accessible name of every state', async () => {
+    const snapshot = fixtureSnapshot('town', 'referee');
+    const party = snapshot.game?.view.party ?? [];
+    const [brenna, wren, osric, tamsin] = party;
+    if (!brenna || !wren || !osric || !tamsin) throw new Error('The fixture party changed.');
+    wren.current_hp = 1;
+    osric.conditions = ['dead'];
+    osric.current_hp = 0;
+    tamsin.conditions = ['poisoned'];
+    tamsin.current_hp = 2;
+    const { user } = setup(snapshot);
+    await user.click(screen.getByRole('tab', { name: 'Temple' }));
+    const temple = await screen.findByRole('group', { name: 'Who is treated' });
+    for (const button of chooserButtons(temple)) {
+      expect(words(button.getAttribute('aria-label') ?? '')).toContain(words(button.textContent ?? ''));
+    }
+    expect(chooserButtons(temple).map((button) => button.getAttribute('aria-label'))).toContain(
+      'Osric, dead',
+    );
+    await user.click(screen.getByRole('tab', { name: 'Outfitter' }));
+    const shopping = await screen.findByRole('group', { name: 'Shopping for' });
+    await user.click(await screen.findByRole('button', { name: 'Add Rope (50’) to the cart' }));
+    for (const button of chooserButtons(shopping)) {
+      expect(words(button.getAttribute('aria-label') ?? '')).toContain(words(button.textContent ?? ''));
+    }
+    expect(chooserButtons(shopping)[0]?.textContent).toContain('1 in cart');
+  });
+});
+
+describe('town tokens', () => {
+  it("wear the color of the player in the member's seat", async () => {
+    const snapshot = fixtureSnapshot('town', 'player');
+    const { container } = setup(snapshot);
+    await screen.findByRole('heading', { name: 'Purses and players' });
+    const sam = snapshot.table.members.find((member) => member.name === 'Sam');
+    const ruth = snapshot.table.members.find((member) => member.name === 'Ruth');
+    if (!sam || !ruth) throw new Error('The fixture table changed.');
+    const probe = document.createElement('div');
+    const colorOf = (hex: string) => {
+      probe.style.setProperty('--token-color', hex);
+      return probe.style.getPropertyValue('--token-color');
+    };
+    const rows = [...container.querySelectorAll('li')].filter((li) => li.querySelector('h3'));
+    const colorFor = (name: string) => {
+      const row = rows.find((li) => li.querySelector('h3')?.textContent === name);
+      return (row?.querySelector('[style*="--token-color"]') as HTMLElement | null)?.style.getPropertyValue(
+        '--token-color',
+      );
+    };
+    expect(colorFor('Brenna')).toBe(colorOf(sam.color));
+    expect(colorFor('Osric')).toBe(colorOf(ruth.color));
   });
 });
