@@ -200,6 +200,14 @@ A refused command isn't an error. The response has status 200, `accepted: false`
 3. When every declarer has declared and `auto_resolve` is on (the default), the server resolves the round. Otherwise the caller or a referee calls `resolveRound`.
 4. If bxapi refuses the round, the declarations stay, and `declarations.refusals` lists each rejection with the `member_id` it concerns. The player fixes that declaration, and the round resolves again.
 
+osrlib returns every rejection of a round without saying whose declaration each one is about, and some rejections, such as `combat.attack.out_of_reach` and `magic.cast.target_count`, name nobody. The server attributes each one in this order:
+
+1. A rejection whose params name a declarer, such as `character`, is that declarer's.
+2. A `hold` is refused only with a rejection that names its member, so when one declaration that isn't a `hold` remains, the rest are its.
+3. Otherwise the server sends bxapi the round again with one member's declaration swapped for a `hold` that sets `back_stab`, which osrlib always refuses first, with `battle.declaration.back_stab_not_attack`. The probe can't resolve the round, adds nothing to the revision or the feed, and uses a fresh `Idempotency-Key`. The rejections the probe lacks were that member's. When two members got the same rejection, the order of the declarations decides. The server never swaps out a declaration that moves its member, because the moves decide how the others are judged.
+
+A refusal the server still can't attribute has `member_id: null` and `candidates`, the members whose declarations could have caused it. That happens when the members in question all declared moves, such as two members who both close and attack.
+
 ### Saves and autosaves
 
 Restoring a save creates a new bxapi session, moves the table to it, keeps each seat with the same member ID, and sends everyone a `notice` with the code `game_restored`, a `table` message, and a `game` message. When the `autosave` setting is on (the default), the server saves after the party enters a dungeon, reaches another level, meets monsters while exploring, or returns to town. Autosave labels start with `Autosave:`, and the server keeps the newest 10.

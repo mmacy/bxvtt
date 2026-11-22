@@ -15,6 +15,7 @@ import { ApiError, parseBody } from '../errors';
 import { now } from '../ids';
 import { RESOLVE_ROUND } from './classify';
 import { readSeats } from './seats';
+import { attributeRefusals } from './refusals';
 import { resolveHandles, TARGET_FIELD_NAMES, toHandles, withoutMonsterIds } from './targets';
 import type { GameService, LiveGame } from './service';
 
@@ -290,6 +291,7 @@ export class BattleService {
     });
     const command = { command_type: RESOLVE_ROUND, declarations };
     const outcome = await this.game.executeLocked(live, command, requestId, userId);
+    const revision = live.revision;
     if (outcome.accepted) {
       await this.game.afterAcceptedLocked(live, outcome, {
         userId,
@@ -299,14 +301,24 @@ export class BattleService {
       return true;
     }
     if (outcome.view !== undefined) live.view = outcome.view;
-    const refusals: DeclarationRefusal[] = outcome.rejections.map((rejection) => {
-      const params = (rejection.params ?? {}) as Record<string, unknown>;
-      const memberId =
-        Object.values(params).find(
-          (value): value is string => typeof value === 'string' && state.declarers.includes(value),
-        ) ?? null;
-      return { member_id: memberId, code: rejection.code, params: toHandles(params, live.targets) };
-    });
+    const attributed = await attributeRefusals(
+      declarations as BattleDeclaration[],
+      outcome.rejections,
+      async (probe) => {
+        const result = await this.game.probeLocked(live, {
+          command_type: RESOLVE_ROUND,
+          declarations: probe,
+        });
+        return result === null ? null : result.rejections;
+      },
+    );
+    // osrlib refuses every probe, but if bxapi ever accepted one, the round has resolved and these refusals no
+    // longer apply.
+    if (live.revision !== revision) return true;
+    const refusals: DeclarationRefusal[] = attributed.map((refusal) => ({
+      ...refusal,
+      params: toHandles(refusal.params, live.targets),
+    }));
     this.ctx.db.run(
       'INSERT OR REPLACE INTO battle_refusals (table_id, session_id, revision, refusals_json) VALUES (?, ?, ?, ?)',
       live.tableId,

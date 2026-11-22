@@ -826,6 +826,46 @@ export class GameService {
   }
 
   /**
+   * Sends bxapi a command that osrlib is certain to refuse, to learn its rejections, such as a battle round with
+   * a declaration that can't stand. The caller holds the table's lock. A refused command changes nothing in the
+   * session, so the probe adds nothing to the revision, the feed, or the session's logs, and it has its own
+   * `Idempotency-Key`, which nothing sends again. The server makes one attempt and gives up on any failure.
+   *
+   * If bxapi ever accepted a probe, the server would treat it as the accepted command it was, so the table
+   * still matches the session.
+   *
+   * @param live - The game.
+   * @param command - The command.
+   * @returns bxapi's outcome of a refused probe, or `null` when it failed or was accepted.
+   */
+  async probeLocked(live: LiveGame, command: Command): Promise<CommandOutcome | null> {
+    let outcome: CommandOutcome;
+    try {
+      outcome = await this.ctx.bxapi.request<CommandOutcome>(
+        'POST',
+        `/v1/sessions/${encodeURIComponent(live.sessionId)}/commands`,
+        {
+          rawBody: JSON.stringify(command),
+          query: { include: 'view', visibility: 'referee', expected_revision: live.revision },
+          idempotencyKey: randomUUID(),
+          requestId: 'probe',
+        },
+      );
+    } catch (error) {
+      this.ctx.log.warn({ err: error, table: live.tableId }, 'a probe of a refused command failed');
+      return null;
+    }
+    if (!outcome.accepted) return outcome;
+    this.ctx.log.error({ table: live.tableId, command: command.command_type }, 'bxapi accepted a probe');
+    await this.afterAcceptedLocked(live, outcome, {
+      userId: null,
+      commandType: command.command_type,
+      class: 'battle',
+    });
+    return null;
+  }
+
+  /**
    * Reloads the game after it changed behind the server's back, and sends everyone the new state.
    *
    * @param live - The game, which this updates in place.

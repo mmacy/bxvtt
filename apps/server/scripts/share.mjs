@@ -11,7 +11,7 @@
 import { spawn, spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { delimiter, dirname, join, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
@@ -19,19 +19,40 @@ const serverBundle = join(root, 'apps', 'server', 'dist', 'main.js');
 const port = process.env.BXVTT_PORT ?? '8660';
 const bxapiUrl = process.env.BXAPI_URL ?? 'http://127.0.0.1:8640';
 
-/** Returns the command that runs cloudflared and a sentence that says where it came from, or exits. */
+/**
+ * Finds a program on the PATH, ignoring the `node_modules/.bin` folders that npm adds while it runs a script, so
+ * the `cloudflared` npm package never counts as one that you installed yourself.
+ */
+function findOnPath(name) {
+  const names = process.platform === 'win32' ? [`${name}.exe`, `${name}.cmd`] : [name];
+  const folders = (process.env.PATH ?? '')
+    .split(delimiter)
+    .filter(
+      (folder) => folder !== '' && !folder.split(sep).slice(-2).join('/').startsWith('node_modules/.bin'),
+    );
+  for (const folder of folders) {
+    for (const candidate of names) {
+      const path = join(folder, candidate);
+      if (existsSync(path)) return path;
+    }
+  }
+  return null;
+}
+
+/** Returns the command that runs cloudflared and a phrase that says where it came from, or exits. */
 async function findCloudflared() {
-  if (!spawnSync('cloudflared', ['--version'], { stdio: 'ignore' }).error) {
-    return { command: 'cloudflared', source: 'the cloudflared on your PATH' };
+  const system = findOnPath('cloudflared');
+  if (system !== null && !spawnSync(system, ['--version'], { stdio: 'ignore' }).error) {
+    return { command: system, source: `the cloudflared that you installed (${system})` };
   }
   try {
     const loaded = await import('cloudflared');
     const lib = loaded.default ?? loaded;
     if (!existsSync(lib.bin)) {
-      console.log('cloudflared is not on your PATH. Downloading it from Cloudflare (one time)...');
+      console.log('cloudflared is not installed. Downloading it from Cloudflare (one time)...');
       await lib.install(lib.bin);
     }
-    return { command: lib.bin, source: 'the cloudflared that npm installed' };
+    return { command: lib.bin, source: 'the cloudflared that npm installed with bxvtt' };
   } catch (error) {
     console.error('npm run share needs cloudflared, and the copy that npm installs is not available.');
     console.error(`Reason: ${error instanceof Error ? error.message : String(error)}`);

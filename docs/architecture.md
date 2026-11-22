@@ -68,7 +68,7 @@ bxapi resolves a battle round from one declaration for each member in `view.enco
 
 1. A player saves a declaration for one member. The server stores it and tells every member who has declared, without revealing a player's choice to anyone who shouldn't see it. Party members see each other's declarations, because the party plans together.
 2. When every declarer has a declaration and the table setting `auto_resolve` is on, the server sends `resolve_battle_round`. Otherwise the caller or a referee asks the server to resolve the round, or any member with a seat when `party_control` is `anyone`. A referee can resolve a round early, and the server then fills each missing declaration with `hold`.
-3. If bxapi refuses the round, the server keeps the declarations, tells the table which declaration bxapi refused and why, and the player fixes it.
+3. If bxapi refuses the round, the server keeps the declarations and tells the table which member's declaration bxapi refused and why, and the player fixes it. Some of bxapi's rejections don't name a member. For those, the server works out the member by sending the round again with one declaration replaced by a hold that bxapi always refuses, so the check can never resolve the round. When the server still can't tell, the refusal lists the members whose declarations could have caused it.
 4. If bxapi accepts the round, the server clears the declarations and broadcasts the result.
 
 ## What each role receives
