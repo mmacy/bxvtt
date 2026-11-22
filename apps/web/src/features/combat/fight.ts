@@ -13,6 +13,9 @@ import {
   joinList,
   memberName,
   pluralize,
+  countedLabel,
+  isProperLabel,
+  capitalizeFirst,
   prettifyId,
   type TextContext,
 } from '@bxvtt/shared/text';
@@ -96,7 +99,10 @@ export function summarizeFight(events: readonly AnyEvent[], ctx: TextContext): F
   const learned = extendContextWithEvents(ctx, events as never);
   let outcome: string | null = null;
   let rounds = 0;
-  const defeated = new Map<string, { label: string; verb: string; count: number; xp: number }>();
+  const defeated = new Map<
+    string,
+    { label: string; plural: string | undefined; verb: string; count: number; xp: number }
+  >();
   const awards: FightSummary['awards'] = [];
   const loot: string[] = [];
   const fallen: string[] = [];
@@ -126,9 +132,17 @@ export function summarizeFight(events: readonly AnyEvent[], ctx: TextContext): F
         const monsterId = str(event, 'monster_id') ?? '';
         const how = str(event, 'outcome') ?? 'slain';
         const template = str(event, 'template_id') ?? '';
-        const label = learned.monsters[monsterId]?.label ?? prettifyId(template).toLowerCase();
-        const key = `${template}:${how}`;
-        const entry = defeated.get(key) ?? { label, verb: DEFEAT_VERB[how] ?? how, count: 0, xp: 0 };
+        const known = learned.monsters[monsterId];
+        const label = known?.label ?? prettifyId(template).toLowerCase();
+        // By label, so a named individual such as Gashnak One-Ear stays apart from the goblins he leads.
+        const key = `${label}:${how}`;
+        const entry = defeated.get(key) ?? {
+          label,
+          plural: known?.labelPlural,
+          verb: DEFEAT_VERB[how] ?? how,
+          count: 0,
+          xp: 0,
+        };
         entry.count += 1;
         entry.xp += num(event, 'xp') ?? 0;
         defeated.set(key, entry);
@@ -175,7 +189,7 @@ export function summarizeFight(events: readonly AnyEvent[], ctx: TextContext): F
   loot.push(...itemList(lootItems, learned));
 
   const list = [...defeated.values()].map((d) => ({
-    text: `${d.count} ${d.count === 1 ? d.label : pluralize(d.label)} ${d.verb}`,
+    text: `${countedLabel(d.label, d.plural, d.count)} ${d.verb}`,
     xp: d.xp,
   }));
   const xpTotal = list.reduce((sum, d) => sum + d.xp, 0);
@@ -184,12 +198,21 @@ export function summarizeFight(events: readonly AnyEvent[], ctx: TextContext): F
   switch (outcome) {
     case 'victory': {
       // Titled for this fight, so it never reads like winning the adventure.
-      const kinds = new Map<string, number>();
-      for (const d of defeated.values()) kinds.set(d.label, (kinds.get(d.label) ?? 0) + d.count);
-      const names = [...kinds.entries()].map(([label, n]) => (n === 1 ? label : pluralize(label)));
-      const one = kinds.size === 1 && [...kinds.values()][0] === 1;
+      const kinds = new Map<string, { plural: string | undefined; count: number }>();
+      for (const d of defeated.values()) {
+        const kind = kinds.get(d.label) ?? { plural: d.plural, count: 0 };
+        kind.count += d.count;
+        kinds.set(d.label, kind);
+      }
+      const names = [...kinds.entries()].map(([label, k]) => {
+        if (isProperLabel(label) && k.count <= 1) return label;
+        return `the ${k.count === 1 ? label : (k.plural ?? pluralize(label))}`;
+      });
+      const one = kinds.size === 1 && [...kinds.values()][0]?.count === 1;
       title =
-        names.length > 0 ? `The ${joinList(names)} ${one ? 'is' : 'are'} beaten` : 'The monsters are beaten';
+        names.length > 0
+          ? `${capitalizeFirst(joinList(names))} ${one ? 'is' : 'are'} beaten`
+          : 'The monsters are beaten';
       sentence = 'The party won the fight.';
       break;
     }

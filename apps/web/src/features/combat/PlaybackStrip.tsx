@@ -1,4 +1,12 @@
-import { conditionLabel, joinList, memberName, type TextContext } from '@bxvtt/shared/text';
+import {
+  capitalizeFirst,
+  conditionLabel,
+  countedLabel,
+  groupName,
+  joinList,
+  memberName,
+  type TextContext,
+} from '@bxvtt/shared/text';
 import { useShortcut } from '@/app';
 import { Badge, Button, cx, Die, Icon, Kbd } from '@/ui';
 import { lineIcon, type RoundDigest } from './playback';
@@ -19,32 +27,32 @@ export function digestChips(
   if (digest.damageDealt > 0) chips.push({ text: `${digest.damageDealt} damage dealt`, tone: 'good' });
   if (digest.damageTaken > 0) chips.push({ text: `${digest.damageTaken} damage taken`, tone: 'bad' });
   if (digest.healed > 0) chips.push({ text: `${digest.healed} hit points healed`, tone: 'good' });
+  // A group by its ID with a count: "2 goblins", "a goblin", "Mag Corrie".
+  const counted = (groupId: string | null, count: number) => {
+    const group = groupId ? ctx.groups[groupId] : undefined;
+    if (!group) return count === 1 ? 'a monster' : `${count} monsters`;
+    return countedLabel(group.label, group.labelPlural, count);
+  };
   for (const slain of digest.slain) {
-    const group = slain.groupId ? ctx.groups[slain.groupId] : undefined;
-    const noun = group
-      ? slain.count === 1
-        ? group.label
-        : group.labelPlural
-      : slain.count === 1
-        ? 'monster'
-        : 'monsters';
-    chips.push({ text: `${slain.count} ${noun} slain`, tone: 'good' });
+    const name = counted(slain.groupId, slain.count);
+    chips.push({ text: `${capitalizeFirst(name)} slain`, tone: 'good' });
   }
   if (digest.fallen.length > 0)
     chips.push({ text: `${joinList(digest.fallen.map((id) => memberName(id, ctx)))} fell`, tone: 'bad' });
   for (const change of digest.conditions) {
-    const group = change.tokenId ? ctx.groups[change.tokenId] : undefined;
-    const who = change.tokenId?.startsWith('character-')
-      ? memberName(change.tokenId, ctx)
-      : `${change.count} ${group ? (change.count === 1 ? group.label : group.labelPlural) : change.count === 1 ? 'monster' : 'monsters'}`;
+    const member = change.tokenId?.startsWith('character-') ?? false;
+    const who =
+      member && change.tokenId ? memberName(change.tokenId, ctx) : counted(change.tokenId, change.count);
     chips.push({
-      text: `${who} ${conditionLabel(change.condition).toLowerCase()}`,
-      tone: change.tokenId?.startsWith('character-') ? 'bad' : 'good',
+      text: `${capitalizeFirst(who)} ${conditionLabel(change.condition).toLowerCase()}`,
+      tone: member ? 'bad' : 'good',
     });
   }
   for (const groupId of digest.fleeing) {
     const group = ctx.groups[groupId];
-    chips.push({ text: `The ${group?.labelPlural ?? 'monsters'} are fleeing`, tone: 'good' });
+    const name = group ? groupName(groupId, ctx) : 'the monsters';
+    const one = group ? (group.count ?? 2) <= 1 : false;
+    chips.push({ text: `${capitalizeFirst(name)} ${one ? 'is' : 'are'} fleeing`, tone: 'good' });
   }
   return chips;
 }

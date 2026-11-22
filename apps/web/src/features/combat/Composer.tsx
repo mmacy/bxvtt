@@ -1,6 +1,13 @@
 import type { EncounterGroupView, EncounterView, MemberView } from '@bxvtt/shared/bxapi';
 import type { DeclarationBody } from '@bxvtt/shared/protocol';
-import { conditionLabel, formatFeet, memberName, spellName, type TextContext } from '@bxvtt/shared/text';
+import {
+  conditionLabel,
+  formatFeet,
+  joinList,
+  memberName,
+  spellName,
+  type TextContext,
+} from '@bxvtt/shared/text';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   getApi,
@@ -28,7 +35,8 @@ import {
   type MemberGear,
 } from './model';
 import styles from './combat.module.css';
-import { useCombatText, useSceneTargets } from './text';
+import { targetLabel, useCombatText, useSceneTargets } from './text';
+import { countBadge, groupHeading, theGroup, viewLabels } from './names';
 
 export type ComposerTab = 'attack' | 'cast' | 'move' | 'item' | 'give' | 'turn' | 'hold';
 
@@ -353,8 +361,13 @@ function Tile({ title, meta, note, disabledReason, icon, label, onClick, pending
 }
 
 function groupTitle(group: EncounterGroupView): string {
-  const name = group.count === 1 ? group.label : group.label_plural;
-  return name.charAt(0).toUpperCase() + name.slice(1);
+  return groupHeading(viewLabels(group));
+}
+
+/** The tile's meta line: the count, when the group isn't one named individual, and the distance. */
+function groupMeta(group: EncounterGroupView, distance: number): string {
+  const badge = countBadge(viewLabels(group));
+  return badge ? `${badge} · ${formatFeet(distance, 'short')}` : formatFeet(distance, 'short');
 }
 
 function groupConditions(group: EncounterGroupView): string | null {
@@ -436,10 +449,10 @@ function AttackChoices({
                 plan.kind === 'missile' ? (plan.weapon?.thrown ? 'target' : 'weapon-bow') : 'weapon-sword'
               }
               title={groupTitle(group)}
-              meta={`×${group.count} · ${formatFeet(plan.distance, 'short')}`}
+              meta={groupMeta(group, plan.distance)}
               note={conditions ? `${plan.note} ${capitalize(conditions)}.` : plan.note}
               disabledReason={plan.reason}
-              label={`${verb}: ${groupTitle(group)}, ${formatFeet(plan.distance)} away`}
+              label={`${verb}: ${theGroup(viewLabels(group))}, ${formatFeet(plan.distance)} away`}
               pending={pending}
               onClick={() => void onSubmit(attackDeclaration(plan, { weaponId: chosen, backStab: stab }))}
             />
@@ -589,10 +602,10 @@ function SpellTargets({
                 key={group.id}
                 icon="spell"
                 title={groupTitle(group)}
-                meta={`×${group.count} · ${formatFeet(distance, 'short')}`}
+                meta={groupMeta(group, distance)}
                 note={groupConditions(group) ? capitalize(groupConditions(group) ?? '') : undefined}
                 disabledReason={reason}
-                label={`Cast ${name} at ${groupTitle(group)}`}
+                label={`Cast ${name.toLowerCase()} at ${theGroup(viewLabels(group))}`}
                 pending={pending}
                 onClick={() => void onSubmit({ ...base, target_group_id: group.id })}
               />
@@ -660,7 +673,7 @@ function SpellTargets({
                     title={tooFar ? `Out of range: ${formatFeet(distance)} away.` : undefined}
                     onClick={() => toggle(target.handle)}
                   >
-                    {target.label}
+                    {targetLabel(target, sceneTargets, group.label)}
                   </Button>
                 );
               })}
@@ -720,7 +733,7 @@ function MoveChoices({ member, encounter, ctx, pending, onSubmit }: ChoiceProps 
             <Tile
               key={group.id}
               icon="footprints"
-              title={`Close in on the ${group.count === 1 ? group.label : group.label_plural}`}
+              title={`Close in on ${theGroup(viewLabels(group))}`}
               meta={formatFeet(distance, 'short')}
               note={
                 distance <= 5
@@ -728,7 +741,7 @@ function MoveChoices({ member, encounter, ctx, pending, onSubmit }: ChoiceProps 
                   : `Moves up to ${formatFeet(Math.min(rate, Math.max(0, distance - 5)))} without attacking.`
               }
               disabledReason={stuck}
-              label={`Close in on ${groupTitle(group)}`}
+              label={`Close in on ${theGroup(viewLabels(group))}`}
               pending={pending}
               onClick={() => void onSubmit({ action: 'move', move: 'close', target_group_id: group.id })}
             />
@@ -875,11 +888,13 @@ function ItemChoices({
                   <Tile
                     key={group.id}
                     title={groupTitle(group)}
-                    meta={`×${group.count} · ${formatFeet(distance, 'short')}`}
+                    meta={groupMeta(group, distance)}
                     note={
-                      thrown ? `Throws it ${formatFeet(distance)}.` : `Aims it at the ${group.label_plural}.`
+                      thrown
+                        ? `Throws it ${formatFeet(distance)}.`
+                        : `Aims it at ${theGroup(viewLabels(group))}.`
                     }
-                    label={`${thrown ? 'Throw' : 'Use'} ${item.name} at ${groupTitle(group)}`}
+                    label={`${thrown ? 'Throw' : 'Use'} ${item.name} at ${theGroup(viewLabels(group))}`}
                     pending={pending}
                     onClick={() =>
                       void onSubmit({ action: 'use_item', item_id: item.id, target_group_id: group.id })
@@ -986,7 +1001,7 @@ function TurnChoice({ member, encounter, pending, onSubmit }: ChoiceProps) {
       <Tile
         icon="class-cleric"
         title="Present the holy symbol"
-        note={`Reaches ${undead.map((g) => `the ${g.label_plural}`).join(' and ')}. A hit can't disrupt it.`}
+        note={`Reaches ${joinList(undead.map((g) => theGroup(viewLabels(g))))}. A hit can't disrupt it.`}
         disabledReason={reason}
         label={`${member.name} turns undead`}
         pending={pending}

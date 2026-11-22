@@ -1,7 +1,8 @@
-import { conditionLabel, formatFeet } from '@bxvtt/shared/text';
+import { capitalizeFirst, conditionLabel, formatFeet, isProperLabel, joinList } from '@bxvtt/shared/text';
 import type { CSSProperties } from 'react';
 import { tokenClass } from '@/app';
 import { cx, Icon, TokenPortrait } from '@/ui';
+import { countBadge, countedGroup, groupHeading, theGroup, type GroupLabels } from './names';
 import type { Pop, TrackGroup, TrackMember, TrackState } from './playback';
 import styles from './track.module.css';
 
@@ -35,9 +36,18 @@ function tickStep(span: number): number {
   return 500;
 }
 
+function trackLabels(group: TrackGroup): GroupLabels {
+  return { label: group.label, plural: group.labelPlural, count: group.count };
+}
+
+/** The group's label as the track prints it under the token, in lower case unless it is a name. */
+function lowerHeading(group: GroupLabels): string {
+  return group.count === 1 ? group.label : (group.plural ?? group.label);
+}
+
 function memberLabel(member: TrackMember, meleeWith: readonly string[] = []): string {
   const parts = [member.name, `${member.hp} of ${member.maxHp} hit points`];
-  if (meleeWith.length > 0) parts.push(`in melee with the ${meleeWith.join(' and the ')}`);
+  if (meleeWith.length > 0) parts.push(`in melee with ${joinList(meleeWith)}`);
   if (member.down) parts.push(member.conditions.includes('dead') ? 'dead' : 'unconscious');
   else if (member.advance !== null && member.advance !== 0)
     parts.push(
@@ -49,7 +59,7 @@ function memberLabel(member: TrackMember, meleeWith: readonly string[] = []): st
 }
 
 function groupLabel(group: TrackGroup, nearest: number | null): string {
-  const parts = [`${group.count} ${group.count === 1 ? group.label : group.labelPlural}`];
+  const parts = [countedGroup(trackLabels(group))];
   if (group.fled) parts.push('fled');
   else if (nearest !== null) parts.push(`${formatFeet(nearest)} from the nearest party member`);
   if (group.fleeing && !group.fled) parts.push('fleeing');
@@ -116,7 +126,8 @@ export function RangeTrack({
     null,
   )?.id;
   const engaged = new Set(present.flatMap((g) => g.frontRank));
-  const meleeOf = (id: string) => present.filter((g) => g.frontRank.includes(id)).map((g) => g.labelPlural);
+  const meleeOf = (id: string) =>
+    present.filter((g) => g.frontRank.includes(id)).map((g) => theGroup(trackLabels(g)));
   const ticks: number[] = [];
   for (let feet = min; feet <= max; feet += step) ticks.push(feet);
   // Groups at the same distance stand side by side, so their tokens and labels don't overlap.
@@ -171,11 +182,18 @@ export function RangeTrack({
               >
                 <span className="visually-hidden">{groupLabel(group, nearest)}</span>
                 <span className={styles.groupToken} aria-hidden="true">
-                  <TokenPortrait name={group.labelPlural} kind="monster" size={TOKEN} decorative />
-                  <span className={styles.count}>×{group.count}</span>
+                  <TokenPortrait
+                    name={groupHeading(trackLabels(group))}
+                    kind="monster"
+                    size={TOKEN}
+                    decorative
+                  />
+                  {countBadge(trackLabels(group)) && (
+                    <span className={styles.count}>{countBadge(trackLabels(group))}</span>
+                  )}
                 </span>
                 <span className={styles.groupName} aria-hidden="true">
-                  {group.count === 1 ? group.label : group.labelPlural}
+                  {isProperLabel(group.label) ? group.label : lowerHeading(trackLabels(group))}
                   {group.fleeing && <Icon name="arrow-right" size={12} />}
                 </span>
                 {nearest !== null && (
@@ -257,11 +275,11 @@ export function RangeTrack({
               <div key={group.id} className={styles.goneToken} title={groupLabel(group, null)}>
                 <span className="visually-hidden">
                   {group.count === 0
-                    ? `The ${group.labelPlural}, all slain`
-                    : `The ${group.labelPlural}, fled`}
+                    ? `${capitalizeFirst(theGroup({ ...trackLabels(group), count: isProperLabel(group.label) ? 1 : 2 }))}, slain`
+                    : `${capitalizeFirst(theGroup(trackLabels(group)))}, fled`}
                 </span>
                 <TokenPortrait
-                  name={group.labelPlural}
+                  name={groupHeading(trackLabels(group))}
                   kind="monster"
                   size={24}
                   state={group.count === 0 ? 'dead' : 'normal'}

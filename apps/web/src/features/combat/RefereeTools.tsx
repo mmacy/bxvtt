@@ -1,7 +1,7 @@
 import type { EncounterView } from '@bxvtt/shared/bxapi';
-import { conditionLabel, formatFeet } from '@bxvtt/shared/text';
+import { conditionLabel, formatFeet, isProperLabel, joinList } from '@bxvtt/shared/text';
 import { useMemo, useState } from 'react';
-import { useCanSend, useMonsterCatalog, useRefereeState, useSendRefereeCommand } from '@/app';
+import { useCanSend, useEncounter, useMonsterCatalog, useRefereeState, useSendRefereeCommand } from '@/app';
 import {
   Badge,
   Button,
@@ -14,6 +14,8 @@ import {
   NumberInput,
   Popover,
 } from '@/ui';
+import { liveGroups } from './model';
+import { groupHeading, theGroup, viewLabels } from './names';
 import styles from './combat.module.css';
 
 function capitalize(text: string): string {
@@ -42,7 +44,9 @@ export function MonsterRoster({ encounter }: { encounter: EncounterView | null }
         return (
           <div key={group.id} className={styles.rosterGroup}>
             <div className={styles.rosterHead}>
-              <span className={styles.rosterName}>{capitalize(group.label_plural)}</span>
+              <span className={styles.rosterName}>
+                {groupHeading({ label: group.label, plural: group.label_plural, count: monsters.length })}
+              </span>
               <span className={styles.rosterMeta}>
                 {formatFeet(view?.distance_feet ?? group.distance_feet, 'short')}
               </span>
@@ -62,13 +66,13 @@ export function MonsterRoster({ encounter }: { encounter: EncounterView | null }
                     data-dead={monster.current_hp <= 0 || undefined}
                   >
                     <span className={styles.rosterMonster}>
-                      {capitalize(group.label)} {index + 1}
+                      {monsterTitle(group.label, index, monsters.length)}
                     </span>
                     <HpBar
                       size="sm"
                       current={Math.max(0, monster.current_hp)}
                       max={monster.max_hp}
-                      label={`${capitalize(group.label)} ${index + 1} hit points`}
+                      label={`${monsterTitle(group.label, index, monsters.length)} hit points`}
                     />
                     <span className={styles.rosterConditions}>
                       {monster.conditions.map(({ condition }) => (
@@ -90,6 +94,12 @@ export function MonsterRoster({ encounter }: { encounter: EncounterView | null }
   );
 }
 
+/** One monster of a group for the referee: "Goblin 2", or "Mag Corrie" for a named individual alone. */
+function monsterTitle(label: string, index: number, count: number): string {
+  if (isProperLabel(label) && count <= 1) return label;
+  return `${capitalize(label)} ${index + 1}`;
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
     ? (value as Record<string, unknown>)
@@ -107,7 +117,10 @@ export function RefereeActions() {
   const { send, pending } = useSendRefereeCommand();
   const [ending, setEnding] = useState<'parley' | 'departed' | null>(null);
   const [resolveArea, setResolveArea] = useState(false);
+  const encounter = useEncounter();
   if (referee === null) return null;
+  const present = liveGroups(encounter);
+  const sides = present.length > 0 ? joinList(present.map((g) => theGroup(viewLabels(g)))) : 'the monsters';
   const fromArea = referee.encounter?.area_ref !== null && referee.encounter?.area_ref !== undefined;
   const end = async () => {
     if (ending === null) return;
@@ -143,7 +156,7 @@ export function RefereeActions() {
         onOpenChange={(open) => {
           if (!open) setEnding(null);
         }}
-        title={ending === 'parley' ? 'The monsters and the party came to terms' : 'One side left the other'}
+        title={ending === 'parley' ? `The party came to terms with ${sides}` : 'One side left the other'}
         description={`${
           ending === 'parley'
             ? 'The encounter ends peacefully, as after a toll paid or a bluff believed.'

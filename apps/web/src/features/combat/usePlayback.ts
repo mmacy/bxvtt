@@ -3,7 +3,7 @@
  * pace the table can follow, skippable, and instant with reduced motion.
  */
 import type { GameEntry } from '@bxvtt/shared/protocol';
-import { extendContextWithEntryNames, idKind } from '@bxvtt/shared/text';
+import { describeGameEntry, extendContextWithEntryNames, idKind, type EventLine } from '@bxvtt/shared/text';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useEncounter, useFeed, useReduceMotion, useRefereeLens, useRefereeState, useTableId } from '@/app';
 import { learnMonsterGroups, snapshotBefore, useCombatMemory } from './memory';
@@ -14,6 +14,7 @@ import {
   trackFromView,
   trackStates,
   type AnyEvent,
+  BEAT_MS,
   type Beat,
   type MonsterGroupLookup,
   type RoundDigest,
@@ -49,6 +50,20 @@ export function useMonsterLookup(): MonsterGroupLookup {
       return null;
     };
   }, [referee, encounter, learned, tableId, ctx]);
+}
+
+/** One beat for each line, for an entry the text layer narrates as a whole. */
+function linesToBeats(lines: readonly EventLine[]): Beat[] {
+  return lines.map((line, index) => ({
+    index,
+    events: [],
+    lines: [line],
+    durationMs: BEAT_MS.base,
+    pops: [],
+    focus: [],
+    roll: null,
+    referee: line.visibility === 'referee',
+  }));
 }
 
 /** The group each member last declared against, from the remembered declarations. */
@@ -160,11 +175,11 @@ export function usePlayback(options: PlaybackOptions): PlaybackView {
           const matches = label ? groups.filter((g) => g.label === label) : [];
           return matches.length === 1 ? (matches[0]?.id ?? null) : null;
         };
-        const beats = buildBeats(events, named, {
-          includeReferee: lens,
-          messages: entry.messages,
-          lookup: local,
-        });
+        // A parley is narrated as a whole by the text layer, with the speaker the entry names.
+        const beats =
+          entry.command_type === 'parley'
+            ? linesToBeats(describeGameEntry(entry, ctx, lens ? {} : { only: 'player' }))
+            : buildBeats(events, named, { includeReferee: lens, messages: entry.messages, lookup: local });
         const start = before ? trackFromView(before.encounter, before.party) : null;
         return {
           seq: entry.seq,

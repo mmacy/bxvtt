@@ -7,7 +7,7 @@ import {
   signed,
   stanceDescription,
   stanceLabel,
-  withArticle,
+  capitalizeFirst,
   type TextContext,
 } from '@bxvtt/shared/text';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
@@ -49,7 +49,8 @@ import {
 } from './useEncounterCommands';
 import { ACCEPT_ALL, usePlayback } from './usePlayback';
 import styles from './combat.module.css';
-import { useCombatText, useSceneTargets } from './text';
+import { targetLabel, useCombatText, useSceneTargets } from './text';
+import { countBadge, countedGroup, groupHeading, theGroup, viewLabels } from './names';
 
 /** What each bearing means for the party's choices, from the `wait` and `parley` command documentation. */
 const STANCE_IMPLICATIONS: Record<string, string> = {
@@ -70,10 +71,6 @@ const STANCE_TONE: Record<string, 'danger' | 'warning' | 'neutral' | 'success'> 
 
 function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
-}
-
-function groupNoun(group: EncounterGroupView): string {
-  return group.count === 1 ? group.label : group.label_plural;
 }
 
 /**
@@ -109,8 +106,8 @@ export function EncounterPanel() {
   const gap = encounter.pursuit_gap_feet;
   const stance = encounter.stance;
   const title = commands.pursuit
-    ? `The ${joinList(present.map(groupNoun))} ${present.length === 1 && present[0]?.count === 1 ? 'gives' : 'give'} chase`
-    : `The party meets ${joinList(present.map((g) => (g.count === 1 ? withArticle(g.label) : `${g.count} ${groupNoun(g)}`)))}`;
+    ? `${capitalizeFirst(joinList(present.map((g) => theGroup(viewLabels(g)))))} ${present.length === 1 && present[0]?.count === 1 ? 'gives' : 'give'} chase`
+    : `The party meets ${joinList(present.map((g) => countedGroup(viewLabels(g))))}`;
 
   return (
     <div className={styles.board} role="region" aria-label="Encounter">
@@ -187,7 +184,7 @@ function GroupCard({ group }: { group: EncounterGroupView }) {
   return (
     <li className={cx(styles.groupCard, group.fled && styles.groupFled)}>
       <TokenPortrait
-        name={group.label_plural}
+        name={groupHeading(viewLabels(group))}
         kind="monster"
         size={40}
         state={group.count === 0 ? 'dead' : 'normal'}
@@ -195,8 +192,10 @@ function GroupCard({ group }: { group: EncounterGroupView }) {
       />
       <div className={styles.groupInfo}>
         <span className={styles.groupTitle}>
-          {capitalize(groupNoun(group))}
-          <span className={styles.groupCount}>×{group.count}</span>
+          {groupHeading(viewLabels(group))}
+          {countBadge(viewLabels(group)) && (
+            <span className={styles.groupCount}>{countBadge(viewLabels(group))}</span>
+          )}
         </span>
         <span className={styles.groupMeta}>
           {group.fled ? 'Fled' : `${formatFeet(group.distance_feet)} away`}
@@ -544,10 +543,13 @@ function UseItemPopover({
           { value: '', label: 'No target' },
           ...encounter.groups
             .filter((g) => !g.fled && g.count > 0)
-            .map((g) => ({ value: g.id, label: `At the ${g.label_plural}` })),
+            .map((g) => ({ value: g.id, label: `At ${theGroup(viewLabels(g))}` })),
           ...sceneTargets
             .filter((t) => !t.defeated && !t.fled)
-            .map((t) => ({ value: t.handle, label: `At ${t.label}` })),
+            .map((t) => ({
+              value: t.handle,
+              label: `At ${targetLabel(t, sceneTargets, encounter.groups.find((g) => g.id === t.group_id)?.label)}`,
+            })),
           ...encounter.declarers.map((id) => ({ value: id, label: `On ${memberName(id, ctx)}` })),
         ];
   const use = async () => {
