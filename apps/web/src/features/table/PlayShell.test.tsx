@@ -1,10 +1,9 @@
 import { act, fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ShortcutLayer, useCombatStage, useTableUi } from '@/app';
+import { END_GRACE_MS, END_MAX_HOLD_MS, ShortcutLayer, useCombatStage, useTableUi } from '@/app';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { renderWithTable } from '@/app/testing/renderWithTable';
 import { PlayShell } from './PlayShell';
-import { END_GRACE_MS, END_MAX_HOLD_MS } from './shownMode';
 
 describe('PlayShell', () => {
   it("shows the mode, the clock, and the caller in a player's exploring game", () => {
@@ -24,6 +23,7 @@ describe('PlayShell', () => {
     renderWithTable(<PlayShell />, { snapshot: fixtureSnapshot('town', 'player') });
     expect(screen.getByText('In town')).toBeInTheDocument();
     expect(screen.queryByRole('toolbar', { name: 'Map tools' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Rules reference' })).toBeInTheDocument();
   });
 
   it('shows the encounter and battle overlays in their modes', () => {
@@ -121,5 +121,15 @@ describe('PlayShell at the end of a game', () => {
     end();
     act(() => vi.advanceTimersByTime(END_MAX_HOLD_MS));
     expect(screen.getByText('The party has fallen')).toBeInTheDocument();
+  });
+});
+
+describe('PlayShell sheet', () => {
+  it('opens a member sheet at the tab the caller names', async () => {
+    const { snapshot } = renderWithTable(<PlayShell />, { snapshot: fixtureSnapshot('exploring', 'player') });
+    const member = snapshot.game?.view.party[0];
+    if (!member) throw new Error('The fixture has no party.');
+    act(() => useTableUi.getState().openCharacterSheet(member.id, 'inventory'));
+    expect(await screen.findByRole('tab', { name: 'Inventory' })).toHaveAttribute('aria-selected', 'true');
   });
 });

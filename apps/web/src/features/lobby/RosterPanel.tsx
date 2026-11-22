@@ -10,7 +10,7 @@ import {
   useTableStoreApi,
   useTableUser,
 } from '@/app';
-import { Button, EmptyState, IconButton, Skeleton, cx, toast } from '@/ui';
+import { Button, EmptyState, IconButton, Skeleton, cx } from '@/ui';
 import { StoredCharacterCard } from '@/features/sheet';
 import { CharacterWizard } from '@/features/wizard';
 import styles from './lobby.module.css';
@@ -223,9 +223,9 @@ function MyCharacters() {
     setAdding(null);
   };
 
+  // The wizard's success view already says the character is ready, so no toast covers it.
   const onCreated = (character: StoredCharacter) => {
     void refresh();
-    toast.success(`${character.name} is ready`);
     void add(character.id, character.name);
   };
 

@@ -98,6 +98,7 @@ export function TableLayout({
 
   return (
     <div
+      data-table-layout=""
       className={cx(styles.table, !toolRail && styles.noRail, className)}
       style={{
         gridTemplateColumns: `${toolRail ? 'var(--rail-width) ' : ''}minmax(0, 1fr) ${dockVisible ? `1px ${width}px` : '0 0'}`,

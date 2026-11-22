@@ -133,10 +133,10 @@ export function drawLabels(
 /** The zoom, in CSS pixels per cell, from which a player map names its areas. */
 const PLAYER_NAME_ZOOM = 16;
 
-/** An area name cut to the width of its room, with an ellipsis. */
-function fitName(ctx: Ctx2D, area: MapArea, view: FrameView): string {
+/** An area name cut to the width of its room (at least `minWidth` CSS pixels), with an ellipsis. */
+function fitName(ctx: Ctx2D, area: MapArea, view: FrameView, minWidth = 90): string {
   const widthPx = (area.bounds.maxX - area.bounds.minX) * view.scale;
-  const maxWidth = Math.max(widthPx * 1.15, 90 * view.dpr);
+  const maxWidth = Math.max(widthPx * 1.15, minWidth * view.dpr);
   let name = area.name;
   if (ctx.measureText(name).width > maxWidth) {
     while (name.length > 4 && ctx.measureText(`${name}…`).width > maxWidth) name = name.slice(0, -1);
@@ -145,6 +145,10 @@ function fitName(ctx: Ctx2D, area: MapArea, view: FrameView): string {
   return name;
 }
 
+/**
+ * A player area's name. A player map often knows only a corridor's width of a room, so the name may run past
+ * the room's cells, and it moves above or below the party token when the token would cover it.
+ */
 function drawNameLabel(
   ctx: Ctx2D,
   view: FrameView,
@@ -155,14 +159,28 @@ function drawNameLabel(
 ): void {
   const { zoom, dpr } = view;
   if (zoom < PLAYER_NAME_ZOOM || !area.name) return;
-  const under =
-    avoid !== null && Math.abs(avoid.x - area.anchor.x) < 0.8 && Math.abs(avoid.y - area.anchor.y) < 0.8;
-  const p = view.toDevice(area.anchor.x, under ? area.anchor.y - 0.85 : area.anchor.y);
-  if (p.x < -200 * dpr || p.y < -80 * dpr || p.x > view.width + 200 * dpr || p.y > view.height + 80 * dpr)
-    return;
   ctx.globalAlpha = 1;
   ctx.font = labelFont(theme, namePx, 650);
-  const name = fitName(ctx, area, view);
+  const name = fitName(ctx, area, view, 180);
+  const halfWidth = ctx.measureText(name).width / 2 + 3 * dpr;
+  const halfHeight = namePx * 0.7;
+  let p = view.toDevice(area.anchor.x, area.anchor.y);
+  if (avoid !== null) {
+    const token = view.toDevice(avoid.x, avoid.y);
+    // The token's radius, as drawParty draws it, with a little room.
+    const radius = Math.min(26 * dpr, Math.max(8.5 * dpr, view.scale * 0.31)) + 2 * dpr;
+    const covers = (at: { x: number; y: number }) =>
+      Math.abs(token.x - at.x) < halfWidth + radius && Math.abs(token.y - at.y) < halfHeight + radius;
+    if (covers(p)) {
+      const above = view.toDevice(area.anchor.x, avoid.y - 0.5);
+      above.y -= radius + halfHeight;
+      const below = view.toDevice(area.anchor.x, avoid.y + 0.5);
+      below.y += radius + halfHeight;
+      p = covers(above) ? below : above;
+    }
+  }
+  if (p.x < -200 * dpr || p.y < -80 * dpr || p.x > view.width + 200 * dpr || p.y > view.height + 80 * dpr)
+    return;
   ctx.lineWidth = Math.max(3 * dpr, namePx * 0.3);
   ctx.strokeStyle = theme.label.halo;
   ctx.strokeText(name, p.x, p.y);

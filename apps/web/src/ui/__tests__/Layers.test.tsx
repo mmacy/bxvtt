@@ -1,5 +1,5 @@
 import './cleanup';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -92,5 +92,29 @@ describe('Popups inside overlays', () => {
       expect(value(name)).toBe('var(--z-layer)');
     expect(Number(value('toast'))).toBeGreaterThan(1200);
     expect(Number(value('tooltip'))).toBeGreaterThan(Number(value('toast')));
+  });
+
+  it('returns focus to the menu button after a dialog that a menu item opened closes', async () => {
+    const user = userEvent.setup();
+    function TableMenu() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <DropdownMenu
+            trigger={<Button>Table menu</Button>}
+            items={[{ label: 'Table settings', onSelect: () => setOpen(true) }]}
+          />
+          <Dialog open={open} onOpenChange={setOpen} title="Table settings">
+            <Button>Save settings</Button>
+          </Dialog>
+        </>
+      );
+    }
+    render(<TableMenu />);
+    await user.click(screen.getByRole('button', { name: 'Table menu' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Table settings' }));
+    expect(await screen.findByRole('dialog', { name: 'Table settings' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Table menu' })).toHaveFocus());
   });
 });

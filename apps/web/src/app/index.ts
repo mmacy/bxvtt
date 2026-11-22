@@ -21,6 +21,7 @@ export {
 } from './permissions';
 export type { Permission, PermissionContext } from './permissions';
 export { TableProvider, useTableStore, useTableStoreApi } from './table/context';
+export { NoTableProvider } from './table/NoTableProvider';
 export * from './table/hooks';
 export { useAdventureDocument } from './table/referee';
 export { PING_LIFETIME_MS, RESYNC_INTERVAL_MS, announceNotice, useTableSession } from './table/session';
@@ -68,7 +69,7 @@ export type {
   PickTarget,
 } from './mapBus';
 export { useTableUi } from './ui';
-export type { CompendiumEntry, TableUiState } from './ui';
+export type { CompendiumEntry, SheetTab, TableUiState } from './ui';
 export {
   ShortcutLayer,
   formatShortcut,
@@ -83,4 +84,5 @@ export { STORAGE_KEYS, readStored, scopedStorage, writeStored } from './storage'
 export type { ScopedStorage, StorageArea } from './storage';
 export { toParamMap } from './params';
 export { useCombatStage } from './combatStage';
+export { END_GRACE_MS, END_MAX_HOLD_MS, ShownModeProvider, useHeldMode, useShownMode } from './shownMode';
 export type { CombatStageState } from './combatStage';

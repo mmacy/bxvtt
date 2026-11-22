@@ -8,6 +8,7 @@ import { Badge, Banner, Button, Card, EmptyState, Field, Icon, PageLayout, Skele
 import { HealthBanner } from './HealthBanner';
 import { NameForm } from './NameForm';
 import { ProfileMenu } from './ProfileMenu';
+import { RulesReference } from './RulesReference';
 import styles from './home.module.css';
 
 /**
@@ -307,7 +308,14 @@ function SignedInHome() {
 export function HomePage() {
   const status = useIdentity((s) => s.status);
   return (
-    <PageLayout headerActions={<ProfileMenu />}>
+    <PageLayout
+      headerActions={
+        <>
+          {status === 'ready' && <RulesReference away />}
+          <ProfileMenu />
+        </>
+      }
+    >
       <div className={styles.stack}>
         <HealthBanner />
         {status === 'unknown' && <Skeleton shape="block" height={240} />}

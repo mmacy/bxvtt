@@ -194,14 +194,14 @@ Every component below is exported from `@/ui`. The path column names the source 
 | Export | Description | Source |
 | --- | --- | --- |
 | `Tabs`, `TabsList`, `TabsTrigger`, `TabsContent` | Tabbed panels in line or enclosed style, with icons and unread counts. `TabsContent keepMounted` keeps a panel mounted while another tab is active, hidden from view and from assistive technology, with its scroll position and state intact. A tab shows its focus ring for keyboard focus only. | `components/Tabs.tsx` |
-| `Dialog`, `DialogClose` | A modal window with a title, description, body, and footer. | `components/Dialog.tsx` |
+| `Dialog`, `DialogClose` | A modal window with a title, description, body, and footer. When it closes, focus returns to the element that opened it: for a dialog opened from a menu item, the menu's button, and for one opened from the command palette, the element that had focus before the palette. | `components/Dialog.tsx` |
 | `ConfirmDialog` | Asks the user to confirm an action, with a spinner while an async action runs. `children` render below the description and can hold block content, such as a checkbox. | `components/Dialog.tsx` |
 | `Drawer` | A side or bottom sheet over the page. `dimmed={false}` keeps the page in view behind it (the overlay still catches the click that closes it). `initialFocus` takes a ref to the element that gets focus on open, or `'content'` for the drawer itself. `Dialog` takes `initialFocus` too. | `components/Dialog.tsx` |
 | `Popover` | Non-modal content anchored to a trigger. | `components/Popover.tsx` |
 | `Tooltip`, `TooltipProvider` | A short hint on hover and focus, with an optional shortcut. | `components/Popover.tsx` |
 | `DropdownMenu` | A menu of actions from a button, with checkbox items, labels, separators, and submenus. | `components/Menu.tsx` |
 | `ContextMenu` | The same menu on right-click, long press, or Shift+F10. | `components/Menu.tsx` |
-| `toast`, `ToastProvider`, `Toaster` | Imperative notices: `toast.success`, `toast.error`, `toast.info`, `toast.warning`, and `toast.dismiss`. | `components/toastStore.ts`, `components/Toast.tsx` |
+| `toast`, `ToastProvider`, `Toaster` | Imperative notices: `toast.success`, `toast.error`, `toast.info`, `toast.warning`, and `toast.dismiss`. On the play screen, toasts sit above the action bar. Use a toast for something the user didn't see happen, not to repeat what the screen already shows. | `components/toastStore.ts`, `components/Toast.tsx` |
 | `CommandPalette`, `useCommandPaletteShortcut` | A searchable list of actions that opens with Ctrl+K or Cmd+K. | `components/CommandPalette.tsx` |
 | `Accordion` | Stacked sections that expand in place. | `components/Accordion.tsx` |
 | `Stepper` | Progress through a wizard. Completed steps can be buttons. | `components/Stepper.tsx` |

@@ -91,7 +91,7 @@ fromPlayerView(view, key, {
 });
 ```
 
-Each area keeps only the cells on the party's map and gets no key number, because players don't see the key. Its name goes on the cell deepest inside the area that holds no stairs or feature, from a zoom of 16 pixels a cell, and moves above the party token when the party stands on that cell. The hover tooltip names the area under the pointer. If you draw your own labels, pass `areaLabels={false}` to `DungeonMap` and keep the areas for the tooltip.
+Each area keeps only the cells on the party's map and gets no key number, because players don't see the key. Its name goes on the cell deepest inside the area that holds no stairs or feature, from a zoom of 16 pixels a cell, and moves above or below the party token when the token would cover it. The hover tooltip names the area under the pointer. If you draw your own labels, pass `areaLabels={false}` to `DungeonMap` and keep the areas for the tooltip.
 
 Keep extras on the server's player projection or in the player's own store, never from referee data.
 

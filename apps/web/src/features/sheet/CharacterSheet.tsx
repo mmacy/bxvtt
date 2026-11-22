@@ -1,5 +1,13 @@
 import { useMemo, useState } from 'react';
-import { useMembers, usePartyMember, usePlayerView, useSeats, useTableUser, useTextContext } from '@/app';
+import {
+  useMembers,
+  usePartyMember,
+  usePlayerView,
+  useSeats,
+  useTableUser,
+  useTextContext,
+  type SheetTab,
+} from '@/app';
 import {
   Avatar,
   ConditionChip,
@@ -35,6 +43,8 @@ export interface CharacterSheetProps {
   memberId: string | null;
   /** Closes the sheet. */
   onClose: () => void;
+  /** The tab to show when the sheet opens: `sheet` (the default), `inventory`, or `spells`. */
+  tab?: SheetTab;
 }
 
 /** Who plays a member: the seat owner with their color, or the referee for an empty seat. */
@@ -53,7 +63,7 @@ function useController(memberId: string | null) {
  * One party member's sheet: abilities, saves, inventory, spells, and the member actions the user may take.
  * The shell renders it and opens it from `useTableUi().openCharacterSheet(memberId)`.
  */
-export function CharacterSheet({ memberId, onClose }: CharacterSheetProps) {
+export function CharacterSheet({ memberId, onClose, tab }: CharacterSheetProps) {
   const member = usePartyMember(memberId);
   return (
     <Drawer
@@ -74,20 +84,25 @@ export function CharacterSheet({ memberId, onClose }: CharacterSheetProps) {
           description="They may have left the game. Pick another member in the party panel."
         />
       ) : (
-        <SheetContent memberId={member.id} />
+        <SheetContent
+          key={`${member.id}:${tab ?? 'sheet'}`}
+          memberId={member.id}
+          initialTab={tab ?? 'sheet'}
+        />
       )}
     </Drawer>
   );
 }
 
-function SheetContent({ memberId }: { memberId: string }) {
+function SheetContent({ memberId, initialTab }: { memberId: string; initialTab: SheetTab }) {
   const member = usePartyMember(memberId);
   const ctx = useTextContext();
   const view = usePlayerView();
   const controller = useController(memberId);
-  const [tab, setTab] = useState('sheet');
+  const [chosenTab, setTab] = useState<string>(initialTab);
   const model = useMemo(() => (member ? sheetFromMember(member, ctx) : null), [member, ctx]);
   const hasSpells = useHasSpells(model);
+  const tab = chosenTab === 'spells' && !hasSpells ? 'sheet' : chosenTab;
   if (!member || !model) return null;
   const effects = (view?.effects ?? []).filter((e) => e.character_id === memberId);
   const deprivation = view?.deprivation[memberId];

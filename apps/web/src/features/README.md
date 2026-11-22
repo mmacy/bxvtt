@@ -10,7 +10,7 @@ The shell (`features/table`) already renders every feature in its place on the p
 | --- | --- | --- |
 | `wizard` | `CharacterWizard({ open, onClose, onCreated(character: StoredCharacter) })` | A dialog from the lobby's "Create a character" button. `onCreated` adds the character to the roster and refreshes the list. |
 | `sheet` | `PartyPanel()` | The Party tab of the dock. |
-| `sheet` | `CharacterSheet({ memberId: string \| null, onClose })` | A drawer the shell opens with `useTableUi().openCharacterSheet(memberId)`. |
+| `sheet` | `CharacterSheet({ memberId: string \| null, onClose, tab? })` | A drawer the shell opens with `useTableUi().openCharacterSheet(memberId, tab?)`. `tab` is `sheet`, `inventory`, or `spells`. |
 | `sheet` | `StoredCharacterCard({ characterId, summary: { name, class_id, level }, owner?, actions? })` | Each roster entry and each of the user's characters in the lobby. The lobby passes its reorder, remove, and add buttons as `actions`. |
 | `explore` | `MapStage()` | The stage whenever the party is in a dungeon, in every mode. |
 | `explore` | `ExploreActions()` | The action bar in `exploring` mode. Render `ActionBarItem` buttons. |
@@ -23,7 +23,7 @@ The shell (`features/table`) already renders every feature in its place on the p
 | `combat` | Any content, through `useCombatStage().showAftermath(node)` | The after-fight slot: the bottom center of the stage, over the map, in `exploring` and `town` modes. See "After a fight and at the end of a game". |
 | `feed` | `FeedPanel()` | The Feed tab of the dock. The shell shows the unread count on the tab, and keeps the panel mounted while another tab is active, so it keeps its scroll position and loaded history. |
 | `journal` | `JournalPanel()` | The Journal tab of the dock. |
-| `compendium` | `Compendium({ open, onOpenChange, entry: CompendiumEntry \| null })` | A drawer from the table menu, the rail's book button, the `B` key, and `useTableUi().openCompendium(entry)`. `B` closes it again when focus is outside a text field. |
+| `compendium` | `Compendium({ open, onOpenChange, entry: CompendiumEntry \| null })` | A drawer from the table menu, the rail's book button (on every screen of play, town included), the `B` key, and `useTableUi().openCompendium(entry)`. `B` closes it again when focus is outside a text field. The lobby and the home page render it too, from the "Rules reference" button in the page header, so `openCompendium` works there. |
 | `referee` | `RefereePanel()` | The Referee tab of the dock, shown only to a referee with the lens on. |
 | `referee` | `SavesDialog({ open, onOpenChange })` | A dialog from the table menu. |
 
@@ -95,6 +95,7 @@ Every hook below reads the table of the surrounding `TableProvider`. Each server
 | `usePresence()` | The set of connected user IDs. |
 | `useGame()` | The whole game state. Prefer a narrower hook. |
 | `useGameMode()` | `town`, `exploring`, `encounter`, `battle`, `game_over`, or `victory`. |
+| `useShownMode()` | The mode the play screen shows. It equals `useGameMode()` except while the shell holds a fight on screen before the end screen, when it stays `encounter` or `battle`. Lay out stage chrome by this mode, so it matches the overlays the shell shows. |
 | `useRevision()` | The game's revision. `useSendCommand` sends it for you. |
 | `usePlayerView()` | bxapi's player view. |
 | `useScene()` | The scene: known areas, features, caches, stairs, traps, and `names`. |
@@ -225,19 +226,22 @@ Each hook fetches its catalog once per page load, shares it with every component
 
 ### Shell overlays
 
-`useTableUi(selector)` opens what the shell renders: `openCharacterSheet(memberId)`, `openCompendium(entry?)`, `toggleCompendium()`, `setSavesOpen`, `setSettingsOpen`, `setSeatsOpen`, `setShortcutsOpen`, and `setPaletteOpen`. `openCompendium()` without an entry opens the compendium at its first page, or leaves it on its current page when it is already open.
+`useTableUi(selector)` opens what the shell renders: `openCharacterSheet(memberId, tab?)`, `openCompendium(entry?)`, `toggleCompendium()`, `setSavesOpen`, `setSettingsOpen`, `setSeatsOpen`, `setShortcutsOpen`, and `setPaletteOpen`. `openCompendium()` without an entry opens the compendium at its first page, or leaves it on its current page when it is already open.
 
 ```tsx
 const openSheet = useTableUi((s) => s.openCharacterSheet);
 <Button variant="ghost" onClick={() => openSheet(member.id)}>{member.name}</Button>;
+<Button onClick={() => openSheet(member.id, 'spells')}>Prepare spells</Button>;
 ```
+
+`openCharacterSheet(memberId, 'spells')` opens the sheet at its Spells tab, and a member with no spells sees the first tab. `NoTableProvider` gives a screen outside any table an empty table, where the reader counts as a player with no game, so a feature that reads the table, such as the compendium, renders on the home page.
 
 ### After a fight and at the end of a game
 
 `useCombatStage` connects the combat feature to the shell's stage:
 
 - `showAftermath(node)` fills the after-fight slot at the bottom center of the stage, and `closeAftermath()` empties it. The slot shows in `exploring` and `town` modes, and the content renders inside the table's providers, so it can use every hook. The shell empties the slot when the next encounter or battle starts and when the user leaves the table.
-- `setPlaying(playing)` reports whether combat playback is running. When a fight ends the game (`game_over` or `victory`), the shell keeps the fight on screen, with its overlays and the fight's mode badge, until playback stops. It waits up to 1.5 seconds for playback to start, and never holds the end screen back longer than 20 seconds.
+- `setPlaying(playing)` reports whether combat playback is running. When a fight ends the game (`game_over` or `victory`), the shell keeps the fight on screen, with its overlays and the fight's mode badge, until playback stops. It waits up to 1.5 seconds for playback to start, and never holds the end screen back longer than 20 seconds. During that hold, `useShownMode()` returns the fight's mode.
 
 ```tsx
 const setPlaying = useCombatStage((s) => s.setPlaying);

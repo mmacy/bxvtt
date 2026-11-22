@@ -7,6 +7,7 @@ import {
   useApiAction,
   useEncounter,
   useIsReferee,
+  useShownMode,
   useMembers,
   usePlayerView,
   usePreferences,
@@ -26,7 +27,6 @@ import {
   type MenuEntry,
 } from '@/ui';
 import { copyInviteLink } from '@/features/lobby';
-import { useShownMode } from './shownMode';
 import styles from './table.module.css';
 
 const GAME_MODES: readonly string[] = ['town', 'exploring', 'encounter', 'battle', 'game_over', 'victory'];

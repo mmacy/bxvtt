@@ -12,6 +12,7 @@ import {
   TokenPortrait,
   toast,
 } from '@/ui';
+import { RuleLinksContext } from './RuleLink';
 import { StoredSheet } from './StoredSheet';
 import sheetStyles from './sheet.module.css';
 import styles from './StoredCharacterCard.module.css';
@@ -130,7 +131,12 @@ function StoredSheetDrawer({ characterId, name, color, onClose }: DrawerProps) {
               : error.detail}
           </Banner>
         )}
-        {data && <StoredSheet character={data} color={color} />}
+        {data && (
+          // The lobby and the home page render the compendium, so names on a stored sheet open it.
+          <RuleLinksContext.Provider value={true}>
+            <StoredSheet character={data} color={color} />
+          </RuleLinksContext.Provider>
+        )}
       </div>
       <ConfirmDialog
         open={confirming}

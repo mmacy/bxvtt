@@ -3,7 +3,9 @@ import {
   getApi,
   useAction,
   useApiAction,
+  ShownModeProvider,
   useFeed,
+  useHeldMode,
   useIsReferee,
   usePartyLocation,
   usePreferences,
@@ -23,7 +25,6 @@ import { CharacterSheet, PartyPanel } from '@/features/sheet';
 import { MapToolRail } from './MapToolRail';
 import { SeatsDialog } from './SeatsDialog';
 import { ShellActionBar } from './ShellActionBar';
-import { ShownModeProvider, useHeldMode } from './shownMode';
 import { Stage } from './Stage';
 import { TableSettingsDialog } from './TableSettingsDialog';
 import { ShellTopBar } from './TopBar';
@@ -137,6 +138,7 @@ function ShellShortcuts() {
 /** The overlays the shell renders for every feature: the sheet, the rules reference, and the dialogs. */
 function ShellOverlays() {
   const sheetMemberId = useTableUi((s) => s.sheetMemberId);
+  const sheetTab = useTableUi((s) => s.sheetTab);
   const closeSheet = useTableUi((s) => s.closeCharacterSheet);
   const compendiumOpen = useTableUi((s) => s.compendiumOpen);
   const compendiumEntry = useTableUi((s) => s.compendiumEntry);
@@ -145,7 +147,7 @@ function ShellOverlays() {
   const setSavesOpen = useTableUi((s) => s.setSavesOpen);
   return (
     <>
-      <CharacterSheet memberId={sheetMemberId} onClose={closeSheet} />
+      <CharacterSheet memberId={sheetMemberId} tab={sheetTab ?? undefined} onClose={closeSheet} />
       <Compendium open={compendiumOpen} onOpenChange={setCompendiumOpen} entry={compendiumEntry} />
       <SavesDialog open={savesOpen} onOpenChange={setSavesOpen} />
       <TableSettingsDialog />
@@ -213,7 +215,7 @@ export function PlayShell() {
     <ShownModeProvider mode={mode}>
       <TableLayout
         topBar={<ShellTopBar />}
-        toolRail={inDungeon && !ended ? <MapToolRail /> : undefined}
+        toolRail={<MapToolRail mapTools={inDungeon && !ended} />}
         stage={panel('The stage', <Stage />)}
         dock={<Dock aria-label="Table panels" tabs={tabs} value={tab} onValueChange={selectTab} />}
         dockLabel="Table panels"

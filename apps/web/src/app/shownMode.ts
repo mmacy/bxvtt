@@ -1,10 +1,17 @@
 /**
  * The mode the play screen shows, which can lag the game's mode for a moment at the end of a game: when a fight
  * ends the game, the shell keeps the fight on screen while the combat feature plays the last round back, and only
- * then swaps to the end screen.
+ * then swaps to the end screen. A feature that lays itself out by mode, such as the map chrome, reads
+ * `useShownMode()` so it matches what the shell shows.
+ *
+ * ```tsx
+ * const mode = useShownMode();
+ * const combat = mode === 'encounter' || mode === 'battle';
+ * ```
  */
 import { createContext, createElement, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { useCombatStage, useGameMode } from '@/app';
+import { useCombatStage } from './combatStage';
+import { useGameMode } from './table/hooks';
 
 /** How long the shell waits for playback to start after the game ends, in milliseconds. */
 export const END_GRACE_MS = 1500;
@@ -69,7 +76,10 @@ export function ShownModeProvider({ mode, children }: { mode: string | null; chi
   return createElement(ShownModeContext.Provider, { value: mode }, children);
 }
 
-/** The mode the play screen shows. Outside the shell, the game's mode. */
+/**
+ * The mode the play screen shows: the game's mode, or the fight's mode while the shell holds the end screen back
+ * for the last round's playback. Outside the play screen, it is the game's mode.
+ */
 export function useShownMode(): string | null {
   const shown = useContext(ShownModeContext);
   const mode = useGameMode();

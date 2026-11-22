@@ -19,3 +19,14 @@ describe('the compendium', () => {
     expect(useTableUi.getState().compendiumEntry).toEqual({ kind: 'monsters', id: 'goblin' });
   });
 });
+
+describe('the character sheet', () => {
+  it('opens at a tab, and at its first tab otherwise', () => {
+    useTableUi.getState().openCharacterSheet('character-0001', 'spells');
+    expect(useTableUi.getState()).toMatchObject({ sheetMemberId: 'character-0001', sheetTab: 'spells' });
+    useTableUi.getState().openCharacterSheet('character-0002');
+    expect(useTableUi.getState()).toMatchObject({ sheetMemberId: 'character-0002', sheetTab: null });
+    useTableUi.getState().closeCharacterSheet();
+    expect(useTableUi.getState()).toMatchObject({ sheetMemberId: null, sheetTab: null });
+  });
+});

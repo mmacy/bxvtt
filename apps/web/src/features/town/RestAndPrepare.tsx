@@ -189,7 +189,12 @@ function SheetPanel() {
                     `, ${counts.book} in the spell book, ${counts.prepared} prepared`}
                 </span>
               </div>
-              <Button size="sm" variant="secondary" icon="book" onClick={() => openSheet(member.id)}>
+              <Button
+                size="sm"
+                variant="secondary"
+                icon="book"
+                onClick={() => openSheet(member.id, 'spells')}
+              >
                 {`Open ${member.name}'s sheet`}
               </Button>
             </li>

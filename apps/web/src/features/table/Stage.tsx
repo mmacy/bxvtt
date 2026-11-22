@@ -1,12 +1,11 @@
 import { useEffect } from 'react';
-import { useCombatStage, useMapBus, usePartyLocation, useShortcut } from '@/app';
+import { useCombatStage, useMapBus, usePartyLocation, useShortcut, useShownMode } from '@/app';
 import { Button } from '@/ui';
 import { BattleBoard, EncounterPanel } from '@/features/combat';
 import { MapStage, ScenePanel } from '@/features/explore';
 import { TownStage } from '@/features/town';
 import { ConnectionBanner } from './ConnectionBanner';
 import { EndScreen } from './EndScreen';
-import { useShownMode } from './shownMode';
 import styles from './table.module.css';
 
 /** The prompt of an open map pick, with a cancel button. Escape cancels it too. */

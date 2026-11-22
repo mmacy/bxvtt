@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { describeProblem, getApi, useCaller, useIsReferee, useMembers, useTableDetail } from '@/app';
 import { Badge, Banner, Panel, PageLayout, Wordmark } from '@/ui';
-import { ProfileMenu } from '@/features/home';
+import { ProfileMenu, RulesReference } from '@/features/home';
 import { AdventurePicker } from './AdventurePicker';
 import { InvitePanel } from './InvitePanel';
 import { MembersPanel } from './MembersPanel';
@@ -80,7 +80,12 @@ export function LobbyPage({ banner }: { banner?: ReactNode }) {
           Your tables
         </RouterLink>
       }
-      headerActions={<ProfileMenu />}
+      headerActions={
+        <>
+          <RulesReference />
+          <ProfileMenu />
+        </>
+      }
     >
       <div className={styles.page}>
         {banner && <div className={styles.stickyBanner}>{banner}</div>}

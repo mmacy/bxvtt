@@ -16,10 +16,19 @@ export interface CompendiumEntry {
   id?: string;
 }
 
+/** A tab of the character sheet. */
+export type SheetTab = 'sheet' | 'inventory' | 'spells';
+
 export interface TableUiState {
   /** The party member whose sheet is open, or `null`. */
   sheetMemberId: string | null;
-  openCharacterSheet: (memberId: string) => void;
+  /** The tab the sheet opens at, or `null` for its first tab. */
+  sheetTab: SheetTab | null;
+  /**
+   * Opens a party member's sheet, at a tab when you name one, such as `openCharacterSheet(id, 'spells')` from a
+   * "prepare spells" button. A member who has no spells sees the first tab instead of `spells`.
+   */
+  openCharacterSheet: (memberId: string, tab?: SheetTab) => void;
   closeCharacterSheet: () => void;
 
   compendiumOpen: boolean;
@@ -55,6 +64,7 @@ export interface TableUiState {
 
 const CLOSED = {
   sheetMemberId: null,
+  sheetTab: null,
   compendiumOpen: false,
   compendiumEntry: null,
   savesOpen: false,
@@ -66,8 +76,8 @@ const CLOSED = {
 
 export const useTableUi = create<TableUiState>()((set) => ({
   ...CLOSED,
-  openCharacterSheet: (memberId) => set({ sheetMemberId: memberId }),
-  closeCharacterSheet: () => set({ sheetMemberId: null }),
+  openCharacterSheet: (memberId, tab) => set({ sheetMemberId: memberId, sheetTab: tab ?? null }),
+  closeCharacterSheet: () => set({ sheetMemberId: null, sheetTab: null }),
   openCompendium: (entry) =>
     set((state) =>
       entry !== undefined

@@ -5,7 +5,6 @@ import {
   canSendCommand,
   useAdventureDocument,
   useCombatStage,
-  useGameMode,
   useIsReferee,
   useMapBus,
   useMembers,
@@ -20,6 +19,7 @@ import {
   useSendPing,
   useSendRefereeCommand,
   useShortcut,
+  useShownMode,
   useTableUser,
   type FocusRequest,
   type GameCommand,
@@ -81,7 +81,8 @@ export function keyDirection(event: Pick<KeyboardEvent, 'key' | 'code'>): Direct
 export function MapStage() {
   const view = usePlayerView();
   const scene = useScene();
-  const mode = useGameMode();
+  // The mode the shell shows, which holds a fight on screen while its last round plays back.
+  const mode = useShownMode();
   const lens = useRefereeLens();
   const isReferee = useIsReferee();
   const refereeState = useRefereeState();
