@@ -1,11 +1,16 @@
 .nav {
+  /* The steps share the full width, even when a parent or a class name makes the nav an inline box. */
   container-type: inline-size;
+  inline-size: 100%;
+  min-inline-size: 0;
 }
 
 .steps {
   display: flex;
+  flex: 1;
   align-items: flex-start;
   gap: var(--space-2);
+  inline-size: 100%;
 }
 
 .step {

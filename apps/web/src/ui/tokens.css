@@ -260,6 +260,20 @@
   --color-gold-subtle: var(--palette-gold-900);
   --color-referee: var(--palette-blood-300);
 
+  /* Condition chips: opaque, so a chip keeps 4.5:1 even inside a row dimmed to 70% opacity. */
+  --color-chip-harm-text: #ffb3a2;
+  --color-chip-harm-bg: #3d1711;
+  --color-chip-harm-edge: var(--palette-blood-400);
+  --color-chip-boon-text: #a6e2bb;
+  --color-chip-boon-bg: #14301e;
+  --color-chip-boon-edge: var(--palette-verdigris-400);
+  --color-chip-magic-text: #d8cbfb;
+  --color-chip-magic-bg: #261c45;
+  --color-chip-magic-edge: var(--palette-arcane-400);
+  --color-chip-neutral-text: #e7ddcc;
+  --color-chip-neutral-bg: #2e2722;
+  --color-chip-neutral-edge: var(--palette-ink-500);
+
   /* Paper: sheets, handouts, the journal. Paper keeps its look in every theme. */
   --color-paper: var(--palette-vellum-100);
   --color-paper-raised: var(--palette-vellum-50);
@@ -350,6 +364,20 @@
   --color-gold-subtle: #f4e9c6;
   --color-referee: #a33826;
 
+  /* Condition chips: opaque, so a chip keeps 4.5:1 even inside a row dimmed to 70% opacity. */
+  --color-chip-harm-text: #5a160b;
+  --color-chip-harm-bg: #fbe9e3;
+  --color-chip-harm-edge: #b03e2b;
+  --color-chip-boon-text: #123d24;
+  --color-chip-boon-bg: #e6f3ea;
+  --color-chip-boon-edge: #2f7049;
+  --color-chip-magic-text: #33217a;
+  --color-chip-magic-bg: #efeafb;
+  --color-chip-magic-edge: #6448c0;
+  --color-chip-neutral-text: #2a2119;
+  --color-chip-neutral-bg: #f3ede2;
+  --color-chip-neutral-edge: #8f7d62;
+
   --edge-highlight: inset 0 1px 0 rgb(255 255 255 / 0.6);
   --shadow-1: 0 1px 2px rgb(60 40 20 / 0.12);
   --shadow-2: 0 2px 4px rgb(60 40 20 / 0.08), 0 8px 20px -6px rgb(60 40 20 / 0.2);
@@ -430,6 +458,20 @@
   --color-magic-subtle: rgb(93 67 181 / 0.12);
   --color-gold: #7d5f0e;
   --color-gold-subtle: rgb(180 138 34 / 0.18);
+
+  /* Condition chips: opaque, so a chip keeps 4.5:1 even inside a row dimmed to 70% opacity. */
+  --color-chip-harm-text: #55150a;
+  --color-chip-harm-bg: #f8e6dc;
+  --color-chip-harm-edge: #a33826;
+  --color-chip-boon-text: #113a22;
+  --color-chip-boon-bg: #e3efdf;
+  --color-chip-boon-edge: #2f6b45;
+  --color-chip-magic-text: #311f75;
+  --color-chip-magic-bg: #ece5f4;
+  --color-chip-magic-edge: #5d43b5;
+  --color-chip-neutral-text: #251c14;
+  --color-chip-neutral-bg: #f5ecd8;
+  --color-chip-neutral-edge: var(--palette-gall-500);
 
   --edge-highlight: inset 0 1px 0 rgb(255 255 255 / 0.5);
   --shadow-1: 0 1px 1px rgb(60 40 20 / 0.15);
