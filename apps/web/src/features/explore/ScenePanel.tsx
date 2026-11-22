@@ -39,6 +39,9 @@ export function enteredText(areaId: string, here: SceneHere, ctx: TextContext): 
   return describeEvent(event, ctx)?.text ?? 'The party enters a new area.';
 }
 
+/** The title where the adventure keys no area: a corridor, a bridge deck, or open ground. */
+export const UNNAMED_PLACE = 'On the way';
+
 /** How long the full card stays after the party enters an area, in milliseconds. */
 export const RECEDE_MS = 10_000;
 
@@ -185,7 +188,7 @@ export function ScenePanel() {
   );
   const doors = doorsHere(view);
   const traps = here.traps.filter((trap) => trap.kind === 'room');
-  const title = area?.name ?? 'A corridor';
+  const title = area?.name ?? UNNAMED_PLACE;
   const count =
     stairs.length +
     passages.length +
@@ -247,7 +250,7 @@ export function ScenePanel() {
             align="end"
             items={quick}
             trigger={
-              <Button size="sm" variant="ghost" iconEnd="chevron-down">
+              <Button size="sm" variant="secondary" icon="more">
                 {thingsHere(count)}
               </Button>
             }
@@ -257,7 +260,7 @@ export function ScenePanel() {
           <span className={styles.sceneMeta}>{thingsHere(count)}</span>
         )}
         <IconButton
-          icon={open ? 'chevron-up' : 'chevron-down'}
+          icon={open ? 'minimize' : 'maximize'}
           label={open ? 'Hide the description' : 'Show the description'}
           size="sm"
           aria-expanded={open}
@@ -275,7 +278,9 @@ export function ScenePanel() {
               <p className={styles.sceneDescription}>{area.description}</p>
             </Parchment>
           ) : (
-            <p className={styles.sceneCorridor}>You are in a corridor. Nothing here has a name.</p>
+            <p className={styles.sceneCorridor}>
+              The party is between named places. Nothing here has a name.
+            </p>
           )}
           <ul className={styles.sceneList} aria-label="What is here">
             {stairs.map((transition) => (

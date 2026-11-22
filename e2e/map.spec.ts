@@ -255,7 +255,7 @@ test.describe('map chrome', () => {
 
     // In a corridor below the chapter house, the folded bar's menu opens the door.
     await placeParty(ruth.client, table.id, { dungeon: 'priory', level: 1, x: 12, y: 15, facing: 'north' });
-    await expect(scene.getByRole('heading', { name: 'A corridor' })).toBeVisible();
+    await expect(scene.getByRole('heading', { name: 'On the way' })).toBeVisible();
     const things = scene.getByRole('button', { name: /^\d+ things? here$/ });
     await expect(things).toBeVisible();
     await sam.page.screenshot({ path: `${SCREENS_DIR}/scene-folded.png` });
