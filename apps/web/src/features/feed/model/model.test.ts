@@ -433,3 +433,33 @@ describe('sounds', () => {
     expect(soundFor([chat(RUTH, 'hello')], SAM)).toBeNull();
   });
 });
+
+describe('recorded names', () => {
+  it('names a monster from the names the server recorded with the entry', () => {
+    const entry = game(SAM, 'resolve_battle_round', [
+      {
+        event_type: 'attack_rolled',
+        code: 'combat.attack.missed',
+        visibility: 'player',
+        attacker_id: 'monster-0001',
+        defender_id: 'character-0001',
+        roll: 3,
+        modifier: 0,
+        total: 3,
+        target: 12,
+        armour_class: 7,
+        attack_name: 'short sword',
+      },
+    ]);
+    const before = narrateEntry(entry, ctx, { lens: false }).text;
+    entry.names = {
+      members: {},
+      groups: {},
+      monsters: { 'monster-0001': { label: 'goblin', label_plural: 'goblins' } },
+      items: {},
+    };
+    const after = narrateEntry(entry, ctx, { lens: false }).text;
+    expect(before).toContain('A monster misses Brenna');
+    expect(after).toContain('A goblin misses Brenna');
+  });
+});

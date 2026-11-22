@@ -4,7 +4,13 @@
  * movement folded into one expandable line.
  */
 import type { GameEntry } from '@bxvtt/shared/protocol';
-import { describeEvents, facingLabel, type EventLine, type TextContext } from '@bxvtt/shared/text';
+import {
+  describeEvents,
+  extendContextWithEntryNames,
+  facingLabel,
+  type EventLine,
+  type TextContext,
+} from '@bxvtt/shared/text';
 
 /** How much a line matters: a step down a corridor is `minor`, and a party member's death is `critical`. */
 export type LineWeight = 'minor' | 'normal' | 'major' | 'critical';
@@ -96,10 +102,12 @@ const ROUND = /^Round (\d+) begins\.$/;
  * Describes a game entry for the feed.
  *
  * @param entry - The game entry.
- * @param ctx - The text context from `useTextContext`.
+ * @param base - The text context from `useTextContext`. The entry's own recorded names are added to it.
  * @param options - `lens` is whether the reader is a referee with the lens on.
  */
-export function narrateEntry(entry: GameEntry, ctx: TextContext, options: { lens: boolean }): Narration {
+export function narrateEntry(entry: GameEntry, base: TextContext, options: { lens: boolean }): Narration {
+  // The names the server recorded with the entry name its monsters and items after a reload.
+  const ctx = extendContextWithEntryNames(base, entry.names);
   const described = describeEvents(entry.events, ctx, {
     messages: entry.messages,
     ...(options.lens ? {} : { only: 'player' as const }),
