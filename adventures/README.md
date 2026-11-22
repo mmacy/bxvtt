@@ -9,7 +9,7 @@ The bxvtt server offers every `*.json` file here to every table, next to the adv
 | Title | File | Party | Length |
 | --- | --- | --- | --- |
 | The Drowned Bell | `the-drowned-bell.json` | 3 to 6 characters of level 1 | Three dungeon levels, 36 keyed areas, several sessions |
-| The Toll at Crookback Bridge | `the-toll-bridge.json` | 3 to 6 characters of level 1 or 2 | One level, 13 keyed areas, about an hour |
+| The Toll at Crookback Bridge | `the-toll-bridge.json` | 4 to 6 characters of level 1 or 2 | One level, 13 keyed areas, about an hour |
 
 ### The Drowned Bell
 

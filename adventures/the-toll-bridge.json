@@ -4,7 +4,7 @@
   "engine_version": "2.5.0",
   "payload": {
     "name": "The Toll at Crookback Bridge",
-    "description": "Bandits have taken the toll tower on Crookback Bridge, and they charge whatever they like to cross the gorge. A short adventure for three to six characters of first or second level, written to be played in about an hour.",
+    "description": "Bandits have taken the toll tower on Crookback Bridge, and they charge whatever they like to cross the gorge. A short adventure for four to six characters of first or second level, written to be played in about an hour.",
     "hooks": [
       "Reeve Odo Pell of Wethercote wants the bandits off the bridge and the east portcullis raised, so the carts can run again.",
       "Miller Aske refused to pay the toll. The bandits took his strongbox and threw his cart into the river, and he wants the box back."
@@ -12,16 +12,16 @@
     "party": {
       "min_level": 1,
       "max_level": 2,
-      "min_size": 3,
+      "min_size": 4,
       "max_size": 6
     },
     "town": {
       "name": "Wethercote",
       "description": "A market village of stone barns and sheep pens at the foot of the Kingsway. Since the bandits took the bridge, no carts have come up from the lowlands, and prices in the market have doubled.",
       "services": [
-        "Hob Tanner's smithy and store: weapons, armour, and gear",
-        "Wayside shrine of the Shepherd: healing at high prices, and raise dead for a fortune",
-        "Old Nan Colley buys gems and jewellery",
+        "Hob Tanner's smithy: weapons, armour, and gear",
+        "Wayside shrine of the Shepherd: healing, cures, and raise dead, all at high prices",
+        "Old Nan Colley, gem buyer: buys gems and jewellery",
         "The Drover's Rest: beds and supper"
       ],
       "travel_turns": {
@@ -253,7 +253,7 @@
                 "kind": "open",
                 "door": null
               },
-              "5,5:west": {
+              "6,5:west": {
                 "kind": "open",
                 "door": null
               },
@@ -376,14 +376,6 @@
                 "door": null
               },
               "5,6:west": {
-                "kind": "open",
-                "door": null
-              },
-              "6,6:north": {
-                "kind": "open",
-                "door": null
-              },
-              "6,6:west": {
                 "kind": "door",
                 "door": {
                   "kind": "normal",
@@ -392,6 +384,14 @@
                   "starts_open": false,
                   "requires": null
                 }
+              },
+              "6,6:north": {
+                "kind": "open",
+                "door": null
+              },
+              "6,6:west": {
+                "kind": "open",
+                "door": null
               },
               "7,6:north": {
                 "kind": "open",
@@ -597,11 +597,11 @@
                 "kind": "open",
                 "door": null
               },
-              "5,7:west": {
+              "6,7:north": {
                 "kind": "open",
                 "door": null
               },
-              "6,7:north": {
+              "6,7:west": {
                 "kind": "open",
                 "door": null
               },
@@ -1089,6 +1089,10 @@
                     5
                   ],
                   [
+                    3,
+                    5
+                  ],
+                  [
                     0,
                     6
                   ],
@@ -1101,6 +1105,10 @@
                     6
                   ],
                   [
+                    3,
+                    6
+                  ],
+                  [
                     0,
                     7
                   ],
@@ -1110,6 +1118,10 @@
                   ],
                   [
                     2,
+                    7
+                  ],
+                  [
+                    3,
                     7
                   ]
                 ],
@@ -1121,42 +1133,18 @@
               {
                 "id": "toll_gate",
                 "name": "Toll gate",
-                "description": "A squat stone arch closes the west end of Crookback Bridge, and a striped pole is lowered across the road. Under the arch, four bandits in odd pieces of armour lounge on upturned barrels with cudgels across their knees. A slate by the pole reads: ONE GOLD A HEAD. NO ARGUING.",
+                "description": "A squat stone arch closes the west end of Crookback Bridge, and a striped pole is lowered across the road. Under the arch, three bandits in odd pieces of armour lounge on upturned barrels with cudgels across their knees. A slate by the pole reads: ONE GOLD A HEAD. NO ARGUING.",
                 "cells": [
                   [
-                    3,
-                    5
-                  ],
-                  [
                     4,
                     5
-                  ],
-                  [
-                    5,
-                    5
-                  ],
-                  [
-                    3,
-                    6
                   ],
                   [
                     4,
                     6
                   ],
                   [
-                    5,
-                    6
-                  ],
-                  [
-                    3,
-                    7
-                  ],
-                  [
                     4,
-                    7
-                  ],
-                  [
-                    5,
                     7
                   ]
                 ],
@@ -1165,7 +1153,7 @@
                     {
                       "template_id": "bandit",
                       "count_dice": null,
-                      "count_fixed": 4
+                      "count_fixed": 3
                     }
                   ],
                   "alignment": "neutral",
@@ -1180,7 +1168,7 @@
               {
                 "id": "kennel",
                 "name": "Kennel",
-                "description": "Straw, gnawed bones, and the rank smell of animals. Two lean grey wolves, bought as cubs from a trapper and kept hungry ever since, rise out of the straw with their hackles up.",
+                "description": "Straw, gnawed bones, and the rank smell of animals. A lean grey wolf, bought as a cub from a trapper and kept hungry ever since, rises out of the straw with its hackles up.",
                 "cells": [
                   [
                     3,
@@ -1224,7 +1212,7 @@
                     {
                       "template_id": "normal_wolf",
                       "count_dice": null,
-                      "count_fixed": 2
+                      "count_fixed": 1
                     }
                   ],
                   "alignment": null,
@@ -1239,7 +1227,7 @@
               {
                 "id": "bunkroom",
                 "name": "Bunkroom",
-                "description": "Six bunks, three of them full of snoring bandits. Boots, dice, and empty wine jugs cover the floor, and a battered sea chest sits under the window.",
+                "description": "Six bunks, two of them full of snoring bandits. Boots, dice, and empty wine jugs cover the floor, and a battered sea chest sits under the window.",
                 "cells": [
                   [
                     3,
@@ -1283,7 +1271,7 @@
                     {
                       "template_id": "bandit",
                       "count_dice": null,
-                      "count_fixed": 3
+                      "count_fixed": 2
                     }
                   ],
                   "alignment": null,
@@ -1385,7 +1373,7 @@
                   ],
                   "alignment": null,
                   "aware": false,
-                  "stance": null,
+                  "stance": "indifferent",
                   "hoard": false
                 },
                 "features": [
@@ -1434,7 +1422,7 @@
               {
                 "id": "captains_loft",
                 "name": "Captain's loft",
-                "description": "The top room of the toll tower, with arrow slits on four sides and a view down the whole gorge. Mag Corrie, who calls herself captain of the bridge, has furnished it with a stolen carpet and a curtained bed. Her bodyguard, a huge bare-chested man with a meat cleaver, never leaves her side.",
+                "description": "The top room of the toll tower, with arrow slits on four sides and a view down the whole gorge. Mag Corrie, who calls herself captain of the bridge, wears a mail shirt even in bed and has furnished it with a stolen carpet and a curtained bed. Her bodyguard, a huge bare-chested man with a meat cleaver, never leaves her side.",
                 "cells": [
                   [
                     20,
@@ -1499,7 +1487,7 @@
                     }
                   ],
                   "alignment": null,
-                  "aware": true,
+                  "aware": false,
                   "stance": null,
                   "hoard": false
                 },
@@ -1975,8 +1963,8 @@
                 "requires": null,
                 "kind": "stairs_up",
                 "position": [
-                  11,
-                  2
+                  12,
+                  4
                 ],
                 "to_dungeon_id": "bridge",
                 "to_level_number": 1,
@@ -1997,8 +1985,8 @@
                 "to_dungeon_id": "bridge",
                 "to_level_number": 1,
                 "to_position": [
-                  11,
-                  2
+                  12,
+                  4
                 ],
                 "to_facing": "south"
               },
@@ -2374,8 +2362,8 @@
         "family_id": "veteran",
         "page": "",
         "intro": "The self-styled captain of Crookback Bridge: a hard, clever fighter who leads the toll bandits.",
-        "ac": 2,
-        "ac_ascending": 17,
+        "ac": 4,
+        "ac_ascending": 15,
         "ac_alternates": [],
         "attack_roll_required": true,
         "hit_dice": {
