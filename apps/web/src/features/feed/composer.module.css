@@ -1,0 +1,324 @@
+/* The message box under the feed, with the dice tray and the command list. */
+
+.composer {
+  position: relative;
+  container-type: inline-size;
+  display: grid;
+  gap: var(--space-1-5);
+  padding: var(--space-2) var(--space-3) var(--space-1-5);
+  border-top: var(--border-hair) solid var(--color-border);
+  background: var(--color-surface-1);
+}
+
+.composerWhisper {
+  border-top-color: var(--color-magic);
+  background: linear-gradient(var(--color-magic-subtle), var(--color-surface-1));
+}
+
+.inputRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-1-5);
+}
+
+.textareaWrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.textareaWrap .textarea {
+  min-height: var(--control-md);
+  max-height: 168px;
+  padding: 5px var(--space-2-5);
+  resize: none;
+  overflow-y: auto;
+}
+
+.tools {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  padding-bottom: 2px;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 16px;
+}
+
+.hint {
+  margin: 0;
+  line-height: 18px;
+  font-size: var(--text-2xs);
+  color: var(--color-text-subtle);
+}
+
+.hintSlash {
+  display: inline;
+}
+
+@container (max-width: 340px) {
+  .hintSlash {
+    display: none;
+  }
+}
+
+.count {
+  margin: 0 0 0 auto;
+  font-family: var(--font-numeric);
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+  white-space: nowrap;
+}
+
+.countOver {
+  color: var(--color-danger);
+  font-weight: var(--weight-semibold);
+}
+
+.error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1-5);
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-danger);
+}
+
+.error svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.whisperBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-1-5);
+  font-size: var(--text-sm);
+  color: var(--color-magic);
+}
+
+.whisperLabel {
+  font-weight: var(--weight-semibold);
+}
+
+/* Slash command suggestions */
+
+.suggestions {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  padding: var(--space-1);
+  border: var(--border-hair) solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-3);
+  box-shadow: var(--shadow-2);
+  list-style: none;
+}
+
+.suggestion {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-1-5) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.suggestion code {
+  font-family: var(--font-numeric);
+  font-size: var(--text-md);
+  color: var(--color-text-strong);
+}
+
+.suggestion:hover {
+  background: var(--color-surface-hover);
+}
+
+.suggestionActive {
+  background: var(--color-surface-selected);
+  box-shadow: inset 2px 0 0 var(--color-accent);
+}
+
+/* Dice tray and command help */
+
+.tray,
+.help {
+  display: grid;
+  gap: var(--space-2-5);
+  padding: var(--space-2-5) var(--space-3) var(--space-3);
+  border: var(--border-hair) solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-2);
+  box-shadow: var(--shadow-2), var(--edge-highlight);
+}
+
+.trayHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-right: calc(var(--space-1) * -1);
+}
+
+.trayTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-plain);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-strong);
+}
+
+.dice {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr)) minmax(0, 1.5fr);
+  gap: 2px;
+}
+
+.dieButton {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: var(--space-1) 0 var(--space-0-5);
+  border: var(--border-hair) solid transparent;
+  border-radius: var(--radius-md);
+  transition: background-color var(--duration-fast) var(--ease-standard);
+}
+
+.dieButton:hover {
+  background: var(--color-surface-hover);
+}
+
+.dieButton:active svg {
+  transform: rotate(-12deg) scale(0.94);
+}
+
+.dieButton svg {
+  transition: transform var(--duration-fast) var(--ease-settle);
+}
+
+.dieChosen {
+  border-color: var(--color-border-accent);
+  background: var(--color-surface-selected);
+}
+
+.dieName {
+  font-family: var(--font-numeric);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.dieCount {
+  position: absolute;
+  top: 0;
+  right: 1px;
+  display: grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-family: var(--font-numeric);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+}
+
+.trayRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.stepperLabel {
+  margin-right: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+}
+
+.stepperValue {
+  min-width: 2.2em;
+  font-family: var(--font-numeric);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-strong);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.trayLabel {
+  flex: 1;
+  min-width: 0;
+}
+
+.traySecret {
+  padding: var(--space-1-5) var(--space-2);
+  border: var(--border-hair) dashed var(--color-referee);
+  border-radius: var(--radius-md);
+}
+
+.trayActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.trayHint,
+.trayNote {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+}
+
+.trayNote {
+  color: var(--color-magic);
+}
+
+.helpList {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.helpItem dt,
+.helpItem dd {
+  margin: 0;
+}
+
+.helpItem code,
+.helpKeys code {
+  font-family: var(--font-numeric);
+  font-size: var(--text-md);
+  color: var(--color-text-strong);
+}
+
+.helpItem dd {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.helpKeys {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+}

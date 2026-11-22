@@ -1,0 +1,508 @@
+/* The journal panel: quests, the chronicle, and the party notes. */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.switcher {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: var(--border-hair) solid var(--color-border);
+}
+
+.sections {
+  width: 100%;
+}
+
+.sections > * {
+  flex: 1;
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border-strong) transparent;
+}
+
+.quiet {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-subtle);
+}
+
+.count {
+  margin-left: var(--space-1);
+  font-family: var(--font-numeric);
+  font-weight: var(--weight-regular);
+  color: var(--color-text-subtle);
+}
+
+/* Quests */
+
+.questLog {
+  display: grid;
+  gap: var(--space-5);
+  padding: var(--space-3) var(--space-3) var(--space-6);
+}
+
+.questLog > section {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.quest {
+  display: grid;
+  gap: var(--space-1-5);
+  padding: var(--space-3);
+  border: var(--border-hair) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  box-shadow: var(--edge-highlight);
+}
+
+.questChanged {
+  border-color: var(--color-border-accent);
+  animation: questGlow 2.4s var(--ease-out) 1;
+}
+
+@keyframes questGlow {
+  0%,
+  30% {
+    box-shadow: var(--glow-accent);
+  }
+  100% {
+    box-shadow: var(--edge-highlight);
+  }
+}
+
+.questDone {
+  background: var(--color-surface-1);
+}
+
+.questDone .questName {
+  color: var(--color-text-muted);
+}
+
+.questHidden {
+  border-style: dashed;
+  border-color: var(--color-referee);
+  background: transparent;
+}
+
+.questHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.questIcon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-text);
+}
+
+.questDone .questIcon {
+  background: var(--color-success-subtle);
+  color: var(--color-success);
+}
+
+.questHidden .questIcon {
+  background: var(--color-danger-subtle);
+  color: var(--color-referee);
+}
+
+.questName {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-plain);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-snug);
+  color: var(--color-text-strong);
+}
+
+.speaker {
+  margin: 0;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-subtle);
+}
+
+.narrative,
+.completion {
+  margin: 0;
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-plain);
+  font-style: italic;
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  color: var(--color-text-muted);
+}
+
+.completion {
+  padding-left: var(--space-2-5);
+  border-left: var(--border-thick) solid var(--color-success);
+}
+
+.clamped {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+
+.more {
+  justify-self: start;
+  margin: calc(var(--space-1) * -1) 0 0 calc(var(--space-2) * -1);
+}
+
+.progress {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+}
+
+.objectives {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.objective {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0 var(--space-2);
+  padding: 3px var(--space-1);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-md);
+  line-height: var(--leading-snug);
+}
+
+.objectiveMark {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  border: var(--border-hair) solid var(--color-border-strong);
+  border-radius: var(--radius-xs);
+  color: var(--color-text-subtle);
+}
+
+.objectiveName {
+  flex: 1;
+  min-width: 0;
+  color: var(--color-text);
+}
+
+.objectiveDone .objectiveMark {
+  border-color: var(--color-success);
+  background: var(--color-success-subtle);
+  color: var(--color-success);
+}
+
+.objectiveDone .objectiveName {
+  color: var(--color-text-subtle);
+  text-decoration: line-through;
+  text-decoration-color: var(--color-border-strong);
+}
+
+.objectiveHidden .objectiveMark {
+  border-style: dashed;
+  border-color: var(--color-referee);
+  color: var(--color-referee);
+}
+
+.objectiveHidden .objectiveName {
+  color: var(--color-text-muted);
+}
+
+.objectiveChanged {
+  background: var(--color-accent-subtle);
+}
+
+.hiddenNote,
+.changedNote {
+  width: 100%;
+  padding-left: calc(16px + var(--space-2));
+  font-size: var(--text-xs);
+  color: var(--color-referee);
+}
+
+.changedNote {
+  color: var(--color-accent-text);
+  font-weight: var(--weight-semibold);
+}
+
+.refereeSection {
+  padding-top: var(--space-3);
+  border-top: var(--border-hair) dashed var(--color-referee);
+}
+
+/* Chronicle */
+
+.chronicleWrap {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-3) var(--space-6);
+}
+
+.chronicleBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.parchment {
+  padding: var(--space-5) var(--space-4) var(--space-6);
+}
+
+.opening {
+  display: grid;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  text-align: center;
+}
+
+.adventureName {
+  margin: 0;
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-soft);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-tight);
+  color: var(--color-paper-rubric);
+}
+
+.townName {
+  margin: var(--space-2) 0 0;
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-plain);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--color-paper-rubric);
+}
+
+.adventureText {
+  margin: 0;
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-plain);
+  font-style: italic;
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  color: var(--color-paper-ink-muted);
+  text-align: left;
+}
+
+.flourish {
+  margin-top: var(--space-2);
+  font-size: var(--text-xl);
+  color: var(--color-paper-rubric);
+  opacity: 0.7;
+}
+
+.day + .day {
+  margin-top: var(--space-4);
+}
+
+.dayLabel {
+  margin: 0 0 var(--space-2);
+  padding-bottom: var(--space-1);
+  border-bottom: var(--border-hair) solid var(--color-paper-rule);
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-plain);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--color-paper-rubric);
+}
+
+.entries {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.entry {
+  display: grid;
+  gap: 2px;
+}
+
+.entryTime {
+  font-family: var(--font-numeric);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-paper-ink-subtle);
+}
+
+.entryText {
+  margin: 0;
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-plain);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  color: var(--color-paper-ink);
+}
+
+.blank {
+  margin: 0;
+  font-family: var(--font-display);
+  font-style: italic;
+  line-height: var(--leading-relaxed);
+  color: var(--color-paper-ink-subtle);
+}
+
+/* Party notes */
+
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-height: 100%;
+  padding: var(--space-3);
+}
+
+.editorWrap {
+  flex: 1;
+  min-height: 240px;
+}
+
+.editorWrap .editor {
+  min-height: 240px;
+  height: 100%;
+  resize: none;
+  line-height: var(--leading-relaxed);
+}
+
+.notesFooter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+}
+
+.statusError {
+  color: var(--color-danger);
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.mergeText {
+  margin: 0 0 var(--space-2);
+}
+
+.mergeActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1-5);
+}
+
+.theirs {
+  display: grid;
+  gap: var(--space-1-5);
+  padding: var(--space-2-5);
+  border: var(--border-hair) dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+}
+
+.theirsTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  margin: 0;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-muted);
+}
+
+.theirsText {
+  max-height: 220px;
+  margin: 0;
+  overflow: auto;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--color-text);
+  user-select: text;
+}
+
+.refereeLink {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-2-5);
+  border: var(--border-hair) dashed var(--color-referee);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.refereeLink > span {
+  flex: 1;
+  min-width: 12em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .questChanged,
+  .spin {
+    animation: none;
+  }
+}
