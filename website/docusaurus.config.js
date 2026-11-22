@@ -1,5 +1,6 @@
 // @ts-check
 import { themes as prismThemes } from 'prism-react-renderer';
+import patina from './src/theme-config/prism-patina.js';
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -26,6 +27,8 @@ const config = {
     defaultLocale: 'en',
     locales: ['en'],
   },
+
+  clientModules: ['./src/client/fonts.js'],
 
   presets: [
     [
@@ -89,7 +92,7 @@ const config = {
       },
       prism: {
         theme: prismThemes.github,
-        darkTheme: prismThemes.dracula,
+        darkTheme: patina,
         additionalLanguages: ['bash', 'json'],
       },
     }),

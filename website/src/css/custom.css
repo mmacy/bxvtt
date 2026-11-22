@@ -1,10 +1,20 @@
 /*
- * Site-wide theme overrides for the bxvtt documentation.
+ * Site-wide theme for the bxvtt documentation.
  *
- * The color tokens below are Infima defaults. Replace them with the bxvtt palette when it's ready.
+ * The dark theme, "patina", takes its pigments from the 1981 Basic Set cover and mutes them:
+ * cave aubergine for the ground, dragon verdigris for links, title brass for display type, and
+ * torch rust for warnings. Every text color meets WCAG AA (4.5:1) on every background level.
+ *
+ * The light theme still uses Infima defaults.
  */
 
 :root {
+  --ifm-font-family-base: 'Noto Sans Variable', 'Noto Sans', system-ui, sans-serif;
+  --ifm-heading-font-family: var(--ifm-font-family-base);
+  --ifm-font-family-monospace: 'Noto Sans Mono Variable', 'Noto Sans Mono', ui-monospace, monospace;
+  --ifm-heading-font-weight: 600;
+  --ifm-code-font-size: 95%;
+
   --ifm-color-primary: #2e8555;
   --ifm-color-primary-dark: #29784c;
   --ifm-color-primary-darker: #277148;
@@ -12,17 +22,159 @@
   --ifm-color-primary-light: #33925d;
   --ifm-color-primary-lighter: #359962;
   --ifm-color-primary-lightest: #3cad6e;
-  --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgb(0 0 0 / 10%);
 }
 
 [data-theme='dark'] {
-  --ifm-color-primary: #25c2a0;
-  --ifm-color-primary-dark: #21af90;
-  --ifm-color-primary-darker: #1fa588;
-  --ifm-color-primary-darkest: #1a8870;
-  --ifm-color-primary-light: #29d5b0;
-  --ifm-color-primary-lighter: #32d8b4;
-  --ifm-color-primary-lightest: #4fddbf;
-  --docusaurus-highlighted-code-line-bg: rgb(0 0 0 / 30%);
+  /* Pigments. */
+  --patina-ground: #16121b;
+  --patina-surface: #1d1823;
+  --patina-raised: #251e2c;
+  --patina-inset: #110e15;
+  --patina-bone: #d9d1c3;
+  --patina-bone-muted: #a49aa8;
+  --patina-verdigris: #86ab8f;
+  --patina-brass: #c8b170;
+  --patina-amethyst: #9d8bb8;
+  --patina-slate: #7f9bb0;
+  --patina-ochre: #c99a4e;
+  --patina-rust: #c0714f;
+
+  /* Primary: verdigris. */
+  --ifm-color-primary: var(--patina-verdigris);
+  --ifm-color-primary-dark: #749f7e;
+  --ifm-color-primary-darker: #6b9876;
+  --ifm-color-primary-darkest: #577e61;
+  --ifm-color-primary-light: #98b7a0;
+  --ifm-color-primary-lighter: #a1bea8;
+  --ifm-color-primary-lightest: #bcd0c1;
+
+  /* Neutral ramp from ground to bone, used for borders, hovers, and secondary text. */
+  --ifm-color-emphasis-0: #16121b;
+  --ifm-color-emphasis-100: #221d27;
+  --ifm-color-emphasis-200: #2e2733;
+  --ifm-color-emphasis-300: #403845;
+  --ifm-color-emphasis-400: #574e5a;
+  --ifm-color-emphasis-500: #6f6670;
+  --ifm-color-emphasis-600: #877e86;
+  --ifm-color-emphasis-700: #a49aa8;
+  --ifm-color-emphasis-800: #b8b0b3;
+  --ifm-color-emphasis-900: #c9c1bb;
+  --ifm-color-emphasis-1000: #d9d1c3;
+
+  /* Ground and text. */
+  --ifm-background-color: var(--patina-ground);
+  --ifm-background-surface-color: var(--patina-surface);
+  --ifm-font-color-base: var(--patina-bone);
+  --ifm-font-color-secondary: var(--patina-bone-muted);
+  --ifm-heading-color: var(--patina-bone);
+  --ifm-link-color: var(--patina-verdigris);
+  --ifm-link-hover-color: var(--ifm-color-primary-lightest);
+  --ifm-hr-background-color: var(--ifm-color-emphasis-200);
+  --ifm-toc-border-color: var(--ifm-color-emphasis-200);
+  --ifm-table-border-color: var(--ifm-color-emphasis-300);
+  --ifm-table-stripe-background: rgb(37 30 44 / 55%);
+  --ifm-card-background-color: var(--patina-raised);
+  --ifm-blockquote-border-color: var(--ifm-color-emphasis-300);
+
+  /* Chrome. */
+  --ifm-navbar-background-color: var(--patina-surface);
+  --ifm-navbar-shadow: none;
+  --ifm-footer-background-color: var(--patina-inset);
+  --ifm-menu-color: var(--patina-bone-muted);
+  --ifm-menu-color-active: var(--patina-verdigris);
+  --ifm-menu-color-background-active: rgb(134 171 143 / 9%);
+  --ifm-menu-color-background-hover: rgb(217 209 195 / 5%);
+  --docsearch-searchbox-background: var(--patina-raised);
+
+  /* Code. */
+  --ifm-code-background: var(--patina-raised);
+  --ifm-pre-background: var(--patina-inset);
+  --docusaurus-highlighted-code-line-bg: rgb(134 171 143 / 10%);
+  --prism-background-color: var(--patina-inset);
+
+  /* Admonitions: note, tip, info, warning, and danger. */
+  --ifm-color-secondary-contrast-background: #1f1a26;
+  --ifm-color-secondary-dark: var(--patina-amethyst);
+  --ifm-color-secondary-contrast-foreground: var(--patina-bone);
+  --ifm-color-success-contrast-background: #18201c;
+  --ifm-color-success-dark: var(--patina-verdigris);
+  --ifm-color-success-contrast-foreground: var(--patina-bone);
+  --ifm-color-info-contrast-background: #161d24;
+  --ifm-color-info-dark: var(--patina-slate);
+  --ifm-color-info-contrast-foreground: var(--patina-bone);
+  --ifm-color-warning-contrast-background: #241d13;
+  --ifm-color-warning-dark: var(--patina-ochre);
+  --ifm-color-warning-contrast-foreground: var(--patina-bone);
+  --ifm-color-danger-contrast-background: #261714;
+  --ifm-color-danger-dark: var(--patina-rust);
+  --ifm-color-danger-contrast-foreground: var(--patina-bone);
+
+  color-scheme: dark;
+}
+
+[data-theme='dark'] ::selection {
+  background: rgb(134 171 143 / 28%);
+}
+
+/* Display type: brass for the page title and site name. */
+
+[data-theme='dark'] h1,
+[data-theme='dark'] .navbar__title {
+  color: var(--patina-brass);
+}
+
+.navbar__title {
+  font-family: var(--ifm-heading-font-family);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Chrome edges: hairlines instead of shadows. */
+
+[data-theme='dark'] .navbar {
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+}
+
+[data-theme='dark'] .footer--dark {
+  --ifm-footer-background-color: var(--patina-inset);
+  --ifm-footer-link-color: var(--patina-bone-muted);
+  --ifm-footer-link-hover-color: var(--patina-verdigris);
+  --ifm-footer-title-color: var(--patina-brass);
+
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+}
+
+[data-theme='dark'] .theme-doc-sidebar-container {
+  border-right-color: var(--ifm-color-emphasis-200) !important;
+}
+
+/* Links: verdigris with a quiet underline that firms up on hover. */
+
+[data-theme='dark'] .markdown a {
+  text-decoration: underline;
+  text-decoration-color: rgb(134 171 143 / 35%);
+  text-underline-offset: 0.18em;
+}
+
+[data-theme='dark'] .markdown a:hover {
+  text-decoration-color: currentcolor;
+}
+
+/* Code: inset blocks with a hairline, inline code without the default border. */
+
+[data-theme='dark'] .theme-code-block {
+  border: 1px solid var(--ifm-color-emphasis-200);
+  box-shadow: none;
+}
+
+[data-theme='dark'] code {
+  border-color: transparent;
+}
+
+/* Images: a frame so screenshots sit on the page instead of floating on it. */
+
+[data-theme='dark'] .markdown img {
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: var(--ifm-global-radius);
 }
