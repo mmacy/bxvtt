@@ -193,6 +193,9 @@ function BattleActions() {
   const playing = useCombatUi((s) => s.playing);
   const skip = useCombatUi((s) => s.skip);
   const setComposing = useCombatUi((s) => s.setComposing);
+  // While a member's choices are open, the bar steps aside, so A never declares something other than what the
+  // player is looking at.
+  const composing = useCombatUi((s) => s.composing);
   const setCollapsed = useCombatUi((s) => s.setCollapsed);
   const declarers = declarations?.declarers ?? encounter?.declarers ?? [];
   const declared = declarations?.declared ?? [];
@@ -218,7 +221,14 @@ function BattleActions() {
     if (showResolve && everyone) void resolve();
   };
   const group = 'Battle';
-  useShortcut({ id: 'combat.quick', keys: 'a', label: 'Attack the nearest monsters', group, run: attack });
+  useShortcut({
+    id: 'combat.quick',
+    keys: 'a',
+    label: 'Attack the nearest monsters',
+    group,
+    enabled: composing === null,
+    run: attack,
+  });
   useShortcut({
     id: 'combat.repeat',
     keys: 'shift+a',
@@ -259,7 +269,7 @@ function BattleActions() {
           onOpen={openComposer}
         />
       ))}
-      {nextMember && quick && (
+      {composing === null && nextMember && quick && (
         <ActionButton
           label={quick.body ? `${nextMember.name}: ${quick.label}` : `${nextMember.name} can't reach anyone`}
           keys="a"

@@ -619,7 +619,7 @@ function SpellTargets({
             const distance = memberDistance(group, member.id);
             const reason =
               range !== null && distance > range
-                ? `Out of range: ${formatFeet(distance)} away, and ${name.toLowerCase()} reaches ${formatFeet(range)}.`
+                ? `Out of range: ${formatFeet(distance)} away, and ${name} reaches ${formatFeet(range)}.`
                 : null;
             return (
               <Tile
@@ -629,7 +629,7 @@ function SpellTargets({
                 meta={groupMeta(group, distance)}
                 note={groupConditions(group) ? capitalize(groupConditions(group) ?? '') : undefined}
                 disabledReason={reason}
-                label={`Cast ${name.toLowerCase()} at ${theGroup(viewLabels(group))}`}
+                label={`Cast ${name} at ${theGroup(viewLabels(group))}`}
                 pending={pending}
                 onClick={() => void onSubmit({ ...base, target_group_id: group.id })}
               />
@@ -647,7 +647,7 @@ function SpellTargets({
             loading={pending}
             onClick={() => void onSubmit(base)}
           >
-            Cast {name.toLowerCase()}
+            Cast {name}
           </Button>
         </div>
       )}
@@ -713,7 +713,7 @@ function SpellTargets({
               title={targets.length === 0 ? 'Choose a target first.' : undefined}
               onClick={() => void onSubmit({ ...base, targets })}
             >
-              Cast {name.toLowerCase()}
+              Cast {name}
               {targets.length > 0
                 ? ` at ${targets.length === 1 ? targetName(targets[0] ?? '', ctx) : `${targets.length} targets`}`
                 : ''}

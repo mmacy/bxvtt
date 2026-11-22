@@ -141,7 +141,7 @@ describe('describeDeclaration', () => {
     );
     expect(
       describeDeclaration({ action: 'cast', spell_id: 'sleep', target_group_id: 'group-0001' }, ctx),
-    ).toBe('Cast sleep at the goblins');
+    ).toBe('Cast Sleep at the goblins');
     expect(describeDeclaration({ action: 'hold', gaze_defense: 'avert_eyes' }, ctx)).toBe(
       'Hold, averting eyes',
     );
@@ -258,7 +258,7 @@ describe('describeDeclaration for monsters a player can’t tell apart', () => {
         { action: 'cast', spell_id: 'magic_missile', targets: ['monster-0001', 'monster-0002'] },
         ctx,
       ),
-    ).toBe('Cast magic missile at 2 goblins');
+    ).toBe('Cast Magic Missile at 2 goblins');
   });
 });
 
@@ -280,6 +280,6 @@ describe('monster targets by handle', () => {
         { action: 'cast', spell_id: 'magic_missile', targets: ['tgt_aaaaaaaaaaaaaaaa'] },
         ctx,
       ),
-    ).toBe('Cast magic missile at Goblin 2');
+    ).toBe('Cast Magic Missile at Goblin 2');
   });
 });

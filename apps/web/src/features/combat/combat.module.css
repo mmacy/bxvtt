@@ -22,6 +22,15 @@
   min-height: var(--control-sm);
 }
 
+.headKeepClose {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+}
+
+.headKeepClose > button {
+  flex: none;
+}
+
 .boardTitle {
   display: flex;
   flex: 1 1 auto;
@@ -816,6 +825,12 @@
   gap: var(--space-2);
 }
 
+.partyReason {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
 .options {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
@@ -913,6 +928,12 @@
   align-items: center;
   gap: var(--space-2);
   color: var(--color-gold);
+}
+
+.pickUpOutcome {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-strong);
 }
 
 .pickUpText {

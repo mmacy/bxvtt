@@ -10,7 +10,7 @@ import {
 import { useShortcut } from '@/app';
 import { Badge, Button, cx, Die, Icon, Kbd, SectionLabel } from '@/ui';
 import { lineIcon, type RoundDigest } from './playback';
-import type { PlaybackView } from './usePlayback';
+import type { PlaybackItem, PlaybackView } from './usePlayback';
 import styles from './combat.module.css';
 
 /** The round in a few chips: who acted first, damage both ways, who fell, what was slain, who flees. */
@@ -64,6 +64,8 @@ export interface PlaybackStripProps {
   idle: string | null;
   /** The heading of the last round's summary, such as "Round 2". */
   summaryTitle?: string;
+  /** What to say about an entry whose events say nothing, such as a wait while the monsters ignore the party. */
+  quietText?: (item: PlaybackItem) => string | null;
   /** Registers Escape to skip. Only one strip on screen should. */
   shortcuts?: boolean;
 }
@@ -71,7 +73,14 @@ export interface PlaybackStripProps {
 /**
  * The beat playing now, with its die and a skip control, or the last round's summary with a replay control.
  */
-export function PlaybackStrip({ playback, ctx, idle, summaryTitle, shortcuts = true }: PlaybackStripProps) {
+export function PlaybackStrip({
+  playback,
+  ctx,
+  idle,
+  summaryTitle,
+  quietText,
+  shortcuts = true,
+}: PlaybackStripProps) {
   const { beat, current, beatIndex, last, playing, skip, replay } = playback;
   useShortcut({
     id: 'combat.playback.skip',
@@ -153,8 +162,10 @@ export function PlaybackStrip({ playback, ctx, idle, summaryTitle, shortcuts = t
 
   if (last !== null) {
     const chips = digestChips(last.digest, ctx);
-    const finalLine = last.beats.at(-1)?.lines.at(-1);
+    const finalLine = last.beats.at(-1)?.lines.at(-1)?.text ?? (quietText ? quietText(last) : null);
     const round = last.digest.round;
+    // An entry with nothing to say gets no box at all.
+    if (chips.length === 0 && !finalLine) return idle === null ? null : <IdleStrip text={idle} />;
     return (
       <div className={styles.strip}>
         <div className={styles.stripDie} aria-hidden="true">
@@ -180,7 +191,7 @@ export function PlaybackStrip({ playback, ctx, idle, summaryTitle, shortcuts = t
               ))}
             </ul>
           ) : (
-            finalLine && <p className={styles.stripSub}>{finalLine.text}</p>
+            <p className={styles.stripSub}>{finalLine}</p>
           )}
         </div>
         {last.beats.length > 0 && (
@@ -195,12 +206,16 @@ export function PlaybackStrip({ playback, ctx, idle, summaryTitle, shortcuts = t
   }
 
   if (idle === null) return null;
+  return <IdleStrip text={idle} />;
+}
+
+function IdleStrip({ text }: { text: string }) {
   return (
     <div className={cx(styles.strip, styles.stripIdle)}>
       <div className={styles.stripDie} aria-hidden="true">
         <Icon name="hourglass" size={18} />
       </div>
-      <p className={styles.stripSub}>{idle}</p>
+      <p className={styles.stripSub}>{text}</p>
     </div>
   );
 }
