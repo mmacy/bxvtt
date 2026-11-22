@@ -89,15 +89,8 @@ export function SheetHeader({ model, color, controller, actions }: SheetHeaderPr
           </RuleLink>
           {[model.title, alignmentLabel(model.alignment)]
             .filter((part): part is string => Boolean(part))
-            .map((part) => (
-              <span key={part}>
-                <span className="visually-hidden">{', '}</span>
-                <span className={styles.dot} aria-hidden="true">
-                  ·
-                </span>
-                {part}
-              </span>
-            ))}
+            .map((part) => `, ${part}`)
+            .join('')}
         </p>
         {controller && <div className={styles.controller}>{controller}</div>}
       </div>
@@ -236,7 +229,7 @@ export function ScoreModifiers({ model }: { model: SheetModel }) {
     ['Open stuck doors', `${m.openDoors} in 6`],
     ['Missile attacks', formatModifier(m.missile)],
     ['Initiative', formatModifier(m.initiative)],
-    ['Hit points per Hit Die', formatModifier(m.hitPoints)],
+    ['Hit points per hit die', formatModifier(m.hitPoints)],
     ['Saving throws against magic', formatModifier(m.magicSave)],
     ['Reactions', formatModifier(m.reactions)],
   ];

@@ -63,7 +63,16 @@ export function ReviewStep({
     detail,
     draft.spells.map((id) => spells?.find((s) => s.id === id)?.name ?? id),
   );
-  const worn = gear.filter((item) => item.equipped).map((item) => item.name.toLowerCase());
+  const wearing = gear
+    .filter((item) => item.equipped && item.kind === 'armour')
+    .map((item) => item.name.toLowerCase());
+  const wielding = gear
+    .filter((item) => item.equipped && item.kind !== 'armour')
+    .map((item) => item.name.toLowerCase());
+  const outfit = [
+    ...(wearing.length > 0 ? [`wearing ${joinList(wearing)}`] : []),
+    ...(wielding.length > 0 ? [`wielding ${joinList(wielding)}`] : []),
+  ];
   const unworn = gear.filter((item) => !item.equipped && (item.kind === 'armour' || item.kind === 'weapon'));
   const edit = (step: WizardDraft['step'], label: string) => (
     <button type="button" className={styles.editLink} onClick={() => onEdit(step)}>
@@ -136,8 +145,8 @@ export function ReviewStep({
                 ))}
               </dl>
               <p className={styles.reviewNote}>
-                {worn.length > 0
-                  ? `You go out wearing and wielding ${joinList(worn)}. `
+                {outfit.length > 0
+                  ? `You go out ${outfit.join(' and ')}. `
                   : 'You go out with nothing worn or wielded. '}
                 The rules engine rolls hit points and works out armour class when it creates the character,
                 and the finished sheet shows both.

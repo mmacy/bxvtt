@@ -20,6 +20,8 @@ export interface RollStepProps {
   onRoll: () => void;
   classes: ClassSummary[] | null;
   tables: AbilityTables | null;
+  /** Called when every score of the roll has landed, so the wizard lets the player continue. */
+  onRevealed?: (rollId: string) => void;
 }
 
 /** The reason a roll doesn't qualify for a class, from the class's requirements in the catalog. */
@@ -49,6 +51,7 @@ function AbilityCell({
   shown,
   animate,
   tables,
+  onSettled,
 }: {
   ability: Ability;
   score: number;
@@ -56,6 +59,7 @@ function AbilityCell({
   shown: boolean;
   animate: boolean;
   tables: AbilityTables | null;
+  onSettled?: () => void;
 }) {
   const [settled, setSettled] = useState(!animate);
   const faces = facesForScore(score, index);
@@ -72,7 +76,10 @@ function AbilityCell({
             hideTotal
             highlightExtremes={false}
             animate={animate}
-            onSettled={() => setSettled(true)}
+            onSettled={() => {
+              setSettled(true);
+              onSettled?.();
+            }}
           />
         ) : (
           <span className={styles.diceWaiting} aria-hidden="true">
@@ -124,11 +131,13 @@ function AbilityRow({
   play,
   tables,
   waiting = false,
+  onSettled,
 }: {
   scores: Scores | null;
   play: boolean;
   tables: AbilityTables | null;
   waiting?: boolean;
+  onSettled?: (index: number) => void;
 }) {
   const [shownCount, setShownCount] = useState(waiting ? 0 : play ? 1 : ABILITIES.length);
   useEffect(() => {
@@ -149,6 +158,7 @@ function AbilityRow({
           shown={index < shownCount}
           animate={play}
           tables={tables}
+          onSettled={() => onSettled?.(index)}
         />
       ))}
     </div>
@@ -156,8 +166,34 @@ function AbilityRow({
 }
 
 /** Step 1: roll 3d6 for each ability, in order, and see which classes the scores allow. */
-export function RollStep({ roll, animate, rolls, rolling, onRoll, classes, tables }: RollStepProps) {
+export function RollStep({
+  roll,
+  animate,
+  rolls,
+  rolling,
+  onRoll,
+  classes,
+  tables,
+  onRevealed,
+}: RollStepProps) {
   const reduceMotion = useReduceMotion();
+  // The scores that have landed for each roll. The classes the roll allows appear once all six have.
+  const [landed, setLanded] = useState<{ rollId: string | null; indexes: readonly number[] }>({
+    rollId: null,
+    indexes: [],
+  });
+  const rollId = roll?.id ?? null;
+  const revealed =
+    rollId !== null &&
+    (!(animate && !reduceMotion) || (landed.rollId === rollId && landed.indexes.length >= 6));
+  useEffect(() => {
+    if (revealed && rollId !== null) onRevealed?.(rollId);
+  }, [revealed, rollId, onRevealed]);
+  const onLanded = (index: number) =>
+    setLanded((current) => {
+      const base = current.rollId === rollId ? current.indexes : [];
+      return base.includes(index) ? current : { rollId, indexes: [...base, index] };
+    });
   const play = animate && !reduceMotion;
 
   if (!roll) {
@@ -182,32 +218,34 @@ export function RollStep({ roll, animate, rolls, rolling, onRoll, classes, table
 
   return (
     <div className={styles.stepBody}>
-      <AbilityRow key={roll.id} scores={scores} play={play} tables={tables} />
+      <AbilityRow key={roll.id} scores={scores} play={play} tables={tables} onSettled={onLanded} />
 
-      <section className={styles.qualifies} aria-labelledby="wizard-qualifies">
-        <h3 id="wizard-qualifies" className={styles.subTitle}>
-          {eligible.size === 0 ? 'This roll qualifies for no class' : 'Classes this roll qualifies for'}
-        </h3>
-        <ul className={styles.classBadges}>
-          {(classes ?? []).map((summary) => {
-            const ok = eligible.has(summary.id);
-            const gap = scores ? shortGap(summary, scores) : null;
-            return (
-              <li key={summary.id}>
-                {ok ? (
-                  <Badge tone="success" icon="check">
-                    {classLabel(summary.id)}
-                  </Badge>
-                ) : (
-                  <Badge tone="neutral" appearance="outline">
-                    {gap ? `${classLabel(summary.id)}, ${gap}` : classLabel(summary.id)}
-                  </Badge>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      </section>
+      {revealed && (
+        <section className={styles.qualifies} aria-labelledby="wizard-qualifies">
+          <h3 id="wizard-qualifies" className={styles.subTitle}>
+            {eligible.size === 0 ? 'This roll qualifies for no class' : 'Classes this roll qualifies for'}
+          </h3>
+          <ul className={styles.classBadges}>
+            {(classes ?? []).map((summary) => {
+              const ok = eligible.has(summary.id);
+              const gap = scores ? shortGap(summary, scores) : null;
+              return (
+                <li key={summary.id}>
+                  {ok ? (
+                    <Badge tone="success" icon="check">
+                      {classLabel(summary.id)}
+                    </Badge>
+                  ) : (
+                    <Badge tone="neutral" appearance="outline">
+                      {gap ? `${classLabel(summary.id)}, ${gap}` : classLabel(summary.id)}
+                    </Badge>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       <div className={styles.rerollRow}>
         <Button variant="secondary" icon="refresh" loading={rolling} onClick={onRoll}>

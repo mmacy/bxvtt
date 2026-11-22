@@ -10,7 +10,7 @@ import { autoEquip } from './OutfitStep';
 import { emptyDraft, goldKey, parseDraft, requestFromDraft, type WizardDraft } from './draft';
 import { applyKit } from './kits';
 import { suggestName } from './names';
-import { checkChoices, explainCreationError, explainInvalid } from './server';
+import { checkChoices, explainCreationError, explainInvalid, oneReasonPerAbility } from './server';
 import { casterNextStep, extraLanguageCount, headlineModifier, xpModifierFor, type Scores } from './tables';
 
 const tables = catalog.abilities as unknown as AbilityTables;
@@ -239,5 +239,19 @@ describe('casterNextStep', () => {
     expect(casterNextStep('Osric', cleric, [])).toBe(
       'Osric casts no spells at first level and gains spell slots at level 2.',
     );
+  });
+});
+
+describe('oneReasonPerAbility', () => {
+  it('drops the step-of-two advice for a score that cannot be lowered at all', () => {
+    const kept = oneReasonPerAbility([
+      { code: 'creation.adjustment.not_lowerable', params: { ability: 'dex' } },
+      { code: 'creation.adjustment.reduction_not_even', params: { ability: 'dex', amount: 1 } },
+      { code: 'creation.adjustment.points_mismatch', params: { points_available: 0, points_spent: 1 } },
+    ]);
+    expect(kept.map((r) => r.code)).toEqual([
+      'creation.adjustment.not_lowerable',
+      'creation.adjustment.points_mismatch',
+    ]);
   });
 });

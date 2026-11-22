@@ -93,6 +93,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
   const [draft, setDraft] = useState<WizardDraft>(() => initial ?? emptyDraft());
   const [restored, setRestored] = useState(initial !== null);
   const [freshRollId, setFreshRollId] = useState<string | null>(null);
+  const [revealedRollId, setRevealedRollId] = useState<string | null>(null);
   const [rolling, setRolling] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<WizardProblem | null>(null);
@@ -417,7 +418,11 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
   const canContinue = (() => {
     switch (draft.step) {
       case 'roll':
-        return draft.roll !== null && eligible.length > 0;
+        return (
+          draft.roll !== null &&
+          eligible.length > 0 &&
+          (draft.roll.id !== freshRollId || revealedRollId === draft.roll.id)
+        );
       case 'class':
         return draft.classId !== null && eligible.includes(draft.classId);
       case 'adjust':
@@ -529,6 +534,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
             rolls={draft.rolls}
             rolling={rolling}
             onRoll={() => void roll()}
+            onRevealed={setRevealedRollId}
             classes={classes.data}
             tables={tables}
           />

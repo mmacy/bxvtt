@@ -15,6 +15,11 @@ const RACES: Record<string, string> = {
   halfling: 'Demihuman',
 };
 
+/** A catalog title such as "Turning the Undead" in sentence case: "Turning the undead". */
+export function sentenceCase(title: string): string {
+  return title.charAt(0) + title.slice(1).toLowerCase();
+}
+
 /** The class's armour rule, as its entry states it. */
 export function armourText(detail: ClassDetail): string {
   const shields = detail.armour.shields_allowed ? 'shields allowed' : 'no shields';
@@ -131,7 +136,9 @@ function ClassCard({ summary, scores, eligible, selected, onSelect, equipment }:
         </div>
       </dl>
       {detail && detail.abilities.length > 0 && (
-        <span className={styles.abilityTags}>{detail.abilities.map((a) => a.name).join(' · ')}</span>
+        <span className={styles.abilityTags}>
+          {detail.abilities.map((a) => sentenceCase(a.name)).join(' · ')}
+        </span>
       )}
     </button>
   );
@@ -198,7 +205,7 @@ export function ClassStep({
               type="multiple"
               items={selected.data.abilities.map((ability) => ({
                 value: ability.tag,
-                title: ability.name,
+                title: sentenceCase(ability.name),
                 content: <p className={styles.prose}>{ability.prose}</p>,
               }))}
             />

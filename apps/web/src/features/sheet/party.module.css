@@ -231,3 +231,11 @@
   margin-inline-start: calc(1.25rem + 40px + var(--space-2-5) * 2);
   font-size: var(--text-xs);
 }
+
+.lightLine {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}

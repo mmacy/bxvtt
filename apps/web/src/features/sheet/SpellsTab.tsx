@@ -88,7 +88,6 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
   const learn = useMemberCommand('learn_spell', member.id);
   const cast = useMemberCommand('cast_spell', member.id);
   const [preparing, setPreparing] = useState<'header' | 'notice' | null>(null);
-  const [prepareRefusal, setPrepareRefusal] = useState<string | null>(null);
   const [casting, setCasting] = useState<{ spellId: string; reversed: boolean } | null>(null);
   const [learning, setLearning] = useState(false);
   const spells = catalog.data;
@@ -108,12 +107,14 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
   const bookNames = model.spellBook.map((id) => nameOf(id, spells));
   // A caster whose class table gives slots at this level but who has nothing memorized can't cast yet.
   const unprepared = magic !== null && model.memorized.length === 0 && slots.some((n) => n > 0);
+  // After a level up, the class table can give more slots than the caster has memorized.
+  const openSlots = Math.max(0, slots.reduce((sum, n) => sum + n, 0) - model.memorized.length);
 
   return (
     <div className={styles.tabPanel}>
       {unprepared && (
         <Banner
-          tone={prepareRefusal ? 'warning' : 'info'}
+          tone="info"
           icon="book"
           title={
             magic.kind === 'arcane' && bookNames.length > 0
@@ -130,17 +131,14 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
                 icon="book"
                 disabled={!prepare.permission.allowed}
                 title={prepare.permission.reason ?? undefined}
-                onClick={() => {
-                  setPrepareRefusal(null);
-                  setPreparing('notice');
-                }}
+                onClick={() => setPreparing('notice')}
               >
                 Prepare spells
               </Button>
             ) : undefined
           }
         >
-          {prepareRefusal ?? "A caster prepares spells after a night's rest."}
+          A caster prepares spells after a night&apos;s rest.
         </Banner>
       )}
       {blocked && !blocked.permission.allowed && (
@@ -179,6 +177,14 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
             <span className={styles.muted}>No spell slots at level {model.level}.</span>
           )}
         </div>
+        {!unprepared && model.memorized.length > 0 && openSlots > 0 && (
+          <p className={styles.note}>
+            {openSlots === 1
+              ? `${member.name} has 1 open spell slot.`
+              : `${member.name} has ${openSlots} open spell slots.`}{' '}
+            Prepare spells after a night&apos;s rest to fill {openSlots === 1 ? 'it' : 'them'}.
+          </p>
+        )}
         <p className={styles.note}>
           Preparing takes six turns, and the caster must have slept since the last time they prepared.
         </p>
@@ -282,14 +288,6 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
           arcane={magic.kind === 'arcane'}
           slots={slots}
           onClose={() => setPreparing(null)}
-          onRefused={
-            preparing === 'notice'
-              ? (message) => {
-                  setPrepareRefusal(message);
-                  setPreparing(null);
-                }
-              : undefined
-          }
         />
       )}
       {casting && (
@@ -326,19 +324,20 @@ interface PrepareProps {
   arcane: boolean;
   slots: number[];
   onClose: () => void;
-  /** Takes a refusal back to where the player asked to prepare, instead of showing it in the dialog. */
-  onRefused?: (message: string) => void;
 }
 
 function PrepareRow({
   spell,
   arcane,
   counts,
+  free,
   setCount,
 }: {
   spell: SpellSummary;
   arcane: boolean;
   counts: Record<string, number>;
+  /** Slots still open at this spell's level, so a count can't go past the slots. */
+  free: number;
   setCount: (key: string, value: number) => void;
 }) {
   const detail = useSpellDetail(arcane ? spell.id : null);
@@ -355,7 +354,7 @@ function PrepareRow({
         decrementLabel={`Fewer copies of ${spell.name}`}
         value={counts[`${spell.id}:false`] ?? 0}
         min={0}
-        max={9}
+        max={(counts[`${spell.id}:false`] ?? 0) + free}
         onChange={(v) => setCount(`${spell.id}:false`, v ?? 0)}
       />
       {reversible && (
@@ -365,7 +364,7 @@ function PrepareRow({
           decrementLabel={`Fewer copies of ${detail.data?.reversed_form?.name ?? 'the reversed form'}`}
           value={counts[`${spell.id}:true`] ?? 0}
           min={0}
-          max={9}
+          max={(counts[`${spell.id}:true`] ?? 0) + free}
           onChange={(v) => setCount(`${spell.id}:true`, v ?? 0)}
         />
       )}
@@ -374,7 +373,7 @@ function PrepareRow({
 }
 
 /** Chooses the spells to memorize, level by level, within the slots the class table lists. */
-function PrepareDialog({ member, model, spellList, arcane, slots, onClose, onRefused }: PrepareProps) {
+function PrepareDialog({ member, model, spellList, arcane, slots, onClose }: PrepareProps) {
   const catalog = useSpellCatalog();
   const { send, pending } = useSendCommand();
   const [error, setError] = useState<string | null>(null);
@@ -422,10 +421,7 @@ function PrepareDialog({ member, model, spellList, arcane, slots, onClose, onRef
       { display: 'inline' },
     );
     if (result.status === 'accepted') onClose();
-    else if (result.status !== 'conflict') {
-      if (onRefused) onRefused(result.message);
-      else setError(result.message);
-    }
+    else if (result.status !== 'conflict') setError(result.message);
   };
 
   return (
@@ -491,6 +487,7 @@ function PrepareDialog({ member, model, spellList, arcane, slots, onClose, onRef
                       spell={spell}
                       arcane={arcane}
                       counts={counts}
+                      free={Math.max(0, n - chosenAt(level))}
                       setCount={(key, value) => setCounts((c) => ({ ...c, [key]: value }))}
                     />
                   ))}

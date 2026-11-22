@@ -1,17 +1,7 @@
 import { classLabel } from '@bxvtt/shared/text';
 import { useState, type ReactNode } from 'react';
 import { getApi, tokenClass, useApiAction, useMyCharacters, useStoredCharacter } from '@/app';
-import {
-  Banner,
-  Button,
-  Card,
-  ConfirmDialog,
-  Drawer,
-  IconButton,
-  Skeleton,
-  TokenPortrait,
-  toast,
-} from '@/ui';
+import { Banner, Button, Card, ConfirmDialog, Drawer, Skeleton, TokenPortrait, toast } from '@/ui';
 import { RuleLinksContext } from './RuleLink';
 import { StoredSheet } from './StoredSheet';
 import sheetStyles from './sheet.module.css';
@@ -41,31 +31,28 @@ export function StoredCharacterCard({ characterId, summary, owner, actions }: St
         decorative
       />
       <div className={styles.text}>
-        <button type="button" className={styles.nameButton} onClick={() => setOpen(true)}>
+        <button
+          type="button"
+          className={styles.nameButton}
+          aria-label={`${summary.name}, open the character sheet`}
+          onClick={() => setOpen(true)}
+        >
           <span className={styles.name}>{summary.name}</span>
-          <span className="visually-hidden">, open the character sheet</span>
         </button>
         <p className={styles.meta}>
           <span>
             Level {summary.level} {classLabel(summary.class_id).toLowerCase()}
+            {owner ? <span className="visually-hidden">,</span> : null}
           </span>
           {owner ? (
             <span className={styles.owner}>
-              <span className="visually-hidden">, played by</span> {owner.name}
+              <span className="visually-hidden">played by </span>
+              {owner.name}
             </span>
           ) : null}
         </p>
       </div>
-      <div className={styles.actions}>
-        <IconButton
-          icon="scroll"
-          label={`Open ${summary.name}'s sheet`}
-          variant="ghost"
-          size="sm"
-          onClick={() => setOpen(true)}
-        />
-        {actions}
-      </div>
+      <div className={styles.actions}>{actions}</div>
       <StoredSheetDrawer
         characterId={open ? characterId : null}
         name={summary.name}

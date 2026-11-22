@@ -19,6 +19,8 @@ export interface AdjustStepProps {
   check: CheckState;
 }
 
+const LOWERABLE: readonly Ability[] = ['str', 'int', 'wis'];
+
 /** The signed change the player made to one ability: negative when lowered. */
 function changeOf(adjustment: Adjustment, ability: Ability): number {
   return (adjustment.raised[ability] ?? 0) - (adjustment.lowered[ability] ?? 0);
@@ -41,6 +43,12 @@ export function withChange(adjustment: Adjustment, ability: Ability, change: num
  */
 export function AdjustStep({ scores, adjustment, onChange, detail, tables, check }: AdjustStepProps) {
   const primes = detail?.prime_requisites ?? [];
+  const fixed = detail?.may_not_lower ?? [];
+  // The trade the step describes: Strength, Intelligence, and Wisdom go down, and prime requisites go up. The
+  // controls offer only those moves, and the rules engine still checks every trade.
+  const canLower = (ability: Ability) =>
+    LOWERABLE.includes(ability) && !primes.includes(ability) && !fixed.includes(ability);
+  const canRaise = (ability: Ability) => primes.includes(ability);
   const adjusted = adjustedScores(scores, adjustment);
   const before = detail ? xpModifierFor(detail, scores) : null;
   const after = detail ? xpModifierFor(detail, adjusted) : null;
@@ -69,27 +77,35 @@ export function AdjustStep({ scores, adjustment, onChange, detail, tables, check
               <span className={styles.adjustRolled} aria-label={`Rolled ${scores[ability]}`}>
                 {scores[ability]}
               </span>
-              <span className={styles.adjustControls}>
-                <IconButton
-                  icon="minus"
-                  label={`Lower ${abilityLabel(ability)}`}
-                  size="sm"
-                  variant="secondary"
-                  disabled={value <= 3}
-                  onClick={() => onChange(withChange(adjustment, ability, change - 1))}
-                />
-                <span className={styles.adjustChange} aria-live="polite">
-                  {change === 0 ? '0' : formatModifier(change)}
+              {canLower(ability) || canRaise(ability) ? (
+                <span className={styles.adjustControls}>
+                  <IconButton
+                    icon="minus"
+                    label={`Lower ${abilityLabel(ability)}`}
+                    size="sm"
+                    variant="secondary"
+                    disabled={canLower(ability) ? value - 2 < 9 : change <= 0}
+                    onClick={() =>
+                      onChange(withChange(adjustment, ability, change - (canLower(ability) ? 2 : 1)))
+                    }
+                  />
+                  <span className={styles.adjustChange} aria-live="polite">
+                    {change === 0 ? '0' : formatModifier(change)}
+                  </span>
+                  <IconButton
+                    icon="plus"
+                    label={`Raise ${abilityLabel(ability)}`}
+                    size="sm"
+                    variant="secondary"
+                    disabled={canRaise(ability) ? value >= 18 : change >= 0}
+                    onClick={() =>
+                      onChange(withChange(adjustment, ability, change + (canRaise(ability) ? 1 : 2)))
+                    }
+                  />
                 </span>
-                <IconButton
-                  icon="plus"
-                  label={`Raise ${abilityLabel(ability)}`}
-                  size="sm"
-                  variant="secondary"
-                  disabled={value >= 18}
-                  onClick={() => onChange(withChange(adjustment, ability, change + 1))}
-                />
-              </span>
+              ) : (
+                <span className={cx(styles.adjustControls, styles.muted)}>Not traded</span>
+              )}
               <StatBox
                 abbreviation={abilityLabel(ability, 'short')}
                 name={`${abilityLabel(ability)} after the trade`}

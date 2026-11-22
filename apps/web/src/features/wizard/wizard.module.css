@@ -685,18 +685,15 @@
 }
 
 .goldCoin {
-  display: inline-grid;
-  place-items: center;
+  display: inline-block;
   width: 1.75rem;
   height: 1.75rem;
   align-self: center;
   border-radius: 50%;
-  background: var(--coin-gp);
-  color: var(--color-text-inverse);
-  font-family: var(--font-numeric);
-  font-size: var(--text-lg);
-  font-weight: var(--weight-bold);
-  box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.25);
+  background: radial-gradient(circle at 35% 35%, rgb(255 255 255 / 0.35), transparent 55%), var(--coin-gp);
+  box-shadow:
+    inset 0 -2px 0 rgb(0 0 0 / 0.25),
+    inset 0 0 0 2px rgb(0 0 0 / 0.12);
 }
 
 .goldUnit {
@@ -890,7 +887,7 @@
   color: var(--color-text-disabled);
 }
 
-.stepper {
+.lotStepper {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);

@@ -4,9 +4,9 @@
  */
 import { lowerFirst } from '@bxvtt/shared/text';
 
-/** "Range 120’", or "Range: the caster" for a range that isn't a distance. */
+/** "Range: 120’", or "Range: the caster" for a range that isn't a distance. */
 export function spellRange(range: string): string {
-  return /^\d/.test(range.trim()) ? `Range ${range.trim()}` : `Range: ${lowerFirst(range.trim())}`;
+  return /^\d/.test(range.trim()) ? `Range: ${range.trim()}` : `Range: ${lowerFirst(range.trim())}`;
 }
 
 /** The duration without a pointer to text the card doesn't show. */
