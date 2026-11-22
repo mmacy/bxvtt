@@ -367,6 +367,23 @@
   font-size: var(--text-sm);
 }
 
+.noSpells {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1-5) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-1);
+  color: var(--color-text-muted);
+}
+
+.noSpellsText {
+  flex: 1 1 260px;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+}
+
 .choiceStack {
   display: grid;
   gap: var(--space-2);

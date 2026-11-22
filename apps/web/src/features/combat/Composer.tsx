@@ -15,6 +15,7 @@ import {
   useMonsterCatalog,
   useRulesEntry,
   useSendDeclaration,
+  useTableUi,
   type ClassDetail,
   type SpellDetail,
 } from '@/app';
@@ -36,6 +37,7 @@ import {
 } from './model';
 import styles from './combat.module.css';
 import { targetLabel, useCombatText, useSceneTargets } from './text';
+import { useCasting } from './casting';
 import { countBadge, groupHeading, theGroup, viewLabels } from './names';
 
 export type ComposerTab = 'attack' | 'cast' | 'move' | 'item' | 'give' | 'turn' | 'hold';
@@ -151,15 +153,21 @@ export function Composer({
 
   const tabs: ComposerTab[] = [];
   if (groups.length > 0) tabs.push('attack');
-  if (spells.length > 0) tabs.push('cast');
+  const casting = useCasting(member);
+  // A caster with nothing memorized sees the Cast tab, disabled, with the reason under the tabs.
+  if (spells.length > 0 || casting.caster) tabs.push('cast');
   tabs.push('move');
   if (usable.length > 0) tabs.push('item');
   if (gear.items.length > 0 && others.length > 0) tabs.push('give');
   if (abilities.turnUndead) tabs.push('turn');
   tabs.push('hold');
 
-  const initial = tabFor(current?.action ?? suggested?.action) ?? tabs[0] ?? 'hold';
-  const [tab, setTab] = useState<ComposerTab>(tabs.includes(initial) ? initial : (tabs[0] ?? 'hold'));
+  const usableTabs = tabs.filter((t) => t !== 'cast' || spells.length > 0);
+  const initial = tabFor(current?.action ?? suggested?.action) ?? usableTabs[0] ?? 'hold';
+  const [tab, setTab] = useState<ComposerTab>(
+    usableTabs.includes(initial) ? initial : (usableTabs[0] ?? 'hold'),
+  );
+  const openSheet = useTableUi((s) => s.openCharacterSheet);
   const [gaze, setGaze] = useState<string>(
     typeof current?.gaze_defense === 'string' ? current.gaze_defense : 'none',
   );
@@ -186,6 +194,7 @@ export function Composer({
             value,
             label: TAB_LABELS[value].label,
             icon: TAB_LABELS[value].icon,
+            disabled: value === 'cast' && spells.length === 0,
           }))}
         />
         <Button
@@ -198,6 +207,21 @@ export function Composer({
           Close
         </Button>
       </div>
+
+      {casting.reason && (
+        <div className={styles.noSpells}>
+          <Icon name="spell" size={14} />
+          <span className={styles.noSpellsText}>{casting.reason}</span>
+          <Button
+            size="sm"
+            variant="ghost"
+            iconEnd="arrow-right"
+            onClick={() => openSheet(member.id, 'spells')}
+          >
+            Open {member.name}'s spells
+          </Button>
+        </div>
+      )}
 
       {gazers.length > 0 && (
         <div className={styles.gazeRow}>
