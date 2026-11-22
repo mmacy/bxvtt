@@ -4,7 +4,7 @@
  */
 import { directionLabel, formatFeet } from '@bxvtt/shared/text';
 import { useMemo, useState, type ReactNode } from 'react';
-import { useLegalCommands, useParty, type GameCommand } from '@/app';
+import { UNKEYED_PLACE_PHRASE, useLegalCommands, useParty, type GameCommand } from '@/app';
 import {
   Accordion,
   Button,
@@ -372,7 +372,7 @@ function pickedPlace(
 ): string {
   const level = data.adventure ? findLevel(data.adventure, cell.dungeon_id, cell.level_number) : null;
   const area = level ? areaAt(level, cell.x, cell.y) : null;
-  return `Level ${cell.level_number}, ${area ? area.name : 'a corridor'}`;
+  return `Level ${cell.level_number}, ${area ? area.name : UNKEYED_PLACE_PHRASE}`;
 }
 
 /** Moves the party to town, to an area of the key, or to a cell picked on the map. */

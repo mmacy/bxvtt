@@ -66,7 +66,7 @@ describe('cursor announcements', () => {
       'Guard post, 12 squares north and 1 square west of the party. Press Enter to choose this square, or Escape to stop.',
     );
     expect(describeCursor(referee, { x: 26, y: 8, side: 'north' }, 'pick-edge')).toMatch(
-      /^North side: a door, closed, locked, stuck\. A corridor, .* Press E for the next side, Enter to choose it, or Escape to stop\.$/,
+      /^North side: a door, closed, locked, stuck\. On the way, .* Press E for the next side, Enter to choose it, or Escape to stop\.$/,
     );
     expect(describeCursor(referee, { x: 24, y: 17, side: 'west' }, 'pick-edge')).toMatch(
       /^West side: a secret door, not found\./,

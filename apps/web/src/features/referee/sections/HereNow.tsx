@@ -2,6 +2,7 @@
  * Here and now: the key for where the party stands. The encounter under way comes first, then the area's
  * description and key, the doors on its walls, and the level's guidance and wandering monster table.
  */
+import { UNKEYED_PLACE_PHRASE } from '@/app';
 import { formatDice, timeUnitNoun } from '@bxvtt/shared/text';
 import { Badge, Banner, EmptyState, Icon, SectionLabel, Skeleton } from '@/ui';
 import { doorsAround, type LevelSpec } from '../model/adventure';
@@ -169,7 +170,7 @@ export function HereNow({ data }: { data: RefereeData }) {
       )}
 
       {!area && (
-        <p className={styles.secondaryLine}>The party stands in a corridor, outside any keyed area.</p>
+        <p className={styles.secondaryLine}>The party is {UNKEYED_PLACE_PHRASE}, outside any keyed area.</p>
       )}
 
       {area ? (

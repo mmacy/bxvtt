@@ -9,6 +9,7 @@ import type { CellTarget, EdgeTarget } from './hit';
 import type { MapParty, MapEdge } from './model';
 import type { MapTool, Measurement } from './overlays';
 import type { Scene } from './scene';
+import { UNKEYED_PLACE_TITLE } from '@/app/places';
 
 /** The tools that show a keyboard cursor while the map has keyboard focus. */
 export type CursorTool = 'pick-cell' | 'pick-edge' | 'pin' | 'ping' | 'ruler';
@@ -99,12 +100,12 @@ export function positionPhrase(x: number, y: number, party: MapParty | null): st
   return `${parts.join(' and ')} of the party`;
 }
 
-/** What a cell is: an area's name, a corridor, or unexplored. */
+/** What a cell is: an area's name, the name for a place no area covers, or unexplored. */
 function placePhrase(scene: Scene, x: number, y: number): string {
   const referee = scene.map.layer === 'referee';
   if (!scene.isFloor(x, y)) return referee ? 'Solid rock' : 'Unexplored';
   const area = scene.map.areas[scene.areaAt(x, y)];
-  const name = area ? area.name || 'An area' : 'A corridor';
+  const name = area ? area.name || 'An area' : UNKEYED_PLACE_TITLE;
   return referee && !scene.isKnown(x, y) ? `${name}, not yet seen by the party` : name;
 }
 
