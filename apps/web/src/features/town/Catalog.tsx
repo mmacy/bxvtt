@@ -80,6 +80,7 @@ export function Catalog({
         <button
           type="button"
           className={styles.nameButton}
+          aria-label={`${item.summary.name}, ${rowSummary(item, ctx) || itemTypeLabel(item.summary.item_type)}, show details`}
           aria-current={selectedId === item.summary.id ? 'true' : undefined}
           onClick={() => onSelect(item.summary.id)}
         >
@@ -91,7 +92,6 @@ export function Catalog({
             <span className={styles.sub}>
               {rowSummary(item, ctx) || itemTypeLabel(item.summary.item_type)}
             </span>
-            <span className="visually-hidden">, show details</span>
           </span>
         </button>
       ),

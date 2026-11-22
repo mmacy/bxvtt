@@ -10,6 +10,7 @@ import type { MemberView } from '@bxvtt/shared/bxapi';
 import { useMemo, useState } from 'react';
 import {
   canSendCommand,
+  useIsReferee,
   useParty,
   usePermissionContext,
   usePlayerView,
@@ -44,16 +45,19 @@ const SERVICE_ORDER = [
   'raise_dead',
 ];
 
-function orderServices(prices: Record<string, number>): string[] {
+function orderServices(prices: Record<string, number>, dead: boolean): string[] {
   const known = SERVICE_ORDER.filter((service) => service in prices);
   const others = Object.keys(prices).filter((service) => !SERVICE_ORDER.includes(service));
-  return [...known, ...others];
+  const all = [...known, ...others];
+  // For a dead patient, raise dead comes first.
+  return dead ? [...all.filter((s) => s === 'raise_dead'), ...all.filter((s) => s !== 'raise_dead')] : all;
 }
 
 export function Temple() {
   const view = usePlayerView();
   const party = useParty();
   const permissionContext = usePermissionContext();
+  const referee = useIsReferee();
   const ctx = useTextContext();
   const { send, pending } = useSendCommand();
   const patientId = useTownUi((s) => s.buyerId);
@@ -127,10 +131,14 @@ export function Temple() {
             if (s.dead) return 'Dead';
             return `${member.current_hp} of ${member.max_hp} hp${s.afflictions.length > 0 ? `, ${s.afflictions.join(', ').toLowerCase()}` : ''}`;
           }}
+          description={(member) => {
+            const s = memberStatus(member);
+            if (s.dead) return 'dead';
+            const state = s.afflictions.length > 0 ? ', afflicted' : s.hurt ? ', hurt' : '';
+            return `${member.current_hp} of ${member.max_hp} hp${s.afflictions.length > 0 ? `, ${s.afflictions.join(', ').toLowerCase()}` : ''}${state}`;
+          }}
           badge={(member) =>
-            memberStatus(member).dead ? (
-              <Badge tone="danger">Dead</Badge>
-            ) : memberStatus(member).afflictions.length > 0 ? (
+            memberStatus(member).dead ? null : memberStatus(member).afflictions.length > 0 ? (
               <Badge tone="warning">Afflicted</Badge>
             ) : memberStatus(member).hurt ? (
               <Badge tone="warning">Hurt</Badge>
@@ -142,9 +150,11 @@ export function Temple() {
       <div className={styles.grid}>
         <Panel title="Temple services" meta={`For ${patient.name}`}>
           <ul className={styles.services}>
-            {orderServices(prices).map((service) => {
+            {orderServices(prices, status.dead).map((service) => {
               const price = prices[service] ?? 0;
               const short = partyGold < price;
+              // The other services need a living patient.
+              const needsLiving = status.dead && service !== 'raise_dead';
               return (
                 <li key={service} className={styles.service}>
                   <div className={styles.serviceText}>
@@ -161,8 +171,12 @@ export function Temple() {
                     variant="secondary"
                     icon="heart"
                     loading={pending}
-                    disabled={!permission.allowed}
-                    title={permission.reason ?? undefined}
+                    disabled={!permission.allowed || needsLiving}
+                    title={
+                      needsLiving
+                        ? `${patient.name} is dead, so this needs a living patient.`
+                        : (permission.reason ?? undefined)
+                    }
                     aria-label={`Buy ${healingServiceLabel(service).toLowerCase()} for ${patient.name}`}
                     onClick={() => void buy(service)}
                   >
@@ -173,12 +187,19 @@ export function Temple() {
             })}
           </ul>
           {!permission.allowed && <p className={styles.explain}>{permission.reason}</p>}
-          <Field
-            label="Temple cleric's level (optional)"
-            hint="Leave this empty and the temple sends the lowest level that can cast the service."
-          >
-            <NumberInput value={level} onChange={setLevel} min={1} width={4} className={styles.level} />
-          </Field>
+          {status.dead && (
+            <p className={styles.explain}>
+              {`${patient.name} is dead. Raise dead is the service for the dead, and the other services need a living patient.`}
+            </p>
+          )}
+          {referee && (
+            <Field
+              label="Temple cleric's level (optional)"
+              hint="Leave this empty and the temple sends the lowest level that can cast the service."
+            >
+              <NumberInput value={level} onChange={setLevel} min={1} width={4} className={styles.level} />
+            </Field>
+          )}
         </Panel>
 
         <div className={styles.side}>
@@ -200,7 +221,7 @@ export function Temple() {
             <div className={styles.patient}>
               {status.dead ? (
                 <div className={styles.deadNote}>
-                  <Badge tone="danger">Dead. Raise dead is the service for the dead.</Badge>
+                  <Badge tone="danger">Dead</Badge>
                 </div>
               ) : (
                 <HpBar

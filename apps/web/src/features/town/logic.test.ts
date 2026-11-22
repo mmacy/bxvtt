@@ -6,6 +6,7 @@ import { cartCount, cartLines, cartTotal, purchaseItemIds } from './cartLines';
 import { gaps, readinessChecklist } from './checklist';
 import { describeItem, lotSentence, type ShopItem } from './equipment';
 import { describeChanges } from './RestAndPrepare';
+import { summarizeEntry } from './Glance';
 import { hasSleptSincePreparing, spellAdvice, spellAdviceText } from './SpellAdvice';
 import { CLASSES, gameEntry, makeCaster } from './testKit';
 import { readInventory } from './inventory';
@@ -355,5 +356,31 @@ describe('spells to prepare', () => {
   it('warns about a second-level cleric, who has slots and no book', () => {
     const members = party((s) => makeCaster(s, 'Osric', 'cleric', { level: 2 }));
     expect(spellAdvice(members, classes, []).needRest.map((m) => m.name)).toEqual(['Osric']);
+  });
+});
+
+describe('summarizing a town action', () => {
+  const line = (eventType: string, text: string, amount?: number) => ({ eventType, text, amount });
+  it('headlines the rest, and the hit points it healed, ahead of a burnt-out torch', () => {
+    const summary = summarizeEntry('rest', [
+      line('effect_expired', 'The torch that Brenna carries burns out.'),
+      line('healing_applied', 'Wren regains no hit points.', 0),
+      line('rested', 'The party rests for a full day.'),
+      line('healing_applied', 'Brenna regains 3 hit points.', 3),
+      line('provisions', 'Brenna eats the day’s food.'),
+    ]);
+    expect(summary.headline).toBe('The party rests for a full day. Brenna regains 3 hit points.');
+    expect(summary.rest).toEqual([
+      'The torch that Brenna carries burns out.',
+      'Wren regains no hit points.',
+      'Brenna eats the day’s food.',
+    ]);
+  });
+
+  it('falls back to the first line for a command it has no headline for', () => {
+    expect(summarizeEntry('equip_item', [line('x', 'One.'), line('y', 'Two.')])).toEqual({
+      headline: 'One.',
+      rest: ['Two.'],
+    });
   });
 });

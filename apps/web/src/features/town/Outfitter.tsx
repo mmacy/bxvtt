@@ -73,6 +73,10 @@ export function Outfitter() {
             const gold = readGold(member);
             return gold;
           }}
+          description={(member) => {
+            const n = cartCount(carts[member.id] ?? {});
+            return `${readGold(member)}${n > 0 ? `, ${n} in cart` : ''}`;
+          }}
           badge={(member) => {
             const n = cartCount(carts[member.id] ?? {});
             return n > 0 ? <Badge tone="accent" appearance="solid">{`${n} in cart`}</Badge> : null;

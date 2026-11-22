@@ -68,6 +68,11 @@ export interface MemberChooserProps {
   meta?: (member: MemberView) => ReactNode;
   /** A badge or count on the trailing edge of each button. */
   badge?: (member: MemberView) => ReactNode;
+  /**
+   * The words after the name in the button's accessible name, such as "7 of 10 hp, hurt", so it reads "Brenna,
+   * 7 of 10 hp, hurt". Include the text of `meta` and `badge`.
+   */
+  description?: (member: MemberView) => string;
   className?: string;
 }
 
@@ -82,6 +87,7 @@ export function MemberChooser({
   label,
   meta,
   badge,
+  description,
   className,
 }: MemberChooserProps) {
   return (
@@ -94,6 +100,7 @@ export function MemberChooser({
             type="button"
             className={cx(styles.choice, value === member.id && styles.chosen)}
             aria-pressed={value === member.id}
+            aria-label={`${member.name}, ${description ? description(member) : status.dead ? 'dead' : classLine(member)}`}
             onClick={() => onChange(member.id)}
           >
             <MemberToken member={member} size={32} />

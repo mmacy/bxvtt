@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useParty, useSendCommand } from '@/app';
 import { Banner, Button, Dialog, EmptyState, Icon, RadioGroup, Skeleton } from '@/ui';
 import { gaps, readinessChecklist } from './checklist';
-import { SpellActions, hasSpellAdvice, spellAdviceText, useSpellAdvice } from './SpellAdvice';
+import { SpellActions, hasSpellAdvice, spellsForChecklist, useSpellAdvice } from './SpellAdvice';
 import { useDungeons, useLeaveAccess, useTownServices, type Dungeon } from './hooks';
 import { useTownUi } from './townUi';
 import styles from './Road.module.css';
@@ -87,7 +87,7 @@ export function LeaveDialog() {
   const list: Dungeon[] = dungeons ?? [];
   const chosen = list.find((dungeon) => dungeon.id === choice) ?? list[0] ?? null;
   const advice = useSpellAdvice();
-  const missing = gaps(readinessChecklist(party, spellAdviceText(advice)));
+  const missing = gaps(readinessChecklist(party, spellsForChecklist(advice)));
 
   const close = (next: boolean) => {
     setOpen(next);
