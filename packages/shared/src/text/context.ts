@@ -15,7 +15,6 @@ import {
   equipmentNoun,
   itemNounFromName,
   itemPhrase,
-  lowerCatalogName,
   magicItemTemplateName,
   monsterTemplateLabels,
   spellCatalogName,
@@ -319,7 +318,7 @@ function readAdventure(ctx: TextContext, adventure: unknown): void {
     if (!isRecord(spell)) continue;
     const id = asString(spell.id);
     const name = asString(spell.name);
-    if (id && name) ctx.spells[id] = lowerCatalogName(name);
+    if (id && name) ctx.spells[id] = name;
   }
   for (const trigger of asArray(adventure.triggers)) {
     if (!isRecord(trigger)) continue;
@@ -435,7 +434,7 @@ export function extendContextWithCatalog(ctx: TextContext, entries: CatalogEntri
       next.items[entry.id] = itemNounFromName(entry.name, { catalog: true }).one;
   }
   for (const entry of entries.spells ?? []) {
-    if (!spellCatalogName(entry.id)) next.spells[entry.id] = lowerCatalogName(entry.name);
+    if (!spellCatalogName(entry.id)) next.spells[entry.id] = entry.name;
   }
   for (const entry of entries.areas ?? []) next.areas[entry.id] = entry.name;
   return next;
@@ -900,7 +899,7 @@ export function itemList(ids: readonly string[], ctx: TextContext, options: Item
   });
 }
 
-/** Name of a spell, lower case: `magic missile`. */
+/** Name of a spell, as the rules write it, which is a proper name: `Magic Missile`. */
 export function spellName(id: string | null | undefined, ctx: TextContext): string {
   if (!id) return 'a spell';
   return ctx.spells[id] ?? spellCatalogName(id) ?? prettifyId(id);

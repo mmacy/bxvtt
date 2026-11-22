@@ -130,17 +130,17 @@ describe('rejections', () => {
     [
       'magic.cast.not_memorized',
       { spell: 'sleep', reversed: 0 },
-      "That caster doesn't have sleep memorized. Casters memorize spells after a night's rest.",
+      "That caster doesn't have Sleep memorized. Casters memorize spells after a night's rest.",
     ],
     [
       'magic.cast.not_memorized',
       { spell: 'cure_light_wounds', reversed: 1 },
-      "That caster doesn't have cure light wounds memorized in its reversed form. Casters memorize spells after a night's rest.",
+      "That caster doesn't have Cure Light Wounds memorized in its reversed form. Casters memorize spells after a night's rest.",
     ],
     [
       'magic.cast.out_of_range',
       { spell: 'magic_missile', distance_feet: 180, range_feet: 150 },
-      'The target is 180 feet away, but magic missile reaches only 150 feet.',
+      'The target is 180 feet away, but Magic Missile reaches only 150 feet.',
     ],
     [
       'combat.attack.out_of_reach',
@@ -192,7 +192,7 @@ describe('rejections', () => {
       { direction: 'east' },
       "The door to the east won't open. The party doesn't have what it needs to pass yet.",
     ],
-    ['items.scroll.no_such_spell', { spell: 'sleep' }, "That scroll doesn't hold sleep."],
+    ['items.scroll.no_such_spell', { spell: 'sleep' }, "That scroll doesn't hold Sleep."],
     [
       'town.healing.no_effect',
       { item: 'cure_disease', character: 'character-0001' },
@@ -487,7 +487,7 @@ describe('events', () => {
         target_ids: ['monster-0001', 'monster-0002', 'monster-0003'],
         manual: false,
       },
-      'Ilsa casts sleep at 3 goblins.',
+      'Ilsa casts Sleep at 3 goblins.',
       'info',
       'magic',
     ],
@@ -798,7 +798,7 @@ describe('humanizeMessage', () => {
     ['character-0001 uses up iron_spikes.', 'Brenna uses up iron spike.'],
     [
       'town-cleric casts cure_light_wounds [heal] at character-0001.',
-      'The temple cleric casts cure light wounds [heal] at Brenna.',
+      'The temple cleric casts Cure Light Wounds [heal] at Brenna.',
     ],
     [
       'character-0001 fumbles with the tinder box \u2014 no flame.',
@@ -864,7 +864,7 @@ describe('contexts', () => {
         },
         extended,
       ).text,
-    ).toBe('Ilsa begins casting moon bolt.');
+    ).toBe('Ilsa begins casting Moon Bolt.');
     expect(
       describeEvent(
         {

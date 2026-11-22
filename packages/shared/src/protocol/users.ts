@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { LIMITS, Timestamp, UserColor, UserId, displayString } from './common';
+import { LIMITS, PickableUserColor, Timestamp, UserColor, UserId, displayString } from './common';
 
 /** A person at a table, as every member of a shared table sees them. */
 export const User = z.object({
@@ -34,7 +34,9 @@ export type CreateUserResponse = z.infer<typeof CreateUserResponse>;
 export const UpdateUserRequest = z
   .strictObject({
     name: displayString(LIMITS.userName).optional(),
-    color: UserColor.optional(),
+    color: UserColor.refine((color) => PickableUserColor.safeParse(color).success, {
+      message: 'must be one of USER_COLORS',
+    }).optional(),
   })
   .refine((value) => value.name !== undefined || value.color !== undefined, {
     message: 'set name, color, or both',

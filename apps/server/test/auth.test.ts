@@ -58,9 +58,13 @@ describe('users and authentication', () => {
     expect(created.user.color).toMatch(/^#[0-9a-f]{6}$/);
     expect(created.token).toMatch(/^bxt_/);
     expect(await client.me()).toEqual(created.user);
-    const updated = await client.updateMe({ name: 'Morgana', color: '#009e73' });
-    expect(updated).toMatchObject({ name: 'Morgana', color: '#009e73' });
-    await expect(client.updateMe({ color: '#123456' as '#009e73' })).rejects.toSatisfy((error) =>
+    const updated = await client.updateMe({ name: 'Morgana', color: '#3fae6a' });
+    expect(updated).toMatchObject({ name: 'Morgana', color: '#3fae6a' });
+    await expect(client.updateMe({ color: '#123456' as '#3fae6a' })).rejects.toSatisfy((error) =>
+      isProblem(error, 'validation_error'),
+    );
+    // A color of the old palette, unreadable on the dark chrome, can't be picked any more (R-002).
+    await expect(client.updateMe({ color: '#882255' })).rejects.toSatisfy((error) =>
       isProblem(error, 'validation_error'),
     );
     await expect(client.createUser('a\u0007b')).rejects.toSatisfy((error) =>

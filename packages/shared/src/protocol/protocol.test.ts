@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ClientMessage, CreateUserRequest, parseRollCommand, PostFeedRequest } from './index';
+import { ClientMessage, CreateUserRequest, parseRollCommand, PostFeedRequest, USER_COLORS } from './index';
 
 describe('parseRollCommand', () => {
   it('reads /roll and /r with a comment', () => {
@@ -46,5 +46,56 @@ describe('request schemas', () => {
       ClientMessage.safeParse({ type: 'ping', dungeon_id: 'barrow', level_number: 1, x: 1e9, y: 0 }).success,
     ).toBe(false);
     expect(ClientMessage.safeParse({ type: 'shout' }).success).toBe(false);
+  });
+});
+
+/** The relative luminance of a `#rrggbb` color, as WCAG defines it. */
+function luminance(hex: string): number {
+  const channels = [1, 3, 5].map((start) => parseInt(hex.slice(start, start + 2), 16) / 255);
+  const [r = 0, g = 0, b = 0] = channels.map((c) =>
+    c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4,
+  );
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** The WCAG contrast ratio of two colors. */
+function contrast(a: string, b: string): number {
+  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return ((light ?? 0) + 0.05) / ((dark ?? 0) + 0.05);
+}
+
+/** A color in CIE Lab, for telling colors apart. */
+function lab(hex: string): [number, number, number] {
+  const linear = [1, 3, 5].map((start) => {
+    const c = parseInt(hex.slice(start, start + 2), 16) / 255;
+    return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  const [r = 0, g = 0, b = 0] = linear;
+  const x = (0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047;
+  const y = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  const z = (0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883;
+  const f = (t: number) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+  return [116 * f(y) - 16, 500 * (f(x) - f(y)), 200 * (f(y) - f(z))];
+}
+
+describe('user colors (R-002)', () => {
+  it('reads as text on every chrome surface, and under dark ink as an avatar', () => {
+    for (const color of USER_COLORS) {
+      for (const surface of ['#16120f', '#1c1814', '#231e19', '#2b2520']) {
+        expect(contrast(color, surface), `${color} on ${surface}`).toBeGreaterThanOrEqual(4.5);
+      }
+      expect(contrast('#16120f', color), `ink on ${color}`).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it('keeps twelve colors that are easy to tell apart', () => {
+    expect(new Set(USER_COLORS).size).toBe(12);
+    for (const [i, a] of USER_COLORS.entries()) {
+      for (const b of USER_COLORS.slice(i + 1)) {
+        const [l1, a1, b1] = lab(a);
+        const [l2, a2, b2] = lab(b);
+        expect(Math.hypot(l1 - l2, a1 - a2, b1 - b2), `${a} and ${b}`).toBeGreaterThan(15);
+      }
+    }
   });
 });

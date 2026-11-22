@@ -130,4 +130,21 @@ describe('text from the QA pass', () => {
     );
     expect(findRefereeData(alice.received)).toEqual([]);
   });
+
+  it('labels an autosave for meeting monsters by what the party met, not as a battle (R-513)', async () => {
+    const tableId = await table('sample:the-toll-bridge');
+    let game = (
+      await alice.client.sendCommand(tableId, { command_type: 'enter_dungeon', dungeon_id: 'bridge' })
+    ).game;
+    // Walk east along the Kingsway until the bandits at the toll gate appear.
+    for (let step = 0; step < 6 && game.mode === 'exploring'; step += 1) {
+      game = (await alice.client.sendCommand(tableId, { command_type: 'move_party', direction: 'east' }))
+        .game;
+    }
+    expect(game.mode).toBe('encounter');
+    const bandits = game.view.encounter?.groups.reduce((sum, group) => sum + group.count, 0) ?? 0;
+    const labels = (await alice.client.listSaves(tableId)).items.map((save) => save.label);
+    expect(labels).toContain(`Autosave: Met ${bandits} bandits in Crookback Bridge, level 1`);
+    expect(labels.some((label) => label?.startsWith('Autosave: Before the battle'))).toBe(false);
+  });
 });

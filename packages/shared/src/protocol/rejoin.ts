@@ -47,7 +47,8 @@ export type RejoinCandidate = z.infer<typeof RejoinCandidate>;
 
 /**
  * Response of `POST /api/rejoin/lookup`: the table's name and its offline members, and nothing else. A member who
- * is online can't be reclaimed, so the list leaves them out.
+ * is online can't be reclaimed, and nobody could approve a request for the table's only referee, so the list
+ * leaves both out.
  */
 export const RejoinLookup = z.object({
   table_name: z.string(),

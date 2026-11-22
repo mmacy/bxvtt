@@ -220,6 +220,9 @@ describe('rejoining a table as an existing member', () => {
   it('never lets a referee be reclaimed without another referee to approve', async () => {
     hostWs.close();
     await waitFor(() => !server.server.ctx.hub.presence(table.id).online.includes(host.id));
+    // The lookup leaves out the only referee, so no visitor is offered a certain refusal (R-501).
+    const offered = (await visitor(server).lookupRejoin(table.invite_code)).members.map((m) => m.user_id);
+    expect(offered).not.toContain(host.id);
     expect(await failure(visitor(server).requestRejoin(table.invite_code, host.id))).toBe(
       'rejoin_no_approver',
     );

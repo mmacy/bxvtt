@@ -417,7 +417,8 @@ describe('osrlib message oddities (reported)', () => {
     ['The party enters town town.', 'The party arrives in Hollin Ferry.'],
     // Reported: "The fallen leave behind ." osrlib writes it when the fallen drop only coins worth less than 1 gp.
     ['The fallen leave behind .', 'The fallen leave a few coins behind.'],
-    ['character-0001 drops .', 'Brenna drops nothing.'],
+    // osrlib writes an empty list when the goods were coins worth less than 1 gp.
+    ['character-0001 drops .', 'Brenna drops a few coins.'],
     // Reported: "— the party is surprised".
     [
       "Encounter: 3 goblins at 60' — the party is surprised.",
@@ -510,7 +511,7 @@ describe('parentheses in sentences (reported)', () => {
         spell_id: 'cure_light_wounds',
         reversed: true,
       }).text,
-    ).toBe('Wren begins casting the reversed form of cure light wounds.');
+    ).toBe('Wren begins casting the reversed form of Cure Light Wounds.');
     expect(
       line({
         event_type: 'spells_memorized',
@@ -521,7 +522,7 @@ describe('parentheses in sentences (reported)', () => {
           { spell_id: 'sleep', reversed: false },
         ],
       }).text,
-    ).toBe('Wren memorizes 2 copies of sleep.');
+    ).toBe('Wren memorizes 2 copies of Sleep.');
     expect(
       line({
         event_type: 'healing_purchased',
@@ -1069,4 +1070,119 @@ describe('every template that names a group, against each kind of label and coun
       });
     }
   }
+});
+
+describe('the final QA pass (R-504, R-505, R-518, R-521)', () => {
+  const party = extendContextWithEntryNames(emptyContext(), {
+    members: { 'character-0001': 'Brenna', 'character-0002': 'Osric', 'character-0003': 'Tamsin' },
+  });
+  const events = (list: Record<string, unknown>[]) =>
+    list.map((event) => ({ visibility: 'player', ...event })) as never;
+
+  it('writes a spell name as the rules do (R-504)', () => {
+    // Reported: "Tamsin memorizes sleep."
+    expect(
+      describeEvent(
+        events([
+          {
+            event_type: 'spells_memorized',
+            code: 'magic.spells.memorized',
+            caster_id: 'character-0003',
+            prepared: [{ spell_id: 'sleep', reversed: false }],
+          },
+        ])[0],
+        party,
+      ).text,
+    ).toBe('Tamsin memorizes Sleep.');
+  });
+
+  it("sums up a day's upkeep and leaves out members who heal nothing (R-505)", () => {
+    const day = events([
+      ...['character-0001', 'character-0002', 'character-0003'].flatMap((id) => [
+        { event_type: 'provisions', code: 'exploration.provisions.consumed', character_id: id, kind: 'food' },
+        {
+          event_type: 'provisions',
+          code: 'exploration.provisions.consumed',
+          character_id: id,
+          kind: 'water',
+        },
+      ]),
+      {
+        event_type: 'healing_applied',
+        code: 'combat.healing.applied',
+        target_id: 'character-0001',
+        amount: 3,
+        source: 'natural',
+      },
+      {
+        event_type: 'healing_applied',
+        code: 'combat.healing.applied',
+        target_id: 'character-0002',
+        amount: 0,
+        source: 'natural',
+      },
+      {
+        event_type: 'healing_applied',
+        code: 'combat.healing.applied',
+        target_id: 'character-0003',
+        amount: 0,
+        source: 'natural',
+      },
+      { event_type: 'rested', code: 'exploration.rest.rested', kind: 'day' },
+    ]);
+    expect(describeEvents(day, party).map((line) => line.text)).toEqual([
+      "The party eats and drinks the day's rations.",
+      'Brenna regains 3 hit points.',
+      'The party rests for a full day.',
+    ]);
+  });
+
+  it('says what a share of a few copper coins is, never "takes nothing" (R-518)', () => {
+    // Reported: after a 2 gp drop split four ways, "Brenna takes nothing."
+    const share = {
+      event_type: 'item_acquired',
+      code: 'exploration.item.acquired',
+      character_id: 'character-0001',
+      item_ids: [],
+      coins_gp_value: 0,
+      origin: 'treasure',
+    };
+    expect(describeEvent(events([share])[0], party).text).not.toMatch(/nothing/);
+    expect(describeEvent(events([share])[0], party).text).toMatch(/a few coins/);
+    expect(humanizeMessage('character-0001 acquires .', party)).toBe('Brenna acquires a few coins.');
+  });
+
+  it("doesn't wake a slain monster (R-521)", () => {
+    // Reported: "A goblin is slain." and then "A goblin wakes up."
+    const ctx = extendContextWithEntryNames(party, {
+      monsters: { 'monster-0001': { label: 'goblin', label_plural: 'goblins' } },
+    });
+    const lines = describeEvents(
+      events([
+        {
+          event_type: 'monster_defeated',
+          code: 'battle.monster.defeated',
+          monster_id: 'monster-0001',
+          template_id: 'goblin',
+          outcome: 'slain',
+          xp: 5,
+        },
+        {
+          event_type: 'effect_released',
+          code: 'effects.effect.released',
+          effect_id: 'effect-0001',
+          kind: 'sleep',
+          target_ref: 'monster-0001',
+        },
+        {
+          event_type: 'condition_removed',
+          code: 'effects.condition.removed',
+          target_id: 'monster-0001',
+          condition: 'asleep',
+        },
+      ]),
+      ctx,
+    ).map((line) => line.text);
+    expect(lines).toEqual(['A goblin is slain.']);
+  });
 });

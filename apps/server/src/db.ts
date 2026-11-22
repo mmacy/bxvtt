@@ -2,12 +2,13 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import type { SQLInputValue, StatementSync } from 'node:sqlite';
+import { RETIRED_USER_COLORS, USER_COLORS } from '@bxvtt/shared/protocol';
 
 /**
  * The version of the table layout. The server upgrades a database of an older version at startup with the
  * steps in {@link MIGRATIONS}, and refuses one of a newer version.
  */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 /** The table of monster target handles, which layout version 2 added. */
 const TARGET_HANDLES = `
@@ -37,6 +38,12 @@ CREATE TABLE retired_tokens (
 const MIGRATIONS: Record<number, string> = {
   2: TARGET_HANDLES,
   3: RETIRED_TOKENS,
+  // The palette changed to colors that read on the dark chrome. Each stored color moves to the new color at its
+  // position, so nobody keeps an unreadable color.
+  4: RETIRED_USER_COLORS.map(
+    (old, index) =>
+      `UPDATE users SET color = '${USER_COLORS[index] ?? USER_COLORS[0]}' WHERE color = '${old}';`,
+  ).join('\n'),
 };
 
 const SCHEMA = `

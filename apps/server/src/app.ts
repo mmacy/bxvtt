@@ -27,7 +27,7 @@ import { registerRulesRoutes, RulesCache } from './rules';
 import { registerTableRoutes, TableStore } from './tables';
 import { registerUserRoutes, UserStore } from './users';
 import { RateLimiter } from './util';
-import { registerSecurityHeaders, registerWebClient, wantsSpaFallback } from './web';
+import { registerSecurityHeaders, registerWebClient, sendIndex, wantsSpaFallback } from './web';
 import { registerWebSocket } from './ws';
 
 /** A built server: the Fastify instance and its services. */
@@ -204,9 +204,7 @@ export async function createServer(config: Config): Promise<Server> {
   const webClient = await registerWebClient(app, config);
 
   app.setNotFoundHandler((request, reply) => {
-    if (webClient && wantsSpaFallback(request)) {
-      return reply.header('Cache-Control', 'no-cache').type('text/html').sendFile('index.html');
-    }
+    if (webClient !== null && wantsSpaFallback(request)) return sendIndex(webClient, request, reply);
     return sendApiError(
       reply,
       new ApiError('not_found', `No route matches ${request.method} ${request.url.split('?')[0] ?? ''}.`),

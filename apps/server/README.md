@@ -24,7 +24,7 @@ curl -s http://127.0.0.1:8660/api/health
 
 The response should have `"status": "ok"`, `bxapi.reachable: true`, and `host_key_required`, which says whether creating a table needs the host key. Without a token, the response stops there: bxapi's versions and storage from `GET /v1/meta` go only to a request with a user's token. When bxapi is down, the health check answers 503 and every route that needs bxapi answers 503 `bxapi_unavailable`.
 
-To run the production build, which also serves the built web client from `apps/web/dist`:
+To run the production build, which also serves the built web client from `apps/web/dist`. The server compresses the client's scripts, styles, and other text files with brotli and gzip once, in memory, and sends the encoding that `Accept-Encoding` allows, with `Vary: Accept-Encoding`. Hashed files under `assets/` are cached for a year as immutable, and `index.html` revalidates on every visit:
 
 ```sh
 npm run build
@@ -215,7 +215,7 @@ A refusal the server still can't attribute has `member_id: null` and `candidates
 
 ### Saves and autosaves
 
-Restoring a save creates a new bxapi session, moves the table to it, keeps each seat with the same member ID, and sends everyone a `notice` with the code `game_restored`, a `table` message, and a `game` message. When the `autosave` setting is on (the default), the server saves after the party enters a dungeon, reaches another level, meets monsters while exploring, or returns to town. Autosave labels start with `Autosave:`, such as `Autosave: Entered the priory on Corvane's Holm`, and the server keeps the newest 10. A name with a leading "The" reads "the" inside a label or a notice, by the rule of `nameInSentence` in `@bxvtt/shared/text`.
+Restoring a save creates a new bxapi session, moves the table to it, keeps each seat with the same member ID, and sends everyone a `notice` with the code `game_restored`, a `table` message, and a `game` message. When the `autosave` setting is on (the default), the server saves after the party enters a dungeon, reaches another level, meets monsters while exploring (labelled by what it met, such as `Autosave: Met 4 bandits in Crookback Bridge, level 1`), starts a battle from exploring, or returns to town. Autosave labels start with `Autosave:`, such as `Autosave: Entered the priory on Corvane's Holm`, and the server keeps the newest 10. A name with a leading "The" reads "the" inside a label or a notice, by the rule of `nameInSentence` in `@bxvtt/shared/text`.
 
 ## The feed
 
