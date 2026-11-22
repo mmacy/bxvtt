@@ -470,13 +470,32 @@ describe('save notices', () => {
     const nameOf = () => 'Ruth';
     expect(
       systemSentence(
-        system('save_created', { label: "Autosave: Entered The priory on Corvane's Holm", autosave: true }),
+        system('save_created', { label: "Autosave: Entered the priory on Corvane's Holm", autosave: true }),
         nameOf,
         ctx,
       ),
-    ).toBe("The server saved the game as “Entered The priory on Corvane's Holm”.");
+    ).toBe("The server saved the game: entered the priory on Corvane's Holm.");
     expect(
       systemSentence(system('save_created', { label: 'Before the crypt', autosave: false }), nameOf, ctx),
     ).toBe('Ruth saved the game as “Before the crypt”.');
+  });
+});
+
+describe('talking', () => {
+  it('shows players who spoke when the reaction roll is hidden', () => {
+    const talk = game(RUTH, 'parley', [
+      {
+        event_type: 'reaction_rolled',
+        code: 'encounter.reaction.rolled',
+        visibility: 'referee',
+        roll: 7,
+        modifier: 0,
+        total: 7,
+        result: 'indifferent',
+      },
+    ]);
+    talk.actor_id = 'character-0001';
+    expect(isEntryVisible(talk, SAM, false)).toBe(true);
+    expect(narrateEntry(talk, ctx, { lens: false }).text).toContain('Brenna talks to');
   });
 });

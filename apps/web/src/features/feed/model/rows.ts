@@ -62,6 +62,8 @@ export function isEntryVisible(entry: FeedEntry, selfId: string | null, lens: bo
     return entry.user_id === selfId;
   if (entry.kind === 'game') {
     if (entry.visibility === 'referees') return false;
+    // A talk shows who spoke even when the monsters' reaction is hidden, so it counts as visible.
+    if (entry.command_type === 'parley' && entry.actor_id) return true;
     return visibleEvents(entry, false).length > 0;
   }
   return entry.visibility !== 'referees' || entry.user_id === selfId;

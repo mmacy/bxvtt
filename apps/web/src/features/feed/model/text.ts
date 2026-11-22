@@ -2,7 +2,7 @@
  * Sentences for system notices and the times on feed entries.
  */
 import type { SystemEntry } from '@bxvtt/shared/protocol';
-import { memberName, type TextContext } from '@bxvtt/shared/text';
+import { lowerFirst, memberName, type TextContext } from '@bxvtt/shared/text';
 
 /** Names a user, or says the user left the table. */
 export type NameOf = (userId: string | null | undefined) => string;
@@ -29,6 +29,8 @@ export function systemSentence(entry: SystemEntry, nameOf: NameOf, ctx: TextCont
       return `${subject} joined the table.`;
     case 'member_left':
       return `${subject} left the table.`;
+    case 'member_rejoined':
+      return `${actor} let ${subject} back into the table.`;
     case 'member_removed':
       return `${actor} removed ${subject} from the table.`;
     case 'role_changed':
@@ -42,20 +44,22 @@ export function systemSentence(entry: SystemEntry, nameOf: NameOf, ctx: TextCont
     case 'game_ended':
       return `${actor} ended the game, and the table is back in its lobby.`;
     case 'save_created': {
-      // The label is a save's name, so it is quoted as a name rather than run into the sentence.
       const label = param(entry, 'label');
       if (entry.params.autosave === true) {
+        // The server writes an autosave label as a phrase, "Entered the priory on Corvane's Holm".
         return label
-          ? `The server saved the game as “${label.replace(AUTOSAVE_PREFIX, '')}”.`
+          ? `The server saved the game: ${lowerFirst(label.replace(AUTOSAVE_PREFIX, ''))}.`
           : 'The server saved the game.';
       }
+      // A label someone typed is a name, so it is quoted rather than run into the sentence.
       return label ? `${actor} saved the game as “${label}”.` : `${actor} saved the game.`;
     }
     case 'save_restored': {
       const label = param(entry, 'label');
-      return label
-        ? `${actor} restored the save “${label.replace(AUTOSAVE_PREFIX, '')}”.`
-        : `${actor} restored a save.`;
+      if (label === null) return `${actor} restored a save.`;
+      return AUTOSAVE_PREFIX.test(label)
+        ? `${actor} restored an autosave: ${lowerFirst(label.replace(AUTOSAVE_PREFIX, ''))}.`
+        : `${actor} restored the save “${label}”.`;
     }
     case 'seat_changed': {
       const member = memberName(param(entry, 'member_id'), ctx);

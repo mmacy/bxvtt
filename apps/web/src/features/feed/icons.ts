@@ -55,6 +55,7 @@ export function eventIcon(icon: EventIcon): IconName {
 export function systemIcon(code: SystemNoticeCode): IconName {
   switch (code) {
     case 'member_joined':
+    case 'member_rejoined':
     case 'member_left':
     case 'member_removed':
       return 'user';

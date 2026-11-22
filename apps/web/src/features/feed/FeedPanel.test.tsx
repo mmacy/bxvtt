@@ -66,7 +66,7 @@ describe('FeedPanel', () => {
     const { api, user } = renderWithTable(<FeedPanel />);
     await user.type(screen.getByRole('textbox', { name: 'Message the table' }), '/roll 2x6{Enter}');
     expect(api.postFeed).not.toHaveBeenCalled();
-    expect(screen.getByRole('alert')).toHaveTextContent("isn't a dice roll");
+    expect(screen.getByText(/isn't a dice roll/).closest('[role="alert"]')).not.toBeNull();
   });
 
   it('lists the commands when you type a slash', async () => {

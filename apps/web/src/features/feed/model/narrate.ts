@@ -5,7 +5,7 @@
  */
 import type { GameEntry } from '@bxvtt/shared/protocol';
 import {
-  describeEvents,
+  describeGameEntry,
   extendContextWithEntryNames,
   facingLabel,
   type EventLine,
@@ -106,12 +106,10 @@ const ROUND = /^Round (\d+) begins\.$/;
  * @param options - `lens` is whether the reader is a referee with the lens on.
  */
 export function narrateEntry(entry: GameEntry, base: TextContext, options: { lens: boolean }): Narration {
-  // The names the server recorded with the entry name its monsters and items after a reload.
+  // The text layer narrates the whole entry with the names the server recorded and the member who acted. The
+  // same names tell a party member from a monster when a line is weighed.
   const ctx = extendContextWithEntryNames(base, entry.names);
-  const described = describeEvents(entry.events, ctx, {
-    messages: entry.messages,
-    ...(options.lens ? {} : { only: 'player' as const }),
-  });
+  const described = describeGameEntry(entry, base, options.lens ? {} : { only: 'player' });
   let headline: string | null = null;
   const lines: NarratedLine[] = [];
   described.forEach((line, index) => {
