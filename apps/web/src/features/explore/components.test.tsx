@@ -1,13 +1,13 @@
 import type { CommandResult } from '@bxvtt/shared/protocol';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { useMapBus } from '@/app';
 import { ActionBar } from '@/ui';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { createFakeApi, renderWithTable } from '@/app/testing/renderWithTable';
 import { ExploreActions } from './ExploreActions';
 import { MapStage } from './MapStage';
-import { ScenePanel } from './ScenePanel';
+import { RECEDE_MS, ScenePanel } from './ScenePanel';
 
 /** The action bar as the shell renders it, which the bar's buttons need for arrow-key navigation. */
 function Bar() {
@@ -103,7 +103,7 @@ describe('MapStage', () => {
     snapshot.table.settings.caller_user_id = null;
     const api = createFakeApi();
     renderWithTable(<MapStage />, { snapshot, api });
-    fireEvent.keyDown(screen.getByRole('application', { name: 'Dungeon map' }), {
+    fireEvent.keyDown(screen.getByRole('application', { name: /^Dungeon map. With the pin/ }), {
       key: 'ArrowUp',
       code: 'ArrowUp',
     });
@@ -114,15 +114,22 @@ describe('MapStage', () => {
     const { snapshot } = exploring();
     const { user } = renderWithTable(<MapStage />, { snapshot });
     expect(screen.getByRole('group', { name: 'Map view' })).toBeInTheDocument();
+    // A narrow screen, as jsdom reports, starts with the minimap folded, and the choice sticks.
+    await user.click(screen.getByRole('button', { name: 'Show the minimap' }));
     expect(screen.getByText('1 square is 10 feet')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Hide the minimap' }));
+    expect(screen.getByRole('button', { name: 'Show the minimap' })).toBeInTheDocument();
     await user.click(screen.getByRole('radio', { name: 'Parchment map' }));
     expect(screen.getByRole('radio', { name: 'Parchment map' })).toHaveAttribute('aria-checked', 'true');
   });
 
-  it('says plainly when the party has no light', () => {
+  it('says plainly when the party has no light, and offers the light actions', () => {
     const { snapshot } = exploring();
     renderWithTable(<MapStage />, { snapshot });
     expect(screen.getByText('The party has no light.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Light: The party has no light.' })).toHaveTextContent(
+      'No light',
+    );
   });
 
   it('tells a referee which map they see', () => {
@@ -252,6 +259,35 @@ describe('ScenePanel', () => {
       ),
     );
     expect(screen.getByText('Treasure is within reach.')).toBeInTheDocument();
+  });
+
+  it('folds to its title bar after the first read, and keeps actions one click away', () => {
+    vi.useFakeTimers();
+    try {
+      const { snapshot, game } = exploring();
+      const here = game.scene.here;
+      if (!here) throw new Error('No scene here.');
+      here.caches = [
+        { id: 'chest', source: 'authored', area_id: null, position: null, reachable: true, trap: null },
+      ];
+      renderWithTable(<ScenePanel />, { snapshot });
+      expect(screen.getByText(/A flight of worn steps/)).toBeInTheDocument();
+      act(() => {
+        vi.advanceTimersByTime(RECEDE_MS + 10);
+      });
+      expect(screen.queryByText(/A flight of worn steps/)).toBeNull();
+      expect(screen.getByRole('heading', { name: 'Gatehouse stair' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '2 things here' })).toBeInTheDocument();
+      // Opening it by hand keeps it open, and this browser remembers.
+      fireEvent.click(screen.getByRole('button', { name: 'Show the description' }));
+      act(() => {
+        vi.advanceTimersByTime(RECEDE_MS * 2);
+      });
+      expect(screen.getByText(/A flight of worn steps/)).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+      localStorage.clear();
+    }
   });
 
   it('collapses without losing its title', async () => {

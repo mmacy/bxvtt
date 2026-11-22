@@ -6,7 +6,17 @@ import { directionLabel } from '@bxvtt/shared/text';
 import type { RefObject } from 'react';
 import type { MapThemeName } from '@/app';
 import { Minimap, type Direction, type DungeonMapHandle, type LevelMap } from '@/map';
-import { Badge, Button, DropdownMenu, IconButton, SegmentedControl, Tooltip, type MenuEntry } from '@/ui';
+import {
+  Badge,
+  Button,
+  DropdownMenu,
+  Icon,
+  IconButton,
+  SegmentedControl,
+  Tooltip,
+  cx,
+  type MenuEntry,
+} from '@/ui';
 import type { LevelOption } from './levels';
 import styles from './explore.module.css';
 
@@ -48,10 +58,9 @@ export function LevelSwitcher({ levels, viewedKey, levelName, onSelect }: LevelS
       trigger={
         <Button
           size="sm"
-          variant="secondary"
+          variant="ghost"
           icon="stairs"
           iconEnd="chevron-down"
-          className={styles.chromeButton}
           aria-label={`Level shown: ${levelName(current)}. Choose another level.`}
         >
           {levelName(current)}
@@ -166,21 +175,31 @@ export interface MinimapCardProps {
   target: RefObject<DungeonMapHandle | null>;
   theme: MapThemeName;
   facing: Direction | null;
+  onHide: () => void;
 }
 
-/** The minimap with the compass and the scale. */
-export function MinimapCard({ map, target, theme, facing }: MinimapCardProps) {
+/** The minimap with the compass and the scale, and a button that folds it away. */
+export function MinimapCard({ map, target, theme, facing, onHide }: MinimapCardProps) {
   return (
     <div className={styles.minimapCard}>
-      <Minimap
-        map={map}
-        target={target}
-        theme={theme}
-        width={184}
-        height={128}
-        ariaLabel="Minimap. Click or drag to move the map."
-        className={styles.minimap}
-      />
+      <div className={styles.minimapFrame}>
+        <Minimap
+          map={map}
+          target={target}
+          theme={theme}
+          width={184}
+          height={128}
+          ariaLabel="Minimap. Click or drag to move the map."
+          className={styles.minimap}
+        />
+        <IconButton
+          icon="minimize"
+          label="Hide the minimap"
+          size="sm"
+          className={styles.minimapHide}
+          onClick={onHide}
+        />
+      </div>
       <div className={styles.minimapFooter}>
         <Compass facing={facing} />
         <span className={styles.scaleNote}>
@@ -188,6 +207,53 @@ export function MinimapCard({ map, target, theme, facing }: MinimapCardProps) {
         </span>
       </div>
     </div>
+  );
+}
+
+export interface LightIndicatorProps {
+  /** The full sentence: "The party has no light." or "Brenna's torch, about 6 turns left". */
+  text: string;
+  /** The short form on the button: "6 turns", "Lit", or "No light". */
+  short: string;
+  lit: boolean;
+  /** The light actions the viewer may take. */
+  menu: MenuEntry[];
+}
+
+/**
+ * The party's light as a compact indicator in the map's toolbar: a torch with the time left, or a clear "no light"
+ * state, with the light actions on click. The full sentence is a status for screen readers.
+ */
+export function LightIndicator({ text, short, lit, menu }: LightIndicatorProps) {
+  const look = cx(styles.lightIndicator, !lit && styles.lightOut);
+  return (
+    <>
+      {menu.length > 0 ? (
+        <DropdownMenu
+          align="end"
+          items={menu}
+          trigger={
+            <Button
+              size="sm"
+              variant="ghost"
+              icon={lit ? 'torch' : 'moon'}
+              className={look}
+              aria-label={`Light: ${text}`}
+            >
+              {short}
+            </Button>
+          }
+        />
+      ) : (
+        <span className={cx(look, styles.lightStatic)} title={text}>
+          <Icon name={lit ? 'torch' : 'moon'} size={14} />
+          {short}
+        </span>
+      )}
+      <span className={styles.srOnly} role="status">
+        {text}
+      </span>
+    </>
   );
 }
 

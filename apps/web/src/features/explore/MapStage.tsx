@@ -3,6 +3,7 @@ import { directionLabel } from '@bxvtt/shared/text';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   canSendCommand,
+  scopedStorage,
   useAdventureDocument,
   useCombatStage,
   useIsReferee,
@@ -27,6 +28,7 @@ import {
 import {
   DungeonMap,
   levelKey,
+  measurementText,
   resolveTheme,
   type Direction,
   type DungeonMapHandle,
@@ -35,7 +37,7 @@ import {
   type MapTool,
   type Point,
 } from '@/map';
-import { Button, DropdownMenu, Icon, cx, type MenuEntry } from '@/ui';
+import { Button, Icon, IconButton, Tooltip, cx, useMediaQuery, type MenuEntry } from '@/ui';
 import { lightEntries } from './actions';
 import { mapMenuEntries } from './contextMenu';
 import { messageDuration, useMapFeedback } from './feedback';
@@ -55,8 +57,15 @@ import {
   wanderingTableName,
   type LevelOption,
 } from './levels';
-import { CameraControls, LayerBadge, LevelSwitcher, MinimapCard, ThemeSwitcher } from './MapChrome';
-import { NO_LIGHT_TEXT, lightLine, lightSourceNoun, partyLight } from './party';
+import {
+  CameraControls,
+  LayerBadge,
+  LevelSwitcher,
+  LightIndicator,
+  MinimapCard,
+  ThemeSwitcher,
+} from './MapChrome';
+import { NO_LIGHT_TEXT, lightLine, lightSourceNoun, partyLight, shortTimeLeft } from './party';
 import { NewPinDialog, PinDetailDialog } from './PinDialogs';
 import { PinsPanel } from './PinsPanel';
 import { PointMenu } from './PointMenu';
@@ -77,6 +86,10 @@ const KEY_DIRECTIONS: Record<string, Direction> = {
 const PING_INTERVAL_MS = 450;
 
 const FALLBACK_COLOR = '#e69f00';
+
+/** This browser's choices for the map's chrome. */
+const chromePrefs = scopedStorage('explore');
+const MINIMAP_KEY = 'minimap.open';
 
 /** The direction an arrow key names, or `null`. Letters stay with the app's shortcuts. */
 export function keyDirection(event: Pick<KeyboardEvent, 'key' | 'code'>): Direction | null {
@@ -123,6 +136,7 @@ export function MapStage() {
   const setBusTool = useMapBus((s) => s.setTool);
   const pick = useMapBus((s) => s.pick);
   const fulfilPick = useMapBus((s) => s.fulfilPick);
+  const cancelPick = useMapBus((s) => s.cancelPick);
   const clearFocus = useMapBus((s) => s.clearFocus);
   const viewedLevel = useMapBus((s) => s.viewedLevel);
   const setViewedLevel = useMapBus((s) => s.setViewedLevel);
@@ -134,6 +148,18 @@ export function MapStage() {
   const [newPin, setNewPin] = useState<Point | null>(null);
   const [pinShown, setPinShown] = useState<string | null>(null);
   const [measuring, setMeasuring] = useState(false);
+  const [measureText, setMeasureText] = useState<string | null>(null);
+  const wide = useMediaQuery('(min-width: 1100px)');
+  const [minimapPref, setMinimapPref] = useState<boolean | null>(() => {
+    const stored = chromePrefs.read(MINIMAP_KEY);
+    return typeof stored === 'boolean' ? stored : null;
+  });
+  // The browser remembers the choice. Until the user makes one, the minimap starts folded on a narrow screen.
+  const minimapOpen = minimapPref ?? wide;
+  const setMinimapOpen = (open: boolean) => {
+    setMinimapPref(open);
+    chromePrefs.write(MINIMAP_KEY, open);
+  };
   const lastPing = useRef(0);
   const pendingFocus = useRef<Point | 'party' | null>(null);
 
@@ -202,6 +228,12 @@ export function MapStage() {
     },
     [send, offLevel, setViewedLevel],
   );
+
+  // A pick from another feature starts with the map focused, so a keyboard user lands on its cursor.
+  const pickId = pick?.id ?? null;
+  useEffect(() => {
+    if (pickId !== null) mapRef.current?.focus();
+  }, [pickId]);
 
   // The tool: a pick from another feature wins over the rail.
   const tool: MapTool = pick ? (pick.kind === 'cell' ? 'pick-cell' : 'pick-edge') : busTool;
@@ -274,6 +306,7 @@ export function MapStage() {
           measureFrom: (cell) => {
             mapRef.current?.startMeasure(cell);
             setMeasuring(true);
+            mapRef.current?.focus();
           },
           move,
         },
@@ -320,8 +353,8 @@ export function MapStage() {
       }
       const direction = keyDirection(event);
       if (direction === null || event.shiftKey) return;
-      // While a measurement runs, the arrow keys move the ruler's far end, which the map handles.
-      if (mapRef.current?.isMeasuring()) return;
+      // While the map's keyboard cursor or a measurement owns the arrow keys, the map handles them.
+      if (mapRef.current?.hasKeyboardCursor()) return;
       if (event.altKey) {
         if (!state.canTurn) return;
         event.preventDefault();
@@ -425,7 +458,7 @@ export function MapStage() {
     if (direction && canMove) move(direction);
   };
   // Light and darkness on the party's level.
-  const light = view ? partyLight(view) : { lights: [], darkness: false };
+  const light = useMemo(() => (view ? partyLight(view) : { lights: [], darkness: false }), [view]);
   const dark = partyShown && map?.layer === 'player' && (light.lights.length === 0 || light.darkness);
 
   // Feedback beside the party.
@@ -443,6 +476,20 @@ export function MapStage() {
   const themeData = resolveTheme(theme);
   const levelName = (option: LevelOption) => levelLabel(option, levels, names);
   const lightMenu = actions ? lightEntries(actions) : [];
+  const lightText = useMemo(() => {
+    const lines = light.lights.map((entry) => {
+      const member = view?.party.find((m) => m.id === entry.memberId);
+      return lightLine(
+        member?.name ?? 'Someone',
+        lightSourceNoun(member, lights[entry.memberId]),
+        entry.remainingRounds,
+      );
+    });
+    if (light.darkness) return { text: 'Magical darkness covers the party.', short: 'Darkness', lit: false };
+    if (lines.length === 0) return { text: NO_LIGHT_TEXT, short: 'No light', lit: false };
+    const longest = Math.max(...light.lights.map((entry) => entry.remainingRounds ?? Infinity));
+    return { text: lines.join('. '), short: shortTimeLeft(longest), lit: true };
+  }, [light, lights, view]);
   const wandering = useMemo(() => {
     if (map?.layer !== 'referee' || !map.wandering) return null;
     const { chanceInSix, intervalTurns } = map.wandering;
@@ -454,8 +501,8 @@ export function MapStage() {
   if (view === null) return null;
 
   const ariaLabel = canMove
-    ? 'Dungeon map. The arrow keys move the party. Alt and an arrow key turns it. Shift and an arrow key pans. Shift and F10 opens the actions where the party stands.'
-    : 'Dungeon map';
+    ? 'Dungeon map. The arrow keys move the party. Alt and an arrow key turns it. Shift and an arrow key pans. Shift and F10 opens the actions where the party stands. With the pin, ping, ruler, or a picking tool, the arrow keys move a cursor and Enter acts.'
+    : 'Dungeon map. With the pin, ping, ruler, or a picking tool, the arrow keys move a cursor and Enter acts.';
 
   return (
     <div
@@ -513,7 +560,12 @@ export function MapStage() {
         }}
         onPinClick={(target) => setPinShown(target.pin.id)}
         onContextMenu={(target, screen, info) => openMenu(target, screen, info.world)}
-        onMeasure={() => setMeasuring(false)}
+        onMeasure={() => {
+          setMeasuring(false);
+          setMeasureText(null);
+        }}
+        onMeasureChange={(measurement) => setMeasureText(measurement ? measurementText(measurement) : null)}
+        onPickCancel={() => cancelPick()}
         onPing={ping}
         onStrokeComplete={(stroke) =>
           annotations.addStroke(stroke.points, me?.color ?? FALLBACK_COLOR, stroke.width)
@@ -578,23 +630,7 @@ export function MapStage() {
       </div>
 
       <div className={styles.chromeTop}>
-        <div className={styles.chromeRow}>
-          {isReferee && map && <LayerBadge layer={map.layer} />}
-          <PinsPanel
-            pins={annotations.pins}
-            records={annotations.pinRecords}
-            partyHere={partyShown}
-            onShow={(pin) => {
-              setFollow(false);
-              mapRef.current?.panTo({ x: pin.x, y: pin.y });
-              mapRef.current?.focus();
-            }}
-            onOpen={(pin) => setPinShown(pin.id)}
-            onAddAtParty={() => {
-              if (party) setNewPin({ x: party.x + 0.5, y: party.y + 0.5 });
-            }}
-          />
-          <ThemeSwitcher theme={theme} onChange={(next) => setPreference('mapTheme', next)} />
+        <div className={styles.toolbarGroup} role="toolbar" aria-label="Map view options">
           {levels.length > 1 && (
             <LevelSwitcher
               levels={levels}
@@ -612,7 +648,36 @@ export function MapStage() {
           {levels.length === 1 && levels[0] && (
             <span className={styles.levelName}>{levelName(levels[0])}</span>
           )}
+          <span className={styles.groupDivider} aria-hidden="true" />
+          <ThemeSwitcher theme={theme} onChange={(next) => setPreference('mapTheme', next)} />
+          <span className={styles.groupDivider} aria-hidden="true" />
+          <PinsPanel
+            pins={annotations.pins}
+            records={annotations.pinRecords}
+            partyHere={partyShown}
+            onShow={(pin) => {
+              setFollow(false);
+              mapRef.current?.panTo({ x: pin.x, y: pin.y });
+              mapRef.current?.focus();
+            }}
+            onOpen={(pin) => setPinShown(pin.id)}
+            onAddAtParty={() => {
+              if (party) setNewPin({ x: party.x + 0.5, y: party.y + 0.5 });
+            }}
+          />
+          {partyShown && (
+            <>
+              <span className={styles.groupDivider} aria-hidden="true" />
+              <LightIndicator
+                text={lightText.text}
+                short={lightText.short}
+                lit={lightText.lit}
+                menu={lightMenu}
+              />
+            </>
+          )}
         </div>
+        {isReferee && map && <LayerBadge layer={map.layer} />}
         {offLevel && partyLevel && (
           <div className={styles.offLevel} role="status">
             <Icon name="eye" size={14} />
@@ -622,48 +687,51 @@ export function MapStage() {
             </Button>
           </div>
         )}
-        {measuring && (
-          <div className={styles.offLevel} role="status">
+        {(measuring || measureText !== null) && (
+          // The map announces each measurement, so this line only shows it.
+          <div className={styles.offLevel}>
             <Icon name="ruler" size={14} />
-            <span>Point at a square to measure. Click or press Enter to keep it, or Escape to stop.</span>
+            <span className={measureText ? styles.measureDistance : undefined}>
+              {measureText ??
+                'Point at a square to measure. Click or press Enter to keep it, or Escape to stop.'}
+            </span>
           </div>
         )}
       </div>
 
-      <div className={styles.chromeSide}>
-        <CameraControls map={mapRef} follow={follow} onFollowChange={setFollow} partyShown={partyShown} />
+      {/* One cluster at the bottom right: the camera controls beside the minimap. While a fight or its summary
+          holds the bottom of the stage, the controls move to the right edge and the minimap steps aside. */}
+      <div className={bottomFree ? styles.cluster : styles.chromeSide}>
+        {bottomFree && wandering !== null && (
+          <div className={styles.wanderingChip}>
+            <Icon name="referee" size={14} />
+            <span>{wandering}</span>
+          </div>
+        )}
+        <div className={styles.clusterRow}>
+          <CameraControls map={mapRef} follow={follow} onFollowChange={setFollow} partyShown={partyShown} />
+          {bottomFree &&
+            (minimapOpen ? (
+              <MinimapCard
+                map={map}
+                target={mapRef}
+                theme={theme}
+                facing={party?.facing ?? null}
+                onHide={() => setMinimapOpen(false)}
+              />
+            ) : (
+              <Tooltip content="Show the minimap" side="left">
+                <IconButton
+                  icon="map"
+                  label="Show the minimap"
+                  variant="secondary"
+                  className={styles.minimapShow}
+                  onClick={() => setMinimapOpen(true)}
+                />
+              </Tooltip>
+            ))}
+        </div>
       </div>
-
-      {bottomFree && (
-        <div className={styles.chromeBottomRight}>
-          <MinimapCard map={map} target={mapRef} theme={theme} facing={party?.facing ?? null} />
-        </div>
-      )}
-
-      {bottomFree && (wandering !== null || partyShown) && (
-        <div className={styles.chromeBottomLeft}>
-          {wandering !== null && (
-            <div className={styles.wanderingChip}>
-              <Icon name="referee" size={14} />
-              <span>{wandering}</span>
-            </div>
-          )}
-          {partyShown && (
-            <LightStatus
-              lights={light.lights.map((entry) => {
-                const member = view.party.find((m) => m.id === entry.memberId);
-                return lightLine(
-                  member?.name ?? 'Someone',
-                  lightSourceNoun(member, lights[entry.memberId]),
-                  entry.remainingRounds,
-                );
-              })}
-              darkness={light.darkness}
-              menu={lightMenu}
-            />
-          )}
-        </div>
-      )}
 
       <MoveShortcuts canMove={canMove} canTurn={canTurn} move={move} turn={turn} />
 
@@ -697,40 +765,6 @@ export function MapStage() {
         onRemove={annotations.removePin}
       />
     </div>
-  );
-}
-
-interface LightStatusProps {
-  /** One line for each burning light, such as "Brenna's torch, about 6 turns left". */
-  lights: string[];
-  darkness: boolean;
-  menu: MenuEntry[];
-}
-
-/** The party's light: who carries one and how long it has left, or a clear warning in the dark. */
-function LightStatus({ lights, darkness, menu }: LightStatusProps) {
-  const lit = lights.length > 0 && !darkness;
-  const text = darkness ? 'Magical darkness covers the party.' : lit ? lights.join('. ') : NO_LIGHT_TEXT;
-  return (
-    <div className={cx(styles.lightStatus, !lit && styles.lightDark)} role="status">
-      <Icon name={lit ? 'torch' : 'moon'} size={16} />
-      <span>{text}</span>
-      {!lit && menu.length > 0 && <LightMenuButton menu={menu} />}
-    </div>
-  );
-}
-
-function LightMenuButton({ menu }: { menu: MenuEntry[] }) {
-  return (
-    <DropdownMenu
-      side="top"
-      items={menu}
-      trigger={
-        <Button size="sm" variant="secondary" icon="torch" className={styles.lightAction}>
-          Light
-        </Button>
-      }
-    />
   );
 }
 

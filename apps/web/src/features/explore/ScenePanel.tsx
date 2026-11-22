@@ -1,17 +1,19 @@
 import type { GameEvent, SceneHere, SceneTrap } from '@bxvtt/shared/protocol';
 import { describeEvent, directionLabel, type TextContext } from '@bxvtt/shared/text';
 import { useEffect, useId, useState, type ReactNode } from 'react';
-import { usePlayerView, useScene, useTextContext } from '@/app';
+import { scopedStorage, usePlayerView, useScene, useTextContext } from '@/app';
 import { Button, DropdownMenu, Icon, IconButton, Parchment, cx, type IconName, type MenuEntry } from '@/ui';
 import {
   cacheEntries,
   cacheLabel,
   doorEntries,
   doorsHere,
+  joinGroups,
   pileEntries,
   stairsHere,
   transitionAction,
   transitionDescription,
+  treasureEntries,
 } from './actions';
 import { useActionContext, useSessionDoors } from './hooks';
 import { doorLoreKey } from './levels';
@@ -35,6 +37,18 @@ export function enteredText(areaId: string, here: SceneHere, ctx: TextContext): 
     transition_ref: null,
   } as unknown as GameEvent;
   return describeEvent(event, ctx)?.text ?? 'The party enters a new area.';
+}
+
+/** How long the full card stays after the party enters an area, in milliseconds. */
+export const RECEDE_MS = 10_000;
+
+/** The browser's choice to keep the scene card open, which the user makes by opening it by hand. */
+const prefs = scopedStorage('explore');
+const PINNED_KEY = 'scene.pinned';
+
+/** The count on the folded bar: "1 thing here", "3 things here". */
+export function thingsHere(count: number): string {
+  return count === 1 ? '1 thing here' : `${count} things here`;
 }
 
 /** What a known trap means to the party, in one sentence. */
@@ -105,6 +119,7 @@ export function ScenePanel() {
   const ctx = useActionContext();
   const ctxText = useTextContext();
   const doorLore = useSessionDoors();
+  const [pinned, setPinned] = useState(() => prefs.read(PINNED_KEY) === true);
   const [open, setOpen] = useState(true);
   const [fresh, setFresh] = useState(false);
   const [announcement, setAnnouncement] = useState('');
@@ -112,20 +127,48 @@ export function ScenePanel() {
   const here = scene?.here ?? null;
   const area = here?.area ?? null;
   const areaId = area?.id ?? null;
-  // A new area speaks once. The check runs during render, as React recommends for state that follows a prop.
-  const [lastArea, setLastArea] = useState<string | null | undefined>(undefined);
-  if (lastArea !== areaId) {
-    if (lastArea !== undefined && area !== null && here !== null) {
+  const cell = here ? here.position.join(',') : null;
+  // A new area speaks once and shows its card; a step within the same area folds the card away. The checks run
+  // during render, as React recommends for state that follows a prop.
+  const [last, setLast] = useState<{ area: string | null; cell: string | null } | undefined>(undefined);
+  if (last === undefined || last.area !== areaId || last.cell !== cell) {
+    if (last !== undefined && last.area !== areaId && area !== null && here !== null) {
       setAnnouncement(enteredText(area.id, here, ctxText));
       setFresh(true);
+      setOpen(true);
+    } else if (last !== undefined && last.cell !== cell && !pinned) {
+      setOpen(false);
     }
-    setLastArea(areaId);
+    setLast({ area: areaId, cell });
   }
   useEffect(() => {
     if (!fresh) return;
     const timer = setTimeout(() => setFresh(false), 1600);
     return () => clearTimeout(timer);
   }, [fresh]);
+  // After the first read, the card folds to its title bar, unless the user opened it by hand.
+  useEffect(() => {
+    if (!open || pinned) return;
+    const timer = setTimeout(() => setOpen(false), RECEDE_MS);
+    return () => clearTimeout(timer);
+  }, [open, pinned, areaId]);
+  // A press on the map folds it too: the user has turned to the map.
+  useEffect(() => {
+    if (pinned) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (target instanceof HTMLCanvasElement && target.getAttribute('aria-roledescription') === 'map')
+        setOpen(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown, true);
+    return () => document.removeEventListener('pointerdown', onPointerDown, true);
+  }, [pinned]);
+  const toggle = () => {
+    const next = !open;
+    setOpen(next);
+    setPinned(next);
+    prefs.write(PINNED_KEY, next);
+  };
 
   if (here === null || view === null || ctx === null) return null;
   const facing = view.location.kind === 'dungeon' ? view.location.facing : null;
@@ -143,20 +186,83 @@ export function ScenePanel() {
   const doors = doorsHere(view);
   const traps = here.traps.filter((trap) => trap.kind === 'room');
   const title = area?.name ?? 'A corridor';
+  const count =
+    stairs.length +
+    passages.length +
+    here.caches.length +
+    (here.pile ? 1 : 0) +
+    doors.length +
+    here.features.length +
+    traps.length;
+  const quick = joinGroups(
+    stairs.length > 0 && ctx.can('use_stairs')
+      ? [
+          {
+            label: transitionAction(stairs[0] ?? { kind: 'stairs_down', leads: 'down' }),
+            icon: 'stairs' as const,
+            onSelect: () => ctx.run({ command_type: 'use_stairs' }),
+          },
+        ]
+      : [],
+    ctx.can('move_party')
+      ? passages.map((passage) => ({
+          label: `Go through the ${directionLabel(passage.side).toLowerCase()} passage`,
+          icon: 'arrow-right' as const,
+          onSelect: () =>
+            ctx.run({ command_type: 'move_party', direction: passage.side }, { feedback: 'map' }),
+        }))
+      : [],
+    treasureEntries(ctx),
+    doors.flatMap((door) => {
+      const entries = doorEntries(
+        ctx,
+        door.direction,
+        door,
+        doorLore[doorLoreKey(key, x, y, door.direction)],
+      );
+      const items = entries.slice(1);
+      return items.some((entry) => entry.type !== 'label')
+        ? [
+            {
+              type: 'submenu' as const,
+              label: `The door to the ${directionLabel(door.direction).toLowerCase()}`,
+              icon: door.open ? ('door-open' as const) : ('door' as const),
+              items,
+            },
+          ]
+        : [];
+    }),
+  );
 
   return (
     <section className={cx(styles.scene, fresh && styles.sceneFresh)} aria-label="Where the party stands">
       <header className={styles.sceneHeader}>
         <Icon name={area ? 'map' : 'footprints'} size={16} className={styles.sceneHeaderIcon} />
         <h2 className={styles.sceneTitle}>{title}</h2>
-        {facing && <span className={styles.sceneMeta}>Facing {directionLabel(facing).toLowerCase()}</span>}
+        {open && facing && (
+          <span className={styles.sceneMeta}>Facing {directionLabel(facing).toLowerCase()}</span>
+        )}
+        {!open && quick.length > 0 && (
+          <DropdownMenu
+            align="end"
+            items={quick}
+            trigger={
+              <Button size="sm" variant="ghost" iconEnd="chevron-down">
+                {thingsHere(count)}
+              </Button>
+            }
+          />
+        )}
+        {!open && quick.length === 0 && count > 0 && (
+          <span className={styles.sceneMeta}>{thingsHere(count)}</span>
+        )}
         <IconButton
           icon={open ? 'chevron-up' : 'chevron-down'}
           label={open ? 'Hide the description' : 'Show the description'}
           size="sm"
           aria-expanded={open}
           aria-controls={bodyId}
-          onClick={() => setOpen(!open)}
+          onClick={toggle}
         />
       </header>
       <div className={styles.srOnly} aria-live="polite">

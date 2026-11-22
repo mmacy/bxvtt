@@ -40,7 +40,7 @@
   display: grid;
   justify-items: end;
   gap: var(--space-2);
-  max-width: calc(100% - 420px);
+  max-width: calc(100% - 364px);
   pointer-events: none;
 }
 
@@ -48,30 +48,14 @@
   pointer-events: auto;
 }
 
-.chromeRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.chromeButton {
-  box-shadow: var(--shadow-1);
-}
-
 .themeSwitch {
-  box-shadow: var(--shadow-1);
+  box-shadow: none;
 }
 
 .levelName {
-  padding: var(--space-1) var(--space-2-5);
-  border: var(--border-hair) solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-surface-2) 88%, transparent);
+  padding: 0 var(--space-2);
   color: var(--color-text-muted);
   font-size: var(--text-sm);
-  box-shadow: var(--shadow-1);
 }
 
 .offLevel {
@@ -79,7 +63,7 @@
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
-  border: var(--border-hair) solid var(--color-border-accent);
+  border: var(--border-hair) solid var(--color-border-strong);
   border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--color-surface-2) 92%, transparent);
   color: var(--color-text);
@@ -87,8 +71,87 @@
   box-shadow: var(--shadow-2);
 }
 
+.measureDistance {
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
+}
+
 .offLevel:not(:has(button)) {
   padding-inline-end: var(--space-3);
+}
+
+.toolbarGroup {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border: var(--border-hair) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-surface-2) 88%, transparent);
+  box-shadow: var(--shadow-1);
+  backdrop-filter: blur(6px);
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.groupDivider {
+  width: 1px;
+  height: 18px;
+  background: var(--color-border);
+}
+
+.lightIndicator {
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
+}
+
+.lightIndicator svg {
+  color: var(--color-gold);
+}
+
+.lightOut,
+.lightOut svg {
+  color: var(--color-warning);
+}
+
+.lightStatic {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.cluster {
+  position: absolute;
+  right: var(--space-3);
+  bottom: var(--space-3);
+  z-index: var(--z-raised);
+  display: grid;
+  justify-items: end;
+  gap: var(--space-1-5);
+}
+
+.clusterRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-1-5);
+}
+
+.minimapFrame {
+  position: relative;
+}
+
+.minimapHide {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  background: color-mix(in srgb, var(--color-surface-2) 80%, transparent);
+}
+
+.minimapShow {
+  box-shadow: var(--shadow-2);
 }
 
 .chromeSide {
@@ -114,13 +177,6 @@
   height: 1px;
   margin: var(--space-0-5) var(--space-1);
   background: var(--color-border);
-}
-
-.chromeBottomRight {
-  position: absolute;
-  right: var(--space-3);
-  bottom: var(--space-3);
-  z-index: var(--z-raised);
 }
 
 .minimapCard {
@@ -166,7 +222,7 @@
 }
 
 .compassNorth {
-  fill: var(--color-accent);
+  fill: var(--color-text-strong);
 }
 
 .compassFacing {
@@ -179,7 +235,7 @@
 }
 
 .compassN {
-  color: var(--color-accent-text);
+  color: var(--color-text-strong);
   font-family: var(--font-display-plain);
   font-weight: var(--weight-bold);
 }
@@ -200,17 +256,6 @@
   border-top: 0;
 }
 
-.chromeBottomLeft {
-  position: absolute;
-  left: var(--space-3);
-  bottom: var(--space-3);
-  z-index: var(--z-raised);
-  max-width: min(420px, calc(100% - 260px));
-  display: grid;
-  justify-items: start;
-  gap: var(--space-1-5);
-}
-
 .wanderingChip {
   display: inline-flex;
   align-items: center;
@@ -226,40 +271,6 @@
 
 .wanderingChip > svg {
   color: var(--color-referee);
-}
-
-.lightStatus {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-1-5) var(--space-3);
-  border: var(--border-hair) solid var(--color-border);
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--color-surface-2) 88%, transparent);
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
-  box-shadow: var(--shadow-1);
-  backdrop-filter: blur(6px);
-}
-
-.lightStatus > svg {
-  flex: none;
-  color: var(--color-gold);
-}
-
-.lightDark {
-  padding-inline-end: var(--space-1);
-  border-color: var(--color-warning);
-  background: color-mix(in srgb, var(--color-surface-2) 94%, transparent);
-  color: var(--color-text-strong);
-}
-
-.lightDark > svg {
-  color: var(--color-warning);
-}
-
-.lightAction {
-  flex: none;
 }
 
 /* A hidden anchor where the context menu opens. */
@@ -483,7 +494,9 @@
 }
 
 .sceneFresh {
-  box-shadow: var(--glow-accent), var(--shadow-3);
+  box-shadow:
+    0 0 0 1px var(--color-border-strong),
+    var(--shadow-3);
 }
 
 .sceneHeader {
@@ -495,7 +508,7 @@
 
 .sceneHeaderIcon {
   flex: none;
-  color: var(--color-accent);
+  color: var(--color-text-subtle);
 }
 
 .sceneTitle {

@@ -40,10 +40,9 @@ export function PinsPanel({ pins, records, partyHere, onShow, onOpen, onAddAtPar
       <Button
         ref={toggleRef}
         size="sm"
-        variant="secondary"
+        variant="ghost"
         icon="flag"
         iconEnd={open ? 'chevron-up' : 'chevron-down'}
-        className={styles.chromeButton}
         aria-expanded={open}
         aria-controls={panelId}
         aria-label={pins.length === 1 ? 'Pins: 1 on this level' : `Pins: ${pins.length} on this level`}

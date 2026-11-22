@@ -128,6 +128,16 @@ export function lightTimeLeft(rounds: number | null): string | null {
   return rounds === 1 ? '1 round' : `${rounds} rounds`;
 }
 
+/** The time on the compact light indicator: "6 turns", "40 rounds", or "Lit" for a light with no end. */
+export function shortTimeLeft(rounds: number): string {
+  if (!Number.isFinite(rounds)) return 'Lit';
+  if (rounds >= ROUNDS_PER_TURN) {
+    const turns = Math.round(rounds / ROUNDS_PER_TURN);
+    return turns === 1 ? '1 turn' : `${turns} turns`;
+  }
+  return rounds === 1 ? '1 round' : `${rounds} rounds`;
+}
+
 /** How long a light has left, in full: `5 turns and 57 rounds (59 minutes 30 seconds)`. */
 export function lightTimeLeftFull(rounds: number | null): string | null {
   return rounds === null ? null : formatDurationRounds(rounds);
