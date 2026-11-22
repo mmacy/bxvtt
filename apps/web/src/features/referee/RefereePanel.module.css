@@ -102,11 +102,6 @@
   overflow-y: auto;
 }
 
-/* A section kept mounted to keep its state (a draft, a search) stays out of view while another is open. */
-.content[data-state='inactive'] {
-  display: none;
-}
-
 .coords {
   color: var(--color-text-subtle);
   font-family: var(--font-numeric);

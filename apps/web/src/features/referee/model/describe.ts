@@ -19,6 +19,7 @@ import {
   prettifyId,
   saveVersus,
   stanceLabel,
+  timeUnitNoun,
   withArticle,
   type TextContext,
 } from '@bxvtt/shared/text';
@@ -174,8 +175,10 @@ export function consequenceText(
       if (location.kind === 'town') return 'Move the party to town.';
       return `Move the party to level ${String(location.level_number)} of ${dungeonInSentence(String(location.dungeon_id), ctx)}.`;
     }
-    case 'advance_time':
-      return `Advance the clock ${count(Number(c.n ?? 0), String(c.unit ?? 'turn'))}.`;
+    case 'advance_time': {
+      const n = Number(c.n ?? 0);
+      return `Advance the clock ${n} ${timeUnitNoun(String(c.unit ?? 'turn'), n)}.`;
+    }
     case 'end_encounter':
       return 'End the encounter.';
     default:
@@ -195,9 +198,9 @@ export function trapText(trap: TrapSpec): string {
   if (effect.condition) {
     const unit = effect.condition_duration_unit ?? 'round';
     const duration = effect.condition_duration_dice
-      ? ` for ${formatDice(effect.condition_duration_dice)} ${unit}s`
+      ? ` for ${formatDice(effect.condition_duration_dice)} ${timeUnitNoun(unit, 2)}`
       : effect.condition_duration_amount
-        ? ` for ${count(effect.condition_duration_amount, unit)}`
+        ? ` for ${effect.condition_duration_amount} ${timeUnitNoun(unit, effect.condition_duration_amount)}`
         : '';
     parts.push(`It leaves its victim ${conditionLabel(effect.condition).toLowerCase()}${duration}.`);
   }

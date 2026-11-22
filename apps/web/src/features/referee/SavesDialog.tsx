@@ -21,7 +21,7 @@ import {
   Checkbox,
   ConfirmDialog,
   Dialog,
-  DialogClose,
+  DropdownMenu,
   EmptyState,
   Field,
   Icon,
@@ -31,6 +31,7 @@ import {
   TextInput,
   toast,
   type GameMode,
+  type MenuEntry,
 } from '@/ui';
 import styles from './SavesDialog.module.css';
 
@@ -180,6 +181,16 @@ function SaveRow({
     }
   };
 
+  const menu: MenuEntry[] = [];
+  if (canManage) menu.push({ label: 'Rename', icon: 'edit', onSelect: () => setRenaming(true) });
+  if (referee) menu.push({ label: 'Export as a file', icon: 'download', onSelect: () => void exportSave() });
+  if (canManage) {
+    menu.push(
+      { type: 'separator' },
+      { label: 'Delete', icon: 'trash', danger: true, onSelect: () => onDelete(save) },
+    );
+  }
+
   const created = new Date(save.created_at);
   return (
     <li className={styles.entry} data-autosave={save.autosave || undefined}>
@@ -240,32 +251,13 @@ function SaveRow({
             Restore
           </Button>
         )}
-        {canManage && (
-          <IconButton
-            icon="edit"
-            label={`Rename ${saveTitle(save)}`}
-            size="sm"
-            variant="ghost"
-            onClick={() => setRenaming(true)}
-          />
-        )}
-        {referee && (
-          <IconButton
-            icon="download"
-            label={`Export ${saveTitle(save)} as a file`}
-            size="sm"
-            variant="ghost"
-            loading={pending && !renaming}
-            onClick={() => void exportSave()}
-          />
-        )}
-        {canManage && (
-          <IconButton
-            icon="trash"
-            label={`Delete ${saveTitle(save)}`}
-            size="sm"
-            variant="ghost"
-            onClick={() => onDelete(save)}
+        {menu.length > 0 && (
+          <DropdownMenu
+            align="end"
+            items={menu}
+            trigger={
+              <IconButton icon="more" label={`More for ${saveTitle(save)}`} size="sm" variant="ghost" />
+            }
           />
         )}
       </div>
@@ -459,39 +451,25 @@ export function SavesDialog({ open, onOpenChange }: SavesDialogProps) {
         </div>
       </Dialog>
 
-      <Dialog
+      <ConfirmDialog
         open={restoring !== null}
         onOpenChange={(next) => !next && setRestoring(null)}
         title={restoring ? `Restore “${saveTitle(restoring)}”?` : 'Restore the save?'}
-        size="sm"
-        footer={
-          <>
-            <DialogClose>
-              <Button variant="ghost">Cancel</Button>
-            </DialogClose>
-            <Button variant="primary" icon="undo" loading={pending} onClick={() => void restore()}>
-              Restore
-            </Button>
-          </>
-        }
+        description={`The table moves to a new game that continues from this save${
+          restoring ? `, at ${formatGameClock(restoring.clock.rounds)}` : ''
+        }. Everyone at the table goes with it, and each seat keeps its character. The game you're playing now isn't deleted: you can return to it through its own saves.`}
+        confirmLabel="Restore"
+        onConfirm={restore}
       >
-        <div className={styles.confirm}>
-          <p>
-            The table moves to a new game that continues from this save
-            {restoring ? `, at ${formatGameClock(restoring.clock.rounds)}` : ''}. Everyone at the table goes
-            with it, and each seat keeps its character.
-          </p>
-          <p>The game you're playing now isn't deleted. You can return to it through its own saves.</p>
-          {game && !game.ended && (
-            <Checkbox
-              label="Save the current game first"
-              description="So you can come back to this exact moment."
-              checked={saveFirst}
-              onCheckedChange={setSaveFirst}
-            />
-          )}
-        </div>
-      </Dialog>
+        {game && !game.ended && (
+          <Checkbox
+            label="Save the current game first"
+            description="So you can come back to this exact moment."
+            checked={saveFirst}
+            onCheckedChange={setSaveFirst}
+          />
+        )}
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={deleting !== null}

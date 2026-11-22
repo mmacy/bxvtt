@@ -21,7 +21,13 @@ import {
   type IconName,
 } from '@/ui';
 import { areaCenter, findArea } from '../model/adventure';
-import { MonsterPicker, MapPickButton, useAreaOptions } from '../pickers';
+import {
+  dungeonNumberAppearing,
+  MapPickButton,
+  MonsterPicker,
+  useAreaOptions,
+  useFullMonsters,
+} from '../pickers';
 import { CommandOutcome, useRefereeCommand } from '../RefereeCommand';
 import { CommandForm } from '../schema/CommandForm';
 import type { RefereeData } from '../useReferee';
@@ -241,7 +247,17 @@ export function SpawnMonstersForm({
   const [dice, setDice] = useState('1d6');
   const [distance, setDistance] = useState<number | null>(30);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const full = useFullMonsters();
   const { run, busy, outcome, clear } = useRefereeCommand();
+  // A newly chosen monster rolls its dungeon number appearing by default, as its entry prints it.
+  const chooseMonster = (id: string | null) => {
+    setMonster(id);
+    const appearing = dungeonNumberAppearing(full?.find((m) => m.id === id));
+    if (appearing && /d/i.test(appearing)) {
+      setMode('dice');
+      setDice(appearing);
+    }
+  };
   const submit = () => {
     const next: Record<string, string> = {};
     if (!monster) next.monster = 'Choose a monster.';
@@ -264,7 +280,7 @@ export function SpawnMonstersForm({
       <Field label="Monster" error={errors.monster}>
         <MonsterPicker
           value={monster}
-          onChange={setMonster}
+          onChange={chooseMonster}
           adventure={data.adventure}
           invalid={Boolean(errors.monster)}
         />

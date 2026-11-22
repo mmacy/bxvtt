@@ -14,6 +14,7 @@ export function refereeApi(): FakeApi {
   api.getAdventureDocument.mockResolvedValue(
     structuredClone(bell.payload) as unknown as Record<string, unknown>,
   );
+  api.fullCatalog.mockRejectedValue(new Error('The referee tests use the summary catalogs.'));
   api.rules.mockImplementation((path: string) => {
     const match = /^commands\/(.+)$/.exec(path);
     if (match) {
@@ -52,16 +53,4 @@ export function commandResult(
     revision: game.revision + 1,
     game: { ...game, revision: game.revision + 1 },
   };
-}
-
-/**
- * jsdom lacks the pointer capture and scrolling methods that Radix Select calls when it opens. The shared test
- * setup doesn't stub them, so the referee tests do.
- */
-export function installDomShims(): void {
-  const proto = Element.prototype as unknown as Record<string, unknown>;
-  proto.hasPointerCapture ??= () => false;
-  proto.setPointerCapture ??= () => {};
-  proto.releasePointerCapture ??= () => {};
-  proto.scrollIntoView ??= () => {};
 }

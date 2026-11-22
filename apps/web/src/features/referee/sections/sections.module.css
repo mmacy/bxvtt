@@ -632,8 +632,11 @@
   font-size: var(--text-sm);
 }
 
-.diceButton {
-  min-height: 0;
+.logWhere {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
 }
 
 /* Notes ----------------------------------------------------------------------------------------------- */
@@ -692,4 +695,35 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+}
+
+.readyLine {
+  margin: 0;
+  color: var(--color-success);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.rewards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.rewardList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reward {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
 }

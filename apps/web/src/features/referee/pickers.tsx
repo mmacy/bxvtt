@@ -9,10 +9,13 @@ import {
   itemTypeLabel,
   magicItemTemplateName,
   prettifyId,
+  resolveItemNoun,
   type TextContext,
 } from '@bxvtt/shared/text';
-import { useMemo } from 'react';
+import type { FullCatalog } from '@bxvtt/shared/protocol';
+import { useEffect, useMemo, useState } from 'react';
 import {
+  getApi,
   useEquipmentCatalog,
   useMagicItemCatalog,
   useMapBus,
@@ -174,7 +177,7 @@ function readEntry(entry: InventoryEntry, where: CarriedItem['where'], ctx: Text
   }
   return {
     id: entry.template.id,
-    label: capital(entry.template.name),
+    label: capital(resolveItemNoun(entry.template.id, ctx, { name: entry.template.name }).one),
     quantity: entry.quantity,
     kind: 'item',
     identified: true,
@@ -260,6 +263,49 @@ export function CarriedItemPicker({
   );
 }
 
+type FullMonster = FullCatalog<'monsters'>['items'][number];
+
+let fullMonsters: Promise<FullMonster[]> | null = null;
+
+/**
+ * Every monster's full entry, from the server's one cached catalog response, or `null` while it loads or when
+ * it fails. The pickers fall back to the summary catalog then.
+ */
+export function useFullMonsters(): FullMonster[] | null {
+  const [items, setItems] = useState<FullMonster[] | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fullMonsters ??= getApi()
+      .fullCatalog('monsters')
+      .then((catalog) => catalog.items);
+    fullMonsters.then(
+      (list) => {
+        if (!cancelled) setItems(list);
+      },
+      () => {
+        fullMonsters = null;
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return items;
+}
+
+function hitDiceText(hd: { count: number; modifier: number; asterisks?: number }): string {
+  const modifier = hd.modifier ? (hd.modifier > 0 ? `+${hd.modifier}` : String(hd.modifier)) : '';
+  return `${hd.count}${modifier}${'*'.repeat(hd.asterisks ?? 0)} HD`;
+}
+
+/** How many of a monster appear in a dungeon, as its entry prints it, or `null`. */
+export function dungeonNumberAppearing(monster: FullMonster | undefined): string | null {
+  const dungeon = monster?.number_appearing.dungeon;
+  if (!dungeon) return null;
+  if (dungeon.dice) return dungeon.dice;
+  return dungeon.fixed ? String(dungeon.fixed) : null;
+}
+
 /** Picks a monster from the catalog and the adventure's bundled monsters. */
 export function MonsterPicker({
   value,
@@ -275,29 +321,48 @@ export function MonsterPicker({
   invalid?: boolean;
 }) {
   const catalog = useMonsterCatalog();
+  const full = useFullMonsters();
   const options = useMemo(() => {
     const out: ComboboxOption[] = [];
     for (const monster of adventure?.monsters ?? []) {
       out.push({
         value: monster.id,
         label: capital(templateLabel(monster.id, adventure)),
-        description: 'From this adventure',
+        description: `From this adventure, ${hitDiceText(monster.hit_dice)}`,
         icon: 'key',
         keywords: [monster.name],
       });
     }
+    if (full) {
+      for (const monster of full) {
+        if (out.some((o) => o.value === monster.id)) continue;
+        const appearing = dungeonNumberAppearing(monster);
+        out.push({
+          value: monster.id,
+          label: monster.name,
+          description: [
+            hitDiceText(monster.hit_dice),
+            `armour class ${monster.ac ?? 'varies'}`,
+            appearing ? `${appearing} in a dungeon` : null,
+            `${monster.xp} XP`,
+          ]
+            .filter(Boolean)
+            .join(', '),
+          keywords: monster.categories,
+        });
+      }
+      return out;
+    }
     for (const monster of catalog.data ?? []) {
       if (out.some((o) => o.value === monster.id)) continue;
-      const hd = monster.hit_dice;
-      const hdText = `${hd.count}${hd.modifier ? (hd.modifier > 0 ? `+${hd.modifier}` : String(hd.modifier)) : ''} HD`;
       out.push({
         value: monster.id,
         label: monster.name,
-        description: `${hdText}, armour class ${monster.ac ?? 'varies'}, ${monster.xp} XP`,
+        description: `${hitDiceText(monster.hit_dice)}, armour class ${monster.ac ?? 'varies'}, ${monster.xp} XP`,
       });
     }
     return out;
-  }, [adventure, catalog.data]);
+  }, [adventure, catalog.data, full]);
   return (
     <Combobox
       id={id}
@@ -305,7 +370,7 @@ export function MonsterPicker({
       options={options}
       value={value ?? null}
       onChange={onChange}
-      placeholder={catalog.loading ? 'Loading the monsters' : 'Search monsters'}
+      placeholder={catalog.loading && !full ? 'Loading the monsters' : 'Search monsters'}
       emptyText="No monster has that name"
     />
   );

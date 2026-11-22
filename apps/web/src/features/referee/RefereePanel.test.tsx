@@ -1,11 +1,9 @@
 import { screen, waitFor, within } from '@testing-library/react';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { renderWithTable } from '@/app/testing/renderWithTable';
 import { RefereePanel } from './RefereePanel';
-import { commandResult, installDomShims, refereeApi } from './testing/helpers';
-
-beforeAll(installDomShims);
+import { commandResult, refereeApi } from './testing/helpers';
 
 describe('RefereePanel', () => {
   it('shows the key for where the party stands', async () => {
