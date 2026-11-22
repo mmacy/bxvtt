@@ -121,3 +121,8 @@
   font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
 }
+
+.idSwitch {
+  margin-left: auto;
+  font-size: var(--text-xs);
+}

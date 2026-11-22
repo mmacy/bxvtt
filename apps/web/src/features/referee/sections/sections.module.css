@@ -752,3 +752,7 @@
   flex-wrap: wrap;
   gap: var(--space-1);
 }
+
+.quoted {
+  color: var(--color-text);
+}

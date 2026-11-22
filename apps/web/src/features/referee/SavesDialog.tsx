@@ -247,7 +247,13 @@ function SaveRow({
       </div>
       <div className={styles.actions}>
         {referee && (
-          <Button size="sm" variant="secondary" icon="undo" onClick={() => onRestore(save)}>
+          <Button
+            size="sm"
+            variant="secondary"
+            icon="undo"
+            aria-label={`Restore ${saveTitle(save)}`}
+            onClick={() => onRestore(save)}
+          >
             Restore
           </Button>
         )}

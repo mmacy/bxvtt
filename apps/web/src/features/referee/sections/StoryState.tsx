@@ -14,8 +14,16 @@ import {
   type QuestSpec,
   type TriggerSpec,
 } from '../model/adventure';
-import { clauseText, conditionText, consequenceText, flagUses, patternText } from '../model/describe';
+import {
+  clauseText,
+  conditionText,
+  consequenceText,
+  flagPhrase,
+  flagUses,
+  patternText,
+} from '../model/describe';
 import { carriedItems, questStatusLabel } from '../pickers';
+import { IdMark } from '../details';
 import { CommandOutcome, useRefereeCommand } from '../RefereeCommand';
 import { knownFlagKeys } from '../schema/fields';
 import { CommandForm } from '../schema/CommandForm';
@@ -30,12 +38,14 @@ function ObjectiveRow({
   state,
   questActive,
   ctx,
+  adventure,
 }: {
   quest: QuestSpec;
   objective: ObjectiveSpec;
   state: { revealed: boolean; complete: boolean } | undefined;
   questActive: boolean;
   ctx: TextContext;
+  adventure: Adventure;
 }) {
   const { run, busy, outcome, clear } = useRefereeCommand();
   const revealed = state?.revealed ?? !objective.hidden;
@@ -61,12 +71,12 @@ function ObjectiveRow({
       </div>
       <p className={styles.secondaryLine}>
         <strong>Done when: </strong>
-        {clauseText(objective.when, ctx)}
+        {clauseText(objective.when, ctx, adventure)}
       </p>
       {!revealed && objective.reveal_when && (
         <p className={styles.secondaryLine}>
           <strong>Shown when: </strong>
-          {clauseText(objective.reveal_when, ctx)}
+          {clauseText(objective.reveal_when, ctx, adventure)}
         </p>
       )}
       {questActive && !complete && (
@@ -196,7 +206,7 @@ function QuestBody({
       {quest.activation && status === 'inactive' && (
         <p className={styles.secondaryLine}>
           <strong>Starts when: </strong>
-          {clauseText(quest.activation, ctx)}
+          {clauseText(quest.activation, ctx, adventure)}
         </p>
       )}
       <ul className={styles.objectiveList} aria-label="Objectives">
@@ -208,6 +218,7 @@ function QuestBody({
             state={state?.objectives[objective.id]}
             questActive={status === 'active'}
             ctx={ctx}
+            adventure={adventure}
           />
         ))}
       </ul>
@@ -344,12 +355,13 @@ function Flags({ data }: { data: RefereeData }) {
                 <div className={styles.flagLine}>
                   <div className={styles.flagText}>
                     <span className={styles.flagUse}>
-                      {uses.get(key)?.[0] ?? 'Not used by this adventure. You or a command set it.'}
+                      {uses.get(key)?.[0] ??
+                        `“${key}”: a flag set during play. The adventure doesn't read it.`}
                     </span>
                     {(uses.get(key)?.length ?? 0) > 1 && (
                       <span className={styles.secondary}>{uses.get(key)?.slice(1).join(' ')}</span>
                     )}
-                    <code className={styles.idMark}>{key}</code>
+                    {uses.has(key) && <IdMark className={styles.idMark}>{key}</IdMark>}
                   </div>
                   {set ? (
                     <span className={styles.flagValue}>{flagText(flags[key])}</span>
@@ -360,7 +372,7 @@ function Flags({ data }: { data: RefereeData }) {
                     icon="edit"
                     size="sm"
                     variant="ghost"
-                    label={`Set ${key}`}
+                    label={`Change ${uses.has(key) ? flagPhrase(key, data.ctx, data.adventure) : `the flag “${key}”`}`}
                     pressed={editing === key}
                     onClick={() => setEditing(editing === key ? null : key)}
                   />
@@ -406,9 +418,9 @@ function TriggerRow({
     <div className={styles.questBody}>
       <p className={styles.prose}>
         <strong>When: </strong>
-        {patternText(trigger.when, ctx)}
+        {patternText(trigger.when, ctx, adventure)}
         {trigger.conditions.length > 0
-          ? `, while ${trigger.conditions.map((c) => conditionText(c, ctx)).join(' and ')}`
+          ? `, while ${trigger.conditions.map((c) => conditionText(c, ctx, adventure)).join(' and ')}`
           : ''}
         .{trigger.repeatable ? ' Fires every time.' : ' Fires once.'}
       </p>
@@ -466,8 +478,8 @@ function Triggers({ data, adventure }: { data: RefereeData; adventure: Adventure
             value: trigger.id,
             title: (
               <span className={styles.triggerTitle}>
-                {patternText(trigger.when, data.ctx)}
-                <span className={styles.idMark}>{trigger.id}</span>
+                {patternText(trigger.when, data.ctx, adventure)}
+                <IdMark className={styles.idMark}>{trigger.id}</IdMark>
               </span>
             ),
             meta: <Badge tone={hasFired ? 'success' : 'neutral'}>{hasFired ? 'Fired' : 'Waiting'}</Badge>,
@@ -477,11 +489,11 @@ function Triggers({ data, adventure }: { data: RefereeData; adventure: Adventure
       />
       {extra.length > 0 && (
         <p className={styles.secondaryLine}>
-          Marked fired, but not triggers of this adventure:{' '}
+          Marked fired from outside this adventure:{' '}
           {extra.map((id, index) => (
             <span key={id}>
               {index > 0 ? ', ' : ''}
-              <span className={styles.idMark}>{id}</span>
+              <span className={styles.quoted}>“{id}”</span>
             </span>
           ))}
         </p>

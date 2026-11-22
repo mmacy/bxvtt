@@ -39,6 +39,7 @@ import {
   Skeleton,
   type IconName,
 } from '@/ui';
+import { IdMark } from '../details';
 import styles from './sections.module.css';
 
 const ICONS: Record<EventIcon, IconName> = {
@@ -222,7 +223,7 @@ function LogLine({ line }: { line: EventLine }) {
           {line.text}
           {line.visibility === 'referee' && <span className={styles.logMark}>Referee</span>}
         </p>
-        {line.refereeDetail && <p className={styles.logWhere}>{line.refereeDetail}</p>}
+        {line.refereeDetail && <IdMark className={styles.logWhere}>{line.refereeDetail}</IdMark>}
         {line.detail &&
           (open ? (
             <p className={styles.logDetail}>{line.detail}</p>

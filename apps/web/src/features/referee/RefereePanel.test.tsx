@@ -14,6 +14,20 @@ describe('RefereePanel', () => {
     expect(screen.getAllByText(/1 in 6, checked every 2 turns/)).not.toHaveLength(0);
   });
 
+  it('names things in words, and shows IDs and cells only with Show IDs on', async () => {
+    const api = refereeApi();
+    const { user } = renderWithTable(<RefereePanel />, {
+      snapshot: fixtureSnapshot('exploring', 'referee'),
+      api,
+    });
+    expect(await screen.findByText(/The statue is Saint Corvane/)).toBeInTheDocument();
+    expect(screen.queryByText('fallen_statue')).not.toBeInTheDocument();
+    expect(screen.queryByText(/cell \d+, \d+/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('switch', { name: 'Show IDs' }));
+    expect(screen.getByText('fallen_statue')).toBeInTheDocument();
+    expect(screen.getAllByText(/cell \d+, \d+/).length).toBeGreaterThan(0);
+  });
+
   it('shows nothing of the referee view with the lens off', () => {
     const api = refereeApi();
     renderWithTable(<RefereePanel />, {

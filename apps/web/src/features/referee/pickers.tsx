@@ -22,12 +22,13 @@ import {
   useMonsterCatalog,
   useParty,
   useSpellCatalog,
+  useTextContext,
   type CellPick,
   type EdgePick,
 } from '@/app';
 import { Button, Combobox, Select, type ComboboxOption, type SelectOption } from '@/ui';
 import { allLevels, type Adventure, type CharacterSheet } from './model/adventure';
-import { templateLabel } from './model/describe';
+import { patternText, templateLabel } from './model/describe';
 
 /** A sentence-case name from catalog text such as `Torches (6)`. */
 function capital(text: string): string {
@@ -505,9 +506,10 @@ export function TriggerPicker({
   id?: string;
   invalid?: boolean;
 }) {
+  const ctx = useTextContext();
   const options = (adventure?.triggers ?? []).map((trigger) => ({
     value: trigger.id,
-    label: prettifyId(trigger.id),
+    label: patternText(trigger.when, ctx, adventure),
     description: fired.includes(trigger.id) ? 'Fired' : 'Not fired',
     keywords: [trigger.id],
   }));

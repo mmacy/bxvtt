@@ -20,7 +20,7 @@ import {
   type DieSides,
   type IconName,
 } from '@/ui';
-import { areaCenter, findArea } from '../model/adventure';
+import { areaAt, areaCenter, findArea, findLevel } from '../model/adventure';
 import {
   dungeonNumberAppearing,
   MapPickButton,
@@ -28,6 +28,7 @@ import {
   useAreaOptions,
   useFullMonsters,
 } from '../pickers';
+import { IdMark } from '../details';
 import { CommandOutcome, useRefereeCommand } from '../RefereeCommand';
 import { CommandForm } from '../schema/CommandForm';
 import type { RefereeData } from '../useReferee';
@@ -360,6 +361,16 @@ function SpawnNpcPartyForm() {
 
 const FACINGS = ['north', 'east', 'south', 'west'] as const;
 
+/** A picked cell in words: `Level 1, Guardroom`, or `Level 2, a corridor`. */
+function pickedPlace(
+  data: RefereeData,
+  cell: { dungeon_id: string; level_number: number; x: number; y: number },
+): string {
+  const level = data.adventure ? findLevel(data.adventure, cell.dungeon_id, cell.level_number) : null;
+  const area = level ? areaAt(level, cell.x, cell.y) : null;
+  return `Level ${cell.level_number}, ${area ? area.name : 'a corridor'}`;
+}
+
 /** Moves the party to town, to an area of the key, or to a cell picked on the map. */
 function PlacePartyForm({ data }: { data: RefereeData }) {
   const [where, setWhere] = useState<'area' | 'cell' | 'town'>('area');
@@ -425,7 +436,10 @@ function PlacePartyForm({ data }: { data: RefereeData }) {
             />
             {cell && (
               <span className={styles.secondary}>
-                Level {cell.level_number}, cell {cell.x}, {cell.y}
+                {pickedPlace(data, cell)}
+                <IdMark className={styles.idMark}>
+                  {' · '}cell {cell.x}, {cell.y}
+                </IdMark>
               </span>
             )}
           </div>

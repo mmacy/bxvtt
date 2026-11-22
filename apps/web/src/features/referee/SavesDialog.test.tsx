@@ -58,7 +58,7 @@ describe('SavesDialog', () => {
     expect(rows[0]).toHaveTextContent('Before the bell pit');
     expect(rows[1]).toHaveTextContent('Entered the priory');
     expect(within(rows[1] as HTMLElement).getByText('Autosave')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Restore' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Restore/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Delete/ })).not.toBeInTheDocument();
     expect(screen.getByText(/Autosave is on/)).toBeInTheDocument();
   });
@@ -85,8 +85,8 @@ describe('SavesDialog', () => {
     api.createSave.mockResolvedValue({ ...(list[0] as SaveEntry), id: 'sav_before' });
     api.restoreSave.mockResolvedValue(snapshot.game as never);
     const { user, store } = renderWithTable(<SavesDialog open onOpenChange={() => {}} />, { snapshot, api });
-    const restoreButtons = await screen.findAllByRole('button', { name: 'Restore' });
-    await user.click(restoreButtons[0] as HTMLElement);
+    expect(await screen.findByRole('button', { name: 'Restore Entered the priory' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Restore Before the bell pit' }));
     const confirm = await screen.findByRole('alertdialog', { name: /Restore “Before the bell pit”/ });
     expect(within(confirm).getByText(/continues from this save/)).toBeInTheDocument();
     expect(within(confirm).getByRole('checkbox', { name: /Save the current game first/ })).toBeChecked();

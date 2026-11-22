@@ -312,10 +312,14 @@ export function partyPlace(state: RefereeState): PartyPlace {
 export function bundledMonsterLabel(
   adventure: Adventure | null,
   templateId: string,
-): { label: string; labelPlural: string; disguise: string | null } | null {
+): { label: string; labelPlural: string; disguise: string | null; proper: boolean } | null {
   const bundled = adventure?.monsters.find((m) => m.id === templateId);
   if (!bundled) return null;
-  const label = bundled.name.toLowerCase();
-  const shown = bundled.display_name?.toLowerCase() ?? null;
-  return { label, labelPlural: `${label}s`, disguise: shown !== null && shown !== label ? shown : null };
+  // A monster whose player-facing name is capitalized, such as Gashnak One-Ear, is one named creature.
+  const proper = /^[A-Z]/.test(bundled.display_name ?? '') && bundled.display_name === bundled.name;
+  const label = proper ? bundled.name : bundled.name.toLowerCase();
+  const shown = bundled.display_name ?? null;
+  const disguise =
+    shown !== null && shown.toLowerCase() !== bundled.name.toLowerCase() ? shown.toLowerCase() : null;
+  return { label, labelPlural: proper ? label : `${label}s`, disguise, proper };
 }
