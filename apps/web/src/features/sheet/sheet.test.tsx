@@ -8,7 +8,6 @@ import { StoredCharacterCard } from './StoredCharacterCard';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { createFakeApi, renderWithTable } from '@/app/testing/renderWithTable';
 import { CharacterSheet } from './CharacterSheet';
-import { lightPhrase } from './actions';
 import { entryRule } from './InventoryTab';
 import { readInventory } from './model';
 import { PartyPanel, moveTo } from './PartyPanel';
@@ -230,11 +229,6 @@ describe('party light', () => {
     unmount();
     renderWithTable(<PartyPanel />, { snapshot: fixtureSnapshot('exploring', 'player') });
     expect(screen.getByText('The party has no light.')).toBeInTheDocument();
-  });
-
-  it('words a burning light the way the map does', () => {
-    expect(lightPhrase('Brenna', 359)).toBe("Brenna's light, about 6 turns left");
-    expect(lightPhrase('Brenna', 12, 'torch')).toBe("Brenna's torch, 12 rounds left");
   });
 });
 

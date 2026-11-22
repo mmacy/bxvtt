@@ -13,7 +13,6 @@ import {
   toast,
 } from '@/ui';
 import { RuleLinksContext } from './RuleLink';
-import { describeFailure } from '../wizard/server';
 import { StoredSheet } from './StoredSheet';
 import sheetStyles from './sheet.module.css';
 import styles from './StoredCharacterCard.module.css';
@@ -94,22 +93,9 @@ function StoredSheetDrawer({ characterId, name, color, onClose }: DrawerProps) {
 
   const remove = async () => {
     if (characterId === null) return;
-    let failure: unknown = null;
-    const result = await run(
-      () =>
-        getApi()
-          .deleteCharacter(characterId)
-          .catch((error: unknown) => {
-            failure = error;
-            throw error;
-          }),
-      { display: 'inline' },
-    );
-    if (!result.ok) {
-      const message = describeFailure(failure);
-      toast.error(`Couldn't delete ${name}`, { description: `${message.title}. ${message.detail}` });
-      return;
-    }
+    const result = await run(() => getApi().deleteCharacter(characterId), {
+      errorTitle: `Couldn't delete ${name}`,
+    });
     if (result.ok) {
       toast.success(`${name} is gone`, { description: 'The character left every party it was in.' });
       await mine.refresh();
@@ -144,19 +130,11 @@ function StoredSheetDrawer({ characterId, name, color, onClose }: DrawerProps) {
         {error && (
           <Banner
             tone="warning"
-            title={
-              error.code === 'not_found'
-                ? "You can't open this sheet"
-                : error.code === 'server_unavailable'
-                  ? "The bxvtt server isn't answering"
-                  : error.title
-            }
+            title={error.code === 'not_found' ? "You can't open this sheet" : error.title}
           >
             {error.code === 'not_found'
               ? "Only the character's owner and the referee of a table with this character in its party can read it."
-              : error.code === 'server_unavailable'
-                ? 'It may be starting or restarting. Close the sheet and open it again in a few seconds.'
-                : error.detail}
+              : error.detail}
           </Banner>
         )}
         {data && (

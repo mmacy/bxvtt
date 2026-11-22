@@ -57,7 +57,5 @@ function useFullEntry<C extends FullCatalogName>(catalog: C, id: string | null) 
 export const useClassDetail = (id: string | null) => useFullEntry('classes', id);
 /** A spell's full entry, or `null` for no ID. */
 export const useSpellDetail = (id: string | null) => useFullEntry('spells', id);
-/** An equipment item's full entry, or `null` for no ID. */
-export const useEquipmentDetail = (id: string | null) => useFullEntry('equipment', id);
 /** A magic item's full entry, or `null` for no ID. */
 export const useMagicItemDetail = (id: string | null) => useFullEntry('magic-items', id);

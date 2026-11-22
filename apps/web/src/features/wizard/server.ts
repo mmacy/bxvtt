@@ -12,7 +12,7 @@ import {
   resolveItemNoun,
   type TextContext,
 } from '@bxvtt/shared/text';
-import { describeProblem, toParamMap, type ProblemMessage } from '@/app';
+import { describeProblem, toParamMap } from '@/app';
 import type { StepId } from './draft';
 
 /**
@@ -25,33 +25,6 @@ import type { StepId } from './draft';
 export function checkChoices(api: BxvttClient, body: CharacterRequest): Promise<CharacterCheck> {
   const { ability_roll_id: rollId, ...rest } = body;
   return api.checkCharacter({ ...rest, ability_roll_id: rollId ?? '' });
-}
-
-/**
- * `describeProblem`, with the cause stated for the problems the client invents when no server answers. A proxy
- * that can't reach the bxvtt server (for example while it starts or restarts) answers 502 or 503 with no problem
- * document, and the client calls that `server_unavailable`. `describeProblem` has no words for it yet and says
- * only "That didn't work", which is what a first roll showed while the server was still starting.
- *
- * @param error - The value from a `catch`.
- */
-export function describeFailure(error: unknown): ProblemMessage {
-  if (isProblem(error, 'server_unavailable')) {
-    return {
-      code: 'server_unavailable',
-      title: "The bxvtt server isn't answering",
-      detail: 'It may be starting or restarting. Wait a few seconds and try again. Your choices are kept.',
-    };
-  }
-  if (isProblem(error, 'invalid_response')) {
-    return {
-      code: 'invalid_response',
-      title: "The server sent an answer this page can't read",
-      detail:
-        'Wait a few seconds and try again. If it keeps happening, reload the page. Your choices are kept.',
-    };
-  }
-  return describeProblem(error);
 }
 
 /** A refusal explained for the player, with the step that fixes it. */
@@ -158,6 +131,12 @@ export function explainCreationError(error: unknown, ctx?: TextContext): WizardP
       sentences: ['Use 1 to 100 characters, with no tabs, line breaks, or text direction marks.'],
     };
   }
-  const message = describeFailure(error);
-  return { step: null, title: message.title, sentences: [message.detail] };
+  const message = describeProblem(error);
+  // A failure that never reached the rules engine loses nothing: the draft stays in this browser.
+  const kept = ['server_unavailable', 'network', 'invalid_response', 'rate_limited', 'bxapi_unavailable'];
+  return {
+    step: null,
+    title: message.title,
+    sentences: kept.includes(message.code) ? [message.detail, 'Your choices are kept.'] : [message.detail],
+  };
 }

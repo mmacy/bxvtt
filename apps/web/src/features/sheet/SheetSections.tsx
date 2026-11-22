@@ -56,12 +56,6 @@ function headline(model: SheetModel, ability: string): number | undefined {
   }
 }
 
-/** How a sheet names its class and level: "Level 1 fighter · Veteran". */
-export function classLine(model: Pick<SheetModel, 'level' | 'classId' | 'title'>): string {
-  const base = `Level ${model.level} ${classLabel(model.classId).toLowerCase()}`;
-  return model.title ? `${base} · ${model.title}` : base;
-}
-
 export interface SheetHeaderProps {
   model: SheetModel;
   /** The seat owner's player color. */
