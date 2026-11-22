@@ -62,7 +62,7 @@ import {
   type RulerMetric,
 } from '../overlays';
 import { Scene, changedCells } from '../scene';
-import { blueprint, type MapTheme } from '../themes';
+import { blueprint, casingColor, type MapTheme } from '../themes';
 import {
   PING_MS,
   drawFinish,
@@ -575,7 +575,7 @@ export class MapRenderer {
       drawLabels(ctx, view, scene, this.opts.theme, true);
     else if (scene.map.layer === 'player' && this.opts.areaLabels)
       drawLabels(ctx, view, scene, this.opts.theme, false, this.partyPose(performance.now()));
-    drawStrokes(ctx, view, this.opts.strokes, this.hiddenStrokes());
+    drawStrokes(ctx, view, this.opts.strokes, this.hiddenStrokes(), casingColor(this.opts.theme));
     drawPins(ctx, view, this.opts.pins, this.opts.theme, null);
     const pose = this.motion.sample(performance.now());
     if (pose) drawParty(ctx, view, pose, this.opts.theme);
@@ -897,13 +897,14 @@ export class MapRenderer {
     if (this.kbCursor) drawKeyboardCursor(ctx, view, this.kbCursor, this.opts.tool === 'pick-edge', theme);
     if (referee && this.opts.refereeMarkers) drawLabels(ctx, view, scene, theme, true, pose);
     else if (!referee && this.opts.areaLabels) drawLabels(ctx, view, scene, theme, false, pose);
-    drawStrokes(ctx, view, this.opts.strokes, this.hiddenStrokes());
+    drawStrokes(ctx, view, this.opts.strokes, this.hiddenStrokes(), casingColor(this.opts.theme));
     if (this.liveStroke && this.liveStroke.length > 0) {
       drawStrokes(
         ctx,
         view,
         [{ id: 'live', points: this.liveStroke, color: this.opts.strokeColor, width: this.opts.strokeWidth }],
         new Set(),
+        casingColor(theme),
       );
     }
     if (this.measurement) drawRuler(ctx, view, this.measurement, theme);

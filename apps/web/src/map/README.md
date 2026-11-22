@@ -251,6 +251,8 @@ Themes are plain data in `themes.ts`: colors, line widths, and a few style switc
 - `torchlit`: dark flagstones and stone walls, warm flickering light around the party, and darkness beyond its reach.
 - `parchment`: ink on aged paper, with hand-drawn walls and hatching along the rock.
 
+Every user color in `USER_COLORS` reads on every theme. The map draws strokes, ping rings, pins, remote pointers, name pills, and the ruler over a thin outline in the theme's `overlay.casing` color (a dark navy, ink, or near-black). A theme without `overlay` gets a dark outline from its tone. `colors.test.ts` checks each user color against each theme's floor and rock: the color stands out on its own at 3:1, or the casing stands out from the background at 3:1 and from the color at 2:1.
+
 To make a variant, copy a theme, change fields, and pass the object as `theme`. Keep the object stable between renders, because a new theme object repaints every tile.
 
 ## Minimap

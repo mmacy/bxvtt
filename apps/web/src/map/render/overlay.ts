@@ -17,7 +17,7 @@ import {
 } from '../overlays';
 import type { Scene } from '../scene';
 import { fitLabel, placeLabels, type FittedLabel, type LabelRequest, type LabelSpot } from '../labels';
-import { labelFont, type MapTheme } from '../themes';
+import { casingColor, labelFont, type MapTheme } from '../themes';
 import { createCanvas, mulberry32, parseColor, rgba, type Ctx2D } from './util';
 
 export interface FrameView {
@@ -60,8 +60,8 @@ function namePill(
   roundRect(ctx, x, y - h / 2, w, h, h / 2);
   ctx.fillStyle = color;
   ctx.fill();
-  ctx.lineWidth = 1 * dpr;
-  ctx.strokeStyle = rgba(theme.tone === 'dark' ? '#000000' : '#ffffff', 0.55);
+  ctx.lineWidth = 1.3 * dpr;
+  ctx.strokeStyle = casingColor(theme);
   ctx.stroke();
   ctx.fillStyle = readableOn(color);
   ctx.textAlign = 'left';
@@ -603,35 +603,57 @@ export function drawKeyboardCursor(
   ctx.restore();
 }
 
+/**
+ * Draws strokes, each over a thin outline in the theme's casing color, so every user color reads on every floor
+ * and rock. The outlines go down first, so one stroke's outline never cuts across another stroke.
+ */
 export function drawStrokes(
   ctx: Ctx2D,
   view: FrameView,
   strokes: readonly MapStroke[],
   hidden: ReadonlySet<string>,
+  casing: string | null = null,
 ): void {
-  ctx.save();
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
+  const paths: { path: Path2D; width: number; color: string }[] = [];
   for (const stroke of strokes) {
     if (hidden.has(stroke.id) || stroke.points.length === 0) continue;
-    ctx.beginPath();
     const first = stroke.points[0];
     if (!first) continue;
+    const path = new Path2D();
     const p0 = view.toDevice(first[0], first[1]);
-    ctx.moveTo(p0.x, p0.y);
-    if (stroke.points.length === 1) ctx.lineTo(p0.x + 0.01, p0.y);
+    path.moveTo(p0.x, p0.y);
+    if (stroke.points.length === 1) path.lineTo(p0.x + 0.01, p0.y);
     for (let i = 1; i < stroke.points.length; i++) {
       const pt = stroke.points[i];
       if (!pt) continue;
       const p = view.toDevice(pt[0], pt[1]);
-      ctx.lineTo(p.x, p.y);
+      path.lineTo(p.x, p.y);
     }
-    ctx.lineWidth = Math.max(1.5 * view.dpr, stroke.width * view.scale);
-    ctx.strokeStyle = stroke.color;
-    ctx.stroke();
+    paths.push({ path, width: Math.max(1.5 * view.dpr, stroke.width * view.scale), color: stroke.color });
+  }
+  if (paths.length === 0) return;
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  if (casing) {
+    ctx.strokeStyle = casing;
+    ctx.globalAlpha = 0.9;
+    for (const { path, width } of paths) {
+      ctx.lineWidth = width + CASING_PX * 2 * view.dpr;
+      ctx.stroke(path);
+    }
+    ctx.globalAlpha = 1;
+  }
+  for (const { path, width, color } of paths) {
+    ctx.lineWidth = width;
+    ctx.strokeStyle = color;
+    ctx.stroke(path);
   }
   ctx.restore();
 }
+
+/** How far the casing reaches past a user-colored mark on each side, in CSS pixels. */
+const CASING_PX = 1.4;
 
 export function drawPins(
   ctx: Ctx2D,
@@ -660,6 +682,10 @@ export function drawPins(
     ctx.fillStyle = pin.refereeOnly ? theme.ui.panel : color;
     ctx.fill();
     ctx.shadowColor = 'transparent';
+    // The theme's casing outside a light rim, so a pin in any user color stands out from the floor and the rock.
+    ctx.lineWidth = (1.6 + CASING_PX * 2) * dpr;
+    ctx.strokeStyle = casingColor(theme);
+    ctx.stroke();
     ctx.lineWidth = 1.6 * dpr;
     ctx.strokeStyle = pin.refereeOnly ? color : rgba('#ffffff', 0.9);
     if (pin.refereeOnly) ctx.setLineDash([3 * dpr, 2.2 * dpr]);
@@ -704,9 +730,11 @@ export function drawRuler(ctx: Ctx2D, view: FrameView, m: Measurement, theme: Ma
     ctx.moveTo(a.x, a.y);
     ctx.lineTo(b.x, b.y);
   }
-  ctx.lineWidth = 5 * dpr;
-  ctx.strokeStyle = rgba(theme.tone === 'dark' ? '#000000' : '#ffffff', 0.75);
+  ctx.lineWidth = (2.2 + CASING_PX * 2) * dpr;
+  ctx.strokeStyle = casingColor(theme);
+  ctx.globalAlpha = 0.85;
   ctx.stroke();
+  ctx.globalAlpha = 1;
   ctx.setLineDash([8 * dpr, 5 * dpr]);
   ctx.lineWidth = 2.2 * dpr;
   ctx.strokeStyle = color;
@@ -717,6 +745,9 @@ export function drawRuler(ctx: Ctx2D, view: FrameView, m: Measurement, theme: Ma
     ctx.arc(p.x, p.y, 4 * dpr, 0, Math.PI * 2);
     ctx.fillStyle = color;
     ctx.fill();
+    ctx.lineWidth = CASING_PX * dpr;
+    ctx.strokeStyle = casingColor(theme);
+    ctx.stroke();
   }
   const text = measurementLabel(m);
   ctx.font = `700 ${13 * dpr}px system-ui, -apple-system, "Segoe UI", sans-serif`;
@@ -757,16 +788,25 @@ export function drawPing(
     const phase = ((age - k * 320) % 1100) / 1100;
     if (age - k * 320 < 0 || phase < 0) continue;
     const r = (6 + phase * 38) * dpr;
+    const alpha = (1 - phase) * 0.9 * fade;
+    const width = (3.2 - phase * 2.2) * dpr;
     ctx.beginPath();
     ctx.arc(c.x, c.y, r, 0, Math.PI * 2);
-    ctx.lineWidth = (3.2 - phase * 2.2) * dpr;
-    ctx.strokeStyle = rgba(ping.color, (1 - phase) * 0.9 * fade);
+    // Each ring sits on a thin ring of the theme's casing, so every user color reads on blueprint's blue too.
+    ctx.lineWidth = width + CASING_PX * 2 * dpr;
+    ctx.strokeStyle = rgba(casingColor(theme), alpha * 0.8);
+    ctx.stroke();
+    ctx.lineWidth = width;
+    ctx.strokeStyle = rgba(ping.color, alpha);
     ctx.stroke();
   }
   ctx.beginPath();
   ctx.arc(c.x, c.y, 5.5 * dpr, 0, Math.PI * 2);
   ctx.fillStyle = rgba(ping.color, fade);
   ctx.fill();
+  ctx.lineWidth = (2 + CASING_PX * 2) * dpr;
+  ctx.strokeStyle = rgba(casingColor(theme), 0.9 * fade);
+  ctx.stroke();
   ctx.lineWidth = 2 * dpr;
   ctx.strokeStyle = rgba('#ffffff', 0.9 * fade);
   ctx.stroke();
@@ -796,6 +836,10 @@ export function drawPointer(ctx: Ctx2D, view: FrameView, pointer: MapPointer, th
   ctx.fillStyle = pointer.color;
   ctx.fill();
   ctx.shadowColor = 'transparent';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = (1.3 + CASING_PX * 2) * dpr;
+  ctx.strokeStyle = casingColor(theme);
+  ctx.stroke();
   ctx.lineWidth = 1.3 * dpr;
   ctx.strokeStyle = '#ffffff';
   ctx.stroke();
