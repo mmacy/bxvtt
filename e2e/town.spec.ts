@@ -27,12 +27,12 @@ function squareMember(page: Page, name: string) {
     .filter({ has: page.getByRole('heading', { name, level: 3 }) });
 }
 
-/** A member's row in the Party panel's marching order. Its description gives the hit points. */
+/** A member's name button in the Party panel's marching order. Its description gives the hit points. */
 function marchingRow(page: Page, name: string) {
   return page
     .getByRole('tabpanel', { name: 'Party' })
     .getByRole('list', { name: 'Marching order' })
-    .getByRole('button', { name: new RegExp(`^${name}\\b`) });
+    .getByRole('button', { name, exact: true });
 }
 
 test.describe('town', () => {
@@ -115,7 +115,9 @@ test.describe('town', () => {
 
     // Cure light wounds costs 20 gp: Brenna's 19 gp and 1 gp from Wren.
     await sam.page.getByRole('button', { name: 'Buy cure light wounds for Brenna' }).click();
-    await expect(marchingRow(alice.page, 'Brenna')).toHaveAccessibleDescription(/^(8|9|10) of 10 hit points/);
+    await expect(marchingRow(alice.page, 'Brenna')).toHaveAccessibleDescription(
+      /, (8|9|10) of 10 hit points/,
+    );
     const game = await sam.client.getGame(table.table.id);
     expect(purseOf(game, 'Brenna')).toBe(0);
     expect(purseOf(game, 'Wren')).toBe(AFTER_DELVE.purses.Wren - 1);
@@ -161,7 +163,9 @@ test.describe('town', () => {
     await sam.page.getByRole('button', { name: 'Rest a full day' }).click();
     await expect(clock(alice.page)).not.toHaveText(before ?? '');
     // A full day of rest heals Brenna's wounds a little.
-    await expect(marchingRow(alice.page, 'Brenna')).toHaveAccessibleDescription(/^(8|9|10) of 10 hit points/);
+    await expect(marchingRow(alice.page, 'Brenna')).toHaveAccessibleDescription(
+      /, (8|9|10) of 10 hit points/,
+    );
     // "Recently in town" leads with the rest itself (R-506).
     await expect(
       alice.page

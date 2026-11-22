@@ -1,6 +1,6 @@
 # Defects found by the end-to-end suite
 
-This report lists the product defects that are open after the third and final pass of the end-to-end suite and of exploratory play, by owner and severity, with a full entry for each. Every defect fixed in the three passes is listed by title in "Fixed" at the end. Each open entry gives the steps, or the spec that shows it, what happens, what should happen, and a screenshot under `.data/screens/e2e/` when one helps (that folder is ignored by Git, so run the spec to regenerate it).
+This report lists the product defects that are open after the last run of the end-to-end suite, with a full entry for each. Every defect fixed across the passes is listed by title in "Fixed" at the end. Each open entry gives the steps, or the spec that shows it, what happens, what should happen, and a screenshot under `.data/screens/e2e/` when one helps (that folder is ignored by Git, so run the spec to regenerate it).
 
 A test that fails because of an open defect is marked `test.fixme` with the entry's ID in a comment, so the suite passes. After you fix a defect, remove the `fixme` from the tests that name its ID and run them.
 
@@ -11,71 +11,25 @@ Severity:
 - **Minor**: Something works incorrectly or confusingly in a way players notice.
 - **Polish**: Wording, layout, or consistency.
 
-IDs that start with `D-` come from the first pass, `R-` from the second, and `F-` from the final pass.
+IDs that start with `D-` come from the first pass, `R-` from the second, `F-` from the third, and `L-` from the last run.
 
 ## Status
 
-On 2026-11-22, at commit `f91b0f1`, 16 defects are open: 0 blockers, 0 majors, 7 minors, and 9 polish. Every open entry was found or confirmed on the final round's tree. The suite passes in development mode and against the production build, with the `fixme` tests that name F-001, F-002, and F-103.
+On 2026-11-22, at commit `2923b75`, 3 defects are open: 0 blockers, 0 majors, 0 minors, and 3 polish. Two of them (R-205 and F-101) may already be fixed but haven't been confirmed in a browser. The suite passes in development mode and against the production build, and no test is marked `fixme`.
 
 ## Open defects by owner
 
-An entry with more than one owner is listed under each.
-
-### adventures
-
-- F-102 (Polish): The feed says "Osric takes a miller Aske's strongbox"
-
-### app/shell
-
-- F-003 (Minor): A full bxapi is reported as busy, with advice to wait
-- F-104 (Minor): After the referee restores a save, the end screen leaves out quests completed before the save
-- F-201 (Polish): The lobby and the end screen still put a stray space before a comma
-- F-202 (Polish): The end screen writes game time in engine units and dates saves with a raw timestamp
-
 ### combat
 
-- F-207 (Minor): The one-click battle action sends the back rank into melee
-- F-208 (Minor): Seven gold pieces split three ways pay 6, and the seventh disappears without a word
 - F-101 (Polish): Range track labels collide when a monster group carries a condition line
-- F-103 (Polish): Waiting on indifferent monsters still leaves no line in the feed (the rest of R-517)
-- F-206 (Polish): The battle composer's Sleep summary still points at text it doesn't show
-
-### feed
-
-- F-103 (Polish): Waiting on indifferent monsters still leaves no line in the feed (the rest of R-517)
-
-### lobby
-
-- F-201 (Polish): The lobby and the end screen still put a stray space before a comma
 
 ### map
 
-- F-203 (Polish): An unkeyed cell is "On the way" in the scene panel, but "a corridor" to the keyboard cursor and the referee
 - R-205 (Polish): Map labels run into the party token and into doors on The Toll at Crookback Bridge
-
-### referee
-
-- F-203 (Polish): An unkeyed cell is "On the way" in the scene panel, but "a corridor" to the keyboard cursor and the referee
-
-### server
-
-- F-003 (Minor): A full bxapi is reported as busy, with advice to wait
-- F-208 (Minor): Seven gold pieces split three ways pay 6, and the seventh disappears without a word
-
-### shared text
-
-- F-204 (Minor): The feed says a member gains the whole award when bxapi caps it at one level
-- F-102 (Polish): The feed says "Osric takes a miller Aske's strongbox"
-- F-206 (Polish): The battle composer's Sleep summary still points at text it doesn't show
 
 ### sheet
 
-- F-001 (Minor): Marching order rows are named with only part of what they show
-
-### town
-
-- F-002 (Minor): The town's member chooser buttons fail axe's label-in-name check
-- F-205 (Polish): Town tokens wear a color from the name, not the owner's color
+- L-001 (Polish): Each marching order row's details are read twice by a screen reader
 
 ## Open defect entries
 
@@ -89,148 +43,33 @@ An entry with more than one owner is listed under each.
 - **What should happen**: Labels and area numbers should move clear of the party token and of doors, as the map README says they do for stairs and features.
 - **Screenshot**: `.data/screens/e2e/tour-b-toll-walk.png`, `.data/screens/e2e/tour-b-toll-walk-referee.png`
 
-### F-001: Marching order rows are named with only part of what they show
-
-- **Severity**: Minor
-- **Owner**: sheet
-- **Steps**: `e2e/a11y.spec.ts`, "exploring, player and referee", "encounter", "battle", "game over", and "rejoining: the visitor waits, and the referee sees the request" (marked `fixme`). Open the Party tab on any play screen.
-- **What happens**: axe reports `label-content-name-mismatch` (serious) on every marching order row. The final round's fix for R-101 names each row with `aria-labelledby` pointing at three spans, so the name is "Brenna You Level 1 fighter", but the row also shows its place number, the player's avatar initial, the hit points ("10/10"), and the armour class ("4"). Round two's version passed axe because the name began with the visible text. This regresses D-005.
-- **What should happen**: The name should contain the row's visible text in order, for example by labelling the row with all its visible spans (hiding the avatar initial and the place number from the accessibility tree) and moving the long description to `aria-describedby`.
-- **Screenshot**: `.data/screens/e2e/a11y-exploring-player.png`
-
-### F-002: The town's member chooser buttons fail axe's label-in-name check
-
-- **Severity**: Minor
-- **Owner**: town
-- **Steps**: `e2e/a11y.spec.ts`, "town, every part of town" (marked `fixme`). Open the Outfitter, the Temple, or the Treasure buyers tab.
-- **What happens**: axe reports `label-content-name-mismatch` (serious) on each member button in the "who" chooser, such as `aria-label="Wren, 5 of 5 hp"` and `aria-label="Wren, 74 gp"`, and on the chosen marker (`._chosen`). The visible text reads "Wren" and "5 of 5 hp" on two lines.
-- **What should happen**: Drop the `aria-label` and let the button take its name from its visible text, or include every visible word in it, so the name and the label agree.
-- **Screenshot**: `.data/screens/e2e/a11y-town-temple.png`
-
-### F-003: A full bxapi is reported as busy, with advice to wait
-
-- **Severity**: Minor
-- **Owner**: server, app/shell
-- **Steps**: Let bxapi reach its storage limit (`/v1/meta` reports `used_bytes` at `max_bytes`), then create a character in the wizard or start a game from the lobby. During this pass the shared development bxapi filled up at about 04:06, and the agents saw this on the wizard's create step and on every table setup that creates characters or starts a game.
-- **What happens**: bxapi answers 507 `storage_full`, and bxvtt shows "bxapi is busy (storage_full). Try again in a moment." Waiting never helps, because the storage stays full until someone frees space or raises the limit, and the raw code `storage_full` shows in the main interface.
-- **What should happen**: Say what happened and who can fix it, for example "The rules server is out of storage, so it can't save anything new. Ask the person who runs this table to free space or raise the limit." Leave out the raw code.
-
 ### F-101: Range track labels collide when a monster group carries a condition line
 
 - **Severity**: Polish
+- **Status**: Possibly fixed. The last batch gives stacked groups room for their labels, and the smoke spec's captain's loft now shows Mag Corrie and her bodyguard stacked with both labels clear. The run never put a group to sleep, so the case with a condition line is unconfirmed.
 - **Owner**: combat
 - **Steps**: `e2e/smoke.spec.ts`, the captain's loft. Wren puts Mag Corrie to sleep, and the party beats her and her bodyguard. Look at the aftermath card's range track, and at the battle board while Mag sleeps and her bodyguard still stands.
 - **What happens**: Mag Corrie's label grows a third line, "1 asleep". In the aftermath card, whose track is narrow, that line is drawn on top of the "Party line" caption, and the party's tokens crowd against Mag's token. On the battle board, in a run where both groups stood at the same distance, the bodyguard's token, stacked below Mag's by the R-304 fix, covered Mag's "In melee" and "1 asleep" lines.
 - **What should happen**: Stack groups at the same distance with room for every line of each label, and keep the condition line clear of the "Party line" caption.
 - **Screenshot**: `.data/screens/e2e/smoke-captains-loft-won.png` (aftermath card, bottom centre)
 
-### F-102: The feed says "Osric takes a miller Aske's strongbox"
+### L-001: Each marching order row's details are read twice by a screen reader
 
 - **Severity**: Polish
-- **Owner**: shared text (or adventures, by renaming the item)
-- **Steps**: `e2e/smoke.spec.ts`, the captain's loft. Take the treasure and read the feed.
-- **What happens**: The take-treasure group reads "Brenna takes a silver brooch and 74 gp in coin. Osric takes a miller Aske's strongbox and 73 gp in coin." The item text lowercases the first letter of "Miller Aske's strongbox" and puts "a" in front of a possessive proper name. This is the line that completes the table's first side quest.
-- **What should happen**: "Osric takes Miller Aske's strongbox and 73 gp in coin." An item whose name starts with a proper name or a possessive keeps its capital and takes no article (the noun's `proper` or `noArticle` flag), or the adventure renames it, for example "the miller's strongbox".
-- **Screenshot**: none. The line is in the feed after the smoke test's "the party takes the captain's chest" step.
-
-### F-103: Waiting on indifferent monsters still leaves no line in the feed (the rest of R-517)
-
-- **Severity**: Polish
-- **Owner**: feed, combat
-- **Steps**: `e2e/combat.spec.ts`, "the feed says that the party waited a round (F-103)" (marked `fixme`). Bring a party into the counting room of The Toll at Crookback Bridge, where the clerk and his bandit are indifferent, and press Wait as the caller.
-- **What happens**: The encounter panel now says "The party waits a round. The ink-stained clerk and the bandit pay the party no mind." for the caller and the other player, which fixes the panel half of R-517. The feed shows nothing for the wait, not even a "Sam Wait" heading, so anyone who reads the feed later can't tell that rounds passed.
-- **What should happen**: A wait appears in the feed with the same sentence the panel shows.
-- **Screenshot**: `.data/screens/e2e/combat-wait-indifferent.png` (panel)
-
-### F-104: After the referee restores a save, the end screen leaves out quests completed before the save
-
-- **Severity**: Minor
-- **Owner**: app/shell
-- **Steps**: In The Toll at Crookback Bridge, complete "Miller Aske's strongbox" (I used the referee command), save by hand, then complete "Open the Kingsway". The victory screen lists both quests. Restore the hand save from the end screen and complete "Open the Kingsway" again.
-- **What happens**: The second victory screen lists only "Open the Kingsway". The fix for R-528 counts `quest_completed` entries whose `session_id` matches the current session, and a restore moves the table to a new bxapi session, so the strongbox quest, completed in the earlier session before the save, no longer counts. A referee who restores after a total party kill and then wins sees fewer quests than the party completed.
-- **What should happen**: Count the quests completed in the game the save continues, for example from the saved game's quest state, or by following each restored session back to the session it was saved from.
-- **Screenshot**: none (checked with a throwaway probe spec; the steps above repeat it).
-
-### F-201: The lobby and the end screen still put a stray space before a comma
-
-- **Severity**: Polish
-- **Owner**: lobby, app/shell
-- **Steps**: Read the accessibility tree of a lobby with characters in the party, and of the end screen after a game ends.
-- **What happens**: R-101 is fixed where it was reported (the profile button reads "Sam, your profile", the catalog reads "Chainmail, Armour class 5, show details"), but the same pattern remains elsewhere. The lobby's party rows read "Level 1 fighter , played by Sam", the start card reads "0 characters , Standard rules", and the end screen reads "Level 1 fighter , 0 XP" and "Day 2, 10:20 , saved 11/22/2026, 4:25:50 AM". A screen reader pauses at the wrong place, and copied text keeps the space.
-- **What should happen**: Put each comma in the same text node as the word before it, as the R-101 fix did for the profile button.
-- **Screenshot**: `.data/screens/e2e/round3-g-p3-00-lobby-ready.aria.txt`, `.data/screens/e2e/round3-g-p12-01-end-ruth.aria.txt`
-
-### F-202: The end screen writes game time in engine units and dates saves with a raw timestamp
-
-- **Severity**: Polish
-- **Owner**: app/shell
-- **Steps**: Lose a game of The Drowned Bell on the second day (here, a total party kill at Day 2, 10:20) and read the end screen.
-- **What happens**: "Game time" reads "1 day, 62 turns, and 1 round, ending at Day 2, 10:20". "62 turns" is 10 hours and 20 minutes, which nobody at the table counts in turns. Each save under "Continue from a save" is dated "11/22/2026, 4:25:50 AM", with seconds, while the saves dialog dates the same saves "4 minutes ago". The XP column is written `{member.xp} XP` in `EndScreen.tsx`, so a large total reads "2730 XP" while the feed writes "2,730 experience points" (the R-532 item, still open).
-- **What should happen**: "1 day, 10 hours, and 20 minutes", the saves dialog's relative dates (or a date without seconds), and "2,730 XP".
-- **Screenshot**: `.data/screens/e2e/round3-g-p12-01-end-ruth.png`
-
-### F-203: An unkeyed cell is "On the way" in the scene panel, but "a corridor" to the keyboard cursor and the referee
-
-- **Severity**: Polish
-- **Owner**: map, referee
-- **Steps**: Read `apps/web/src/map/cursor.ts` line 107, `features/referee/sections/QuickActions.tsx` line 375, and `features/referee/sections/HereNow.tsx` line 172. In the interface, pick a cell outside any area with "Place the party" and "A cell".
-- **What happens**: The R-525 fix titles the scene panel "On the way", but the map's keyboard cursor still announces such a cell as "A corridor", the referee's pick reads "Level 1, a corridor", and "Here and now" says "The party stands in a corridor, outside any keyed area." On The Toll at Crookback Bridge a screen reader user still hears the bridge deck called a corridor. I confirmed this in the source; I didn't hear the cursor's announcement on the bridge.
-- **What should happen**: One neutral name everywhere, such as "On the way" or "Between areas".
-
-### F-204: The feed says a member gains the whole award when bxapi caps it at one level
-
-- **Severity**: Minor
-- **Owner**: shared text
-- **Steps**: In town, as the referee, award 2,600 XP to each member of a first-level party (Brenna, Wren, Osric, Tamsin), then read the feed and the game view.
-- **What happens**: The feed says "Wren gains 2,600 experience points." and "Wren reaches level 2", but Wren's XP is 2,399: one award raises a character at most one level, so bxapi stopped her one point short of level 3 and dropped the rest. The text uses `modified_award`, which bxapi documents as the amount before that cap.
-- **What should happen**: Say what the member kept, such as "Wren gains 2,399 experience points. One award raises a character only one level, so the rest is lost." The view's XP before and after gives the number.
-- **Screenshot**: `.data/screens/e2e/round3-g-chk-R531-feed.png`
-
-### F-205: Town tokens wear a color from the name, not the owner's color
-
-- **Severity**: Polish
-- **Owner**: town
-- **Steps**: Start a game where Sam (orange) plays Brenna and Ann (yellow) plays Tamsin and Osric. Compare the town square's "Purses and players" with the Party panel.
-- **What happens**: The Party panel, the lobby, and the battle board ring each token in its owner's color. The town square's tokens get colors from `TokenPortrait`'s default, because `MemberToken` in `features/town/parts.tsx` passes no color: Brenna is green, Tamsin orange, Osric blue. Tamsin wears Sam's orange although Ann plays her.
-- **What should happen**: Pass the owner's color, as the Party panel does.
-- **Screenshot**: `.data/screens/e2e/round3-g-p3-01-town-sam.png`
-
-### F-206: The battle composer's Sleep summary still points at text it doesn't show
-
-- **Severity**: Polish
-- **Owner**: combat, shared text
-- **Steps**: In a battle, open a magic-user's "More choices", choose Cast, then Sleep.
-- **What happens**: The button now reads "Cast Sleep" (part of R-532 is fixed), but the summary still reads "240’ · 4d4 turns · A single creature with 4+1 Hit Dice (see Hit point modifiers)." The composer also opens on "One creature", whose Cast button stays disabled until a target is picked, so a new player facing two goblins first sees a disabled button.
-- **What should happen**: Drop the dangling reference, and open on the form that fits the encounter, or say why the button is disabled next to it (the reason is only in its title tooltip, "Choose a target first.").
-- **Screenshot**: `.data/screens/e2e/round3-g-p8-01-cast-tab.png`
-
-### F-207: The one-click battle action sends the back rank into melee
-
-- **Severity**: Minor
-- **Owner**: combat
-- **Steps**: In The Drowned Bell, walk into the dorter (four hostile goblins, 50 feet away) with Brenna (fighter), Tamsin (magic-user, 3 hit points), and Osric (cleric, 3 hit points), choose Fight, and press each member's main button.
-- **What happens**: The main button for every member is "Attack the goblins, closing in" (or "Close in on the goblins"), and the action bar offers the same with A. Pressing it for each member moved all three into melee in round 1. The goblins killed Osric and Tamsin in round 1 and Brenna in round 2. In the guardroom, at 30 feet, Tamsin's main button was a thrown dagger instead. A first-time player who takes the highlighted choice walks the magic-user into the front line.
-- **What should happen**: bxapi decides what is legal, but the main suggestion is the client's choice. For a member outside the front rank, suggest a missile attack, a spell, or holding, and keep "close in" under "More choices".
-- **Screenshot**: `.data/screens/e2e/round3-g-p11-end-sam.png`
-
-### F-208: Seven gold pieces split three ways pay 6, and the seventh disappears without a word
-
-- **Severity**: Minor
-- **Owner**: combat, server
-- **Steps**: Beat the two goblins in The Drowned Bell's guardroom. The feed says "The fallen leave behind 7 gp in coin." Press "Pick up the dropped goods".
-- **What happens**: "Brenna takes 2 gp in coin. Tamsin takes 2 gp in coin. Osric takes 2 gp in coin." The dropped goods vanish from the scene, and nobody gets the seventh gold piece. This is the same family as R-518.
-- **What should happen**: Give the remainder to someone (the first member in marching order, for example) or say where it went.
-- **Screenshot**: `.data/screens/e2e/round3-g-p9-01-picked-up.png`
+- **Owner**: sheet
+- **Steps**: Open the Party tab and read the marching order with a screen reader in browse mode, or look at the list's accessibility tree.
+- **What happens**: The F-001 fix names each row's button by the member's name and points its description at a hidden text element inside the same list item. That element is still in the accessibility tree as the list item's content, so browse mode reads "You, level 1 fighter, 10 of 10 hit points, armour class 4. Opens the character sheet." and then, on the button, "Brenna" followed by the same sentence as its description.
+- **What should happen**: Each detail should be read once, for example by hiding the description element from the tree (`aria-hidden="true"` still lets `aria-describedby` use it).
 
 ## Fixed
 
-These defects were fixed and confirmed by a passing test or, where the entry had no test, by exploratory play or the source. A defect fixed in part names the open entry that carries the rest.
+These defects were fixed and confirmed by a passing test or, where the entry had no test, by exploratory play or the source. A defect fixed in part names the open entry that carried the rest.
 
 - D-001: The Party panel warns about darkness while the party is in town.
 - D-002: The profile button's accessible name doesn't match its visible text.
 - D-003: The "Hooks" heading in the adventure picker fails color contrast.
 - D-004: Action bar buttons leave their shortcut key out of their accessible name.
-- D-005: Marching order rows have a name that leaves out what they show. Fixed in the second pass, then regressed in the final round; see F-001.
+- D-005: Marching order rows have a name that leaves out what they show. Fixed in the second pass, regressed in the third, and fixed again with F-001.
 - D-006: Outfitter item buttons are named "Details for …" while they show the item and its summary.
 - D-007: The dungeon map renders an empty tooltip with no accessible name.
 - D-008: The journal's scrolling body can't be reached from the keyboard.
@@ -345,9 +184,23 @@ These defects were fixed and confirmed by a passing test or, where the entry had
 - R-530: Returning to the lobby quietly resets every character to how it was created.
 - R-531: A level up only appears as a feed line.
 - R-532: Small wording slips in the referee panel, the readiness card, and the end screen. Fixed in part; the rest is F-202 and F-206.
+- F-001: Marching order rows are named with only part of what they show.
+- F-002: The town's member chooser buttons fail axe's label-in-name check.
+- F-003: A full bxapi is reported as busy, with advice to wait.
+- F-102: The feed says "Osric takes a miller Aske's strongbox".
+- F-103: Waiting on indifferent monsters still leaves no line in the feed (the rest of R-517).
+- F-104: After the referee restores a save, the end screen leaves out quests completed before the save.
+- F-201: The lobby and the end screen still put a stray space before a comma.
+- F-202: The end screen writes game time in engine units and dates saves with a raw timestamp.
+- F-203: An unkeyed cell is "On the way" in the scene panel, but "a corridor" to the keyboard cursor and the referee.
+- F-204: The feed says a member gains the whole award when bxapi caps it at one level.
+- F-205: Town tokens wear a color from the name, not the owner's color.
+- F-206: The battle composer's Sleep summary still points at text it doesn't show.
+- F-207: The one-click battle action sends the back rank into melee.
+- F-208: Seven gold pieces split three ways pay 6, and the seventh disappears without a word.
 
 ## Notes that aren't defects
 
 - bxapi has no command that grants a gem or a piece of jewellery, so the referee's grant tool can only give items and coins. The town spec gets treasure by having the referee place the party in The Drowned Bell's chapel and take the altar's candlesticks. If the referee should be able to hand out treasure, bxapi needs a `grant_valuable` command first.
-- First-level parties die easily in both sample adventures, as B/X intends. In the final pass, a first-time table that followed the battle board's highlighted action died in The Drowned Bell's dorter (see F-207), and talking at the toll gate can turn the bandits hostile, depending on the dice.
+- First-level parties die easily in both sample adventures, as B/X intends. Talking at the toll gate can turn the bandits hostile, depending on the dice. Since F-207 was fixed, the battle board's highlighted choice keeps back-rank members out of melee, so a newcomer who follows it no longer walks the casters into a fight.
 - On 2026-11-22 the shared development bxapi filled its 1 GiB storage limit after three passes of test runs, and every request that stored something failed until it was restarted on a fresh database. `scripts/dev-bxapi.sh` now turns the limit off. F-003 covers the message bxvtt showed.

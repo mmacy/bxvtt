@@ -362,7 +362,9 @@ test.describe('first run and lobby', () => {
     expect(game.view.party.map((member) => member.name)).toEqual(['Brenna', 'Wren', 'Osric', 'Tamsin']);
     // Sam still plays his own characters.
     await expect(
-      sam.page.getByRole('list', { name: 'Marching order' }).getByRole('button', { name: /^Brenna\b/ }),
-    ).toContainText('You');
+      sam.page
+        .getByRole('list', { name: 'Marching order' })
+        .getByRole('button', { name: 'Brenna', exact: true }),
+    ).toHaveAccessibleDescription(/^You, /);
   });
 });

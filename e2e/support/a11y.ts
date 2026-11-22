@@ -66,8 +66,8 @@ export interface FocusStop {
 /**
  * Presses Tab from the top of the page and records each focused element, until focus leaves the page or returns
  * to the first stop, or after `max` presses. To decide whether focus is visible, it compares a screenshot of the
- * element and a few pixels around it while focused with one taken after the element loses focus, so a ring drawn
- * on a wrapper or on a canvas counts.
+ * element, its row-sized container, and a few pixels around them while focused with one taken after the element
+ * loses focus, so a ring drawn on a wrapper, a row, or a canvas counts.
  *
  * @returns The stops, and whether focus got stuck: the same short cycle repeated without reaching the end.
  */
@@ -93,6 +93,20 @@ export async function tabWalk(page: Page, max = 120): Promise<{ stops: FocusStop
         (active.textContent ?? '').trim().slice(0, 60);
       const role = active.getAttribute('role') ?? active.tagName.toLowerCase();
       const rect = active.getBoundingClientRect();
+      // A ring may be drawn on a small container around the element, such as a row whose only button is a name,
+      // so the area to compare grows to the largest of the nearest three ancestors that is still row-sized.
+      let area = { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom };
+      let node: HTMLElement | null = active.parentElement;
+      for (let depth = 0; depth < 3 && node !== null; depth += 1, node = node.parentElement) {
+        const box = node.getBoundingClientRect();
+        if (box.width > 600 || box.height > 200) break;
+        area = {
+          left: Math.min(area.left, box.left),
+          top: Math.min(area.top, box.top),
+          right: Math.max(area.right, box.right),
+          bottom: Math.max(area.bottom, box.bottom),
+        };
+      }
       const visible =
         rect.width > 0 &&
         rect.height > 0 &&
@@ -109,7 +123,7 @@ export async function tabWalk(page: Page, max = 120): Promise<{ stops: FocusStop
         label: `${role} "${name.slice(0, 80)}"`,
         visible,
         key: path.join('/'),
-        rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+        rect: { x: area.left, y: area.top, width: area.right - area.left, height: area.bottom - area.top },
       };
     });
     if (info === null || element === null) return { stops, trapped: false };

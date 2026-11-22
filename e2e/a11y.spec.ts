@@ -96,8 +96,7 @@ test.describe('axe finds no serious or critical violations', () => {
     ).toEqual([]);
   });
 
-  // F-002, F-001
-  test.fixme('town, every part of town', async ({ crew }, testInfo) => {
+  test('town, every part of town', async ({ crew }, testInfo) => {
     const staged = await stagedTable(crew, 'town');
     const { page } = staged.sam;
     await openTable(page, staged.path);
@@ -119,8 +118,7 @@ test.describe('axe finds no serious or critical violations', () => {
     expect(found).toEqual([]);
   });
 
-  // F-001
-  test.fixme('exploring, player and referee', async ({ crew }, testInfo) => {
+  test('exploring, player and referee', async ({ crew }, testInfo) => {
     const staged = await stagedTable(crew, 'exploring');
     const found: string[] = [];
     for (const [who, actor] of [
@@ -188,8 +186,6 @@ test.describe('axe finds no serious or critical violations', () => {
 
   for (const stage of ['encounter', 'battle', 'game_over'] as const) {
     test(`${stage.replace('_', ' ')}`, async ({ crew }, testInfo) => {
-      // F-001: the marching order rows fail axe's label-in-name check on every play screen.
-      test.fixme(true, 'F-001');
       const staged = await stagedTable(crew, stage);
       const { page } = staged.sam;
       await openTable(page, staged.path);
@@ -207,8 +203,7 @@ test.describe('axe finds no serious or critical violations', () => {
 });
 
 test.describe('axe on the screens added in the fix round', () => {
-  // F-001
-  test.fixme('rejoining: the visitor waits, and the referee sees the request', async ({ crew }, testInfo) => {
+  test('rejoining: the visitor waits, and the referee sees the request', async ({ crew }, testInfo) => {
     const staged = await stagedTable(crew, 'town');
     await openTable(staged.ruth.page, staged.path);
     const visitor = await crew.person('Visitor', { signedIn: false });
