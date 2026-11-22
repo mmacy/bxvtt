@@ -3,7 +3,7 @@
  * accessibility and layout spec and the performance spec. Each helper returns a table with a referee (Ruth) and
  * a player (Sam), where Sam owns the first seat and is the caller.
  */
-import type { GameState } from '@bxvtt/shared/protocol';
+import { USER_COLORS, type GameState } from '@bxvtt/shared/protocol';
 import { expect } from '@playwright/test';
 import type { Actor, Crew, PersonOptions } from './fixtures';
 import {
@@ -48,8 +48,8 @@ export async function stagedTable(
   const ruth = await crew.person('Ruth', options);
   const sam = await crew.person('Sam', options);
   // The server picks each user's color at random. Fixed colors keep screenshots and contrast checks repeatable.
-  await ruth.client.updateMe({ color: '#e69f00' });
-  await sam.client.updateMe({ color: '#56b4e9' });
+  await ruth.client.updateMe({ color: USER_COLORS[0] });
+  await sam.client.updateMe({ color: USER_COLORS[1] });
   const party: MemberSpec[] =
     stage === 'game_over'
       ? [{ owner: sam, name: 'Brenna', classId: 'fighter', seed: 106 }]

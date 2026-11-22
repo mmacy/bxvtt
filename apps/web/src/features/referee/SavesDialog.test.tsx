@@ -97,6 +97,19 @@ describe('SavesDialog', () => {
   });
 });
 
+describe('SavesDialog in the lobby', () => {
+  it('marks no save as from an earlier game, and sends the referee to the lobby’s own autosave switch', async () => {
+    const snapshot = fixtureSnapshot('lobby', 'referee');
+    const api = createFakeApi();
+    api.listSaves.mockResolvedValue({ items: saves('ses_old', snapshot.user.id) });
+    renderWithTable(<SavesDialog open onOpenChange={() => {}} />, { snapshot, api });
+    await screen.findByRole('list', { name: 'Saves, newest first' });
+    expect(screen.queryByText('Earlier game')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Change' })).not.toBeInTheDocument();
+    expect(screen.getByText(/Change it with “Save automatically” in the table settings/)).toBeInTheDocument();
+  });
+});
+
 describe('RefereeNotes', () => {
   it('saves after typing, and offers a choice when another referee saved first', async () => {
     const snapshot = fixtureSnapshot('exploring', 'referee');

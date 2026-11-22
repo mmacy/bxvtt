@@ -126,3 +126,8 @@
   margin-left: auto;
   font-size: var(--text-xs);
 }
+
+.endedBanner {
+  flex: none;
+  padding: var(--space-2) var(--space-3) 0;
+}

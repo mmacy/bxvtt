@@ -7,6 +7,7 @@ import { commandInfo, describeEvents, type EventLine } from '@bxvtt/shared/text'
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSendRefereeCommand, useTextContext, type GameCommand } from '@/app';
 import { Banner, Icon, IconButton } from '@/ui';
+import { useEndedGuard } from './endedGuard';
 import styles from './referee.module.css';
 
 /** What the last command of one form did. */
@@ -35,6 +36,7 @@ export function useRefereeCommand(): {
   clear: () => void;
 } {
   const { send } = useSendRefereeCommand();
+  const guard = useEndedGuard();
   const ctx = useTextContext();
   const ctxRef = useRef(ctx);
   useEffect(() => {
@@ -101,6 +103,7 @@ export function useRefereeCommand(): {
   const runAll = useCallback(
     async (commands: readonly GameCommand[]): Promise<boolean> => {
       if (commands.length === 0) return false;
+      if (!(await guard(commands))) return false;
       setBusy(true);
       try {
         const lines: EventLine[] = [];
@@ -132,7 +135,7 @@ export function useRefereeCommand(): {
         setBusy(false);
       }
     },
-    [sendOne],
+    [sendOne, guard],
   );
 
   const run = useCallback((command: GameCommand) => runAll([command]), [runAll]);

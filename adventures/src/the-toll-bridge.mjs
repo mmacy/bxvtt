@@ -25,9 +25,9 @@ const level = new LevelBuilder({
 ###KKK#####TTTT#####UUUU##
 ###KKK#####TTTT###########
 ###KKK#####TTTT###########
-RRRGGG,,,,,,,,,,,,,,EEEFFF
-RRRGGG,,,,,,,,,,,,,,EEEFFF
-RRRGGG,,,,,,,,,,,,,,EEEFFF
+RRRRG,,,,,,,,,,,,,,,EEEFFF
+RRRRG,,,,,,,,,,,,,,,EEEFFF
+RRRRG,,,,,,,,,,,,,,,EEEFFF
 ###BBB####################
 ###BBB####PPP#############
 ###BBB####PPPLLLLLL#######
@@ -48,22 +48,22 @@ level
     id: 'toll_gate',
     name: 'Toll gate',
     description:
-      'A squat stone arch closes the west end of Crookback Bridge, and a striped pole is lowered across the road. Under the arch, four bandits in odd pieces of armour lounge on upturned barrels with cudgels across their knees. A slate by the pole reads: ONE GOLD A HEAD. NO ARGUING.',
-    encounter: monsters([['bandit', 4]], { alignment: 'neutral', stance: 'indifferent' }),
+      'A squat stone arch closes the west end of Crookback Bridge, and a striped pole is lowered across the road. Under the arch, three bandits in odd pieces of armour lounge on upturned barrels with cudgels across their knees. A slate by the pole reads: ONE GOLD A HEAD. NO ARGUING.',
+    encounter: monsters([['bandit', 3]], { alignment: 'neutral', stance: 'indifferent' }),
   })
   .area('K', {
     id: 'kennel',
     name: 'Kennel',
     description:
-      'Straw, gnawed bones, and the rank smell of animals. Two lean grey wolves, bought as cubs from a trapper and kept hungry ever since, rise out of the straw with their hackles up.',
-    encounter: monsters([['normal_wolf', 2]], { stance: 'attacks' }),
+      'Straw, gnawed bones, and the rank smell of animals. A lean grey wolf, bought as a cub from a trapper and kept hungry ever since, rises out of the straw with its hackles up.',
+    encounter: monsters([['normal_wolf', 1]], { stance: 'attacks' }),
   })
   .area('B', {
     id: 'bunkroom',
     name: 'Bunkroom',
     description:
-      'Six bunks, three of them full of snoring bandits. Boots, dice, and empty wine jugs cover the floor, and a battered sea chest sits under the window.',
-    encounter: monsters([['bandit', 3]]),
+      'Six bunks, two of them full of snoring bandits. Boots, dice, and empty wine jugs cover the floor, and a battered sea chest sits under the window.',
+    encounter: monsters([['bandit', 2]]),
     features: [
       {
         id: 'sea_chest',
@@ -79,10 +79,13 @@ level
     name: 'Counting room',
     description:
       'A cramped office inside the toll tower, lit by a smoking lamp. Ledgers record every toll in a neat hand. A wizened man in an ink-stained robe sits behind the desk, and a bandit with a crossbow stands at his shoulder. Beside the desk is a square trapdoor with a rope handle, and a ladder climbs to the room above.',
-    encounter: monsters([
-      ['toll_clerk', 1],
-      ['bandit', 1],
-    ]),
+    encounter: monsters(
+      [
+        ['toll_clerk', 1],
+        ['bandit', 1],
+      ],
+      { stance: 'indifferent' },
+    ),
     features: [
       {
         id: 'toll_strongbox',
@@ -97,13 +100,13 @@ level
     id: 'captains_loft',
     name: "Captain's loft",
     description:
-      'The top room of the toll tower, with arrow slits on four sides and a view down the whole gorge. Mag Corrie, who calls herself captain of the bridge, has furnished it with a stolen carpet and a curtained bed. Her bodyguard, a huge bare-chested man with a meat cleaver, never leaves her side.',
+      'The top room of the toll tower, with arrow slits on four sides and a view down the whole gorge. Mag Corrie, who calls herself captain of the bridge, wears a mail shirt even in bed and has furnished it with a stolen carpet and a curtained bed. Her bodyguard, a huge bare-chested man with a meat cleaver, never leaves her side.',
     encounter: monsters(
       [
         ['mag_corrie', 1],
         ['mags_bodyguard', 1],
       ],
-      { aware: true },
+      {},
     ),
     features: [
       {
@@ -188,7 +191,7 @@ level
   .join('R', 'G')
   .door([4, 4], 'south')
   .door([4, 7], 'south')
-  .door([5, 6], 'east')
+  .door([4, 6], 'east')
   .door([12, 4], 'south')
   .door([19, 6], 'east', { starts_open: true })
   .door([22, 6], 'east', { locked: true })
@@ -197,7 +200,7 @@ level
   .join('L', 'V')
   .transition({
     kind: 'stairs_up',
-    position: [11, 2],
+    position: [12, 4],
     to_dungeon_id: DUNGEON,
     to_level_number: 1,
     to_position: [21, 1],
@@ -208,7 +211,7 @@ level
     position: [21, 1],
     to_dungeon_id: DUNGEON,
     to_level_number: 1,
-    to_position: [11, 2],
+    to_position: [12, 4],
     to_facing: 'south',
   })
   .transition({
@@ -272,20 +275,20 @@ const areaEntered = (area_id) => ({
 const payload = {
   name: 'The Toll at Crookback Bridge',
   description:
-    'Bandits have taken the toll tower on Crookback Bridge, and they charge whatever they like to cross the gorge. A short adventure for three to six characters of first or second level, written to be played in about an hour.',
+    'Bandits have taken the toll tower on Crookback Bridge, and they charge whatever they like to cross the gorge. A short adventure for four to six characters of first or second level, written to be played in about an hour.',
   hooks: [
     'Reeve Odo Pell of Wethercote wants the bandits off the bridge and the east portcullis raised, so the carts can run again.',
     'Miller Aske refused to pay the toll. The bandits took his strongbox and threw his cart into the river, and he wants the box back.',
   ],
-  party: { min_level: 1, max_level: 2, min_size: 3, max_size: 6 },
+  party: { min_level: 1, max_level: 2, min_size: 4, max_size: 6 },
   town: {
     name: 'Wethercote',
     description:
       'A market village of stone barns and sheep pens at the foot of the Kingsway. Since the bandits took the bridge, no carts have come up from the lowlands, and prices in the market have doubled.',
     services: [
-      "Hob Tanner's smithy and store: weapons, armour, and gear",
-      'Wayside shrine of the Shepherd: healing at high prices, and raise dead for a fortune',
-      'Old Nan Colley buys gems and jewellery',
+      "Hob Tanner's smithy: weapons, armour, and gear",
+      'Wayside shrine of the Shepherd: healing, cures, and raise dead, all at high prices',
+      'Old Nan Colley, gem buyer: buys gems and jewellery',
       "The Drover's Rest: beds and supper",
     ],
     travel_turns: { [DUNGEON]: 1 },
@@ -314,6 +317,8 @@ const payload = {
       family_id: 'veteran',
       intro:
         'The self-styled captain of Crookback Bridge: a hard, clever fighter who leads the toll bandits.',
+      // A mail shirt and a shield, not the plate armour of the template.
+      changes: { ac: 4, ac_ascending: 15 },
     }),
     named('berserker', {
       id: 'mags_bodyguard',

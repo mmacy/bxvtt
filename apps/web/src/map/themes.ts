@@ -120,6 +120,13 @@ export interface MapTheme {
     vignette: number;
     vignetteColor: string;
   };
+  /**
+   * How user-colored marks (strokes, pings, pins, pointers, and the ruler) stay readable: a thin outline in
+   * `casing` under each one. Leave it out and the map picks a dark outline from the theme's tone.
+   */
+  overlay?: {
+    casing: string;
+  };
   /** Colors for the tooltip and chips the map draws in HTML. */
   ui: {
     panel: string;
@@ -171,6 +178,7 @@ export const blueprint: MapTheme = {
   marker: { encounter: '#c62f3b', treasure: '#c48a0e', trap: '#d9661b', done: '#8a9bb3' },
   hover: { stroke: '#e0821a', fill: 'rgba(255, 176, 64, 0.18)' },
   finish: { grain: 0.035, grainColor: '#1b3d6e', vignette: 0, vignetteColor: '#000000' },
+  overlay: { casing: '#0e2647' },
   ui: { panel: 'rgba(251,252,254,0.97)', text: '#14305a', muted: '#4c6a94', border: '#9dbde6' },
 };
 
@@ -213,6 +221,7 @@ export const torchlit: MapTheme = {
   marker: { encounter: '#ff6b5a', treasure: '#f3c34f', trap: '#ff9a3c', done: '#6d6457' },
   hover: { stroke: '#ffd27a', fill: 'rgba(255, 196, 92, 0.16)' },
   finish: { grain: 0.06, grainColor: '#000000', vignette: 0.6, vignetteColor: '#000000' },
+  overlay: { casing: '#090605' },
   ui: { panel: 'rgba(22,18,15,0.96)', text: '#f2e6cf', muted: '#b8a68a', border: '#5a4a38' },
 };
 
@@ -255,6 +264,7 @@ export const parchment: MapTheme = {
   marker: { encounter: '#8e1f14', treasure: '#9a6a12', trap: '#b4521c', done: '#a8916a' },
   hover: { stroke: '#8e1f14', fill: 'rgba(142, 31, 20, 0.1)' },
   finish: { grain: 0.09, grainColor: '#5a3d1c', vignette: 0.42, vignetteColor: '#6b4a22' },
+  overlay: { casing: '#24180e' },
   ui: { panel: 'rgba(246,238,216,0.98)', text: '#2f2216', muted: '#6b5538', border: '#c8b089' },
 };
 
@@ -268,4 +278,9 @@ export function resolveTheme(theme: ThemeName | MapTheme | undefined): MapTheme 
 /** A canvas font string for a label at `px` CSS pixels. */
 export function labelFont(theme: MapTheme, px: number, weight = theme.label.weight): string {
   return `${theme.label.italic ? 'italic ' : ''}${weight} ${px}px ${theme.label.family}`;
+}
+
+/** The outline color under user-colored marks on a theme. */
+export function casingColor(theme: MapTheme): string {
+  return theme.overlay?.casing ?? (theme.tone === 'dark' ? '#000000' : '#151a22');
 }

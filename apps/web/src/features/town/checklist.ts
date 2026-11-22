@@ -16,6 +16,8 @@ export interface Suggestion {
   covered: boolean;
   /** Who carries it, or why it matters when nobody does. */
   detail: string;
+  /** What a screen reader hears after the title, when "nobody has it yet" doesn't fit. */
+  status?: string;
   /** Text to search the outfitter for when the line is not covered. */
   search: string;
 }
@@ -41,17 +43,29 @@ function carry(list: readonly string[]): string {
  * Builds the checklist from the party's packs.
  *
  * @param party - The party in marching order.
- * @param spellsAdvice - What to say about casters with nothing memorized, or empty when there is nothing to say.
+ * @param spellsAdvice - What to say about casters with spells to prepare, or nothing when there are none.
  */
-export function readinessChecklist(party: readonly MemberView[], spellsAdvice = ''): Suggestion[] {
+export function readinessChecklist(
+  party: readonly MemberView[],
+  spellsAdvice?: { detail: string; status: string },
+): Suggestion[] {
   const light = carriers(party, LIGHT_IDS);
   const tinder = carriers(party, ['tinder_box']);
   const rations = carriers(party, RATION_IDS);
   const rope = carriers(party, ['rope']);
   const spells: Suggestion[] =
-    spellsAdvice === ''
+    spellsAdvice === undefined
       ? []
-      : [{ key: 'spells', title: 'Spells to prepare', covered: false, detail: spellsAdvice, search: '' }];
+      : [
+          {
+            key: 'spells',
+            title: 'Spells to prepare',
+            covered: false,
+            detail: spellsAdvice.detail,
+            status: spellsAdvice.status,
+            search: '',
+          },
+        ];
   return [
     ...spells,
     {

@@ -99,10 +99,32 @@ export type Role = z.infer<typeof Role>;
 
 /**
  * The colors a user can have. The server assigns one when it creates a user, and a user can pick another one
- * from this list. The palette combines the Okabe-Ito and Paul Tol palettes, which stay distinct for readers
- * with a color vision deficiency.
+ * from this list. They are the design system's twelve player colors (`playerColors` in `apps/web/src/ui/tokens.ts`,
+ * in the same order: vermilion, saffron, orpiment, weld, malachite, verdigris, cerulean, azurite, ultramarine,
+ * tyrian, madder, slate), with vermilion, azurite, ultramarine, tyrian, and madder made a little lighter. Each one
+ * reads at 4.5:1 or more as text on the chrome surfaces, from `#16120f` to `#2b2520`, and dark ink (`#16120f`)
+ * reads at 4.5:1 or more on it as an avatar background.
  */
 export const USER_COLORS = [
+  '#e76742',
+  '#f29e2e',
+  '#e3c444',
+  '#a4c639',
+  '#3fae6a',
+  '#2bb3a3',
+  '#3fa7d6',
+  '#5c8de5',
+  '#8e7ff3',
+  '#bc70dd',
+  '#e261a0',
+  '#8d9cab',
+] as const;
+
+/**
+ * The palette before the design system's colors, by position. A user who has one of these colors reads as the
+ * color at the same position of {@link USER_COLORS}: the server changes stored colors at startup.
+ */
+export const RETIRED_USER_COLORS = [
   '#e69f00',
   '#56b4e9',
   '#009e73',
@@ -117,10 +139,17 @@ export const USER_COLORS = [
   '#6699cc',
 ] as const;
 
-/** One of the colors in {@link USER_COLORS}. */
-export const UserColor = z.enum(USER_COLORS);
-/** One of the user colors. */
+/**
+ * A user's color: one of {@link USER_COLORS}, or, in a record from before the palette changed, one of
+ * {@link RETIRED_USER_COLORS}. The server assigns and accepts only colors of `USER_COLORS`, and changes stored
+ * retired colors at startup, so a client sees a retired color only in old fixtures.
+ */
+export const UserColor = z.enum([...USER_COLORS, ...RETIRED_USER_COLORS]);
+/** A user's color. */
 export type UserColor = z.infer<typeof UserColor>;
+
+/** A color a user may pick now: one of {@link USER_COLORS}. */
+export const PickableUserColor = z.enum(USER_COLORS);
 
 /** A dungeon level that map data belongs to: a dungeon ID from the adventure and a level number. */
 export const LevelRef = z.strictObject({

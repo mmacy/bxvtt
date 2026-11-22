@@ -100,7 +100,8 @@ const MAGIC_ITEMS_BY_NAME = new Map<string, string>(
   catalog.magic_items.map((entry) => [entry.name.toLowerCase(), lowerCatalogName(entry.name)]),
 );
 const SPELLS = new Map<string, string>(
-  catalog.spells.map((entry) => [entry.id, lowerCatalogName(entry.name)]),
+  // A spell's name is a proper name, written as the rules write it: `Sleep`, `Magic Missile`.
+  catalog.spells.map((entry) => [entry.id, entry.name]),
 );
 const MONSTERS = new Map<string, { label: string; labelPlural: string; name: string }>(
   catalog.monsters.map((entry) => [

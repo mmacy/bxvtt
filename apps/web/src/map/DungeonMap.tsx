@@ -335,7 +335,7 @@ export function DungeonMap(props: DungeonMapProps) {
     strokes,
     pins,
     pointers,
-    strokeColor = '#e4572e',
+    strokeColor = '#e76742',
     strokeWidth = 0.09,
     rulerMetric = 'grid',
     followParty = false,

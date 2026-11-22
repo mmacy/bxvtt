@@ -1,26 +1,21 @@
 import type { ChatEntry, GameEntry, SystemEntry } from '@bxvtt/shared/protocol';
 import { formatGameClock, joinList } from '@bxvtt/shared/text';
-import { memo, useId, useMemo, useState, type CSSProperties } from 'react';
-import { Avatar, Badge, Icon, Parchment, cx } from '@/ui';
+import { memo, useId, useMemo, useState } from 'react';
+import { Avatar, Icon, Parchment, cx } from '@/ui';
 import { parseMarkup } from './model/markup';
+import { movementRunText, narrateEntry, type NarratedLine, type NarrationItem } from './model/narrate';
 import {
-  movementRunText,
-  narrateEntry,
-  type NarratedLine,
-  type NarrationItem,
-  type PartyStep,
-} from './model/narrate';
-import { commandLabel, isRefereeCommand, type FeedRow, type MessageEntry } from './model/rows';
+  commandLabel,
+  isRefereeCommand,
+  type CommandPart,
+  type FeedRow,
+  type MessageEntry,
+} from './model/rows';
 import { formatDateTime, formatTime, systemSentence } from './model/text';
 import { directionArrow, eventIcon, systemIcon } from './icons';
 import { Highlight, Markup, useFeedView } from './FeedView';
 import { RollCard } from './RollCard';
 import styles from './feed.module.css';
-
-/** Tints a name with the user's color, mixed toward the text color so every color stays readable. */
-function authorStyle(color: string | undefined): CSSProperties | undefined {
-  return color ? ({ '--author': color } as CSSProperties) : undefined;
-}
 
 /** The time of an entry, with the full date in a tooltip. */
 function Time({ iso }: { iso: string }) {
@@ -169,7 +164,7 @@ const MessageGroup = memo(function MessageGroup({ entries }: { entries: MessageE
         />
         <div className={styles.groupMain}>
           <header className={styles.groupHeader}>
-            <span id={headingId} className={styles.author} style={authorStyle(color)}>
+            <span id={headingId} className={styles.author}>
               {name}
             </span>
             {member?.role === 'referee' && <span className={styles.roleTag}>Referee</span>}
@@ -211,7 +206,8 @@ function LineView({ line }: { line: NarratedLine }) {
         <Parchment variant="plain" className={styles.handout}>
           <p className={styles.handoutLabel}>
             <Icon name="journal" size={12} />
-            <span>Journal{line.detail !== undefined ? ` · ${line.detail.replace(/\.$/, '')}` : ''}</span>
+            <span className={styles.handoutKind}>Journal</span>
+            {line.detail !== undefined && <span>{line.detail}</span>}
           </p>
           <p className={styles.handoutText}>
             <Highlight text={text} query={view.query} />
@@ -224,7 +220,10 @@ function LineView({ line }: { line: NarratedLine }) {
   const body = (
     <>
       <span className={styles.lineIcon} aria-hidden="true">
-        <Icon name={eventIcon(line.icon)} size={line.weight === 'critical' ? 16 : 14} />
+        <Icon
+          name={eventIcon(line.icon)}
+          size={line.weight === 'critical' || line.weight === 'milestone' ? 16 : 14}
+        />
       </span>
       <span className={styles.lineText}>
         {hidden && <span className="visually-hidden">Hidden from players. </span>}
@@ -321,9 +320,7 @@ function ActorHeading({
     <header className={styles.gameHeader}>
       <Avatar name={name} color={member?.color} size="xs" referee={member?.role === 'referee'} decorative />
       <span id={id} className={styles.gameTitle}>
-        <span className={styles.actor} style={authorStyle(member?.color)}>
-          {name}
-        </span>
+        <span className={styles.actor}>{name}</span>
         {label !== null && <span className={styles.commandLabel}>{label}</span>}
       </span>
       <span className={styles.gameMeta}>
@@ -334,119 +331,48 @@ function ActorHeading({
   );
 }
 
-const GameBlock = memo(function GameBlock({ entry, compact }: { entry: GameEntry; compact: boolean }) {
-  const view = useFeedView();
-  const narration = useMemo(
-    () => narrateEntry(entry, view.ctx, { lens: view.lens }),
-    [entry, view.ctx, view.lens],
-  );
-  const headingId = `feed-${entry.seq}`;
-  const refereeCommand = isRefereeCommand(entry);
-  let label = narration.headline ?? commandLabel(entry);
-  if (label === null && refereeCommand) label = 'Referee action';
-  const items = view.hiddenOnly
-    ? narration.items.filter((item) => item.kind === 'line' && item.line.visibility === 'referee')
-    : narration.items;
-  if (items.length === 0) return null;
-  return (
-    <article
-      className={cx(
-        styles.game,
-        compact && styles.gameCompact,
-        styles[`entry-${narration.weight}`],
-        narration.refereeOnly && styles.gameHidden,
-      )}
-      aria-labelledby={headingId}
-    >
-      {narration.headline !== null && entry.command_type === 'resolve_battle_round' ? (
-        <header className={styles.roundHeader}>
-          <span className={styles.roundIcon} aria-hidden="true">
-            <Icon name="battle" size={12} />
-          </span>
-          <span id={headingId} className={styles.roundTitle}>
-            {narration.headline}
-          </span>
-          <span className={styles.gameMeta}>
-            <GameClock entry={entry} />
-            <Time iso={entry.created_at} />
-          </span>
-        </header>
-      ) : compact ? (
-        <header className={styles.gameHeaderCompact}>
-          <span id={headingId} className={styles.commandLabel}>
-            <span className="visually-hidden">{view.nameOf(entry.user_id)}, </span>
-            {label}
-          </span>
-          {narration.refereeOnly && (
-            <Badge tone="referee" appearance="outline">
-              Hidden
-            </Badge>
-          )}
-          <span className={styles.gameMeta}>
-            <GameClock entry={entry} />
-            <Time iso={entry.created_at} />
-          </span>
-        </header>
-      ) : (
-        <ActorHeading userId={entry.user_id} label={label} entry={entry} id={headingId} />
-      )}
-      <ul className={styles.lines}>
-        {items.map((item) =>
-          item.kind === 'line' ? (
-            <LineView key={item.line.key} line={item.line} />
-          ) : (
-            <Cluster key={item.key} item={item} />
-          ),
-        )}
-      </ul>
-    </article>
-  );
-});
-
-const MovesRow = memo(function MovesRow({
-  entries,
-  steps,
-  checks,
-  userId,
-}: {
-  entries: GameEntry[];
-  steps: PartyStep[];
-  checks: number;
-  userId: string | null;
-}) {
+/** A run of plain party movement, as one line that opens to show the path. */
+function StepsLine({ part }: { part: Extract<CommandPart, { kind: 'steps' }> }) {
   const view = useFeedView();
   const [open, setOpen] = useState(false);
   const pathId = useId();
-  const last = entries.at(-1);
-  const member = view.memberOf(userId);
-  const name = view.nameOf(userId);
-  if (last === undefined) return null;
-  const text = movementRunText(steps);
-  const path = steps.map((step) => (step.turned ? `turn ${step.facing}` : step.facing)).join(', ');
+  const text = movementRunText(part.steps);
+  const path = part.steps.map((step) => (step.turned ? `turn ${step.facing}` : step.facing)).join(', ');
+  const body = (
+    <>
+      <span className={styles.lineIcon} aria-hidden="true">
+        <Icon name="footprints" size={14} />
+      </span>
+      <span className={styles.lineText}>
+        <Highlight text={text} query={view.query} />
+      </span>
+    </>
+  );
+  if (part.steps.length < 2 && !(view.lens && part.checks > 0)) {
+    return (
+      <li className={cx(styles.line, styles['weight-minor'])}>
+        <div className={styles.lineRow}>{body}</div>
+      </li>
+    );
+  }
   return (
-    <article className={styles.moves} aria-label={`${name}: ${text}`}>
+    <li className={cx(styles.line, styles['weight-minor'])}>
       <button
         type="button"
-        className={styles.movesButton}
+        className={cx(styles.lineRow, styles.lineButton)}
         aria-expanded={open}
         aria-controls={pathId}
         onClick={() => setOpen((value) => !value)}
-        disabled={steps.length === 0}
       >
-        <Icon name="footprints" size={14} className={styles.movesIcon} />
-        <span className={styles.movesText}>
-          <Highlight text={text} query={view.query} />
-        </span>
-        <Avatar name={name} color={member?.color} size="xs" decorative className={styles.movesAvatar} />
-        <span className={styles.gameMeta}>
-          <GameClock entry={last} />
-          <Time iso={last.created_at} />
+        {body}
+        <span className={styles.detailCue} aria-hidden="true">
+          <Icon name={open ? 'chevron-up' : 'chevron-down'} size={12} />
         </span>
       </button>
       <div id={pathId} className={styles.path} hidden={!open}>
         <p className="visually-hidden">The party went {path}.</p>
         <ol className={styles.pathSteps} aria-hidden="true">
-          {steps.map((step, index) => (
+          {part.steps.map((step, index) => (
             <li
               key={index}
               className={cx(styles.pathStep, step.turned && styles.pathTurn)}
@@ -456,22 +382,97 @@ const MovesRow = memo(function MovesRow({
             </li>
           ))}
         </ol>
-        {view.lens && checks > 0 && (
-          <div className={cx(styles.line, styles.hiddenLine, styles['weight-minor'])}>
-            <p className={styles.lineRow}>
-              <span className={styles.lineIcon} aria-hidden="true">
-                <Icon name="dice" size={14} />
-              </span>
-              <span className={styles.lineText}>
-                <span className="visually-hidden">Hidden from players. </span>
-                {checks === 1
-                  ? 'No wandering monsters come.'
-                  : `No wandering monsters come in ${checks} checks.`}
-              </span>
-            </p>
-          </div>
+        {view.lens && part.checks > 0 && (
+          <p className={cx(styles.refereeDetail, styles.pathNote)}>
+            <Icon name="eye-off" size={12} />
+            <span className="visually-hidden">Hidden from players. </span>
+            {part.checks === 1
+              ? 'No wandering monsters come.'
+              : `No wandering monsters come in ${part.checks} checks.`}
+          </p>
         )}
       </div>
+    </li>
+  );
+}
+
+/** The lines of one entry inside a command group. */
+function EntryLines({ entry }: { entry: GameEntry }) {
+  const view = useFeedView();
+  const narration = useMemo(
+    () => narrateEntry(entry, view.ctx, { lens: view.lens }),
+    [entry, view.ctx, view.lens],
+  );
+  const items = view.hiddenOnly
+    ? narration.items.filter((item) => item.kind === 'line' && item.line.visibility === 'referee')
+    : narration.items;
+  return (
+    <>
+      {items.map((item) =>
+        item.kind === 'line' ? (
+          <LineView key={item.line.key} line={item.line} />
+        ) : (
+          <Cluster key={item.key} item={item} />
+        ),
+      )}
+    </>
+  );
+}
+
+/**
+ * One sender's commands of one kind: a heading with who acted and the command, then the lines of each entry,
+ * with runs of plain party movement folded into one line. A battle round is headed by its number.
+ */
+const CommandBlock = memo(function CommandBlock({ row }: { row: Extract<FeedRow, { type: 'command' }> }) {
+  const view = useFeedView();
+  const first = row.entries[0];
+  const last = row.entries.at(-1);
+  const round = useMemo(
+    () =>
+      first !== undefined && row.group === 'round'
+        ? narrateEntry(first, view.ctx, { lens: view.lens }).headline
+        : null,
+    [first, row.group, view.ctx, view.lens],
+  );
+  const refereeOnly = useMemo(
+    () =>
+      row.entries.every((entry) => narrateEntry(entry, view.ctx, { lens: view.lens }).refereeOnly) &&
+      row.parts.every((part) => part.kind === 'entry'),
+    [row, view.ctx, view.lens],
+  );
+  if (first === undefined || last === undefined) return null;
+  const headingId = `feed-${first.seq}`;
+  let label = commandLabel(first);
+  if (label === null && isRefereeCommand(first)) label = 'Referee action';
+  const parts = view.hiddenOnly ? row.parts.filter((part) => part.kind === 'entry') : row.parts;
+  if (parts.length === 0) return null;
+  return (
+    <article className={cx(styles.game, refereeOnly && styles.gameHidden)} aria-labelledby={headingId}>
+      {round !== null ? (
+        <header className={styles.roundHeader}>
+          <span className={styles.roundIcon} aria-hidden="true">
+            <Icon name="battle" size={12} />
+          </span>
+          <span id={headingId} className={styles.roundTitle}>
+            {round}
+          </span>
+          <span className={styles.gameMeta}>
+            <GameClock entry={last} />
+            <Time iso={last.created_at} />
+          </span>
+        </header>
+      ) : (
+        <ActorHeading userId={row.userId} label={label} entry={last} id={headingId} />
+      )}
+      <ul className={styles.lines}>
+        {parts.map((part) =>
+          part.kind === 'steps' ? (
+            <StepsLine key={part.key} part={part} />
+          ) : (
+            <EntryLines key={part.key} entry={part.entry} />
+          ),
+        )}
+      </ul>
     </article>
   );
 });
@@ -489,9 +490,7 @@ export const FeedRowView = memo(function FeedRowView({ row }: { row: FeedRow }) 
       return <SystemRow entry={row.entry} />;
     case 'messages':
       return <MessageGroup entries={row.entries} />;
-    case 'game':
-      return <GameBlock entry={row.entry} compact={row.compact} />;
-    case 'moves':
-      return <MovesRow entries={row.entries} steps={row.steps} checks={row.checks} userId={row.userId} />;
+    case 'command':
+      return <CommandBlock row={row} />;
   }
 });

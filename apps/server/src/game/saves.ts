@@ -1,4 +1,4 @@
-import { nameInSentence } from '@bxvtt/shared/text';
+import { countedLabel, joinList, nameInSentence } from '@bxvtt/shared/text';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { SaveInfo, SessionInfo } from '@bxvtt/shared/bxapi';
@@ -34,8 +34,8 @@ function toEntry(row: Row): SaveEntry {
 
 /**
  * Decides whether a change of the player view is a moment worth an autosave, and labels it: entering a dungeon,
- * reaching another level, an encounter or battle opening (the last moment before a battle), and returning to
- * town.
+ * reaching another level, meeting monsters from exploring ("Met 4 bandits in Crookback Bridge, level 1"), a battle
+ * opening from exploring ("Before the battle in …"), and returning to town.
  *
  * @param before - The view before the command.
  * @param after - The view after it.
@@ -69,7 +69,14 @@ export function autosaveLabel(
       to.kind === 'dungeon'
         ? ` in ${nameInSentence(dungeon(to.dungeon_id))}, level ${to.level_number ?? '?'}`
         : '';
-    label = `Before the battle${where}`;
+    if (after.mode === 'battle') {
+      label = `Before the battle${where}`;
+    } else {
+      // An encounter isn't a battle yet: the party may talk, wait, or slip away.
+      const groups = (after.encounter?.groups ?? []).filter((group) => group.count > 0);
+      const met = joinList(groups.map((group) => countedLabel(group.label, group.label_plural, group.count)));
+      label = `Met ${met === '' ? 'monsters' : met}${where}`;
+    }
   }
   return label === null ? null : `Autosave: ${label}`.slice(0, LIMITS.saveLabel);
 }

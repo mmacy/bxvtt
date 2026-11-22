@@ -90,7 +90,6 @@ const TOOLS: { tool: MapTool; label: string }[] = [
   { tool: 'pick-cell', label: 'Pick a cell' },
   { tool: 'pick-edge', label: 'Pick an edge' },
 ];
-const NO_POINTERS: MapPointer[] = [];
 const COLORS = ['#e4572e', '#2e86de', '#27ae60', '#8e44ad', '#f39c12'];
 
 export function Harness() {
@@ -111,6 +110,11 @@ export function Harness() {
   const [pins, setPins] = useState<MapPin[]>([]);
   const [showPointers, setShowPointers] = useState(params.get('pointers') === '1');
   const [pointers, setPointers] = useState<MapPointer[]>([]);
+  const [demoPointers, setDemoPointers] = useState<MapPointer[]>([]);
+  const shownPointers = useMemo(
+    () => (showPointers ? [...pointers, ...demoPointers] : demoPointers),
+    [showPointers, pointers, demoPointers],
+  );
   const [hover, setHover] = useState<MapTarget | null>(null);
   const [measurement, setMeasurement] = useState<Measurement | null>(null);
   const [areaNames, setAreaNames] = useState(params.get('areas') !== '0');
@@ -293,6 +297,10 @@ export function Harness() {
       ping: (x: number, y: number) => ping(x, y, 'Tomas', '#2e86de'),
       burst,
       addStroke: (s: MapStroke) => setStrokes((all) => [...all, s]),
+      addStrokes: (list: MapStroke[]) => setStrokes((all) => [...all, ...list]),
+      pingAs: (x: number, y: number, color: string, label: string) => ping(x, y, label, color),
+      addPin: (pin: MapPin) => setPins((all) => [...all, pin]),
+      setDemoPointers,
     };
   }, [move, chooseFixture, ping, burst]);
 
@@ -440,7 +448,7 @@ export function Harness() {
           strokes={strokes}
           pings={pings}
           pins={layer === 'referee' ? pins : pins.filter((p) => !p.refereeOnly)}
-          pointers={showPointers ? pointers : NO_POINTERS}
+          pointers={shownPointers}
           strokeColor={color}
           followParty={follow}
           arrowKeys="move"

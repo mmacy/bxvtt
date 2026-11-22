@@ -9,7 +9,7 @@ import { createFakeApi, type FakeApi } from './testing/renderWithTable';
 const rhea: User = {
   id: 'usr_aaaaaaaaaaaaaaaaaaaaaa',
   name: 'Rhea',
-  color: '#56b4e9',
+  color: '#f29e2e',
   created_at: '2026-11-22T05:00:00Z',
 };
 
@@ -102,9 +102,9 @@ describe('identity', () => {
     localStorage.setItem(STORAGE_KEYS.identity, JSON.stringify({ token: 'bxt_secret', user: rhea }));
     api.me.mockResolvedValue(rhea);
     await useIdentity.getState().load();
-    api.updateMe.mockResolvedValue({ ...rhea, color: '#d55e00' });
-    await useIdentity.getState().update({ color: '#d55e00' });
-    expect(useIdentity.getState().user?.color).toBe('#d55e00');
-    expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.identity) ?? '{}').user.color).toBe('#d55e00');
+    api.updateMe.mockResolvedValue({ ...rhea, color: '#2bb3a3' });
+    await useIdentity.getState().update({ color: '#2bb3a3' });
+    expect(useIdentity.getState().user?.color).toBe('#2bb3a3');
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.identity) ?? '{}').user.color).toBe('#2bb3a3');
   });
 });

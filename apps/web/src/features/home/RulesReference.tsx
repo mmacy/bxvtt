@@ -1,12 +1,12 @@
 import { Suspense, lazy, useState } from 'react';
 import { NoTableProvider, formatShortcut, useAction, useShortcut, useTableUi } from '@/app';
 import { Button, Tooltip } from '@/ui';
+import styles from './home.module.css';
 
 // The compendium is large, so it loads the first time someone opens it.
 const Compendium = lazy(() =>
   import('@/features/compendium').then((module) => ({ default: module.Compendium })),
 );
-
 export interface RulesReferenceProps {
   /** Set it on a screen outside any table, such as the home page, so the compendium has a table to read. */
   away?: boolean;
@@ -45,7 +45,8 @@ export function RulesReference({ away = false }: RulesReferenceProps) {
     <>
       <Tooltip content="Rules reference" shortcut={formatShortcut('b')} side="bottom">
         <Button variant="ghost" size="sm" icon="book" onClick={() => openCompendium()}>
-          Rules reference
+          {/* At phone width the header shows the book alone, and the name stays for assistive technology. */}
+          <span className={styles.narrowHidden}>Rules reference</span>
         </Button>
       </Tooltip>
       {away ? <NoTableProvider>{book}</NoTableProvider> : book}

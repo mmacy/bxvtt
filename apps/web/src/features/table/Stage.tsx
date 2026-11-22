@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useCombatStage, useMapBus, usePartyLocation, useShortcut, useShownMode } from '@/app';
 import { Button } from '@/ui';
 import { BattleBoard, EncounterPanel } from '@/features/combat';
@@ -7,13 +7,12 @@ import { TownStage } from '@/features/town';
 import { ConnectionBanner } from './ConnectionBanner';
 import { EndScreen } from './EndScreen';
 import { LoadingScreen } from './LoadingScreen';
+import { MapStagePart } from './parts';
 import { RejoinPrompt } from './RejoinPrompt';
 import styles from './table.module.css';
 
 // The map and its renderer load as a part of their own, when the party first enters a dungeon.
-const MapStage = lazy(() =>
-  import('@/features/explore/MapStage').then((module) => ({ default: module.MapStage })),
-);
+const MapStage = MapStagePart;
 
 /** The prompt of an open map pick, with a cancel button. Escape cancels it too. */
 function PickPrompt() {
@@ -93,7 +92,8 @@ export function Stage() {
         )}
       </div>
       <div className={styles.overlays}>
-        <div className={styles.overlayTop}>
+        {/* On a map, the prompts sit below the map's toolbar, so its level switcher stays usable during a pick. */}
+        <div className={inTown ? styles.overlayTop : `${styles.overlayTop} ${styles.overlayBelowChrome}`}>
           <ConnectionBanner floating />
           <RejoinPrompt />
           <PickPrompt />

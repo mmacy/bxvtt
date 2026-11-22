@@ -108,6 +108,27 @@ export function spellAdviceText(advice: SpellAdvice): string {
   return sentences.join(' ');
 }
 
+/** What a screen reader hears after "Spells to prepare", such as "Tamsin has none memorized". */
+export function spellAdviceStatus(advice: SpellAdvice): string {
+  const parts: string[] = [];
+  if (advice.needRest.length > 0) {
+    parts.push(
+      `${joinList(advice.needRest.map((member) => member.name))} ${advice.needRest.length === 1 ? 'has' : 'have'} none memorized`,
+    );
+  }
+  if (advice.canPrepare.length > 0) {
+    parts.push(`${joinList(advice.canPrepare.map((member) => member.name))} can prepare spells now`);
+  }
+  return parts.join(', and ');
+}
+
+/** The advice for the readiness card, or `undefined` when there is none. */
+export function spellsForChecklist(advice: SpellAdvice): { detail: string; status: string } | undefined {
+  return hasSpellAdvice(advice)
+    ? { detail: spellAdviceText(advice), status: spellAdviceStatus(advice) }
+    : undefined;
+}
+
 const CLASSES_KEY = 'full:classes';
 
 /** Every class entry by ID, from the bulk catalog. Empty until it loads. */

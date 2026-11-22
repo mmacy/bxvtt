@@ -1,8 +1,10 @@
 import { formatGameClock, sessionModeLabel } from '@bxvtt/shared/text';
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import { useAction, usePreferences, useMapBus } from '@/app';
+import { useAction, usePreferences, useMapBus, useTableUi } from '@/app';
 import {
   Badge,
+  Banner,
+  Button,
   EmptyState,
   IconButton,
   Switch,
@@ -13,6 +15,7 @@ import {
   type IconName,
 } from '@/ui';
 import { DetailsProvider, IdMark, useDetails } from './details';
+import { EndedGuardProvider, endedSentence, useGameEnded } from './endedGuard';
 import styles from './RefereePanel.module.css';
 import { AreaKey } from './sections/AreaKey';
 import { CommandConsole } from './sections/CommandConsole';
@@ -119,6 +122,28 @@ function StatusStrip({ data }: { data: RefereeData }) {
   );
 }
 
+/** While the game is over, a line that says so and points at the saves. */
+function EndedBanner() {
+  const ended = useGameEnded();
+  const setSavesOpen = useTableUi((s) => s.setSavesOpen);
+  if (!ended) return null;
+  return (
+    <div className={styles.endedBanner}>
+      <Banner
+        tone="neutral"
+        title={endedSentence(ended)}
+        actions={
+          <Button size="sm" variant="secondary" onClick={() => setSavesOpen(true)}>
+            Open the saves
+          </Button>
+        }
+      >
+        Commands that change the story ask first. To play on, restore a save.
+      </Banner>
+    </div>
+  );
+}
+
 /** Palette actions that open a section of the panel. */
 function SectionActions({ onOpen }: { onOpen: (section: RefereeSection) => void }) {
   const setPreference = usePreferences((s) => s.set);
@@ -214,57 +239,60 @@ export function RefereePanel() {
 
   return (
     <DetailsProvider>
-      <div className={styles.root} ref={rootRef}>
-        <SectionActions onOpen={setSection} />
-        <StatusStrip data={data} />
-        <Tabs
-          value={section}
-          onValueChange={(value) => setSection(value as RefereeSection)}
-          variant="enclosed"
-          className={styles.tabs}
-        >
-          <div className={styles.tabBar}>
-            <TabsList aria-label="Referee tools" stretch className={styles.tabList}>
-              {SECTIONS.map((s) => (
-                <TabsTrigger
-                  key={s.value}
-                  value={s.value}
-                  icon={s.icon}
-                  iconOnly={!showLabels}
-                  className={showLabels ? undefined : styles.iconTab}
-                >
-                  {showLabels ? s.label : s.title}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            <h2 className={styles.sectionName}>{current?.title}</h2>
-          </div>
-          <TabsContent value="now" className={styles.content}>
-            <HereNow data={data} />
-          </TabsContent>
-          <TabsContent value="actions" className={styles.content}>
-            <QuickActions data={data} />
-          </TabsContent>
-          <TabsContent value="story" className={styles.content}>
-            <StoryState data={data} />
-          </TabsContent>
-          <TabsContent value="key" className={styles.content} keepMounted>
-            <AreaKey data={data} />
-          </TabsContent>
-          <TabsContent value="tables" className={styles.content} keepMounted>
-            <Generators data={data} />
-          </TabsContent>
-          <TabsContent value="log" className={styles.content}>
-            <RefereeLog />
-          </TabsContent>
-          <TabsContent value="notes" className={styles.content} keepMounted>
-            <RefereeNotes />
-          </TabsContent>
-          <TabsContent value="commands" className={styles.content}>
-            <CommandConsole />
-          </TabsContent>
-        </Tabs>
-      </div>
+      <EndedGuardProvider>
+        <div className={styles.root} ref={rootRef}>
+          <SectionActions onOpen={setSection} />
+          <StatusStrip data={data} />
+          <EndedBanner />
+          <Tabs
+            value={section}
+            onValueChange={(value) => setSection(value as RefereeSection)}
+            variant="enclosed"
+            className={styles.tabs}
+          >
+            <div className={styles.tabBar}>
+              <TabsList aria-label="Referee tools" stretch className={styles.tabList}>
+                {SECTIONS.map((s) => (
+                  <TabsTrigger
+                    key={s.value}
+                    value={s.value}
+                    icon={s.icon}
+                    iconOnly={!showLabels}
+                    className={showLabels ? undefined : styles.iconTab}
+                  >
+                    {showLabels ? s.label : s.title}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              <h2 className={styles.sectionName}>{current?.title}</h2>
+            </div>
+            <TabsContent value="now" className={styles.content}>
+              <HereNow data={data} />
+            </TabsContent>
+            <TabsContent value="actions" className={styles.content}>
+              <QuickActions data={data} />
+            </TabsContent>
+            <TabsContent value="story" className={styles.content}>
+              <StoryState data={data} />
+            </TabsContent>
+            <TabsContent value="key" className={styles.content} keepMounted>
+              <AreaKey data={data} />
+            </TabsContent>
+            <TabsContent value="tables" className={styles.content} keepMounted>
+              <Generators data={data} />
+            </TabsContent>
+            <TabsContent value="log" className={styles.content}>
+              <RefereeLog />
+            </TabsContent>
+            <TabsContent value="notes" className={styles.content} keepMounted>
+              <RefereeNotes />
+            </TabsContent>
+            <TabsContent value="commands" className={styles.content}>
+              <CommandConsole />
+            </TabsContent>
+          </Tabs>
+        </div>
+      </EndedGuardProvider>
     </DetailsProvider>
   );
 }

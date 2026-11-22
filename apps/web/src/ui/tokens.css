@@ -76,17 +76,17 @@
   --palette-gold-900: #33270b;
 
   /* Player colors: twelve pigments from an illuminator's box. */
-  --player-vermilion: #e4572e;
+  --player-vermilion: #e76742;
   --player-saffron: #f29e2e;
   --player-orpiment: #e3c444;
   --player-weld: #a4c639;
   --player-malachite: #3fae6a;
   --player-verdigris: #2bb3a3;
   --player-cerulean: #3fa7d6;
-  --player-azurite: #4f84e3;
-  --player-ultramarine: #8676f2;
-  --player-tyrian: #b664da;
-  --player-madder: #e0569a;
+  --player-azurite: #5c8de5;
+  --player-ultramarine: #8e7ff3;
+  --player-tyrian: #bc70dd;
+  --player-madder: #e261a0;
   --player-slate: #8d9cab;
 
   /* Coin metals for purse displays. */

@@ -10,7 +10,9 @@ import {
   useLegalCommand,
   useMembers,
   useParty,
+  lightTimeLeft,
   usePartyLight,
+  type MemberLight,
   usePlayerView,
   useSeats,
   useSendCommand,
@@ -84,7 +86,7 @@ export function PartyPanel() {
   const view = playing ? held.view : liveView;
   const ended = shownMode === 'game_over' || shownMode === 'victory';
   const showLight = location?.kind === 'dungeon' && !ended;
-  // The same words as the map's light chip, from one place in the app layer.
+  // The map's toolbar states the party's light. Each row shows the light its member carries, in a dungeon.
   const light = usePartyLight();
   const classes = useFullCatalog('classes');
   const inTown = location?.kind === 'town' && !ended;
@@ -180,33 +182,13 @@ export function PartyPanel() {
     if (from !== -1 && from !== index) move(from, index);
   };
 
-  // One light for each member, the one that lasts longest, as the map counts them.
-  const lights = (view?.effects ?? [])
-    .filter((e) => e.kind === 'light' || e.kind === 'continual_light')
-    .reduce<Array<{ character_id: string; remaining_rounds: number | null }>>((all, effect) => {
-      const existing = all.find((l) => l.character_id === effect.character_id);
-      if (!existing)
-        return [...all, { character_id: effect.character_id, remaining_rounds: effect.remaining_rounds }];
-      if (
-        existing.remaining_rounds !== null &&
-        (effect.remaining_rounds === null || effect.remaining_rounds > existing.remaining_rounds)
-      )
-        existing.remaining_rounds = effect.remaining_rounds;
-      return all;
-    }, []);
   const nameOf = (id: string) => party.find((m) => m.id === id)?.name ?? 'Someone';
   const deprived = Object.entries(view?.deprivation ?? {});
 
   return (
     <div className={styles.panel}>
-      {(showLight || view?.fatigued || view?.exhausted || deprived.length > 0) && (
+      {(view?.fatigued || view?.exhausted || deprived.length > 0) && (
         <section className={styles.partyState} aria-label="The party">
-          {showLight && (
-            <div className={styles.stateRow}>
-              <Icon name="torch" size={16} />
-              <span className={light.lit ? undefined : styles.dark}>{light.text}</span>
-            </div>
-          )}
           {(view?.fatigued || view?.exhausted || deprived.length > 0) && (
             <div className={styles.stateRow}>
               {view?.exhausted ? (
@@ -316,7 +298,7 @@ export function PartyPanel() {
                   controller={
                     owner ? { name: owner.name, label: owner.user_id === me?.id ? 'You' : owner.name } : null
                   }
-                  lit={lights.some((l) => l.character_id === member.id)}
+                  light={showLight ? (light.lights.find((l) => l.memberId === member.id) ?? null) : null}
                   effects={(view?.effects ?? []).filter(
                     (e) => e.character_id === member.id && e.kind !== 'light',
                   )}
@@ -350,22 +332,33 @@ interface MemberRowProps {
   rank: number;
   color: string | undefined;
   controller: { name: string; label: string } | null;
-  lit: boolean;
+  /** The light the member carries, when one burns. */
+  light: MemberLight | null;
   effects: Array<{ kind: string; remaining_rounds: number | null }>;
   onOpen: () => void;
 }
 
-function MemberRow({ member, rank, color, controller, lit, effects, onOpen }: MemberRowProps) {
+/** A member's light on their own row, where the name is already shown: "Torch, about 6 turns left". */
+function lightRowText(light: MemberLight): string {
+  const left = lightTimeLeft(light.remainingRounds);
+  const noun = light.noun.charAt(0).toUpperCase() + light.noun.slice(1);
+  return left ? `${noun}, ${left} left` : noun;
+}
+
+function MemberRow({ member, rank, color, controller, light, effects, onOpen }: MemberRowProps) {
   const dead = member.conditions.includes('dead');
   const down = member.current_hp <= 0;
   const conditions = member.conditions.filter((c) => c !== 'dead');
   const detailId = useId();
+  const nameId = useId();
+  const controllerId = useId();
+  const metaId = useId();
   const details = [
     `${member.current_hp} of ${member.max_hp} hit points`,
     `armour class ${member.armour_class}`,
     ...(dead ? ['dead'] : []),
     ...conditions.map((c) => conditionLabel(c).toLowerCase()),
-    ...(lit ? ['carries a light'] : []),
+    ...(light ? [lightRowText(light).toLowerCase()] : []),
     ...effects.map((e) => effectLabel(e.kind).toLowerCase()),
   ];
   return (
@@ -377,6 +370,7 @@ function MemberRow({ member, rank, color, controller, lit, effects, onOpen }: Me
         type="button"
         className={cx(styles.row, dead && styles.deadRow)}
         onClick={onOpen}
+        aria-labelledby={`${nameId} ${controllerId} ${metaId}`}
         aria-describedby={detailId}
       >
         <span className={styles.rank} aria-hidden="true">
@@ -392,22 +386,31 @@ function MemberRow({ member, rank, color, controller, lit, effects, onOpen }: Me
         />
         <span className={styles.body}>
           <span className={styles.topLine}>
-            <span className={styles.name}>{member.name}</span>
-            <span className="visually-hidden">{', '}</span>
-            {lit && <Icon name="torch" size={14} className={styles.lit} aria-hidden />}
+            <span id={nameId} className={styles.name}>
+              {member.name}
+            </span>
             {controller ? (
               <span className={styles.controller}>
                 <Avatar name={controller.name} color={color} size="xs" decorative />
-                <span className={styles.controllerName}>{controller.label}</span>
+                <span id={controllerId} className={styles.controllerName}>
+                  {controller.label}
+                </span>
               </span>
             ) : (
-              <span className={styles.empty}>Empty seat</span>
+              <span id={controllerId} className={styles.empty}>
+                Empty seat
+              </span>
             )}
           </span>
-          <span className="visually-hidden">{', '}</span>
-          <span className={styles.meta}>
+          <span id={metaId} className={styles.meta}>
             Level {member.level} {classLabel(member.class_id).toLowerCase()}
           </span>
+          {light && (
+            <span className={styles.lightLine} aria-hidden="true">
+              <Icon name="torch" size={12} className={styles.lit} />
+              {lightRowText(light)}
+            </span>
+          )}
           <span className={styles.hpLine} aria-hidden="true">
             <HpBar
               current={member.current_hp}

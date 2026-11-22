@@ -10,7 +10,7 @@ import { useNavigation } from '../navigation';
 import { spellListLabel } from '../search';
 import { TurningTable } from '../tables/CombatTables';
 import styles from '../book.module.css';
-import { titleFromId } from '../model';
+import { raceLabel, titleFromId } from '../model';
 import { formatPercentModifier, stripMarkup } from '../typeset';
 
 const SAVE_ORDER = ['death', 'wands', 'paralysis', 'breath', 'spells'] as const;
@@ -242,7 +242,7 @@ export function ClassEntry({ id }: { id: string }) {
         const turns = definition.abilities.some((ability) => ability.tag === 'turn_undead');
         return (
           <EntryPage
-            kicker={definition.race === 'human' ? 'Class' : `${titleFromId(definition.race)} class`}
+            kicker={`${raceLabel(definition.race)} class`}
             title={
               <span className={styles.titleWithIcon}>
                 <Icon name={classIcon(definition.id)} size={32} />

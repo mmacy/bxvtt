@@ -17,7 +17,7 @@ import {
   scenePanel,
   showKeyboardCursor,
 } from './support/map';
-import { openQuickAction } from './support/referee';
+import { DOOR_PROMPT, PLACE_PROMPT, openQuickAction } from './support/referee';
 import { placeParty, waitForGame } from './support/table';
 
 const MINIMAP = 'Minimap. Click or drag to move the map.';
@@ -31,7 +31,11 @@ test.describe('the map with the keyboard', () => {
     const place = await openQuickAction(ruth.page, 'Place the party');
     await place.getByRole('radio', { name: 'A cell' }).click();
     await place.getByRole('button', { name: 'Pick a cell on the map' }).press('Enter');
-    await expect(ruth.page.getByText('Click the cell to place the party on.')).toBeVisible();
+    await expect(ruth.page.getByText(PLACE_PROMPT)).toBeVisible();
+    // The prompt sits below the map's toolbar, so the level switcher stays usable during a pick (R-201).
+    const promptBox = await ruth.page.getByText(PLACE_PROMPT).boundingBox();
+    const toolbarBox = await mapOptions(ruth.page).boundingBox();
+    expect(promptBox && toolbarBox && promptBox.y >= toolbarBox.y + toolbarBox.height).toBe(true);
     await expect(dungeonMap(ruth.page)).toBeFocused();
     await showKeyboardCursor(ruth.page);
     await expect(
@@ -45,7 +49,7 @@ test.describe('the map with the keyboard', () => {
       ),
     ).toBeAttached();
     await ruth.page.keyboard.press('Enter');
-    await expect(ruth.page.getByText('Click the cell to place the party on.')).toHaveCount(0);
+    await expect(ruth.page.getByText(PLACE_PROMPT)).toHaveCount(0);
     await expect(place.getByText(/^Level 1, Gatehouse stair/)).toBeVisible();
     await place.getByRole('button', { name: 'Place the party' }).press('Enter');
     await waitForGame(
@@ -65,7 +69,7 @@ test.describe('the map with the keyboard', () => {
     await expectPartyAt(ruth.page, 12, 15);
     const door = await openQuickAction(ruth.page, 'Change a door');
     await door.getByRole('button', { name: 'Pick a door on the map' }).press('Enter');
-    await expect(ruth.page.getByText('Click the door to change.')).toBeVisible();
+    await expect(ruth.page.getByText(DOOR_PROMPT)).toBeVisible();
     await showKeyboardCursor(ruth.page);
     await expect(mapAnnouncement(ruth.page, /^North side: a door, closed\./)).toBeAttached();
     await ruth.page.keyboard.press('ArrowUp');
@@ -78,7 +82,7 @@ test.describe('the map with the keyboard', () => {
       ),
     ).toBeAttached();
     await ruth.page.keyboard.press('Enter');
-    await expect(ruth.page.getByText('Click the door to change.')).toHaveCount(0);
+    await expect(ruth.page.getByText(DOOR_PROMPT)).toHaveCount(0);
     await expect(door.getByRole('spinbutton', { name: 'Column' })).toHaveValue('12');
     await expect(door.getByRole('spinbutton', { name: 'Row' })).toHaveValue('14');
     await door.getByRole('radiogroup', { name: 'Open' }).getByRole('radio', { name: 'Yes' }).click();
@@ -255,7 +259,7 @@ test.describe('map chrome', () => {
 
     // In a corridor below the chapter house, the folded bar's menu opens the door.
     await placeParty(ruth.client, table.id, { dungeon: 'priory', level: 1, x: 12, y: 15, facing: 'north' });
-    await expect(scene.getByRole('heading', { name: 'A corridor' })).toBeVisible();
+    await expect(scene.getByRole('heading', { name: 'On the way' })).toBeVisible();
     const things = scene.getByRole('button', { name: /^\d+ things? here$/ });
     await expect(things).toBeVisible();
     await sam.page.screenshot({ path: `${SCREENS_DIR}/scene-folded.png` });

@@ -1,6 +1,6 @@
 import { createServer } from './app';
 import { loadConfig } from './config';
-import { checkHealth } from './health';
+import { checkHealth, watchStorage } from './health';
 
 /** Starts the bxvtt server from the environment's settings and stops it cleanly on SIGINT or SIGTERM. */
 async function main(): Promise<void> {
@@ -15,6 +15,7 @@ async function main(): Promise<void> {
   }
   if (config.webDist === null) app.log.info('apps/web/dist is missing, so the server serves only the API');
   if (config.hostKey === null) app.log.info('BXVTT_HOST_KEY is unset, so any user can create a table');
+  watchStorage(app, ctx);
 
   let stopping = false;
   const stop = (signal: string) => {

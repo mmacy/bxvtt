@@ -117,10 +117,11 @@ function TableList({
                   {[
                     ...tableStatus(table),
                     table.member_count === 1 ? '1 member' : `${table.member_count} members`,
-                  ].map((fact, index) => (
+                  ].map((fact, index, facts) => (
+                    // The comma ends the fact before it, because the browser puts a space between flex items.
                     <span key={index}>
-                      {index > 0 && <span className="visually-hidden">, </span>}
                       {fact}
+                      {index < facts.length - 1 && <span className="visually-hidden-inline">,</span>}
                     </span>
                   ))}
                 </span>

@@ -156,6 +156,11 @@ const FIXED: Record<string, { title: string; detail: string }> = {
     title: "The rules engine isn't answering",
     detail: "bxvtt can't reach bxapi. Ask the person who runs this server to start it, then try again.",
   },
+  bxapi_storage_full: {
+    title: "The rules engine's storage is full",
+    detail:
+      "bxvtt can't store anything new until there is room: no new characters, games, moves, or saves. A referee can delete tables nobody plays and saves nobody will restore. If that isn't enough, ask the person who runs this server to raise the rules engine's storage limit.",
+  },
   method_not_allowed: {
     title: "The server doesn't take that request",
     detail: 'Reload the page. The server may have been updated.',

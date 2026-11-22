@@ -1,6 +1,6 @@
 import type { LevelRef } from '@bxvtt/shared/protocol';
 import { directionLabel } from '@bxvtt/shared/text';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import {
   canSendCommand,
   scopedStorage,
@@ -79,7 +79,7 @@ const KEY_DIRECTIONS: Record<string, Direction> = {
 /** The shortest time between two pings from this browser. The server allows 5 pings in 2 seconds. */
 const PING_INTERVAL_MS = 450;
 
-const FALLBACK_COLOR = '#e69f00';
+const FALLBACK_COLOR = '#e76742';
 
 /** This browser's choices for the map's chrome. */
 const chromePrefs = scopedStorage('explore');
@@ -205,6 +205,7 @@ export function MapStage() {
   // The after-fight summary takes the bottom of the stage, so the minimap and the light chip step aside.
   const aftermath = useCombatStage((s) => s.aftermath !== null);
   const bottomFree = !combat && !aftermath;
+  useOverlayCamera(mapRef, rootRef, !bottomFree, map?.party ?? null, setFollow);
 
   // Movement.
   const move = useCallback(
@@ -607,6 +608,9 @@ export function MapStage() {
         )}
       </Projected>
 
+      {/* The map's focus ring, drawn above the darkness so a keyboard user sees it with no light too. */}
+      <div className={styles.focusRing} aria-hidden="true" />
+
       {/* Screen readers hear the same lines the map shows beside the party. */}
       <div className={styles.srOnly} aria-live="polite">
         {message?.text ?? ''}
@@ -806,4 +810,55 @@ function DirectionShortcut({
     run: () => turn(direction),
   });
   return null;
+}
+
+/**
+ * While an overlay holds the bottom of the stage (an encounter, a battle, or the after-fight summary), keeps the
+ * party in the visible part of the map above it, and returns to following the party when the overlay goes.
+ */
+function useOverlayCamera(
+  mapRef: RefObject<DungeonMapHandle | null>,
+  rootRef: RefObject<HTMLDivElement | null>,
+  covered: boolean,
+  party: { x: number; y: number } | null,
+  setFollow: (follow: boolean) => void,
+) {
+  const shifted = useRef(false);
+  const px = party?.x ?? null;
+  const py = party?.y ?? null;
+  useEffect(() => {
+    const handle = mapRef.current;
+    const root = rootRef.current;
+    if (!handle || !root) return;
+    if (!covered || px === null || py === null) {
+      if (shifted.current) {
+        shifted.current = false;
+        setFollow(true);
+        handle.centerOnParty();
+      }
+      return;
+    }
+    // The shell's overlay is a sibling of this stage. Its height decides how far up the party goes.
+    const stage = root.parentElement?.parentElement ?? null;
+    const shift = () => {
+      const overlay = stage?.querySelector<HTMLElement>('[class*="overlayBottom"]');
+      const rootRect = root.getBoundingClientRect();
+      const overlayTop = overlay?.firstElementChild?.getBoundingClientRect().top ?? rootRect.bottom;
+      const visible = Math.max(80, overlayTop - rootRect.top);
+      const camera = handle.getCamera();
+      // Put the party at the middle of the visible band above the overlay.
+      const offset = (rootRect.height / 2 - visible / 2) / camera.zoom;
+      shifted.current = true;
+      setFollow(false);
+      handle.setCamera({ ...camera, x: px + 0.5, y: py + 0.5 + offset }, true);
+    };
+    const frame = requestAnimationFrame(shift);
+    const overlay = stage?.querySelector<HTMLElement>('[class*="overlayBottom"]');
+    const observer = typeof ResizeObserver !== 'undefined' && overlay ? new ResizeObserver(shift) : null;
+    if (overlay) observer?.observe(overlay);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer?.disconnect();
+    };
+  }, [mapRef, rootRef, covered, px, py, setFollow]);
 }

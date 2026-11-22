@@ -187,7 +187,7 @@ describe('StoredCharacterCard', () => {
       />,
       { api, snapshot: fixtureSnapshot('lobby', 'player') },
     );
-    await user.click(screen.getByRole('button', { name: `Open ${character.name}'s sheet` }));
+    await user.click(screen.getByRole('button', { name: `${character.name}, open the character sheet` }));
     expect(await screen.findByRole('group', { name: /^Strength 15/ })).toBeInTheDocument();
     await user.click(await screen.findByRole('button', { name: 'Delete character' }));
     const confirm = await screen.findByRole('alertdialog');
@@ -224,12 +224,15 @@ describe('rules links', () => {
 });
 
 describe('party light', () => {
-  it('speaks of light only while the party is in a dungeon', () => {
-    const { unmount } = renderWithTable(<PartyPanel />, { snapshot: fixtureSnapshot('town', 'player') });
+  it("leaves the party light to the map and shows each lit member's light on their row", () => {
+    const snapshot = fixtureSnapshot('exploring', 'player');
+    const game = snapshot.game;
+    const brenna = game?.view.party[0];
+    if (!game || !brenna) throw new Error('no game');
+    game.view.effects = [{ character_id: brenna.id, kind: 'light', remaining_rounds: 359 }];
+    renderWithTable(<PartyPanel />, { snapshot });
     expect(screen.queryByText('The party has no light.')).toBeNull();
-    unmount();
-    renderWithTable(<PartyPanel />, { snapshot: fixtureSnapshot('exploring', 'player') });
-    expect(screen.getByText('The party has no light.')).toBeInTheDocument();
+    expect(screen.getByText('Torch, about 6 turns left')).toBeInTheDocument();
   });
 });
 
@@ -269,6 +272,11 @@ describe('a caster with nothing memorized', () => {
   }
   function casterApi() {
     const api = createFakeApi();
+    api.rules.mockImplementation(async (path: string) =>
+      path === 'spells'
+        ? { items: catalog.spells.items, total: catalog.spells.items.length, limit: 200, offset: 0 }
+        : { items: [], total: 0, limit: 200, offset: 0 },
+    );
     api.fullCatalog.mockImplementation(async (name) =>
       name === 'classes'
         ? ({ catalog: name, total: 1, items: [catalog.details.magic_user] } as never)
@@ -277,7 +285,7 @@ describe('a caster with nothing memorized', () => {
     return api;
   }
 
-  it('says why the caster cannot cast and shows the refusal where the player asked', async () => {
+  it('says why the caster cannot cast and keeps a refusal in the prepare dialog', async () => {
     const { snapshot, wren } = casterSnapshot('exploring');
     const api = casterApi();
     const game = snapshot.game;
@@ -300,9 +308,12 @@ describe('a caster with nothing memorized', () => {
     expect(screen.getByText("A caster prepares spells after a night's rest.")).toBeInTheDocument();
     await user.click(screen.getAllByRole('button', { name: 'Prepare spells' })[0] as HTMLElement);
     const dialog = await screen.findByRole('dialog', { name: /Prepare/ });
+    // One copy of Sleep fills the one first-level slot, so the count can't go higher.
+    expect(within(dialog).getByRole('button', { name: 'More copies of Sleep' })).toBeDisabled();
     await user.click(within(dialog).getByRole('button', { name: 'Prepare spells' }));
-    await waitFor(() => expect(screen.queryByRole('dialog', { name: /Prepare/ })).toBeNull());
-    expect(screen.queryByText("A caster prepares spells after a night's rest.")).toBeNull();
+    // The refusal stays in the dialog, where the player can change the choice.
+    expect(await within(dialog).findByText(/rest/i)).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: /Prepare/ })).toBeInTheDocument();
     expect(api.sendCommand).toHaveBeenCalledWith(
       expect.any(String),
       { command_type: 'prepare_spells', character_id: wren.id, selections: expect.any(Array) },

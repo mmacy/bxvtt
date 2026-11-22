@@ -21,6 +21,7 @@ describe('group labels', () => {
     expect(countBadge(goblins)).toBe('×3');
     expect(theGroup(clerk)).toBe('the ink-stained clerk');
     expect(countedGroup(clerk)).toBe('an ink-stained clerk');
+    expect(countBadge(clerk)).toBeNull();
   });
 });
 

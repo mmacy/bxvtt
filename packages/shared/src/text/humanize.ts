@@ -104,7 +104,8 @@ function tidyWording(text: string, ctx: TextContext): string {
       .replace(DOOR_OF_CELL, (_match, t: string, side: string) => `${t}he ${side} door`)
       // osrlib writes "leave behind ." when the fallen dropped only coins worth less than 1 gp.
       .replace(/\bleave behind \./g, 'leave a few coins behind.')
-      .replace(NOTHING_LISTED, '$1 nothing')
+      // osrlib writes "acquires ." when the goods were coins worth less than 1 gp.
+      .replace(NOTHING_LISTED, '$1 a few coins')
   );
 }
 

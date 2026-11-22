@@ -179,7 +179,7 @@ export function ShellTopBar() {
         open={confirm === 'end'}
         onOpenChange={(open) => !open && setConfirm(null)}
         title="Return the table to its lobby?"
-        description="The game ends for everyone. Its saves stay, so you can restore one later."
+        description="The game ends for everyone. Characters start each new game as they were created, so what happened to them in this game, such as experience, treasure, and deaths, stays in its saves. To keep playing the characters as they are now, continue from a save, in the lobby or later."
         confirmLabel="Return to the lobby"
         tone="danger"
         onConfirm={end}

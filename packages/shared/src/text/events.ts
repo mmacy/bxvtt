@@ -239,7 +239,9 @@ function goodsText(
 ): string {
   const parts = itemList(itemIds, ctx, options);
   if (gp > 0) parts.push(coinsText(gp));
-  return parts.length === 0 ? 'nothing' : joinList(parts);
+  // osrlib writes these events only when goods moved, and counts coins in whole gold pieces, so goods with no
+  // items and no gold are a few coins worth less than 1 gp, such as one member's share of 48 cp.
+  return parts.length === 0 ? 'a few coins' : joinList(parts);
 }
 
 /** Phrase for how a weapon is named in an attack: ` with a sword`, ` with its claw`, or nothing. */
@@ -2112,14 +2114,74 @@ export function describeEvents(
     ) {
       continue;
     }
-    if (dropRedundant && event.event_type === 'condition_removed' && event.condition === 'turned') {
-      const target = event.target_id;
-      if (
-        list
-          .slice(0, index)
-          .some((earlier) => earlier.event_type === 'monster_defeated' && earlier.monster_id === target)
-      )
+    if (
+      dropRedundant &&
+      (event.event_type === 'condition_removed' ||
+        event.event_type === 'effect_released' ||
+        event.event_type === 'effect_expired')
+    ) {
+      // A slain creature's effects and conditions end with it: osrlib releases them when the encounter closes.
+      // Saying that a slain goblin "wakes up" is wrong, so these lines go.
+      const record = event as unknown as Record<string, unknown>;
+      const target = record.target_id ?? record.target_ref;
+      const slain = list
+        .slice(0, index)
+        .some(
+          (earlier) =>
+            (earlier.event_type === 'monster_defeated' && earlier.monster_id === target) ||
+            (earlier.event_type === 'death' && earlier.target_id === target) ||
+            (earlier.event_type === 'condition_gained' &&
+              earlier.condition === 'dead' &&
+              earlier.target_id === target),
+        );
+      if (slain) continue;
+    }
+    if (
+      dropRedundant &&
+      event.event_type === 'healing_applied' &&
+      event.code !== 'combat.healing.blocked' &&
+      event.amount === 0 &&
+      event.source === 'natural'
+    ) {
+      // Natural healing that heals nothing, such as for an unhurt member after a rest, says nothing.
+      continue;
+    }
+    if (
+      dropRedundant &&
+      event.event_type === 'provisions' &&
+      event.code === 'exploration.provisions.consumed'
+    ) {
+      // The day's rations of a run of members read as one line.
+      let end = index;
+      while (end < list.length) {
+        const next = list[end];
+        if (next?.event_type !== 'provisions' || next.code !== 'exploration.provisions.consumed') break;
+        end += 1;
+      }
+      if (end - index > 1) {
+        const run = list.slice(index, end) as Extract<GameEvent, { event_type: 'provisions' }>[];
+        const eaters = [...new Set(run.map((entry) => entry.character_id))];
+        const kinds = new Set(run.map((entry) => entry.kind));
+        const party = Object.keys(learned.members);
+        const who =
+          party.length > 0 && party.every((id) => eaters.includes(id))
+            ? 'The party'
+            : joinList(eaters.map((id) => memberName(id, learned)));
+        const plural = who === 'The party' ? false : eaters.length > 1;
+        const what =
+          kinds.has('food') && kinds.has('water')
+            ? `${plural ? 'eat and drink' : 'eats and drinks'} the day's rations`
+            : kinds.has('water')
+              ? `${plural ? 'drink' : 'drinks'} the day's water`
+              : `${plural ? 'eat' : 'eats'} the day's food`;
+        lines.push({
+          ...describeEvent(event, learned, messageOption(index)),
+          text: `${who} ${what}.`,
+          actorIds: eaters,
+        });
+        index = end - 1;
         continue;
+      }
     }
     if (
       dropRedundant &&

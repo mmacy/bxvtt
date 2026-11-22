@@ -281,7 +281,7 @@ describe('the outfitter', () => {
     const { user } = setup();
     await user.click(screen.getByRole('tab', { name: 'Outfitter' }));
     await screen.findByRole('button', { name: 'Add Sword to the cart' });
-    expect(screen.getByRole('button', { name: /^Sword 1d8, melee, show details$/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Sword, 1d8, melee, show details$/ })).toBeInTheDocument();
     await user.type(screen.getByRole('searchbox', { name: 'Search equipment' }), 'rope');
     expect(screen.queryByRole('button', { name: 'Add Sword to the cart' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add Rope (50’) to the cart' })).toBeInTheDocument();
@@ -609,5 +609,78 @@ describe('spells to prepare', () => {
     await waitFor(() => expect(api.fullCatalog).toHaveBeenCalledWith('classes'));
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(screen.queryByText("Spells aren't prepared")).not.toBeInTheDocument();
+  });
+});
+
+describe('the temple and a dead member', () => {
+  function withDeadOsric() {
+    const snapshot = fixtureSnapshot('town', 'referee');
+    const osric = snapshot.game?.view.party.find((member) => member.name === 'Osric');
+    if (!osric) throw new Error('No Osric.');
+    osric.conditions = ['dead'];
+    osric.current_hp = 0;
+    return snapshot;
+  }
+
+  it('names the button "Osric, dead", lists raise dead first, and leaves every Buy button enabled', async () => {
+    const { user } = setup(withDeadOsric());
+    await user.click(screen.getByRole('tab', { name: 'Temple' }));
+    const group = await screen.findByRole('group', { name: 'Who is treated' });
+    expect(within(group).getByRole('button', { name: 'Osric, dead' })).toBeInTheDocument();
+    expect(within(group).getByRole('button', { name: /^Brenna, \d+ of \d+ hp$/ })).toBeInTheDocument();
+    const buttons = screen.getAllByRole('button', { name: /^Buy .* for Osric$/ });
+    expect(buttons[0]).toHaveAccessibleName('Buy raise dead for Osric');
+    for (const button of buttons) expect(button).toBeEnabled();
+  });
+
+  it("shows bxapi's refusal when a service can't help a dead member", async () => {
+    const { api, user, store } = setup(withDeadOsric());
+    const game = store.getState().game;
+    if (!game) throw new Error('No game.');
+    api.sendCommand.mockResolvedValue(
+      refused(game, 'town.healing.no_effect', { service: 'cure_light_wounds' }),
+    );
+    await user.click(screen.getByRole('tab', { name: 'Temple' }));
+    await user.click(await screen.findByRole('button', { name: 'Buy cure light wounds for Osric' }));
+    expect(await screen.findByText("The temple can't do that for Osric")).toBeInTheDocument();
+    expect(api.sendCommand).toHaveBeenCalled();
+  });
+
+  it('shows the cleric level field to a referee only', async () => {
+    const referee = setup(fixtureSnapshot('town', 'referee'));
+    await referee.user.click(screen.getByRole('tab', { name: 'Temple' }));
+    expect(await screen.findByText("Temple cleric's level (optional)")).toBeInTheDocument();
+    referee.unmount();
+    const player = setup(fixtureSnapshot('town', 'player'));
+    await player.user.click(screen.getByRole('tab', { name: 'Temple' }));
+    await screen.findByRole('group', { name: 'Who is treated' });
+    expect(screen.queryByText("Temple cleric's level (optional)")).not.toBeInTheDocument();
+  });
+});
+
+describe('recently in town', () => {
+  it('headlines a rest with the rest and opens the rest of the lines', async () => {
+    const snapshot = fixtureSnapshot('town', 'player');
+    snapshot.feed.entries.push(
+      gameEntry(901, 'rest', [
+        { event_type: 'fatigue', code: 'exploration.fatigue.recovered', visibility: 'player' },
+        { event_type: 'rested', code: 'exploration.rest.rested', kind: 'day', visibility: 'player' },
+      ]),
+    );
+    const { user } = setup(snapshot);
+    expect(await screen.findByText('The party rests for a full day.')).toBeInTheDocument();
+    const more = screen.getByRole('button', { name: '+1 more' });
+    expect(more).toHaveAttribute('aria-expanded', 'false');
+    await user.click(more);
+    expect(screen.getByRole('button', { name: 'Show less' })).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('The party recovers from fatigue.')).toBeInTheDocument();
+  });
+
+  it('reads the spell line for a screen reader as "Spells to prepare: Tamsin has none memorized"', async () => {
+    const snapshot = fixtureSnapshot('town', 'player');
+    makeCaster(snapshot, 'Tamsin', 'magic_user', { book: 1 });
+    setup(snapshot);
+    await screen.findByText("Spells aren't prepared");
+    expect(screen.getByText(': Tamsin has none memorized')).toBeInTheDocument();
   });
 });

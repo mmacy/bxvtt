@@ -15,6 +15,7 @@ import {
   type TriggerSpec,
 } from '../model/adventure';
 import {
+  asClause,
   clauseText,
   conditionText,
   consequenceText,
@@ -71,12 +72,12 @@ function ObjectiveRow({
       </div>
       <p className={styles.secondaryLine}>
         <strong>Done when: </strong>
-        {clauseText(objective.when, ctx, adventure)}
+        {asClause(clauseText(objective.when, ctx, adventure))}
       </p>
       {!revealed && objective.reveal_when && (
         <p className={styles.secondaryLine}>
           <strong>Shown when: </strong>
-          {clauseText(objective.reveal_when, ctx, adventure)}
+          {asClause(clauseText(objective.reveal_when, ctx, adventure))}
         </p>
       )}
       {questActive && !complete && (
@@ -206,7 +207,7 @@ function QuestBody({
       {quest.activation && status === 'inactive' && (
         <p className={styles.secondaryLine}>
           <strong>Starts when: </strong>
-          {clauseText(quest.activation, ctx, adventure)}
+          {asClause(clauseText(quest.activation, ctx, adventure))}
         </p>
       )}
       <ul className={styles.objectiveList} aria-label="Objectives">
@@ -418,7 +419,7 @@ function TriggerRow({
     <div className={styles.questBody}>
       <p className={styles.prose}>
         <strong>When: </strong>
-        {patternText(trigger.when, ctx, adventure)}
+        {asClause(patternText(trigger.when, ctx, adventure))}
         {trigger.conditions.length > 0
           ? `, while ${trigger.conditions.map((c) => conditionText(c, ctx, adventure)).join(' and ')}`
           : ''}

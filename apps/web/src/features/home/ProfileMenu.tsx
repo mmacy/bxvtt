@@ -4,20 +4,23 @@ import { describeProblem, displayStringProblem, useIdentity } from '@/app';
 import { Avatar, Button, Field, Popover, TextInput, toast } from '@/ui';
 import styles from './home.module.css';
 
-/** Names for the server's user colors, for the color picker's accessible labels. */
-const COLOR_NAMES: Record<UserColor, string> = {
-  '#e69f00': 'Orange',
-  '#56b4e9': 'Sky blue',
-  '#009e73': 'Green',
-  '#f0e442': 'Yellow',
-  '#0072b2': 'Blue',
-  '#d55e00': 'Vermilion',
-  '#cc79a7': 'Pink',
-  '#882255': 'Wine',
-  '#44aa99': 'Teal',
-  '#999933': 'Olive',
-  '#aa4499': 'Purple',
-  '#6699cc': 'Steel blue',
+/**
+ * Plain names for the user colors, for the color picker's accessible labels, in the palette's order. Keyed by
+ * `USER_COLORS`, so a palette change that leaves a color unnamed fails the typecheck.
+ */
+const COLOR_NAMES: Record<(typeof USER_COLORS)[number], string> = {
+  '#e76742': 'Vermilion',
+  '#f29e2e': 'Saffron',
+  '#e3c444': 'Gold',
+  '#a4c639': 'Lime',
+  '#3fae6a': 'Green',
+  '#2bb3a3': 'Teal',
+  '#3fa7d6': 'Sky blue',
+  '#5c8de5': 'Blue',
+  '#8e7ff3': 'Violet',
+  '#bc70dd': 'Purple',
+  '#e261a0': 'Pink',
+  '#8d9cab': 'Slate',
 };
 
 /** The profile form: display name and color. */
@@ -113,8 +116,11 @@ export function ProfileMenu() {
         // user sees. The avatar's initial is hidden from assistive technology.
         <button type="button" className={styles.profileTrigger}>
           <Avatar name={user.name} color={user.color} size="sm" decorative />
-          <span className={styles.profileName}>{user.name}</span>
-          <span className="visually-hidden">, your profile</span>
+          {/* The comma shares the name's element, so the name reads "Ruth, your profile" with no space before it. */}
+          <span className={`${styles.profileName} ${styles.narrowHidden}`}>
+            {user.name}
+            <span className="visually-hidden-inline">, your profile</span>
+          </span>
         </button>
       }
     >

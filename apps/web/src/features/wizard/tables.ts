@@ -129,7 +129,7 @@ export function modifierLines(tables: AbilityTables, ability: Ability, score: nu
     }
     case 'con': {
       const row = rowFor(tables.constitution, score);
-      return row ? [{ label: 'Hit points per Hit Die', value: row.hit_points, signed: true }] : [];
+      return row ? [{ label: 'Hit points per hit die', value: row.hit_points, signed: true }] : [];
     }
     case 'cha': {
       const row = rowFor(tables.charisma, score);

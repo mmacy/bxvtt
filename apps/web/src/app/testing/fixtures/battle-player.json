@@ -3,7 +3,7 @@
   "user": {
     "id": "usr_9w3ahkA7vgakA72hGmdhNg",
     "name": "Sam",
-    "color": "#44aa99",
+    "color": "#8e7ff3",
     "created_at": "2026-11-22T05:18:27Z"
   },
   "role": "player",
@@ -22,14 +22,14 @@
       {
         "user_id": "usr_yyi4I1GsY3UtjRmjiFUNRQ",
         "name": "Ruth",
-        "color": "#882255",
+        "color": "#5c8de5",
         "role": "referee",
         "joined_at": "2026-11-22T05:18:27Z"
       },
       {
         "user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
         "name": "Sam",
-        "color": "#44aa99",
+        "color": "#8e7ff3",
         "role": "player",
         "joined_at": "2026-11-22T05:18:27Z"
       }

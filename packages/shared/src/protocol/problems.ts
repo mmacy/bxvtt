@@ -101,6 +101,12 @@ export const PROBLEM_CODES = {
   /** 503: bxvtt can't reach bxapi. Start bxapi and try again. */
   bxapi_unavailable: 503,
   /**
+   * 507: bxapi's storage for bxvtt is full, so nothing new can be stored: no character, game, command, or save.
+   * Waiting doesn't help. Extra members: `used_bytes` and `max_bytes`. A referee frees space by deleting old
+   * tables and saves, and the host can raise the limit with bxapi's `BXAPI_MAX_CLIENT_BYTES`.
+   */
+  bxapi_storage_full: 507,
+  /**
    * 502, 503, or 504, made by the SDK rather than the server: something between the browser and the bxvtt
    * server, such as the Vite proxy or a tunnel, answered with an error page instead of a problem document,
    * usually because the bxvtt server is down. `status` is the status the proxy sent.
@@ -147,6 +153,8 @@ export const Problem = z.looseObject({
   id: z.unknown().optional(),
   revision: z.number().int().optional(),
   retry_after: z.number().int().optional(),
+  used_bytes: z.number().optional(),
+  max_bytes: z.number().nullable().optional(),
   command_type: z.string().optional(),
   missing: z.array(z.string()).optional(),
   rejections: z

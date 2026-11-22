@@ -171,7 +171,7 @@ describe('MapStage for keyboard and screen reader users', () => {
           x: 14.5,
           y: 21.5,
           text: 'Painted monks',
-          color: '#e69f00',
+          color: '#e76742',
           visibility: 'everyone',
         },
       ],
@@ -232,11 +232,11 @@ describe('ScenePanel', () => {
     expect(screen.getByText(/The statue is Saint Corvane/)).toBeInTheDocument();
   });
 
-  it('says the party is in a corridor where no area is keyed', () => {
+  it('gives an unkeyed place a neutral name', () => {
     const { snapshot } = exploring();
     if (snapshot.game?.scene.here) snapshot.game.scene.here.area = null;
     renderWithTable(<ScenePanel />, { snapshot });
-    expect(screen.getByRole('heading', { name: 'A corridor' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'On the way' })).toBeInTheDocument();
   });
 
   it('takes stairs and treasure from the panel', async () => {

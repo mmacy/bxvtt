@@ -326,3 +326,16 @@
   font-size: var(--text-sm);
   color: var(--color-text-subtle);
 }
+
+/* At phone width the page header keeps its icons and drops their visible words, which stay in the accessible name. */
+@media (max-width: 480px) {
+  .narrowHidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}

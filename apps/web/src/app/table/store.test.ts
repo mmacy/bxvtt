@@ -191,7 +191,7 @@ describe('rejoin requests', () => {
       table_id: snapshot.table.id,
       user_id: 'usr_bbbbbbbbbbbbbbbbbbbbbb',
       name: 'Sam',
-      color: '#cc79a7' as const,
+      color: '#3fa7d6' as const,
       role: 'player' as const,
       created_at: '2026-11-22T05:00:00Z',
       expires_at: '2026-11-22T05:05:00Z',

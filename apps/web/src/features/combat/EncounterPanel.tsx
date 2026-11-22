@@ -12,6 +12,7 @@ import {
 } from '@bxvtt/shared/text';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
+  useCaller,
   useEncounter,
   useParty,
   useRefereeLens,
@@ -168,7 +169,13 @@ export function EncounterPanel() {
 
       <PartyOptions encounter={encounter} party={party} commands={commands} ctx={ctx} />
 
-      <PlaybackStrip playback={playback} ctx={ctx} summaryTitle="What happened" idle={null} />
+      <PlaybackStrip
+        playback={playback}
+        ctx={ctx}
+        summaryTitle="What happened"
+        idle={null}
+        quietText={(item) => quietRound(item.commandType, encounter)}
+      />
 
       {lens && (
         <details className={styles.refereeBlock}>
@@ -182,6 +189,28 @@ export function EncounterPanel() {
       )}
     </div>
   );
+}
+
+/** What the monsters' bearing looks like after a quiet round, as a verb phrase for one or several. */
+const QUIET_BEARING: Record<string, { one: string; many: string }> = {
+  indifferent: { one: 'pays the party no mind', many: 'pay the party no mind' },
+  friendly: { one: 'seems friendly', many: 'seem friendly' },
+  uncertain: { one: "hasn't decided what to do yet", many: "haven't decided what to do yet" },
+  hostile: { one: 'glares but holds back for now', many: 'glare but hold back for now' },
+};
+
+/**
+ * What a round said when bxapi reported no events for it, such as a wait while the monsters ignore the party:
+ * "The party waits a round. The clerk and the bandit pay the party no mind."
+ */
+export function quietRound(commandType: string | null, encounter: EncounterView): string {
+  const lead = commandType === 'wait' ? 'The party waits a round.' : 'The round passes.';
+  const present = encounter.groups.filter((g) => !g.fled && g.count > 0);
+  const bearing = encounter.stance ? QUIET_BEARING[encounter.stance] : undefined;
+  if (present.length === 0 || !bearing) return lead;
+  const names = capitalizeFirst(joinList(present.map((g) => theGroup(viewLabels(g)))));
+  const one = present.length === 1 && present[0]?.count === 1;
+  return `${lead} ${names} ${one ? bearing.one : bearing.many}.`;
 }
 
 function GroupCard({ group }: { group: EncounterGroupView }) {
@@ -233,6 +262,8 @@ interface OptionProps {
   loading?: boolean;
   shortcut?: string;
   onClick?: () => void;
+  /** Whether `disabledReason` is the one the panel states above every choice, so the explanation stays. */
+  sharedReason?: boolean;
   /** A popover with more choices, instead of `onClick`. */
   popover?: { title: string; content: (close: () => void) => ReactNode };
 }
@@ -246,6 +277,7 @@ function Option({
   loading,
   onClick,
   popover,
+  sharedReason,
 }: OptionProps) {
   const [open, setOpen] = useState(false);
   const button = (
@@ -279,7 +311,7 @@ function Option({
         button
       )}
       <span className={cx(styles.optionText, disabledReason && styles.optionDisabled)}>
-        {disabledReason ?? description}
+        {disabledReason && !sharedReason ? disabledReason : description}
       </span>
     </li>
   );
@@ -302,6 +334,13 @@ function PartyOptions({
   commands: EncounterCommands;
   ctx: TextContext;
 }) {
+  const caller = useCaller();
+  // One sentence above the choices says who chooses for the party, instead of the same refusal on every choice.
+  const partyReason = commands.partyPermission.allowed
+    ? null
+    : caller.member
+      ? `${caller.member.name} is the caller, so ${caller.member.name} or the referee chooses for the party.`
+      : 'The referee chooses for the party.';
   const able = party.filter((m) => encounter.declarers.includes(m.id));
   const turnerClasses = useTurnerClasses(able.map((m) => m.class_id));
   const turners = able.filter((m) => turnerClasses.includes(m.class_id));
@@ -439,9 +478,16 @@ function PartyOptions({
 
   return (
     <div className={styles.optionsBlock}>
+      {partyReason && <p className={styles.partyReason}>{partyReason}</p>}
       <ul className={styles.options} aria-label="The party's choices">
         {options.map((option) => (
-          <Option key={option.label} {...option} />
+          <Option
+            key={option.label}
+            {...option}
+            sharedReason={
+              option.disabledReason !== null && option.disabledReason === commands.partyPermission.reason
+            }
+          />
         ))}
       </ul>
       <ItemOptions encounter={encounter} party={party} commands={commands} ctx={ctx} />

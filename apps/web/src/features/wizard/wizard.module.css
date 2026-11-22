@@ -381,7 +381,8 @@
   grid-template-areas:
     'name stat'
     'rolled stat'
-    'controls stat';
+    'controls stat'
+    'refusal refusal';
   align-items: center;
   gap: var(--space-1) var(--space-3);
   padding: var(--space-3);
@@ -435,7 +436,7 @@
   text-align: center;
 }
 
-.adjustRow > :last-child {
+.adjustStat {
   grid-area: stat;
 }
 
@@ -685,18 +686,15 @@
 }
 
 .goldCoin {
-  display: inline-grid;
-  place-items: center;
+  display: inline-block;
   width: 1.75rem;
   height: 1.75rem;
   align-self: center;
   border-radius: 50%;
-  background: var(--coin-gp);
-  color: var(--color-text-inverse);
-  font-family: var(--font-numeric);
-  font-size: var(--text-lg);
-  font-weight: var(--weight-bold);
-  box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.25);
+  background: radial-gradient(circle at 35% 35%, rgb(255 255 255 / 0.35), transparent 55%), var(--coin-gp);
+  box-shadow:
+    inset 0 -2px 0 rgb(0 0 0 / 0.25),
+    inset 0 0 0 2px rgb(0 0 0 / 0.12);
 }
 
 .goldUnit {
@@ -890,7 +888,7 @@
   color: var(--color-text-disabled);
 }
 
-.stepper {
+.lotStepper {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
@@ -908,4 +906,12 @@
 .cartLot {
   font-size: var(--text-xs);
   color: var(--color-text-muted);
+}
+
+.adjustRefusal {
+  grid-area: refusal;
+  margin: 0;
+  color: var(--color-warning);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
 }

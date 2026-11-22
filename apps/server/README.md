@@ -24,7 +24,7 @@ curl -s http://127.0.0.1:8660/api/health
 
 The response should have `"status": "ok"`, `bxapi.reachable: true`, and `host_key_required`, which says whether creating a table needs the host key. Without a token, the response stops there: bxapi's versions and storage from `GET /v1/meta` go only to a request with a user's token. When bxapi is down, the health check answers 503 and every route that needs bxapi answers 503 `bxapi_unavailable`.
 
-To run the production build, which also serves the built web client from `apps/web/dist`:
+To run the production build, which also serves the built web client from `apps/web/dist`. The server compresses the client's scripts, styles, and other text files with brotli and gzip once, in memory, and sends the encoding that `Accept-Encoding` allows, with `Vary: Accept-Encoding`. Hashed files under `assets/` are cached for a year as immutable, and `index.html` revalidates on every visit:
 
 ```sh
 npm run build
@@ -215,7 +215,7 @@ A refusal the server still can't attribute has `member_id: null` and `candidates
 
 ### Saves and autosaves
 
-Restoring a save creates a new bxapi session, moves the table to it, keeps each seat with the same member ID, and sends everyone a `notice` with the code `game_restored`, a `table` message, and a `game` message. When the `autosave` setting is on (the default), the server saves after the party enters a dungeon, reaches another level, meets monsters while exploring, or returns to town. Autosave labels start with `Autosave:`, such as `Autosave: Entered the priory on Corvane's Holm`, and the server keeps the newest 10. A name with a leading "The" reads "the" inside a label or a notice, by the rule of `nameInSentence` in `@bxvtt/shared/text`.
+Restoring a save creates a new bxapi session, moves the table to it, keeps each seat with the same member ID, and sends everyone a `notice` with the code `game_restored`, a `table` message, and a `game` message. When the `autosave` setting is on (the default), the server saves after the party enters a dungeon, reaches another level, meets monsters while exploring (labelled by what it met, such as `Autosave: Met 4 bandits in Crookback Bridge, level 1`), starts a battle from exploring, or returns to town. Autosave labels start with `Autosave:`, such as `Autosave: Entered the priory on Corvane's Holm`, and the server keeps the newest 10. A name with a leading "The" reads "the" inside a label or a notice, by the rule of `nameInSentence` in `@bxvtt/shared/text`.
 
 ## The feed
 
@@ -396,6 +396,28 @@ A client message is at most 16 KiB, and a connection may send about 20 messages 
 Every error is an RFC 9457 problem document with the media type `application/problem+json`, a stable `code`, a `detail` for a person, and the `request_id` that the `X-Request-Id` header also states. `PROBLEM_CODES` in `@bxvtt/shared/protocol` lists every code with its status and its extra members. bxapi's `character_invalid` problem passes through with `rejections`, or with `field`, `index`, and `id`, so the character wizard can point at the wrong choice. `validation_error` has `errors`, each with a `path` and a `message`. `target_unknown` has `field` and `id`.
 
 The SDK also makes two codes of its own. When a response that should be a problem document isn't JSON, such as the HTML error page the Vite proxy or a tunnel sends while the bxvtt server is down, the SDK throws a `BxvttProblemError` instead of a `SyntaxError`: `server_unavailable` for status 502, 503, or 504, and the code that matches the status otherwise, such as `content_too_large` for 413. A successful response whose body isn't JSON throws `invalid_response`. A request that never reaches a server still rejects with the `TypeError` that `fetch` throws.
+
+## When bxapi's storage fills up
+
+bxapi limits how much each client stores, 1 GiB by default (`BXAPI_MAX_CLIENT_BYTES`). bxvtt stores everything as one bxapi client, so every table on the server shares that space. When it's full, bxapi refuses anything that stores something new, and bxvtt answers 507 `bxapi_storage_full` with `used_bytes` and `max_bytes`: nobody can create a character, start or restore a game, send a command, or save. Waiting doesn't help.
+
+What uses the space:
+
+- **Games:** bxapi keeps each game as a save document that it rewrites after every accepted command, and a long game's document grows with its event log.
+- **Saves:** each save, autosaves included, is a full copy of the game. The server keeps the newest 10 autosaves of each table.
+- **Characters and uploaded adventures:** each one is a document of its own.
+- **Command responses:** bxvtt sends every command with an `Idempotency-Key`, so bxapi keeps each command's response, with the views it returns, for 24 hours, so that a retry gets the same answer.
+
+bxvtt deletes what nobody can reach any more:
+
+- **Deleted tables:** their sessions, saves, and uploaded adventures.
+- **Replaced and ended games:** the session a restore replaced, and the session of a game a referee ended. A save outlives its session, so every save still restores.
+- **Deleted characters:** a character its owner deleted.
+- **Failed deletions:** a deletion that fails while bxapi is down is retried at startup and every hour.
+
+To see the usage, call `GET /api/health` with a user's token and read `bxapi.meta.storage`. The server logs a warning at startup and every 10 minutes while the usage is over 80 percent.
+
+To free space, delete tables you no longer play, and old saves you won't restore, in bxvtt. Deleting a table deletes its games and saves in bxapi. To raise the limit, restart bxapi with a larger `BXAPI_MAX_CLIENT_BYTES`, or set it to `0` to remove the limit.
 
 ## Security
 

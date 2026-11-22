@@ -1,7 +1,8 @@
 import { capitalizeFirst, conditionLabel, formatFeet, isProperLabel, joinList } from '@bxvtt/shared/text';
-import type { CSSProperties } from 'react';
-import { tokenClass } from '@/app';
+import { useMemo, type CSSProperties } from 'react';
+import { tokenClass, useTableId } from '@/app';
 import { cx, Icon, TokenPortrait } from '@/ui';
+import { useCombatMemory } from './memory';
 import { countBadge, countedGroup, groupHeading, theGroup, type GroupLabels } from './names';
 import type { Pop, TrackGroup, TrackMember, TrackState } from './playback';
 import styles from './track.module.css';
@@ -27,8 +28,9 @@ const TOKEN = 32;
 const STACK = 3;
 /** Vertical room for one stacked token with its hit point bar. */
 const ROW = 42;
-/** Room for one group's token and labels, for groups that stand at the same distance. */
-const GROUP_WIDTH = 104;
+/** Vertical room for one group's token and labels, for groups that stand at the same distance. */
+const GROUP_HEIGHT = 74;
+const GROUP_HEIGHT_COMPACT = 58;
 
 /** A tick spacing that gives four to eight ticks across the span. */
 function tickStep(span: number): number {
@@ -82,6 +84,17 @@ export function RangeTrack({
   animate,
   compact = false,
 }: RangeTrackProps) {
+  // How many each group had at its largest, so a group that was all slain is named in the right number.
+  const tableId = useTableId();
+  const snapshots = useCombatMemory((s) => s.snapshots);
+  const peaks = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const snapshot of snapshots) {
+      if (snapshot.tableId !== tableId) continue;
+      for (const g of snapshot.encounter?.groups ?? []) map[g.id] = Math.max(map[g.id] ?? 0, g.count);
+    }
+    return map;
+  }, [snapshots, tableId]);
   const members = track.memberOrder
     .map((id) => track.members[id])
     .filter((m): m is TrackMember => m !== undefined);
@@ -111,11 +124,22 @@ export function RangeTrack({
   const columns = Math.max(1, ...[...stacks.values()].map((stack) => Math.ceil(stack.length / rows)));
   // Margins in pixels that leave room for the stacked party, the group labels, and the set-aside trays.
   const leftPx = 8 + columns * (TOKEN + 4) + (fallen.length > 0 ? 64 : 0);
-  const sideBySide = Math.max(
+  const stacked = Math.max(
     1,
     ...present.map((g) => present.filter((other) => other.distance === g.distance).length),
   );
-  const rightPx = 104 + (sideBySide - 1) * GROUP_WIDTH + (gone.length > 0 ? 64 : 0);
+  const rightPx = 104 + (gone.length > 0 ? 64 : 0);
+  // Groups at the same distance stack one above another at that distance, so the scale stays true. The lane
+  // grows to fit the stack.
+  const groupHeight = compact ? GROUP_HEIGHT_COMPACT : GROUP_HEIGHT;
+  const extra = (stacked - 1) * groupHeight;
+  const laneStyle: CSSProperties | undefined =
+    extra > 0
+      ? ({
+          height: `calc(${compact ? 104 : 156}px + ${extra}px)`,
+          '--center': `calc(${compact ? 58 : 86}px + ${extra / 2}px)`,
+        } as CSSProperties)
+      : undefined;
   const fraction = (feet: number) => (feet - min) / (max - min);
   const at = (feet: number, offsetPx = 0) =>
     `calc(${leftPx + offsetPx}px + (100% - ${leftPx + rightPx}px) * ${fraction(feet)})`;
@@ -133,8 +157,9 @@ export function RangeTrack({
   // Groups at the same distance stand side by side, so their tokens and labels don't overlap.
   const groupOffset = (group: TrackGroup): CSSProperties => {
     const same = present.filter((g) => g.distance === group.distance);
+    if (same.length < 2) return {};
     const index = same.indexOf(group);
-    return index > 0 ? { marginLeft: `${index * GROUP_WIDTH}px` } : {};
+    return { transform: `translateY(${(index - (same.length - 1) / 2) * groupHeight}px)` };
   };
   const popsFor = (id: string) => pops.filter((p) => p.tokenId === id);
   const focusSet = new Set(focus);
@@ -154,7 +179,7 @@ export function RangeTrack({
       className={cx(styles.track, compact && styles.compact, !animate && styles.still)}
       aria-label="Battlefield: the party on the left, the monsters on the right"
     >
-      <div className={styles.lane}>
+      <div className={styles.lane} style={laneStyle}>
         <div className={styles.line} style={{ left: at(0) }} aria-hidden="true"></div>
         {ticks.map((feet) => (
           <span key={feet} className={styles.tick} style={{ left: at(feet) }} aria-hidden="true">
@@ -270,7 +295,7 @@ export function RangeTrack({
               <div key={group.id} className={styles.goneToken} title={groupLabel(group, null)}>
                 <span className="visually-hidden">
                   {group.count === 0
-                    ? `${capitalizeFirst(theGroup({ ...trackLabels(group), count: isProperLabel(group.label) ? 1 : 2 }))}, slain`
+                    ? `${capitalizeFirst(theGroup({ ...trackLabels(group), count: peaks[group.id] ?? 2 }))}, slain`
                     : `${capitalizeFirst(theGroup(trackLabels(group)))}, fled`}
                 </span>
                 <TokenPortrait

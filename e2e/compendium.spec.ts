@@ -104,6 +104,13 @@ test.describe('rules reference', () => {
     await expect(book(sam.page)).toBeVisible();
     await book(sam.page).getByRole('tab', { name: 'Classes' }).click();
     await expect(book(sam.page).getByRole('tabpanel', { name: 'Classes' })).toContainText('Halfling');
+    // A demihuman class reads "Demihuman" under its name, not the class name again (R-106).
+    await expect(book(sam.page).getByRole('tabpanel', { name: 'Classes' })).toContainText(
+      /Dwarf\s*Demihuman/,
+    );
+    await expect(book(sam.page).getByRole('tabpanel', { name: 'Classes' })).not.toContainText(
+      /Dwarf\s*Dwarf/,
+    );
     await sam.page.screenshot({ path: `${SCREENS_DIR}/compendium-lobby.png` });
     await sam.page.keyboard.press('b');
     await expect(book(sam.page)).toBeHidden();

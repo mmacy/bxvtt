@@ -1,6 +1,7 @@
 // Copies of built-in osrlib monster templates (engine 2.5.0, from GET /v1/rules/monsters/{id}) that the
 // adventures bundle under new ids, so a named individual shows players its own name instead of the
-// template's. `named` returns a copy with the new id and labels and the same statistics.
+// template's. `named` returns a copy with the new id and labels and the same statistics, unless the
+// caller changes some.
 
 const BASE = {
   veteran_2: {
@@ -300,10 +301,15 @@ const BASE = {
   },
 };
 
-export function named(baseId, { id, name, display_name, display_name_plural, family_id, intro }) {
+// `changes` overrides statistics of the copy, such as a lighter armour class.
+export function named(
+  baseId,
+  { id, name, display_name, display_name_plural, family_id, intro, changes = {} },
+) {
   const base = structuredClone(BASE[baseId]);
   return {
     ...base,
+    ...changes,
     id,
     name,
     display_name,

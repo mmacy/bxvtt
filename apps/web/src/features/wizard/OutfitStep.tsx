@@ -92,16 +92,19 @@ function DetailsButton({ item, detail }: { item: EquipmentSummary; detail: Equip
       title={item.name}
       width="280px"
       trigger={
-        <button type="button" className={styles.shopNameButton}>
+        <button
+          type="button"
+          className={styles.shopNameButton}
+          aria-label={`${item.name}, ${rowSummary(item.id, item.name, detail) || itemTypeLabel(item.item_type)}, show details`}
+        >
           <span className={styles.shopIcon}>
             <Icon name={itemIcon(item.id, item.item_type)} size={16} />
           </span>
           <span className={styles.shopNameText}>
-            <span className={styles.shopName}>{item.name}</span>{' '}
+            <span className={styles.shopName}>{item.name}</span>
             <span className={styles.shopSub}>
               {rowSummary(item.id, item.name, detail) || itemTypeLabel(item.item_type)}
             </span>
-            <span className="visually-hidden">, show details</span>
           </span>
         </button>
       }
@@ -125,7 +128,7 @@ function LotStepper({
 }) {
   const noun = resolveItemNoun(item.id, emptyContext(), { name: item.name });
   return (
-    <span className={styles.stepper} role="group" aria-label={`${capitalizeFirst(noun.many)} in the cart`}>
+    <span className={styles.lotStepper} role="group" aria-label={`${capitalizeFirst(noun.many)} in the cart`}>
       <IconButton
         icon="minus"
         size="sm"
@@ -205,7 +208,7 @@ export function OutfitStep({
       header: 'Price',
       numeric: true,
       sortValue: (item) => item.cost_gp,
-      cell: (item) => formatGold(item.cost_gp),
+      cell: (item) => (item.cost_gp === 0 ? 'Free' : formatGold(item.cost_gp)),
       width: '84px',
     },
     {
@@ -215,8 +218,8 @@ export function OutfitStep({
       sortValue: (item) => weightCoins(full.byId.get(item.id)) ?? Number.MAX_SAFE_INTEGER,
       cell: (item) => {
         const weight = weightCoins(full.byId.get(item.id));
-        return weight === null ? (
-          <span className={styles.none} title="The catalog lists no weight">
+        return weight === null || weight === 0 ? (
+          <span className={styles.none} title="The catalog lists no weight for it">
             -
           </span>
         ) : (
@@ -322,9 +325,7 @@ export function OutfitStep({
           {gold.status === 'known' && (
             <>
               <span className={styles.goldBig}>
-                <span className={styles.goldCoin} aria-hidden="true">
-                  g
-                </span>
+                <span className={styles.goldCoin} aria-hidden="true" />
                 {gold.gp}
                 <span className={styles.goldUnit}>gp</span>
               </span>
@@ -363,7 +364,6 @@ export function OutfitStep({
               const equippable = item?.item_type === 'weapon' || item?.item_type === 'armour';
               const itemName = item?.name ?? line.itemId;
               const lot = lotSentence(line.itemId, itemName, detail, line.quantity);
-              const noun = resolveItemNoun(line.itemId, emptyContext(), { name: item?.name }).one;
               return (
                 <li key={line.itemId} className={styles.cartRow}>
                   <span className={styles.cartMain}>
@@ -375,14 +375,9 @@ export function OutfitStep({
                     {equippable && item && (
                       <Checkbox
                         label={
-                          <>
-                            <span aria-hidden="true">
-                              {item.item_type === 'armour' ? 'Wear it' : 'Wield it'}
-                            </span>
-                            <span className="visually-hidden">
-                              {item.item_type === 'armour' ? `Wear the ${noun}` : `Wield the ${noun}`}
-                            </span>
-                          </>
+                          item.item_type === 'armour'
+                            ? `Wear the ${item.name.toLowerCase()}`
+                            : `Wield the ${item.name.toLowerCase()}`
                         }
                         checked={equip.includes(line.itemId)}
                         onCheckedChange={(checked) =>

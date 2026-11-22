@@ -44,9 +44,9 @@ export function isAre(group: GroupLabels): 'is' | 'are' {
   return group.count === 1 ? 'is' : 'are';
 }
 
-/** A count badge such as "×3", or `null` for a named individual, whose count says nothing. */
+/** A count badge such as "×3", or `null` for a single monster, whose count says nothing. */
 export function countBadge(group: GroupLabels): string | null {
-  return isNamedOne(group) ? null : `×${group.count}`;
+  return group.count > 1 ? `×${group.count}` : null;
 }
 
 /** The labels of an encounter group from the view. */

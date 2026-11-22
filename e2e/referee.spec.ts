@@ -8,6 +8,8 @@ import { seriousViolations, describeViolations } from './support/a11y';
 import { findRawText } from './support/feed-text';
 import { expect, test, type Actor, type Crew } from './support/fixtures';
 import {
+  DOOR_PROMPT,
+  PLACE_PROMPT,
   choose,
   openFromTableMenu,
   openQuickAction,
@@ -73,6 +75,9 @@ test.describe('referee tools', () => {
     const { ruth, sam, tableId } = await bellTable(crew);
     const now = await openRefereeSection(ruth.page, 'now');
     await expect(now).toContainText('A flight of worn steps');
+    // The wandering monster table has one row per entry, with its range of rolls (R-519).
+    await expect(now.getByRole('row', { name: '1 to 3 Giant rats 1d6' })).toBeVisible();
+    await expect(now.getByRole('row').filter({ hasText: 'Giant rats' })).toHaveCount(1);
     await screenshot(ruth.page, 'referee-now');
     const dock = ruth.page.getByRole('tabpanel', { name: 'Referee' });
     await expect(dock).toContainText('Gatehouse stair');
@@ -192,13 +197,18 @@ test.describe('referee tools', () => {
   test('the referee places the party by picking a cell, and changes a door', async ({ crew }) => {
     const { ruth, sam, tableId } = await bellTable(crew);
     const place = await openQuickAction(ruth.page, 'Place the party');
+    // Placing the party in an area says what it skips (R-527).
+    await place.getByRole('radio', { name: 'An area' }).click();
+    await expect(place).toContainText(
+      "Placing the party doesn't start an area's monsters or fire its triggers, as walking in would.",
+    );
     await place.getByRole('radio', { name: 'A cell' }).click();
     // A keyboard user presses the button, and the pick focuses the map with its cursor on the party's cell. Two
     // cells north is still the gatehouse stair.
     const pick = place.getByRole('button', { name: 'Pick a cell on the map' });
     await pick.focus();
     await ruth.page.keyboard.press('Enter');
-    await expect(ruth.page.getByText('Click the cell to place the party on.')).toBeVisible();
+    await expect(ruth.page.getByText(PLACE_PROMPT)).toBeVisible();
     const map = ruth.page.getByRole('application', { name: /^Dungeon map/ });
     await expect(map).toBeFocused();
     await expect(ruth.page.getByText(/Press Enter to choose this square/)).toBeAttached();
@@ -206,7 +216,7 @@ test.describe('referee tools', () => {
     await ruth.page.keyboard.press('ArrowUp');
     await expect(ruth.page.getByText(/2 squares north of the party/)).toBeAttached();
     await ruth.page.keyboard.press('Enter');
-    await expect(ruth.page.getByText('Click the cell to place the party on.')).toHaveCount(0);
+    await expect(ruth.page.getByText(PLACE_PROMPT)).toHaveCount(0);
     // The pick reads in words, and "Show IDs" adds the cell.
     await expect(place.getByText(/^Level 1, (Gatehouse stair|a corridor)$/)).toBeVisible();
     await showIds(ruth.page, true);
@@ -234,7 +244,7 @@ test.describe('referee tools', () => {
     // The door pick works from the keyboard too: Enter picks the side of the party's cell under the cursor.
     await door.getByRole('button', { name: 'Pick a door on the map' }).focus();
     await ruth.page.keyboard.press('Enter');
-    await expect(ruth.page.getByText('Click the door to change.')).toBeVisible();
+    await expect(ruth.page.getByText(DOOR_PROMPT)).toBeVisible();
     await expect(ruth.page.getByRole('application', { name: /^Dungeon map/ })).toBeFocused();
     await expect(ruth.page.getByText(/North side: .*Enter to choose it/)).toBeAttached();
     await ruth.page.keyboard.press('Enter');

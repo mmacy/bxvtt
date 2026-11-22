@@ -227,7 +227,21 @@
 }
 
 .activityMore {
-  color: var(--color-text-subtle);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.activityDetails {
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-1-5) 0 0;
+  padding-inline-start: var(--space-4);
+  color: var(--color-text-muted);
 }
 
 .checkActions {

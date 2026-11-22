@@ -75,8 +75,51 @@ function flagValue(value: unknown): string {
  * A sentence fragment that starts with a capital, made fit to follow another word: a leading `The`, `A`, or
  * `An` becomes lower case, and a name such as `Gashnak One-Ear` keeps its capitals.
  */
-function asClause(text: string): string {
+export function asClause(text: string): string {
   return /^(The|A|An)\s/.test(text) ? `${text[0]?.toLowerCase() ?? ''}${text.slice(1)}` : text;
+}
+
+/**
+ * An area's name inside a sentence, with an article: `the gatehouse stair`, `the Drain Folk warren`, `the bell
+ * pit`. A name written in sentence case loses its capital, and a name with other capitalized words keeps them.
+ */
+export function areaInSentence(name: string): string {
+  if (/^The\s/.test(name)) return `the ${name.slice(4)}`;
+  const rest = name.split(/\s+/).slice(1);
+  const common = rest.every((word) => word === word.toLowerCase());
+  return `the ${common ? `${name[0]?.toLowerCase() ?? ''}${name.slice(1)}` : name}`;
+}
+
+/**
+ * An item inside a sentence. An item the adventure names after someone, such as Miller Aske's strongbox, keeps
+ * its capitals and takes no article. Every other item reads as the text layer names it.
+ */
+function itemInSentence(itemId: string, ctx: TextContext, adventure: Adventure | null): string {
+  const own = adventure?.items.find((item) => item.id === itemId);
+  if (own && /^[A-Z][\w-]*(?:'s)?\s+[A-Z]/.test(own.name)) return own.name;
+  return itemName(itemId, ctx);
+}
+
+/**
+ * The event in the adventure that writes a flag, as a sentence fragment: `The party enters the east gatehouse`.
+ * `null` when no trigger writes that value.
+ */
+function flagSetterEvent(
+  key: string,
+  value: unknown,
+  ctx: TextContext,
+  adventure: Adventure | null,
+): string | null {
+  for (const trigger of adventure?.triggers ?? []) {
+    if (trigger.when.pattern_type === 'flag_set') continue;
+    for (const c of trigger.consequences) {
+      const command = c as unknown as Record<string, unknown>;
+      if (command.command_type !== 'set_flag' || command.key !== key) continue;
+      if (value !== null && value !== undefined && command.value !== value) continue;
+      return patternText(trigger.when, ctx, adventure);
+    }
+  }
+  return null;
 }
 
 /** A dungeon's name inside a sentence: a leading `The` becomes `the`. */
@@ -88,7 +131,7 @@ function dungeonInSentence(id: string, ctx: TextContext): string {
 export function patternText(pattern: TriggerPattern, ctx: TextContext, adventure?: Adventure | null): string {
   switch (pattern.pattern_type) {
     case 'area_entered':
-      return `The party enters ${areaName(pattern.area_id, ctx, pattern.dungeon_id, pattern.level_number)}`;
+      return `The party enters ${areaInSentence(areaName(pattern.area_id, ctx, pattern.dungeon_id, pattern.level_number))}`;
     case 'level_entered':
       return `The party reaches level ${pattern.level_number} of ${dungeonInSentence(pattern.dungeon_id, ctx)}`;
     case 'dungeon_entered':
@@ -96,7 +139,7 @@ export function patternText(pattern: TriggerPattern, ctx: TextContext, adventure
     case 'town_entered':
       return ctx.townName ? `The party returns to ${ctx.townName}` : 'The party returns to town';
     case 'item_acquired':
-      return `A member gains ${itemName(pattern.item_id, ctx)}`;
+      return `A member gets ${itemInSentence(pattern.item_id, ctx, adventure ?? null)}`;
     case 'monster_defeated': {
       const bundled = bundledMonsterLabel(adventure ?? null, pattern.template_id);
       if (bundled?.proper) return `${bundled.label} is slain or routed`;
@@ -104,6 +147,8 @@ export function patternText(pattern: TriggerPattern, ctx: TextContext, adventure
       return `${capitalizeFirst(bundled ? withArticle(label) : label)} is slain or routed`;
     }
     case 'flag_set': {
+      const setter = flagSetterEvent(pattern.key, pattern.value, ctx, adventure ?? null);
+      if (setter) return setter;
       const flag = capitalizeFirst(flagPhrase(pattern.key, ctx, adventure ?? null));
       return pattern.value === null || pattern.value === undefined
         ? `${flag} is written`
@@ -123,7 +168,7 @@ function withArticleLabel(templateId: string): string {
 export function conditionText(condition: Condition, ctx: TextContext, adventure?: Adventure | null): string {
   switch (condition.condition_type) {
     case 'has_item':
-      return `a member carries ${itemName(condition.item_id, ctx)}${condition.consumes ? ', which is used up' : ''}`;
+      return `a member carries ${itemInSentence(condition.item_id, ctx, adventure ?? null)}${condition.consumes ? ', which is used up' : ''}`;
     case 'flag_equals':
       return `${flagPhrase(condition.key, ctx, adventure ?? null)} reads ${flagValue(condition.value)}`;
     case 'effect_active':
@@ -222,9 +267,9 @@ export function consequenceText(
     case 'remove_coins':
       return `Take ${formatCoins((c.coins ?? {}) as Record<string, number>, 'long')} from ${selectorText(c.character_id, ctx)}.`;
     case 'grant_item':
-      return `Give ${itemName(String(c.item_id), ctx)} to ${selectorText(c.character_id, ctx)}.`;
+      return `Give ${itemInSentence(String(c.item_id), ctx, adventure)} to ${selectorText(c.character_id, ctx)}.`;
     case 'remove_item':
-      return `Take ${itemName(String(c.item_id), ctx)} from ${selectorText(c.character_id, ctx)}.`;
+      return `Take ${itemInSentence(String(c.item_id), ctx, adventure)} from ${selectorText(c.character_id, ctx)}.`;
     case 'award_xp':
       return `Award ${count(Number(c.amount ?? 0), 'experience point')} to ${selectorText(c.character_id, ctx)}.`;
     case 'spawn_monsters':

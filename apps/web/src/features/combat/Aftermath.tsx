@@ -1,6 +1,6 @@
 import type { GameEntry } from '@bxvtt/shared/protocol';
-import { joinList } from '@bxvtt/shared/text';
-import { useCallback, useEffect, useMemo } from 'react';
+import { describeEvents, joinList, type TextContext } from '@bxvtt/shared/text';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   useCanSend,
   useCombatStage,
@@ -18,6 +18,7 @@ import { fightEvents, summarizeFight, xpSentence } from './fight';
 import { PlaybackStrip } from './PlaybackStrip';
 import { RangeTrack } from './RangeTrack';
 import { useCombatPeople } from './people';
+import type { AnyEvent } from './playback';
 import { usePlayback, usePublishPlayback } from './usePlayback';
 import styles from './combat.module.css';
 import { useCombatText } from './text';
@@ -71,7 +72,7 @@ export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
   const good = summary.outcome === 'victory' || summary.outcome === 'parley' || summary.outcome === 'turned';
   return (
     <section className={cx(styles.board, styles.aftermath)} aria-label={summary.title} role="region">
-      <header className={styles.boardHead}>
+      <header className={cx(styles.boardHead, styles.headKeepClose)}>
         <div className={styles.boardTitle}>
           <Icon name={good ? 'flag' : summary.outcome === 'defeat' ? 'skull' : 'footprints'} size={18} />
           <h2 className={styles.heading}>{summary.title}</h2>
@@ -105,7 +106,7 @@ export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
             {summary.defeated.length > 0 && (
               <div className={styles.fact}>
                 <dt>Defeated</dt>
-                <dd>{joinList(summary.defeated.map((d) => d.text))}</dd>
+                <dd>{capitalize(joinList(summary.defeated.map((d) => d.text)))}</dd>
               </div>
             )}
             {xp && (
@@ -143,15 +144,33 @@ export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
 function PickUp() {
   const here = useScene()?.here ?? null;
   const canTake = useCanSend('take_treasure');
+  const ctx = useCombatText();
   const { send, pendingType } = useSendCommand();
-  if (here === null) return null;
-  const caches = here.caches.filter((cache) => cache.reachable);
-  if (!here.pile && caches.length === 0) return null;
-  const take = (featureId: string) => void send({ command_type: 'take_treasure', feature_id: featureId });
+  const [outcome, setOutcome] = useState<{ tone: 'success' | 'info' | 'danger'; text: string } | null>(null);
+  const caches = here?.caches.filter((cache) => cache.reachable) ?? [];
+  const pile = here?.pile === true;
+  // The answer stays on screen after the goods are gone from the scene.
+  if (!pile && caches.length === 0 && outcome === null) return null;
+  // Report what bxapi answered, including that there was nothing to take, so the button never fails silently.
+  const take = async (featureId: string) => {
+    setOutcome(null);
+    const result = await send(
+      { command_type: 'take_treasure', feature_id: featureId },
+      { display: 'inline' },
+    );
+    if (result.status === 'accepted') setOutcome(takeOutcome(result.result.events as AnyEvent[], ctx));
+    else if (result.status === 'refused' || result.status === 'error')
+      setOutcome({ tone: 'danger', text: result.message });
+  };
   const busy = pendingType === 'take_treasure';
   return (
     <div className={styles.pickUp}>
-      {here.pile && (
+      {outcome && (
+        <p className={cx(styles.pickUpOutcome, outcome.tone === 'danger' && styles.toneBad)} role="status">
+          {outcome.text}
+        </p>
+      )}
+      {pile && (
         <div className={styles.pickUpRow}>
           <Icon name="coins" size={16} />
           <span className={styles.pickUpText}>There are dropped goods here.</span>
@@ -161,7 +180,7 @@ function PickUp() {
             loading={busy}
             disabled={!canTake.allowed}
             title={canTake.reason ?? undefined}
-            onClick={() => take('pile')}
+            onClick={() => void take('pile')}
           >
             Pick up the dropped goods
           </Button>
@@ -182,7 +201,7 @@ function PickUp() {
               loading={busy}
               disabled={!canTake.allowed}
               title={canTake.reason ?? undefined}
-              onClick={() => take(cache.id)}
+              onClick={() => void take(cache.id)}
             >
               Take the treasure
             </Button>
@@ -191,6 +210,30 @@ function PickUp() {
       ))}
     </div>
   );
+}
+
+/**
+ * What a take answered: the lines that say who took what, or that there was nothing to take when nobody took
+ * anything.
+ */
+export function takeOutcome(
+  events: readonly AnyEvent[],
+  ctx: TextContext,
+): { tone: 'success' | 'info'; text: string } {
+  const took = events.some(
+    (e) =>
+      e.event_type === 'item_acquired' &&
+      ((Array.isArray(e.item_ids) && e.item_ids.length > 0) ||
+        (typeof e.coins_gp_value === 'number' && e.coins_gp_value > 0)),
+  );
+  if (!took) return { tone: 'info', text: 'There was nothing to pick up.' };
+  const lines = describeEvents(
+    events.filter((e) => e.event_type === 'item_acquired'),
+    ctx,
+  )
+    .map((l) => l.text)
+    .filter((t) => !/takes nothing/.test(t));
+  return { tone: 'success', text: lines.join(' ') };
 }
 
 function capitalize(text: string): string {

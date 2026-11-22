@@ -1,4 +1,4 @@
-import { LinkButton, Parchment, cx, type BadgeProps } from '@/ui';
+import { LinkButton, Parchment, SectionLabel, cx, type BadgeProps } from '@/ui';
 import { Badge } from '@/ui';
 import { useEffect, useRef, type ReactNode } from 'react';
 import styles from './book.module.css';
@@ -102,7 +102,11 @@ export function EntryPage({
   return (
     <Parchment variant="plain" className={cx(styles.page, className)} data-entry-page="">
       <header className={styles.pageHeader}>
-        {kicker && <p className={styles.kicker}>{kicker}</p>}
+        {kicker && (
+          <SectionLabel level="none" tone="paper">
+            {kicker}
+          </SectionLabel>
+        )}
         <div className={styles.titleRow}>
           <h2 className={styles.title}>{title}</h2>
           {badges && <div className={styles.badges}>{badges}</div>}
@@ -151,7 +155,11 @@ export function Stat({
 }) {
   return (
     <div className={cx(styles.stat, span !== undefined && styles[`span-${span}`])}>
-      <dt className={styles.statLabel}>{label}</dt>
+      <dt className={styles.statLabel}>
+        <SectionLabel level="none" tone="paper">
+          {label}
+        </SectionLabel>
+      </dt>
       <dd className={styles.statValue}>{children}</dd>
     </div>
   );

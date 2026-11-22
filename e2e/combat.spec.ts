@@ -7,7 +7,7 @@
  * a particular die roll.
  */
 import type { Page } from '@playwright/test';
-import { expect, test } from './support/fixtures';
+import { expect, test, type Crew } from './support/fixtures';
 import {
   battleBoard,
   combatTable,
@@ -22,7 +22,15 @@ import {
   walkIntoWardensCell,
 } from './support/combat';
 import { SCREENS_DIR } from './support/env';
-import { ADVENTURES, openTable, send, setupTable, waitForGame } from './support/table';
+import {
+  ADVENTURES,
+  enterDungeon,
+  openTable,
+  placeParty,
+  send,
+  setupTable,
+  waitForGame,
+} from './support/table';
 
 /** Saves a screenshot for the defect report. */
 const shot = (page: Page, name: string) => page.screenshot({ path: `${SCREENS_DIR}/combat-${name}.png` });
@@ -53,11 +61,19 @@ test.describe('encounters', () => {
       await expect(panelChoices.getByRole('button', { name: label, exact: true })).toBeVisible();
       await expect(bar.getByRole('button', { name: new RegExp(`^${label}\\b`) })).toBeVisible();
     }
-    // Only the caller and the referee act for the party. Ann sees why her buttons are off.
-    const annChoices = encounterPanel(ann.page).getByRole('list', { name: "The party's choices" });
+    // Only the caller and the referee act for the party. Ann sees why her buttons are off, in one sentence above
+    // the choices, and each choice keeps its own explanation (R-306).
+    const annPanel = encounterPanel(ann.page);
+    const annChoices = annPanel.getByRole('list', { name: "The party's choices" });
     await expect(annChoices.getByRole('button', { name: 'Fight' })).toBeDisabled();
-    await expect(annChoices).toContainText('Only the caller or the referee can act for the whole party.');
+    const reason = 'Sam is the caller, so Sam or the referee chooses for the party.';
+    await expect(annPanel.getByText(reason, { exact: true })).toHaveCount(1);
+    await expect(annChoices).not.toContainText('Only the caller');
+    await expect(annChoices).toContainText(
+      'Start a battle. Everyone declares, and the round resolves together.',
+    );
     await expect(annChoices.getByRole('button', { name: 'Turn undead' })).toBeDisabled();
+    await shot(ann.page, 'encounter-not-caller');
 
     // Sam talks, choosing who speaks.
     const samChoices = encounterPanel(sam.page).getByRole('list', { name: "The party's choices" });
@@ -146,6 +162,61 @@ test.describe('encounters', () => {
       await expect(feed).toContainText(/Osric/);
       await expect(feed).toContainText(/skeleton/i);
     }
+  });
+});
+
+test.describe('waiting on indifferent monsters', () => {
+  /** Brings a Toll party to the counting room, where the clerk and his bandit pay the party no mind. */
+  async function countingRoom(crew: Crew) {
+    const ruth = await crew.person('Ruth');
+    const sam = await crew.person('Sam');
+    const ann = await crew.person('Ann');
+    const setup = await setupTable({
+      referee: ruth,
+      players: [sam, ann],
+      party: [
+        { owner: sam, name: 'Brenna', classId: 'fighter' },
+        { owner: sam, name: 'Osric', classId: 'cleric' },
+        { owner: ann, name: 'Tamsin', classId: 'magic_user' },
+        { owner: ann, name: 'Wren', classId: 'elf' },
+      ],
+      adventure: ADVENTURES.toll,
+    });
+    const tableId = setup.table.id;
+    await enterDungeon(sam.client, tableId, 'bridge');
+    await placeParty(ruth.client, tableId, { dungeon: 'bridge', level: 1, x: 12, y: 5, facing: 'north' });
+    await send(sam.client, tableId, { command_type: 'open_door', direction: 'north' });
+    const game = await send(sam.client, tableId, { command_type: 'move_party', direction: 'north' });
+    expect(game.view.encounter?.stance).toBe('indifferent');
+    for (const actor of [sam, ann]) await openTable(actor.page, setup.path);
+    return { ruth, sam, ann, tableId };
+  }
+
+  test('the encounter panel says what a wait did, for the caller and the other player (R-517)', async ({
+    crew,
+  }) => {
+    const { sam, ann, tableId } = await countingRoom(crew);
+    const before = (await sam.client.getGame(tableId)).revision;
+    await encounterPanel(sam.page)
+      .getByRole('list', { name: "The party's choices" })
+      .getByRole('button', { name: 'Wait' })
+      .click();
+    await waitForGame(sam.client, tableId, (game) => game.revision > before, 'the wait to apply');
+    const said = 'The party waits a round. The ink-stained clerk and the bandit pay the party no mind.';
+    for (const actor of [sam, ann]) await expect(encounterPanel(actor.page)).toContainText(said);
+    await shot(ann.page, 'wait-indifferent');
+  });
+
+  // F-103: the wait still leaves no line in the feed, so a look at the feed can't tell that a round passed.
+  test.fixme('the feed says that the party waited a round (F-103)', async ({ crew }) => {
+    const { sam, ann, tableId } = await countingRoom(crew);
+    const before = (await sam.client.getGame(tableId)).revision;
+    await encounterPanel(sam.page)
+      .getByRole('list', { name: "The party's choices" })
+      .getByRole('button', { name: 'Wait' })
+      .click();
+    await waitForGame(sam.client, tableId, (game) => game.revision > before, 'the wait to apply');
+    await expect(await openFeed(ann.page)).toContainText(/waits a round/);
   });
 });
 

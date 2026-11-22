@@ -139,3 +139,20 @@ export function textAtWorld(
   ctx.fillText(text, sx, sy);
   ctx.restore();
 }
+
+/** The relative luminance of a color, from 0 (black) to 1 (white), as WCAG defines it. */
+export function luminance(color: string): number {
+  const c = parseColor(color);
+  const channel = (v: number) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * channel(c.r) + 0.7152 * channel(c.g) + 0.0722 * channel(c.b);
+}
+
+/** The WCAG contrast ratio between two colors, from 1 to 21. */
+export function contrastRatio(a: string, b: string): number {
+  const la = luminance(a);
+  const lb = luminance(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}

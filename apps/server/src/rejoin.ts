@@ -145,9 +145,11 @@ export class RejoinService {
     const online = new Set(this.ctx.hub.presence(table.id).online);
     return {
       table_name: table.name,
+      // A member nobody could approve, such as the table's only referee, would end in a certain refusal.
       members: this.ctx.tables
         .members(table.id)
         .filter((member) => !online.has(member.user_id))
+        .filter((member) => this.approvers(table.id, member.user_id, false).length > 0)
         .map((member) => ({ user_id: member.user_id, name: member.name, color: member.color })),
     };
   }

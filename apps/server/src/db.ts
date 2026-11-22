@@ -2,12 +2,13 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import type { SQLInputValue, StatementSync } from 'node:sqlite';
+import { RETIRED_USER_COLORS, USER_COLORS } from '@bxvtt/shared/protocol';
 
 /**
  * The version of the table layout. The server upgrades a database of an older version at startup with the
  * steps in {@link MIGRATIONS}, and refuses one of a newer version.
  */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 5;
 
 /** The table of monster target handles, which layout version 2 added. */
 const TARGET_HANDLES = `
@@ -33,10 +34,27 @@ CREATE TABLE retired_tokens (
 );
 `;
 
+/** The table of bxapi resources whose deletion failed, which layout version 5 added. */
+const BXAPI_GARBAGE = `
+CREATE TABLE bxapi_garbage (
+  kind TEXT NOT NULL,
+  id TEXT NOT NULL,
+  added_at TEXT NOT NULL,
+  PRIMARY KEY (kind, id)
+);
+`;
+
 /** The SQL that upgrades a database from the version before each key to that version. */
 const MIGRATIONS: Record<number, string> = {
   2: TARGET_HANDLES,
   3: RETIRED_TOKENS,
+  // The palette changed to colors that read on the dark chrome. Each stored color moves to the new color at its
+  // position, so nobody keeps an unreadable color.
+  4: RETIRED_USER_COLORS.map(
+    (old, index) =>
+      `UPDATE users SET color = '${USER_COLORS[index] ?? USER_COLORS[0]}' WHERE color = '${old}';`,
+  ).join('\n'),
+  5: BXAPI_GARBAGE,
 };
 
 const SCHEMA = `
@@ -187,7 +205,7 @@ CREATE TABLE samples (
   uploaded_at TEXT NOT NULL,
   PRIMARY KEY (file_name, content_hash)
 );
-${TARGET_HANDLES}${RETIRED_TOKENS}`;
+${TARGET_HANDLES}${RETIRED_TOKENS}${BXAPI_GARBAGE}`;
 
 /** A row as `node:sqlite` returns it. */
 export type Row = Record<string, SQLInputValue>;

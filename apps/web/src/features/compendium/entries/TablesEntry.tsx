@@ -1,4 +1,4 @@
-import { LinkButton } from '@/ui';
+import { LinkButton, SectionLabel } from '@/ui';
 import { EntryPage, useAnchorScroll } from '../Parts';
 import { TABLE_ANCHORS, anchorId, tableSetInfo } from '../model';
 import styles from '../book.module.css';
@@ -27,7 +27,9 @@ export function TablesEntry({ id, anchor }: { id: string; anchor?: string }) {
     <EntryPage kicker="Tables" title={info.label} lede={info.blurb || undefined}>
       {anchors.length > 0 && (
         <nav aria-label="Tables on this page" className={styles.jumpBar}>
-          <span className={styles.jumpLabel}>On this page</span>
+          <SectionLabel level="none" tone="paper">
+            On this page
+          </SectionLabel>
           {anchors.map((entry) => (
             <LinkButton key={entry.anchor} tone="quiet" onClick={() => jumpTo(entry.anchor)}>
               {entry.title}

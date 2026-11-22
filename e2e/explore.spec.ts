@@ -254,20 +254,29 @@ test.describe('exploration', () => {
     const light = mapOptions(sam.page).getByRole('button', { name: /^Light: / });
     await expect(status).toHaveText("Brenna's torch, about 6 turns left");
     await expect(light).toHaveText('6 turns');
-    // The party panel uses the same words as the map (D-207).
+    await expect(light).toHaveAccessibleName("Light: Brenna's torch, about 6 turns left");
+    // The party panel shows the light on the row of the member who carries it, in the map's words (D-207), and no
+    // party-wide light banner.
     await sam.page.getByRole('tab', { name: 'Party' }).click();
-    await expect(sam.page.getByRole('region', { name: 'The party', exact: true })).toContainText(
-      "Brenna's torch, about 6 turns left",
+    const order = sam.page.getByRole('list', { name: 'Marching order' });
+    const brenna = order.getByRole('button', { name: /^Brenna\b/ });
+    await expect(brenna).toHaveAccessibleDescription(
+      /, torch, about 6 turns left\. Opens the character sheet\.$/,
     );
+    await expect(order.getByRole('listitem').filter({ hasText: 'Brenna' })).toContainText(
+      'Torch, about 6 turns left',
+    );
+    await expect(sam.page.getByRole('region', { name: 'The party', exact: true })).toHaveCount(0);
 
     await send(ruth.client, table.id, { command_type: 'advance_time', n: 3, unit: 'turn' });
     await expect(status).toHaveText("Brenna's torch, about 3 turns left");
+    await expect(order.getByRole('listitem').filter({ hasText: 'Brenna' })).toContainText(
+      'Torch, about 3 turns left',
+    );
     await send(ruth.client, table.id, { command_type: 'advance_time', n: 3, unit: 'turn' });
     await expect(status).toHaveText('The party has no light.');
     await expect(light).toHaveAccessibleName('Light: The party has no light.');
-    await expect(sam.page.getByRole('region', { name: 'The party', exact: true })).toContainText(
-      'The party has no light.',
-    );
+    await expect(order.getByRole('listitem').filter({ hasText: 'Brenna' })).not.toContainText(/torch/i);
     const lines = await feedLines(sam.page);
     expect(lines.join('\n')).toMatch(/torch/i);
   });

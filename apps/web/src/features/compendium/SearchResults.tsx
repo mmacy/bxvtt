@@ -1,4 +1,4 @@
-import { Banner, Button, EmptyState, Icon, Spinner, type IconName } from '@/ui';
+import { Banner, Button, EmptyState, Icon, SectionLabel, Spinner, type IconName } from '@/ui';
 import { Fragment } from 'react';
 import { sectionInfo } from './model';
 import { bodySnippet, highlight, type ResultKind, type SearchItem } from './search';
@@ -179,8 +179,9 @@ export function SearchResults({
             className={styles.group}
           >
             <div className={styles.groupTitle} id={`compendium-group-${group.kind}`}>
-              {group.label}
-              <span className={styles.groupCount}>{group.total}</span>
+              <SectionLabel level="none" count={group.total}>
+                {group.label}
+              </SectionLabel>
             </div>
             <div className={styles.rows}>
               {group.rows.map((row) => {

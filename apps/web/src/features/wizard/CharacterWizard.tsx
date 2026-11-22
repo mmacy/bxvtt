@@ -34,7 +34,13 @@ import { applyKit, cartPhrase } from './kits';
 import { OutfitStep, cartCost, type GoldState } from './OutfitStep';
 import { ReviewStep } from './ReviewStep';
 import { RollStep } from './RollStep';
-import { checkChoices, explainCreationError, explainInvalid, type WizardProblem } from './server';
+import {
+  checkChoices,
+  explainByAbility,
+  explainCreationError,
+  explainInvalid,
+  type WizardProblem,
+} from './server';
 import { casterNextStep, classMagic, extraLanguageCount, readScores, spellSlotsAt } from './tables';
 import styles from './wizard.module.css';
 import { useClassDetail } from '../sheet/catalogs';
@@ -93,6 +99,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
   const [draft, setDraft] = useState<WizardDraft>(() => initial ?? emptyDraft());
   const [restored, setRestored] = useState(initial !== null);
   const [freshRollId, setFreshRollId] = useState<string | null>(null);
+  const [revealedRollId, setRevealedRollId] = useState<string | null>(null);
   const [rolling, setRolling] = useState(false);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<WizardProblem | null>(null);
@@ -150,7 +157,8 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
           if (!result.valid && result.problem) {
             const explained = explainInvalid(result.problem);
             if (explained.step !== null && stepIndex(explained.step) <= stepIndex('adjust')) {
-              settle({ status: 'invalid', sentences: explained.sentences });
+              const split = explainByAbility(result.problem);
+              settle({ status: 'invalid', sentences: split.general, byAbility: split.byAbility });
               return;
             }
           }
@@ -417,7 +425,11 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
   const canContinue = (() => {
     switch (draft.step) {
       case 'roll':
-        return draft.roll !== null && eligible.length > 0;
+        return (
+          draft.roll !== null &&
+          eligible.length > 0 &&
+          (draft.roll.id !== freshRollId || revealedRollId === draft.roll.id)
+        );
       case 'class':
         return draft.classId !== null && eligible.includes(draft.classId);
       case 'adjust':
@@ -529,6 +541,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
             rolls={draft.rolls}
             rolling={rolling}
             onRoll={() => void roll()}
+            onRevealed={setRevealedRollId}
             classes={classes.data}
             tables={tables}
           />

@@ -4,14 +4,14 @@
  */
 import { count, describeEvents, formatGameClock } from '@bxvtt/shared/text';
 import type { FeedEntry } from '@bxvtt/shared/protocol';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useFeed, useMember, useParty, usePlayerView, useTextContext } from '@/app';
 import { Badge, Button, EmptyState, Icon, Panel, type IconName } from '@/ui';
 import { gaps, readinessChecklist } from './checklist';
 import { MemberToken, PurseOf, SeatOwner } from './parts';
 import { memberStatus } from './members';
 import { useTownServices } from './hooks';
-import { SpellActions, spellAdviceText, useSpellAdvice } from './SpellAdvice';
+import { SpellActions, spellsForChecklist, useSpellAdvice } from './SpellAdvice';
 import { parseService, sectionOf } from './services';
 import { useTownUi, type TownSection } from './townUi';
 import styles from './Glance.module.css';
@@ -120,7 +120,7 @@ export function ChecklistPanel({ onShop }: { onShop?: (search: string) => void }
   const setSection = useTownUi((s) => s.setSection);
   const setSearch = useTownUi((s) => s.setOutfitterSearch);
   const advice = useSpellAdvice();
-  const checklist = useMemo(() => readinessChecklist(party, spellAdviceText(advice)), [party, advice]);
+  const checklist = useMemo(() => readinessChecklist(party, spellsForChecklist(advice)), [party, advice]);
   const missing = gaps(checklist).length;
   const shop = (search: string) => {
     if (onShop) onShop(search);
@@ -141,7 +141,11 @@ export function ChecklistPanel({ onShop }: { onShop?: (search: string) => void }
               <span className={styles.checkTitle}>
                 {line.title}
                 <span className="visually-hidden">
-                  {line.covered ? ': the party has it' : ': nobody has it yet'}
+                  {line.status
+                    ? `: ${line.status}`
+                    : line.covered
+                      ? ': the party has it'
+                      : ': nobody has it yet'}
                 </span>
               </span>
               <span className={styles.checkDetail}>{line.detail}</span>
@@ -223,24 +227,66 @@ const TOWN_COMMANDS = new Set([
   'equip_item',
 ]);
 
-/** One feed row: who sent the command, and what happened. */
-function ActivityRow({
-  entry,
-  text,
-  more,
-}: {
+/** The event types that headline each town command, in the order they read. Other lines wait behind "more". */
+const HEADLINE: Record<string, readonly string[]> = {
+  purchase_equipment: ['item_acquired'],
+  sell_treasure: ['treasure_sold'],
+  purchase_healing: ['healing_purchased'],
+  rest: ['rested', 'healing_applied'],
+  equip_item: [],
+};
+
+interface ActivityItem {
   entry: Extract<FeedEntry, { kind: 'game' }>;
-  text: string;
-  more: number;
-}) {
-  const sender = useMember(entry.user_id);
+  headline: string;
+  rest: string[];
+}
+
+/** Splits an entry's lines into the ones that summarize the action and the ones that wait behind "more". */
+export function summarizeEntry(
+  commandType: string,
+  lines: ReadonlyArray<{ text: string; eventType: string; amount?: number }>,
+) {
+  const types = HEADLINE[commandType] ?? [];
+  // A healing line with nothing healed ("Wren regains no hit points") is not news.
+  const head = types.flatMap((type) =>
+    lines.filter((line) => line.eventType === type && (type !== 'healing_applied' || (line.amount ?? 0) > 0)),
+  );
+  const chosen = head.length > 0 ? head : lines.slice(0, 1);
+  const rest = lines.filter((line) => !chosen.includes(line)).map((line) => line.text);
+  return { headline: chosen.map((line) => line.text).join(' '), rest };
+}
+
+/** One feed row: who sent the command, and what happened. "More" opens the lines that didn't make the headline. */
+function ActivityRow({ item }: { item: ActivityItem }) {
+  const sender = useMember(item.entry.user_id);
+  const [open, setOpen] = useState(false);
   return (
     <li className={styles.activityRow}>
       <span className={styles.activityWho}>{sender?.name ?? 'The table'}</span>
-      <span>
-        {text}
-        {more > 0 && <span className={styles.activityMore}>{` +${more} more`}</span>}
-      </span>
+      <div>
+        <span>{item.headline}</span>
+        {item.rest.length > 0 && (
+          <>
+            {' '}
+            <button
+              type="button"
+              className={styles.activityMore}
+              aria-expanded={open}
+              onClick={() => setOpen((value) => !value)}
+            >
+              {open ? 'Show less' : `+${item.rest.length} more`}
+            </button>
+          </>
+        )}
+        {open && (
+          <ul className={styles.activityDetails}>
+            {item.rest.map((line, index) => (
+              <li key={`${index}-${line}`}>{line}</li>
+            ))}
+          </ul>
+        )}
+      </div>
     </li>
   );
 }
@@ -250,18 +296,13 @@ export function ActivityPanel() {
   const feed = useFeed();
   const ctx = useTextContext();
   const rows = useMemo(() => {
-    const out: Array<{ entry: Extract<FeedEntry, { kind: 'game' }>; text: string; more: number }> = [];
+    const out: ActivityItem[] = [];
     for (const entry of [...feed].reverse()) {
       if (entry.kind !== 'game' || entry.command_type === null || !TOWN_COMMANDS.has(entry.command_type))
         continue;
       const lines = describeEvents(entry.events, ctx, { messages: entry.messages, only: 'player' });
-      const first = lines[0];
-      if (first === undefined) continue;
-      out.push({
-        entry,
-        text: first.text,
-        more: lines.length - 1,
-      });
+      if (lines.length === 0) continue;
+      out.push({ entry, ...summarizeEntry(entry.command_type, lines) });
       if (out.length === 5) break;
     }
     return out;
@@ -277,8 +318,8 @@ export function ActivityPanel() {
         />
       ) : (
         <ul className={styles.activity}>
-          {rows.map(({ entry, text, more }) => (
-            <ActivityRow key={entry.seq} entry={entry} text={text} more={more} />
+          {rows.map((item) => (
+            <ActivityRow key={item.entry.seq} item={item} />
           ))}
         </ul>
       )}

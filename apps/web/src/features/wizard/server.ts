@@ -35,6 +35,32 @@ export interface WizardProblem {
   sentences: string[];
 }
 
+/** Codes that say an ability can't move in that direction at all. */
+const BLOCKED = new Set([
+  'creation.adjustment.not_lowerable',
+  'creation.adjustment.prime_requisite_lowered',
+  'creation.adjustment.class_restriction',
+  'creation.adjustment.raise_not_prime_requisite',
+]);
+
+/**
+ * Drops the lesser reasons for an ability that can't be traded at all, so "Dexterity can't be lowered" isn't
+ * followed by advice on how far to lower it.
+ */
+export function oneReasonPerAbility<R extends { code: string; params: Record<string, unknown> }>(
+  rejections: readonly R[],
+): R[] {
+  const blocked = new Set(
+    rejections.filter((r) => BLOCKED.has(r.code)).map((r) => String(r.params.ability ?? '')),
+  );
+  return rejections.filter(
+    (r) =>
+      BLOCKED.has(r.code) ||
+      !r.code.startsWith('creation.adjustment.') ||
+      !blocked.has(String(r.params.ability ?? '')),
+  );
+}
+
 function phrase(id: string, ctx: TextContext): string {
   return itemPhrase(resolveItemNoun(id, ctx));
 }
@@ -63,7 +89,7 @@ const STEP_TITLES: Record<StepId, string> = {
  * @param ctx - Names for the IDs in the rejections.
  */
 export function explainInvalid(problem: Problem, ctx: TextContext = emptyContext()): WizardProblem {
-  const rejections = problem.rejections ?? [];
+  const rejections = oneReasonPerAbility(problem.rejections ?? []);
   if (rejections.length > 0) {
     const first = rejections[0];
     const step = first ? stepForCode(first.code) : 'review';
@@ -139,4 +165,30 @@ export function explainCreationError(error: unknown, ctx?: TextContext): WizardP
     title: message.title,
     sentences: kept.includes(message.code) ? [message.detail, 'Your choices are kept.'] : [message.detail],
   };
+}
+
+/**
+ * Splits the refusals of a trade of ability points by the score each names, so each reason shows next to its
+ * score, and the rest (such as points that don't add up) show once for the whole trade.
+ *
+ * @param problem - The `character_invalid` problem.
+ * @param ctx - Names for the IDs in the rejections.
+ */
+export function explainByAbility(
+  problem: Problem,
+  ctx: TextContext = emptyContext(),
+): { byAbility: Partial<Record<string, string[]>>; general: string[] } {
+  const byAbility: Partial<Record<string, string[]>> = {};
+  const general: string[] = [];
+  for (const rejection of oneReasonPerAbility(problem.rejections ?? [])) {
+    const [sentence] = describeRejections(
+      [{ code: rejection.code, params: toParamMap(rejection.params) }],
+      ctx,
+    );
+    if (!sentence) continue;
+    const ability = rejection.params.ability;
+    if (typeof ability === 'string') (byAbility[ability] ??= []).push(sentence);
+    else general.push(sentence);
+  }
+  return { byAbility, general };
 }

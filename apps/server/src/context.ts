@@ -3,6 +3,7 @@ import type { AdventureCatalog } from './adventures';
 import type { Auth } from './auth';
 import type { BxapiClient } from './bxapi';
 import type { CharacterStore } from './characters';
+import type { BxapiJanitor } from './cleanup';
 import type { Config } from './config';
 import type { Database } from './db';
 import type { FeedStore } from './feed';
@@ -30,6 +31,7 @@ export interface Context {
   adventures: AdventureCatalog;
   game: GameService;
   rejoin: RejoinService;
+  janitor: BxapiJanitor;
   limits: {
     /** New users, by address. */
     createUser: RateLimiter;

@@ -42,12 +42,12 @@ test.describe('play screen shell', () => {
     const { ruth, sam } = staged;
     await openTable(ruth.page, staged.path);
     await sam.page.goto('/');
-    // The name has a stray space before the comma for now (R-101), so the space is optional.
-    await sam.page.getByRole('button', { name: /^Sam ?, your profile$/ }).click();
+    // The name has no stray space before the comma (R-101).
+    await sam.page.getByRole('button', { name: 'Sam, your profile', exact: true }).click();
     const field = sam.page.getByRole('textbox', { name: 'Name', exact: true });
     await field.fill('Samwise');
     await field.press('Enter');
-    await expect(sam.page.getByRole('button', { name: /^Samwise ?, your profile$/ })).toBeVisible();
+    await expect(sam.page.getByRole('button', { name: 'Samwise, your profile', exact: true })).toBeVisible();
     const people = ruth.page.getByRole('heading', { name: 'People at the table' }).locator('xpath=../..');
     await expect(people).toContainText('Samwise');
   });

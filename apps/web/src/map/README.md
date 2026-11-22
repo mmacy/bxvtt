@@ -91,7 +91,7 @@ fromPlayerView(view, key, {
 });
 ```
 
-Each area keeps only the cells on the party's map and gets no key number, because players don't see the key. From a zoom of 16 pixels a cell, the map writes the area's name on the widest row of its cells that holds no stairs or feature, so a name never covers a symbol. A long name wraps to two lines inside the area's walls. If it still doesn't fit, it runs up to two cells past the walls where nothing is drawn, then shrinks, and only then ends in an ellipsis. When the party token would cover a name, the name moves above or below the token, to whichever side holds no symbol. Referee labels follow the same rules. The hover tooltip names the area under the pointer. If you draw your own labels, pass `areaLabels={false}` to `DungeonMap` and keep the areas for the tooltip.
+Each area keeps only the cells on the party's map and gets no key number, because players don't see the key. From a zoom of 16 pixels a cell, the map writes the area's name on the widest row of its cells that holds no stairs or feature, so a name never covers a symbol. A long name wraps to two lines inside the area's walls. If it still doesn't fit, it runs up to two cells past the walls where nothing is drawn, then shrinks, and only then ends in an ellipsis. When every known cell of the area holds a symbol, as when the party knows one cell and a feature stands on it, the name still gets the overhang. Each label then takes the first place that covers nothing: its best row, the area's other rows, the rows above and below, a place above or below the party token, and last a place just outside the area. Nothing means the party token, door and passage symbols (an open door's leaf too), the S of a hidden secret door, cells with stairs or features, the entrance mark, and labels placed before it. The party's own area is placed first. Referee labels, with their numbers and markers, follow the same rules. The layout is worked out again only when the zoom or the party token changes, so a pan reuses it. The hover tooltip names the area under the pointer. If you draw your own labels, pass `areaLabels={false}` to `DungeonMap` and keep the areas for the tooltip.
 
 Keep extras on the server's player projection or in the player's own store, never from referee data.
 
@@ -126,7 +126,7 @@ A `LevelMap` contains:
 | `strokes` | `MapStroke[]` | `[]` | Committed freehand strokes, in cells. |
 | `pins` | `MapPin[]` | `[]` | Numbered pins. A pin's `note` shows on hover, and `refereeOnly` draws a dashed referee style. Filter referee pins out of a player's props. |
 | `pointers` | `MapPointer[]` | `[]` | Other users' pointers. The map eases each one toward its new position, so 10 updates a second look smooth. |
-| `strokeColor` | `string` | `'#e4572e'` | The color of a new stroke. |
+| `strokeColor` | `string` | `'#e76742'` | The color of a new stroke. |
 | `strokeWidth` | `number` | `0.09` | The width of a new stroke, in cells. |
 | `rulerMetric` | `'grid' \| 'diagonal' \| 'straight'` | `'grid'` | How the ruler counts squares. `grid` counts the orthogonal steps the party walks. |
 | `followParty` | `boolean` | `false` | Keeps the camera on the party. A pan turns it off and calls `onFollowPartyChange(false)`. |
@@ -250,6 +250,8 @@ Themes are plain data in `themes.ts`: colors, line widths, and a few style switc
 - `blueprint`: blue line work on pale paper with solid blue rock, in the style of the old modules.
 - `torchlit`: dark flagstones and stone walls, warm flickering light around the party, and darkness beyond its reach.
 - `parchment`: ink on aged paper, with hand-drawn walls and hatching along the rock.
+
+Every user color in `USER_COLORS` reads on every theme. The map draws strokes, ping rings, pins, remote pointers, name pills, and the ruler over a thin outline in the theme's `overlay.casing` color (a dark navy, ink, or near-black). A theme without `overlay` gets a dark outline from its tone. `colors.test.ts` checks each user color against each theme's floor and rock: the color stands out on its own at 3:1, or the casing stands out from the background at 3:1 and from the color at 2:1.
 
 To make a variant, copy a theme, change fields, and pass the object as `theme`. Keep the object stable between renders, because a new theme object repaints every tile.
 

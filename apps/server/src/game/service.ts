@@ -510,8 +510,8 @@ export class GameService {
   }
 
   /**
-   * Ends the game and returns the table to its lobby. The session and its saves stay in bxapi, so a referee can
-   * restore a save later.
+   * Ends the game and returns the table to its lobby. The saves stay in bxapi, so a referee can restore one later.
+   * The session goes, because nothing can play it again and bxapi stores a full copy of it.
    *
    * @param tableId - The table ID.
    * @param user - The referee.
@@ -523,6 +523,8 @@ export class GameService {
       this.ctx.tables.setGame(tableId, null);
       this.live.delete(tableId);
       this.ctx.db.run('DELETE FROM declarations WHERE table_id = ?', tableId);
+      // Nothing plays the ended session any more. Its saves stay, so a referee can still restore them.
+      await this.ctx.janitor.retireSessionsLocked(tableId);
       this.ctx.feed.system(tableId, user.id, 'game_ended', { session_id: game.sessionId });
       this.ctx.hub.broadcast(tableId, {
         type: 'notice',
@@ -564,6 +566,8 @@ export class GameService {
       this.ctx.db.run('DELETE FROM declarations WHERE table_id = ?', tableId);
     });
     const live = await this.load(tableId, session.id);
+    // The session the restore replaced is unreachable now. Its saves are documents of their own, so they stay.
+    await this.ctx.janitor.retireSessionsLocked(tableId);
     this.ctx.hub.broadcast(tableId, {
       type: 'notice',
       code: 'game_restored',
@@ -1015,23 +1019,15 @@ export class GameService {
   async deleteTable(tableId: string): Promise<void> {
     await this.locked(tableId, async () => {
       this.live.delete(tableId);
-      const remove = async (path: string) => {
-        try {
-          await this.ctx.bxapi.request('DELETE', path);
-        } catch (error) {
-          if (!(error instanceof BxapiProblem && error.code === 'not_found')) {
-            this.ctx.log.warn({ err: error, path }, 'could not delete a bxapi resource');
-          }
-        }
-      };
+      // A deletion that fails is remembered and tried again later (see BxapiJanitor).
       for (const row of this.ctx.db.all('SELECT id FROM saves WHERE table_id = ?', tableId)) {
-        await remove(`/v1/saves/${encodeURIComponent(str(row, 'id'))}`);
+        await this.ctx.janitor.remove('save', str(row, 'id'));
       }
       for (const row of this.ctx.db.all(
         'SELECT session_id FROM table_sessions WHERE table_id = ?',
         tableId,
       )) {
-        await remove(`/v1/sessions/${encodeURIComponent(str(row, 'session_id'))}`);
+        await this.ctx.janitor.remove('session', str(row, 'session_id'));
       }
       await this.ctx.adventures.removeAll(tableId);
       this.ctx.db.run('DELETE FROM tables WHERE id = ?', tableId);
@@ -1046,11 +1042,7 @@ export class GameService {
    * @param sessionId - The session ID.
    */
   async discardSession(sessionId: string): Promise<void> {
-    try {
-      await this.ctx.bxapi.request('DELETE', `/v1/sessions/${encodeURIComponent(sessionId)}`);
-    } catch (error) {
-      this.ctx.log.warn({ err: error, session: sessionId }, 'could not delete an unused bxapi session');
-    }
+    await this.ctx.janitor.remove('session', sessionId);
   }
 
   /**

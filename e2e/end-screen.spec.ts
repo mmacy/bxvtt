@@ -68,13 +68,11 @@ test('after a victory, the end screen tells the story and the referee restores a
   await shot(ruth.page, 'victory-referee');
   await shot(sam.page, 'victory-player');
 
-  // Every row's button is named only "Restore" (R-301), so find it by its row. The confirmation's title lowercases
-  // the save's label (R-302), so its match ignores case.
-  await saves
-    .filter({ hasText: 'On the Kingsway' })
-    .getByRole('button', { name: /^Restore/ })
+  await ruth.page
+    .getByRole('region', { name: 'Continue from a save' })
+    .getByRole('button', { name: 'Restore On the Kingsway' })
     .click();
-  const confirm = ruth.page.getByRole('alertdialog', { name: /^Restore on the Kingsway\?$/i });
+  const confirm = ruth.page.getByRole('alertdialog', { name: 'Restore On the Kingsway?' });
   await confirm.getByRole('button', { name: 'Restore save' }).click();
   for (const actor of [ruth, sam]) {
     await expect(actor.page.getByRole('heading', { name: 'Victory' })).toHaveCount(0, { timeout: 20_000 });
@@ -83,7 +81,7 @@ test('after a victory, the end screen tells the story and the referee restores a
   }
 });
 
-test('after a total party kill, the end screen names the fallen and the referee restores the autosave before the battle', async ({
+test('after a total party kill, the end screen names the fallen and the referee restores the autosave from when the party met the goblins', async ({
   crew,
 }, testInfo) => {
   const table = await combatTable(crew, { party: 'weak' });
@@ -110,15 +108,22 @@ test('after a total party kill, the end screen names the fallen and the referee 
     expect(describeViolations(violations)).toEqual([]);
   }
 
+  // Walking into the guardroom meets the goblins, which autosaves as a meeting. "Before the battle" is only for a
+  // battle that opens straight from exploring, which this one doesn't.
   const saves = endSaves(ruth.page);
-  const beforeBattle = saves.filter({ hasText: /^Autosave: Before the battle/ });
-  await expect(beforeBattle).toHaveCount(1);
-  await expect(saves.filter({ hasText: 'Autosave: Entered the priory' })).toHaveCount(1);
+  const met = "Autosave: Met 2 goblins in the priory on Corvane's Holm, level 1";
+  await expect(saves.filter({ hasText: met })).toHaveCount(1);
+  await expect(saves.filter({ hasText: /Before the battle/ })).toHaveCount(0);
+  await expect(saves.filter({ hasText: /^Autosave: Entered the priory/ })).toHaveCount(1);
   await shot(ruth.page, 'party-fallen-referee');
 
-  await beforeBattle.getByRole('button', { name: /^Restore/ }).click();
+  // Each restore button names its save (R-301), and the confirmation shows the label as written (R-302).
   await ruth.page
-    .getByRole('alertdialog', { name: /^Restore autosave: before the battle/i })
+    .getByRole('region', { name: 'Continue from a save' })
+    .getByRole('button', { name: `Restore ${met}` })
+    .click();
+  await ruth.page
+    .getByRole('alertdialog', { name: `Restore ${met}?` })
     .getByRole('button', { name: 'Restore save' })
     .click();
   // The saved game is the moment the goblins appeared, so every page is back at the encounter.
@@ -132,10 +137,8 @@ test('after a total party kill, the end screen names the fallen and the referee 
   expect(restored.view.party.every((member) => member.current_hp > 0)).toBe(true);
 });
 
-// R-303: the end screen states that the party finished the adventure, but not the adventure's closing text.
-test.fixme('after a victory, the end screen tells how the adventure ends in its own words', async ({
-  crew,
-}) => {
+// R-303: the victory screen tells the ending in the adventure's own words.
+test('after a victory, the end screen tells how the adventure ends in its own words', async ({ crew }) => {
   const ruth = await crew.person('Ruth');
   const sam = await crew.person('Sam');
   const setup = await setupTable({
@@ -155,8 +158,8 @@ test.fixme('after a victory, the end screen tells how the adventure ends in its 
   await expect(sam.page.getByRole('main')).toContainText(closing);
 });
 
-// R-301: every save row's button is named "Restore". R-302: the confirmation lowercases the save's label.
-test.fixme('the end screen names each save in its restore button and its confirmation as written', async ({
+// R-301: each save row's button names its save. R-302: the confirmation shows the save's label as written.
+test('the end screen names each save in its restore button and its confirmation as written', async ({
   crew,
 }) => {
   const ruth = await crew.person('Ruth');
@@ -176,4 +179,60 @@ test.fixme('the end screen names each save in its restore button and its confirm
   await expect(
     ruth.page.getByRole('alertdialog', { name: 'Restore Autosave: Entered Crookback Bridge?' }),
   ).toBeVisible();
+});
+
+// R-528: the end screen counted every quest in the table's feed, including the previous adventure's.
+test('a victory in the table’s second adventure counts only that game’s quests', async ({ crew }) => {
+  const ruth = await crew.person('Ruth');
+  const sam = await crew.person('Sam');
+  const setup = await setupTable({
+    referee: ruth,
+    players: [sam],
+    party: [{ owner: sam, name: 'Brenna', classId: 'fighter' }],
+    adventure: ADVENTURES.toll,
+  });
+  const tableId = setup.table.id;
+  await enterDungeon(sam.client, tableId, 'bridge');
+  await send(ruth.client, tableId, { command_type: 'complete_quest', quest_id: 'open_the_kingsway' });
+  await waitForGame(ruth.client, tableId, (game) => game.mode === 'victory', 'the victory');
+
+  // The referee returns the table to its lobby, and the confirmation says what that does to the characters.
+  await openTable(ruth.page, setup.path);
+  await ruth.page.getByRole('button', { name: 'Return the table to its lobby' }).click();
+  const back = ruth.page.getByRole('alertdialog', { name: 'Return the table to its lobby?' });
+  await expect(back).toContainText('Characters start each new game as they were created');
+  await back.getByRole('button', { name: 'Return to the lobby' }).click();
+  await expect(ruth.page.getByRole('heading', { name: 'Victory' })).toHaveCount(0);
+
+  await ruth.client.startGame(tableId, { adventure_id: ADVENTURES.bell, seed: 1981 });
+  await enterDungeon(sam.client, tableId, 'priory');
+  await send(ruth.client, tableId, { command_type: 'complete_quest', quest_id: 'silence_the_bell' });
+  await openTable(sam.page, setup.path);
+  await expect(sam.page.getByRole('heading', { name: 'Victory', level: 2 })).toBeVisible();
+  await expect(sam.page.getByRole('main')).toContainText('The Drowned Bell');
+  await expect(await fact(sam.page, 'Quests completed')).toHaveText('Silence the drowned bell');
+});
+
+// R-529: after a total party kill, the referee could complete the quest that ends the adventure without a word.
+test('after a total party kill, a referee command that changes the story asks first', async ({ crew }) => {
+  const table = await combatTable(crew, { party: 'weak' });
+  const { sam, ruth, tableId } = table;
+  await walkIntoGuardroom(sam.client, tableId);
+  await send(sam.client, tableId, { command_type: 'engage_battle' });
+  expect((await fightThroughSdk(table)).mode).toBe('game_over');
+  await openTable(ruth.page, table.path);
+  await ruth.page
+    .getByRole('tablist', { name: 'Table panels' })
+    .getByRole('tab', { name: 'Referee' })
+    .click();
+  await ruth.page.getByRole('tab', { name: 'Quests, flags, and triggers' }).click();
+  await ruth.page.getByRole('button', { name: 'Complete the quest' }).first().click();
+  const guard = ruth.page.getByRole('alertdialog', { name: 'The game is over' });
+  await expect(guard).toContainText('The party has fallen, so the game is over.');
+  await expect(guard).toContainText('To play on, restore a save instead.');
+  await shot(ruth.page, 'story-guard');
+  await guard.getByRole('button', { name: 'Cancel' }).click();
+  await expect(guard).toHaveCount(0);
+  // Nothing changed: the end screen still lists no quests.
+  await expect(await fact(ruth.page, 'Quests completed')).toHaveText('None');
 });

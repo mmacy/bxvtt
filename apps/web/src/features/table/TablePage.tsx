@@ -1,5 +1,5 @@
 import { isProblem } from '@bxvtt/shared/client';
-import { Suspense, lazy, useEffect, useState, type ReactNode } from 'react';
+import { Suspense, useEffect, useState, type ReactNode } from 'react';
 import { Link as RouterLink, useParams } from 'react-router-dom';
 import {
   TableProvider,
@@ -17,13 +17,14 @@ import { Button, Card, EmptyState, PageLayout, Skeleton, Spinner } from '@/ui';
 import { NameForm, ProfileMenu } from '@/features/home';
 import { ConnectionBanner } from './ConnectionBanner';
 import { LoadingScreen } from './LoadingScreen';
+import { LobbyPagePart, PlayShellPart, preloadTableScreens } from './parts';
 import { RejoinPrompt } from './RejoinPrompt';
 import styles from './table.module.css';
 
 // The lobby and the play screen load on demand, so the home page never downloads the map, the compendium, or the
 // referee tools, and the lobby never downloads the play screen.
-const LobbyPage = lazy(() => import('@/features/lobby').then((module) => ({ default: module.LobbyPage })));
-const PlayShell = lazy(() => import('./PlayShell').then((module) => ({ default: module.PlayShell })));
+const LobbyPage = LobbyPagePart;
+const PlayShell = PlayShellPart;
 
 function Centered({ children }: { children: ReactNode }) {
   return (
@@ -222,6 +223,7 @@ function TableSessionView({ tableId, token }: { tableId: string; token: string }
 /** `/tables/:tableId`: the table's lobby before the game starts, and the play screen after. */
 export function TablePage() {
   const { tableId = '' } = useParams();
+  useEffect(() => void preloadTableScreens(), []);
   const status = useIdentity((s) => s.status);
   const token = useIdentity((s) => s.token);
   const notice = useIdentity((s) => s.notice);
