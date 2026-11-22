@@ -6,7 +6,6 @@ import {
   getApi,
   useApiAction,
   useEncounter,
-  useGameMode,
   useIsReferee,
   useMembers,
   usePlayerView,
@@ -27,6 +26,7 @@ import {
   type MenuEntry,
 } from '@/ui';
 import { copyInviteLink } from '@/features/lobby';
+import { useShownMode } from './shownMode';
 import styles from './table.module.css';
 
 const GAME_MODES: readonly string[] = ['town', 'exploring', 'encounter', 'battle', 'game_over', 'victory'];
@@ -39,7 +39,7 @@ export function isGameMode(mode: string | null): mode is GameMode {
 /** The play screen's top bar: table name, mode, clock, referee lens, presence, and the table menu. */
 export function ShellTopBar() {
   const table = useTableDetail();
-  const mode = useGameMode();
+  const mode = useShownMode();
   const view = usePlayerView();
   const encounter = useEncounter();
   const members = useMembers();

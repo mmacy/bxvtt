@@ -4,6 +4,7 @@ import { Link as RouterLink, useParams } from 'react-router-dom';
 import {
   TableProvider,
   getApi,
+  useCombatStage,
   useIdentity,
   useMapBus,
   useTableSession,
@@ -146,6 +147,7 @@ function TableSessionView({ tableId, token }: { tableId: string; token: string }
     () => () => {
       useMapBus.getState().reset();
       useTableUi.getState().reset();
+      useCombatStage.getState().reset();
     },
     [tableId],
   );

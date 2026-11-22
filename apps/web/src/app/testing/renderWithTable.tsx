@@ -15,8 +15,10 @@ import userEvent, { type UserEvent } from '@testing-library/user-event';
 import type { ReactElement, ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { vi, type MockInstance } from 'vitest';
-import { KitProvider, toast } from '@/ui';
+import { toast } from '@/ui';
+import { AppKitProvider } from '../AppKitProvider';
 import { setApi } from '../api';
+import { useCombatStage } from '../combatStage';
 import { useMapBus } from '../mapBus';
 import { DEFAULT_PREFERENCES, usePreferences, type Preferences } from '../preferences';
 import { resetCatalogCache } from '../rules';
@@ -82,6 +84,7 @@ export function resetAppState(): void {
   usePreferences.setState({ ...DEFAULT_PREFERENCES });
   useMapBus.getState().reset();
   useTableUi.getState().reset();
+  useCombatStage.getState().reset();
   resetCatalogCache();
 }
 
@@ -106,9 +109,9 @@ export function renderWithTable(
   const route = options.route ?? `/tables/${snapshot.table.id}`;
   const wrapper = ({ children }: { children: ReactNode }) => (
     <MemoryRouter initialEntries={[route]}>
-      <KitProvider>
+      <AppKitProvider>
         <TableProvider store={store}>{children}</TableProvider>
-      </KitProvider>
+      </AppKitProvider>
     </MemoryRouter>
   );
   const user = userEvent.setup();

@@ -76,7 +76,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       ) : (
         icon && <Icon name={icon} size={iconSize[size]} />
       )}
-      {children !== undefined && <span className={styles.label}>{children}</span>}
+      {children !== undefined && (
+        <span className={styles.label} data-button-label="">
+          {children}
+        </span>
+      )}
       {iconEnd && !loading && <Icon name={iconEnd} size={iconSize[size]} />}
     </button>
   );

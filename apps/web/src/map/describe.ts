@@ -126,7 +126,8 @@ export function describeTarget(target: MapTarget, map: LevelMap): TargetDescript
         return { title: 'Corridor', lines: target.known ? [] : ['The party hasn’t seen this cell.'] };
       }
       if (target.direction) lines.unshift(`Step ${target.direction}.`);
-      return { title: `${area.label}. ${area.name || humanize(area.id)}`, lines };
+      const name = area.name || humanize(area.id);
+      return { title: area.label ? `${area.label}. ${name}` : name, lines };
     }
   }
 }

@@ -120,17 +120,24 @@ function VirtualListInner<T>(
   const [observer] = useState(() => {
     if (typeof ResizeObserver === 'undefined') return null;
     let frame: number | null = null;
+    let header: number | null = null;
     return new ResizeObserver((records) => {
       let changed = false;
       for (const record of records) {
         const target = record.target as HTMLElement;
         const key = target.dataset.rowKey;
-        if (key === undefined) model.setHeader(target.offsetHeight);
-        else if (model.measure(key, target.offsetHeight)) changed = true;
+        if (key === undefined) {
+          header = target.offsetHeight;
+          changed = true;
+        } else if (model.measure(key, target.offsetHeight)) changed = true;
       }
+      // Re-render on the next frame. Rendering new rows inside the observer's callback makes the browser report
+      // "ResizeObserver loop completed with undelivered notifications".
       if (changed && frame === null) {
         frame = requestAnimationFrame(() => {
           frame = null;
+          if (header !== null) model.setHeader(header);
+          header = null;
           model.flush();
         });
       }
@@ -143,16 +150,26 @@ function VirtualListInner<T>(
     const element = scroller.current;
     if (!element) return;
     // The observer also reports the first size, which reads the viewport on mount.
+    let frame: number | null = null;
     const resize =
       typeof ResizeObserver === 'undefined'
         ? null
         : new ResizeObserver(() => {
             // A reader at the bottom stays there when the list gets shorter, such as when the composer grows.
             if (model.atBottom && followOutput) element.scrollTop = element.scrollHeight;
-            readScroll();
+            // Read the viewport on the next frame, for the same reason as the row observer above.
+            if (frame === null) {
+              frame = requestAnimationFrame(() => {
+                frame = null;
+                readScroll();
+              });
+            }
           });
     resize?.observe(element);
-    return () => resize?.disconnect();
+    return () => {
+      resize?.disconnect();
+      if (frame !== null) cancelAnimationFrame(frame);
+    };
   }, [readScroll, model, followOutput]);
 
   useEffect(() => {

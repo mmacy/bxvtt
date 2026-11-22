@@ -25,7 +25,13 @@ export interface TableUiState {
   compendiumOpen: boolean;
   /** Where the compendium opens, or `null` for its first page. */
   compendiumEntry: CompendiumEntry | null;
+  /**
+   * Opens the compendium at an entry. Without an entry, it opens at its first page, or stays on the page it
+   * shows when it is already open.
+   */
   openCompendium: (entry?: CompendiumEntry) => void;
+  /** Closes the compendium when it is open, and opens it at its first page when it is closed. */
+  toggleCompendium: () => void;
   setCompendiumOpen: (open: boolean) => void;
 
   savesOpen: boolean;
@@ -62,7 +68,18 @@ export const useTableUi = create<TableUiState>()((set) => ({
   ...CLOSED,
   openCharacterSheet: (memberId) => set({ sheetMemberId: memberId }),
   closeCharacterSheet: () => set({ sheetMemberId: null }),
-  openCompendium: (entry) => set({ compendiumOpen: true, compendiumEntry: entry ?? null }),
+  openCompendium: (entry) =>
+    set((state) =>
+      entry !== undefined
+        ? { compendiumOpen: true, compendiumEntry: entry }
+        : { compendiumOpen: true, compendiumEntry: state.compendiumOpen ? state.compendiumEntry : null },
+    ),
+  toggleCompendium: () =>
+    set((state) =>
+      state.compendiumOpen
+        ? { compendiumOpen: false, compendiumEntry: null }
+        : { compendiumOpen: true, compendiumEntry: null },
+    ),
   setCompendiumOpen: (open) =>
     set(open ? { compendiumOpen: true } : { compendiumOpen: false, compendiumEntry: null }),
   setSavesOpen: (open) => set({ savesOpen: open }),

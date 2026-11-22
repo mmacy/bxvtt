@@ -20,15 +20,18 @@ The shell (`features/table`) already renders every feature in its place on the p
 | `combat` | `EncounterPanel()` | The bottom center of the stage, over the map, in `encounter` mode. |
 | `combat` | `BattleBoard()` | The bottom center of the stage, over the map, in `battle` mode. |
 | `combat` | `CombatActions()` | The action bar in `encounter` and `battle` modes. |
-| `feed` | `FeedPanel()` | The Feed tab of the dock. The shell shows the unread count on the tab. |
+| `combat` | Any content, through `useCombatStage().showAftermath(node)` | The after-fight slot: the bottom center of the stage, over the map, in `exploring` and `town` modes. See "After a fight and at the end of a game". |
+| `feed` | `FeedPanel()` | The Feed tab of the dock. The shell shows the unread count on the tab, and keeps the panel mounted while another tab is active, so it keeps its scroll position and loaded history. |
 | `journal` | `JournalPanel()` | The Journal tab of the dock. |
-| `compendium` | `Compendium({ open, onOpenChange, entry: CompendiumEntry \| null })` | A drawer from the table menu, the rail's book button, the `B` key, and `useTableUi().openCompendium(entry)`. |
+| `compendium` | `Compendium({ open, onOpenChange, entry: CompendiumEntry \| null })` | A drawer from the table menu, the rail's book button, the `B` key, and `useTableUi().openCompendium(entry)`. `B` closes it again when focus is outside a text field. |
 | `referee` | `RefereePanel()` | The Referee tab of the dock, shown only to a referee with the lens on. |
 | `referee` | `SavesDialog({ open, onOpenChange })` | A dialog from the table menu. |
 
 The shell owns the rest of the play screen: the top bar (name, mode badge, clock, referee lens switch, presence, and the table menu), the map tool rail, the action bar's caller status, the connection banner, the map pick prompt, the end screen for `game_over` and `victory`, the table settings dialog, and the seats dialog. Other directories you may read but not edit: `features/home`, `features/lobby`, and `features/table`.
 
 Stage overlay slots size nothing. A feature in a slot sets its own width, up to 380 px in the corner and 760 px at the bottom center. Each dock tab and the stage sit inside an `ErrorBoundary`, so a crash in one feature leaves the rest of the table running.
+
+The play screen works from 820 px wide. Below 1100 px the dock moves into a drawer. When the actions don't fit the action bar, it first shows only the icons of buttons that have one, and then moves actions from the end into a "More actions" menu. Give every action bar button an `icon`, so it stays recognizable without its label, and use `ActionBarMenu` for a button that opens a menu, so the overflow menu can list its entries.
 
 ## Rules
 
@@ -50,8 +53,11 @@ Import everything from `@/app`.
 | --- | --- |
 | `useIdentity(selector)` | The signed-in user and token, with `create(name)`, `update({ name, color })`, and `forget()`. |
 | `useCurrentUser()` | The signed-in user, or `null`. |
-| `usePreferences(selector)` | Display preferences kept in this browser: `mapTheme`, `dockWidth`, `dockCollapsed`, `dockTab`, `refereeLens`, `sound`, and `motion`, with `set(key, value)`. |
-| `useReduceMotion()` | Whether to reduce motion: the user's choice, or the system setting. |
+| `usePreferences(selector)` | Display preferences kept in this browser: `mapTheme`, `dockWidth`, `dockCollapsed`, `dockTab`, `refereeLens`, `sound` (off until the user turns it on), and `motion`, with `set(key, value)`. |
+| `useReduceMotion()` | Whether to reduce motion: the user's choice, or the system setting. Kit components such as `DiceRoll` already follow it, because the app root renders `AppKitProvider`. |
+| `scopedStorage(scope, area?)` | Browser storage for one feature, under the prefix `bxvtt.<scope>.`, in `local` (the default) or `session` storage. It returns `{ key(name), read(name), write(name, value), remove(name) }`, reads and writes JSON, and keeps a copy in memory when the browser refuses storage. |
+| `readStored(key, area?)`, `writeStored(key, value, area?)`, `STORAGE_KEYS` | The same, for a full key. `STORAGE_KEYS` lists the app layer's own keys. |
+| `toParamMap(params)` | Keeps the params of a rejection that the text layer can read, for `describeRejection`. |
 | `getApi()` | The one `BxvttClient`, with the user's token. Prefer the hooks below. |
 | `describeProblem(error)` | Turns any API error into `{ title, detail }` for the player. |
 | `reportError(error, { title })` | Shows an error toast for an API error. |
@@ -62,6 +68,10 @@ Import everything from `@/app`.
 const theme = usePreferences((s) => s.mapTheme);
 const setPreference = usePreferences((s) => s.set);
 setPreference('mapTheme', 'torchlit');
+
+const drafts = scopedStorage('feed', 'session');
+drafts.write(`draft.${tableId}`, { text, to });
+const draft = drafts.read(`draft.${tableId}`); // unknown: validate it before use
 ```
 
 ### The table
@@ -183,7 +193,7 @@ A request can fail with a quota (403 `forbidden`, such as 100 saves per table), 
 
 ### Text
 
-`useTextContext()` returns the `TextContext` for `describeEvents`, `describeRejection`, and `humanizeMessage`. The store builds it from every game state and carries it forward, so names survive a command that removes them from the view. It holds the party, the encounter groups, the scene's area names, and `scene.names`. The hook adds the names of any catalog that has loaded, and for a referee with the lens on, the referee state and the adventure's names.
+`useTextContext()` returns the `TextContext` for `describeEvents`, `describeRejection`, and `humanizeMessage`. The store builds it from every game state and carries it forward, so names survive a command that removes them from the view. It holds the party, the encounter groups, the scene's area names, and `scene.names`. The hook adds the names of any catalog that has loaded, and for a referee with the lens on, the referee state and the adventure's names. Every name goes through the text layer's own functions (`contextFromPlayerView`, `extendContextWithNames`, `extendContextWithCatalog`, and `extendContextWithReferee`), which keep its curated nouns, so a catalog lot name such as `Torches (6)` still reads as "a torch". Don't write into a context's `items` yourself.
 
 ```tsx
 const ctx = useTextContext();
@@ -215,12 +225,30 @@ Each hook fetches its catalog once per page load, shares it with every component
 
 ### Shell overlays
 
-`useTableUi(selector)` opens what the shell renders: `openCharacterSheet(memberId)`, `openCompendium(entry?)`, `setSavesOpen`, `setSettingsOpen`, `setSeatsOpen`, `setShortcutsOpen`, and `setPaletteOpen`.
+`useTableUi(selector)` opens what the shell renders: `openCharacterSheet(memberId)`, `openCompendium(entry?)`, `toggleCompendium()`, `setSavesOpen`, `setSettingsOpen`, `setSeatsOpen`, `setShortcutsOpen`, and `setPaletteOpen`. `openCompendium()` without an entry opens the compendium at its first page, or leaves it on its current page when it is already open.
 
 ```tsx
 const openSheet = useTableUi((s) => s.openCharacterSheet);
 <Button variant="ghost" onClick={() => openSheet(member.id)}>{member.name}</Button>;
 ```
+
+### After a fight and at the end of a game
+
+`useCombatStage` connects the combat feature to the shell's stage:
+
+- `showAftermath(node)` fills the after-fight slot at the bottom center of the stage, and `closeAftermath()` empties it. The slot shows in `exploring` and `town` modes, and the content renders inside the table's providers, so it can use every hook. The shell empties the slot when the next encounter or battle starts and when the user leaves the table.
+- `setPlaying(playing)` reports whether combat playback is running. When a fight ends the game (`game_over` or `victory`), the shell keeps the fight on screen, with its overlays and the fight's mode badge, until playback stops. It waits up to 1.5 seconds for playback to start, and never holds the end screen back longer than 20 seconds.
+
+```tsx
+const setPlaying = useCombatStage((s) => s.setPlaying);
+useEffect(() => setPlaying(playback.playing), [playback.playing, setPlaying]);
+useEffect(() => () => setPlaying(false), [setPlaying]);
+
+// When the board unmounts at the end of a fight:
+useCombatStage.getState().showAftermath(<Aftermath endRevision={revision} afterSeq={seq} onClose={close} />);
+```
+
+`Aftermath`'s close button calls `useCombatStage.getState().closeAftermath()`.
 
 ### Keyboard shortcuts and the command palette
 
@@ -231,7 +259,9 @@ useShortcut({ id: 'explore.search', keys: 's', label: 'Search the area', group: 
 useAction({ id: 'explore.search', label: 'Search the area', group: 'Party', icon: 'search', shortcut: 's', run: search });
 ```
 
-The shell already uses `?`, `mod+k`, `mod+s` (save), `b` (rules reference), `shift+l` (referee lens), `alt+1` to `alt+4` (dock tabs), `escape` (cancel a map pick), and the map tools: `v` select, `h` pan, `r` measure, `p` ping, `d` draw, `n` pin, and `e` erase. Pick other keys, or tell the client lead.
+The shell already uses `?`, `mod+k`, `mod+s` (save), `b` (open or close the rules reference), `shift+l` (referee lens), `alt+1` to `alt+4` (dock tabs), `escape` (cancel a map pick), and the map tools: `v` select, `h` pan, `r` measure, `p` ping, `d` draw, `n` pin, and `e` erase. Pick other keys, or tell the client lead.
+
+The focused map handles only its own keys: the arrow keys, plus, minus, zero, Space, and Escape when it has a measurement to clear. Letters reach your shortcuts even after a click on the map. A feature that handles keys on the map itself in the capture phase, as `explore` does for W, A, S, and D, takes those keys from every shortcut while the map has focus.
 
 ### The map interaction bus
 
@@ -263,6 +293,8 @@ const fulfilPick = useMapBus((s) => s.fulfilPick);
 ## Test a feature
 
 Web tests run with `npx vitest run --project web`. Write a test for behavior, not for markup.
+
+`src/test-setup.ts` already stubs the browser APIs that jsdom lacks and Radix needs (`ResizeObserver`, `hasPointerCapture`, `setPointerCapture`, `releasePointerCapture`, `scrollIntoView`, and `matchMedia`), so any kit component opens in a test. Remove a feature's own copy of these stubs.
 
 `renderWithTable(ui, options)` from `@/app/testing/renderWithTable` mounts a component inside a fake open table: a table store filled from a snapshot, the kit's providers, a router, and a fake API whose methods are spies. It returns Testing Library's result with `store`, `api`, `user` (a `userEvent` instance), and `snapshot`.
 

@@ -10,6 +10,11 @@
   animation: fadeOut var(--duration-fast) var(--ease-standard) forwards;
 }
 
+/* A drawer that keeps the page in view. The overlay stays to catch the click that closes the drawer. */
+.overlayClear {
+  background: transparent;
+}
+
 .dialog {
   position: fixed;
   z-index: var(--z-modal);
@@ -103,6 +108,13 @@
   min-height: 0;
   overflow-y: auto;
   padding: var(--space-1) var(--space-6) var(--space-5);
+}
+
+/* Content under a confirmation's description, such as a checkbox. */
+.confirmBody {
+  display: grid;
+  gap: var(--space-3);
+  padding-top: 0;
 }
 
 .footer {

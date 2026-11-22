@@ -4,7 +4,6 @@ import {
   useAction,
   useApiAction,
   useFeed,
-  useGameMode,
   useIsReferee,
   usePartyLocation,
   usePreferences,
@@ -24,6 +23,7 @@ import { CharacterSheet, PartyPanel } from '@/features/sheet';
 import { MapToolRail } from './MapToolRail';
 import { SeatsDialog } from './SeatsDialog';
 import { ShellActionBar } from './ShellActionBar';
+import { ShownModeProvider, useHeldMode } from './shownMode';
 import { Stage } from './Stage';
 import { TableSettingsDialog } from './TableSettingsDialog';
 import { ShellTopBar } from './TopBar';
@@ -73,6 +73,7 @@ function ShellShortcuts() {
   const lens = usePreferences((s) => s.refereeLens);
   const setPreference = usePreferences((s) => s.set);
   const openCompendium = useTableUi((s) => s.openCompendium);
+  const toggleCompendium = useTableUi((s) => s.toggleCompendium);
   const setSavesOpen = useTableUi((s) => s.setSavesOpen);
   const setSettingsOpen = useTableUi((s) => s.setSettingsOpen);
   const setSeatsOpen = useTableUi((s) => s.setSeatsOpen);
@@ -86,8 +87,8 @@ function ShellShortcuts() {
   useShortcut({
     id: 'table.compendium',
     keys: 'b',
-    label: 'Open the rules reference',
-    run: () => openCompendium(),
+    label: 'Open or close the rules reference',
+    run: () => toggleCompendium(),
   });
   useShortcut({ id: 'table.save', keys: 'mod+s', label: 'Save the game', allowInInputs: true, run: save });
   useShortcut({
@@ -166,7 +167,7 @@ function panel(area: string, content: ReactNode) {
  * feed, journal, and referee tabs, and the action bar. Each feature fills its slot.
  */
 export function PlayShell() {
-  const mode = useGameMode();
+  const mode = useHeldMode();
   const location = usePartyLocation();
   const lens = useRefereeLens();
   const dockWidth = usePreferences((s) => s.dockWidth);
@@ -192,6 +193,8 @@ export function PlayShell() {
       icon: 'feed',
       count: unread > 0 ? unread : undefined,
       content: panel('The feed', <FeedPanel />),
+      // The feed keeps its scroll position and its loaded history across a tab switch.
+      keepMounted: true,
     },
     { value: 'journal', label: 'Journal', icon: 'journal', content: panel('The journal', <JournalPanel />) },
     ...(lens
@@ -207,7 +210,7 @@ export function PlayShell() {
   ];
 
   return (
-    <>
+    <ShownModeProvider mode={mode}>
       <TableLayout
         topBar={<ShellTopBar />}
         toolRail={inDungeon && !ended ? <MapToolRail /> : undefined}
@@ -225,6 +228,6 @@ export function PlayShell() {
       ))}
       <ShellShortcuts />
       <ShellOverlays />
-    </>
+    </ShownModeProvider>
   );
 }

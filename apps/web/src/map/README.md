@@ -83,13 +83,23 @@ fromPlayerView(view, undefined, {
 });
 ```
 
+The player view also names no areas. Pass the areas the party has entered, such as the scene's `levels[].areas`, and the map names them:
+
+```ts
+fromPlayerView(view, key, {
+  extras: { areas: sceneLevel.areas.map(({ id, name, cells }) => ({ id, name, cells })) },
+});
+```
+
+Each area keeps only the cells on the party's map and gets no key number, because players don't see the key. Its name goes on the cell deepest inside the area that holds no stairs or feature, from a zoom of 16 pixels a cell, and moves above the party token when the party stands on that cell. The hover tooltip names the area under the pointer. If you draw your own labels, pass `areaLabels={false}` to `DungeonMap` and keep the areas for the tooltip.
+
 Keep extras on the server's player projection or in the player's own store, never from referee data.
 
 ## Model builders
 
 | Function | What it returns |
 | --- | --- |
-| `fromPlayerView(view, levelKey?, options?)` | A player map of one level, or `null`. `options.lightRadiusFeet` sets the light hint, and `options.extras` adds transitions and features. |
+| `fromPlayerView(view, levelKey?, options?)` | A player map of one level, or `null`. `options.lightRadiusFeet` sets the light hint, and `options.extras` adds transitions, features, and areas. |
 | `fromReferee(refereeView, levelKey?)` | A referee map of one level, with the party light read from the effects ledger, or `null`. |
 | `fromRefereeView(levelSpec, dungeonState, { dungeonId, light })` | A referee map from the parts, for when you hold the level and the state separately. |
 | `refereeLight(refereeView)` | `{ radiusFeet }` from the largest light effect on a party member, or `null` when the party has no light or darkness puts it out. |
@@ -102,7 +112,7 @@ A `LevelMap` contains:
 - `edges`: every edge around the floor cells, with `kind` (`wall`, `open`, `door`, or `passage`) and a `door` with `open`, `wedged`, `locked`, `unlocked`, `stuck`, `secret`, `discovered`, and `gated`. A field the player view doesn't report is `null`.
 - `transitions`: stairs up and down, trapdoors, chutes, and passages, with their destination on a referee map.
 - `features`: caches (`emptied`, and a treasure `trap` with its state), rolled caches, piles, construction tricks (`found`), and custom features, each with a `contents` list for a tooltip.
-- `areas`: on a referee map, each keyed area with its `label` (its position in the list, from 1), name, description, cells, label `anchor`, `encounter` summary, `treasure`, and room `trap`.
+- `areas`: on a referee map, each keyed area with its `label` (its position in the list, from 1), name, description, cells, label `anchor`, `encounter` summary, `treasure`, and room `trap`. On a player map, the areas from `extras.areas`, with an empty `label` and no encounter, treasure, or trap.
 - `entrance`, `party` (position and facing), `light`, `wandering` (the level's wandering monster check), `bounds`, and `knownBounds`.
 
 ## Props
@@ -121,13 +131,16 @@ A `LevelMap` contains:
 | `rulerMetric` | `'grid' \| 'diagonal' \| 'straight'` | `'grid'` | How the ruler counts squares. `grid` counts the orthogonal steps the party walks. |
 | `followParty` | `boolean` | `false` | Keeps the camera on the party. A pan turns it off and calls `onFollowPartyChange(false)`. |
 | `arrowKeys` | `'pan' \| 'move'` | `'pan'` | With `'move'`, the arrow keys call `onMoveKey`, and Shift with the arrows pans. |
+| `letterKeys` | `boolean` | `false` | Handles W, A, S, and D (pan), C (centre on the party), and F (follow) on the focused map. Leave it off in the app, so letters reach the app's shortcuts. The harness turns it on. |
 | `reducedMotion` | `boolean` | the user's `prefers-reduced-motion` | Turns off easing, inertia, and flicker. |
 | `refereeMarkers` | `boolean` | `true` | On a referee map, draws area labels and the encounter, treasure, and trap markers. |
+| `areaLabels` | `boolean` | `true` | On a player map, draws the names of the areas from `extras.areas`. |
+| `hideErasedStrokes` | `boolean` | `true` | Hides a stroke as soon as the eraser touches it, until the next `strokes` list arrives or you call `restoreErasedStrokes`. With `false`, the map only reports `onStrokeErase`, and a stroke stays until you remove it from `strokes`. |
 | `showWandering` | `boolean` | `true` | On a referee map, shows the wandering monster chip in the corner. |
 | `zoomLimits` | `{ min, max }` | `{ min: 6, max: 160 }` | Zoom limits in CSS pixels per cell. |
 | `initialView` | `'fit' \| 'party'` | `'fit'` | Where the camera starts on a new level. `fit` shows the known cells on a player map and the whole level on a referee map. |
 | `ariaLabel` | `string` | `'Dungeon map'` | The accessible name. |
-| `className`, `style` | | | Applied to the container. Give the container a size. |
+| `className`, `style` | | | Applied to the container. Give the container a size. The map's own defaults (`position: relative`, `overflow: hidden`, and the theme's rock color as the background) sit in a rule with no specificity, so a class or a style can position the map, such as `position: absolute; inset: 0`. |
 
 ## Callbacks
 
@@ -142,10 +155,10 @@ Every click callback receives a target and a `MapPointerInfo` with the screen po
 | `onHover(target)` | The hovered target changed. The map already shows a tooltip, so use this for a side panel. |
 | `onPing(point)` | Alt and click in any tool, a long press, or a click with the ping tool. Broadcast it and add it to `pings`. |
 | `onStrokeComplete(stroke)` | A finished stroke with the draw tool, already simplified. Give it an id and add it to `strokes`. |
-| `onStrokeErase(ids)` | The eraser touched these strokes. Remove them from `strokes`. |
+| `onStrokeErase(ids)` | The eraser touched these strokes. Remove them from `strokes`. If the server refuses the erase, call `restoreErasedStrokes(ids)` on the handle to show them again. |
 | `onPinCreate(point)` | A click on an empty spot with the pin tool. |
 | `onPickCell(target)`, `onPickEdge(target)` | A click with the pick-a-cell or pick-an-edge tool, for referee tools such as `place_party` and `set_door_state`. `onPickEdge` reports any edge, walls included. |
-| `onMeasure(measurement)` | The ruler finished a measurement, or cleared one with `null`. |
+| `onMeasure(measurement)` | The ruler finished a measurement, or cleared one with `null`. It also reports the end of a measurement from `startMeasure`. |
 | `onFollowPartyChange(follow)` | A pan turned follow mode off, or the F key toggled it. |
 | `onMoveKey(direction, repeat)` | An arrow key with `arrowKeys="move"`. `repeat` is true while the key is held. |
 | `onCameraChange(camera)` | The camera moved. It fires on every animated frame, so don't set React state from it directly. |
@@ -159,6 +172,16 @@ Pass a `ref` to get a `DungeonMapHandle`:
 - `onCamera(listener)`, which subscribes to camera changes and returns an unsubscribe function. The minimap uses it.
 - `toDataURL({ area, type, quality, scale })`, which returns an image. `area: 'viewport'` (the default) captures the screen. `area: 'level'` paints the known level at `scale` device pixels per cell, with strokes, pins, and the party, up to 4096 pixels on a side.
 - `getStats()`, which returns frames per second and frame times, and `focus()`.
+- `startMeasure(cell)`, which starts a measurement from a cell (`{ x, y }` in cells) in any tool, such as for "Measure from here" in a context menu. The ruler runs to the cell under the pointer, and the arrow keys move its far end while the map has focus. A click or Enter ends it and reports the measurement through `onMeasure`, and that click reaches no other callback. Escape, a tool change, a level change, or `cancelMeasure()` ends it and reports `null`. `isMeasuring()` says whether one is running.
+- `restoreErasedStrokes(ids?)`, which shows strokes the eraser hid again: the given ids, or every hidden stroke.
+
+```tsx
+const mapRef = useRef<DungeonMapHandle>(null);
+// In a context menu on a cell:
+mapRef.current?.startMeasure({ x: target.x, y: target.y });
+// After the server refuses an erase:
+mapRef.current?.restoreErasedStrokes(ids);
+```
 
 ## Tools
 
@@ -176,13 +199,16 @@ Pass a `ref` to get a `DungeonMapHandle`:
 
 In every tool, holding Space and dragging pans, a middle-button drag pans, the wheel or a pinch zooms at the pointer, and two fingers pinch and pan on a touch screen. Alt and click pings, and so does a long press, except that a mouse doesn't long-press in the draw, erase, and ruler tools. A release during a pan keeps the map gliding.
 
-With the map focused, the keyboard works as follows:
+With the map focused, it handles these keys and calls `preventDefault` on each:
 
-- The arrow keys or W, A, S, and D pan. With `arrowKeys="move"`, the arrow keys move and Shift with the arrows pans.
-- Plus and minus zoom.
-- Zero fits the known map, and C centres on the party.
-- F toggles follow mode.
-- Escape clears the ruler.
+- The arrow keys pan. With `arrowKeys="move"`, the arrow keys call `onMoveKey`, and Shift with the arrows pans.
+- Plus (or `=`) and minus (or `_`) zoom, and zero fits the known map.
+- Space pans while you hold it and drag.
+- Escape clears the ruler or a stroke in progress, and ends a measurement from `startMeasure`. With nothing to clear, Escape passes through.
+- During a measurement from `startMeasure`, the arrow keys move its far end and Enter ends it.
+- With `letterKeys`, W, A, S, and D pan, C centres on the party, and F toggles follow mode.
+
+Every other key, and every key pressed with Ctrl, Cmd, or Alt, passes through untouched, so the app's shortcut registry receives it. For example, A after a click on the map reaches the combat feature's "Attack the nearest monsters" shortcut.
 
 ## Themes
 
@@ -231,7 +257,7 @@ Search and trap rolls are random, so a new capture can differ from the committed
 
 ## Known limits
 
-- A player map can't show emptied caches, stairs, or features unless you pass them as extras, because the player view doesn't include them.
+- A player map can't show emptied caches, stairs, features, or area names unless you pass them as extras, because the player view doesn't include them.
 - The light hint on a player map assumes the radius you pass, because the player view doesn't state it.
 - The map doesn't draw a fog-of-war shape for what the party sees right now. Every known cell looks the same, because the player view doesn't separate walked, remembered, and lit cells.
 - The hover tooltip describes doors, features, and areas in English from `describe.ts`. Move those strings to `@bxvtt/shared/text` if the app gains translations.

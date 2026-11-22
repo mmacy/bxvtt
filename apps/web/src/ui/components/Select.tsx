@@ -1,6 +1,7 @@
 import { Select as SelectPrimitive } from 'radix-ui';
 import { Icon, type IconName } from '../icons/Icon';
 import { cx } from '../lib/cx';
+import { useControllableState } from '../lib/hooks';
 import { useFieldContext } from './Field';
 import type { InputSize } from './TextInput';
 import styles from './Select.module.css';
@@ -53,6 +54,9 @@ export function Select({
 }: SelectProps) {
   const field = useFieldContext();
   const isInvalid = invalid ?? field?.invalid ?? false;
+  // Radix always gets a controlled value, so a caller whose value starts undefined and later becomes a string
+  // doesn't switch the select from uncontrolled to controlled. An empty string shows the placeholder.
+  const [current, setCurrent] = useControllableState(value, defaultValue ?? '', onValueChange);
   const renderOption = (option: SelectOption) => (
     <SelectPrimitive.Item
       key={option.value}
@@ -72,9 +76,8 @@ export function Select({
   );
   return (
     <SelectPrimitive.Root
-      value={value}
-      defaultValue={defaultValue}
-      onValueChange={onValueChange}
+      value={current}
+      onValueChange={setCurrent}
       disabled={disabled ?? field?.disabled}
       required={field?.required}
     >

@@ -133,8 +133,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tumbling,
-  .landing {
+  :root:not([data-motion='full']) .tumbling,
+  :root:not([data-motion='full']) .landing {
     animation: none;
   }
+}
+
+:root[data-motion='reduce'] .tumbling,
+:root[data-motion='reduce'] .landing {
+  animation: none;
 }

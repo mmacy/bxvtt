@@ -183,16 +183,21 @@
   --ease-in: cubic-bezier(0.5, 0, 0.75, 0);
   --ease-settle: cubic-bezier(0.34, 1.4, 0.64, 1);
 
-  /* Layers. */
+  /*
+   * Layers. Everything that opens over the page in a portal (dialogs, drawers, their overlays, menus, selects,
+   * comboboxes, and popovers) shares `--z-layer`, so the one opened last stacks on top: a menu inside a dialog
+   * opens over that dialog, and a nested dialog dims the one beneath it. Toasts and tooltips stay above them all.
+   */
   --z-base: 0;
   --z-raised: 10;
   --z-rail: 20;
   --z-dock: 30;
   --z-topbar: 40;
-  --z-dropdown: 1000;
-  --z-overlay: 1100;
-  --z-modal: 1200;
-  --z-popover: 1300;
+  --z-layer: 1200;
+  --z-dropdown: var(--z-layer);
+  --z-overlay: var(--z-layer);
+  --z-modal: var(--z-layer);
+  --z-popover: var(--z-layer);
   --z-toast: 1400;
   --z-tooltip: 1500;
 }
@@ -354,14 +359,23 @@
   --glow-accent: 0 0 0 1px rgb(138 98 36 / 0.5), 0 0 14px rgb(181 101 29 / 0.2);
 }
 
+/* Reduced motion: the system setting, or the app's choice in `data-motion` on the root element. */
 @media (prefers-reduced-motion: reduce) {
-  :root {
+  :root:not([data-motion='full']) {
     --duration-instant: 1ms;
     --duration-fast: 1ms;
     --duration-base: 1ms;
     --duration-slow: 1ms;
     --duration-slower: 1ms;
   }
+}
+
+:root[data-motion='reduce'] {
+  --duration-instant: 1ms;
+  --duration-fast: 1ms;
+  --duration-base: 1ms;
+  --duration-slow: 1ms;
+  --duration-slower: 1ms;
 }
 
 /*

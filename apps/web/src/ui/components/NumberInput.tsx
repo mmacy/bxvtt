@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from 'react';
+import { useId, useState, type KeyboardEvent } from 'react';
 import { Icon } from '../icons/Icon';
 import { cx } from '../lib/cx';
 import { useFieldContext } from './Field';
@@ -17,7 +17,10 @@ export interface NumberInputProps {
   id?: string;
   /** Accessible name when the input is not inside a Field. */
   'aria-label'?: string;
-  /** Labels for the step buttons. */
+  /**
+   * Accessible names for the step buttons. By default they name the field: "Decrease Strength" from a Field
+   * labelled "Strength", or from `aria-label` outside a Field.
+   */
   decrementLabel?: string;
   incrementLabel?: string;
   /** Width of the text area in characters. Defaults to 3. */
@@ -47,12 +50,21 @@ export function NumberInput({
   invalid,
   id,
   'aria-label': ariaLabel,
-  decrementLabel = 'Decrease',
-  incrementLabel = 'Increase',
+  decrementLabel,
+  incrementLabel,
   width = 3,
   className,
 }: NumberInputProps) {
   const field = useFieldContext();
+  const stepId = useId();
+  // A step button's name is its verb and the field's name. Inside a Field it reads the label element, which can
+  // hold any content, through aria-labelledby.
+  const stepName = (verb: 'Decrease' | 'Increase', explicit: string | undefined, id: string) => {
+    if (explicit !== undefined) return { 'aria-label': explicit };
+    if (ariaLabel) return { 'aria-label': `${verb} ${ariaLabel}` };
+    if (field) return { id, 'aria-label': verb, 'aria-labelledby': `${id} ${field.labelId}` };
+    return { 'aria-label': verb };
+  };
   const [draft, setDraft] = useState<string | null>(null);
   const isDisabled = disabled ?? field?.disabled ?? false;
   const isInvalid = invalid ?? field?.invalid ?? false;
@@ -102,7 +114,7 @@ export function NumberInput({
         type="button"
         tabIndex={-1}
         className={styles.step}
-        aria-label={decrementLabel}
+        {...stepName('Decrease', decrementLabel, `${stepId}-decrease`)}
         disabled={isDisabled || (min !== undefined && value !== null && value <= min)}
         onClick={() => stepBy(-step)}
       >
@@ -139,7 +151,7 @@ export function NumberInput({
         type="button"
         tabIndex={-1}
         className={styles.step}
-        aria-label={incrementLabel}
+        {...stepName('Increase', incrementLabel, `${stepId}-increase`)}
         disabled={isDisabled || (max !== undefined && value !== null && value >= max)}
         onClick={() => stepBy(step)}
       >

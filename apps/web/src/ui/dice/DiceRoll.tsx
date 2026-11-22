@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { cx } from '../lib/cx';
-import { useReducedMotion } from '../lib/hooks';
+import { useKitReducedMotion } from '../lib/motion';
 import { durations } from '../tokens';
 import { Die, type DieSides } from './Die';
 import styles from './DiceRoll.module.css';
@@ -33,6 +33,20 @@ export interface DiceRollProps {
   highlightExtremes?: boolean;
   /** Hides the total, for rolls where each die stands alone. */
   hideTotal?: boolean;
+  /** Hides the label and formula line above the dice, for a caller that names the roll itself. */
+  hideHeader?: boolean;
+  /** Hides the Skip button. A click on the dice still lands them at once. */
+  hideSkip?: boolean;
+  /**
+   * Announces the result in a polite live region when the dice land. Defaults to true. Pass false when the caller
+   * announces rolls itself, such as a feed that names the roller.
+   */
+  announce?: boolean;
+  /**
+   * Shows the result at once, with no tumble. Defaults to the value KitProvider received, or the system's
+   * `prefers-reduced-motion` setting.
+   */
+  reducedMotion?: boolean;
   /** Called once when every die has landed, or at once when the roll does not animate. */
   onSettled?: () => void;
   className?: string;
@@ -73,7 +87,8 @@ function cosmeticFace(sides: DieSides, seed: number): number {
 /**
  * Plays a roll of server-supplied results: the dice tumble, slow down, and land on the given
  * faces in about a second. Click the dice or press the skip button to land them at once.
- * With reduced motion, the dice appear already landed.
+ * With reduced motion (the `reducedMotion` prop, KitProvider's value, or the system setting), the dice appear
+ * already landed.
  */
 export function DiceRoll({
   dice,
@@ -85,10 +100,15 @@ export function DiceRoll({
   animate = true,
   highlightExtremes = true,
   hideTotal = false,
+  hideHeader = false,
+  hideSkip = false,
+  announce = true,
+  reducedMotion: reducedMotionProp,
   onSettled,
   className,
 }: DiceRollProps) {
-  const reducedMotion = useReducedMotion();
+  const kitReducedMotion = useKitReducedMotion();
+  const reducedMotion = reducedMotionProp ?? kitReducedMotion;
   const [phase, setPhase] = useState<Phase>(() =>
     animate && !reducedMotion && dice.length > 0 ? 'rolling' : 'settled',
   );
@@ -162,7 +182,7 @@ export function DiceRoll({
       aria-label={label ? `${label} roll` : 'Dice roll'}
       aria-busy={phase === 'rolling'}
     >
-      {(label || formula) && (
+      {!hideHeader && (label || formula) && (
         <div className={styles.header} aria-hidden="true">
           {label && <span className={styles.label}>{label}</span>}
           <span className={styles.formula}>{formula}</span>
@@ -217,15 +237,17 @@ export function DiceRoll({
             <span className={styles.totalValue}>{phase === 'settled' ? shownTotal : ' '}</span>
           </div>
         )}
-        {phase === 'rolling' && (
+        {phase === 'rolling' && !hideSkip && (
           <button type="button" className={styles.skip} onClick={skip}>
             Skip
           </button>
         )}
       </div>
-      <span className="visually-hidden" aria-live="polite">
-        {phase === 'settled' ? announcement : ''}
-      </span>
+      {announce && (
+        <span className="visually-hidden" aria-live="polite">
+          {phase === 'settled' ? announcement : ''}
+        </span>
+      )}
     </div>
   );
 }

@@ -26,7 +26,7 @@ import {
   contextFromPlayerView,
   emptyContext,
   extendContextWithCatalog,
-  stripArticle,
+  extendContextWithNames,
   type TextContext,
 } from '@bxvtt/shared/text';
 import { createStore, type StoreApi } from 'zustand/vanilla';
@@ -173,7 +173,9 @@ export function newerGame(current: GameState | null, incoming: GameState | null)
 
 /**
  * Builds the player-visible text context for a game state: names from the player view, the area names of the
- * scene, and the scene's item names, on top of the previous context.
+ * scene, and the scene's item names, on top of the previous context. Every name goes through the text layer's own
+ * functions, which keep its curated nouns: the scene names `Torches (6)` for a torch, and the context still says
+ * "a torch".
  */
 export function buildBaseTextContext(previous: TextContext, game: GameState | null): TextContext {
   if (game === null) return previous;
@@ -186,11 +188,7 @@ export function buildBaseTextContext(previous: TextContext, game: GameState | nu
     }
   }
   if (areas.length > 0) ctx = extendContextWithCatalog(ctx, { areas });
-  const names = Object.entries(game.scene.names);
-  if (names.length > 0) {
-    ctx = { ...ctx, items: { ...ctx.items } };
-    for (const [id, name] of names) ctx.items[id] = stripArticle(name);
-  }
+  if (Object.keys(game.scene.names).length > 0) ctx = extendContextWithNames(ctx, game.scene.names);
   return ctx;
 }
 

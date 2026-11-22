@@ -26,7 +26,7 @@ export interface Preferences {
    * referee who also plays can avoid spoilers. Players never have referee data, whatever this says.
    */
   refereeLens: boolean;
-  /** Whether the table plays sounds, such as dice and a ping. */
+  /** Whether the table plays sounds, such as dice and a ping. Off until the user turns it on. */
   sound: boolean;
   motion: MotionPreference;
 }
@@ -37,7 +37,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   dockCollapsed: false,
   dockTab: 'party',
   refereeLens: true,
-  sound: true,
+  sound: false,
   motion: 'system',
 };
 

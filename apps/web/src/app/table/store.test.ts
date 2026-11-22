@@ -1,7 +1,9 @@
 import type { FeedEntry, GameState, ServerMessage } from '@bxvtt/shared/protocol';
+import { emptyContext, itemName } from '@bxvtt/shared/text';
 import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot } from '../testing/fixtures';
 import {
+  buildBaseTextContext,
   createTableStore,
   dataFromSnapshot,
   initialTableData,
@@ -166,5 +168,17 @@ describe('createTableStore', () => {
     expect(store.getState().game?.revision).toBe(game.revision);
     store.getState().receiveGame(withRevision(game, game.revision + 1));
     expect(store.getState().game?.revision).toBe(game.revision + 1);
+  });
+});
+
+describe('buildBaseTextContext', () => {
+  it("keeps the text layer's nouns when the scene names an item by its catalog lot", () => {
+    const game = fixtureSnapshot('exploring', 'player').game;
+    if (!game) throw new Error('The fixture has no game.');
+    const ctx = buildBaseTextContext(emptyContext(), {
+      ...game,
+      scene: { ...game.scene, names: { ...game.scene.names, torch: 'Torches (6)' } },
+    });
+    expect(itemName('torch', ctx)).toBe('a torch');
   });
 });

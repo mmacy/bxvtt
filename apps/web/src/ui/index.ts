@@ -4,6 +4,8 @@ export * from './tokens';
 export { cx } from './lib/cx';
 export { colorIdForName, hashString, initialsForName } from './lib/identity';
 export { useControllableState, useMediaQuery, useReducedMotion } from './lib/hooks';
+export { MotionProvider, useKitReducedMotion } from './lib/motion';
+export type { MotionProviderProps } from './lib/motion';
 
 // Icons
 export { Icon, iconNames, classIconNames } from './icons/Icon';
@@ -12,8 +14,8 @@ export type { IconName, IconProps, IconSize, CharacterClassKey } from './icons/I
 // Actions
 export { Button, IconButton } from './components/Button';
 export type { ButtonProps, ButtonSize, ButtonVariant, IconButtonProps } from './components/Button';
-export { Link } from './components/Link';
-export type { LinkProps } from './components/Link';
+export { Link, LinkButton } from './components/Link';
+export type { LinkButtonProps, LinkProps } from './components/Link';
 
 // Form controls
 export { Field, useFieldContext } from './components/Field';
@@ -41,7 +43,7 @@ export type {
 export { Tabs, TabsList, TabsTrigger, TabsContent } from './components/Tabs';
 export type { TabsProps, TabsListProps, TabsTriggerProps, TabsContentProps } from './components/Tabs';
 export { Dialog, DialogClose, ConfirmDialog, Drawer } from './components/Dialog';
-export type { DialogProps, ConfirmDialogProps, DrawerProps } from './components/Dialog';
+export type { DialogProps, ConfirmDialogProps, DrawerProps, InitialFocus } from './components/Dialog';
 export { Popover, Tooltip, TooltipProvider } from './components/Popover';
 export type { PopoverProps, TooltipProps } from './components/Popover';
 export { DropdownMenu, ContextMenu } from './components/Menu';
@@ -56,6 +58,7 @@ export type { AccordionProps, AccordionItem } from './components/Accordion';
 export { Stepper } from './components/Stepper';
 export type { StepperProps, StepperStep } from './components/Stepper';
 export { KitProvider } from './components/KitProvider';
+export type { KitProviderProps } from './components/KitProvider';
 
 // Display
 export { Badge, Tag } from './components/Badge';
@@ -126,6 +129,7 @@ export {
   ActionBar,
   ActionBarItem,
   ActionBarDivider,
+  ActionBarMenu,
   Dock,
 } from './layout/TableLayout';
 export type {
@@ -136,6 +140,7 @@ export type {
   ToolRailProps,
   ToolRailButtonProps,
   ActionBarProps,
+  ActionBarMenuProps,
   DockProps,
   DockTab,
 } from './layout/TableLayout';

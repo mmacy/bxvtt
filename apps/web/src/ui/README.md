@@ -18,17 +18,19 @@ BXVTT_WEB_PORT=5181 npm run dev -w @bxvtt/web   # then open http://localhost:518
    import './ui/styles';
    ```
 
-2. Wrap the app in `KitProvider`. It shares tooltip timing and renders the toast stack.
+2. Wrap the app in `KitProvider`. It shares tooltip timing, renders the toast stack, and passes the app's motion choice to kit components. The app renders `AppKitProvider` from `@/app`, which passes the user's motion preference as `reducedMotion`.
 
    ```tsx
    import { KitProvider } from '@/ui';
 
    root.render(
-     <KitProvider>
+     <KitProvider reducedMotion={userWantsLessMotion}>
        <App />
      </KitProvider>,
    );
    ```
+
+   Leave `reducedMotion` out to follow the system's `prefers-reduced-motion` setting.
 
 Import components, hooks, and token values from `@/ui`:
 
@@ -89,6 +91,31 @@ Other groups:
 - **Coins** are `--coin-pp`, `--coin-gp`, `--coin-ep`, `--coin-sp`, and `--coin-cp`.
 - **Dice** are `--color-die-*`.
 - **Layout measures** are `--control-sm|md|lg` (28, 32, and 40 px), `--topbar-height`, `--rail-width`, `--actionbar-height`, and `--dock-min|default|max`.
+- **Layers** are `--z-base`, `--z-raised`, `--z-rail`, `--z-dock`, `--z-topbar`, `--z-layer`, `--z-toast`, and `--z-tooltip`. See [Layers](#layers).
+
+### Layers
+
+Everything that opens over the page in a portal shares one level, `--z-layer` (1200): dialogs, drawers, their overlays, menus, context menus, selects, comboboxes, and popovers. Layers on one level stack in the order they open, so a menu opened inside a dialog appears above that dialog, and a nested dialog dims the dialog beneath it. Toasts (`--z-toast`, 1400) and tooltips (`--z-tooltip`, 1500) stay above every layer.
+
+`--z-dropdown`, `--z-overlay`, `--z-modal`, and `--z-popover` remain as names for `--z-layer`. Use them for a custom popup, and render it in a portal, as Radix does, so it stacks in open order.
+
+### Motion
+
+Kit components that animate read `useKitReducedMotion()`: the `reducedMotion` value that `KitProvider` received, or the system setting when it received none. `KitProvider` also sets `data-motion="reduce"` or `data-motion="full"` on the root element, and the kit's CSS honors it as well as the media query:
+
+```css
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='full']) .shimmer {
+    animation: none;
+  }
+}
+
+:root[data-motion='reduce'] .shimmer {
+  animation: none;
+}
+```
+
+Use the same pair of rules in a feature's CSS when the feature should follow the app's choice instead of the system setting alone.
 
 ### Themes and the paper scope
 
@@ -104,12 +131,13 @@ Do:
 - Give every `IconButton` a `label`, and give a standalone `Icon` a `label`. An icon next to visible text needs no label.
 - Write UI text in sentence case and in the game's vocabulary: referee, party, caller, turn, round, hit points, armour class.
 - Tell the player what happened and what to do next. Put a refused command's reason in a `Banner` or an error toast, in the game's terms.
-- Pass `animate={false}` to `DiceRoll` for rolls loaded from history, so only new rolls tumble.
+- Pass `animate={false}` to `DiceRoll` for rolls loaded from history, so only new rolls tumble. A list that announces rolls itself, such as the feed, passes `announce={false}`, `hideHeader`, and `hideSkip`.
 - Use `toast` for short confirmations and `Banner` for anything the player must read before acting.
 
 Don't:
 
 - Don't add a color, font size, spacing value, radius, shadow, duration, or z-index that isn't a token. Kit components may use fixed pixel sizes for their own internal parts.
+- Don't raise a popup's z-index to get it above a dialog. Every portaled layer shares `--z-layer` and stacks in open order.
 - Don't use a palette token (`--palette-*`) in a component or feature.
 - Don't put parchment on chrome, such as panels, the top bar, or menus.
 - Don't use more than one primary button in a view.
@@ -129,9 +157,10 @@ Every component below is exported from `@/ui`. The path column names the source 
 | `tokens.css`, `base.css`, `styles` | Design tokens, the reset and global styles, and the module that loads both with the fonts. | `tokens.css`, `base.css`, `styles.ts`, `fonts.ts` |
 | Token values | Typed values for JavaScript: `playerColors`, `eventColors`, `coinColors`, `chromeColors`, `fonts`, `durations`, `zIndex`, `breakpoints`, `layout`. | `tokens.ts` |
 | `Icon`, `iconNames`, `classIconNames` | One icon component with a typed name, covering interface icons from lucide and original game icons. | `icons/Icon.tsx`, `icons/gameIcons.tsx` |
-| `cx`, `useMediaQuery`, `useReducedMotion`, `useControllableState` | Class name joining and shared hooks. | `lib/` |
+| `cx`, `useMediaQuery`, `useReducedMotion`, `useControllableState` | Class name joining and shared hooks. `useReducedMotion` reads the system setting only. | `lib/` |
+| `useKitReducedMotion`, `MotionProvider` | Whether to reduce motion: the app's choice from `KitProvider`, or the system setting. `KitProvider` renders `MotionProvider` for you. | `lib/motion.tsx` |
 | `colorIdForName`, `initialsForName`, `hashString` | Stable color and initials from a name. | `lib/identity.ts` |
-| `KitProvider` | Tooltip timing and the toast stack. Render it once at the root. | `components/KitProvider.tsx` |
+| `KitProvider` | Motion, tooltip timing, and the toast stack. Render it once at the root. `reducedMotion` passes the app's motion choice to kit components. | `components/KitProvider.tsx` |
 
 ### Actions
 
@@ -140,6 +169,7 @@ Every component below is exported from `@/ui`. The path column names the source 
 | `Button` | The kit's button, in primary, secondary, ghost, and danger variants, three sizes, with icons and a loading state. `asChild` styles a link as a button. | `components/Button.tsx` |
 | `IconButton` | A square button with an icon and a required accessible label. `pressed` marks an active tool. | `components/Button.tsx` |
 | `Link` | A text link, inline or quiet, with an external variant. | `components/Link.tsx` |
+| `LinkButton` | A button styled as a text link, for an in-app cross-link that opens something instead of going to a URL, such as a spell name that opens the rules reference. It takes `tone` (`inline` or `quiet`) and every button attribute. | `components/Link.tsx` |
 | `Kbd` | A keyboard key or chord hint. | `components/Kbd.tsx` |
 
 ### Form controls
@@ -148,11 +178,11 @@ Every component below is exported from `@/ui`. The path column names the source 
 | --- | --- | --- |
 | `Field` | Label, hint, and error for one control, wired to the control automatically. | `components/Field.tsx` |
 | `TextInput` | A single-line text input with optional leading icon and trailing content. | `components/TextInput.tsx` |
-| `SearchInput` | A search field with a clear button. Escape clears it. | `components/TextInput.tsx` |
-| `Textarea` | A multi-line text input. | `components/TextInput.tsx` |
-| `NumberInput` | A number field with step buttons, arrow-key stepping, and clamping. | `components/NumberInput.tsx` |
-| `Select` | Picks one value from a short list, with optional groups. | `components/Select.tsx` |
-| `Combobox` | A text input that filters a long list, such as monsters or spells. | `components/Combobox.tsx` |
+| `SearchInput` | A search field with a clear button. Escape clears it. The browser's own clear button is hidden. | `components/TextInput.tsx` |
+| `Textarea` | A multi-line text input, at least 72 px tall by default. `minRows` (or the native `rows`) sets its height in lines instead, and `autoGrow` grows it with its text up to `maxRows` lines (8 by default) before it scrolls. A chat composer uses `minRows={1} autoGrow`. | `components/TextInput.tsx` |
+| `NumberInput` | A number field with step buttons, arrow-key stepping, and clamping. The step buttons take their names from the field: "Increase Strength" and "Decrease Strength" in a Field labelled "Strength", or from `aria-label` outside a Field. `incrementLabel` and `decrementLabel` replace them. | `components/NumberInput.tsx` |
+| `Select` | Picks one value from a short list, with optional groups. A `value` that starts undefined and later becomes a string doesn't switch it from uncontrolled to controlled. | `components/Select.tsx` |
+| `Combobox` | A text input that filters a long list, such as monsters or spells. The list opens in a portal, so a scrolling dialog or drawer body doesn't clip it. | `components/Combobox.tsx` |
 | `Checkbox` | A checkbox with a label, a description, and an indeterminate state. | `components/Choice.tsx` |
 | `Switch` | An on and off setting that applies at once. | `components/Choice.tsx` |
 | `RadioGroup` | Picks one of a few visible options. | `components/Choice.tsx` |
@@ -163,10 +193,10 @@ Every component below is exported from `@/ui`. The path column names the source 
 
 | Export | Description | Source |
 | --- | --- | --- |
-| `Tabs`, `TabsList`, `TabsTrigger`, `TabsContent` | Tabbed panels in line or enclosed style, with icons and unread counts. | `components/Tabs.tsx` |
+| `Tabs`, `TabsList`, `TabsTrigger`, `TabsContent` | Tabbed panels in line or enclosed style, with icons and unread counts. `TabsContent keepMounted` keeps a panel mounted while another tab is active, hidden from view and from assistive technology, with its scroll position and state intact. A tab shows its focus ring for keyboard focus only. | `components/Tabs.tsx` |
 | `Dialog`, `DialogClose` | A modal window with a title, description, body, and footer. | `components/Dialog.tsx` |
-| `ConfirmDialog` | Asks the user to confirm an action, with a spinner while an async action runs. | `components/Dialog.tsx` |
-| `Drawer` | A side or bottom sheet over the page. | `components/Dialog.tsx` |
+| `ConfirmDialog` | Asks the user to confirm an action, with a spinner while an async action runs. `children` render below the description and can hold block content, such as a checkbox. | `components/Dialog.tsx` |
+| `Drawer` | A side or bottom sheet over the page. `dimmed={false}` keeps the page in view behind it (the overlay still catches the click that closes it). `initialFocus` takes a ref to the element that gets focus on open, or `'content'` for the drawer itself. `Dialog` takes `initialFocus` too. | `components/Dialog.tsx` |
 | `Popover` | Non-modal content anchored to a trigger. | `components/Popover.tsx` |
 | `Tooltip`, `TooltipProvider` | A short hint on hover and focus, with an optional shortcut. | `components/Popover.tsx` |
 | `DropdownMenu` | A menu of actions from a button, with checkbox items, labels, separators, and submenus. | `components/Menu.tsx` |
@@ -219,7 +249,7 @@ Every component below is exported from `@/ui`. The path column names the source 
 | Export | Description | Source |
 | --- | --- | --- |
 | `Die` | A d4, d6, d8, d10, d12, d20, or d100 face drawn in SVG, with crayon-colored numerals. | `dice/Die.tsx`, `dice/geometry.ts` |
-| `DiceRoll`, `formatDiceFormula`, `DICE_ROLL_MAX_MS` | Plays a roll of server-supplied results in under 1.2 s. Clicking skips it, and reduced motion shows the result at once. | `dice/DiceRoll.tsx` |
+| `DiceRoll`, `formatDiceFormula`, `DICE_ROLL_MAX_MS` | Plays a roll of server-supplied results in under 1.2 s. Clicking skips it, and reduced motion shows the result at once. `announce={false}` turns off its live-region announcement, `hideHeader` hides the label and formula, and `hideSkip` hides the Skip button. `reducedMotion` overrides the value from `KitProvider`. | `dice/DiceRoll.tsx` |
 
 ### Layout
 
@@ -228,11 +258,38 @@ Every component below is exported from `@/ui`. The path column names the source 
 | `TableLayout` | The play screen: top bar, tool rail, stage, resizable and collapsible dock, and action bar. Below 1100 px the dock moves into a drawer. | `layout/TableLayout.tsx` |
 | `TableTopBar`, `ModeBadge`, `GameClock` | The top bar contents: table name, session mode, and game time in turns and rounds. | `layout/TableLayout.tsx` |
 | `ToolRail`, `ToolRailButton`, `ToolRailDivider` | The vertical tool strip, with arrow-key navigation and tooltips. | `layout/TableLayout.tsx` |
-| `ActionBar`, `ActionBarItem`, `ActionBarDivider` | Contextual actions under the stage, with a status slot. | `layout/TableLayout.tsx` |
-| `Dock` | Tabbed panels for the right side of the table screen. | `layout/TableLayout.tsx` |
+| `ActionBar`, `ActionBarItem`, `ActionBarDivider`, `ActionBarMenu` | Contextual actions under the stage, with a status slot. See [The action bar](#the-action-bar). | `layout/ActionBar.tsx` |
+| `Dock` | Tabbed panels for the right side of the table screen. A tab with `keepMounted: true` stays mounted while hidden, so it keeps its scroll position. | `layout/TableLayout.tsx` |
 | `PageLayout` | The frame for home, lobby, and settings pages. | `layout/PageLayout.tsx` |
 | `Wordmark`, `WordmarkMark` | The bxvtt wordmark and its d20 mark. | `layout/Wordmark.tsx` |
+
+### The action bar
+
+Wrap each button in `ActionBarItem`, so it joins the bar's arrow-key navigation. Use `ActionBarMenu` for a button that opens a menu:
+
+```tsx
+<ActionBar aria-label="Party actions" status={<CallerStatus />}>
+  <ActionBarItem>
+    <Button size="sm" icon="search" onClick={search}>
+      Search
+    </Button>
+  </ActionBarItem>
+  <ActionBarMenu label="Light" icon="torch" shortcut={['T']} items={lightEntries} open={open} onOpenChange={setOpen} />
+</ActionBar>
+```
+
+`ActionBarMenu` takes `label`, `icon`, `items` (the `MenuEntry` list that `DropdownMenu` takes), `tooltip` (the label by default, `null` for none), `shortcut`, `disabled`, `loading`, `variant`, `side` (`top` by default), `align`, and `open` with `onOpenChange` for a shortcut that opens the menu.
+
+When the actions don't fit, the bar degrades in steps:
+
+1. A long status truncates at 45% of the bar.
+2. Buttons with an icon show only the icon. Each keeps its label as its accessible name.
+3. Actions move from the end into a "More actions" menu. Picking an action there presses its button, and an `ActionBarMenu` appears there as a submenu with its own entries.
 
 ## Tests
 
 Component tests live in `src/ui/__tests__` and run with `npx vitest run --project web`. Each test file imports `./cleanup`, because the web project runs Vitest without globals and Testing Library can't register its own cleanup.
+
+`src/test-setup.ts` adds stand-ins for the browser APIs that jsdom lacks and Radix calls when a component opens: `ResizeObserver`, `hasPointerCapture`, `setPointerCapture`, `releasePointerCapture`, `scrollIntoView`, and `matchMedia`. Any kit component, including `Select`, `Combobox`, `Popover`, and menus, opens in a test without extra setup.
+
+The gallery's "Popups inside overlays" specimen opens every popup kind inside a dialog, a nested dialog, a drawer that keeps the page in view, and a confirmation with a checkbox.

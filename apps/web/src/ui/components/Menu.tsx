@@ -131,6 +131,17 @@ const contextParts: MenuParts = {
   Portal: ContextPrimitive.Portal,
 };
 
+/**
+ * The items of a dropdown menu, for a kit component that builds its own menu from the Radix parts, such as
+ * `ActionBarMenu`. Features use `DropdownMenu`.
+ */
+export function renderDropdownEntries(entries: MenuEntry[]): ReactNode {
+  return renderEntries(entries, dropdownParts);
+}
+
+/** The class name of a menu's content, for a kit component that builds its own menu. */
+export const menuContentClass = styles.content;
+
 export interface DropdownMenuProps {
   /** The element that opens the menu, usually an IconButton or Button. */
   trigger: ReactElement;

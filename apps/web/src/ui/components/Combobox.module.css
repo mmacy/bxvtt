@@ -19,22 +19,23 @@
   color: var(--color-text-strong);
 }
 
-.list {
-  position: absolute;
-  z-index: var(--z-dropdown);
-  inset-inline: 0;
-  top: calc(100% + 4px);
-  max-height: 280px;
+.popup {
+  z-index: var(--z-popover);
+  width: var(--radix-popover-trigger-width);
+  max-height: min(280px, var(--radix-popover-content-available-height));
   overflow-y: auto;
   padding: var(--space-1);
   border: var(--border-hair) solid var(--color-border-strong);
   border-radius: var(--radius-md);
   background: var(--color-surface-2);
   box-shadow: var(--edge-highlight), var(--shadow-2);
+  color: var(--color-text);
 }
 
-.list[hidden] {
-  display: none;
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .option {

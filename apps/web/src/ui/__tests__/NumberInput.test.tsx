@@ -42,4 +42,22 @@ describe('NumberInput', () => {
     expect(input).toHaveValue('20');
     expect(input).toHaveAttribute('aria-valuenow', '20');
   });
+
+  it('names its step buttons after the field', () => {
+    render(<Arrows />);
+    expect(screen.getByRole('button', { name: 'Increase Arrows' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Decrease Arrows' })).toBeInTheDocument();
+  });
+
+  it('names its step buttons after its own label outside a field, or as the caller says', () => {
+    render(
+      <>
+        <NumberInput value={3} onChange={() => {}} aria-label="Torches" />
+        <NumberInput value={1} onChange={() => {}} aria-label="Rope" incrementLabel="One more rope" />
+      </>,
+    );
+    expect(screen.getByRole('button', { name: 'Increase Torches' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'One more rope' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Decrease Rope' })).toBeInTheDocument();
+  });
 });

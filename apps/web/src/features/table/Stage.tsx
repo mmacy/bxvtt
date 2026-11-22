@@ -1,10 +1,12 @@
-import { useGameMode, useMapBus, usePartyLocation, useShortcut } from '@/app';
+import { useEffect } from 'react';
+import { useCombatStage, useMapBus, usePartyLocation, useShortcut } from '@/app';
 import { Button } from '@/ui';
 import { BattleBoard, EncounterPanel } from '@/features/combat';
 import { MapStage, ScenePanel } from '@/features/explore';
 import { TownStage } from '@/features/town';
 import { ConnectionBanner } from './ConnectionBanner';
 import { EndScreen } from './EndScreen';
+import { useShownMode } from './shownMode';
 import styles from './table.module.css';
 
 /** The prompt of an open map pick, with a cancel button. Escape cancels it too. */
@@ -31,14 +33,36 @@ function PickPrompt() {
 }
 
 /**
+ * The after-fight slot: what the combat feature put in `useCombatStage().aftermath`, such as the summary of a
+ * finished fight. It shows at the bottom center in every mode that follows a fight, and a new fight clears it.
+ */
+function AftermathSlot({ mode }: { mode: string | null }) {
+  const aftermath = useCombatStage((s) => s.aftermath);
+  const close = useCombatStage((s) => s.closeAftermath);
+  const fighting = mode === 'encounter' || mode === 'battle';
+  useEffect(() => {
+    if (fighting && aftermath !== null) close();
+  }, [fighting, aftermath, close]);
+  if (fighting || aftermath === null) return null;
+  return (
+    <div className={styles.overlayBottom} data-slot="aftermath">
+      {aftermath}
+    </div>
+  );
+}
+
+/**
  * The stage: the town in town, the map in a dungeon in every mode, with the scene, encounter, and battle overlays
  * over it, and the end screen after the game ends.
  *
- * Overlay slots: the scene panel sits in the top corner, and the encounter panel and the battle board sit at the
- * bottom center, above the action bar. Each slot positions its feature, and the feature sizes itself.
+ * Overlay slots: the scene panel sits in the top corner, and the encounter panel, the battle board, and the
+ * after-fight slot sit at the bottom center, above the action bar. Each slot positions its feature, and the
+ * feature sizes itself.
+ *
+ * The stage follows the shown mode, which holds a fight on screen while the round that ended the game plays back.
  */
 export function Stage() {
-  const mode = useGameMode();
+  const mode = useShownMode();
   const location = usePartyLocation();
   if (mode === 'game_over' || mode === 'victory') {
     return (
@@ -71,6 +95,7 @@ export function Stage() {
             <BattleBoard />
           </div>
         )}
+        <AftermathSlot mode={mode} />
       </div>
     </div>
   );

@@ -1,3 +1,4 @@
+import { Popover as PopoverPrimitive } from 'radix-ui';
 import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Icon, type IconName } from '../icons/Icon';
 import { cx } from '../lib/cx';
@@ -47,7 +48,10 @@ export function defaultComboboxFilter(option: ComboboxOption, query: string): bo
     .every((word) => haystack.includes(word));
 }
 
-/** A text input that filters a long list of options, such as monsters, spells, or equipment. */
+/**
+ * A text input that filters a long list of options, such as monsters, spells, or equipment. The list opens in a
+ * portal above the page, so a scrolling dialog or drawer body doesn't clip it.
+ */
 export function Combobox({
   options,
   value,
@@ -66,6 +70,7 @@ export function Combobox({
   const field = useFieldContext();
   const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
+  const anchorRef = useRef<HTMLDivElement>(null);
   const selected = options.find((option) => option.value === value);
   const [query, setQuery] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -139,94 +144,118 @@ export function Combobox({
   };
 
   return (
-    <div className={cx(styles.combobox, className)}>
-      <div
-        className={cx(
-          inputStyles.wrap,
-          inputStyles[size],
-          isInvalid && inputStyles.invalid,
-          isDisabled && inputStyles.disabled,
-        )}
-      >
-        <span className={inputStyles.adornment}>
-          <Icon name={selected?.icon ?? 'search'} size={16} />
-        </span>
-        <input
-          ref={inputRef}
-          id={id ?? field?.id}
-          type="text"
-          role="combobox"
-          autoComplete="off"
-          aria-autocomplete="list"
-          aria-expanded={open}
-          aria-controls={listId}
-          aria-activedescendant={activeOption ? optionId(activeIndex) : undefined}
-          aria-label={ariaLabel}
-          aria-invalid={isInvalid || undefined}
-          aria-describedby={field?.describedBy}
-          className={inputStyles.input}
-          placeholder={placeholder}
-          disabled={isDisabled}
-          value={query ?? selected?.label ?? ''}
-          onChange={(event) => {
-            setQuery(event.target.value);
-            setActive(0);
-            setOpen(true);
-          }}
-          onClick={() => setOpen(true)}
-          onKeyDown={onKeyDown}
-          onBlur={close}
-        />
-        <button
-          type="button"
-          tabIndex={-1}
-          className={styles.toggle}
-          aria-label={open ? 'Close list' : 'Open list'}
-          disabled={isDisabled}
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => {
-            setOpen(!open);
-            inputRef.current?.focus();
-          }}
-        >
-          <Icon name="chevron-down" size={14} />
-        </button>
-      </div>
-      <ul
-        id={listId}
-        role="listbox"
-        aria-label={ariaLabel ?? 'Options'}
-        className={styles.list}
-        hidden={!open}
-      >
-        {results.length === 0 ? (
-          <li className={styles.empty} role="presentation">
-            {emptyText}
-          </li>
-        ) : (
-          results.map((option, index) => (
-            <li
-              key={option.value}
-              id={optionId(index)}
-              role="option"
-              aria-selected={option.value === value}
-              aria-disabled={option.disabled || undefined}
-              data-active={index === activeIndex || undefined}
-              className={styles.option}
+    <PopoverPrimitive.Root
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) close();
+      }}
+    >
+      <div className={cx(styles.combobox, className)}>
+        <PopoverPrimitive.Anchor asChild>
+          <div
+            ref={anchorRef}
+            className={cx(
+              inputStyles.wrap,
+              inputStyles[size],
+              isInvalid && inputStyles.invalid,
+              isDisabled && inputStyles.disabled,
+            )}
+          >
+            <span className={inputStyles.adornment}>
+              <Icon name={selected?.icon ?? 'search'} size={16} />
+            </span>
+            <input
+              ref={inputRef}
+              id={id ?? field?.id}
+              type="text"
+              role="combobox"
+              autoComplete="off"
+              aria-autocomplete="list"
+              aria-expanded={open}
+              aria-controls={open ? listId : undefined}
+              aria-activedescendant={activeOption ? optionId(activeIndex) : undefined}
+              aria-label={ariaLabel}
+              aria-invalid={isInvalid || undefined}
+              aria-describedby={field?.describedBy}
+              className={inputStyles.input}
+              placeholder={placeholder}
+              disabled={isDisabled}
+              value={query ?? selected?.label ?? ''}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setActive(0);
+                setOpen(true);
+              }}
+              onClick={() => setOpen(true)}
+              onKeyDown={onKeyDown}
+              onBlur={close}
+            />
+            <button
+              type="button"
+              tabIndex={-1}
+              className={styles.toggle}
+              aria-label={open ? 'Close list' : 'Open list'}
+              disabled={isDisabled}
               onMouseDown={(event) => event.preventDefault()}
-              onMouseEnter={() => setActive(index)}
-              onClick={() => choose(option)}
+              onClick={() => {
+                setOpen(!open);
+                inputRef.current?.focus();
+              }}
             >
-              {option.icon && <Icon name={option.icon} size={16} className={styles.optionIcon} />}
-              <span className={styles.optionText}>
-                <span>{option.label}</span>
-                {option.description && <span className={styles.optionDescription}>{option.description}</span>}
-              </span>
-              {option.value === value && <Icon name="check" size={14} className={styles.check} />}
-            </li>
-          ))
-        )}
-      </ul>
-    </div>
+              <Icon name="chevron-down" size={14} />
+            </button>
+          </div>
+        </PopoverPrimitive.Anchor>
+      </div>
+      <PopoverPrimitive.Portal>
+        <PopoverPrimitive.Content
+          role="presentation"
+          side="bottom"
+          align="start"
+          sideOffset={4}
+          collisionPadding={8}
+          className={styles.popup}
+          // Focus stays in the input, which names the active option with aria-activedescendant.
+          onOpenAutoFocus={(event) => event.preventDefault()}
+          onCloseAutoFocus={(event) => event.preventDefault()}
+          onInteractOutside={(event) => {
+            if (event.target instanceof Node && anchorRef.current?.contains(event.target))
+              event.preventDefault();
+          }}
+          onMouseDown={(event) => event.preventDefault()}
+        >
+          <ul id={listId} role="listbox" aria-label={ariaLabel ?? 'Options'} className={styles.list}>
+            {results.length === 0 ? (
+              <li className={styles.empty} role="presentation">
+                {emptyText}
+              </li>
+            ) : (
+              results.map((option, index) => (
+                <li
+                  key={option.value}
+                  id={optionId(index)}
+                  role="option"
+                  aria-selected={option.value === value}
+                  aria-disabled={option.disabled || undefined}
+                  data-active={index === activeIndex || undefined}
+                  className={styles.option}
+                  onMouseEnter={() => setActive(index)}
+                  onClick={() => choose(option)}
+                >
+                  {option.icon && <Icon name={option.icon} size={16} className={styles.optionIcon} />}
+                  <span className={styles.optionText}>
+                    <span>{option.label}</span>
+                    {option.description && (
+                      <span className={styles.optionDescription}>{option.description}</span>
+                    )}
+                  </span>
+                  {option.value === value && <Icon name="check" size={14} className={styles.check} />}
+                </li>
+              ))
+            )}
+          </ul>
+        </PopoverPrimitive.Content>
+      </PopoverPrimitive.Portal>
+    </PopoverPrimitive.Root>
   );
 }

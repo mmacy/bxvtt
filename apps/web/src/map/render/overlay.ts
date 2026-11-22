@@ -3,7 +3,7 @@
  * with an identity transform, converting world points through the `FrameView`, so text and markers
  * stay sharp and keep a readable size at every zoom.
  */
-import { FACING_ANGLE } from '../geometry';
+import { FACING_ANGLE, type Point } from '../geometry';
 import type { MapTarget } from '../hit';
 import { featureSlots } from '../hit';
 import { lightRadiusCells, type MapArea } from '../model';
@@ -75,12 +75,18 @@ export function readableOn(color: string): string {
   return luminance > 0.6 ? '#111111' : '#ffffff';
 }
 
+/**
+ * Draws area labels. A referee area has a number from the key, and its name when the zoom leaves room. A player
+ * area has no number, so it shows its name alone, from a closer zoom. With `avoid` (the party's token), a player
+ * label that would sit under the token moves above it.
+ */
 export function drawLabels(
   ctx: Ctx2D,
   view: FrameView,
   scene: Scene,
   theme: MapTheme,
   showMarkers: boolean,
+  avoid: Point | null = null,
 ): void {
   const { zoom, dpr } = view;
   if (zoom < 7) return;
@@ -92,6 +98,10 @@ export function drawLabels(
   ctx.textBaseline = 'middle';
   ctx.lineJoin = 'round';
   for (const area of scene.map.areas) {
+    if (area.label === '') {
+      drawNameLabel(ctx, view, area, theme, namePx, avoid);
+      continue;
+    }
     const p = view.toDevice(area.anchor.x, area.anchor.y);
     if (p.x < -200 * dpr || p.y < -80 * dpr || p.x > view.width + 200 * dpr || p.y > view.height + 80 * dpr)
       continue;
@@ -105,14 +115,8 @@ export function drawLabels(
     ctx.fillStyle = theme.label.color;
     ctx.fillText(area.label, p.x, y);
     if (showNames && area.name) {
-      const widthPx = (area.bounds.maxX - area.bounds.minX) * view.scale;
       ctx.font = labelFont(theme, namePx);
-      const maxWidth = Math.max(widthPx * 1.15, 90 * dpr);
-      let name = area.name;
-      if (ctx.measureText(name).width > maxWidth) {
-        while (name.length > 4 && ctx.measureText(`${name}…`).width > maxWidth) name = name.slice(0, -1);
-        name = `${name.trimEnd()}…`;
-      }
+      const name = fitName(ctx, area, view);
       y += numberPx * 0.62 + namePx * 0.5;
       ctx.lineWidth = Math.max(3 * dpr, namePx * 0.3);
       ctx.strokeText(name, p.x, y);
@@ -124,6 +128,46 @@ export function drawLabels(
     if (showMarkers && zoom >= 15) drawAreaMarkers(ctx, area, p.x, y + 9 * dpr, dpr, theme);
   }
   ctx.restore();
+}
+
+/** The zoom, in CSS pixels per cell, from which a player map names its areas. */
+const PLAYER_NAME_ZOOM = 16;
+
+/** An area name cut to the width of its room, with an ellipsis. */
+function fitName(ctx: Ctx2D, area: MapArea, view: FrameView): string {
+  const widthPx = (area.bounds.maxX - area.bounds.minX) * view.scale;
+  const maxWidth = Math.max(widthPx * 1.15, 90 * view.dpr);
+  let name = area.name;
+  if (ctx.measureText(name).width > maxWidth) {
+    while (name.length > 4 && ctx.measureText(`${name}…`).width > maxWidth) name = name.slice(0, -1);
+    name = `${name.trimEnd()}…`;
+  }
+  return name;
+}
+
+function drawNameLabel(
+  ctx: Ctx2D,
+  view: FrameView,
+  area: MapArea,
+  theme: MapTheme,
+  namePx: number,
+  avoid: Point | null,
+): void {
+  const { zoom, dpr } = view;
+  if (zoom < PLAYER_NAME_ZOOM || !area.name) return;
+  const under =
+    avoid !== null && Math.abs(avoid.x - area.anchor.x) < 0.8 && Math.abs(avoid.y - area.anchor.y) < 0.8;
+  const p = view.toDevice(area.anchor.x, under ? area.anchor.y - 0.85 : area.anchor.y);
+  if (p.x < -200 * dpr || p.y < -80 * dpr || p.x > view.width + 200 * dpr || p.y > view.height + 80 * dpr)
+    return;
+  ctx.globalAlpha = 1;
+  ctx.font = labelFont(theme, namePx, 650);
+  const name = fitName(ctx, area, view);
+  ctx.lineWidth = Math.max(3 * dpr, namePx * 0.3);
+  ctx.strokeStyle = theme.label.halo;
+  ctx.strokeText(name, p.x, p.y);
+  ctx.fillStyle = theme.label.color;
+  ctx.fillText(name, p.x, p.y);
 }
 
 function drawAreaMarkers(

@@ -8,6 +8,7 @@ export type { ProblemMessage } from './api';
 export { useCurrentUser, useIdentity } from './identity';
 export type { IdentityState, IdentityStatus } from './identity';
 export { DEFAULT_PREFERENCES, usePreferences, useReduceMotion } from './preferences';
+export { AppKitProvider } from './AppKitProvider';
 export type { DockTabId, MapThemeName, MotionPreference, Preferences } from './preferences';
 export {
   canActForParty,
@@ -78,3 +79,8 @@ export {
 } from './shortcuts';
 export type { ActionDefinition, ShortcutDefinition } from './shortcuts';
 export { tokenClass } from './display';
+export { STORAGE_KEYS, readStored, scopedStorage, writeStored } from './storage';
+export type { ScopedStorage, StorageArea } from './storage';
+export { toParamMap } from './params';
+export { useCombatStage } from './combatStage';
+export type { CombatStageState } from './combatStage';

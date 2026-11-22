@@ -151,15 +151,29 @@ table {
   background: transparent;
 }
 
+/*
+ * Reduced motion follows the system setting, unless the app states a choice with `data-motion` on the root
+ * element (KitProvider sets it from its `reducedMotion` prop): `reduce` turns motion down on any system, and
+ * `full` keeps it on.
+ */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  :root:not([data-motion='full']) *,
+  :root:not([data-motion='full']) *::before,
+  :root:not([data-motion='full']) *::after {
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+:root[data-motion='reduce'] *,
+:root[data-motion='reduce'] *::before,
+:root[data-motion='reduce'] *::after {
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+  scroll-behavior: auto !important;
 }
 
 /* Hide content visually but keep it available to assistive technology. */

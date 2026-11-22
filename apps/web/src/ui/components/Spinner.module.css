@@ -14,10 +14,15 @@
   }
 }
 
+/* With reduced motion, a slow turn still shows that work continues. */
 @media (prefers-reduced-motion: reduce) {
-  /* A slow turn still shows that work continues. */
-  .spinner svg {
+  :root:not([data-motion='full']) .spinner svg {
     animation-duration: 2.4s !important;
     animation-iteration-count: infinite !important;
   }
+}
+
+:root[data-motion='reduce'] .spinner svg {
+  animation-duration: 2.4s !important;
+  animation-iteration-count: infinite !important;
 }

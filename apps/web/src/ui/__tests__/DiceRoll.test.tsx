@@ -1,6 +1,7 @@
 import './cleanup';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { KitProvider } from '../components/KitProvider';
 import { DICE_ROLL_MAX_MS, DiceRoll, formatDiceFormula } from '../dice/DiceRoll';
 
 function shownValues(container: HTMLElement): string[] {
@@ -72,6 +73,48 @@ describe('DiceRoll', () => {
     rerender(<DiceRoll dice={[{ sides: 6, value: 5 }]} />);
     act(() => vi.advanceTimersByTime(DICE_ROLL_MAX_MS));
     expect(shownValues(container)).toEqual(['5']);
+  });
+});
+
+describe('DiceRoll for a caller that names rolls itself', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('can stay silent and drop its header and Skip button', () => {
+    const { container } = render(
+      <DiceRoll label="Attack" dice={[{ sides: 20, value: 12 }]} announce={false} hideHeader hideSkip />,
+    );
+    expect(screen.queryByRole('button', { name: 'Skip' })).not.toBeInTheDocument();
+    expect(screen.queryByText('1d20')).not.toBeInTheDocument();
+    act(() => vi.advanceTimersByTime(DICE_ROLL_MAX_MS));
+    expect(shownValues(container)).toEqual(['12']);
+    expect(container.querySelector('[aria-live]')).toBeNull();
+  });
+
+  it('shows the result at once when the app asks for reduced motion', () => {
+    const onSettled = vi.fn();
+    render(
+      <KitProvider reducedMotion>
+        <DiceRoll label="Strength" dice={[{ sides: 6, value: 4 }]} onSettled={onSettled} />
+      </KitProvider>,
+    );
+    expect(onSettled).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: 'Skip' })).not.toBeInTheDocument();
+    expect(document.documentElement).toHaveAttribute('data-motion', 'reduce');
+  });
+
+  it('lets its own prop override the app setting', () => {
+    render(
+      <KitProvider reducedMotion>
+        <DiceRoll dice={[{ sides: 6, value: 4 }]} reducedMotion={false} />
+      </KitProvider>,
+    );
+    expect(screen.getByRole('button', { name: 'Skip' })).toBeInTheDocument();
   });
 });
 

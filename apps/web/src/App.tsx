@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import { ShortcutLayer, useIdentity } from '@/app';
+import { AppKitProvider, ShortcutLayer, useIdentity } from '@/app';
 import { HomePage, JoinPage, NotFoundPage } from '@/features/home';
 import { TablePage } from '@/features/table';
-import { ErrorBoundary, KitProvider } from '@/ui';
+import { ErrorBoundary } from '@/ui';
 import { KitGallery, KitTableMock } from '@/ui/gallery';
 
 /**
@@ -21,7 +21,7 @@ export function App() {
   }, [load]);
 
   return (
-    <KitProvider>
+    <AppKitProvider>
       <BrowserRouter>
         <ErrorBoundary area="This page">
           <Routes>
@@ -35,6 +35,6 @@ export function App() {
         </ErrorBoundary>
         <ShortcutLayer />
       </BrowserRouter>
-    </KitProvider>
+    </AppKitProvider>
   );
 }

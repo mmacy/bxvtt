@@ -121,6 +121,12 @@ export interface RendererOptions {
   reducedMotion: boolean;
   /** Draws area labels and the referee's markers on a referee map. */
   refereeMarkers: boolean;
+  /** Draws the names of a player map's areas, which the caller passes as extras. */
+  areaLabels: boolean;
+  /** Handles W, A, S, and D (pan), C (centre on the party), and F (follow) on the focused map. */
+  letterKeys: boolean;
+  /** Hides a stroke the eraser touched until the caller passes a new `strokes` list. */
+  hideErasedStrokes: boolean;
   zoomLimits: ZoomLimits;
   initialView: 'fit' | 'party';
 }
@@ -154,9 +160,14 @@ const DEFAULT_OPTIONS: RendererOptions = {
   arrowKeys: 'pan',
   reducedMotion: false,
   refereeMarkers: true,
+  areaLabels: true,
+  letterKeys: false,
+  hideErasedStrokes: true,
   zoomLimits: DEFAULT_ZOOM_LIMITS,
   initialView: 'fit',
 };
+
+const NO_STROKES: ReadonlySet<string> = new Set();
 
 const PAN_KEYS: Record<string, Direction> = {
   ArrowUp: 'north',
@@ -167,6 +178,14 @@ const PAN_KEYS: Record<string, Direction> = {
   s: 'south',
   a: 'west',
   d: 'east',
+};
+
+/** The cell offset of a step in each direction. */
+const STEP: Record<Direction, [number, number]> = {
+  north: [0, -1],
+  south: [0, 1],
+  west: [-1, 0],
+  east: [1, 0],
 };
 
 type DragMode = 'pan' | 'draw' | 'erase' | 'measure' | null;
@@ -209,6 +228,9 @@ export class MapRenderer {
   private readonly erased = new Set<string>();
   private measurement: Measurement | null = null;
   private measureFrom: Point | null = null;
+  /** The cell a measurement started with `startMeasure` runs from, and the cell it reaches now. */
+  private measureAnchor: Point | null = null;
+  private measureEnd: Point | null = null;
   private hover: MapTarget | null = null;
   private pointerScreen: Point | null = null;
   private readonly pingSeen = new Map<string, number>();
@@ -254,6 +276,7 @@ export class MapRenderer {
     if (next.followParty === true && !prev.followParty) this.tween = null;
     if (next.tool && next.tool !== prev.tool) {
       this.liveStroke = null;
+      if (this.measureAnchor) this.cancelMeasure();
       if (next.tool !== 'ruler') this.measurement = null;
       this.updateHover();
     }
@@ -287,6 +310,7 @@ export class MapRenderer {
     const scene = new Scene(map);
     const sameLevel = prevMap !== null && prevMap.key === map.key && prevMap.layer === map.layer;
     if (!prevScene || !sameLevel) {
+      if (this.measureAnchor) this.cancelMeasure();
       this.tiles.clear();
       this.overview = null;
       this.scene = scene;
@@ -425,6 +449,70 @@ export class MapRenderer {
   }
 
   /**
+   * Starts a measurement from a cell, in any tool. The ruler runs from that cell to the cell under the pointer,
+   * and the arrow keys move its far end. A click or Enter ends it and reports the measurement through
+   * `onMeasure`. Escape, a new tool, a new level, or `cancelMeasure` ends it and reports `null`.
+   */
+  startMeasure(from: Point): void {
+    const cell = { x: Math.floor(from.x), y: Math.floor(from.y) };
+    this.measureAnchor = cell;
+    this.measureEnd = cell;
+    this.measurement = measure(cell, cell, this.opts.rulerMetric);
+    this.updateCursor();
+    this.request();
+  }
+
+  /** Ends a measurement that `startMeasure` began, without a result. */
+  cancelMeasure(): void {
+    if (!this.measureAnchor) return;
+    this.measureAnchor = null;
+    this.measureEnd = null;
+    this.measurement = null;
+    this.callbacks.onMeasure?.(null);
+    this.updateCursor();
+    this.request();
+  }
+
+  /** Whether a measurement that `startMeasure` began is running. */
+  isMeasuring(): boolean {
+    return this.measureAnchor !== null;
+  }
+
+  private moveMeasureEnd(cell: Point): void {
+    const anchor = this.measureAnchor;
+    if (!anchor) return;
+    const end = { x: Math.floor(cell.x), y: Math.floor(cell.y) };
+    if (this.measureEnd && this.measureEnd.x === end.x && this.measureEnd.y === end.y) return;
+    this.measureEnd = end;
+    this.measurement = measure(anchor, end, this.opts.rulerMetric);
+    this.request();
+  }
+
+  private finishMeasure(): void {
+    const result = this.measurement;
+    this.measureAnchor = null;
+    this.measureEnd = null;
+    this.measurement = null;
+    this.callbacks.onMeasure?.(result);
+    this.updateCursor();
+    this.request();
+  }
+
+  /**
+   * Shows strokes the eraser hid again, such as after the server refused an erase. Pass the ids to restore, or
+   * nothing to restore every hidden stroke.
+   */
+  restoreErasedStrokes(ids?: readonly string[]): void {
+    if (ids === undefined) this.erased.clear();
+    else for (const id of ids) this.erased.delete(id);
+    this.request();
+  }
+
+  private hiddenStrokes(): ReadonlySet<string> {
+    return this.opts.hideErasedStrokes ? this.erased : NO_STROKES;
+  }
+
+  /**
    * A PNG (or another type) of the map. `viewport` captures what is on screen, fully painted.
    * `level` paints the whole level at `scale` device pixels per cell, with strokes, pins, and the
    * party, and caps the image at 4096 pixels on a side.
@@ -461,7 +549,9 @@ export class MapRenderer {
     };
     if (scene.map.layer === 'referee' && this.opts.refereeMarkers)
       drawLabels(ctx, view, scene, this.opts.theme, true);
-    drawStrokes(ctx, view, this.opts.strokes, this.erased);
+    else if (scene.map.layer === 'player' && this.opts.areaLabels)
+      drawLabels(ctx, view, scene, this.opts.theme, false, this.partyPose(performance.now()));
+    drawStrokes(ctx, view, this.opts.strokes, this.hiddenStrokes());
     drawPins(ctx, view, this.opts.pins, this.opts.theme, null);
     const pose = this.motion.sample(performance.now());
     if (pose) drawParty(ctx, view, pose, this.opts.theme);
@@ -781,7 +871,8 @@ export class MapRenderer {
       drawHover(ctx, view, this.hover, scene, theme, pose, this.opts.tool === 'select');
     }
     if (referee && this.opts.refereeMarkers) drawLabels(ctx, view, scene, theme, true);
-    drawStrokes(ctx, view, this.opts.strokes, this.erased);
+    else if (!referee && this.opts.areaLabels) drawLabels(ctx, view, scene, theme, false, pose);
+    drawStrokes(ctx, view, this.opts.strokes, this.hiddenStrokes());
     if (this.liveStroke && this.liveStroke.length > 0) {
       drawStrokes(
         ctx,
@@ -972,6 +1063,9 @@ export class MapRenderer {
     } else if (s.pointerType !== 'touch') {
       this.updateHover();
     }
+    if (this.measureAnchor && !this.gestures.dragging) {
+      this.moveMeasureEnd(screenToWorld(this.camera, this.viewport, s));
+    }
   }
 
   private pointerUp(e: PointerEvent): void {
@@ -1065,6 +1159,11 @@ export class MapRenderer {
     const scene = this.scene;
     const tool = this.opts.tool;
     if (pointer.button === 1) return;
+    if (this.measureAnchor) {
+      this.moveMeasureEnd(info.world);
+      this.finishMeasure();
+      return;
+    }
     if (pointer.altKey || tool === 'ping') {
       this.callbacks.onPing?.(info.world);
       return;
@@ -1092,6 +1191,7 @@ export class MapRenderer {
         break;
       case 'erase':
         this.eraseAt(info.world);
+        if (!this.opts.hideErasedStrokes) this.erased.clear();
         break;
       case 'ruler':
         if (this.measurement) {
@@ -1225,6 +1325,10 @@ export class MapRenderer {
       case 'measure':
         this.callbacks.onMeasure?.(this.measurement);
         break;
+      case 'erase':
+        // The caller controls the strokes, so the next gesture may report the same stroke again.
+        if (!this.opts.hideErasedStrokes) this.erased.clear();
+        break;
       default:
         break;
     }
@@ -1274,8 +1378,15 @@ export class MapRenderer {
     handler(target, p, info);
   }
 
+  /**
+   * The keys the focused map handles: the arrow keys (pan, or `onMoveKey` with `arrowKeys="move"`), Shift and the
+   * arrows (pan), plus and minus (zoom), zero (fit), Space (pan while held), Escape (when there is a measurement
+   * or a stroke to clear), and Enter (to end a measurement from `startMeasure`). With `letterKeys`, it also
+   * handles W, A, S, and D (pan), C (centre on the party), and F (follow). Every other key, and every key with
+   * Ctrl, Cmd, or Alt, passes through untouched to the app's shortcuts.
+   */
   private keyDown(e: KeyboardEvent): void {
-    if (e.metaKey || e.ctrlKey) return;
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
     const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
     if (key === ' ') {
       e.preventDefault();
@@ -1284,12 +1395,25 @@ export class MapRenderer {
       return;
     }
     const arrow = e.key.startsWith('Arrow') ? PAN_KEYS[e.key] : undefined;
+    if (arrow && this.measureAnchor && this.measureEnd) {
+      e.preventDefault();
+      const [dx, dy] = STEP[arrow];
+      this.moveMeasureEnd({ x: this.measureEnd.x + dx, y: this.measureEnd.y + dy });
+      return;
+    }
+    if (key === 'Enter' && this.measureAnchor) {
+      e.preventDefault();
+      this.finishMeasure();
+      return;
+    }
     if (arrow && this.opts.arrowKeys === 'move' && !e.shiftKey && this.callbacks.onMoveKey) {
       e.preventDefault();
       this.callbacks.onMoveKey(arrow, e.repeat);
       return;
     }
-    if (PAN_KEYS[key] && !e.altKey) {
+    const letter = key.length === 1 && key >= 'a' && key <= 'z';
+    if (letter && !this.opts.letterKeys) return;
+    if (PAN_KEYS[key]) {
       e.preventDefault();
       if (!this.keys.has(key)) {
         this.keys.add(key);
@@ -1324,7 +1448,10 @@ export class MapRenderer {
         this.request();
         break;
       case 'Escape':
-        if (this.measurement || this.liveStroke) {
+        if (this.measureAnchor) {
+          e.preventDefault();
+          this.cancelMeasure();
+        } else if (this.measurement || this.liveStroke) {
           e.preventDefault();
           this.measurement = null;
           this.liveStroke = null;
@@ -1398,6 +1525,7 @@ export class MapRenderer {
     let cursor = 'default';
     if (this.dragMode === 'pan') cursor = 'grabbing';
     else if (this.spaceDown || tool === 'pan') cursor = 'grab';
+    else if (this.measureAnchor) cursor = 'crosshair';
     else if (tool === 'draw' || tool === 'ruler' || tool === 'pick-cell' || tool === 'pick-edge')
       cursor = 'crosshair';
     else if (tool === 'erase') cursor = 'cell';

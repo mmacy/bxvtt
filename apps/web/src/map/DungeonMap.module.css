@@ -1,0 +1,11 @@
+/*
+ * The map's container. The rule has no specificity (`:where`), so a caller's `className` or `style` can position,
+ * size, or round the map. The container needs a size and a positioning context, because the tooltip and the
+ * corner chip are positioned inside it.
+ */
+:where(.root) {
+  position: relative;
+  overflow: hidden;
+  border-radius: inherit;
+  background: var(--dungeon-map-rock);
+}
