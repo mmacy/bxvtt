@@ -9,3 +9,20 @@
   border-radius: inherit;
   background: var(--dungeon-map-rock);
 }
+
+/*
+ * The canvas fills the container. Its focus ring is an outline drawn inside its edge, because the outline paints
+ * above the canvas's pixels, whereas a shadow on the container would sit under the opaque canvas.
+ */
+.canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  outline: none;
+  user-select: none;
+}
+
+.canvas:focus-visible {
+  outline: 3px solid var(--dungeon-map-focus);
+  outline-offset: -3px;
+}

@@ -3,7 +3,7 @@
  * with an identity transform, converting world points through the `FrameView`, so text and markers
  * stay sharp and keep a readable size at every zoom.
  */
-import { FACING_ANGLE, type Point } from '../geometry';
+import { FACING_ANGLE, type Direction, type Point } from '../geometry';
 import type { MapTarget } from '../hit';
 import { featureSlots } from '../hit';
 import { lightRadiusCells, type MapArea } from '../model';
@@ -16,6 +16,7 @@ import {
   type Measurement,
 } from '../overlays';
 import type { Scene } from '../scene';
+import { fitLabel, type FittedLabel, type LabelSpot } from '../labels';
 import { labelFont, type MapTheme } from '../themes';
 import { createCanvas, mulberry32, parseColor, rgba, type Ctx2D } from './util';
 
@@ -99,59 +100,149 @@ export function drawLabels(
   ctx.lineJoin = 'round';
   for (const area of scene.map.areas) {
     if (area.label === '') {
-      drawNameLabel(ctx, view, area, theme, namePx, avoid);
+      drawNameLabel(ctx, view, scene, area, theme, namePx, avoid);
       continue;
     }
-    const p = view.toDevice(area.anchor.x, area.anchor.y);
+    const spot = scene.labelSpots.get(area.id) ?? {
+      x: area.anchor.x,
+      y: area.anchor.y,
+      width: 1,
+      inside: 1,
+      twoLines: false,
+    };
+    const name = showNames && area.name ? fitAreaName(ctx, view, theme, area, spot, namePx, 600) : null;
+    const lineHeight = name ? name.px * 1.12 : 0;
+    const blockHeight = numberPx + (name ? name.lines.length * lineHeight : 0);
+    ctx.font = labelFont(theme, name?.px ?? numberPx, 600);
+    const blockWidth = Math.max(numberPx, ...(name?.lines ?? []).map((line) => ctx.measureText(line).width));
+    const p = clearOfToken(
+      view,
+      scene,
+      spot,
+      view.toDevice(spot.x, spot.y),
+      blockWidth / 2 + 3 * dpr,
+      blockHeight / 2,
+      avoid,
+    );
     if (p.x < -200 * dpr || p.y < -80 * dpr || p.x > view.width + 200 * dpr || p.y > view.height + 80 * dpr)
       continue;
-    const dim = !area.known;
-    ctx.globalAlpha = dim ? 0.72 : 1;
-    let y = p.y - (showNames && area.name ? namePx * 0.55 : 0);
+    ctx.globalAlpha = area.known ? 1 : 0.72;
+    let y = p.y - blockHeight / 2 + numberPx / 2;
     ctx.font = labelFont(theme, numberPx, 800);
     ctx.lineWidth = Math.max(3 * dpr, numberPx * 0.22);
     ctx.strokeStyle = theme.label.halo;
     ctx.strokeText(area.label, p.x, y);
     ctx.fillStyle = theme.label.color;
     ctx.fillText(area.label, p.x, y);
-    if (showNames && area.name) {
-      ctx.font = labelFont(theme, namePx);
-      const name = fitName(ctx, area, view);
-      y += numberPx * 0.62 + namePx * 0.5;
-      ctx.lineWidth = Math.max(3 * dpr, namePx * 0.3);
-      ctx.strokeText(name, p.x, y);
-      ctx.fillText(name, p.x, y);
-      y += namePx * 0.6;
-    } else {
-      y += numberPx * 0.62;
+    y += numberPx / 2;
+    if (name) {
+      ctx.font = labelFont(theme, name.px, 600);
+      ctx.lineWidth = Math.max(3 * dpr, name.px * 0.3);
+      for (const line of name.lines) {
+        y += lineHeight / 2;
+        ctx.strokeText(line, p.x, y);
+        ctx.fillText(line, p.x, y);
+        y += lineHeight / 2;
+      }
     }
     if (showMarkers && zoom >= 15) drawAreaMarkers(ctx, area, p.x, y + 9 * dpr, dpr, theme);
   }
   ctx.restore();
 }
 
+/**
+ * Moves a label block above or below the party token when the token would cover it. `at` is the block's centre
+ * in device pixels, and the halves are its half width and half height.
+ */
+function clearOfToken(
+  view: FrameView,
+  scene: Scene,
+  spot: LabelSpot,
+  at: { x: number; y: number },
+  halfWidth: number,
+  halfHeight: number,
+  avoid: Point | null,
+): { x: number; y: number } {
+  if (avoid === null) return at;
+  const { dpr } = view;
+  const token = view.toDevice(avoid.x, avoid.y);
+  // The token's radius, as drawParty draws it, with a little room.
+  const radius = Math.min(26 * dpr, Math.max(8.5 * dpr, view.scale * 0.31)) + 2 * dpr;
+  const covers = (p: { x: number; y: number }) =>
+    Math.abs(token.x - p.x) < halfWidth + radius && Math.abs(token.y - p.y) < halfHeight + radius;
+  if (!covers(at)) return at;
+  const above = view.toDevice(spot.x, avoid.y - 0.5);
+  above.y -= radius + halfHeight;
+  const below = view.toDevice(spot.x, avoid.y + 0.5);
+  below.y += radius + halfHeight;
+  // Above reads first. Below wins when above is under the token or on a symbol and below is clear.
+  const blocked = (p: { x: number; y: number }) => symbolUnder(view, scene, p, halfWidth, halfHeight);
+  if (covers(above) || (blocked(above) && !blocked(below))) return below;
+  return above;
+}
+
+/** Whether a label block, centred at a device point, overlaps a cell that holds stairs or a feature. */
+function symbolUnder(
+  view: FrameView,
+  scene: Scene,
+  at: { x: number; y: number },
+  halfWidth: number,
+  halfHeight: number,
+): boolean {
+  const origin = view.toDevice(0, 0);
+  const x0 = Math.floor((at.x - halfWidth - origin.x) / view.scale);
+  const x1 = Math.floor((at.x + halfWidth - origin.x) / view.scale);
+  const y0 = Math.floor((at.y - halfHeight - origin.y) / view.scale);
+  const y1 = Math.floor((at.y + halfHeight - origin.y) / view.scale);
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      const k = `${x},${y}`;
+      if (scene.featuresByCell.has(k)) return true;
+      if ((scene.transitionsByCell.get(k) ?? []).some((t) => t.kind !== 'passage')) return true;
+    }
+  }
+  return false;
+}
+
 /** The zoom, in CSS pixels per cell, from which a player map names its areas. */
 const PLAYER_NAME_ZOOM = 16;
 
-/** An area name cut to the width of its room (at least `minWidth` CSS pixels), with an ellipsis. */
-function fitName(ctx: Ctx2D, area: MapArea, view: FrameView, minWidth = 90): string {
-  const widthPx = (area.bounds.maxX - area.bounds.minX) * view.scale;
-  const maxWidth = Math.max(widthPx * 1.15, minWidth * view.dpr);
-  let name = area.name;
-  if (ctx.measureText(name).width > maxWidth) {
-    while (name.length > 4 && ctx.measureText(`${name}…`).width > maxWidth) name = name.slice(0, -1);
-    name = `${name.trimEnd()}…`;
-  }
-  return name;
+/**
+ * An area's name fitted to its label spot: whole on one line if it fits, then on two lines, then smaller, and cut
+ * with an ellipsis only when nothing else fits.
+ */
+function fitAreaName(
+  ctx: Ctx2D,
+  view: FrameView,
+  theme: MapTheme,
+  area: MapArea,
+  spot: LabelSpot,
+  px: number,
+  weight: number,
+): FittedLabel {
+  const measure = (text: string, size: number) => {
+    ctx.font = labelFont(theme, size, weight);
+    return ctx.measureText(text).width;
+  };
+  // Inside the area's walls at the full size, on one line or two, reads best. Past the walls comes next, and
+  // a smaller size and an ellipsis come last.
+  // Two lines need the rows above and below, unless they fit inside the label's own row.
+  const twoLines = spot.twoLines || px * 1.12 * 2 <= view.scale * 0.92;
+  const inside = Math.max(view.scale * spot.inside - 6 * view.dpr, 24 * view.dpr);
+  const within = fitLabel(area.name, inside, measure, { px, minPx: Math.round(px * 0.8) }, twoLines);
+  if (!within.lines.some((line) => line.endsWith('…'))) return within;
+  const maxWidth = Math.max(view.scale * spot.width - 6 * view.dpr, 24 * view.dpr);
+  return fitLabel(area.name, maxWidth, measure, { px, minPx: Math.round(9 * view.dpr) }, twoLines);
 }
 
 /**
- * A player area's name. A player map often knows only a corridor's width of a room, so the name may run past
- * the room's cells, and it moves above or below the party token when the token would cover it.
+ * A player area's name, at its label spot. The name keeps clear of stairs and features, and moves above or below
+ * the party token when the token would cover it.
  */
 function drawNameLabel(
   ctx: Ctx2D,
   view: FrameView,
+  scene: Scene,
   area: MapArea,
   theme: MapTheme,
   namePx: number,
@@ -159,33 +250,31 @@ function drawNameLabel(
 ): void {
   const { zoom, dpr } = view;
   if (zoom < PLAYER_NAME_ZOOM || !area.name) return;
+  const spot = scene.labelSpots.get(area.id) ?? {
+    x: area.anchor.x,
+    y: area.anchor.y,
+    width: 1,
+    inside: 1,
+    twoLines: false,
+  };
   ctx.globalAlpha = 1;
-  ctx.font = labelFont(theme, namePx, 650);
-  const name = fitName(ctx, area, view, 180);
-  const halfWidth = ctx.measureText(name).width / 2 + 3 * dpr;
-  const halfHeight = namePx * 0.7;
-  let p = view.toDevice(area.anchor.x, area.anchor.y);
-  if (avoid !== null) {
-    const token = view.toDevice(avoid.x, avoid.y);
-    // The token's radius, as drawParty draws it, with a little room.
-    const radius = Math.min(26 * dpr, Math.max(8.5 * dpr, view.scale * 0.31)) + 2 * dpr;
-    const covers = (at: { x: number; y: number }) =>
-      Math.abs(token.x - at.x) < halfWidth + radius && Math.abs(token.y - at.y) < halfHeight + radius;
-    if (covers(p)) {
-      const above = view.toDevice(area.anchor.x, avoid.y - 0.5);
-      above.y -= radius + halfHeight;
-      const below = view.toDevice(area.anchor.x, avoid.y + 0.5);
-      below.y += radius + halfHeight;
-      p = covers(above) ? below : above;
-    }
-  }
+  const fitted = fitAreaName(ctx, view, theme, area, spot, namePx, 650);
+  ctx.font = labelFont(theme, fitted.px, 650);
+  const lineHeight = fitted.px * 1.12;
+  const halfWidth = Math.max(...fitted.lines.map((line) => ctx.measureText(line).width)) / 2 + 3 * dpr;
+  const halfHeight = (lineHeight * fitted.lines.length) / 2 + 2 * dpr;
+  const p = clearOfToken(view, scene, spot, view.toDevice(spot.x, spot.y), halfWidth, halfHeight, avoid);
   if (p.x < -200 * dpr || p.y < -80 * dpr || p.x > view.width + 200 * dpr || p.y > view.height + 80 * dpr)
     return;
-  ctx.lineWidth = Math.max(3 * dpr, namePx * 0.3);
+  ctx.lineWidth = Math.max(3 * dpr, fitted.px * 0.3);
   ctx.strokeStyle = theme.label.halo;
-  ctx.strokeText(name, p.x, p.y);
   ctx.fillStyle = theme.label.color;
-  ctx.fillText(name, p.x, p.y);
+  let y = p.y - (lineHeight * (fitted.lines.length - 1)) / 2;
+  for (const line of fitted.lines) {
+    ctx.strokeText(line, p.x, y);
+    ctx.fillText(line, p.x, y);
+    y += lineHeight;
+  }
 }
 
 function drawAreaMarkers(
@@ -474,6 +563,57 @@ export function drawHover(
     }
     case 'pin':
       break;
+  }
+  ctx.restore();
+}
+
+/**
+ * The keyboard cursor: a bold square with a contrasting inner line, so it reads on every theme and stays distinct
+ * from the hover highlight. In the pick-an-edge tool, a thick bar marks the chosen side.
+ */
+export function drawKeyboardCursor(
+  ctx: Ctx2D,
+  view: FrameView,
+  cursor: { x: number; y: number; side: Direction },
+  edge: boolean,
+  theme: MapTheme,
+): void {
+  const { dpr, scale } = view;
+  const a = view.toDevice(cursor.x, cursor.y);
+  const inset = 1.5 * dpr;
+  const contrast = theme.tone === 'dark' ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.95)';
+  ctx.save();
+  ctx.fillStyle = theme.hover.fill;
+  ctx.fillRect(a.x, a.y, scale, scale);
+  ctx.lineJoin = 'miter';
+  ctx.lineWidth = 4 * dpr;
+  ctx.strokeStyle = contrast;
+  ctx.strokeRect(a.x + inset, a.y + inset, scale - inset * 2, scale - inset * 2);
+  ctx.lineWidth = 2.5 * dpr;
+  ctx.strokeStyle = theme.hover.stroke;
+  if (edge) ctx.setLineDash([5 * dpr, 4 * dpr]);
+  ctx.strokeRect(a.x + inset, a.y + inset, scale - inset * 2, scale - inset * 2);
+  ctx.setLineDash([]);
+  if (edge) {
+    const ends: Record<Direction, [number, number, number, number]> = {
+      north: [0, 0, 1, 0],
+      south: [0, 1, 1, 1],
+      west: [0, 0, 0, 1],
+      east: [1, 0, 1, 1],
+    };
+    const [x1, y1, x2, y2] = ends[cursor.side];
+    const p1 = view.toDevice(cursor.x + x1, cursor.y + y1);
+    const p2 = view.toDevice(cursor.x + x2, cursor.y + y2);
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineTo(p2.x, p2.y);
+    ctx.lineWidth = Math.max(9 * dpr, scale * 0.2);
+    ctx.strokeStyle = contrast;
+    ctx.stroke();
+    ctx.lineWidth = Math.max(5 * dpr, scale * 0.12);
+    ctx.strokeStyle = theme.hover.stroke;
+    ctx.stroke();
   }
   ctx.restore();
 }

@@ -43,4 +43,17 @@ describe('DungeonMap', () => {
     // The map's own default lives in a rule with no specificity, so the caller's class wins.
     expect((plain.firstElementChild as HTMLElement).style.position).toBe('');
   });
+
+  it('keeps the empty tooltip hidden, so it never needs a name', () => {
+    render(<DungeonMap map={fromPlayerView(fixture('showcase-explored').view)} />);
+    const tooltip = screen.getByRole('tooltip', { hidden: true });
+    expect(tooltip).not.toBeVisible();
+    expect(screen.queryByRole('tooltip')).toBeNull();
+  });
+
+  it('gives the canvas the class that draws its keyboard focus ring', () => {
+    render(<DungeonMap map={null} />);
+    const canvas = screen.getByRole('application', { name: 'Dungeon map' });
+    expect(canvas.className).toMatch(/canvas/);
+  });
 });

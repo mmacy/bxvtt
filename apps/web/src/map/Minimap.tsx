@@ -36,9 +36,20 @@ interface Layout {
   oy: number;
 }
 
-function layoutFor(map: LevelMap, width: number, height: number): Layout {
+/** The fewest cells a player's minimap spans, so a level the party barely knows shows as a small shape. */
+const MIN_SPAN = { w: 16, h: 12 };
+
+export function layoutFor(map: LevelMap, width: number, height: number): Layout {
   const b = map.layer === 'referee' ? map.bounds : (map.knownBounds ?? map.bounds);
   const bounds = { minX: b.minX - 1, minY: b.minY - 1, maxX: b.maxX + 1, maxY: b.maxY + 1 };
+  if (map.layer === 'player') {
+    const growX = Math.max(0, MIN_SPAN.w - (bounds.maxX - bounds.minX)) / 2;
+    const growY = Math.max(0, MIN_SPAN.h - (bounds.maxY - bounds.minY)) / 2;
+    bounds.minX -= growX;
+    bounds.maxX += growX;
+    bounds.minY -= growY;
+    bounds.maxY += growY;
+  }
   const w = bounds.maxX - bounds.minX;
   const h = bounds.maxY - bounds.minY;
   // Cap the scale so a level the party barely knows doesn't fill the minimap with one cell.
@@ -89,11 +100,18 @@ export function Minimap(props: MinimapProps) {
       const y = layout.oy + (cam.camera.y - halfH - layout.bounds.minY) * layout.scale;
       const w = halfW * 2 * layout.scale;
       const h = halfH * 2 * layout.scale;
-      ctx.fillStyle = rgba(theme.hover.stroke, 0.12);
-      ctx.fillRect(x, y, w, h);
-      ctx.lineWidth = 1.5;
-      ctx.strokeStyle = theme.hover.stroke;
-      ctx.strokeRect(x + 0.75, y + 0.75, Math.max(2, w - 1.5), Math.max(2, h - 1.5));
+      // The viewport as an outline only, clipped to the minimap. When the main map shows more than the minimap
+      // covers, the outline would only frame the edge, so it's left out.
+      const x0 = Math.max(0, x);
+      const y0 = Math.max(0, y);
+      const x1 = Math.min(width, x + w);
+      const y1 = Math.min(height, y + h);
+      const covers = x0 <= 0 && y0 <= 0 && x1 >= width && y1 >= height;
+      if (!covers && x1 > x0 && y1 > y0) {
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = theme.hover.stroke;
+        ctx.strokeRect(x0 + 0.75, y0 + 0.75, Math.max(2, x1 - x0 - 1.5), Math.max(2, y1 - y0 - 1.5));
+      }
     }
   }, [height, map, theme, width]);
 
@@ -119,7 +137,10 @@ export function Minimap(props: MinimapProps) {
     if (ctx) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       const cell = layout.scale;
+      // A player's minimap draws only what the party knows, on the theme's rock. A referee's draws the whole
+      // level, with what the party hasn't seen under the veil.
       for (const c of map.cells) {
+        if (map.layer === 'player' && !c.known) continue;
         ctx.fillStyle = c.known ? theme.floor.color : rgba(theme.fog.veil, 0.85);
         ctx.fillRect(
           layout.ox + (c.x - layout.bounds.minX) * cell,
@@ -127,6 +148,22 @@ export function Minimap(props: MinimapProps) {
           Math.ceil(cell),
           Math.ceil(cell),
         );
+      }
+      // The walls, so the explored shape reads at a glance.
+      if (cell >= 3) {
+        ctx.beginPath();
+        for (const e of map.edges) {
+          if (e.kind === 'open') continue;
+          const x = layout.ox + (e.x - layout.bounds.minX) * cell;
+          const y = layout.oy + (e.y - layout.bounds.minY) * cell;
+          ctx.moveTo(x, y);
+          if (e.side === 'north') ctx.lineTo(x + cell, y);
+          else ctx.lineTo(x, y + cell);
+        }
+        ctx.lineWidth = Math.max(1, cell * 0.14);
+        ctx.lineCap = 'square';
+        ctx.strokeStyle = theme.wall.color;
+        ctx.stroke();
       }
     }
     baseRef.current = base;

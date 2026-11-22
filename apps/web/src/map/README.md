@@ -91,7 +91,7 @@ fromPlayerView(view, key, {
 });
 ```
 
-Each area keeps only the cells on the party's map and gets no key number, because players don't see the key. Its name goes on the cell deepest inside the area that holds no stairs or feature, from a zoom of 16 pixels a cell, and moves above or below the party token when the token would cover it. The hover tooltip names the area under the pointer. If you draw your own labels, pass `areaLabels={false}` to `DungeonMap` and keep the areas for the tooltip.
+Each area keeps only the cells on the party's map and gets no key number, because players don't see the key. From a zoom of 16 pixels a cell, the map writes the area's name on the widest row of its cells that holds no stairs or feature, so a name never covers a symbol. A long name wraps to two lines inside the area's walls. If it still doesn't fit, it runs up to two cells past the walls where nothing is drawn, then shrinks, and only then ends in an ellipsis. When the party token would cover a name, the name moves above or below the token, to whichever side holds no symbol. Referee labels follow the same rules. The hover tooltip names the area under the pointer. If you draw your own labels, pass `areaLabels={false}` to `DungeonMap` and keep the areas for the tooltip.
 
 Keep extras on the server's player projection or in the player's own store, never from referee data.
 
@@ -162,6 +162,9 @@ Every click callback receives a target and a `MapPointerInfo` with the screen po
 | `onFollowPartyChange(follow)` | A pan turned follow mode off, or the F key toggled it. |
 | `onMoveKey(direction, repeat)` | An arrow key with `arrowKeys="move"`. `repeat` is true while the key is held. |
 | `onCameraChange(camera)` | The camera moved. It fires on every animated frame, so don't set React state from it directly. |
+| `onPickCancel()` | Escape with the keyboard cursor in the `pick-cell` or `pick-edge` tool. Leave the pick mode, as your Cancel button does. |
+| `onMeasureChange(measurement)` | The ruler's measurement changed while the user draws it with the pointer or moves it with the keyboard, or it was cleared (`null`). Show it in your status line with `measurementText(measurement)`, which returns text such as "6 squares, 60 feet". |
+| `onCursorChange(target, text)` | The keyboard cursor moved, appeared, or went away (`target` is `null`). `target` is a `CellTarget`, or an `EdgeTarget` in the `pick-edge` tool, and `text` is the sentence the map announces. |
 
 ## Imperative handle
 
@@ -174,6 +177,7 @@ Pass a `ref` to get a `DungeonMapHandle`:
 - `getStats()`, which returns frames per second and frame times, and `focus()`.
 - `startMeasure(cell)`, which starts a measurement from a cell (`{ x, y }` in cells) in any tool, such as for "Measure from here" in a context menu. The ruler runs to the cell under the pointer, and the arrow keys move its far end while the map has focus. A click or Enter ends it and reports the measurement through `onMeasure`, and that click reaches no other callback. Escape, a tool change, a level change, or `cancelMeasure()` ends it and reports `null`. `isMeasuring()` says whether one is running.
 - `restoreErasedStrokes(ids?)`, which shows strokes the eraser hid again: the given ids, or every hidden stroke.
+- `hasKeyboardCursor()`, which says whether the keyboard cursor or a measurement from `startMeasure` owns the arrow keys, Enter, and Escape right now. See [The keyboard cursor](#the-keyboard-cursor).
 
 ```tsx
 const mapRef = useRef<DungeonMapHandle>(null);
@@ -210,6 +214,35 @@ With the map focused, it handles these keys and calls `preventDefault` on each:
 
 Every other key, and every key pressed with Ctrl, Cmd, or Alt, passes through untouched, so the app's shortcut registry receives it. For example, A after a click on the map reaches the combat feature's "Attack the nearest monsters" shortcut.
 
+The focused map draws a 3-pixel outline in the theme's highlight color inside its edge. The outline follows `:focus-visible`, so it shows when the user reaches the map with the keyboard and not after a click.
+
+### The keyboard cursor
+
+In the tools that pick a place (`pick-cell`, `pick-edge`, `pin`, `ping`, and `ruler`), the keyboard does what a click does. When the map has keyboard focus in one of these tools, it shows a cursor: a bold square on a cell, with a thick bar on one side in the `pick-edge` tool. The cursor starts on the party's cell, or on the cell at the centre of the screen when the party is on another level.
+
+| Key | What it does |
+| --- | --- |
+| Arrow keys | Move the cursor one cell. The first arrow key shows the cursor if focus didn't. Shift and an arrow key still pans. |
+| E, Shift and E | Turn the `pick-edge` cursor to the next side clockwise, or anticlockwise. |
+| Enter | Acts at the cursor: `onPickCell`, `onPickEdge`, `onPinCreate`, or `onPing` with the cell's centre. With the ruler, the first Enter starts a measurement at the cursor, the arrow keys move its far end, and the next Enter keeps it and reports it through `onMeasure`. |
+| Escape | Clears a kept measurement with the ruler, or hides the cursor. In the `pick-cell` and `pick-edge` tools it also calls `onPickCancel`. |
+
+The map pans to keep the cursor two cells inside the screen, and a pointer click hides the cursor until the next arrow key. The canvas carries `data-map-cursor="on"` while the cursor shows.
+
+The map handles these keys in the capture phase on the window, before any handler on an ancestor element. A play screen that moves the party with the arrow keys therefore never receives them while the cursor shows. To keep the two clearly apart, a handler of your own can also return early while `hasKeyboardCursor()` is true.
+
+To start a pick from a button, focus the map after the user presses it, so a keyboard user lands on the cursor:
+
+```tsx
+<Button onClick={() => { startPick('cell'); mapRef.current?.focus(); }}>Pick a cell on the map</Button>
+```
+
+### What the map announces
+
+The map owns a polite live region next to the canvas. It announces each cursor move in words, relative to the party, such as "Guardroom, not yet seen by the party, 2 squares north of the party. Press Enter to choose this square, or Escape to stop." In the `pick-edge` tool it names the side first, such as "North side: a door, closed, locked." It announces a measurement as "6 squares, 60 feet", whether the user draws it with the pointer or moves it with the keyboard, and "Kept: 6 squares, 60 feet." when the user keeps a keyboard measurement. The region empties when the tool changes to one without a cursor.
+
+The hover tooltip stays hidden, and out of the accessibility tree, until it has text to show.
+
 ## Themes
 
 Themes are plain data in `themes.ts`: colors, line widths, and a few style switches.
@@ -222,7 +255,7 @@ To make a variant, copy a theme, change fields, and pass the object as `theme`. 
 
 ## Minimap
 
-`<Minimap map={map} target={mapRef} />` draws the level, the party, and the main map's viewport. A click or drag on it moves the main map, and the arrow keys pan by a quarter screen when it has focus. Give it the same `map` and `theme` as the main map.
+`<Minimap map={map} target={mapRef} />` draws the level, the party, and the main map's viewport. On a player map it draws only the cells the party knows, with their walls, on the theme's rock color, and it spans at least 16 by 12 cells so a level the party barely knows shows as a small shape. On a referee map it draws the whole level, with unseen cells under the veil. It draws the viewport as an outline, and leaves the outline out when the main map shows more than the minimap covers. A click or drag on it moves the main map, and the arrow keys pan by a quarter screen when it has focus. Give it the same `map` and `theme` as the main map.
 
 ## How it renders
 

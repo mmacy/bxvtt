@@ -141,7 +141,21 @@ export function Harness() {
     const areas = areaNames
       ? level.areas.map((area) => ({ id: area.id, name: area.name, cells: area.cells }))
       : undefined;
-    return fromPlayerView(view, world.key, { extras: { areas } });
+    // The scene also describes the features the party has found. The harness offers those on known cells.
+    const known = new Set((view.explored[0]?.cells ?? []).map(([x, y]) => `${x},${y}`));
+    const kinds = { treasure_cache: 'cache', construction_trick: 'trick', custom: 'custom' } as const;
+    const features = areaNames
+      ? [...level.features, ...level.areas.flatMap((area) => area.features)]
+          .filter((f) => f.cell && known.has(`${f.cell[0]},${f.cell[1]}`))
+          .map((f) => ({
+            id: f.id,
+            kind: kinds[f.kind],
+            x: f.cell?.[0] ?? 0,
+            y: f.cell?.[1] ?? 0,
+            description: f.description,
+          }))
+      : undefined;
+    return fromPlayerView(view, world.key, { extras: { areas, features } });
   }, [located, layer, world, areaNames]);
 
   // Pins: one for everyone and one for referees, placed near the party when the level changes.
