@@ -108,6 +108,23 @@ export class SaveService {
     label: string | null,
     autosave: boolean,
   ): Promise<SaveEntry> {
+    if (!autosave) {
+      const count = num(
+        this.ctx.db.get(
+          'SELECT count(*) AS n FROM saves WHERE table_id = ? AND autosave = 0',
+          live.tableId,
+        ) ?? {
+          n: 0,
+        },
+        'n',
+      );
+      if (count >= this.ctx.config.quotas.savesPerTable) {
+        throw new ApiError(
+          'forbidden',
+          `The table has ${count} saves, the most this server keeps. Delete an old save first.`,
+        );
+      }
+    }
     const info = await callBxapi(() =>
       this.ctx.bxapi.post<SaveInfo>(
         `/v1/sessions/${encodeURIComponent(live.sessionId)}/saves`,
@@ -223,9 +240,15 @@ export class SaveService {
       const session = await callBxapi(() =>
         this.ctx.bxapi.post<SessionInfo>(`/v1/saves/${encodeURIComponent(saveId)}/restore`, {}),
       );
-      const view = await callBxapi(() =>
-        this.ctx.bxapi.get<PlayerView>(`/v1/sessions/${encodeURIComponent(session.id)}/view`),
-      );
+      let view: PlayerView;
+      try {
+        view = await callBxapi(() =>
+          this.ctx.bxapi.get<PlayerView>(`/v1/sessions/${encodeURIComponent(session.id)}/view`),
+        );
+      } catch (error) {
+        await this.game.discardSession(session.id);
+        throw error;
+      }
       copySeats(this.ctx.db, tableId, str(save, 'session_id'), session.id, view);
       const lastRecord = previous?.record ??
         this.lastRecordFor(tableId) ?? {

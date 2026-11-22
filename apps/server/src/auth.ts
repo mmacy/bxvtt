@@ -3,7 +3,7 @@ import type { User } from '@bxvtt/shared/protocol';
 import { ApiError } from './errors';
 import type { UserStore } from './users';
 import type { RateLimiter } from './util';
-import { clientAddress } from './util';
+import { addressKey, clientAddress, requestPath } from './util';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -24,11 +24,13 @@ const PUBLIC_ROUTES = new Set(['GET /api/health', 'HEAD /api/health', 'POST /api
 export class Auth {
   /**
    * @param users - The user store.
-   * @param failedAuth - The limiter for failed attempts.
+   * @param failedAuth - The limiter for failed attempts, by address.
+   * @param userWrites - The limiter for requests that change something, by user.
    */
   constructor(
     private readonly users: UserStore,
     private readonly failedAuth: RateLimiter,
+    private readonly userWrites: RateLimiter,
   ) {}
 
   /**
@@ -41,7 +43,7 @@ export class Auth {
     app.decorateRequest('clientIp', '');
     app.addHook('onRequest', async (request) => {
       request.clientIp = clientAddress(request.socket.remoteAddress, request.headers);
-      const path = request.url.split('?')[0] ?? '';
+      const path = requestPath(request);
       if (!path.startsWith('/api/') && path !== '/api') return;
       if (PUBLIC_ROUTES.has(`${request.method} ${path}`)) return;
       const header = request.headers.authorization;
@@ -59,6 +61,10 @@ export class Auth {
         );
       }
       request.user = user;
+      if (request.method !== 'GET' && request.method !== 'HEAD') {
+        const retry = this.userWrites.take(user.id);
+        if (retry > 0) throw rateLimited('You are sending changes too fast. Wait a moment.', retry);
+      }
     });
   }
 
@@ -71,18 +77,13 @@ export class Auth {
    * @throws ApiError `rate_limited` when the address has failed too often.
    */
   authenticate(token: string, address: string): User | null {
-    const blocked = this.failedAuth.peek(address);
+    const key = addressKey(address);
+    const blocked = this.failedAuth.peek(key);
     const user = token.length <= 200 ? this.users.byToken(token) : null;
     if (user !== null) return user;
-    if (blocked > 0) {
-      throw new ApiError(
-        'rate_limited',
-        'This address has sent too many unknown tokens. Try again later.',
-        { retry_after: blocked },
-        { headers: { 'Retry-After': String(blocked) } },
-      );
-    }
-    this.failedAuth.take(address);
+    if (blocked > 0)
+      throw rateLimited('This address has sent too many unknown tokens. Try again later.', blocked);
+    this.failedAuth.take(key);
     return null;
   }
 
@@ -96,4 +97,19 @@ export class Auth {
     if (request.user === null) throw new ApiError('unauthorized', 'This route needs a user token.');
     return request.user;
   }
+}
+
+/**
+ * Builds a `rate_limited` problem with the `Retry-After` header.
+ *
+ * @param detail - What the client did too often.
+ * @param retryAfter - The whole seconds until the client may try again.
+ */
+export function rateLimited(detail: string, retryAfter: number): ApiError {
+  return new ApiError(
+    'rate_limited',
+    detail,
+    { retry_after: retryAfter },
+    { headers: { 'Retry-After': String(retryAfter) } },
+  );
 }

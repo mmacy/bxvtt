@@ -3,7 +3,15 @@ import { isProblem } from '@bxvtt/shared/client';
 import type { BxvttProblemError } from '@bxvtt/shared/client';
 import { LIMITS } from '@bxvtt/shared/protocol';
 import type { TestConnection, TestServer, TestUser } from './helpers';
-import { connect, createTable, createUser, findRefereeData, received, startServer } from './helpers';
+import {
+  connect,
+  createCharacter,
+  createTable,
+  createUser,
+  findRefereeData,
+  received,
+  startServer,
+} from './helpers';
 
 const LEVEL = { dungeon_id: 'barrow', level_number: 1 };
 
@@ -21,6 +29,10 @@ describe('map annotations, pings, and notes', () => {
     alice = await createUser(server, 'Alice');
     bob = await createUser(server, 'Bob');
     tableId = (await createTable(referee, [alice, bob])).id;
+    // A player sees and makes marks only on a level the party has mapped, so the party enters the barrow.
+    await alice.client.addToRoster(tableId, (await createCharacter(alice, 'Brenna')).id);
+    await referee.client.startGame(tableId, { adventure_id: 'builtin-barrow', seed: 7 });
+    await alice.client.sendCommand(tableId, { command_type: 'enter_dungeon', dungeon_id: 'barrow' });
     bobWs = await connect(server, bob, tableId);
   });
 

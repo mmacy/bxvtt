@@ -9,8 +9,11 @@ import { z } from 'zod';
  * - An area appears once the party has walked into one of its cells, with its name, its description, and the
  *   cells of it the party knows.
  * - A treasure cache appears once the party has entered its area (or walked onto its cell, for one outside an
- *   area), until it is emptied, and never while an encounter or battle is open. Neither its contents nor its
- *   authored description appear.
+ *   area), until it is emptied, and never while an encounter or battle is open. A cache on a cell appears only
+ *   once that cell is on the party's map. A lair hoard appears only after its monsters were slain or routed.
+ *   Neither its contents nor its authored description appear. A player's `take_treasure`, `inspect_treasure`,
+ *   or `remove_treasure_trap` that names a cache missing from `scene.here.caches` is refused with
+ *   `exploration.feature.unknown`, as bxapi refuses a cache that isn't there.
  * - A custom feature appears with its description once the party has entered its area or walked onto its cell.
  *   A construction trick appears only after a search found it.
  * - A transition (stairs, trapdoor, chute, or passage) appears once its cell is on the party's map. The scene

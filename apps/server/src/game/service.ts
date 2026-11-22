@@ -9,6 +9,7 @@ import type {
   LegalCommand,
   PlayerView,
   RefereeState,
+  Rejection,
   Role,
   Scene,
   StartGameRequest,
@@ -89,6 +90,50 @@ export function playerEvents(
     }
   });
   return { events: keep, messages: lines };
+}
+
+/** The commands that name a treasure cache in `feature_id`. */
+const TREASURE_COMMANDS: ReadonlySet<string> = new Set([
+  'take_treasure',
+  'inspect_treasure',
+  'remove_treasure_trap',
+]);
+
+/**
+ * Refuses a player's treasure command that names a cache the scene doesn't show the party, as bxapi refuses a
+ * cache that isn't there. Without this, a player could take a lair hoard the party hasn't found by guessing its
+ * sequential `cache-NNNN` ID.
+ *
+ * @param live - The game.
+ * @param command - The command.
+ * @returns The rejection, or `null` to send the command to bxapi.
+ */
+function unseenTreasure(live: LiveGame, command: Command): Rejection | null {
+  if (!TREASURE_COMMANDS.has(command.command_type)) return null;
+  const featureId = command.feature_id;
+  if (typeof featureId !== 'string' || featureId === 'pile') return null;
+  const here = live.scene.here;
+  if (here === null) return null;
+  if (here.caches.some((cache) => cache.id === featureId)) return null;
+  return { code: 'exploration.feature.unknown', params: { feature: featureId } };
+}
+
+/**
+ * Makes a refused `remove_treasure_trap` on a cache the party can see read the same whether or not the cache is
+ * trapped. osrlib answers `exploration.feature.unknown` for a cache with no trap and
+ * `exploration.trap.not_found` for one whose trap nobody found, which would tell a player which caches are
+ * trapped without a search.
+ *
+ * @param command - The command.
+ * @param outcome - bxapi's outcome, which this changes in place.
+ */
+function maskTrapRejections(command: Command, outcome: CommandOutcome): void {
+  if (command.command_type !== 'remove_treasure_trap') return;
+  outcome.rejections = outcome.rejections.map((rejection) =>
+    rejection.code === 'exploration.feature.unknown'
+      ? { ...rejection, code: 'exploration.trap.not_found' }
+      : rejection,
+  );
 }
 
 /**
@@ -384,9 +429,16 @@ export class GameService {
           },
         );
       }
-      const view = await callBxapi(() =>
-        this.ctx.bxapi.get<PlayerView>(`/v1/sessions/${encodeURIComponent(session.id)}/view`),
-      );
+      let view: PlayerView;
+      try {
+        view = await callBxapi(() =>
+          this.ctx.bxapi.get<PlayerView>(`/v1/sessions/${encodeURIComponent(session.id)}/view`),
+        );
+      } catch (error) {
+        // The table never recorded the session, so nothing else would delete it.
+        await this.discardSession(session.id);
+        throw error;
+      }
       const { seats, matchedByOrder } = seatsFromRoster(roster, view);
       if (!matchedByOrder) {
         this.ctx.log.warn(
@@ -548,7 +600,21 @@ export class GameService {
         );
       }
       this.checkPermission(live, user, role, info, command);
+      const unseen = role === 'referee' ? null : unseenTreasure(live, command);
+      if (unseen !== null) {
+        return {
+          accepted: false,
+          rejections: [unseen],
+          events: [],
+          messages: [],
+          mode: live.mode,
+          ended: live.ended,
+          revision: live.revision,
+          game: await this.project(live, role),
+        };
+      }
       const outcome = await this.executeLocked(live, command, requestId, user.id);
+      if (role !== 'referee' && !outcome.accepted) maskTrapRejections(command, outcome);
       if (outcome.accepted) {
         await this.afterAcceptedLocked(live, outcome, {
           userId: user.id,
@@ -861,12 +927,14 @@ export class GameService {
   }
 
   /**
-   * Deletes a table's bxapi sessions, saves, and uploaded adventures, before the table itself is deleted.
-   * Failures are logged, because the table goes either way.
+   * Deletes a table: its bxapi saves, sessions, and uploaded adventures, then its rows, and tells its members.
+   * It holds the table's lock throughout, so no command, start, or restore queued behind it can create a bxapi
+   * session for a table that no longer exists. A failed bxapi deletion is logged, because the table goes either
+   * way.
    *
    * @param tableId - The table ID.
    */
-  async deleteTableData(tableId: string): Promise<void> {
+  async deleteTable(tableId: string): Promise<void> {
     await this.locked(tableId, async () => {
       this.live.delete(tableId);
       const remove = async (path: string) => {
@@ -888,6 +956,38 @@ export class GameService {
         await remove(`/v1/sessions/${encodeURIComponent(str(row, 'session_id'))}`);
       }
       await this.ctx.adventures.removeAll(tableId);
+      this.ctx.db.run('DELETE FROM tables WHERE id = ?', tableId);
+      this.ctx.hub.removeUser(tableId, null, 'table_deleted');
     });
+  }
+
+  /**
+   * Deletes a bxapi session that the server created but never recorded, after a start or restore failed
+   * partway. A failure is logged.
+   *
+   * @param sessionId - The session ID.
+   */
+  async discardSession(sessionId: string): Promise<void> {
+    try {
+      await this.ctx.bxapi.request('DELETE', `/v1/sessions/${encodeURIComponent(sessionId)}`);
+    } catch (error) {
+      this.ctx.log.warn({ err: error, session: sessionId }, 'could not delete an unused bxapi session');
+    }
+  }
+
+  /**
+   * Whether the party's map includes a level, from the game the server holds in memory. A player sees map
+   * annotations and pings only on such a level, because anything on another level is the referee's plan.
+   *
+   * @param tableId - The table ID.
+   * @param level - The level.
+   * @returns `false` in the lobby or before the server has read the game.
+   */
+  levelKnown(tableId: string, level: { dungeon_id: string; level_number: number }): boolean {
+    const live = this.live.get(tableId);
+    if (live === undefined || this.ctx.tables.game(tableId)?.sessionId !== live.sessionId) return false;
+    return live.view.explored.some(
+      (known) => known.dungeon_id === level.dungeon_id && known.level_number === level.level_number,
+    );
   }
 }

@@ -145,6 +145,13 @@ export class AdventureCatalog {
    * @param document - The document.
    */
   async upload(tableId: string, user: User, document: unknown): Promise<AdventureListing> {
+    const count = this.ctx.db.all('SELECT id FROM adventures WHERE table_id = ?', tableId).length;
+    if (count >= this.ctx.config.quotas.adventuresPerTable) {
+      throw new ApiError(
+        'forbidden',
+        `The table has uploaded ${count} adventures, the most this server keeps. Delete one first.`,
+      );
+    }
     const info = await callBxapi(() => this.ctx.bxapi.post<AdventureInfo>('/v1/adventures', document));
     const uploadedAt = now();
     this.ctx.db.run(

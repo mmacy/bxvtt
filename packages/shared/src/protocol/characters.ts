@@ -21,8 +21,9 @@ const Purchase = z.looseObject({
 /**
  * Body of `POST /api/characters` and `POST /api/characters/preview`: the choices bxapi's `POST /v1/characters`
  * accepts. The server checks the shape and passes the choices to bxapi, which checks the rules and answers with
- * a `character_invalid` problem when a choice breaks one. `seed` is accepted only when the server allows
- * character seeds. A preview ignores `ability_roll_id`.
+ * a `character_invalid` problem when a choice breaks one. `POST /api/characters` accepts `seed` only when the
+ * server allows character seeds. A preview ignores `ability_roll_id` and accepts `seed` on any server, because
+ * it stores nothing and a stored character can't reuse its rolls.
  */
 export const CharacterRequest = z.looseObject({
   name: z.string().min(1).max(100),

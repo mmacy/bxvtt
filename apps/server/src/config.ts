@@ -32,15 +32,56 @@ export interface Config {
   logLevel: string;
   /** Whether users may pass `seed` when they roll abilities or create characters. For tests and development. */
   allowCharacterSeeds: boolean;
-  /** Per-address rate limits. */
+  /**
+   * Rate limits. `createUser`, `join`, `failedAuth`, and `failedHostKey` count requests per network address (an
+   * IPv6 address counts by its /64 prefix). `userWrites` counts every request that changes something, and
+   * `userPosts` counts feed posts and new annotations, per user.
+   */
   rateLimits: {
     createUser: RateLimit;
     join: RateLimit;
     failedAuth: RateLimit;
+    failedHostKey: RateLimit;
+    userWrites: RateLimit;
+    userPosts: RateLimit;
   };
+  /** Caps on what one user or table can store, so nobody can fill the disk of bxvtt or bxapi. */
+  quotas: Quotas;
   /** How long a bxapi request may take before the server gives up, in milliseconds. */
   bxapiTimeoutMs: number;
 }
+
+/** Caps on stored data and open connections. */
+export interface Quotas {
+  /** Most tables one user may create. */
+  tablesPerUser: number;
+  /** Most stored characters one user may have. */
+  charactersPerUser: number;
+  /** Most saves a table may have, not counting autosaves, which the server prunes. */
+  savesPerTable: number;
+  /** Most adventures a table may upload. */
+  adventuresPerTable: number;
+  /** Most annotations a table may have on all levels together. */
+  annotationsPerTable: number;
+  /** Most open WebSocket connections one user may have to one table. */
+  connectionsPerUser: number;
+  /** Most WebSocket connections one address may hold open before they authenticate. */
+  pendingSocketsPerAddress: number;
+  /** Most bytes the rules cache holds. */
+  rulesCacheBytes: number;
+}
+
+/** The default quotas. */
+export const DEFAULT_QUOTAS: Quotas = {
+  tablesPerUser: 50,
+  charactersPerUser: 200,
+  savesPerTable: 100,
+  adventuresPerTable: 20,
+  annotationsPerTable: 20_000,
+  connectionsPerUser: 10,
+  pendingSocketsPerAddress: 20,
+  rulesCacheBytes: 32 * 1024 * 1024,
+};
 
 /** The default bxapi URL. Development scripts set `BXAPI_URL` to the development bxapi instead. */
 export const DEFAULT_BXAPI_URL = 'http://127.0.0.1:8640';
@@ -120,7 +161,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       createUser: { capacity: 10, windowMs: 10 * 60_000 },
       join: { capacity: 20, windowMs: 10 * 60_000 },
       failedAuth: { capacity: 30, windowMs: 10 * 60_000 },
+      failedHostKey: { capacity: 10, windowMs: 10 * 60_000 },
+      userWrites: { capacity: 100, windowMs: 20_000 },
+      userPosts: { capacity: 30, windowMs: 30_000 },
     },
+    quotas: { ...DEFAULT_QUOTAS },
     bxapiTimeoutMs: 15_000,
   };
 }

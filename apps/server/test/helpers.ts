@@ -12,6 +12,12 @@ import { loadConfig } from '../src/config';
 /** The bxapi the tests use. Never the one on port 8640. */
 export const BXAPI_URL = process.env.BXAPI_URL ?? 'http://127.0.0.1:8651';
 
+/** Settings a test changes. Rate limits and quotas merge with the test defaults. */
+export type ServerOverrides = Omit<Partial<Config>, 'rateLimits' | 'quotas'> & {
+  rateLimits?: Partial<Config['rateLimits']>;
+  quotas?: Partial<Config['quotas']>;
+};
+
 /** A server started for one test file, on a free port with its own data directory. */
 export interface TestServer {
   server: Server;
@@ -28,7 +34,7 @@ export interface TestServer {
  * @param samples - Sample adventure files to put in the sample directory, by file name.
  */
 export async function startServer(
-  overrides: Partial<Config> = {},
+  overrides: ServerOverrides = {},
   samples: Record<string, string> = {},
 ): Promise<TestServer> {
   const keep = overrides.dataDir !== undefined;
@@ -42,17 +48,23 @@ export async function startServer(
     BXVTT_DATA_DIR: dataDir,
     BXVTT_WEB_DIST: join(dataDir, 'web'),
   });
+  const generous = { capacity: 10_000, windowMs: 60_000 };
   const config: Config = {
     ...base,
     adventuresDir,
     logLevel: process.env.BXVTT_TEST_LOG ?? 'silent',
     allowCharacterSeeds: true,
-    rateLimits: {
-      createUser: { capacity: 10_000, windowMs: 60_000 },
-      join: { capacity: 10_000, windowMs: 60_000 },
-      failedAuth: { capacity: 10_000, windowMs: 60_000 },
-    },
     ...overrides,
+    rateLimits: {
+      createUser: generous,
+      join: generous,
+      failedAuth: generous,
+      failedHostKey: generous,
+      userWrites: generous,
+      userPosts: generous,
+      ...overrides.rateLimits,
+    },
+    quotas: { ...base.quotas, ...overrides.quotas },
   };
   const server = await createServer(config);
   await server.app.listen({ host: '127.0.0.1', port: 0 });

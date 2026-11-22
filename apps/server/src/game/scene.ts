@@ -242,6 +242,8 @@ export function buildScene(view: PlayerView, source: SceneSource, names: Map<str
     }
     for (const { areaId, feature } of placed) {
       const position: Position | null = feature.cell == null ? null : [feature.cell[0], feature.cell[1]];
+      // A feature on a cell the party hasn't seen would give the cell away.
+      if (position !== null && !knownCells.has(cellKey(position))) continue;
       if (feature.kind === 'treasure_cache') {
         if (state.emptied_caches?.includes(ref(feature.id))) continue;
         const trap = cacheTrap(areaId, feature);
@@ -279,7 +281,12 @@ export function buildScene(view: PlayerView, source: SceneSource, names: Map<str
       const position: Position = [x ?? 0, y ?? 0];
       const area = areaAt(level, position);
       if (!walked.has(cellKey(position)) && (area === null || !entered.has(area.id))) continue;
+      if (!knownCells.has(cellKey(position))) continue;
       if (encounterOpen && area !== null && area.id === partyArea?.id) continue;
+      // A lair hoard belongs to monsters that are still there until the party slays or routs them. After the
+      // party evades them or the encounter ends another way, they return, and the hoard stays out of sight.
+      if (area?.encounter?.hoard === true && !(state.resolved_encounters ?? []).includes(ref(area.id)))
+        continue;
       caches.push({
         id: cacheId,
         source: 'generated',
