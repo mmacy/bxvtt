@@ -153,8 +153,6 @@ export function Temple() {
             {orderServices(prices, status.dead).map((service) => {
               const price = prices[service] ?? 0;
               const short = partyGold < price;
-              // The other services need a living patient.
-              const needsLiving = status.dead && service !== 'raise_dead';
               return (
                 <li key={service} className={styles.service}>
                   <div className={styles.serviceText}>
@@ -171,12 +169,8 @@ export function Temple() {
                     variant="secondary"
                     icon="heart"
                     loading={pending}
-                    disabled={!permission.allowed || needsLiving}
-                    title={
-                      needsLiving
-                        ? `${patient.name} is dead, so this needs a living patient.`
-                        : (permission.reason ?? undefined)
-                    }
+                    disabled={!permission.allowed}
+                    title={permission.reason ?? undefined}
                     aria-label={`Buy ${healingServiceLabel(service).toLowerCase()} for ${patient.name}`}
                     onClick={() => void buy(service)}
                   >
@@ -189,7 +183,7 @@ export function Temple() {
           {!permission.allowed && <p className={styles.explain}>{permission.reason}</p>}
           {status.dead && (
             <p className={styles.explain}>
-              {`${patient.name} is dead. Raise dead is the service for the dead, and the other services need a living patient.`}
+              {`${patient.name} is dead. Raise dead is the service for a dead member, so it is listed first.`}
             </p>
           )}
           {referee && (

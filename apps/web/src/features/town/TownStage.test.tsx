@@ -622,7 +622,7 @@ describe('the temple and a dead member', () => {
     return snapshot;
   }
 
-  it('names the button "Osric, dead", puts raise dead first, and disables the services that need a living patient', async () => {
+  it('names the button "Osric, dead", lists raise dead first, and leaves every Buy button enabled', async () => {
     const { user } = setup(withDeadOsric());
     await user.click(screen.getByRole('tab', { name: 'Temple' }));
     const group = await screen.findByRole('group', { name: 'Who is treated' });
@@ -630,9 +630,20 @@ describe('the temple and a dead member', () => {
     expect(within(group).getByRole('button', { name: /^Brenna, \d+ of \d+ hp$/ })).toBeInTheDocument();
     const buttons = screen.getAllByRole('button', { name: /^Buy .* for Osric$/ });
     expect(buttons[0]).toHaveAccessibleName('Buy raise dead for Osric');
-    expect(buttons[0]).toBeEnabled();
-    for (const other of buttons.slice(1)) expect(other).toBeDisabled();
-    expect(screen.getByText(/the other services need a living patient/)).toBeInTheDocument();
+    for (const button of buttons) expect(button).toBeEnabled();
+  });
+
+  it("shows bxapi's refusal when a service can't help a dead member", async () => {
+    const { api, user, store } = setup(withDeadOsric());
+    const game = store.getState().game;
+    if (!game) throw new Error('No game.');
+    api.sendCommand.mockResolvedValue(
+      refused(game, 'town.healing.no_effect', { service: 'cure_light_wounds' }),
+    );
+    await user.click(screen.getByRole('tab', { name: 'Temple' }));
+    await user.click(await screen.findByRole('button', { name: 'Buy cure light wounds for Osric' }));
+    expect(await screen.findByText("The temple can't do that for Osric")).toBeInTheDocument();
+    expect(api.sendCommand).toHaveBeenCalled();
   });
 
   it('shows the cleric level field to a referee only', async () => {
