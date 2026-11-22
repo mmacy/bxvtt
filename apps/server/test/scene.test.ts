@@ -90,7 +90,13 @@ describe('the scene', () => {
 
   it('is empty in town and describes the first area once the party walks in', async () => {
     const town = await alice.client.getGame(tableId);
-    expect(town.scene).toEqual({ levels: [], here: null, names: expect.any(Object) });
+    expect(town.scene).toEqual({
+      levels: [],
+      here: null,
+      names: expect.any(Object),
+      can_travel_to_town: false,
+      targets: [],
+    });
     const entered = await alice.client.sendCommand(tableId, {
       command_type: 'enter_dungeon',
       dungeon_id: 'priory',
@@ -190,6 +196,26 @@ describe('the scene', () => {
     await alice.client.getGame(tableId);
     const texts = [...alice.received, ...aliceWs.messages.map((message) => JSON.stringify(message))];
     expect(findRefereeData(texts, HIDDEN)).toEqual([]);
+  });
+
+  it('shows a level entrance only on a cell the party has mapped', async () => {
+    const games = aliceWs.messages.flatMap((message) =>
+      message.type === 'game' && message.game !== null ? [message.game] : [],
+    );
+    expect(games.length).toBeGreaterThan(3);
+    for (const game of games) {
+      for (const level of game.scene.levels) {
+        if (level.entrance == null) continue;
+        const known = game.view.explored.find(
+          (candidate) =>
+            candidate.dungeon_id === level.dungeon_id && candidate.level_number === level.level_number,
+        );
+        expect(known?.cells.map((cell) => `${cell[0]},${cell[1]}`)).toContain(
+          `${level.entrance[0]},${level.entrance[1]}`,
+        );
+      }
+      if (game.scene.can_travel_to_town === true) expect(game.scene.here?.at_entrance).toBe(true);
+    }
   });
 });
 

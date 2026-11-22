@@ -67,6 +67,12 @@ export const PROBLEM_CODES = {
   character_invalid: 422,
   /** 422 (from bxapi): the roster's characters can't form a party. */
   party_invalid: 422,
+  /**
+   * 422: a command or declaration names a target handle (`tgt_...`) that isn't one of the handles in
+   * `game.scene.targets`, for example a handle from an encounter that has ended. Extra members: `field`, the
+   * field that holds it, and `id`, the handle. Read the scene again and pick a target from it.
+   */
+  target_unknown: 422,
   /** 429: too many requests from this address. The `Retry-After` header and the `retry_after` member give the seconds to wait. */
   rate_limited: 429,
   /** 500: a bug in bxvtt. The server logs the cause. */
@@ -75,6 +81,17 @@ export const PROBLEM_CODES = {
   bxapi_error: 502,
   /** 503: bxvtt can't reach bxapi. Start bxapi and try again. */
   bxapi_unavailable: 503,
+  /**
+   * 502, 503, or 504, made by the SDK rather than the server: something between the browser and the bxvtt
+   * server, such as the Vite proxy or a tunnel, answered with an error page instead of a problem document,
+   * usually because the bxvtt server is down. `status` is the status the proxy sent.
+   */
+  server_unavailable: 503,
+  /**
+   * Made by the SDK rather than the server: a response the SDK expected to be JSON wasn't, such as an HTML page
+   * where an API response belongs. `status` is the response's status.
+   */
+  invalid_response: 502,
 } as const;
 
 /** A stable problem code. */

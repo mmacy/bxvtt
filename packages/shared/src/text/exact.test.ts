@@ -390,7 +390,7 @@ describe('events', () => {
         facing: 'east',
         narrative: null,
       },
-      'The party moves to (2, 0), facing east.',
+      'The party moves east.',
       'neutral',
       'movement',
     ],

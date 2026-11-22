@@ -117,10 +117,32 @@ export class RulesCache {
   async json<T>(path: string): Promise<T> {
     return JSON.parse((await this.fetch(path)).body) as T;
   }
+
+  /**
+   * Reads every entry of a catalog's list, page by page.
+   *
+   * @param catalog - The catalog, such as `equipment`.
+   * @returns The list entries in bxapi's order, and the `ETag` of each page.
+   */
+  async list<T>(catalog: string): Promise<{ items: T[]; etags: string[] }> {
+    const items: T[] = [];
+    const etags: string[] = [];
+    for (let offset = 0; ; offset += LIST_PAGE) {
+      const entry = await this.fetch(`${catalog}?limit=${LIST_PAGE}&offset=${offset}`);
+      const page = JSON.parse(entry.body) as { items: T[]; total?: number };
+      items.push(...page.items);
+      etags.push(entry.etag);
+      if (page.items.length < LIST_PAGE || (page.total !== undefined && items.length >= page.total)) break;
+    }
+    return { items, etags };
+  }
 }
 
+/** The page size {@link RulesCache.list} asks bxapi for, the largest bxapi allows. */
+const LIST_PAGE = 200;
+
 /** Whether an `If-None-Match` header matches an `ETag`, ignoring weak prefixes. */
-function etagMatches(header: string | undefined, etag: string): boolean {
+export function etagMatches(header: string | undefined, etag: string): boolean {
   if (header === undefined || etag === '') return false;
   const bare = etag.replace(/^W\//, '');
   return header.split(',').some((tag) => {

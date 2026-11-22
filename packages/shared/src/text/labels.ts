@@ -1,7 +1,7 @@
 /**
  * Display labels for the closed sets of values that bxapi uses: session modes, conditions, abilities, saving
- * throws, alignments, classes, coins, item types, door states, monster bearing, battle actions and moves,
- * directions, and time units.
+ * throws, alignments, classes, coins, item types, weapon qualities, door states, monster bearing, battle actions
+ * and moves, directions, and time units.
  *
  * Every label is in sentence case. Each lookup accepts any string and falls back to the value's words
  * (`magic_user` becomes `Magic user`) so a value that bxapi adds later still reads as English.
@@ -322,6 +322,57 @@ export function itemTypeLabel(itemType: string): string {
   return lookup(ITEM_TYPES, itemType)?.label ?? fallbackLabel(itemType);
 }
 
+// Weapon qualities ------------------------------------------------------------------------------------------
+
+/** osrlib's weapon qualities, as the weapon table prints them. Each weapon template lists its qualities. */
+const WEAPON_QUALITIES: Record<string, { label: string; description: string }> = {
+  blunt: {
+    label: 'Blunt',
+    description:
+      'A crushing weapon, not an edged one. Only an edged melee weapon kills a sleeping target with one hit.',
+  },
+  brace: {
+    label: 'Brace',
+    description: 'Deals double damage when the wielder sets it against a charging enemy.',
+  },
+  charge: { label: 'Charge', description: 'Deals double damage when the wielder charges with it.' },
+  melee: { label: 'Melee', description: 'Strikes hand to hand, at melee reach.' },
+  missile: {
+    label: 'Missile',
+    description: 'Shoots or is thrown at range. The range band sets the attack modifier.',
+  },
+  reload: {
+    label: 'Reload',
+    description: "Can't fire in two rounds in a row, when the table's rules use reloading.",
+  },
+  slow: {
+    label: 'Slow',
+    description:
+      'The wielder always acts after everyone without a slow weapon, whatever the initiative roll.',
+  },
+  splash: {
+    label: 'Splash',
+    description:
+      'Bursts on the target. A damaging hit deals its damage again at the start of the next round.',
+  },
+  two_handed: {
+    label: 'Two-handed',
+    description: "Needs both hands, so the wielder can't use a shield with it.",
+  },
+};
+
+export const WEAPON_QUALITY_VALUES = Object.keys(WEAPON_QUALITIES);
+
+/** Label for a weapon quality: `Two-handed`. */
+export function weaponQualityLabel(quality: string): string {
+  return lookup(WEAPON_QUALITIES, quality)?.label ?? fallbackLabel(quality);
+}
+
+/** What a weapon quality does in a fight, in a sentence or two. */
+export function weaponQualityDescription(quality: string): string {
+  return lookup(WEAPON_QUALITIES, quality)?.description ?? `${fallbackLabel(quality)}.`;
+}
+
 // Doors and edges -------------------------------------------------------------------------------------------
 
 const DOOR_STATES: Record<string, { label: string; description: string }> = {
@@ -502,15 +553,27 @@ export function oppositeDirection(direction: string): string {
 
 // Time, rests, and other small sets -------------------------------------------------------------------------
 
-const TIME_UNITS: Record<string, { label: string }> = {
-  round: { label: 'Rounds (10 seconds)' },
-  turn: { label: 'Turns (10 minutes)' },
-  day: { label: 'Days (24 hours)' },
+const TIME_UNITS: Record<string, { label: string; one: string; many: string }> = {
+  round: { label: 'Rounds (10 seconds)', one: 'round', many: 'rounds' },
+  turn: { label: 'Turns (10 minutes)', one: 'turn', many: 'turns' },
+  day: { label: 'Days (24 hours)', one: 'day', many: 'days' },
 };
+
+export const TIME_UNIT_VALUES = Object.keys(TIME_UNITS);
 
 /** Label for a game time unit, with its length: `Turns (10 minutes)`. */
 export function timeUnitLabel(unit: string): string {
   return lookup(TIME_UNITS, unit)?.label ?? fallbackLabel(unit);
+}
+
+/**
+ * The time unit as a noun for a count, in lower case: `timeUnitNoun('turn')` gives `turn`, and
+ * `timeUnitNoun('turn', 3)` gives `turns`. Use `formatDuration` for a whole amount such as `3 turns (30 minutes)`.
+ */
+export function timeUnitNoun(unit: string, count = 1): string {
+  const known = lookup(TIME_UNITS, unit);
+  const one = known?.one ?? prettifyId(unit).toLowerCase();
+  return count === 1 ? one : (known?.many ?? `${one}s`);
 }
 
 const REST_KINDS: Record<string, { label: string; description: string }> = {

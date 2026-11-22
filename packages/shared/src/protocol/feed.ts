@@ -54,6 +54,14 @@ export const GameEntry = FeedEntryBase.extend({
   session_id: z.string(),
   events: z.array(z.custom<GameEvent>()),
   messages: z.array(z.string()),
+  /**
+   * The game clock after the command, in rounds since the session began (the player view's `clock_rounds`
+   * at `revision`). Format it with `formatGameClock` from `@bxvtt/shared/text`. The server records it for
+   * every new entry. An entry written before the server recorded clocks has it only when its `revision` is
+   * the game's current revision, and `null` otherwise. Optional in the type so that older fixtures still
+   * compile. This server always sends it.
+   */
+  clock_rounds: z.number().int().nullable().optional(),
 });
 
 /** What a system notice reports. The client writes the sentence from `code` and `params`. */

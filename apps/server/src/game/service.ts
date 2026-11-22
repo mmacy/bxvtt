@@ -29,6 +29,8 @@ import { CommandClassifier } from './classify';
 import { SaveService } from './saves';
 import { buildScene, eventItemIds, inventoryNames, templateNames } from './scene';
 import { readSeats, reconcileSeats, seatsFromRoster, writeSeats } from './seats';
+import type { TargetBook } from './targets';
+import { emptyTargetBook, resolveHandles, syncTargets, toHandles } from './targets';
 
 /** What the server holds in memory about a table's game, at one revision. */
 export interface LiveGame {
@@ -47,6 +49,8 @@ export interface LiveGame {
   scene: Scene;
   /** Display names for item IDs that the party has seen, kept across revisions of the session. */
   names: Map<string, string>;
+  /** The monster target handles of the session, and the ones the scene lists at `revision`. */
+  targets: TargetBook;
 }
 
 /** Who sent an accepted command, for the feed. */
@@ -228,8 +232,9 @@ export class GameService {
       legal: commands.commands,
       referee: null,
       refereeRevision: -1,
-      scene: { levels: [], here: null, names: {} },
+      scene: { levels: [], here: null, names: {}, can_travel_to_town: false, targets: [] },
       names,
+      targets: emptyTargetBook(),
     };
     if (info.revision === commands.revision) {
       live.referee = refereeState(refereeView);
@@ -266,11 +271,15 @@ export class GameService {
       refereeView.adventure,
       this.equipment ?? new Map(),
     );
-    live.scene = buildScene(
-      live.view,
-      { adventure: refereeView.adventure, dungeonState: refereeView.dungeon_state },
-      live.names,
-    );
+    live.targets = syncTargets(this.ctx.db, live.tableId, live.sessionId, live.view, refereeView);
+    live.scene = {
+      ...buildScene(
+        live.view,
+        { adventure: refereeView.adventure, dungeonState: refereeView.dungeon_state },
+        live.names,
+      ),
+      targets: live.targets.targets,
+    };
   }
 
   /**
@@ -600,6 +609,7 @@ export class GameService {
         );
       }
       this.checkPermission(live, user, role, info, command);
+      const resolved = resolveHandles(command, info.targetFields, live.targets, 'command');
       const unseen = role === 'referee' ? null : unseenTreasure(live, command);
       if (unseen !== null) {
         return {
@@ -613,7 +623,7 @@ export class GameService {
           game: await this.project(live, role),
         };
       }
-      const outcome = await this.executeLocked(live, command, requestId, user.id);
+      const outcome = await this.executeLocked(live, resolved, requestId, user.id);
       if (role !== 'referee' && !outcome.accepted) maskTrapRejections(command, outcome);
       if (outcome.accepted) {
         await this.afterAcceptedLocked(live, outcome, {
@@ -630,7 +640,8 @@ export class GameService {
           : playerEvents(outcome.events, outcome.messages);
       return {
         accepted: outcome.accepted,
-        rejections: outcome.rejections,
+        // A player names a monster by its target handle, so a rejection names it the same way.
+        rejections: role === 'referee' ? outcome.rejections : toHandles(outcome.rejections, live.targets),
         events: projected.events,
         messages: projected.messages,
         mode: outcome.mode,
@@ -887,6 +898,7 @@ export class GameService {
         session_id: live.sessionId,
         events: forPlayers.events,
         messages: forPlayers.messages,
+        clock_rounds: live.view.clock_rounds,
       },
       referee: {
         kind: 'game',
@@ -895,6 +907,7 @@ export class GameService {
         session_id: live.sessionId,
         events: outcome.events,
         messages: outcome.messages,
+        clock_rounds: live.view.clock_rounds,
       },
     });
     this.battle.afterAcceptedLocked(live);
@@ -973,6 +986,21 @@ export class GameService {
     } catch (error) {
       this.ctx.log.warn({ err: error, session: sessionId }, 'could not delete an unused bxapi session');
     }
+  }
+
+  /**
+   * The game clock at one revision of a session, when the server knows it: the clock of the game it holds in
+   * memory, at that game's current revision.
+   *
+   * @param tableId - The table ID.
+   * @param sessionId - The session ID.
+   * @param revision - The revision.
+   * @returns The clock in rounds, or `null`.
+   */
+  clockAt(tableId: string, sessionId: string, revision: number): number | null {
+    const live = this.live.get(tableId);
+    if (live === undefined || live.sessionId !== sessionId || live.revision !== revision) return null;
+    return live.view.clock_rounds;
   }
 
   /**

@@ -46,7 +46,6 @@ import {
   conditionGained,
   conditionRemoved,
   encounterOutcomeSentence,
-  facingLabel,
   healingServiceLabel,
   saveVersus,
   searchKindNoun,
@@ -161,6 +160,7 @@ interface Parts {
   tone: EventTone;
   icon: EventIcon;
   detail?: string | undefined;
+  refereeDetail?: string | undefined;
   ids?: ReadonlyArray<string | null | undefined>;
   amount?: number | undefined;
 }
@@ -205,8 +205,13 @@ function coinsText(gp: number): string {
   return `${formatGold(gp)} in coin`;
 }
 
-function goodsText(itemIds: readonly string[], gp: number, ctx: TextContext): string {
-  const parts = itemList(itemIds, ctx);
+function goodsText(
+  itemIds: readonly string[],
+  gp: number,
+  ctx: TextContext,
+  options: { lots?: boolean } = {},
+): string {
+  const parts = itemList(itemIds, ctx, options);
   if (gp > 0) parts.push(coinsText(gp));
   return parts.length === 0 ? 'nothing' : joinList(parts);
 }
@@ -351,6 +356,7 @@ export function describeEvent(
     visibility,
   };
   if (parts.detail) line.detail = removeDashes(parts.detail);
+  if (parts.refereeDetail) line.refereeDetail = parts.refereeDetail;
   if (parts.amount !== undefined) line.amount = parts.amount;
   return line;
 }
@@ -904,12 +910,14 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
 
     // Movement and exploration ---------------------------------------------------------------------------------
     case 'party_moved': {
+      // After a step, the party faces the way it went, so the facing is the direction of the step.
       const base =
         event.code === 'exploration.party.turned'
-          ? `The party turns to face ${event.facing}.`
-          : `The party moves to (${event.x}, ${event.y}), ${facingLabel(event.facing)}.`;
+          ? `The party turns to face ${doorSide(event.facing)}.`
+          : `The party moves ${doorSide(event.facing)}.`;
       return {
         text: withNarrative(base, event.narrative),
+        refereeDetail: `Cell (${event.x}, ${event.y}).`,
         category: 'movement',
         tone: 'neutral',
         icon: event.code === 'exploration.party.turned' ? 'turn' : 'step',
@@ -928,13 +936,13 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
     case 'door': {
       const side = doorSide(event.direction);
       const who = event.character_id ? memberName(event.character_id, ctx) : undefined;
-      const place = `Door cell (${event.x}, ${event.y}), side ${event.direction}.`;
+      const place = `The door is on the ${side} side of cell (${event.x}, ${event.y}).`;
       const ids = [event.character_id];
       switch (event.code) {
         case 'exploration.door.opened':
           return {
             text: withNarrative(`The door to the ${side} opens.`, event.narrative),
-            detail: place,
+            refereeDetail: place,
             category: 'door',
             tone: 'neutral',
             icon: 'door',
@@ -943,7 +951,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
         case 'exploration.door.closed':
           return {
             text: `The door to the ${side} closes.`,
-            detail: place,
+            refereeDetail: place,
             category: 'door',
             tone: 'neutral',
             icon: 'door',
@@ -955,7 +963,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
               `${who ?? 'A party member'} forces the door to the ${side} open.`,
               event.narrative,
             ),
-            detail: place,
+            refereeDetail: place,
             category: 'door',
             tone: 'good',
             icon: 'door',
@@ -966,7 +974,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
             text: who
               ? `The door to the ${side} won't budge, and ${who} strains in vain.`
               : `The door to the ${side} won't budge.`,
-            detail: place,
+            refereeDetail: place,
             category: 'door',
             tone: 'bad',
             icon: 'door',
@@ -975,7 +983,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
         case 'exploration.door.wedged':
           return {
             text: `An iron spike wedges the door to the ${side}.`,
-            detail: place,
+            refereeDetail: place,
             category: 'door',
             tone: 'neutral',
             icon: 'door',
@@ -984,7 +992,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
         case 'exploration.door.swung_shut':
           return {
             text: 'A door swings shut behind the party.',
-            detail: place,
+            refereeDetail: place,
             category: 'door',
             tone: 'neutral',
             icon: 'door',
@@ -993,7 +1001,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
         case 'exploration.door.unlocked':
           return {
             text: `${who ?? 'A party member'} unlocks the door to the ${side}.`,
-            detail: place,
+            refereeDetail: place,
             category: 'door',
             tone: 'good',
             icon: 'lock',
@@ -1124,7 +1132,8 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
               ? 'takes'
               : 'gets';
       return {
-        text: `${who} ${verb} ${goodsText(event.item_ids, event.coins_gp_value, ctx)}.`,
+        // A purchase lists one ID per lot, so two lots of torches are 12 torches.
+        text: `${who} ${verb} ${goodsText(event.item_ids, event.coins_gp_value, ctx, { lots: event.origin === 'purchase' })}.`,
         category: event.origin === 'treasure' ? 'treasure' : 'item',
         tone: 'good',
         icon: event.item_ids.length === 0 ? 'coins' : 'chest',
@@ -1383,7 +1392,10 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
           };
     case 'loot_dropped':
       return {
-        text: `The fallen leave behind ${goodsText(event.item_ids, event.coins_gp_value, ctx)}.`,
+        text:
+          event.item_ids.length === 0 && event.coins_gp_value === 0
+            ? 'The fallen leave nothing behind.'
+            : `The fallen leave behind ${goodsText(event.item_ids, event.coins_gp_value, ctx)}.`,
         category: 'treasure',
         tone: 'good',
         icon: 'chest',
@@ -1712,7 +1724,12 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
       };
     case 'trigger_fired':
       return {
-        text: withNarrative(`The adventure trigger "${event.trigger_id}" fires.`, event.narrative),
+        text: withNarrative(
+          ctx.triggers?.[event.trigger_id]
+            ? `The trigger for ${ctx.triggers[event.trigger_id]} fires.`
+            : `The ${prettifyId(event.trigger_id)} trigger fires.`,
+          event.narrative,
+        ),
         category: 'referee',
         tone: 'info',
         icon: 'flag',
@@ -1933,13 +1950,20 @@ function describeLocation(
 export interface DescribeEventsOptions {
   /** Join an attack with the damage it dealt. Defaults to true. */
   mergeAttacks?: boolean;
-  /** Drop a `dead` condition when a death event for the same creature follows it. Defaults to true. */
+  /**
+   * Drop lines that repeat what another line says: a `dead` condition that a death event repeats, a `turned`
+   * condition that ends with the monster's defeat, and a hit point report that states the same numbers as the
+   * last report for that creature. Defaults to true.
+   */
   dropRedundant?: boolean;
   /** Collapse a run of wandering-monster checks that found nothing into one line. Defaults to true. */
   collapseChecks?: boolean;
   /** Keep only events with this visibility. Defaults to all events. */
   only?: 'player' | 'referee';
-  /** bxapi's own messages, one per event in order, used as the fallback for event types this module doesn't know. */
+  /**
+   * bxapi's own messages, one per event of the unfiltered list in order, used as the fallback for event types
+   * this module doesn't know. With `only`, each message still goes with its own event.
+   */
   messages?: readonly string[];
 }
 
@@ -1963,14 +1987,32 @@ export function describeEvents(
   const merge = options.mergeAttacks ?? true;
   const dropRedundant = options.dropRedundant ?? true;
   const collapse = options.collapseChecks ?? true;
-  const list = options.only
-    ? events.filter((event) => (options.only === 'player' ? isPlayerVisible(event) : !isPlayerVisible(event)))
-    : events;
+  // Filter the events and their messages together, so each message stays with its own event.
+  const kept = events.flatMap((event, index) =>
+    !options.only || (options.only === 'player') === isPlayerVisible(event) ? [index] : [],
+  );
+  const list = kept.flatMap((index) => (events[index] === undefined ? [] : [events[index]]));
+  const messages = kept.map((index) => options.messages?.[index]);
+  const messageOption = (index: number): { message?: string } => {
+    const message = messages[index];
+    return message === undefined ? {} : { message };
+  };
   const learned = extendContextWithEvents(ctx, list as readonly LearnableEvent[]);
   const lines: EventLine[] = [];
+  // The last hit point report for each creature, so a report that repeats it can be dropped.
+  const lastReport = new Map<string, string>();
   for (let index = 0; index < list.length; index += 1) {
     const event = list[index];
     if (event === undefined) continue;
+    if (dropRedundant && event.event_type === 'hit_points_reported') {
+      const target = String(event.target_id);
+      const numbers = `${String(event.current_hp)}/${String(event.max_hp)}`;
+      if (lastReport.get(target) === numbers) continue;
+      lastReport.set(target, numbers);
+    } else if (!REPORT_KEEPING_EVENTS.has(event.event_type)) {
+      // Anything else that happens to a creature, such as healing, can change its hit points.
+      for (const id of eventSubjects(event)) lastReport.delete(id);
+    }
     if (dropRedundant && event.event_type === 'condition_removed' && event.condition === 'turned') {
       const target = event.target_id;
       if (
@@ -2025,7 +2067,7 @@ export function describeEvents(
         next.attacker_id === event.attacker_id &&
         next.target_id === event.defender_id
       ) {
-        const attack = describeEvent(event, learned, messageOption(options, index));
+        const attack = describeEvent(event, learned, messageOption(index));
         const absorbed = describeEvent(next, learned);
         const merged: EventLine = {
           ...attack,
@@ -2045,7 +2087,7 @@ export function describeEvents(
         next.attacker_id === event.attacker_id &&
         next.target_id === event.defender_id
       ) {
-        const attack = describeEvent(event, learned, messageOption(options, index));
+        const attack = describeEvent(event, learned, messageOption(index));
         const damage = describeEvent(next, learned);
         const amount = typeof next.amount === 'number' ? next.amount : 0;
         const text = `${attack.text.replace(/\.$/, '')} for ${amount} damage.`;
@@ -2065,7 +2107,7 @@ export function describeEvents(
         continue;
       }
     }
-    lines.push(describeEvent(event, learned, messageOption(options, index)));
+    lines.push(describeEvent(event, learned, messageOption(index)));
   }
   return lines;
 }
@@ -2075,7 +2117,14 @@ function isQuietCheck(event: GameEvent | LooseEvent | undefined): boolean {
   return !('encounter' in event && event.encounter === true);
 }
 
-function messageOption(options: DescribeEventsOptions, index: number): { message?: string } {
-  const message = options.messages?.[index];
-  return message === undefined ? {} : { message };
+/** Events that never change a creature's hit points, so a hit point report after them can repeat the last one. */
+const REPORT_KEEPING_EVENTS = new Set(['condition_gained', 'condition_removed', 'death', 'monster_defeated']);
+
+/** The IDs an event is about, from its fields that name a creature. */
+function eventSubjects(event: GameEvent | LooseEvent): string[] {
+  const record = event as unknown as Record<string, unknown>;
+  return ['target_id', 'character_id', 'defender_id', 'monster_id'].flatMap((field) => {
+    const value = record[field];
+    return typeof value === 'string' ? [value] : [];
+  });
 }

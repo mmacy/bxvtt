@@ -15,14 +15,18 @@ const MONSTER_WITH_TEMPLATE = /\b(monster-\d{4,}) \(([a-z0-9_:]+)\)/g;
 const EFFECT_WITH_KIND = /\bEffect effect-\d{4,} \(([a-z0-9_]+)\)/g;
 const TRAP_REF = /\b([a-z][a-z0-9_-]*):(\d+):([a-z][a-z0-9_-]*)\b/g;
 const DUNGEON_OR_AREA = /\b(dungeon|area) ([a-z][a-z0-9_-]*)\b/g;
+const ENTERS_TOWN = /\bThe party enters town [a-z0-9_-]+(?: \(level \d+\))?\./g;
+const ENTERS_LEVEL = /\bThe party enters level ([a-z][a-z0-9_-]*) \(level (\d+)\)\./g;
+const MOVES_TO_CELL = /\bThe party moves to \(-?\d+, -?\d+\), facing ([a-z]+)\./g;
+const DOOR_OF_CELL = /\b([Tt])he door ([a-z]+) of \(-?\d+, -?\d+\)/g;
+const NOTHING_LISTED = /\b(acquires|drops|gives) (?=\.| to )/g;
 
 function withThe(name: string): string {
   return /^the\s/i.test(name) ? lowerFirst(name) : `the ${lowerFirst(name)}`;
 }
 
 function nameForToken(token: string, ctx: TextContext): string {
-  if (ctx.items[token]) return ctx.items[token];
-  if (equipmentNoun(token)) return itemNoun(token, ctx);
+  if (ctx.items[token] || equipmentNoun(token)) return itemNoun(token, ctx);
   if (ctx.spells[token]) return ctx.spells[token];
   if (spellCatalogName(token)) return spellCatalogName(token) ?? prettifyId(token);
   const magic = magicItemTemplateName(token);
@@ -33,12 +37,32 @@ function nameForToken(token: string, ctx: TextContext): string {
   return prettifyId(token);
 }
 
-/** Replace the em dashes and en dashes in bxapi's wording, which the text layer never emits. */
+/**
+ * Replace the em dashes and en dashes in bxapi's wording, which the text layer never emits. A dash between
+ * numbers becomes a hyphen. A dash before a clause, as in `the spell is disrupted \u2014 the spell is lost`,
+ * becomes `, and`, and any other dash becomes a comma.
+ */
 export function removeDashes(text: string): string {
   return text
     .replace(/(\d)\s*[\u2013\u2014]\s*(\d)/g, '$1-$2')
+    .replace(/\s*[\u2013\u2014]\s*(?=(?:the|a|an|it|its|both|they|exhaustion)\b|[A-Z])/g, ', and ')
     .replace(/\s*[\u2013\u2014]\s*/g, ', ')
     .replace(/\u2212/g, '-');
+}
+
+/** Rewrite osrlib's wording that reads badly once its IDs are names: map cells, empty lists, and `town town`. */
+function tidyWording(text: string, ctx: TextContext): string {
+  return text
+    .replace(ENTERS_TOWN, () => `The party arrives in ${ctx.townName ?? 'town'}.`)
+    .replace(
+      ENTERS_LEVEL,
+      (_match, dungeon: string, level: string) =>
+        `The party reaches level ${level} of ${withThe(dungeonName(dungeon, ctx))}.`,
+    )
+    .replace(MOVES_TO_CELL, (_match, facing: string) => `The party moves ${facing}.`)
+    .replace(DOOR_OF_CELL, (_match, t: string, side: string) => `${t}he ${side} door`)
+    .replace(/\bleave behind \./g, 'leave nothing behind.')
+    .replace(NOTHING_LISTED, '$1 nothing');
 }
 
 /** Capitalize the first letter of the string and the first letter after each sentence end. */
@@ -55,7 +79,7 @@ function capitalizeSentences(text: string): string {
  * and trap IDs in the messages bxapi writes. Names that the context doesn't know degrade to a readable phrase.
  */
 export function humanizeMessage(message: string, ctx: TextContext): string {
-  let text = message;
+  let text = tidyWording(message, ctx);
   text = text.replace(MONSTER_WITH_TEMPLATE, (_match, id: string, template: string) => {
     const known = ctx.monsters[id];
     if (known) return entityName(id, ctx);

@@ -34,8 +34,8 @@ export interface Config {
   allowCharacterSeeds: boolean;
   /**
    * Rate limits. `createUser`, `join`, `failedAuth`, and `failedHostKey` count requests per network address (an
-   * IPv6 address counts by its /64 prefix). `userWrites` counts every request that changes something, and
-   * `userPosts` counts feed posts and new annotations, per user.
+   * IPv6 address counts by its /64 prefix). `userWrites` counts every request that changes something,
+   * `userPosts` counts feed posts and new annotations, and `characterChecks` counts character checks, per user.
    */
   rateLimits: {
     createUser: RateLimit;
@@ -44,6 +44,7 @@ export interface Config {
     failedHostKey: RateLimit;
     userWrites: RateLimit;
     userPosts: RateLimit;
+    characterChecks: RateLimit;
   };
   /** Caps on what one user or table can store, so nobody can fill the disk of bxvtt or bxapi. */
   quotas: Quotas;
@@ -166,6 +167,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       failedHostKey: { capacity: 10, windowMs: 10 * 60_000 },
       userWrites: { capacity: 100 * relax, windowMs: 20_000 },
       userPosts: { capacity: 30 * relax, windowMs: 30_000 },
+      characterChecks: { capacity: 60 * relax, windowMs: 60_000 },
     },
     quotas: { ...DEFAULT_QUOTAS },
     bxapiTimeoutMs: 15_000,

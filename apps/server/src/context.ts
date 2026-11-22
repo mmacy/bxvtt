@@ -37,6 +37,8 @@ export interface Context {
     failedHostKey: RateLimiter;
     /** Feed posts and new annotations, by user. */
     userPosts: RateLimiter;
+    /** Character checks, by user. Each check can cost bxapi several requests. */
+    characterChecks: RateLimiter;
   };
   startedAt: number;
 }

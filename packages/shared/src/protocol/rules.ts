@@ -3,6 +3,7 @@ import type {
   DiceRollResponse,
   MonstersResponse,
   NpcPartyResponse,
+  paths,
   RoomResponse,
   TreasureResponse,
 } from '../bxapi';
@@ -95,3 +96,42 @@ export const RULES_QUERY_PARAMETERS = [
   'limit',
   'offset',
 ] as const;
+
+/**
+ * The catalogs that `GET /api/catalogs/{catalog}` serves whole: every full entry in one response, instead of one
+ * `GET /api/rules/{catalog}/{id}` request per entry.
+ */
+export const FULL_CATALOGS = ['classes', 'equipment', 'monsters', 'spells', 'magic-items'] as const;
+/** A catalog that `GET /api/catalogs/{catalog}` serves whole. */
+export type FullCatalogName = (typeof FULL_CATALOGS)[number];
+/** A catalog name, as a zod schema. */
+export const FullCatalogNameSchema = z.enum(FULL_CATALOGS);
+
+/** The body of a bxapi `GET` route's 200 response. */
+type BxapiGetResponse<P extends keyof paths> = paths[P] extends {
+  get: { responses: { 200: { content: { 'application/json': infer T } } } };
+}
+  ? T
+  : never;
+
+/** The full entry of each catalog, as bxapi's `GET /v1/rules/{catalog}/{id}` returns it. */
+export interface FullCatalogEntries {
+  classes: BxapiGetResponse<'/v1/rules/classes/{class_id}'>;
+  equipment: BxapiGetResponse<'/v1/rules/equipment/{item_id}'>;
+  monsters: BxapiGetResponse<'/v1/rules/monsters/{monster_id}'>;
+  spells: BxapiGetResponse<'/v1/rules/spells/{spell_id}'>;
+  'magic-items': BxapiGetResponse<'/v1/rules/magic-items/{item_id}'>;
+}
+
+/**
+ * Response of `GET /api/catalogs/{catalog}`: every entry of one rules catalog, each exactly as
+ * `GET /api/rules/{catalog}/{id}` returns it, in the order of bxapi's list. The response has an `ETag` and
+ * `Cache-Control: private, max-age=3600`, and the server answers `If-None-Match` with 304 and gzips the body
+ * for a client that accepts it.
+ */
+export interface FullCatalog<C extends FullCatalogName = FullCatalogName> {
+  catalog: C;
+  /** How many entries `items` holds. */
+  total: number;
+  items: FullCatalogEntries[C][];
+}

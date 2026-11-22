@@ -1,6 +1,7 @@
 import type { CommandClass } from '@bxvtt/shared/protocol';
 import type { CommandDetail, CommandSummary } from '@bxvtt/shared/bxapi';
 import type { RulesCache } from '../rules';
+import { TARGET_FIELD_NAMES } from './targets';
 
 /** How the server decides who may send one command type. */
 export interface CommandInfo {
@@ -9,6 +10,8 @@ export interface CommandInfo {
   class: CommandClass;
   /** The field that names the acting member of a `member` command, or `null`. */
   memberField: string | null;
+  /** The fields that can name a monster target, such as `targets`, which the server reads target handles in. */
+  targetFields: string[];
 }
 
 /**
@@ -33,14 +36,15 @@ const MEMBER_FIELDS = ['character_id', 'member_id', 'actor_id'];
  * @param detail - bxapi's command detail, with `json_schema`.
  */
 export function classifyCommand(detail: CommandDetail): CommandInfo {
-  const base = { commandType: detail.command_type, kind: detail.kind };
-  if (detail.kind === 'referee') return { ...base, class: 'referee', memberField: null };
-  if (detail.command_type === RESOLVE_ROUND) return { ...base, class: 'battle', memberField: null };
-  if (PARTY_OVERRIDES.has(detail.command_type)) return { ...base, class: 'party', memberField: null };
   const schema = detail.json_schema as {
     required?: unknown;
     properties?: Record<string, { type?: unknown }>;
   };
+  const targetFields = TARGET_FIELD_NAMES.filter((name) => schema.properties?.[name] !== undefined);
+  const base = { commandType: detail.command_type, kind: detail.kind, targetFields };
+  if (detail.kind === 'referee') return { ...base, class: 'referee', memberField: null };
+  if (detail.command_type === RESOLVE_ROUND) return { ...base, class: 'battle', memberField: null };
+  if (PARTY_OVERRIDES.has(detail.command_type)) return { ...base, class: 'party', memberField: null };
   const required = Array.isArray(schema.required) ? (schema.required as unknown[]) : [];
   const field = MEMBER_FIELDS.find(
     (name) => required.includes(name) && schema.properties?.[name]?.type === 'string',

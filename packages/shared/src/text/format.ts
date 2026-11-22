@@ -46,10 +46,16 @@ const IRREGULAR_PLURALS: Record<string, string> = {
   'magic-user': 'magic-users',
 };
 
-/** Regular English plural of a noun or noun phrase. A phrase such as `flask of oil` pluralizes its head noun. */
+/**
+ * Regular English plural of a noun or noun phrase. A phrase such as `flask of oil` pluralizes its head noun, and
+ * a phrase with a trailing bonus such as `sword +1` pluralizes the noun before it: `swords +1`.
+ */
 export function pluralize(noun: string): string {
-  const ofIndex = noun.indexOf(' of ');
-  if (ofIndex > 0) return `${pluralize(noun.slice(0, ofIndex))}${noun.slice(ofIndex)}`;
+  const preposition = / (?:of|with|from|for|in|on) /.exec(noun);
+  if (preposition && preposition.index > 0)
+    return `${pluralize(noun.slice(0, preposition.index))}${noun.slice(preposition.index)}`;
+  const bonus = /^(.*[A-Za-z])(\s+[+-]\d.*)$/.exec(noun);
+  if (bonus?.[1] !== undefined && bonus[2] !== undefined) return `${pluralize(bonus[1])}${bonus[2]}`;
   const lastWord = /[A-Za-z-]+$/.exec(noun)?.[0] ?? noun;
   const irregular = IRREGULAR_PLURALS[lastWord.toLowerCase()];
   if (irregular)
@@ -60,6 +66,30 @@ export function pluralize(noun: string): string {
     return noun.replace(/fe$/i, 'ves').replace(/f$/i, 'ves');
   }
   return `${noun}s`;
+}
+
+const IRREGULAR_SINGULARS: Record<string, string> = Object.fromEntries(
+  Object.entries(IRREGULAR_PLURALS).map(([singular, plural]) => [plural, singular]),
+);
+
+/**
+ * Singular of an English plural noun, the reverse of `pluralize` for the nouns that game names use: `torches`
+ * gives `torch`, `spikes` gives `spike`, and `rations` gives `ration`. A word that isn't a plural comes back
+ * unchanged.
+ */
+export function singularize(noun: string): string {
+  const lastWord = /[A-Za-z-]+$/.exec(noun)?.[0];
+  if (lastWord === undefined) return noun;
+  const head = noun.slice(0, noun.length - lastWord.length);
+  const lower = lastWord.toLowerCase();
+  const irregular = IRREGULAR_SINGULARS[lower];
+  if (irregular) return `${head}${irregular}`;
+  if (/(?:ss|us|is)$/.test(lower) || !lower.endsWith('s')) return noun;
+  if (/[^aeiou]ies$/.test(lower)) return `${head}${lastWord.slice(0, -3)}y`;
+  if (/(?:ches|shes|xes|zes|sses)$/.test(lower)) return `${head}${lastWord.slice(0, -2)}`;
+  if (/(?:ives|lves|rves)$/.test(lower))
+    return `${head}${lastWord.slice(0, -3)}${lower.endsWith('ives') ? 'fe' : 'f'}`;
+  return `${head}${lastWord.slice(0, -1)}`;
 }
 
 /** Return `1 torch` or `3 torches`. Pass `plural` for an irregular plural such as `wolves`. */

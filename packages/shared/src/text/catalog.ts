@@ -4,18 +4,31 @@
  */
 
 import catalog from './data/catalog.json' with { type: 'json' };
-import { capitalizeFirst, pluralize, prettifyId } from './format';
+import { capitalizeFirst, indefiniteArticle, pluralize, prettifyId, singularize } from './format';
 
+/**
+ * How to name an item in a sentence. Get one with [`resolveItemNoun`][resolveItemNoun] for an item ID, or with
+ * [`itemNounFromName`][itemNounFromName] for a printed name, and turn it into a phrase with
+ * [`itemPhrase`][itemPhrase].
+ */
 export interface ItemNoun {
-  /** Singular noun phrase without an article: `flask of oil`. */
+  /** Singular noun phrase without an article: `flask of oil`, `torch`, `Hand of Saint Corvane`. */
   one: string;
   /** Plural noun phrase: `flasks of oil`. */
   many: string;
   /** True for a name that takes no article, such as `thieves' tools`. */
   noArticle?: boolean;
+  /**
+   * True for a proper name, such as an adventure's `Hand of Saint Corvane`. It keeps its capitals and takes
+   * `the` instead of `a` or `an`.
+   */
+  proper?: boolean;
 }
 
-/** Hand-written nouns for catalog entries whose printed name describes a lot or a pack, such as `Torches (6)`. */
+/**
+ * Hand-written nouns for catalog entries whose printed name describes a lot or a pack, such as `Torches (6)`.
+ * Each noun names one unit of the item as osrlib counts it in an inventory stack, so `6 torches` is one lot.
+ */
 const ITEM_NOUN_OVERRIDES: Record<string, ItemNoun> = {
   torch: { one: 'torch', many: 'torches' },
   iron_spikes: { one: 'iron spike', many: 'iron spikes' },
@@ -30,15 +43,15 @@ const ITEM_NOUN_OVERRIDES: Record<string, ItemNoun> = {
   sack_large: { one: 'large sack', many: 'large sacks' },
   sack_small: { one: 'small sack', many: 'small sacks' },
   stakes_and_mallet: { one: 'set of wooden stakes and a mallet', many: 'sets of wooden stakes and a mallet' },
-  thieves_tools: { one: "thieves' tools", many: "thieves' tools", noArticle: true },
+  thieves_tools: { one: "thieves' tools", many: "sets of thieves' tools", noArticle: true },
   tinder_box: { one: 'tinder box', many: 'tinder boxes' },
-  wine: { one: 'flask of wine', many: 'flasks of wine' },
+  wine: { one: 'pint of wine', many: 'pints of wine' },
   wolfsbane: { one: 'bunch of wolfsbane', many: 'bunches of wolfsbane' },
   arrows: { one: 'arrow', many: 'arrows' },
   crossbow_bolts: { one: 'crossbow bolt', many: 'crossbow bolts' },
   silver_tipped_arrow: { one: 'silver-tipped arrow', many: 'silver-tipped arrows' },
   sling_stones: { one: 'sling stone', many: 'sling stones' },
-  leather: { one: 'leather armour', many: 'suits of leather armour' },
+  leather: { one: 'suit of leather armour', many: 'suits of leather armour' },
   chainmail: { one: 'suit of chainmail', many: 'suits of chainmail' },
   plate_mail: { one: 'suit of plate mail', many: 'suits of plate mail' },
   garlic: { one: 'clove of garlic', many: 'cloves of garlic' },
@@ -57,7 +70,9 @@ export function lowerCatalogName(name: string): string {
 }
 
 const EQUIPMENT = new Map<string, ItemNoun>();
+const LOT_SIZES = new Map<string, number>();
 for (const entry of catalog.equipment) {
+  LOT_SIZES.set(entry.id, entry.lot_size);
   const override = ITEM_NOUN_OVERRIDES[entry.id];
   if (override) {
     EQUIPMENT.set(entry.id, override);
@@ -67,14 +82,22 @@ for (const entry of catalog.equipment) {
   EQUIPMENT.set(entry.id, { one, many: pluralize(one) });
 }
 
+/** Built-in equipment nouns by every spelling a caller might pass: the printed name and the curated nouns. */
 const EQUIPMENT_BY_NAME = new Map<string, ItemNoun>();
 for (const entry of catalog.equipment) {
   const noun = EQUIPMENT.get(entry.id);
-  if (noun) EQUIPMENT_BY_NAME.set(entry.name, noun);
+  if (!noun) continue;
+  for (const spelling of [entry.name, lowerCatalogName(entry.name), noun.one, noun.many]) {
+    const key = spelling.toLowerCase();
+    if (!EQUIPMENT_BY_NAME.has(key)) EQUIPMENT_BY_NAME.set(key, noun);
+  }
 }
 
 const MAGIC_ITEMS = new Map<string, string>(
   catalog.magic_items.map((entry) => [entry.id, lowerCatalogName(entry.name)]),
+);
+const MAGIC_ITEMS_BY_NAME = new Map<string, string>(
+  catalog.magic_items.map((entry) => [entry.name.toLowerCase(), lowerCatalogName(entry.name)]),
 );
 const SPELLS = new Map<string, string>(
   catalog.spells.map((entry) => [entry.id, lowerCatalogName(entry.name)]),
@@ -92,13 +115,159 @@ export function equipmentNoun(id: string): ItemNoun | undefined {
 }
 
 /**
+ * How many units one purchase of a built-in equipment ID delivers, such as 6 for `torch`, or undefined when the
+ * ID isn't in the catalog. A `purchase_equipment` command lists one ID per lot.
+ */
+export function equipmentLotSize(id: string): number | undefined {
+  return LOT_SIZES.get(id);
+}
+
+/** Words that stay in lower case inside a title, such as the `of` in `Hand of Saint Corvane`. */
+const TITLE_SMALL_WORDS = new Set([
+  'a',
+  'an',
+  'and',
+  'at',
+  'by',
+  'for',
+  'from',
+  'in',
+  'of',
+  'on',
+  'or',
+  'the',
+  'to',
+  'vs',
+  'with',
+]);
+
+/** True when every word of a name of two or more words, apart from small words, starts with a capital. */
+function isTitleCase(name: string): boolean {
+  const words = name.split(' ').filter((word) => /^[A-Za-z]/.test(word) && !TITLE_SMALL_WORDS.has(word));
+  return words.length >= 2 && words.every((word) => /^[A-Z]/.test(word));
+}
+
+/** Lower-case the first word of a sentence-case name, but keep an acronym or a word such as `McGuffin`. */
+function lowerFirstWord(name: string): string {
+  const [first = '', ...rest] = name.split(' ');
+  const keep = /^[A-Z]{2,}/.test(first) || /^.[a-z]*[A-Z]/.test(first);
+  return [keep ? first : first.toLowerCase(), ...rest].join(' ');
+}
+
+/** Words for one container of a substance in a lot name, such as the `vial` of `Holy water (vial)`. */
+const CONTAINER_WORDS = new Set([
+  'bag',
+  'barrel',
+  'bottle',
+  'box',
+  'bunch',
+  'case',
+  'cask',
+  'flask',
+  'jar',
+  'jug',
+  'pint',
+  'pouch',
+  'quiver',
+  'skin',
+  'vial',
+]);
+
+/**
+ * Read a lot name such as `Torches (6)`, `Oil (1 flask)`, `Holy water (vial)`, `Arrows (quiver of 20)`, or
+ * `Sack (large)` as the noun for one unit, or return undefined when the name has no parenthesis.
+ */
+function nounFromLotName(name: string): ItemNoun | undefined {
+  const match = /^([^(]*?)\s*\(([^)]*)\)\s*(.*)$/.exec(name);
+  if (!match) return undefined;
+  const head = lowerFirstWord((match[1] ?? '').trim());
+  const inner = (match[2] ?? '').trim().toLowerCase();
+  const tail = (match[3] ?? '').trim();
+  if (head === '') return undefined;
+  let one: string;
+  const counted = /^(\d+)\s+([a-z]+)$/.exec(inner);
+  if (/^\d+$/.test(inner) || /^[a-z]+ of \d+/.test(inner)) {
+    // `Torches (6)` and `Arrows (quiver of 20)` count single torches and arrows.
+    one = singularize(head);
+  } else if (counted?.[2] !== undefined && CONTAINER_WORDS.has(singularize(counted[2]))) {
+    one = `${singularize(counted[2])} of ${head}`;
+  } else if (CONTAINER_WORDS.has(inner)) {
+    one = `${inner} of ${head}`;
+  } else if (/^[a-z]+$/.test(inner)) {
+    // `Sack (large)` and `Hammer (small)` put an adjective in the parenthesis.
+    one = `${inner} ${head}`;
+  } else {
+    one = head;
+  }
+  if (tail !== '') one = `${one} ${tail}`;
+  return { one, many: pluralize(one) };
+}
+
+/** Options for [`itemNounFromName`][itemNounFromName]. */
+export interface ItemNameOptions {
+  /**
+   * Read the name as a rules catalog prints it, as in `/v1/rules/magic-items`, where every name is in title case
+   * (`Potion of Healing`). The noun comes out in lower case. Leave it off for a name an adventure's author wrote,
+   * where title case marks a proper name.
+   */
+  catalog?: boolean;
+}
+
+/**
+ * The noun for an item from any printed name: a catalog name, a lot name, a display name with an article, or a
+ * name an adventure's author wrote. A built-in equipment name gets the curated noun whatever its spelling.
+ *
+ * ```ts
+ * itemNounFromName('Torches (6)'); // { one: 'torch', many: 'torches' }
+ * itemNounFromName('Oil (1 flask)'); // { one: 'flask of oil', many: 'flasks of oil' }
+ * itemNounFromName('Leather'); // { one: 'suit of leather armour', many: 'suits of leather armour' }
+ * itemNounFromName('a potion'); // { one: 'potion', many: 'potions' }
+ * itemNounFromName('Hand of Saint Corvane'); // { one: 'Hand of Saint Corvane', ..., proper: true }
+ * itemNounFromName('Potion of Healing', { catalog: true }); // { one: 'potion of healing', ... }
+ * ```
+ */
+export function itemNounFromName(name: string, options: ItemNameOptions = {}): ItemNoun {
+  let text = name.replace(/\s+/g, ' ').trim();
+  const article = /^(a|an|some|the)\s+/i.exec(text);
+  const definite = article?.[1]?.toLowerCase() === 'the';
+  if (article) text = text.slice(article[0].length);
+  if (text === '') return { one: 'item', many: 'items' };
+  const known = EQUIPMENT_BY_NAME.get(text.toLowerCase());
+  if (known) return known;
+  const magic = MAGIC_ITEMS_BY_NAME.get(text.toLowerCase());
+  if (magic) return { one: magic, many: pluralize(magic) };
+  const lot = nounFromLotName(text);
+  if (lot) return options.catalog ? { one: lot.one.toLowerCase(), many: lot.many.toLowerCase() } : lot;
+  if (options.catalog) {
+    const one = lowerCatalogName(text);
+    return { one, many: pluralize(one) };
+  }
+  if (definite || isTitleCase(text)) return { one: text, many: pluralize(text), proper: true };
+  const one = lowerFirstWord(text);
+  return { one, many: pluralize(one) };
+}
+
+/**
+ * The noun as a phrase with an article or a count: `a torch`, `an iron spike`, `12 torches`, `thieves' tools`,
+ * or `the Hand of Saint Corvane`.
+ *
+ * ```ts
+ * itemPhrase(itemNounFromName('Torches (6)'), 12); // '12 torches'
+ * ```
+ */
+export function itemPhrase(noun: ItemNoun, quantity = 1): string {
+  if (quantity !== 1) return `${quantity} ${noun.many}`;
+  if (noun.noArticle) return noun.one;
+  if (noun.proper) return `the ${noun.one}`;
+  return `${indefiniteArticle(noun.one)} ${noun.one}`;
+}
+
+/**
  * Noun for an item by its printed catalog name, such as `Oil (1 flask)`. An attack event names the weapon
- * this way. Names that aren't in the catalog, such as `Sword +1`, come back lower-cased.
+ * this way. A name that isn't in the catalog, such as `Sword +1`, comes back in lower case.
  */
 export function itemNounByName(name: string): ItemNoun {
-  return (
-    EQUIPMENT_BY_NAME.get(name) ?? { one: lowerCatalogName(name), many: pluralize(lowerCatalogName(name)) }
-  );
+  return itemNounFromName(name, { catalog: true });
 }
 
 /** Lower-case name of a built-in magic item template, such as `potion of healing`. */

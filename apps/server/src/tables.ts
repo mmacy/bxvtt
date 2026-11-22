@@ -242,6 +242,7 @@ export class TableStore {
         role: str(row, 'my_role') as Role,
         phase: strOrNull(row, 'session_id') === null ? 'lobby' : 'playing',
         member_count: num(row, 'member_count'),
+        online_count: this.ctx.hub.presence(str(row, 'id')).online.length,
         game: this.gameSummary(row),
         created_at: str(row, 'created_at'),
       }));

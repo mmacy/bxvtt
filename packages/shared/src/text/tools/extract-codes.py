@@ -4,7 +4,8 @@ The text layer in `packages/shared/src/text` has to describe every outcome osrli
 script reads the installed osrlib package and writes two files that the tests use to check coverage:
 
 - `data/codes.json`: every rejection code with the parameter names that osrlib passes with it, every event type
-  with its codes and fields, and the game clock constants.
+  with its codes and fields, the values of the osrlib enums that the text layer labels, and the game clock
+  constants.
 - `data/catalog.json`: the display names of the built-in monsters, spells, equipment, magic items, classes, and
   languages, which the text layer uses when an event names a catalog ID.
 
@@ -28,6 +29,7 @@ from collections import defaultdict
 
 import osrlib
 from osrlib.core.clock import ROUNDS_PER_DAY, ROUNDS_PER_TURN, SECONDS_PER_ROUND, TURNS_PER_DAY, GameClock, TimeUnit
+from osrlib.core.items import WeaponQuality
 from osrlib.crawl.events import ALL_EVENT_CLASSES
 from osrlib.data import (
     load_classes,
@@ -184,6 +186,14 @@ def extract_clock() -> dict:
     }
 
 
+def extract_enums() -> dict:
+    """Record the values of the osrlib enums that the text layer has a label for."""
+    return {
+        "weapon_qualities": [quality.value for quality in WeaponQuality],
+        "time_units": [unit.value for unit in TimeUnit],
+    }
+
+
 def extract_catalog() -> dict:
     equipment = load_equipment()
     gear = []
@@ -231,6 +241,7 @@ def main() -> None:
         "osrlib_version": importlib.metadata.version("osrlib"),
         "rejections": rejections,
         "events": events,
+        "enums": extract_enums(),
         "clock": extract_clock(),
     }
     (DATA_DIR / "codes.json").write_text(json.dumps(codes, indent=2, ensure_ascii=False) + "\n")

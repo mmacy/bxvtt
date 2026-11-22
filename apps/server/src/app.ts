@@ -7,6 +7,7 @@ import { LIMITS } from '@bxvtt/shared/protocol';
 import { AdventureCatalog, registerAdventureRoutes } from './adventures';
 import { registerAnnotationRoutes } from './annotations';
 import { Auth } from './auth';
+import { registerCatalogRoutes } from './catalogs';
 import { BxapiClient } from './bxapi';
 import { CharacterStore, registerCharacterRoutes } from './characters';
 import type { Config } from './config';
@@ -125,6 +126,7 @@ export async function createServer(config: Config): Promise<Server> {
       join: new RateLimiter(config.rateLimits.join),
       failedHostKey: new RateLimiter(config.rateLimits.failedHostKey),
       userPosts: new RateLimiter(config.rateLimits.userPosts),
+      characterChecks: new RateLimiter(config.rateLimits.characterChecks),
     },
     rules: new RulesCache(bxapi, config.quotas.rulesCacheBytes),
     startedAt: Date.now(),
@@ -212,6 +214,7 @@ export async function createServer(config: Config): Promise<Server> {
   registerTableRoutes(app, ctx);
   registerCharacterRoutes(app, ctx);
   registerRulesRoutes(app, ctx);
+  registerCatalogRoutes(app, ctx);
   registerAdventureRoutes(app, ctx);
   registerGameRoutes(app, ctx);
   registerBattleRoutes(app, ctx);

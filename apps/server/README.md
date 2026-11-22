@@ -41,7 +41,7 @@ The server reads its settings from environment variables. A relative path resolv
 | --- | --- | --- |
 | `BXVTT_PORT` | `8660` | Port to listen on. |
 | `BXVTT_HOST` | `127.0.0.1` | Address to listen on. |
-| `BXVTT_DATA_DIR` | `.data` | Directory for `bxvtt.db`, the SQLite database. A restart loses nothing except who is connected. |
+| `BXVTT_DATA_DIR` | `.data` | Directory for `bxvtt.db`, the SQLite database. A restart loses nothing except who is connected. The server upgrades a database from an older server at startup, and refuses one from a newer server. |
 | `BXAPI_URL` | `http://127.0.0.1:8640` | Base URL of bxapi. The `dev` script sets `http://127.0.0.1:8651`. |
 | `BXAPI_KEY` | none | A bxapi key with the `referee` role. Leave it unset for a bxapi in anonymous mode. |
 | `BXVTT_HOST_KEY` | none | When set, creating a table needs this key in `host_key`. |
@@ -118,8 +118,44 @@ bxapi's player view draws the map's cells and edges, but it names no areas, show
 - `scene.here` is what the party perceives on its cell: the area with its name and description, the caches of the area (with `reachable` for the ones `take_treasure` can take from this cell), custom features and found construction tricks, the transitions on the cell (send `use_stairs` there), the known traps of the area, and whether a dropped pile lies there (`take_treasure` with `feature_id: "pile"`).
 - `scene.levels` lists, for each level on the party's map, the entered areas, the transitions on known cells, the known traps, the caches, the features, and the piles, so the map can draw them.
 - `scene.names` maps item, magic item, and valuable IDs from player events and the inventory to display names. An unidentified magic item keeps its masked name, such as `a potion`.
+- `scene.can_travel_to_town` is `true` when `travel_to_town` would take the party back to town: the party is exploring and stands on its level's entrance cell, which is the condition osrlib checks. Offer "Return to town" from it, also after a reload. `scene.here.at_entrance` says whether the party's cell is the entrance in any mode, and each level's `entrance` gives the entrance cell once it's on the party's map, or `null`.
+- `scene.targets` lists the monsters of an open encounter that a party member can single out, each with an opaque handle and a label such as `Goblin 2`. See "Monster targets".
 
 The server reveals only what osrlib marks as known to the party. An area appears after the party walks into it. A cache never shows its contents or its authored description, and no cache appears while an encounter or battle is open. A cache on a cell appears only once the cell is on the party's map, and a lair hoard appears only after its monsters were slain or routed. A player's `take_treasure`, `inspect_treasure`, or `remove_treasure_trap` that names a cache missing from `scene.here.caches` is refused with `exploration.feature.unknown`, and a refused `remove_treasure_trap` on a visible cache reads `exploration.trap.not_found` whether or not the cache is trapped. A trap appears only after the party found it, it sprang, or a thief removed it. A construction trick appears only after a search found it. A transition shows which way it leads (`up`, `down`, `same_level`, or `elsewhere`) and never where it lands. The scene has no edges, so a secret door stays a wall until the player view shows it as a door.
+
+### Monster targets
+
+bxapi's player view counts the monsters of each group but hides their IDs. A spell with `single` or `up_to_n` targeting, such as *magic missile*, *charm person*, or *hold person*, needs a monster ID in `targets`, so a player couldn't aim it at one goblin of a group. At a table, a player says "the second goblin" and the referee knows which one. The server does the same with target handles.
+
+Each entry of `scene.targets` describes one monster:
+
+| Field | Meaning |
+| --- | --- |
+| `handle` | An opaque ID such as `tgt_q3Jx0b9KfL2mWv8a`. Put it where a command or declaration takes a monster target. |
+| `group_id` | The group the monster stands in now, as in `view.encounter.groups[i].id`. |
+| `label`, `number` | What to call the monster, such as `Goblin 2`: the group's label and the monster's number among the monsters of that label in this encounter. |
+| `defeated` | Whether the monster was slain. A slain monster keeps its handle, so the other labels don't change. |
+| `fled` | Whether the monster's group fled the battle. |
+
+To aim a spell at the second goblin in a battle, declare with its handle:
+
+```ts
+const goblin = game.scene.targets?.find((target) => target.label === 'Goblin 2');
+if (goblin) await player.declare(tableId, 'character-0002', {
+  action: 'cast',
+  spell_id: 'magic_missile',
+  spell_mode: 'missiles',
+  targets: [goblin.handle],
+});
+```
+
+The rules for handles:
+
+- **Where handles go:** The server replaces a handle with the monster's ID in every field that the command schemas use for a monster target: `targets` and `target_id` of `cast_spell` and `use_item`, and `targets` of a battle declaration. The classifier finds these fields by name in each command's schema, so a command that bxapi adds later with a `targets` field works too. Member IDs, monster IDs, and cell references in the same lists pass through unchanged.
+- **Unknown handles:** A handle that `scene.targets` doesn't list now, such as one from an encounter that ended, gets 422 `target_unknown` with `field` and `id`, and the server sends nothing to bxapi. A declaration with an unknown handle is refused when you save it.
+- **Stability:** The server stores a handle and its number in its database the first time the party can see the monster. A handle stays the same for the rest of the encounter, across a server restart, and when its monster moves to another group, such as turned undead that split off. An invisible monster gets no handle until it shows itself, so the numbers never reveal a hidden monster.
+- **What players see:** A handle reveals nothing about its monster. The scene never states a monster's ID, hit points, or the conditions of one monster, because the player view shows conditions only per group. The server stores declarations with handles, so everyone reads them that way, and a player's copy of a declaration or a refusal names no monster by ID. A rejection that a player receives names a monster by its handle. bxapi's own player events name monsters by ID, such as `target_id` in `damage_dealt`, and the server passes those events unchanged.
+- **Referees:** A referee can send handles or monster IDs. The referee state still lists each group's `monster_ids`.
 
 ## Who may do what
 
@@ -174,7 +210,7 @@ Every table has one feed. Each entry has a `kind`:
 
 - `chat`: a message. With `to`, it's a whisper that only the sender and the named members can read.
 - `roll`: a message that starts with `/roll` or `/r`, such as `/roll 2d6+1 for damage`. bxapi rolls it. A referee can roll in secret with `/roll secret 1d20` or `secret: true`, and only referees see that roll.
-- `game`: the result of an accepted command, with the sender's `user_id`, the `command_type`, and the events and messages. A player's copy holds only player events, and it has `command_type: null` for a referee command. A referee command with no player events isn't in a player's feed at all.
+- `game`: the result of an accepted command, with the sender's `user_id`, the `command_type`, the events and messages, and `clock_rounds`, the game clock after the command (format it with `formatGameClock` from `@bxvtt/shared/text`). A player's copy holds only player events, and it has `command_type: null` for a referee command. A referee command with no player events isn't in a player's feed at all. An entry written before the server recorded clocks has `clock_rounds: null`, except the entry at the game's current revision, whose clock the server knows.
 - `system`: a notice such as `member_joined`, `save_created`, or `save_restored`, with IDs in `params`.
 
 A message is at most 2,000 characters. `getFeed(tableId, { limit })` returns the newest page, `{ before: seq }` scrolls back, and `{ after: seq }` catches up. Every page is in order, oldest first.
@@ -189,7 +225,7 @@ Every route under `/api` needs `Authorization: Bearer <token>`, except `GET /api
 | `POST /users` | `createUser` | anyone (rate limited) | `CreateUserResponse` with the token |
 | `GET /users/me` | `me` | user | `User` |
 | `PATCH /users/me` | `updateMe` | user | `User` |
-| `GET /tables` | `listTables` | user | `TableList` |
+| `GET /tables` | `listTables` | user | `TableList`, with `online_count` for each table: how many members have a WebSocket open to it |
 | `POST /tables` | `createTable` | user, with `host_key` when set | `TableDetail` |
 | `GET /tables/{t}` | `getTable` | member | `TableDetail` |
 | `PATCH /tables/{t}` | `updateTable` | referee | `TableDetail` |
@@ -205,11 +241,13 @@ Every route under `/api` needs `Authorization: Bearer <token>`, except `GET /api
 | `POST /ability-rolls` | `rollAbilities` | user | bxapi `AbilityRoll` |
 | `GET /ability-rolls/{roll_id}` | `getAbilityRoll` | its owner | bxapi `AbilityRoll` |
 | `POST /characters/preview` | `previewCharacter` | user | bxapi generated character |
+| `POST /characters/check` | `checkCharacter` | owner of the roll (rate limited) | `CharacterCheck` |
 | `POST /characters` | `createCharacter` | user | bxapi `StoredCharacter` |
 | `GET /characters` | `listCharacters` | user | the user's characters |
 | `GET /characters/{id}` | `getCharacter` | owner, or roster referee | bxapi `StoredCharacter` |
 | `DELETE /characters/{id}` | `deleteCharacter` | owner | 204 |
 | `GET /rules/{path}` | `rules` | user | bxapi's `/v1/rules/{path}` |
+| `GET /catalogs/{catalog}` | `fullCatalog` | user | `FullCatalog`: every full entry of `classes`, `equipment`, `monsters`, `spells`, or `magic-items` |
 | `POST /dice/roll` | `rollDice` | user | bxapi `DiceRollResponse` |
 | `POST /tables/{t}/generate/{kind}` | `generate` | referee | bxapi's generator response |
 | `GET /tables/{t}/adventures` | `listAdventures` | member | `AdventureList` |
@@ -245,9 +283,46 @@ Every route under `/api` needs `Authorization: Bearer <token>`, except `GET /api
 
 The rules proxy serves `classes`, `monsters`, `spells`, `equipment`, `magic-items`, `languages`, `tables`, `commands`, and `license`, each with an optional `/{id}`, and passes the query parameters `q`, `class_id`, `level`, `item_type`, `category`, `kind`, `mode`, `limit`, and `offset`. Responses have bxapi's `ETag` and `Cache-Control: private, max-age=3600`, and the server answers `If-None-Match` with 304. The server caches each response and revalidates it with bxapi every five minutes.
 
-An adventure's `id` in the list is a bxapi ID for a built-in or uploaded adventure, and `sample:<file name>` for a sample from `adventures/`. The server uploads a sample to bxapi the first time a table plays it and skips a sample file that bxapi refuses, with a warning in the log.
+`GET /catalogs/{catalog}` returns `{ catalog, total, items }`, where each item is exactly what `GET /rules/{catalog}/{id}` returns, in the order of bxapi's list. Use it instead of one request per entry, for example to show every item's weight and damage or every monster's categories. The server builds each catalog from bxapi's list and entry routes the first time someone asks for it, keeps it in memory, and checks bxapi's list for a change every five minutes. The response has an `ETag`, `Cache-Control: private, max-age=3600`, and `Vary: Accept-Encoding`. The server answers `If-None-Match` with 304, and gzips the body when `Accept-Encoding` allows it.
+
+```ts
+const { items } = await client.fullCatalog('monsters');
+const undead = items.filter((monster) => monster.categories.includes('undead'));
+```
+
+An adventure's `id` in the list is a bxapi ID for a built-in or uploaded adventure, and `sample:` followed by the file name without `.json` for a sample from `adventures/`, such as `sample:the-drowned-bell` for `adventures/the-drowned-bell.json`. The server uploads a sample to bxapi the first time a table plays it and skips a sample file that bxapi refuses, with a warning in the log.
 
 A request body is at most 64 KiB, except an adventure document, which is at most 8 MiB. A JSON body may nest at most 64 levels.
+
+## Checking a new character
+
+`POST /api/characters/check` checks a character wizard's choices against one of the user's ability rolls, and reports the roll's starting gold. It stores nothing and leaves the roll unused, so the wizard can call it at every step. The body is the body of `POST /api/characters`, with a required `ability_roll_id`.
+
+```ts
+const check = await client.checkCharacter({
+  name: 'Brenna',
+  class_id: 'fighter',
+  alignment: 'lawful',
+  ability_roll_id: roll.id,
+  purchases: [{ item_id: 'leather' }, { item_id: 'sword' }],
+  equip_item_ids: ['leather', 'sword'],
+});
+// { valid: true, problem: null, gold_gp: 110 }
+```
+
+The response, `CharacterCheck`, has three fields:
+
+- `valid`: whether every choice passed. `POST /api/characters` with the same body then creates the character.
+- `problem`: bxapi's `character_invalid` problem document when a choice breaks a rule, with its `rejections`, or `field`, `index`, and `id`, unchanged. Otherwise `null`.
+- `gold_gp`: the gold the roll gives this class, before any purchase. The hit point roll comes before the gold roll, so the gold depends on the roll, the class's hit die, and `hp_reroll_at_first_level`. It's `null` when the class or the starting spells break a rule, because bxapi stops before it rolls the gold.
+
+An unknown roll, or another user's, gets 404 `not_found`, and a used roll gets 409 `ability_roll_used`.
+
+The server sends bxapi's `POST /v1/characters` with the choices and one more entry at the end of `equip_item_ids`, `bxvtt-character-check`, which isn't an equipment ID. bxapi checks the choices in a fixed order (class, adjustment, starting spells, hit points, extra languages, gold, purchases, then equipping) and stores the character, marking the roll used, only after the last step passes. Its spec states that a `character_invalid` failure stores nothing and leaves the roll unused. The extra entry always fails the equipping step after every real choice has passed. The first time it checks a character, the server also confirms that the equipment catalog has no item with that ID.
+
+To count the gold, the server sends a few more such requests, each with purchases of known prices. The item where the gold runs out narrows the gold, and about three requests find the exact amount. The server keeps the gold for each roll, class, and reroll option, so a later check costs one bxapi request.
+
+Each check counts as a change against the per-user write limit, and against its own limit of 60 checks a minute per user, because one check can cost bxapi several requests.
 
 ## WebSocket messages
 
@@ -275,14 +350,16 @@ A client message is at most 16 KiB, and a connection may send about 20 messages 
 
 ## Errors
 
-Every error is an RFC 9457 problem document with the media type `application/problem+json`, a stable `code`, a `detail` for a person, and the `request_id` that the `X-Request-Id` header also states. `PROBLEM_CODES` in `@bxvtt/shared/protocol` lists every code with its status and its extra members. bxapi's `character_invalid` problem passes through with `rejections`, or with `field`, `index`, and `id`, so the character wizard can point at the wrong choice. `validation_error` has `errors`, each with a `path` and a `message`.
+Every error is an RFC 9457 problem document with the media type `application/problem+json`, a stable `code`, a `detail` for a person, and the `request_id` that the `X-Request-Id` header also states. `PROBLEM_CODES` in `@bxvtt/shared/protocol` lists every code with its status and its extra members. bxapi's `character_invalid` problem passes through with `rejections`, or with `field`, `index`, and `id`, so the character wizard can point at the wrong choice. `validation_error` has `errors`, each with a `path` and a `message`. `target_unknown` has `field` and `id`.
+
+The SDK also makes two codes of its own. When a response that should be a problem document isn't JSON, such as the HTML error page the Vite proxy or a tunnel sends while the bxvtt server is down, the SDK throws a `BxvttProblemError` instead of a `SyntaxError`: `server_unavailable` for status 502, 503, or 504, and the code that matches the status otherwise, such as `content_too_large` for 413. A successful response whose body isn't JSON throws `invalid_response`. A request that never reaches a server still rejects with the `TypeError` that `fetch` throws.
 
 ## Security
 
 `docs/security.md` states the trust model, what the server guarantees and which tests check it, and a checklist for hosts. In short:
 
 - The server limits each IP address (an IPv6 address by its /64 prefix): 10 new users, 20 invite code attempts, 30 unknown tokens, and 10 wrong host keys every 10 minutes. After that, the request gets 429 `rate_limited` with `Retry-After`. A valid token always works, but a blocked address can't create a table even with the right host key.
-- Each user may send 100 requests that change something every 20 seconds, and 30 feed posts and new annotations every 30 seconds.
+- Each user may send 100 requests that change something every 20 seconds, 30 feed posts and new annotations every 30 seconds, and 60 character checks a minute.
 - Quotas cap what one user or table stores: 50 tables per user, 200 characters per user, 100 saves per table (autosaves aside), 20 uploaded adventures per table, and 20,000 annotations per table. A request over a quota gets 403 `forbidden`, or 413 `content_too_large` for annotations.
 - The server trusts `CF-Connecting-IP` and then the last `X-Forwarded-For` entry only from a peer on the same machine, such as `cloudflared` or the Vite proxy.
 - An invite code has 100 random bits, and removing a member replaces it. The server stores only a SHA-256 hash of each token.

@@ -19,8 +19,12 @@ import { z } from 'zod';
  * - A transition (stairs, trapdoor, chute, or passage) appears once its cell is on the party's map. The scene
  *   says which way it leads, never where it lands.
  * - A trap appears only after the party found it, it sprang, or a thief removed it.
- * - Nothing about cells off the party's map, monsters, or undiscovered secret doors appears. The player view
- *   already draws a secret door as a wall until the party finds it.
+ * - A level's entrance cell, where `travel_to_town` takes the party back to town, appears once that cell is on
+ *   the party's map.
+ * - Each monster the party can single out in an open encounter appears as a target handle. See
+ *   {@link SceneTarget}.
+ * - Nothing about cells off the party's map, monster hit points, or undiscovered secret doors appears. The
+ *   player view already draws a secret door as a wall until the party finds it.
  */
 
 /** A cell position: `[x, y]`. */
@@ -111,6 +115,12 @@ export const SceneLevel = z.object({
   features: z.array(SceneFeature),
   /** The cells with a dropped pile, which `take_treasure` takes with `feature_id: "pile"`. */
   piles: z.array(ScenePosition),
+  /**
+   * The level's entrance cell, where `travel_to_town` works, once that cell is on the party's map. `null` when
+   * the level has no entrance or the party hasn't seen it. Optional in the type so that older fixtures still
+   * compile. This server always sends it.
+   */
+  entrance: ScenePosition.nullable().optional(),
 });
 /** What the party knows of one level. */
 export type SceneLevel = z.infer<typeof SceneLevel>;
@@ -130,9 +140,60 @@ export const SceneHere = z.object({
   traps: z.array(SceneTrap),
   /** Whether a dropped pile lies on this cell. */
   pile: z.boolean(),
+  /**
+   * Whether this cell is the level's entrance, where `travel_to_town` works while the party is exploring.
+   * Optional in the type so that older fixtures still compile. This server always sends it.
+   */
+  at_entrance: z.boolean().optional(),
 });
 /** What the party perceives where it stands. */
 export type SceneHere = z.infer<typeof SceneHere>;
+
+/**
+ * An opaque target handle, `tgt_` and 16 URL-safe characters, that stands for one monster in a command or a
+ * declaration.
+ */
+export const TargetHandle = z.string().regex(/^tgt_[A-Za-z0-9_-]{16}$/);
+/** An opaque target handle. */
+export type TargetHandle = z.infer<typeof TargetHandle>;
+
+/**
+ * One monster that a party member can single out, by an opaque handle.
+ *
+ * bxapi's player view counts the monsters of each group but hides their IDs, and a spell such as *magic
+ * missile*, *charm person*, or *hold person* needs a monster ID in `targets`. At a table, a player says "the
+ * second goblin" and the referee knows which one. The scene does the same: it gives each monster the party can
+ * see a handle and a label, and the server swaps each handle for the monster's ID before it sends a command or
+ * a declaration to bxapi.
+ *
+ * - Put `handle` wherever a command or a declaration takes a monster target: `targets` and `target_id` of
+ *   `cast_spell` and `use_item`, and `targets` of a battle declaration. Member IDs and cell references in the
+ *   same lists pass through unchanged.
+ * - A handle stays the same for the life of the encounter, also when its monster moves to another group, such
+ *   as turned undead that split off. A handle from an encounter that ended, or one the scene doesn't list, is
+ *   refused with 422 `target_unknown` and nothing reaches bxapi.
+ * - A monster gets its handle and its number the first time the party can see it, so the numbers count the
+ *   monsters of one label in the order the party met them, and an invisible monster has no handle until it
+ *   shows itself.
+ * - The scene never states a monster's ID, hit points, or the conditions of one monster. A rejection or a
+ *   declaration refusal that names a monster names it by handle in a player's copy. bxapi's own player events
+ *   name monsters by ID, and the server passes those unchanged.
+ */
+export const SceneTarget = z.object({
+  handle: TargetHandle,
+  /** The group the monster stands in now, by `view.encounter.groups[i].id`. */
+  group_id: z.string(),
+  /** What to call the monster, such as `Goblin 2`: the group's label and the monster's number. */
+  label: z.string(),
+  /** The monster's number among the monsters of its label in this encounter, from 1. */
+  number: z.number().int(),
+  /** Whether the monster was slain. A slain monster keeps its handle, so the labels of the others don't change. */
+  defeated: z.boolean(),
+  /** Whether the monster's group fled the battle. bxapi refuses a declaration aimed at a fled group. */
+  fled: z.boolean(),
+});
+/** One monster that a party member can single out. */
+export type SceneTarget = z.infer<typeof SceneTarget>;
 
 /** The scene: the levels the party knows, what it perceives where it stands, and display names. */
 export const Scene = z.object({
@@ -145,6 +206,18 @@ export const Scene = z.object({
    * as `a potion`. An ID with no entry has no name the party knows.
    */
   names: z.record(z.string(), z.string()),
+  /**
+   * Whether `travel_to_town` would take the party back to town now: the party is exploring and stands on the
+   * entrance cell of its level, which is osrlib's condition for the command. Use it to offer "Return to town".
+   * Optional in the type so that older fixtures still compile. This server always sends it.
+   */
+  can_travel_to_town: z.boolean().optional(),
+  /**
+   * The monsters of the open encounter that a party member can single out, group by group in the player
+   * view's order, and by number within a group. Empty when no encounter is open. See {@link SceneTarget}.
+   * Optional in the type so that older fixtures still compile. This server always sends it.
+   */
+  targets: z.array(SceneTarget).optional(),
 });
 /** The scene. */
 export type Scene = z.infer<typeof Scene>;

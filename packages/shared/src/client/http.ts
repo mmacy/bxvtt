@@ -6,6 +6,8 @@ import type {
   AdventureList,
   AdventureListing,
   AdventureValidation,
+  CharacterCheck,
+  CharacterCheckRequest,
   CharacterList,
   CharacterPreview,
   CharacterRequest,
@@ -23,6 +25,8 @@ import type {
   FeedEntry,
   FeedPage,
   FeedQuery,
+  FullCatalog,
+  FullCatalogName,
   GameState,
   GeneratorKind,
   Health,
@@ -158,11 +162,20 @@ export class BxvttClient {
     const response = await this.fetchImpl(url, { method, headers, body });
     if (response.status === 204) return null as T;
     const text = await response.text();
-    const parsed: unknown = text === '' ? null : JSON.parse(text);
+    const parsed = parseJson(text);
     if (!response.ok) {
-      throw new BxvttProblemError(toProblem(parsed, response.status));
+      throw new BxvttProblemError(toProblem(parsed.ok ? parsed.value : undefined, response.status));
     }
-    return parsed as T;
+    if (!parsed.ok) {
+      throw new BxvttProblemError({
+        type: 'about:blank',
+        title: 'Invalid response',
+        status: response.status,
+        code: 'invalid_response',
+        detail: `The server answered ${method} ${path} with a body that isn't JSON.`,
+      });
+    }
+    return parsed.value as T;
   }
 
   // Health and users.
@@ -319,6 +332,25 @@ export class BxvttClient {
   }
 
   /**
+   * Checks a set of choices against one of the user's ability rolls, storing nothing and leaving the roll
+   * unused, and reads the starting gold the roll gives the chosen class. Use it to check each step of a
+   * character wizard, and to show the gold before the player shops.
+   *
+   * ```ts
+   * const check = await client.checkCharacter({ ...choices, ability_roll_id: roll.id });
+   * if (!check.valid) showProblem(check.problem); // bxapi's character_invalid problem
+   * if (check.gold_gp !== null) showGold(check.gold_gp);
+   * ```
+   *
+   * @param body - The character choices, with `ability_roll_id`.
+   * @throws BxvttProblemError `not_found` for a roll the user doesn't own, `ability_roll_used` for a roll that
+   *   already made a character, and `rate_limited` after too many checks.
+   */
+  checkCharacter(body: CharacterCheckRequest): Promise<CharacterCheck> {
+    return this.request('POST', '/api/characters/check', { body });
+  }
+
+  /**
    * Creates and stores a character that the user owns.
    *
    * @param body - The character choices.
@@ -360,6 +392,21 @@ export class BxvttClient {
    */
   rules<T = unknown>(path: string, query?: Record<string, string | number | undefined>): Promise<T> {
     return this.request('GET', `/api/rules/${path.replace(/^\//, '')}`, { query });
+  }
+
+  /**
+   * Reads every full entry of one rules catalog in one response, such as every monster with its categories, or
+   * every equipment item with its weight and damage. Each entry is what `rules('monsters/goblin')` returns.
+   *
+   * ```ts
+   * const { items } = await client.fullCatalog('monsters');
+   * const undead = items.filter((monster) => monster.categories.includes('undead'));
+   * ```
+   *
+   * @param catalog - `classes`, `equipment`, `monsters`, `spells`, or `magic-items`.
+   */
+  fullCatalog<C extends FullCatalogName>(catalog: C): Promise<FullCatalog<C>> {
+    return this.request('GET', `/api/catalogs/${catalog}`);
   }
 
   /**
@@ -754,16 +801,48 @@ function enc(segment: string): string {
   return encodeURIComponent(segment);
 }
 
-/** Turns an error response body into a problem document, inventing one when the body isn't a problem. */
+/** Parses a response body, empty as `null`, without throwing. */
+function parseJson(text: string): { ok: true; value: unknown } | { ok: false } {
+  if (text === '') return { ok: true, value: null };
+  try {
+    return { ok: true, value: JSON.parse(text) as unknown };
+  } catch {
+    return { ok: false };
+  }
+}
+
+/** The problem code for an error status whose body isn't a problem document. */
+const FALLBACK_CODES: Record<number, ProblemCode> = {
+  400: 'bad_request',
+  401: 'unauthorized',
+  403: 'forbidden',
+  404: 'not_found',
+  405: 'method_not_allowed',
+  413: 'content_too_large',
+  415: 'unsupported_media_type',
+  429: 'rate_limited',
+  502: 'server_unavailable',
+  503: 'server_unavailable',
+  504: 'server_unavailable',
+};
+
+/**
+ * Turns an error response body into a problem document, inventing one when the body isn't a problem: for
+ * example the HTML page a proxy sends when the bxvtt server is down, which becomes `server_unavailable`.
+ */
 function toProblem(body: unknown, status: number): Problem {
   if (typeof body === 'object' && body !== null && 'code' in body && typeof body.code === 'string') {
     return body as Problem;
   }
+  const code = FALLBACK_CODES[status] ?? (status >= 500 ? 'internal_error' : 'bad_request');
   return {
     type: 'about:blank',
     title: 'Error',
     status,
-    code: status >= 500 ? 'internal_error' : 'bad_request',
-    detail: `The server answered with status ${status}.`,
+    code,
+    detail:
+      code === 'server_unavailable'
+        ? `The bxvtt server didn't answer (status ${status}). It may be down or restarting.`
+        : `The server answered with status ${status}.`,
   };
 }
