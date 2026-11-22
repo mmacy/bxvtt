@@ -27,7 +27,7 @@ bxvtt pairs with [bxapi](https://github.com/mmacy/bxapi), a local HTTP rules ser
 
 - **Guided character creation** for all seven B/X classes (cleric, dwarf, elf, fighter, halfling, magic-user, and thief), with ability score adjustments, languages, starting spells, and equipment kits.
 - **Full play loop** across town outfitting, temple healing, dungeon exploration, monster encounters, and simultaneous round-by-round battle declarations with event-by-event playback.
-- **Strict server-side fog of war** that strips referee-only data before anything leaves the server, paired with a toggleable referee lens (`Shift+L`) so a solo player or referee-player can play unspoiled.
+- **Strict server-side fog of war** that strips referee-only data before anything reaches players, paired with a toggleable referee lens (`Shift+L`) so a solo player or referee-player can hide referee data on their screen.
 - **Shared dungeon canvas** in three visual themes (blueprint, torchlit, and parchment) with pings, freehand drawing, numbered note pins, distance measurement, and full keyboard navigation.
 - **Built-in B/X compendium** covering classes, spells, monsters, equipment, magic items, languages, actions, and reference tables.
 - **Three playable adventures** ready out of the box, plus JSON upload validation and an automated dungeon reachability and quest checker.

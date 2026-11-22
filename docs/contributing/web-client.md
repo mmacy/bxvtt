@@ -31,7 +31,7 @@ Both routes load lazily (`lazyPart`) so gallery code stays out of the main bundl
 - **Single portal layer:** Dialogs, drawers, menus, selects, comboboxes, and popovers all share `--z-layer` (`1200`) and render in portals so nested popups stack naturally in open order without custom `z-index` overrides.
 - **WCAG label-in-name key hints:** Pass keyboard hints via `<Button shortcut="G">Set out</Button>` (or `ActionBarMenu` / `ToolRailButton`), which renders visual keycaps outside the accessible label and sets `aria-keyshortcuts`.
 
-See `apps/web/src/ui/README.md` for the complete export catalog.
+See [`apps/web/src/ui/README.md`](https://github.com/mmacy/bxvtt/blob/main/apps/web/src/ui/README.md) for the complete export catalog.
 
 ## App hooks, command pacing, and feature testing (`apps/web/src/app`)
 
@@ -42,7 +42,7 @@ Feature components never call `fetch` or open sockets directly; they import hook
   - Default calls (`send(cmd)`) represent deliberate clicks or form submissions: up to 3 commands queue in order while a request is in flight, paced to 4 commands per second, deduplicating double-clicks and dropping stale queued moves with a toast if the mode or party square changed.
   - Auto-repeating movement keys pass `{ repeatable: true, display: 'inline' }`, dropping extra keystrokes silently while a command is in flight so pressing and holding arrow keys never stacks up steps.
 - **Map interaction bus (`useMapBus`):** Decouples `features/referee` and `features/table` from `features/explore` for active rail tools, camera focus requests, and interactive cell/edge picking (`requestPick({ kind: 'cell' | 'edge', prompt })`).
-- **Component tests (`renderWithTable`):** Mount any feature inside a populated table store, `KitProvider`, router, and spy-backed `createFakeApi()` using snapshots captured from a real server (`fixtureSnapshot(stage, role)` for `lobby`, `town`, `exploring`, `encounter`, and `battle`). See `apps/web/src/features/README.md`.
+- **Component tests (`renderWithTable`):** Mount any feature inside a populated table store, `KitProvider`, router, and spy-backed `createFakeApi()` using snapshots captured from a real server (`fixtureSnapshot(stage, role)` for `lobby`, `town`, `exploring`, `encounter`, and `battle`). See [`apps/web/src/features/README.md`](https://github.com/mmacy/bxvtt/blob/main/apps/web/src/features/README.md).
 
 ## Canvas dungeon map (`apps/web/src/map`)
 
@@ -50,7 +50,7 @@ Feature components never call `fetch` or open sockets directly; they import hook
 
 - **Tile-cached 60 fps rendering:** Static geometry (rock, floor, grid, merged wall runs, doors, transitions, and fog veil) paints into cached 512-pixel offscreen tiles at the active zoom level, while labels, flickering torchlight, tokens, strokes, pins, pings, remote pointers, and the ruler draw in screen space only when dirty or animating.
 - **Accessible keyboard cursor:** In `pick-cell`, `pick-edge`, `pin`, `ping`, and `ruler` tools, focusing the canvas activates a keyboard cell/edge cursor (`Arrow` keys to step, `E` / `Shift+E` to rotate edges, `Enter` to confirm, `Esc` to cancel) paired with a polite ARIA live region announcing rooms, doors, and relative coordinates.
-- **Standalone development harness:** Start `@bxvtt/web` (`npm run dev -w @bxvtt/web`) and open [http://localhost:5180/map-harness.html](http://localhost:5180/map-harness.html) (supports `?fixture=hills&layer=player&theme=parchment`) to test themes, tools, overlays, and frame timing in isolation. See `apps/web/src/map/README.md`.
+- **Standalone development harness:** Start `@bxvtt/web` (`npm run dev -w @bxvtt/web`) and open [http://localhost:5180/map-harness.html](http://localhost:5180/map-harness.html) (supports `?fixture=hills&layer=player&theme=parchment`) to test themes, tools, overlays, and frame timing in isolation. See [`apps/web/src/map/README.md`](https://github.com/mmacy/bxvtt/blob/main/apps/web/src/map/README.md).
 
 ## Game text humanization (`packages/shared/src/text`)
 
@@ -58,4 +58,4 @@ Feature components never call `fetch` or open sockets directly; they import hook
 
 - Build and carry forward a `TextContext` across revisions (`contextFromPlayerView`, `extendContextWithScene`, `extendContextWithCatalog`, and `extendContextWithReferee` when the referee lens is on) so names of consumed potions and defeated monster groups survive after leaving the live view.
 - Call `describeEvents` / `describeGameEntry` for feed and playback lines (emitting `line.refereeDetail` separately for referee coordinates) and `describeRejections` for refused commands.
-- Unit tests in `packages/shared` verify 100% template coverage against `packages/shared/src/text/data/codes.json`, failing whenever `osrlib` introduces an unhandled event code, rejection code, command, or field. See `packages/shared/src/text/README.md`.
+- Unit tests in `packages/shared` verify 100% template coverage against `packages/shared/src/text/data/codes.json`, failing whenever `osrlib` introduces an unhandled event code, rejection code, command, or field. See [`packages/shared/src/text/README.md`](https://github.com/mmacy/bxvtt/blob/main/packages/shared/src/text/README.md).

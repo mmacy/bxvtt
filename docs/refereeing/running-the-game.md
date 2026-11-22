@@ -41,7 +41,7 @@ With the **Referee lens** on, select **Referee** (`Alt+4`) in the dock. A persis
 
 | Tab | Section title | What you can do |
 | --- | --- | --- |
-| **Now** | **Here and now** | View active encounter monster groups with individual HP bars, conditions, and the **End it** form. Outside combat, read town services and rumours or the current room's full key, one-click **Spawn** buttons for unresolved monsters, trap and cache status, **Run the trigger** buttons, adjacent door toggles, and the level's wandering monster schedule and 1-20 table. |
+| **Now** | **Here and now** | Answer what is here right now and act on it: inspect the current room's key, doors, traps, triggers, and wandering monster table, or manage active encounter monster HP and end the encounter via **End it**. |
 | **Act** | **Quick actions** | Open streamlined forms grouped under **Monsters** (moved first during encounters), **The party**, **Places and time**, and **Dice and records**. |
 | **Story** | **Quests, flags, and triggers** | Activate or complete quests, **Reveal** hidden objectives, **Mark complete** objectives, distribute quest rewards with **Give**, edit adventure flags, and inspect or **Mark fired** triggers. |
 | **Key** | **The adventure key** | Search every dungeon level's rooms by name, text, or monster, see **Party**, **Monsters**/**Cleared**, **Treasure**, **Trap**, and **Unvisited** badges, center the map on any room, or **Place the party here**. |
@@ -105,4 +105,4 @@ Open the **More for** menu on any save row to **Rename**, **Export as a file** (
 
 ### Returning to the lobby resets roster characters
 
-Selecting **Return to the lobby** in the **Table menu** (or **Return the table to its lobby** on the end screen) ends the active session and brings everyone back to the lobby. Stored characters on the lobby roster retain their initial level-1 state as created; that session's saves store all experience, treasure, learned spells, and deaths from play. When you want to keep playing an ongoing campaign, always use **Continue from a save** rather than starting a fresh game from the lobby.
+Create a named save (`Ctrl+S` / `Cmd+S` or **Saves** in the **Table menu**) before ending an ongoing campaign session. Selecting **Return to the lobby** in the **Table menu** (or **Return the table to its lobby** on the end screen) ends the active session and brings everyone back to the lobby. Stored characters on the lobby roster retain their initial level-1 state as created; that session's saves store all experience, treasure, learned spells, and deaths from play. When you want to keep playing an ongoing campaign, always use **Continue from a save** rather than starting a fresh game from the lobby.

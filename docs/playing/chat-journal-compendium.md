@@ -1,6 +1,6 @@
 ---
 title: Feed, journal, and rules reference
-description: Chat, whisper, and roll dice in the feed, track quests and shared notes in the journal, look up B/X rules, and use keyboard shortcuts.
+description: Chat, whisper, and roll dice in the feed, track quests and shared notes in the journal, and look up B/X rules in the compendium.
 sidebar_position: 5
 ---
 
@@ -59,53 +59,4 @@ Open the B/X rules compendium at any time with the book icon at the bottom of th
 - **Navigation keys:** Inside the open compendium, press `/` to jump to the search box, `Alt+Left` and `Alt+Right` to move back and forward through viewed pages, and `Esc` to clear an active search or close the drawer.
 - **Spoiler protection:** Magic item entries reveal unidentified effects and curses. Players see a spoiler warning banner first and must select **Show magic items** to view them.
 
-## Keyboard shortcuts
-
-Press `?` on any screen to list the shortcuts currently active. Single-key shortcuts never fire while you are typing in an input or text area. On macOS, use `Cmd` in place of `Ctrl` and `Option` in place of `Alt`.
-
-### General and panels
-
-| Keys | Action |
-| --- | --- |
-| `?` | Show active keyboard shortcuts. |
-| `Ctrl+K` | Open the command palette to search and run actions. |
-| `B` | Open or close the rules reference. |
-| `Ctrl+S` | Save the game immediately. |
-| `Alt+1`, `Alt+2`, `Alt+3` | Open the **Party**, **Feed**, or **Journal** dock tab. |
-| `Alt+4` | Open the **Referee** dock tab (referee with referee lens on). |
-| `Shift+L` | Turn the referee lens on or off (referee only). |
-
-### Map tools
-
-| Keys | Action |
-| --- | --- |
-| `V` | Select and move tool. |
-| `H` | Pan the map tool (`Space`+drag or `Shift`+arrow keys also pan). |
-| `R` | Measure distance tool. |
-| `P` | Ping tool (`Alt`+click also pings in any tool). |
-| `D` | Freehand draw tool. |
-| `N` | Pin a note tool. |
-| `E` | Erase strokes tool. |
-| `Esc` | Clear a measurement or cancel map picking. |
-
-### Town and dungeon exploration
-
-| Keys | Action |
-| --- | --- |
-| `O`, `T`, `M` | In town: open **Outfitter**, **Temple**, or **Treasure buyers**. |
-| `Shift+R`, `G` | In town: open the **Rest** menu, or **Set out** for the dungeon. |
-| `Arrow keys` | While exploring: move and face one square in that direction. |
-| `Alt+Arrow keys` | While exploring: turn to face that direction without moving. |
-| `S`, `L`, `T`, `Z` | While exploring: **Search**, **Listen**, **Light**, or **Rest**. |
-| `G`, `U`, `M` | While exploring: **Treasure**, use stairs/transitions, or open **Other**. |
-
-### Encounters and battle
-
-| Keys | Action |
-| --- | --- |
-| `T`, `W`, `Shift+F`, `F` | In an encounter: **Talk**, **Wait**, **Flee**, or **Fight**. |
-| `A` | In battle: apply the suggested action for your next undeclared character. |
-| `Shift+A` | In battle: repeat last round's declarations for all of your characters. |
-| `1` to `9` | In battle: open the action composer for your first through ninth character. |
-| `Ctrl+Enter` | In battle: resolve the round (when automatic resolution is off). |
-| `Esc` | Skip combat playback, or dismiss the aftermath card. |
+For a complete table of shortcuts across every mode and panel, see [Keyboard shortcuts](keyboard-shortcuts.md).

@@ -54,9 +54,9 @@ Each server maintains a separate SQLite database:
 
 Because rows in `bxvtt.db` reference session, save, character, and adventure IDs in `bxapi.db`, always back up and restore both databases as a matched pair.
 
-### Back up while running
+### Back up databases
 
-Use `sqlite3`'s `.backup` command to take consistent snapshots without stopping either server (assuming `bxapi` is cloned alongside `bxvtt`):
+Take backups while no one is actively submitting commands at the table (for example, at a break or at the end of a session) so both databases reflect the exact same game revision. `sqlite3`'s `.backup` command writes a self-contained snapshot of each database without stopping `npm run share` or dropping your Cloudflare quick tunnel (assuming `bxapi` is cloned alongside `bxvtt`):
 
 ```sh
 mkdir -p ~/bxvtt-backup && chmod 700 ~/bxvtt-backup
@@ -64,14 +64,15 @@ sqlite3 .data/bxvtt.db ".backup $HOME/bxvtt-backup/bxvtt.db"
 sqlite3 ../bxapi/bxapi.db ".backup $HOME/bxvtt-backup/bxapi.db"
 ```
 
-If `sqlite3` is not installed, stop `bxvtt` and `bxapi` first, then copy `bxvtt.db` and `bxapi.db` (along with any `-wal` and `-shm` files beside them). Store backups in a private directory because `bxvtt.db` contains all chat messages, whispers, and notes in plain text.
+If `sqlite3` is not installed, wait until the session is over, stop `bxvtt` first and then `bxapi` (clean shutdown checkpoints and removes the `-wal` and `-shm` files automatically), and copy `.data/bxvtt.db` and `../bxapi/bxapi.db`. Store backups in a private directory because `bxvtt.db` contains all chat messages, whispers, and notes in plain text.
 
 ### Restore from backup
 
 1. Stop `bxvtt`, then stop `bxapi`.
-2. Copy your backed-up `bxvtt.db` over `.data/bxvtt.db` and `bxapi.db` over `../bxapi/bxapi.db`.
-3. Delete any leftover `bxvtt.db-wal`, `bxvtt.db-shm`, `bxapi.db-wal`, and `bxapi.db-shm` files so SQLite does not replay stale journal frames.
+2. Remove any destination `-wal` or `-shm` files (`bxvtt.db-wal`, `bxvtt.db-shm`, `bxapi.db-wal`, and `bxapi.db-shm`) if an unclean crash left them behind, so SQLite cannot replay stale frames over your backup.
+3. Copy your backed-up `bxvtt.db` to `.data/bxvtt.db` and `bxapi.db` to `../bxapi/bxapi.db`.
 4. Start `bxapi`, then start `bxvtt`.
+5. Open [http://127.0.0.1:8660](http://127.0.0.1:8660), open your table, and check **Saves** to confirm the expected session state is intact.
 
 ## Use a permanent address with a named tunnel
 
@@ -143,7 +144,7 @@ On Windows, run `netstat -ano | findstr :8660` instead. Stop that process, or ch
 
 Check these causes in order:
 
-1. **The player clicked a `127.0.0.1` link directly:** Loopback URLs work only on the host computer. Have the player open your public `https://...` URL and paste the invite link or code into **Join a table** (or send them a link starting with your public URL).
+1. **The player clicked a `127.0.0.1` link directly:** Loopback URLs work only on the host computer. Replace `http://127.0.0.1:8660` in the copied `/join/<code>` link with your public `https://...` URL and send that link to the player (works for both first-time and returning players).
 2. **The tunnel stopped:** If Cloudflare returns a tunnel error page, restart `npm run share` and share the new URL.
 3. **Invalid or rate-limited invite code:** Confirm the code, or select **Make a new link** in the lobby. Each IP address is limited to 20 invite attempts every 10 minutes.
 4. **"Connection lost. Reconnecting to the table." on a custom tunnel:** WebSocket handshakes verify the `Origin` header. When running your own tunnel instead of `npm run share`, set `BXVTT_PUBLIC_ORIGINS` to your public `https://...` origin and restart bxvtt.

@@ -35,14 +35,27 @@ Before exposing a server publicly, review the protections and limits in [Securit
    ```
 
 4. Open [http://127.0.0.1:8660](http://127.0.0.1:8660) in your browser. Always use `http://127.0.0.1:8660` as the host rather than the `trycloudflare.com` URL: your browser ties your sign-in token to the exact web address (origin) you open, and a quick tunnel generates a different `trycloudflare.com` URL each time you run `npm run share`. Using `127.0.0.1` preserves your referee identity across every session.
-5. Under **Create a table**, enter a **Table name** and paste the **Host key** printed in your terminal, then select **Create table**. Only table creation requires the host key; players never need it.
-6. In the lobby's **Invite players** panel, select **Copy**. Because you opened `http://127.0.0.1:8660`, the copied link starts with `http://127.0.0.1:8660/join/...`. Replace `http://127.0.0.1:8660` with your `https://*.trycloudflare.com` URL (for example, `https://example-words-here.trycloudflare.com/join/ABCD1-EFGH2-JKLM3-NPQR4`) and send that direct join link to your players. (New first-time players can also open the root `https://*.trycloudflare.com` URL, pick a name, and paste the invite code into **Join a table**.)
+5. Open your table:
+
+   - **If you already created a table in the Quickstart:** Select it under **Your tables** to open its lobby.
+   - **If you are creating a new table:** Under **Create a table**, enter a **Table name** and paste the **Host key** printed in your terminal, then select **Create table**. Only creating a new table requires the host key; players never need it.
+
+6. In the lobby's **Invite players** panel, select **Copy**. Because you opened `http://127.0.0.1:8660`, the copied link uses your local address. Swap `http://127.0.0.1:8660` for your `https://*.trycloudflare.com` URL, keeping `/join/...` unchanged:
+
+   ```text
+   Copied:  http://127.0.0.1:8660/join/ABCD1-EFGH2-JKLM3-NPQR4
+   Share:   https://example-words-here.trycloudflare.com/join/ABCD1-EFGH2-JKLM3-NPQR4
+   ```
+
+   Send that `https://...` join link to your players.
+
 7. When your session ends, press `Ctrl+C` in the terminal to close the tunnel and stop the server.
 
-To reuse the same host key across runs instead of generating a fresh one each time, set `BXVTT_HOST_KEY` before running `npm run share`:
+By default, `npm run share` generates a fresh host key on every run. If you prefer a fixed host key, generate one once, store it privately, and pass that saved value when starting `npm run share`:
 
 ```sh
-BXVTT_HOST_KEY="$(openssl rand -base64 24)" npm run share
+openssl rand -base64 24                         # run once and save the output
+BXVTT_HOST_KEY="paste-your-saved-key" npm run share
 ```
 
 ## Bring players back for the next session

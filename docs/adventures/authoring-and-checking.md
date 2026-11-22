@@ -11,11 +11,58 @@ You can author `osrlib` adventure documents with visual editors (`osr-editor` or
 
 ## Build adventures from scripts
 
-The bundled modules in `adventures/` are generated from source scripts in `adventures/src/*.mjs` (`the-drowned-bell.mjs` and `the-toll-bridge.mjs`) using helpers in `adventures/tools/lib.mjs`. Edit the source scripts rather than editing `adventures/*.json` by hand, then regenerate the JSON files from the repository root:
+The bundled modules in `adventures/` are generated from ES modules in `adventures/src/*.mjs` (`the-drowned-bell.mjs` and `the-toll-bridge.mjs`) using helpers in `adventures/tools/lib.mjs`. `adventures/tools/build.mjs` scans `adventures/src/*.mjs` automatically and writes `adventures/<file>` for every module exporting `file` and `document` (modules without a `document` export, such as `named-monsters.mjs`, act as shared helpers).
+
+Edit source scripts rather than editing `adventures/*.json` by hand, then regenerate the JSON files from the repository root:
 
 ```sh
 node adventures/tools/build.mjs          # writes adventures/*.json
 node adventures/tools/build.mjs --maps   # writes JSON and prints ASCII maps of every level
+```
+
+### Create a minimal custom module
+
+Add a new script such as `adventures/src/my-crypt.mjs` with a unique output filename so you do not overwrite the bundled samples:
+
+```js
+import { LevelBuilder, envelope, feature, monsters } from '../tools/lib.mjs';
+
+const level = new LevelBuilder({
+  dungeonId: 'crypt',
+  number: 1,
+  mask: `
+#######
+#EEGGG#
+#EEGGG#
+#######
+`,
+});
+
+level
+  .area('E', { id: 'entry_steps', name: 'Entry steps', description: 'Damp stone steps descend out of the wind.' })
+  .area('G', {
+    id: 'guardroom',
+    name: 'Guardroom',
+    description: 'Broken spears litter the flagstones.',
+    encounter: monsters([['goblin', '1d4']]),
+    features: [feature({ id: 'iron_box', kind: 'treasure_cache', description: 'A rusted iron box.', coins: { gp: 40 } })],
+  })
+  .door([2, 1], 'east');
+
+export const file = 'my-crypt.json';
+export const document = envelope({
+  name: 'The Old Crypt',
+  description: 'A two-room crypt outside Oakhaven.',
+  town: { name: 'Oakhaven', description: 'A quiet crossroads village.', travel_turns: { crypt: 1 } },
+  dungeons: [{ id: 'crypt', name: 'The Old Crypt', levels: [level.build({ entrance: [1, 1] })] }],
+});
+```
+
+Build, verify against `bxapi`, and reload the lobby to select **The Old Crypt**:
+
+```sh
+node adventures/tools/build.mjs --maps
+node adventures/tools/check.mjs adventures/my-crypt.json
 ```
 
 ### How `LevelBuilder` maps work

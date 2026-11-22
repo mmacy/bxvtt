@@ -11,12 +11,12 @@ bxvtt is an npm workspaces monorepo requiring Node.js 24+, `uv`, and a sibling c
 
 ## Start the development servers
 
-Install dependencies once, then run the development `bxapi` server (from `~/repos/bxapi`, or pass `BXAPI_DIR=../bxapi`) and the bxvtt watch servers in two terminals:
+Open two terminals in the `bxvtt` repository root (`scripts/dev-bxapi.sh` reads `~/repos/bxapi` by default, or `BXAPI_DIR`), install dependencies once, and start both watch servers:
 
 ```sh
 npm install
-BXAPI_DIR=../bxapi npm run dev:bxapi    # terminal 1: anonymous bxapi on http://127.0.0.1:8651 (.data/bxapi-dev-8651.db)
-npm run dev                             # terminal 2: Fastify server on :8660 + Vite client on http://localhost:5180
+BXAPI_DIR=../bxapi npm run dev:bxapi    # terminal 1 (in bxvtt): anonymous bxapi on http://127.0.0.1:8651
+npm run dev                             # terminal 2 (in bxvtt): Fastify on :8660 + Vite on http://localhost:5180
 ```
 
 `scripts/dev-bxapi.sh` disables `bxapi` rate limits and client storage caps so automated test suites can create thousands of sessions without hitting quotas. Open [http://localhost:5180](http://localhost:5180) in your browser; Vite hot-reloads client edits and proxies `/api` and `/ws` to `http://127.0.0.1:8660`.

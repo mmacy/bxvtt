@@ -4,6 +4,9 @@ bxvtt is a browser-based virtual tabletop for the 1981 B/X (Basic and Expert) fa
 
 ![A party of four exploring the first level of The Drowned Bell beside the marching order panel](docs/images/explore.webp)
 
+- **Invited to play at someone's table?** You do not install anything. Open your referee's link in a desktop browser and read [Join a table and make a character](docs/playing/getting-started.md).
+- **Running a game or playing solo?** Follow [Quickstart](#quickstart) below to launch `bxapi` and `bxvtt` locally, then [Play over the internet](#play-over-the-internet) to invite friends.
+
 ## Prerequisites
 
 - [Node.js](https://nodejs.org/) 24 or later (includes `npm`).
@@ -73,7 +76,7 @@ Press `Ctrl+C` to close the tunnel when the session ends. When the tunnel URL ch
 See [`docs/`](docs/index.md) for the full documentation set:
 
 - **Getting started:** [Quickstart](docs/getting-started/quickstart.md) and [Play over the internet](docs/getting-started/share-online.md).
-- **Player guide:** [Join and make a character](docs/playing/getting-started.md), [Table screen and town](docs/playing/table-and-town.md), [Explore the dungeon](docs/playing/dungeon-exploration.md), [Encounters and battle](docs/playing/encounters-and-battle.md), and [Feed, journal, and rules reference](docs/playing/chat-journal-compendium.md).
+- **Player guide:** [Join and make a character](docs/playing/getting-started.md), [Table screen and town](docs/playing/table-and-town.md), [Explore the dungeon](docs/playing/dungeon-exploration.md), [Encounters and battle](docs/playing/encounters-and-battle.md), [Feed, journal, and rules reference](docs/playing/chat-journal-compendium.md), and [Keyboard shortcuts](docs/playing/keyboard-shortcuts.md).
 - **Referee guide:** [Set up a table and lobby](docs/refereeing/lobby-and-setup.md) and [Run the game behind the screen](docs/refereeing/running-the-game.md).
 - **Adventures:** [Included and custom adventures](docs/adventures/included-adventures.md) and [Author and validate adventures](docs/adventures/authoring-and-checking.md).
 - **Hosting and operations:** [Run and maintain a server](docs/hosting/running-a-server.md) and [Security and trust model](docs/hosting/security.md).
@@ -98,11 +101,11 @@ See [Environment variables and limits](docs/reference/environment-variables.md) 
 
 ## Development
 
-Start the development `bxapi` instance (from `~/repos/bxapi`, or pass `BXAPI_DIR=../bxapi`) and the bxvtt watch servers in two terminals:
+Run both commands from the `bxvtt` root directory in two terminals (`scripts/dev-bxapi.sh` reads `~/repos/bxapi` by default, or `BXAPI_DIR`):
 
 ```sh
-BXAPI_DIR=../bxapi npm run dev:bxapi    # terminal 1: bxapi on http://127.0.0.1:8651
-npm run dev                             # terminal 2: bxvtt server on :8660, Vite client on http://localhost:5180
+BXAPI_DIR=../bxapi npm run dev:bxapi    # terminal 1 (in bxvtt): bxapi on http://127.0.0.1:8651
+npm run dev                             # terminal 2 (in bxvtt): server on :8660, Vite client on http://localhost:5180
 ```
 
 Open [http://localhost:5180](http://localhost:5180) (or `/kit` for the UI component gallery).

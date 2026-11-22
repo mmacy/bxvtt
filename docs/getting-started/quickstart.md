@@ -6,7 +6,7 @@ sidebar_position: 1
 
 # Quickstart
 
-Run a complete bxvtt table on your own computer in a few minutes. You will start two local processes: `bxapi` (the B/X rules engine) and `bxvtt` (the web server and browser client). Only the person hosting the table installs these programs; players connect with a web browser.
+Run a complete bxvtt table on your computer in a few minutes by starting two local processes: `bxapi` (the B/X rules engine) and `bxvtt` (the web server and browser client). Only the person hosting or playing solo installs these programs; if a referee invited you to join their table, skip installation and go to [Join a table and make a character](../playing/getting-started.md).
 
 ## Prerequisites
 
@@ -80,7 +80,7 @@ A healthy server returns JSON beginning with `{"status":"ok"`.
 2. Under **Pick your name**, enter the display name others at the table should see and select **Continue**. Your browser saves a sign-in token locally, with no password required.
 3. Under **Create a table**, enter a name such as `Thursday at the Drowned Bell` and select **Create table**.
 
-You enter the lobby as the table's referee, with *The Drowned Bell* selected by default.
+You enter the lobby as the table's referee, with *The Drowned Bell* selected by default. A **table** is your group's persistent room (retaining members, notes, and saves across sessions), whereas a **game** is one active run of an adventure at that table.
 
 ## Next steps
 

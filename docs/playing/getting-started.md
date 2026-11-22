@@ -47,6 +47,8 @@ In the lobby, locate **Your characters** inside the **Party** panel and select *
 
 6. **Review.** Verify your character summary (use **Change** on any section to jump back) and select **Create character**. `bxapi` rolls your starting hit points and creates the character. Select **Make another** to roll an additional character, or **Done** to return to the lobby.
 
+Each character created in the wizard joins the **Party** list automatically. When the referee starts the game, each character on the roster becomes a **seat** (the link assigning control of that character during play to you).
+
 ## Wait in the lobby
 
 Before play starts, everyone gathers in the lobby.
@@ -54,9 +56,9 @@ Before play starts, everyone gathers in the lobby.
 ![The table lobby showing four party members in marching order](../images/lobby.webp)
 
 - **Party** displays the characters in marching order, where the top rows form the front rank. Select any character's name to inspect their sheet (and **Delete character** if you own them and want to remove them permanently). You can pull your own character off the roster with **Take out of the party** (for example, **Take Wren out of the party**), while the referee controls the final marching order.
-- **Your characters** lists characters you created previously that are not in the current party. Select **Add to party** to place one on the roster.
+- **Your characters** lists any characters you created earlier (or removed from the roster) that are not currently in **Party**. Select **Add to party** if a character is waiting here.
 - **People at the table** shows everyone who joined, with a green indicator for members currently online.
 - **Invite players** provides a **Copy** button for the table's invite link.
 - **Table settings** displays who moves the party, who the caller is (the player designated to speak for the party), and whether battle rounds and autosaves run automatically.
 
-While the referee selects the adventure and optional rules, your side column shows **Waiting for the referee to start** (plus a note if the table has saves from earlier sessions that the referee can restore). As soon as the referee starts or restores a game, everyone's browser transitions to the play screen automatically.
+While the referee selects the adventure and optional rules, your side column shows **Waiting for the referee to start** (plus a note if the table has saves from earlier sessions that the referee can restore). As soon as the referee starts or restores a game, everyone's browser transitions to the play screen automatically. Next, read [The table screen and town](table-and-town.md).

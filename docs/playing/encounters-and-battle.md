@@ -43,7 +43,7 @@ B/X battles resolve simultaneously round by round. A range track at the top of t
    - **Item:** Drink a potion, read a scroll, throw oil or holy water, or activate a magic item.
    - **Give**, **Turn undead**, and **Hold**.
    - When facing a monster with a petrifying gaze, a **Guard against the gaze** selector lets you choose **No guard**, **Avert eyes**, or **Watch in a mirror**.
-3. Before the round resolves, select **Change** to edit a character's declaration or click the clear button (`X`) to remove it.
+3. With **Resolve battle rounds automatically** enabled (the default), submitting the final character's declaration resolves the round immediately. While at least one character has yet to declare (or whenever automatic resolution is turned off), select **Change** to revise a character's declaration or click the clear button (`X`) to remove it.
 4. Starting in round 2, select **Same as last round for all** (`Shift+A`) to repeat your previous declarations for every eligible character you control, or click the repeat icon on a single character's row.
 
 ## Resolve the round and watch playback

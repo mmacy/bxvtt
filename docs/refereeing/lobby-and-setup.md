@@ -35,7 +35,7 @@ Selecting an adventure card expands its **Hooks** so you can read the setup to y
 
 ## Choose optional rules
 
-Expand **Optional rules** to customize how `bxapi` adjudicates B/X rules for the upcoming game. You must configure optional rules before starting a new game; select **Use the standard rules** at any time to reset everything to the defaults below.
+Expand **Optional rules** before starting a new game (and decide **Reroll low first-level hit points** before players roll characters, since players must check the matching box in Step 2 of the character wizard). Select **Use the standard rules** at any time to reset everything to the defaults below.
 
 | Rule | Default | Effect |
 | --- | --- | --- |
@@ -69,5 +69,5 @@ When you start a game, bxvtt assigns each character's seat to the member who cre
 1. Arrange the **Party** list into your group's starting marching order by dragging rows or clicking the forward and back buttons.
 2. Check **Start the game** in the side column for any non-blocking warnings (such as party size outside the adventure's recommendation or an online player without a character).
 3. Choose how to enter play:
-   - Select **Start the game** to begin a fresh run of the selected adventure with characters in their newly created state.
-   - If the table has saves from earlier sessions, select **Continue from a save** to restore a saved game with all earned XP, treasure, and dungeon state intact.
+   - **Start a brand-new run (`Start the game`):** Begins the selected adventure with every roster character in their initial level-1 state as created.
+   - **Resume an ongoing campaign (`Continue from a save`):** Shown whenever the table has saves from earlier sessions. Restores a saved session with all earned XP, treasure, spells, deaths, and dungeon progress intact (choose this rather than **Start the game** when continuing a multi-session campaign).
