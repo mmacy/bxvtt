@@ -1,6 +1,6 @@
 import { gunzipSync } from 'node:zlib';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { isProblem } from '@bxvtt/shared/client';
+import { BxvttClient, isProblem } from '@bxvtt/shared/client';
 import type { FullCatalog, GameEntry, GameState } from '@bxvtt/shared/protocol';
 import type { TestConnection, TestServer, TestUser } from './helpers';
 import {
@@ -127,10 +127,13 @@ describe('the game clock on feed entries, the entrance, and presence', () => {
 describe('whole rules catalogs', () => {
   let server: TestServer;
   let alice: TestUser;
+  /** A client that doesn't copy each response, because the recording fetch can't tee a large body reliably. */
+  let plain: BxvttClient;
 
   beforeAll(async () => {
     server = await startServer();
     alice = await createUser(server, 'Alice');
+    plain = new BxvttClient({ baseUrl: server.url, token: alice.token });
   });
 
   afterAll(async () => {
@@ -138,7 +141,7 @@ describe('whole rules catalogs', () => {
   });
 
   it('returns every full equipment entry, the same as the entry route', async () => {
-    const catalog = await alice.client.fullCatalog('equipment');
+    const catalog = await plain.fullCatalog('equipment');
     const list = await alice.client.rules<{ items: { id: string }[]; total: number }>('equipment', {
       limit: 200,
     });
@@ -150,28 +153,28 @@ describe('whole rules catalogs', () => {
   });
 
   it('pages through a catalog longer than one bxapi page', async () => {
-    const monsters = await alice.client.fullCatalog('monsters');
+    const monsters = await plain.fullCatalog('monsters');
     expect(monsters.total).toBeGreaterThan(200);
     expect(monsters.items).toHaveLength(monsters.total);
     expect(new Set(monsters.items.map((monster) => monster.id)).size).toBe(monsters.total);
     expect(monsters.items.every((monster) => Array.isArray(monster.categories))).toBe(true);
     for (const name of ['classes', 'spells', 'magic-items'] as const) {
-      const catalog: FullCatalog = await alice.client.fullCatalog(name);
+      const catalog: FullCatalog = await plain.fullCatalog(name);
       expect(catalog.items.length).toBe(catalog.total);
     }
   });
 
   it('answers with an ETag, a 304 for a matching If-None-Match, and gzip when asked', async () => {
     const headers = { Authorization: `Bearer ${alice.token}` };
-    const plain = await fetch(`${server.url}/api/catalogs/spells`, {
+    const identity = await fetch(`${server.url}/api/catalogs/spells`, {
       headers: { ...headers, 'Accept-Encoding': 'identity' },
     });
-    expect(plain.status).toBe(200);
-    expect(plain.headers.get('content-encoding')).toBeNull();
-    expect(plain.headers.get('cache-control')).toBe('private, max-age=3600');
-    const etag = plain.headers.get('etag') ?? '';
+    expect(identity.status).toBe(200);
+    expect(identity.headers.get('content-encoding')).toBeNull();
+    expect(identity.headers.get('cache-control')).toBe('private, max-age=3600');
+    const etag = identity.headers.get('etag') ?? '';
     expect(etag).toMatch(/^"[0-9a-f]{32}"$/);
-    const body = await plain.text();
+    const body = await identity.text();
     const again = await fetch(`${server.url}/api/catalogs/spells`, {
       headers: { ...headers, 'If-None-Match': etag },
     });
@@ -199,7 +202,7 @@ describe('whole rules catalogs', () => {
   });
 
   it('refuses a catalog it does not serve', async () => {
-    await expect(alice.client.fullCatalog('languages' as 'classes')).rejects.toSatisfy((error) =>
+    await expect(plain.fullCatalog('languages' as 'classes')).rejects.toSatisfy((error) =>
       isProblem(error, 'not_found'),
     );
   });

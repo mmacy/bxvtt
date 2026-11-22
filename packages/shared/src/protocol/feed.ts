@@ -43,6 +43,38 @@ export const RollEntry = FeedEntryBase.extend({
   secret: z.boolean(),
 });
 
+/** What players called one monster group, or one monster by its group, when a feed entry was written. */
+export const EntryLabel = z.object({
+  /** What to call one of them: `goblin`. */
+  label: z.string(),
+  /** What to call several: `goblins`. */
+  label_plural: z.string(),
+});
+/** What players called one monster group or monster. */
+export type EntryLabel = z.infer<typeof EntryLabel>;
+
+/**
+ * The display names for the IDs in a game entry's events, as the reader could see them when the command ran, so
+ * a client narrates the entry later as it read live: after the fight ended and the encounter left the player
+ * view, or in a new browser. Pass it to `extendContextWithEntryNames` from `@bxvtt/shared/text`.
+ *
+ * Each record holds only the IDs that the entry's events name. A monster has its group's label as the player
+ * view showed it, such as `robed corpse`, never its template's true name. An item has the name the party knew,
+ * so an unidentified magic item keeps its masked name.
+ */
+export const EntryNames = z.object({
+  /** Party member names by member ID: `character-0001` to `Brenna`. */
+  members: z.record(z.string(), z.string()),
+  /** Group labels by group ID. */
+  groups: z.record(z.string(), EntryLabel),
+  /** The label of each monster's group, by monster ID (`monster-0003`) or NPC ID (`npc-0001`). */
+  monsters: z.record(z.string(), EntryLabel),
+  /** Item display names by item ID, as in `scene.names`. */
+  items: z.record(z.string(), z.string()),
+});
+/** The display names for the IDs in a game entry's events. */
+export type EntryNames = z.infer<typeof EntryNames>;
+
 /**
  * The result of an accepted command. `events` and `messages` are projected for the reader: a player's copy
  * holds only player events. `command_type` is `null` in a player's copy of a referee command.
@@ -62,6 +94,14 @@ export const GameEntry = FeedEntryBase.extend({
    * compile. This server always sends it.
    */
   clock_rounds: z.number().int().nullable().optional(),
+  /**
+   * The names for the IDs in `events`, as the reader could see them when the command ran. See
+   * {@link EntryNames}. The server records them for every new entry. For an entry written before it recorded
+   * names, it fills in what it still knows when it serves the entry: the party's names, item names, and the label
+   * of each monster the party has met since the server recorded labels. Optional in the type so that older
+   * fixtures still compile.
+   */
+  names: EntryNames.optional(),
 });
 
 /** What a system notice reports. The client writes the sentence from `code` and `params`. */

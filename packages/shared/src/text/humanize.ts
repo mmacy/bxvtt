@@ -52,17 +52,20 @@ export function removeDashes(text: string): string {
 
 /** Rewrite osrlib's wording that reads badly once its IDs are names: map cells, empty lists, and `town town`. */
 function tidyWording(text: string, ctx: TextContext): string {
-  return text
-    .replace(ENTERS_TOWN, () => `The party arrives in ${ctx.townName ?? 'town'}.`)
-    .replace(
-      ENTERS_LEVEL,
-      (_match, dungeon: string, level: string) =>
-        `The party reaches level ${level} of ${withThe(dungeonName(dungeon, ctx))}.`,
-    )
-    .replace(MOVES_TO_CELL, (_match, facing: string) => `The party moves ${facing}.`)
-    .replace(DOOR_OF_CELL, (_match, t: string, side: string) => `${t}he ${side} door`)
-    .replace(/\bleave behind \./g, 'leave nothing behind.')
-    .replace(NOTHING_LISTED, '$1 nothing');
+  return (
+    text
+      .replace(ENTERS_TOWN, () => `The party arrives in ${ctx.townName ?? 'town'}.`)
+      .replace(
+        ENTERS_LEVEL,
+        (_match, dungeon: string, level: string) =>
+          `The party reaches level ${level} of ${withThe(dungeonName(dungeon, ctx))}.`,
+      )
+      .replace(MOVES_TO_CELL, (_match, facing: string) => `The party moves ${facing}.`)
+      .replace(DOOR_OF_CELL, (_match, t: string, side: string) => `${t}he ${side} door`)
+      // osrlib writes "leave behind ." when the fallen dropped only coins worth less than 1 gp.
+      .replace(/\bleave behind \./g, 'leave a few coins behind.')
+      .replace(NOTHING_LISTED, '$1 nothing')
+  );
 }
 
 /** Capitalize the first letter of the string and the first letter after each sentence end. */

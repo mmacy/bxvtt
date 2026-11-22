@@ -4,6 +4,7 @@ import type {
   Command,
   CommandRequest,
   CommandResult,
+  EntryNames,
   GameEvent,
   GameState,
   LegalCommand,
@@ -29,6 +30,8 @@ import { CommandClassifier } from './classify';
 import { SaveService } from './saves';
 import { buildScene, eventItemIds, inventoryNames, templateNames } from './scene';
 import { readSeats, reconcileSeats, seatsFromRoster, writeSeats } from './seats';
+import type { LabelBook } from './labels';
+import { entryNames, learnLabels, newLabelBook } from './labels';
 import type { TargetBook } from './targets';
 import { emptyTargetBook, resolveHandles, syncTargets, toHandles } from './targets';
 
@@ -51,6 +54,8 @@ export interface LiveGame {
   names: Map<string, string>;
   /** The monster target handles of the session, and the ones the scene lists at `revision`. */
   targets: TargetBook;
+  /** What the players of the session have called each member, group, and monster, for feed entries. */
+  labels: LabelBook;
 }
 
 /** Who sent an accepted command, for the feed. */
@@ -222,6 +227,7 @@ export class GameService {
     );
     const previous = this.live.get(tableId);
     const names = previous?.sessionId === sessionId ? previous.names : new Map<string, string>();
+    const labels = previous?.sessionId === sessionId ? previous.labels : newLabelBook(this.ctx.db, sessionId);
     const live: LiveGame = {
       tableId,
       sessionId,
@@ -235,6 +241,7 @@ export class GameService {
       scene: { levels: [], here: null, names: {}, can_travel_to_town: false, targets: [] },
       names,
       targets: emptyTargetBook(),
+      labels,
     };
     if (info.revision === commands.revision) {
       live.referee = refereeState(refereeView);
@@ -272,6 +279,7 @@ export class GameService {
       this.equipment ?? new Map(),
     );
     live.targets = syncTargets(this.ctx.db, live.tableId, live.sessionId, live.view, refereeView);
+    learnLabels(live.labels, live.view, refereeView);
     live.scene = {
       ...buildScene(
         live.view,
@@ -899,6 +907,7 @@ export class GameService {
         events: forPlayers.events,
         messages: forPlayers.messages,
         clock_rounds: live.view.clock_rounds,
+        names: entryNames(forPlayers.events, live.labels, live.names),
       },
       referee: {
         kind: 'game',
@@ -908,6 +917,7 @@ export class GameService {
         events: outcome.events,
         messages: outcome.messages,
         clock_rounds: live.view.clock_rounds,
+        names: entryNames(outcome.events, live.labels, live.names),
       },
     });
     this.battle.afterAcceptedLocked(live);
@@ -1001,6 +1011,20 @@ export class GameService {
     const live = this.live.get(tableId);
     if (live === undefined || live.sessionId !== sessionId || live.revision !== revision) return null;
     return live.view.clock_rounds;
+  }
+
+  /**
+   * The names for the IDs in the events of an older feed entry, from what the server knows of the entry's session
+   * now, or `undefined` when the server doesn't hold that session in memory.
+   *
+   * @param tableId - The table ID.
+   * @param sessionId - The entry's session.
+   * @param events - The events of the reader's copy.
+   */
+  namesFor(tableId: string, sessionId: string, events: GameEvent[]): EntryNames | undefined {
+    const live = this.live.get(tableId);
+    if (live === undefined || live.sessionId !== sessionId) return undefined;
+    return entryNames(events, live.labels, live.names);
   }
 
   /**

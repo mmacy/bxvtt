@@ -10,7 +10,9 @@ import {
   describeEvent,
   describeEvents,
   equipmentNoun,
+  emptyContext,
   extendContextWithCatalog,
+  extendContextWithEntryNames,
   extendContextWithNames,
   extendContextWithReferee,
   humanizeMessage,
@@ -405,8 +407,8 @@ describe('osrlib message oddities (reported)', () => {
   it.each([
     // Reported: "The party enters town town."
     ['The party enters town town.', 'The party arrives in Hollin Ferry.'],
-    // Reported: "The fallen leave behind ." when nothing drops.
-    ['The fallen leave behind .', 'The fallen leave nothing behind.'],
+    // Reported: "The fallen leave behind ." osrlib writes it when the fallen drop only coins worth less than 1 gp.
+    ['The fallen leave behind .', 'The fallen leave a few coins behind.'],
     ['character-0001 drops .', 'Brenna drops nothing.'],
     // Reported: "— the party is surprised".
     [
@@ -423,7 +425,7 @@ describe('osrlib message oddities (reported)', () => {
     );
   });
 
-  it('describes loot that has nothing in it', () => {
+  it('describes a drop of coins worth less than 1 gp as coins, never as nothing', () => {
     const line = describeEvent(
       {
         event_type: 'loot_dropped',
@@ -434,7 +436,10 @@ describe('osrlib message oddities (reported)', () => {
       },
       base,
     );
-    expect(line.text).toBe('The fallen leave nothing behind.');
+    // osrlib sends loot_dropped only when something dropped, and rounds coins down to whole gold pieces, so this
+    // is a pile such as 39 cp.
+    expect(line.text).toBe('The fallen leave a few coins behind.');
+    expect(line.detail).toBe('The coins are worth less than 1 gp.');
   });
 
   it('never emits the oddities for any message or event in the captured outcomes', () => {
@@ -456,5 +461,165 @@ describe('osrlib message oddities (reported)', () => {
         expect(text).not.toMatch(/\(-?\d+, -?\d+\)/);
       }
     }
+  });
+});
+
+describe('parentheses in sentences (reported)', () => {
+  const ctx = extendContextWithEntryNames(emptyContext(), {
+    members: { 'character-0001': 'Brenna', 'character-0002': 'Wren' },
+  });
+  const line = (event: Record<string, unknown>) =>
+    describeEvent({ visibility: 'player', ...event } as Parameters<typeof describeEvent>[0], ctx);
+
+  it('writes an interrupted rest as two sentences', () => {
+    // Reported: "The party's rest is interrupted (it planned a night)."
+    for (const [kind, length] of [
+      ['night', 'a night'],
+      ['day', 'a full day'],
+      ['turn', 'one turn'],
+    ]) {
+      expect(line({ event_type: 'rested', code: 'exploration.rest.interrupted', kind }).text).toBe(
+        `The party's rest is interrupted. It had planned to rest for ${length}.`,
+      );
+    }
+  });
+
+  it('writes the other asides as plain clauses', () => {
+    expect(
+      line({
+        event_type: 'wandering_check',
+        code: 'exploration.wandering.none',
+        roll: null,
+        chance: 1,
+        encounter: false,
+      }).detail,
+    ).toBe('No die rolled. The chance was 1 in 6.');
+    expect(
+      line({
+        event_type: 'spell_declared',
+        code: 'battle.spell.declared',
+        caster_id: 'character-0002',
+        spell_id: 'cure_light_wounds',
+        reversed: true,
+      }).text,
+    ).toBe('Wren begins casting the reversed form of cure light wounds.');
+    expect(
+      line({
+        event_type: 'spells_memorized',
+        code: 'magic.spells.memorized',
+        caster_id: 'character-0002',
+        prepared: [
+          { spell_id: 'sleep', reversed: false },
+          { spell_id: 'sleep', reversed: false },
+        ],
+      }).text,
+    ).toBe('Wren memorizes 2 copies of sleep.');
+    expect(
+      line({
+        event_type: 'healing_purchased',
+        code: 'town.healing.purchased',
+        character_id: 'character-0001',
+        service: 'cure_light_wounds',
+        cost_gp: 15,
+        payers: ['character-0001', 'character-0002'],
+        payments_gp: [10, 5],
+      }).detail,
+    ).toBe('Brenna pays 10 gp and Wren pays 5 gp.');
+    expect(
+      line({
+        event_type: 'npc_party_spawned',
+        code: 'encounter.npc_party.spawned',
+        party_kind: 'basic',
+        alignment: 'chaotic',
+        npc_ids: ['npc-0001'],
+        class_ids: ['fighter'],
+        levels: [2],
+      }).text,
+    ).toBe('A party of chaotic low-level NPC adventurers takes the field: Fighter 2.');
+  });
+
+  it('leaves no parenthetical aside in the text or detail of any sample event', () => {
+    for (const fixture of outcomes as unknown as Array<{
+      view: Parameters<typeof contextFromPlayerView>[0];
+      outcome: { events?: Parameters<typeof describeEvents>[0] };
+    }>) {
+      for (const described of describeEvents(
+        fixture.outcome.events ?? [],
+        contextFromPlayerView(fixture.view),
+      )) {
+        // A sentence holds no "(...)" aside. A detail may quote the rules text of a monster's power, which
+        // has its own parentheses, so only the narrated sentence is checked.
+        expect(described.text).not.toMatch(/\([a-z][^)]*\)/);
+      }
+    }
+  });
+});
+
+describe('monster names in feed history (reported)', () => {
+  const attack = [
+    {
+      event_type: 'attack_rolled',
+      code: 'combat.attack.hit',
+      visibility: 'player',
+      attacker_id: 'monster-0003',
+      defender_id: 'character-0001',
+      attack_name: 'weapon',
+      roll: 15,
+      modifier: 0,
+      total: 15,
+      required: 12,
+      defender_ac: 5,
+      natural: null,
+      back_stab: false,
+    },
+    {
+      event_type: 'damage_dealt',
+      code: 'combat.damage.dealt',
+      visibility: 'player',
+      target_id: 'character-0001',
+      attacker_id: 'monster-0003',
+      amount: 5,
+      rolls: [5],
+      keys: [],
+      non_regenerable: false,
+    },
+  ] as unknown as Parameters<typeof describeEvents>[0];
+  const party = extendContextWithEntryNames(emptyContext(), { members: { 'character-0001': 'Osric' } });
+
+  it('names a monster from the entry names once the encounter has left the player view', () => {
+    // Reported: "A monster hits Osric for 5 damage." from history, where the live round read "A goblin hits Osric".
+    expect(describeEvents(attack, party)[0]?.text).toMatch(/^A monster hits Osric/);
+    const named = extendContextWithEntryNames(party, {
+      monsters: { 'monster-0003': { label: 'goblin', label_plural: 'goblins' } },
+      groups: { 'group-0001': { label: 'goblin', label_plural: 'goblins' } },
+    });
+    expect(describeEvents(attack, named)[0]?.text).toMatch(/^A goblin hits Osric/);
+  });
+
+  it("keeps a disguised monster's label when its defeat names the true template", () => {
+    const named = extendContextWithEntryNames(party, {
+      monsters: { 'monster-0003': { label: 'robed corpse', label_plural: 'robed corpses' } },
+    });
+    const defeat = [
+      ...attack,
+      {
+        event_type: 'monster_defeated',
+        code: 'battle.monster.slain',
+        visibility: 'player',
+        monster_id: 'monster-0003',
+        template_id: 'drowned_prior',
+        outcome: 'slain',
+        xp: 50,
+      },
+    ] as unknown as Parameters<typeof describeEvents>[0];
+    const text = describeEvents(defeat, named)
+      .map((described) => `${described.text} ${described.detail ?? ''}`)
+      .join(' ');
+    expect(text).toMatch(/robed corpse/);
+    expect(text.toLowerCase()).not.toMatch(/prior/);
+  });
+
+  it('leaves the context alone without names', () => {
+    expect(extendContextWithEntryNames(party, undefined)).toBe(party);
   });
 });

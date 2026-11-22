@@ -522,7 +522,7 @@ export function battleMoveDescription(move: string): string {
 
 /** The move as a verb phrase for narration: `falls back`. */
 export function battleMoveVerb(move: string): string {
-  return lookup(BATTLE_MOVES, move)?.past ?? `moves (${prettifyId(move)})`;
+  return lookup(BATTLE_MOVES, move)?.past ?? `makes the ${prettifyId(move).toLowerCase()} move`;
 }
 
 // Directions and facings ------------------------------------------------------------------------------------
@@ -579,13 +579,16 @@ export function timeUnitNoun(unit: string, count = 1): string {
 const REST_KINDS: Record<string, { label: string; description: string }> = {
   turn: {
     label: 'One turn',
-    description: 'Rest for one turn (10 minutes), the breather a party needs once every six turns.',
+    description: 'Rest for one turn, which is 10 minutes. A party needs this breather once every six turns.',
   },
   night: {
     label: 'A night',
-    description: 'Rest for a night (48 turns, 8 hours). Casters can prepare spells afterward.',
+    description: 'Rest for a night, which is 48 turns or 8 hours. Casters can prepare spells afterward.',
   },
-  day: { label: 'A full day', description: 'Rest for a full day (144 turns), which also heals the party.' },
+  day: {
+    label: 'A full day',
+    description: 'Rest for a full day, which is 144 turns. It also heals the party.',
+  },
 };
 
 /** Label for a rest length: `A night`. */
@@ -667,7 +670,10 @@ export function encounterOutcomeLabel(outcome: string): string {
 
 /** A narrated sentence for how an encounter ended. */
 export function encounterOutcomeSentence(outcome: string): string {
-  return lookup(ENCOUNTER_OUTCOMES, outcome)?.sentence ?? `The encounter ended (${prettifyId(outcome)}).`;
+  return (
+    lookup(ENCOUNTER_OUTCOMES, outcome)?.sentence ??
+    `The encounter ended with the outcome ${prettifyId(outcome).toLowerCase()}.`
+  );
 }
 
 /** Label for a light source: `torch` gives `Torch`. */

@@ -48,7 +48,8 @@ Extend a context with more data:
 | `extendContextWithReferee(ctx, refereeView)` | The template of every monster ID, NPC names, the adventure's area, dungeon, town, item, and spell names, and what sets off each trigger, so a `trigger_fired` event reads "The trigger for entering the drain warren fires." Referee clients only. |
 | `extendContextWithCatalog(ctx, entries)` | Names from `/v1/rules/equipment`, `/magic-items`, `/spells`, and `/monsters` listings, for IDs that the built-in catalog lacks. Pass the names as the catalog prints them, such as `Torches (6)`. |
 | `extendContextWithNames(ctx, names)` | Item names by ID, such as `game.scene.names` from the bxvtt server. Each name becomes a noun: `Torches (6)` reads as `torch`, `a potion` stays a potion, and `Hand of Saint Corvane` keeps its capitals. |
-| `extendContextWithEvents(ctx, events)` | What a defeated monster was, what an identified item is, and who joined the party. `describeEvents` calls it for you. |
+| `extendContextWithEntryNames(ctx, entry.names)` | The names a game feed entry recorded for the IDs in its events: member names, group labels, the label of each monster's group as the players saw it, and item names. Use it to narrate an entry from the feed history, after the encounter left the player view. An entry without names leaves the context unchanged. |
+| `extendContextWithEvents(ctx, events)` | What a defeated monster was, when the context doesn't name it yet, what an identified item is, and who joined the party. `describeEvents` calls it for you. A monster the context already names keeps its label, so a disguised monster isn't unmasked by its defeat. |
 
 The built-in catalog names (`data/catalog.json`) come from osrlib, so a torch, a sleep spell, or a goblin resolves without a lookup. A lookup that misses degrades to a phrase such as `a party member`, `a monster`, or `a magic item`, never to an ID.
 
@@ -56,6 +57,12 @@ For the scene, add the names after you read the player view:
 
 ```ts
 ctx = extendContextWithNames(contextFromPlayerView(game.view, ctx), game.scene.names);
+```
+
+For a game entry from the feed, add the entry's own names, so a battle that ended reads "A goblin hits Osric" as it did live:
+
+```ts
+const lines = describeEvents(entry.events, extendContextWithEntryNames(ctx, entry.names));
 ```
 
 ## Name items
@@ -118,5 +125,5 @@ The tests fail when a rejection code, an event type or code, a weapon quality, a
 - `events.ts`: the wording for each event type and code.
 - `commands.ts`: command labels, field text, and option labels.
 - `labels.ts` and `format.ts`: value labels and formatters.
-- `context.ts`, `catalog.ts`, `humanize.ts`: names, item nouns, and ID replacement. `humanizeMessage` also rewrites osrlib wording that reads badly once the IDs are names: it takes map coordinates out ("The party moves north."), says "The party arrives in Hollin Ferry." for `enters town town`, says "nothing" for an empty list ("The fallen leave nothing behind."), and replaces every em dash and en dash.
+- `context.ts`, `catalog.ts`, `humanize.ts`: names, item nouns, and ID replacement. `humanizeMessage` also rewrites osrlib wording that reads badly once the IDs are names: it takes map coordinates out ("The party moves north."), says "The party arrives in Hollin Ferry." for `enters town town`, says "nothing" for an empty list ("Brenna drops nothing."), writes "The fallen leave a few coins behind." for osrlib's "The fallen leave behind ." (a drop of coins worth less than 1 gp), and replaces every em dash and en dash.
 - `fixtures/`: bxapi outcomes captured from a live server (`outcomes.json`, `creation.json`) and a sample event for each type.

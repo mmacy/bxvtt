@@ -27,17 +27,20 @@ import {
   count,
   formatDice,
   formatDiceTotal,
-  formatDuration,
   formatFeet,
   formatGameClock,
   formatGold,
   formatInteger,
+  formatRealTime,
   joinList,
   lowerFirst,
   pluralize,
   prettifyId,
+  SECONDS_PER_ROUND,
   signed,
+  toRounds,
   withArticle,
+  type TimeUnitName,
 } from './format';
 import { removeDashes, humanizeMessage } from './humanize';
 import {
@@ -51,6 +54,7 @@ import {
   searchKindNoun,
   stanceSentence,
   restKindLabel,
+  timeUnitNoun,
 } from './labels';
 import { describeRejection } from './rejections';
 import type { EventCategory, EventIcon, EventLine, EventTone, GameEvent, LooseEvent } from './types';
@@ -205,6 +209,21 @@ function coinsText(gp: number): string {
   return `${formatGold(gp)} in coin`;
 }
 
+/** A spell's name, or `the reversed form of` it, for narration. */
+function spellForm(spellId: string, reversed: boolean | null | undefined, ctx: TextContext): string {
+  const name = spellName(spellId, ctx);
+  return reversed === true ? `the reversed form of ${name}` : name;
+}
+
+/** An amount of game time with its real length, in a sentence: `3 turns, or 30 minutes`. */
+function durationPhrase(amount: number, unit: TimeUnitName): string {
+  const text = count(amount, timeUnitNoun(unit));
+  return unit === 'day' ? text : `${text}, or ${formatRealTime(toRounds(amount, unit) * SECONDS_PER_ROUND)}`;
+}
+
+/** How experienced an NPC party is, by bxapi's `party_kind`. */
+const NPC_PARTY_LEVELS: Record<string, string> = { basic: 'low-level', expert: 'higher-level' };
+
 function goodsText(
   itemIds: readonly string[],
   gp: number,
@@ -246,8 +265,8 @@ function rollDetail(event: {
   let text = parts.join(', ');
   if (event.defender_ac !== null && event.defender_ac !== undefined)
     text += ` against armour class ${event.defender_ac}`;
-  if (event.natural === 20) text += ' (natural 20)';
-  else if (event.natural === 1) text += ' (natural 1)';
+  if (event.natural === 20) text += ', a natural 20';
+  else if (event.natural === 1) text += ', a natural 1';
   return `${text}.`;
 }
 
@@ -296,7 +315,7 @@ function effectTarget(targetRef: string, ctx: TextContext): string {
 function dieAgainst(kind: string, roll: number | null | undefined, chance: number): string {
   const percentile = kind === 'open_locks' || kind === 'treasure_traps';
   if (roll === null || roll === undefined)
-    return `No die rolled (chance ${percentile ? `${chance}%` : `${chance} in 6`}).`;
+    return `No die rolled. The chance was ${percentile ? `${chance}%` : `${chance} in 6`}.`;
   return percentile
     ? `Rolled ${roll} on d100 against ${chance}%.`
     : `Rolled ${roll} on d6 against ${chance} in 6.`;
@@ -601,9 +620,9 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
         event.expires_round !== null &&
         event.expires_round !== undefined
       ) {
-        detail = `Runs until round ${formatInteger(event.expires_round)} (${formatGameClock(event.expires_round)}).`;
+        detail = `Runs until round ${formatInteger(event.expires_round)}, at ${formatGameClock(event.expires_round)}.`;
       } else if (event.event_type === 'effect_ticked' || event.event_type === 'effect_expired') {
-        detail = `Round ${formatInteger(event.round)} (${formatGameClock(event.round)}).`;
+        detail = `Round ${formatInteger(event.round)}, at ${formatGameClock(event.round)}.`;
       }
       return {
         text: verbs[event.code] ?? `The ${kind} effect on ${target} changes.`,
@@ -746,12 +765,10 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
     // Magic -----------------------------------------------------------------------------------------------------
     case 'spells_memorized': {
       const caster = entityName(event.caster_id, ctx);
-      const labels = event.prepared.map(
-        (spell) => `${spellName(spell.spell_id, ctx)}${spell.reversed ? ' (reversed)' : ''}`,
-      );
+      const labels = event.prepared.map((spell) => spellForm(spell.spell_id, spell.reversed, ctx));
       const grouped = new Map<string, number>();
       for (const label of labels) grouped.set(label, (grouped.get(label) ?? 0) + 1);
-      const list = [...grouped.entries()].map(([label, n]) => (n === 1 ? label : `${label} (${n} copies)`));
+      const list = [...grouped.entries()].map(([label, n]) => (n === 1 ? label : `${n} copies of ${label}`));
       return {
         text: list.length === 0 ? `${caster} memorizes no spells.` : `${caster} memorizes ${joinList(list)}.`,
         category: 'magic',
@@ -762,7 +779,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
     }
     case 'spell_cast': {
       const caster = entityName(event.caster_id, ctx);
-      const spell = `${spellName(event.spell_id, ctx)}${event.reversed ? ' (reversed)' : ''}`;
+      const spell = spellForm(event.spell_id, event.reversed, ctx);
       const party = isParty(event.caster_id, ctx);
       if (event.code === 'magic.cast.no_effect') {
         return {
@@ -786,7 +803,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
     }
     case 'spell_disrupted': {
       const caster = entityName(event.caster_id, ctx);
-      const spell = `${spellName(event.spell_id, ctx)}${event.reversed ? ' (reversed)' : ''}`;
+      const spell = spellForm(event.spell_id, event.reversed, ctx);
       const party = isParty(event.caster_id, ctx);
       const detail = event.reason ? describeRejection({ code: event.reason, params: {} }, ctx) : undefined;
       const text =
@@ -845,7 +862,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
     }
     case 'spell_forgotten':
       return {
-        text: `${entityName(event.caster_id, ctx)} forgets ${spellName(event.spell_id, ctx)}${event.reversed ? ' (reversed)' : ''}.`,
+        text: `${entityName(event.caster_id, ctx)} forgets ${spellForm(event.spell_id, event.reversed, ctx)}.`,
         category: 'magic',
         tone: 'bad',
         icon: 'book',
@@ -1226,7 +1243,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
               : restKindLabel(event.kind).toLowerCase();
       if (event.code === 'exploration.rest.interrupted') {
         return {
-          text: `The party's rest is interrupted (it planned ${length}).`,
+          text: `The party's rest is interrupted. It had planned to rest for ${length}.`,
           category: 'exploration',
           tone: 'bad',
           icon: 'rest',
@@ -1267,7 +1284,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
     case 'wandering_check': {
       const detail =
         event.roll === null || event.roll === undefined
-          ? `No die rolled (chance ${event.chance} in 6).`
+          ? `No die rolled. The chance was ${event.chance} in 6.`
           : `Rolled ${event.roll} on d6 against ${event.chance} in 6.`;
       return {
         text: event.encounter ? 'Wandering monsters appear.' : 'No wandering monsters come.',
@@ -1390,17 +1407,21 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
             tone: 'good',
             icon: 'rest',
           };
-    case 'loot_dropped':
+    case 'loot_dropped': {
+      // osrlib sends this event only when the fallen dropped something, and it rounds the coins down to whole
+      // gold pieces. An event with no items and 0 gp is a few coins worth less than 1 gp, never an empty pile.
+      const onlySmallCoins = event.item_ids.length === 0 && event.coins_gp_value === 0;
       return {
-        text:
-          event.item_ids.length === 0 && event.coins_gp_value === 0
-            ? 'The fallen leave nothing behind.'
-            : `The fallen leave behind ${goodsText(event.item_ids, event.coins_gp_value, ctx)}.`,
+        text: onlySmallCoins
+          ? 'The fallen leave a few coins behind.'
+          : `The fallen leave behind ${goodsText(event.item_ids, event.coins_gp_value, ctx)}.`,
+        detail: onlySmallCoins ? 'The coins are worth less than 1 gp.' : undefined,
         category: 'treasure',
         tone: 'good',
         icon: 'chest',
         amount: event.coins_gp_value > 0 ? event.coins_gp_value : undefined,
       };
+    }
     case 'encounter_ended':
       return {
         text: 'The encounter ends.',
@@ -1423,7 +1444,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
       };
     case 'spell_declared':
       return {
-        text: `${entityName(event.caster_id, ctx)} begins casting ${spellName(event.spell_id, ctx)}${event.reversed ? ' (reversed)' : ''}.`,
+        text: `${entityName(event.caster_id, ctx)} begins casting ${spellForm(event.spell_id, event.reversed, ctx)}.`,
         category: 'magic',
         tone: 'info',
         icon: 'spell',
@@ -1598,7 +1619,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
         (_id, index) => `${classLabel(event.class_ids[index] ?? '')} ${event.levels[index] ?? 1}`,
       );
       return {
-        text: `An NPC party (${prettifyId(event.party_kind)}, ${event.alignment}) takes the field: ${joinList(roster)}.`,
+        text: `A party of ${event.alignment} ${NPC_PARTY_LEVELS[event.party_kind] ?? prettifyId(event.party_kind).toLowerCase()} NPC adventurers takes the field: ${joinList(roster)}.`,
         category: 'referee',
         tone: 'info',
         icon: 'monsters',
@@ -1631,7 +1652,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
       const service = healingServiceLabel(event.service).toLowerCase();
       let detail: string | undefined;
       if (event.payers.length > 1) {
-        detail = `Paid by ${joinList(event.payers.map((payer, index) => `${memberName(payer, ctx)} (${formatGold(event.payments_gp[index] ?? 0)})`))}.`;
+        detail = `${joinList(event.payers.map((payer, index) => `${memberName(payer, ctx)} pays ${formatGold(event.payments_gp[index] ?? 0)}`))}.`;
       }
       return {
         text: `${who} buys ${service} at the temple for ${formatGold(event.cost_gp)}.`,
@@ -1680,7 +1701,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
     }
     case 'leveled_up': {
       const who = memberName(event.character_id, ctx);
-      const title = event.title ? ` (${event.title})` : '';
+      const title = event.title ? ` ${who}'s title is now ${event.title}.` : '';
       const detailParts: string[] = [];
       if (event.hp_roll !== null && event.hp_roll !== undefined)
         detailParts.push(
@@ -1688,7 +1709,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
         );
       else detailParts.push('This level adds a flat number of hit points.');
       return {
-        text: `${who} reaches level ${event.level_after}${title} and gains ${count(event.hp_gained, 'hit point')}.`,
+        text: `${who} reaches level ${event.level_after} and gains ${count(event.hp_gained, 'hit point')}.${title}`,
         detail: detailParts.join(' '),
         category: 'xp',
         tone: 'good',
@@ -1699,8 +1720,8 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
     }
     case 'time_advanced':
       return {
-        text: `The referee moves the clock forward ${formatDuration(event.n, normalizeUnit(event.unit))}.`,
-        detail: `The clock reads ${formatGameClock(event.rounds_total)} (round ${formatInteger(event.rounds_total)}).`,
+        text: `The referee moves the clock forward ${durationPhrase(event.n, normalizeUnit(event.unit))}.`,
+        detail: `The clock now reads ${formatGameClock(event.rounds_total)}, round ${formatInteger(event.rounds_total)}.`,
         category: 'time',
         tone: 'info',
         icon: 'clock',

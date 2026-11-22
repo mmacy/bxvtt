@@ -349,7 +349,7 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
 export function fallbackRejectionText(code: string): string {
   const words = code.split('.').slice(1).map(prettifyId);
   const reason = words.length > 0 ? words.join(' ') : prettifyId(code);
-  return `That wasn't allowed (${reason}).`;
+  return `That wasn't allowed: ${reason.charAt(0).toLowerCase()}${reason.slice(1)}.`;
 }
 
 /**

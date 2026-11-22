@@ -26,7 +26,7 @@ const FRESH_MS = 5 * 60_000;
 /** How many entries the server reads from bxapi at once while it builds a catalog. */
 const CONCURRENCY = 4;
 /** How many times the server retries one entry that bxapi refused for being busy. */
-const RETRIES = 5;
+const RETRIES = 8;
 
 /**
  * Builds and caches whole rules catalogs: every full entry of `classes`, `equipment`, `monsters`, `spells`, or

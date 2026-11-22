@@ -173,6 +173,11 @@ export class FeedStore {
       // An entry from before the server recorded clocks. The server knows the clock of its current revision.
       body.clock_rounds = this.ctx.game.clockAt(str(row, 'table_id'), body.session_id, body.revision);
     }
+    if (body.kind === 'game' && body.names === undefined) {
+      // An entry from before the server recorded names. Fill in what the server knows of its session now.
+      const names = this.ctx.game.namesFor(str(row, 'table_id'), body.session_id, body.events);
+      if (names !== undefined) body.names = names;
+    }
     return {
       seq: num(row, 'seq'),
       created_at: str(row, 'created_at'),

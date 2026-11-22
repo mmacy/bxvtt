@@ -374,6 +374,66 @@ export function extendContextWithNames(
   return next;
 }
 
+/** What players called one monster group or monster, as a feed entry's `names` records it. */
+export interface EntryLabelLike {
+  label: string;
+  label_plural?: string;
+}
+
+/** Loose shape of a game feed entry's `names` from the bxvtt server. A protocol `EntryNames` fits it. */
+export interface EntryNamesLike {
+  members?: Readonly<Record<string, string>>;
+  groups?: Readonly<Record<string, EntryLabelLike>>;
+  monsters?: Readonly<Record<string, EntryLabelLike>>;
+  items?: Readonly<Record<string, string>>;
+}
+
+/**
+ * Add the names a game feed entry recorded for the IDs in its events (`entry.names` from the bxvtt server), so
+ * the entry reads later as it read live. Without them, a battle loaded from the feed history reads "A monster
+ * hits Osric", because the encounter that named the goblins is gone from the player view.
+ *
+ * The entry's member, group, and monster labels replace what the context had for those IDs, because they are
+ * what the players saw when the command ran. Its item names fill in the items the context doesn't know, read as
+ * in [`extendContextWithNames`][extendContextWithNames].
+ *
+ * ```ts
+ * for (const entry of feed.entries) {
+ *   if (entry.kind !== 'game') continue;
+ *   const lines = describeEvents(entry.events, extendContextWithEntryNames(ctx, entry.names));
+ * }
+ * ```
+ *
+ * @param ctx - The context, which isn't changed.
+ * @param names - The entry's `names`, or `undefined` for an entry that has none.
+ * @returns A new context.
+ */
+export function extendContextWithEntryNames(
+  ctx: TextContext,
+  names: EntryNamesLike | undefined,
+): TextContext {
+  if (names === undefined) return ctx;
+  const next = cloneContext(ctx);
+  const label = (entry: EntryLabelLike) => ({
+    label: entry.label,
+    labelPlural:
+      entry.label_plural && entry.label_plural !== '' ? entry.label_plural : pluralize(entry.label),
+  });
+  for (const [id, name] of Object.entries(names.members ?? {})) {
+    if (name.trim() !== '') next.members[id] = { ...next.members[id], name };
+  }
+  for (const [id, entry] of Object.entries(names.groups ?? {})) {
+    if (entry.label.trim() !== '') next.groups[id] = { ...next.groups[id], ...label(entry) };
+  }
+  for (const [id, entry] of Object.entries(names.monsters ?? {})) {
+    if (entry.label.trim() !== '') next.monsters[id] = { ...next.monsters[id], ...label(entry) };
+  }
+  const unknownItems = Object.fromEntries(
+    Object.entries(names.items ?? {}).filter(([id]) => next.items[id] === undefined),
+  );
+  return extendContextWithNames(next, unknownItems);
+}
+
 /** Shape of any event that the context can learn from. */
 export interface LearnableEvent {
   event_type: string;
@@ -384,7 +444,9 @@ export interface LearnableEvent {
 /**
  * Learn names from events a player may see:
  *
- * - A defeated monster reveals what that monster ID was.
+ * - A defeated monster reveals what that monster ID was, when the context doesn't name it yet. A monster the
+ *   context already names, such as one that `extendContextWithEntryNames` labelled as the players saw it, keeps
+ *   that label, so a disguised monster isn't unmasked by its defeat.
  * - An identified item reveals what an item instance ID was.
  * - A new party member and a new encounter group reveal their names.
  *
@@ -399,7 +461,7 @@ export function extendContextWithEvents(ctx: TextContext, events: readonly Learn
       case 'monster_defeated': {
         const monsterId = asString(event.monster_id);
         const templateId = asString(event.template_id);
-        if (monsterId && templateId) {
+        if (monsterId && templateId && ctx.monsters[monsterId] === undefined) {
           const labels = monsterTemplateLabels(templateId);
           edit().monsters[monsterId] = {
             label: labels?.label ?? prettifyId(templateId),

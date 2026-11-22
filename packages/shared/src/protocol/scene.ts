@@ -10,7 +10,8 @@ import { z } from 'zod';
  *   cells of it the party knows.
  * - A treasure cache appears once the party has entered its area (or walked onto its cell, for one outside an
  *   area), until it is emptied, and never while an encounter or battle is open. A cache on a cell appears only
- *   once that cell is on the party's map. A lair hoard appears only after its monsters were slain or routed.
+ *   once that cell is on the party's map. A lair hoard appears only after its monsters were slain or routed, and
+ *   not after the party evades them. A hoard whose roll gave nothing has no cache at all.
  *   Neither its contents nor its authored description appear. A player's `take_treasure`, `inspect_treasure`,
  *   or `remove_treasure_trap` that names a cache missing from `scene.here.caches` is refused with
  *   `exploration.feature.unknown`, as bxapi refuses a cache that isn't there.

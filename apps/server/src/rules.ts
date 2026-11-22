@@ -81,7 +81,7 @@ export class RulesCache {
           detail: `bxapi answered ${response.status}.`,
           status: response.status,
         },
-        null,
+        retryAfterSeconds(response.headers.get('retry-after')),
       );
     }
     const entry: CacheEntry = {
@@ -136,6 +136,12 @@ export class RulesCache {
     }
     return { items, etags };
   }
+}
+
+/** Reads a `Retry-After` header in seconds, or `null`. */
+function retryAfterSeconds(header: string | null): number | null {
+  const seconds = Number(header);
+  return header !== null && Number.isFinite(seconds) && seconds > 0 ? seconds : null;
 }
 
 /** The page size {@link RulesCache.list} asks bxapi for, the largest bxapi allows. */
