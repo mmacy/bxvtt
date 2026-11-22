@@ -1,0 +1,61 @@
+.stage {
+  container: town / inline-size;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  background: var(--color-bg-stage);
+  scrollbar-gutter: stable;
+}
+
+.tabs {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tabList {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-raised);
+  padding-inline: var(--space-6);
+  background: var(--color-bg-stage);
+}
+
+.content {
+  flex: 1;
+  padding: var(--space-5) var(--space-6) var(--space-6);
+}
+
+.square {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6);
+  align-items: start;
+  max-width: var(--page-max);
+  margin-inline: auto;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+@container town (max-width: 900px) {
+  .square {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .content {
+    padding: var(--space-4);
+  }
+
+  .tabList {
+    padding-inline: var(--space-4);
+    overflow-x: auto;
+  }
+}

@@ -1,0 +1,3979 @@
+{
+  "classes": [
+    {
+      "id": "cleric",
+      "name": "Cleric",
+      "race": "human",
+      "prime_requisites": ["wis"],
+      "requirements": {},
+      "hit_die": 6,
+      "max_level": 14
+    },
+    {
+      "id": "dwarf",
+      "name": "Dwarf",
+      "race": "dwarf",
+      "prime_requisites": ["str"],
+      "requirements": { "con": 9 },
+      "hit_die": 8,
+      "max_level": 12
+    },
+    {
+      "id": "elf",
+      "name": "Elf",
+      "race": "elf",
+      "prime_requisites": ["int", "str"],
+      "requirements": { "int": 9 },
+      "hit_die": 6,
+      "max_level": 10
+    },
+    {
+      "id": "fighter",
+      "name": "Fighter",
+      "race": "human",
+      "prime_requisites": ["str"],
+      "requirements": {},
+      "hit_die": 8,
+      "max_level": 14
+    },
+    {
+      "id": "halfling",
+      "name": "Halfling",
+      "race": "halfling",
+      "prime_requisites": ["dex", "str"],
+      "requirements": { "con": 9, "dex": 9 },
+      "hit_die": 6,
+      "max_level": 8
+    },
+    {
+      "id": "magic_user",
+      "name": "Magic-User",
+      "race": "human",
+      "prime_requisites": ["int"],
+      "requirements": {},
+      "hit_die": 4,
+      "max_level": 14
+    },
+    {
+      "id": "thief",
+      "name": "Thief",
+      "race": "human",
+      "prime_requisites": ["dex"],
+      "requirements": {},
+      "hit_die": 4,
+      "max_level": 14
+    }
+  ],
+  "classDetails": {
+    "cleric": {
+      "id": "cleric",
+      "name": "Cleric",
+      "race": "human",
+      "requirements": {},
+      "prime_requisites": ["wis"],
+      "xp_tiers": [
+        { "modifier_pct": 10, "minimums": { "wis": 16 } },
+        { "modifier_pct": 5, "minimums": { "wis": 13 } },
+        { "modifier_pct": 0, "minimums": { "wis": 9 } },
+        { "modifier_pct": -10, "minimums": { "wis": 6 } },
+        { "modifier_pct": -20, "minimums": { "wis": 3 } }
+      ],
+      "hit_die": 6,
+      "max_level": 14,
+      "armour": { "kind": "any", "shields_allowed": true },
+      "weapons": {
+        "kind": "allowed",
+        "weapon_ids": ["club", "mace", "sling", "staff", "war_hammer"],
+        "manual_notes": []
+      },
+      "languages": ["common"],
+      "may_not_lower": [],
+      "abilities": [
+        {
+          "tag": "divine_magic",
+          "name": "Divine Magic",
+          "prose": "See Spells for full details on divine magic.\nHoly symbol: A cleric must carry a holy symbol (see Adventuring Gear).\nDeity disfavour: Clerics must be faithful to the tenets of their alignment, clergy, and religion. Clerics who fall from favour with their deity may incur penalties.\nMagical research: A cleric of any level may spend time and money on magical research. This allows them to create new spells or other magical effects associated with their deity. When a cleric reaches 9th level, they are also able to create magic items.\nSpell casting: Once a cleric has proven their faith (from 2nd level), the character may pray to receive spells. The level progression table (below) shows the number of spells a cleric may memorize, based on their experience level. The list of spells available to clerics is found in Cleric Spells.\nUsing magic items: As spell casters, clerics can use magic scrolls of spells on their spell list. They can also use items that may only be used by divine spell casters (e.g. some magic staves).",
+          "manual": false,
+          "params": { "spell_list": "cleric" }
+        },
+        {
+          "tag": "turn_undead",
+          "name": "Turning the Undead",
+          "prose": "Clerics can invoke the power of their deity to repel undead monsters encountered. To turn the undead, the player rolls 2d6. The referee then consults the table below, comparing the roll against the HD of the type of undead monsters targeted.",
+          "manual": false,
+          "params": {}
+        }
+      ],
+      "thief_skills": [],
+      "level_titles": [
+        "Acolyte",
+        "Adept",
+        "Priest(ess)",
+        "Vicar",
+        "Curate",
+        "Elder",
+        "Bishop",
+        "Lama",
+        "Matriarch (Patriarch)"
+      ],
+      "progression": [
+        {
+          "level": 1,
+          "xp": 0,
+          "hit_dice": { "count": 1, "die": 6, "bonus": 0, "con_applies": true },
+          "thac0": 19,
+          "attack_bonus": 0,
+          "saves": { "death": 11, "wands": 12, "paralysis": 14, "breath": 16, "spells": 15 },
+          "spell_slots": [0, 0, 0, 0, 0]
+        },
+        {
+          "level": 2,
+          "xp": 1500,
+          "hit_dice": { "count": 2, "die": 6, "bonus": 0, "con_applies": true },
+          "thac0": 19,
+          "attack_bonus": 0,
+          "saves": { "death": 11, "wands": 12, "paralysis": 14, "breath": 16, "spells": 15 },
+          "spell_slots": [1, 0, 0, 0, 0]
+        },
+        {
+          "level": 3,
+          "xp": 3000,
+          "hit_dice": { "count": 3, "die": 6, "bonus": 0, "con_applies": true },
+          "thac0": 19,
+          "attack_bonus": 0,
+          "saves": { "death": 11, "wands": 12, "paralysis": 14, "breath": 16, "spells": 15 },
+          "spell_slots": [2, 0, 0, 0, 0]
+        },
+        {
+          "level": 4,
+          "xp": 6000,
+          "hit_dice": { "count": 4, "die": 6, "bonus": 0, "con_applies": true },
+          "thac0": 19,
+          "attack_bonus": 0,
+          "saves": { "death": 11, "wands": 12, "paralysis": 14, "breath": 16, "spells": 15 },
+          "spell_slots": [2, 1, 0, 0, 0]
+        },
+        {
+          "level": 5,
+          "xp": 12000,
+          "hit_dice": { "count": 5, "die": 6, "bonus": 0, "con_applies": true },
+          "thac0": 17,
+          "attack_bonus": 2,
+          "saves": { "death": 9, "wands": 10, "paralysis": 12, "breath": 14, "spells": 12 },
+          "spell_slots": [2, 2, 0, 0, 0]
+        },
+        {
+          "level": 6,
+          "xp": 25000,
+          "hit_dice": { "count": 6, "die": 6, "bonus": 0, "con_applies": true },
+          "thac0": 17,
+          "attack_bonus": 2,
+          "saves": { "death": 9, "wands": 10, "paralysis": 12, "breath": 14, "spells": 12 },
+          "spell_slots": [2, 2, 1, 1, 0]
+        },
+        {
+          "level": 7,
+          "xp": 50000,
+          "hit_dice": { "count": 7, "die": 6, "bonus": 0, "con_applies": true },
+          "thac0": 17,
+          "attack_bonus": 2,
+          "saves": { "death": 9, "wands": 10, "paralysis": 12, "breath": 14, "spells": 12 },
+          "spell_slots": [2, 2, 2, 1, 1]
+        },
+        {
+          "level": 8,
+          "xp": 100000,
+          "hit_dice": { "count": 8, "die": 6, "bonus": 0, "con_applies": true },
+          "thac0": 17,
+          "attack_bonus": 2,
+          "saves": { "death": 9, "wands": 10, "paralysis": 12, "breath": 14, "spells": 12 },
+          "spell_slots": [3, 3, 2, 2, 1]
+        },
+        {
+          "level": 9,
+          "xp": 200000,
+          "hit_dice": { "count": 9, "die": 6, "bonus": 0, "con_applies": true },
+          "thac0": 14,
+          "attack_bonus": 5,
+          "saves": { "death": 6, "wands": 7, "paralysis": 9, "breath": 11, "spells": 9 },
+          "spell_slots": [3, 3, 3, 2, 2]
+        },
+        {
+          "level": 10,
+          "xp": 300000,
+          "hit_dice": { "count": 9, "die": 6, "bonus": 1, "con_applies": false },
+          "thac0": 14,
+          "attack_bonus": 5,
+          "saves": { "death": 6, "wands": 7, "paralysis": 9, "breath": 11, "spells": 9 },
+          "spell_slots": [4, 4, 3, 3, 2]
+        },
+        {
+          "level": 11,
+          "xp": 400000,
+          "hit_dice": { "count": 9, "die": 6, "bonus": 2, "con_applies": false },
+          "thac0": 14,
+          "attack_bonus": 5,
+          "saves": { "death": 6, "wands": 7, "paralysis": 9, "breath": 11, "spells": 9 },
+          "spell_slots": [4, 4, 4, 3, 3]
+        },
+        {
+          "level": 12,
+          "xp": 500000,
+          "hit_dice": { "count": 9, "die": 6, "bonus": 3, "con_applies": false },
+          "thac0": 14,
+          "attack_bonus": 5,
+          "saves": { "death": 6, "wands": 7, "paralysis": 9, "breath": 11, "spells": 9 },
+          "spell_slots": [5, 5, 4, 4, 3]
+        },
+        {
+          "level": 13,
+          "xp": 600000,
+          "hit_dice": { "count": 9, "die": 6, "bonus": 4, "con_applies": false },
+          "thac0": 12,
+          "attack_bonus": 7,
+          "saves": { "death": 3, "wands": 5, "paralysis": 7, "breath": 8, "spells": 7 },
+          "spell_slots": [5, 5, 5, 4, 4]
+        },
+        {
+          "level": 14,
+          "xp": 700000,
+          "hit_dice": { "count": 9, "die": 6, "bonus": 5, "con_applies": false },
+          "thac0": 12,
+          "attack_bonus": 7,
+          "saves": { "death": 3, "wands": 5, "paralysis": 7, "breath": 8, "spells": 7 },
+          "spell_slots": [6, 5, 5, 5, 4]
+        }
+      ],
+      "overrides_applied": []
+    },
+    "thief": {
+      "id": "thief",
+      "name": "Thief",
+      "race": "human",
+      "requirements": {},
+      "prime_requisites": ["dex"],
+      "xp_tiers": [
+        { "modifier_pct": 10, "minimums": { "dex": 16 } },
+        { "modifier_pct": 5, "minimums": { "dex": 13 } },
+        { "modifier_pct": 0, "minimums": { "dex": 9 } },
+        { "modifier_pct": -10, "minimums": { "dex": 6 } },
+        { "modifier_pct": -20, "minimums": { "dex": 3 } }
+      ],
+      "hit_die": 4,
+      "max_level": 14,
+      "armour": { "kind": "leather_only", "shields_allowed": false },
+      "weapons": { "kind": "any", "weapon_ids": [], "manual_notes": [] },
+      "languages": ["common"],
+      "may_not_lower": ["str"],
+      "abilities": [
+        {
+          "tag": "back_stab",
+          "name": "Back-stab",
+          "prose": "When attacking an unaware opponent from behind, a thief receives a +4 bonus to hit and doubles any damage dealt.",
+          "manual": false,
+          "params": { "attack_bonus": 4, "damage_multiplier": 2 }
+        },
+        {
+          "tag": "read_languages",
+          "name": "Read Languages",
+          "prose": "A thief of 4th level or higher can read non-magical text in any language (including dead languages and basic codes) with 80% probability. If the roll fails, the thief may not try to read the same text again before gaining an experience level.",
+          "manual": false,
+          "params": { "min_level": 4, "pct": 80 }
+        },
+        {
+          "tag": "scroll_use",
+          "name": "Scroll Use",
+          "prose": "A thief of 10th level or higher can cast arcane spells from scrolls. There is a 10% chance of error: an unusual or deleterious effect instead of the expected effect.",
+          "manual": false,
+          "params": { "error_pct": 10, "min_level": 10 }
+        }
+      ],
+      "thief_skills": [
+        {
+          "level": 1,
+          "climb_sheer_surfaces": 87,
+          "find_remove_treasure_traps": 10,
+          "hear_noise": 2,
+          "hide_in_shadows": 10,
+          "move_silently": 20,
+          "open_locks": 15,
+          "pick_pockets": 20
+        },
+        {
+          "level": 2,
+          "climb_sheer_surfaces": 88,
+          "find_remove_treasure_traps": 15,
+          "hear_noise": 2,
+          "hide_in_shadows": 15,
+          "move_silently": 25,
+          "open_locks": 20,
+          "pick_pockets": 25
+        },
+        {
+          "level": 3,
+          "climb_sheer_surfaces": 89,
+          "find_remove_treasure_traps": 20,
+          "hear_noise": 3,
+          "hide_in_shadows": 20,
+          "move_silently": 30,
+          "open_locks": 25,
+          "pick_pockets": 30
+        },
+        {
+          "level": 4,
+          "climb_sheer_surfaces": 90,
+          "find_remove_treasure_traps": 25,
+          "hear_noise": 3,
+          "hide_in_shadows": 25,
+          "move_silently": 35,
+          "open_locks": 30,
+          "pick_pockets": 35
+        },
+        {
+          "level": 5,
+          "climb_sheer_surfaces": 91,
+          "find_remove_treasure_traps": 30,
+          "hear_noise": 3,
+          "hide_in_shadows": 30,
+          "move_silently": 40,
+          "open_locks": 35,
+          "pick_pockets": 40
+        },
+        {
+          "level": 6,
+          "climb_sheer_surfaces": 92,
+          "find_remove_treasure_traps": 40,
+          "hear_noise": 3,
+          "hide_in_shadows": 36,
+          "move_silently": 45,
+          "open_locks": 45,
+          "pick_pockets": 45
+        },
+        {
+          "level": 7,
+          "climb_sheer_surfaces": 93,
+          "find_remove_treasure_traps": 50,
+          "hear_noise": 4,
+          "hide_in_shadows": 45,
+          "move_silently": 55,
+          "open_locks": 55,
+          "pick_pockets": 55
+        },
+        {
+          "level": 8,
+          "climb_sheer_surfaces": 94,
+          "find_remove_treasure_traps": 60,
+          "hear_noise": 4,
+          "hide_in_shadows": 55,
+          "move_silently": 65,
+          "open_locks": 65,
+          "pick_pockets": 65
+        },
+        {
+          "level": 9,
+          "climb_sheer_surfaces": 95,
+          "find_remove_treasure_traps": 70,
+          "hear_noise": 4,
+          "hide_in_shadows": 65,
+          "move_silently": 75,
+          "open_locks": 75,
+          "pick_pockets": 75
+        },
+        {
+          "level": 10,
+          "climb_sheer_surfaces": 96,
+          "find_remove_treasure_traps": 80,
+          "hear_noise": 4,
+          "hide_in_shadows": 75,
+          "move_silently": 85,
+          "open_locks": 85,
+          "pick_pockets": 85
+        },
+        {
+          "level": 11,
+          "climb_sheer_surfaces": 97,
+          "find_remove_treasure_traps": 90,
+          "hear_noise": 5,
+          "hide_in_shadows": 85,
+          "move_silently": 95,
+          "open_locks": 95,
+          "pick_pockets": 95
+        },
+        {
+          "level": 12,
+          "climb_sheer_surfaces": 98,
+          "find_remove_treasure_traps": 95,
+          "hear_noise": 5,
+          "hide_in_shadows": 90,
+          "move_silently": 96,
+          "open_locks": 96,
+          "pick_pockets": 105
+        },
+        {
+          "level": 13,
+          "climb_sheer_surfaces": 99,
+          "find_remove_treasure_traps": 97,
+          "hear_noise": 5,
+          "hide_in_shadows": 95,
+          "move_silently": 98,
+          "open_locks": 97,
+          "pick_pockets": 115
+        },
+        {
+          "level": 14,
+          "climb_sheer_surfaces": 99,
+          "find_remove_treasure_traps": 99,
+          "hear_noise": 5,
+          "hide_in_shadows": 99,
+          "move_silently": 99,
+          "open_locks": 99,
+          "pick_pockets": 125
+        }
+      ],
+      "level_titles": [
+        "Apprentice",
+        "Footpad",
+        "Robber",
+        "Burglar",
+        "Cutpurse",
+        "Sharper",
+        "Pilferer",
+        "Thief",
+        "Master Thief"
+      ],
+      "progression": [
+        {
+          "level": 1,
+          "xp": 0,
+          "hit_dice": { "count": 1, "die": 4, "bonus": 0, "con_applies": true },
+          "thac0": 19,
+          "attack_bonus": 0,
+          "saves": { "death": 13, "wands": 14, "paralysis": 13, "breath": 16, "spells": 15 },
+          "spell_slots": []
+        },
+        {
+          "level": 2,
+          "xp": 1200,
+          "hit_dice": { "count": 2, "die": 4, "bonus": 0, "con_applies": true },
+          "thac0": 19,
+          "attack_bonus": 0,
+          "saves": { "death": 13, "wands": 14, "paralysis": 13, "breath": 16, "spells": 15 },
+          "spell_slots": []
+        },
+        {
+          "level": 3,
+          "xp": 2400,
+          "hit_dice": { "count": 3, "die": 4, "bonus": 0, "con_applies": true },
+          "thac0": 19,
+          "attack_bonus": 0,
+          "saves": { "death": 13, "wands": 14, "paralysis": 13, "breath": 16, "spells": 15 },
+          "spell_slots": []
+        },
+        {
+          "level": 4,
+          "xp": 4800,
+          "hit_dice": { "count": 4, "die": 4, "bonus": 0, "con_applies": true },
+          "thac0": 19,
+          "attack_bonus": 0,
+          "saves": { "death": 13, "wands": 14, "paralysis": 13, "breath": 16, "spells": 15 },
+          "spell_slots": []
+        },
+        {
+          "level": 5,
+          "xp": 9600,
+          "hit_dice": { "count": 5, "die": 4, "bonus": 0, "con_applies": true },
+          "thac0": 17,
+          "attack_bonus": 2,
+          "saves": { "death": 12, "wands": 13, "paralysis": 11, "breath": 14, "spells": 13 },
+          "spell_slots": []
+        },
+        {
+          "level": 6,
+          "xp": 20000,
+          "hit_dice": { "count": 6, "die": 4, "bonus": 0, "con_applies": true },
+          "thac0": 17,
+          "attack_bonus": 2,
+          "saves": { "death": 12, "wands": 13, "paralysis": 11, "breath": 14, "spells": 13 },
+          "spell_slots": []
+        },
+        {
+          "level": 7,
+          "xp": 40000,
+          "hit_dice": { "count": 7, "die": 4, "bonus": 0, "con_applies": true },
+          "thac0": 17,
+          "attack_bonus": 2,
+          "saves": { "death": 12, "wands": 13, "paralysis": 11, "breath": 14, "spells": 13 },
+          "spell_slots": []
+        },
+        {
+          "level": 8,
+          "xp": 80000,
+          "hit_dice": { "count": 8, "die": 4, "bonus": 0, "con_applies": true },
+          "thac0": 17,
+          "attack_bonus": 2,
+          "saves": { "death": 12, "wands": 13, "paralysis": 11, "breath": 14, "spells": 13 },
+          "spell_slots": []
+        },
+        {
+          "level": 9,
+          "xp": 160000,
+          "hit_dice": { "count": 9, "die": 4, "bonus": 0, "con_applies": true },
+          "thac0": 14,
+          "attack_bonus": 5,
+          "saves": { "death": 10, "wands": 11, "paralysis": 9, "breath": 12, "spells": 10 },
+          "spell_slots": []
+        },
+        {
+          "level": 10,
+          "xp": 280000,
+          "hit_dice": { "count": 9, "die": 4, "bonus": 2, "con_applies": false },
+          "thac0": 14,
+          "attack_bonus": 5,
+          "saves": { "death": 10, "wands": 11, "paralysis": 9, "breath": 12, "spells": 10 },
+          "spell_slots": []
+        },
+        {
+          "level": 11,
+          "xp": 400000,
+          "hit_dice": { "count": 9, "die": 4, "bonus": 4, "con_applies": false },
+          "thac0": 14,
+          "attack_bonus": 5,
+          "saves": { "death": 10, "wands": 11, "paralysis": 9, "breath": 12, "spells": 10 },
+          "spell_slots": []
+        },
+        {
+          "level": 12,
+          "xp": 520000,
+          "hit_dice": { "count": 9, "die": 4, "bonus": 6, "con_applies": false },
+          "thac0": 14,
+          "attack_bonus": 5,
+          "saves": { "death": 10, "wands": 11, "paralysis": 9, "breath": 12, "spells": 10 },
+          "spell_slots": []
+        },
+        {
+          "level": 13,
+          "xp": 640000,
+          "hit_dice": { "count": 9, "die": 4, "bonus": 8, "con_applies": false },
+          "thac0": 12,
+          "attack_bonus": 7,
+          "saves": { "death": 8, "wands": 9, "paralysis": 7, "breath": 10, "spells": 8 },
+          "spell_slots": []
+        },
+        {
+          "level": 14,
+          "xp": 760000,
+          "hit_dice": { "count": 9, "die": 4, "bonus": 10, "con_applies": false },
+          "thac0": 12,
+          "attack_bonus": 7,
+          "saves": { "death": 8, "wands": 9, "paralysis": 7, "breath": 10, "spells": 8 },
+          "spell_slots": []
+        }
+      ],
+      "overrides_applied": []
+    }
+  },
+  "spells": [
+    {
+      "id": "animate_dead",
+      "name": "Animate Dead",
+      "level": 5,
+      "spell_list": "magic_user",
+      "range": "60’",
+      "duration": "Permanent"
+    },
+    {
+      "id": "anti_magic_shell",
+      "name": "Anti-Magic Shell",
+      "level": 6,
+      "spell_list": "magic_user",
+      "range": "The caster",
+      "duration": "12 turns"
+    },
+    {
+      "id": "bless",
+      "name": "Bless",
+      "level": 2,
+      "spell_list": "cleric",
+      "range": "60’",
+      "duration": "6 turns"
+    },
+    {
+      "id": "charm_monster",
+      "name": "Charm Monster",
+      "level": 4,
+      "spell_list": "magic_user",
+      "range": "120’",
+      "duration": "One or more days (see below)"
+    },
+    {
+      "id": "charm_person",
+      "name": "Charm Person",
+      "level": 1,
+      "spell_list": "magic_user",
+      "range": "120’",
+      "duration": "One or more days (see below)"
+    },
+    {
+      "id": "clairvoyance",
+      "name": "Clairvoyance",
+      "level": 3,
+      "spell_list": "magic_user",
+      "range": "60’",
+      "duration": "12 turns"
+    },
+    {
+      "id": "cloudkill",
+      "name": "Cloudkill",
+      "level": 5,
+      "spell_list": "magic_user",
+      "range": "30’",
+      "duration": "6 turns"
+    },
+    {
+      "id": "commune",
+      "name": "Commune",
+      "level": 5,
+      "spell_list": "cleric",
+      "range": "The caster",
+      "duration": "3 turns"
+    },
+    {
+      "id": "confusion",
+      "name": "Confusion",
+      "level": 4,
+      "spell_list": "magic_user",
+      "range": "120’",
+      "duration": "12 rounds"
+    },
+    {
+      "id": "conjure_elemental",
+      "name": "Conjure Elemental",
+      "level": 5,
+      "spell_list": "magic_user",
+      "range": "240’",
+      "duration": "Permanent (until dismissed or slain)"
+    },
+    {
+      "id": "contact_higher_plane",
+      "name": "Contact Higher Plane",
+      "level": 5,
+      "spell_list": "magic_user",
+      "range": "The caster",
+      "duration": "One conversation"
+    },
+    {
+      "id": "continual_light_c",
+      "name": "Continual Light",
+      "level": 3,
+      "spell_list": "cleric",
+      "range": "120’",
+      "duration": "Permanent"
+    },
+    {
+      "id": "continual_light_mu",
+      "name": "Continual Light",
+      "level": 2,
+      "spell_list": "magic_user",
+      "range": "120’",
+      "duration": "Permanent"
+    },
+    {
+      "id": "control_weather",
+      "name": "Control Weather",
+      "level": 6,
+      "spell_list": "magic_user",
+      "range": "240 yards around the caster",
+      "duration": "Concentration"
+    },
+    {
+      "id": "create_food",
+      "name": "Create Food",
+      "level": 5,
+      "spell_list": "cleric",
+      "range": "Appears in the caster’s presence",
+      "duration": "Permanent"
+    },
+    {
+      "id": "create_water",
+      "name": "Create Water",
+      "level": 4,
+      "spell_list": "cleric",
+      "range": "Touch",
+      "duration": "Permanent"
+    },
+    {
+      "id": "cure_disease",
+      "name": "Cure Disease",
+      "level": 3,
+      "spell_list": "cleric",
+      "range": "30’",
+      "duration": "Instant"
+    },
+    {
+      "id": "cure_light_wounds",
+      "name": "Cure Light Wounds",
+      "level": 1,
+      "spell_list": "cleric",
+      "range": "The caster or a creature touched",
+      "duration": "Instant"
+    },
+    {
+      "id": "cure_serious_wounds",
+      "name": "Cure Serious Wounds",
+      "level": 4,
+      "spell_list": "cleric",
+      "range": "The caster or a creature touched",
+      "duration": "Instant"
+    },
+    {
+      "id": "death_spell",
+      "name": "Death Spell",
+      "level": 6,
+      "spell_list": "magic_user",
+      "range": "240’",
+      "duration": "Instant"
+    },
+    {
+      "id": "detect_evil_c",
+      "name": "Detect Evil",
+      "level": 1,
+      "spell_list": "cleric",
+      "range": "120’",
+      "duration": "6 turns"
+    },
+    {
+      "id": "detect_evil_mu",
+      "name": "Detect Evil",
+      "level": 2,
+      "spell_list": "magic_user",
+      "range": "60’",
+      "duration": "2 turns"
+    },
+    {
+      "id": "detect_invisible",
+      "name": "Detect Invisible",
+      "level": 2,
+      "spell_list": "magic_user",
+      "range": "10’ per level",
+      "duration": "6 turns"
+    },
+    {
+      "id": "detect_magic_c",
+      "name": "Detect Magic",
+      "level": 1,
+      "spell_list": "cleric",
+      "range": "60’",
+      "duration": "2 turns"
+    },
+    {
+      "id": "detect_magic_mu",
+      "name": "Detect Magic",
+      "level": 1,
+      "spell_list": "magic_user",
+      "range": "60’",
+      "duration": "2 turns"
+    },
+    {
+      "id": "dimension_door",
+      "name": "Dimension Door",
+      "level": 4,
+      "spell_list": "magic_user",
+      "range": "10’",
+      "duration": "1 round"
+    },
+    {
+      "id": "disintegrate",
+      "name": "Disintegrate",
+      "level": 6,
+      "spell_list": "magic_user",
+      "range": "60’",
+      "duration": "Instant"
+    },
+    {
+      "id": "dispel_evil",
+      "name": "Dispel Evil",
+      "level": 5,
+      "spell_list": "cleric",
+      "range": "30’",
+      "duration": "Concentration (up to 1 turn) or instant (see below)"
+    },
+    {
+      "id": "dispel_magic",
+      "name": "Dispel Magic",
+      "level": 3,
+      "spell_list": "magic_user",
+      "range": "120’",
+      "duration": "Instant"
+    },
+    {
+      "id": "esp",
+      "name": "ESP",
+      "level": 2,
+      "spell_list": "magic_user",
+      "range": "60’",
+      "duration": "12 turns"
+    },
+    {
+      "id": "feeblemind",
+      "name": "Feeblemind",
+      "level": 5,
+      "spell_list": "magic_user",
+      "range": "240’",
+      "duration": "Permanent"
+    },
+    {
+      "id": "find_traps",
+      "name": "Find Traps",
+      "level": 2,
+      "spell_list": "cleric",
+      "range": "30’",
+      "duration": "2 turns"
+    },
+    {
+      "id": "fire_ball",
+      "name": "Fire Ball",
+      "level": 3,
+      "spell_list": "magic_user",
+      "range": "240’",
+      "duration": "Instant"
+    },
+    {
+      "id": "floating_disc",
+      "name": "Floating Disc",
+      "level": 1,
+      "spell_list": "magic_user",
+      "range": "6’",
+      "duration": "6 turns"
+    },
+    {
+      "id": "fly",
+      "name": "Fly",
+      "level": 3,
+      "spell_list": "magic_user",
+      "range": "The caster or a creature touched",
+      "duration": "1d6 turns +1 per level"
+    },
+    {
+      "id": "geas",
+      "name": "Geas",
+      "level": 6,
+      "spell_list": "magic_user",
+      "range": "30’",
+      "duration": "Permanent / Instant (remove geas)"
+    },
+    {
+      "id": "growth_of_animal",
+      "name": "Growth of Animal",
+      "level": 3,
+      "spell_list": "cleric",
+      "range": "120’",
+      "duration": "12 turns"
+    },
+    {
+      "id": "growth_of_plants",
+      "name": "Growth of Plants",
+      "level": 4,
+      "spell_list": "magic_user",
+      "range": "120’",
+      "duration": "Permanent"
+    },
+    {
+      "id": "hallucinatory_terrain",
+      "name": "Hallucinatory Terrain",
+      "level": 4,
+      "spell_list": "magic_user",
+      "range": "240’",
+      "duration": "Until touched"
+    },
+    {
+      "id": "haste",
+      "name": "Haste",
+      "level": 3,
+      "spell_list": "magic_user",
+      "range": "240’",
+      "duration": "3 turns"
+    },
+    {
+      "id": "hold_monster",
+      "name": "Hold Monster",
+      "level": 5,
+      "spell_list": "magic_user",
+      "range": "120’",
+      "duration": "6 turns +1 per level"
+    },
+    {
+      "id": "hold_person_c",
+      "name": "Hold Person",
+      "level": 2,
+      "spell_list": "cleric",
+      "range": "180’",
+      "duration": "9 turns"
+    },
+    {
+      "id": "hold_person_mu",
+      "name": "Hold Person",
+      "level": 3,
+      "spell_list": "magic_user",
+      "range": "120’",
+      "duration": "1 turn per level"
+    },
+    {
+      "id": "hold_portal",
+      "name": "Hold Portal",
+      "level": 1,
+      "spell_list": "magic_user",
+      "range": "10’",
+      "duration": "2d6 turns"
+    },
+    {
+      "id": "infravision",
+      "name": "Infravision",
+      "level": 3,
+      "spell_list": "magic_user",
+      "range": "The caster or a creature touched",
+      "duration": "1 day"
+    },
+    {
+      "id": "insect_plague",
+      "name": "Insect Plague",
+      "level": 5,
+      "spell_list": "cleric",
+      "range": "480’",
+      "duration": "Concentration (up to 1 day)"
+    },
+    {
+      "id": "invisibility",
+      "name": "Invisibility",
+      "level": 2,
+      "spell_list": "magic_user",
+      "range": "240’",
+      "duration": "Permanent (but may be broken, see below)"
+    },
+    {
+      "id": "invisibility_10_radius",
+      "name": "Invisibility 10’ Radius",
+      "level": 3,
+      "spell_list": "magic_user",
+      "range": "120’",
+      "duration": "Permanent (but may be broken, see below)"
+    },
+    {
+      "id": "invisible_stalker",
+      "name": "Invisible Stalker",
+      "level": 6,
+      "spell_list": "magic_user",
+      "range": "Summoned to caster’s presence",
+      "duration": "One mission"
+    },
+    {
+      "id": "knock",
+      "name": "Knock",
+      "level": 2,
+      "spell_list": "magic_user",
+      "range": "60’",
+      "duration": "1 round"
+    },
+    {
+      "id": "know_alignment",
+      "name": "Know Alignment",
+      "level": 2,
+      "spell_list": "cleric",
+      "range": "10’",
+      "duration": "1 round"
+    },
+    {
+      "id": "levitate",
+      "name": "Levitate",
+      "level": 2,
+      "spell_list": "magic_user",
+      "range": "The caster",
+      "duration": "6 turns +1 per level"
+    },
+    {
+      "id": "light_c",
+      "name": "Light",
+      "level": 1,
+      "spell_list": "cleric",
+      "range": "120’",
+      "duration": "12 turns"
+    },
+    {
+      "id": "light_mu",
+      "name": "Light",
+      "level": 1,
+      "spell_list": "magic_user",
+      "range": "120’",
+      "duration": "6 turns +1 per level"
+    },
+    {
+      "id": "lightning_bolt",
+      "name": "Lightning Bolt",
+      "level": 3,
+      "spell_list": "magic_user",
+      "range": "180’",
+      "duration": "Instant"
+    },
+    {
+      "id": "locate_object_c",
+      "name": "Locate Object",
+      "level": 3,
+      "spell_list": "cleric",
+      "range": "120’",
+      "duration": "6 turns"
+    },
+    {
+      "id": "locate_object_mu",
+      "name": "Locate Object",
+      "level": 2,
+      "spell_list": "magic_user",
+      "range": "60’ +10’ per level",
+      "duration": "2 turns"
+    },
+    {
+      "id": "lower_water",
+      "name": "Lower Water",
+      "level": 6,
+      "spell_list": "magic_user",
+      "range": "240’",
+      "duration": "10 turns"
+    },
+    {
+      "id": "magic_jar",
+      "name": "Magic Jar",
+      "level": 5,
+      "spell_list": "magic_user",
+      "range": "The caster",
+      "duration": "Special"
+    },
+    {
+      "id": "magic_missile",
+      "name": "Magic Missile",
+      "level": 1,
+      "spell_list": "magic_user",
+      "range": "150’",
+      "duration": "1 turn"
+    },
+    {
+      "id": "massmorph",
+      "name": "Massmorph",
+      "level": 4,
+      "spell_list": "magic_user",
+      "range": "240’",
+      "duration": "Permanent"
+    },
+    {
+      "id": "mirror_image",
+      "name": "Mirror Image",
+      "level": 2,
+      "spell_list": "magic_user",
+      "range": "The caster",
+      "duration": "6 turns"
+    },
+    {
+      "id": "move_earth",
+      "name": "Move Earth",
+      "level": 6,
+      "spell_list": "magic_user",
+      "range": "240’",
+      "duration": "6 turns"
+    },
+    {
+      "id": "neutralize_poison",
+      "name": "Neutralize Poison",
+      "level": 4,
+      "spell_list": "cleric",
+      "range": "The caster or a creature or object touched",
+      "duration": "Instant"
+    },
+    {
+      "id": "part_water",
+      "name": "Part Water",
+      "level": 6,
+      "spell_list": "magic_user",
+      "range": "120’",
+      "duration": "6 turns"
+    },
+    {
+      "id": "pass_wall",
+      "name": "Pass-Wall",
+      "level": 5,
+      "spell_list": "magic_user",
+      "range": "30’",
+      "duration": "3 turns"
+    },
+    {
+      "id": "phantasmal_force",
+      "name": "Phantasmal Force",
+      "level": 2,
+      "spell_list": "magic_user",
+      "range": "240’",
+      "duration": "Concentration"
+    },
+    {
+      "id": "polymorph_others",
+      "name": "Polymorph Others",
+      "level": 4,
+      "spell_list": "magic_user",
+      "range": "60’",
+      "duration": "Permanent"
+    },
+    {
+      "id": "polymorph_self",
+      "name": "Polymorph Self",
+      "level": 4,
+      "spell_list": "magic_user",
+      "range": "The caster",
+      "duration": "6 turns +1 per level"
+    },
+    {
+      "id": "projected_image",
+      "name": "Projected Image",
+      "level": 6,
+      "spell_list": "magic_user",
+      "range": "240’",
+      "duration": "6 turns"
+    },
+    {
+      "id": "protection_from_evil_10_radius_c",
+      "name": "Protection from Evil 10’ Radius",
+      "level": 4,
+      "spell_list": "cleric",
+      "range": "10’ around the caster",
+      "duration": "12 turns"
+    },
+    {
+      "id": "protection_from_evil_10_radius_mu",
+      "name": "Protection from Evil 10’ Radius",
+      "level": 3,
+      "spell_list": "magic_user",
+      "range": "10’ around the caster",
+      "duration": "12 turns"
+    },
+    {
+      "id": "protection_from_evil_c",
+      "name": "Protection from Evil",
+      "level": 1,
+      "spell_list": "cleric",
+      "range": "The caster",
+      "duration": "12 turns"
+    },
+    {
+      "id": "protection_from_evil_mu",
+      "name": "Protection from Evil",
+      "level": 1,
+      "spell_list": "magic_user",
+      "range": "The caster",
+      "duration": "6 turns"
+    },
+    {
+      "id": "protection_from_normal_missiles",
+      "name": "Protection from Normal Missiles",
+      "level": 3,
+      "spell_list": "magic_user",
+      "range": "30’",
+      "duration": "12 turns"
+    },
+    {
+      "id": "purify_food_and_water",
+      "name": "Purify Food and Water",
+      "level": 1,
+      "spell_list": "cleric",
+      "range": "10’",
+      "duration": "Permanent"
+    },
+    {
+      "id": "quest",
+      "name": "Quest",
+      "level": 5,
+      "spell_list": "cleric",
+      "range": "30’",
+      "duration": "Until quest is completed / Instant (remove quest)"
+    },
+    {
+      "id": "raise_dead",
+      "name": "Raise Dead",
+      "level": 5,
+      "spell_list": "cleric",
+      "range": "120’",
+      "duration": "Instant"
+    },
+    {
+      "id": "read_languages",
+      "name": "Read Languages",
+      "level": 1,
+      "spell_list": "magic_user",
+      "range": "The caster",
+      "duration": "2 turns"
+    },
+    {
+      "id": "read_magic",
+      "name": "Read Magic",
+      "level": 1,
+      "spell_list": "magic_user",
+      "range": "The caster",
+      "duration": "1 turn"
+    },
+    {
+      "id": "reincarnation",
+      "name": "Reincarnation",
+      "level": 6,
+      "spell_list": "magic_user",
+      "range": "Appears in the caster’s presence",
+      "duration": "Permanent"
+    },
+    {
+      "id": "remove_curse_c",
+      "name": "Remove Curse",
+      "level": 3,
+      "spell_list": "cleric",
+      "range": "The caster or a creature touched",
+      "duration": "Instant / Permanent (curse)"
+    },
+    {
+      "id": "remove_curse_mu",
+      "name": "Remove Curse",
+      "level": 4,
+      "spell_list": "magic_user",
+      "range": "The caster or a creature touched",
+      "duration": "Instant / Permanent (curse)"
+    },
+    {
+      "id": "remove_fear",
+      "name": "Remove Fear",
+      "level": 1,
+      "spell_list": "cleric",
+      "range": "The caster or a creature touched",
+      "duration": "2 turns"
+    },
+    {
+      "id": "resist_cold",
+      "name": "Resist Cold",
+      "level": 1,
+      "spell_list": "cleric",
+      "range": "30’",
+      "duration": "6 turns"
+    },
+    {
+      "id": "resist_fire",
+      "name": "Resist Fire",
+      "level": 2,
+      "spell_list": "cleric",
+      "range": "30’",
+      "duration": "2 turns"
+    },
+    {
+      "id": "shield",
+      "name": "Shield",
+      "level": 1,
+      "spell_list": "magic_user",
+      "range": "The caster",
+      "duration": "2 turns"
+    },
+    {
+      "id": "silence_15_radius",
+      "name": "Silence 15’ Radius",
+      "level": 2,
+      "spell_list": "cleric",
+      "range": "180’",
+      "duration": "12 turns"
+    },
+    {
+      "id": "sleep",
+      "name": "Sleep",
+      "level": 1,
+      "spell_list": "magic_user",
+      "range": "240’",
+      "duration": "4d4 turns"
+    },
+    {
+      "id": "snake_charm",
+      "name": "Snake Charm",
+      "level": 2,
+      "spell_list": "cleric",
+      "range": "60’",
+      "duration": "1d4+1 rounds or turns"
+    },
+    {
+      "id": "speak_with_animals",
+      "name": "Speak with Animals",
+      "level": 2,
+      "spell_list": "cleric",
+      "range": "30’",
+      "duration": "6 turns"
+    },
+    {
+      "id": "speak_with_plants",
+      "name": "Speak with Plants",
+      "level": 4,
+      "spell_list": "cleric",
+      "range": "30’",
+      "duration": "3 turns"
+    },
+    {
+      "id": "sticks_to_snakes",
+      "name": "Sticks to Snakes",
+      "level": 4,
+      "spell_list": "cleric",
+      "range": "120’",
+      "duration": "6 turns"
+    },
+    {
+      "id": "stone_to_flesh",
+      "name": "Stone to Flesh",
+      "level": 6,
+      "spell_list": "magic_user",
+      "range": "120’",
+      "duration": "Permanent"
+    },
+    {
+      "id": "striking",
+      "name": "Striking",
+      "level": 3,
+      "spell_list": "cleric",
+      "range": "30’",
+      "duration": "1 turn"
+    },
+    {
+      "id": "telekinesis",
+      "name": "Telekinesis",
+      "level": 5,
+      "spell_list": "magic_user",
+      "range": "120’",
+      "duration": "Concentration (up to 6 rounds)"
+    },
+    {
+      "id": "teleport",
+      "name": "Teleport",
+      "level": 5,
+      "spell_list": "magic_user",
+      "range": "10’",
+      "duration": "Instant"
+    },
+    {
+      "id": "transmute_rock_to_mud",
+      "name": "Transmute Rock to Mud",
+      "level": 5,
+      "spell_list": "magic_user",
+      "range": "120’",
+      "duration": "3d6 days / Permanent (transmute mud to rock)"
+    },
+    {
+      "id": "ventriloquism",
+      "name": "Ventriloquism",
+      "level": 1,
+      "spell_list": "magic_user",
+      "range": "60’",
+      "duration": "2 turns"
+    },
+    {
+      "id": "wall_of_fire",
+      "name": "Wall of Fire",
+      "level": 4,
+      "spell_list": "magic_user",
+      "range": "60’",
+      "duration": "Concentration"
+    },
+    {
+      "id": "wall_of_ice",
+      "name": "Wall of Ice",
+      "level": 4,
+      "spell_list": "magic_user",
+      "range": "120’",
+      "duration": "12 turns"
+    },
+    {
+      "id": "wall_of_stone",
+      "name": "Wall of Stone",
+      "level": 5,
+      "spell_list": "magic_user",
+      "range": "60’",
+      "duration": "Permanent"
+    },
+    {
+      "id": "water_breathing",
+      "name": "Water Breathing",
+      "level": 3,
+      "spell_list": "magic_user",
+      "range": "30’",
+      "duration": "1 day"
+    },
+    {
+      "id": "web",
+      "name": "Web",
+      "level": 2,
+      "spell_list": "magic_user",
+      "range": "10’",
+      "duration": "48 turns"
+    },
+    {
+      "id": "wizard_eye",
+      "name": "Wizard Eye",
+      "level": 4,
+      "spell_list": "magic_user",
+      "range": "240’",
+      "duration": "6 turns"
+    },
+    {
+      "id": "wizard_lock",
+      "name": "Wizard Lock",
+      "level": 2,
+      "spell_list": "magic_user",
+      "range": "10’",
+      "duration": "Permanent"
+    }
+  ],
+  "spellDetails": {
+    "sleep": {
+      "id": "sleep",
+      "name": "Sleep",
+      "spell_list": "magic_user",
+      "level": 1,
+      "duration": "4d4 turns",
+      "duration_spec": {
+        "kind": "fixed",
+        "unit": "turn",
+        "amount": null,
+        "dice": "4d4",
+        "per_level": 0,
+        "concentration_cap_unit": null,
+        "concentration_cap_amount": null
+      },
+      "range": "240’",
+      "range_spec": { "kind": "feet", "feet": 240, "per_level_feet": null },
+      "reversed_form": null,
+      "modes": [
+        {
+          "key": "single_4_plus",
+          "targeting": {
+            "mode": "single",
+            "count": null,
+            "count_dice": null,
+            "hd_budget_dice": null,
+            "hd_cap": null,
+            "hd_min": null,
+            "shape": null,
+            "dimensions": {}
+          },
+          "save": null,
+          "effect": {
+            "kind": "condition",
+            "condition": "asleep",
+            "cures_conditions": [],
+            "cures_effect_kinds": [],
+            "modifiers": [],
+            "params": { "excludes_undead": true, "hd_bonus_required": true, "hd_count": 4 }
+          },
+          "manual": false,
+          "prose": "A single creature with 4+1 Hit Dice (see Hit point modifiers)."
+        },
+        {
+          "key": "hd_budget",
+          "targeting": {
+            "mode": "hd_budget",
+            "count": null,
+            "count_dice": null,
+            "hd_budget_dice": "2d8",
+            "hd_cap": 4,
+            "hd_min": null,
+            "shape": null,
+            "dimensions": {}
+          },
+          "save": null,
+          "effect": {
+            "kind": "condition",
+            "condition": "asleep",
+            "cures_conditions": [],
+            "cures_effect_kinds": [],
+            "modifiers": [],
+            "params": { "excludes_hd_4_plus": true, "excludes_undead": true }
+          },
+          "manual": false,
+          "prose": "A total of 2d8 Hit Dice of creatures of 4 HD or lower each."
+        }
+      ],
+      "intro": "Causes creatures (except undead) to fall into a magical slumber. The spell may target either:",
+      "conjured_monsters": [],
+      "conjured_monster_ids": [],
+      "overrides_applied": []
+    },
+    "cure_light_wounds": {
+      "id": "cure_light_wounds",
+      "name": "Cure Light Wounds",
+      "spell_list": "cleric",
+      "level": 1,
+      "duration": "Instant",
+      "duration_spec": {
+        "kind": "instant",
+        "unit": null,
+        "amount": null,
+        "dice": null,
+        "per_level": 0,
+        "concentration_cap_unit": null,
+        "concentration_cap_amount": null
+      },
+      "range": "The caster or a creature touched",
+      "range_spec": { "kind": "touch", "feet": null, "per_level_feet": null },
+      "reversed_form": {
+        "name": "Cause Light Wounds",
+        "prose": "Inflicts 1d6+1 hit points of damage to a touched creature. In combat, a melee attack roll is required.",
+        "modes": [
+          {
+            "key": "harm",
+            "targeting": {
+              "mode": "single",
+              "count": null,
+              "count_dice": null,
+              "hd_budget_dice": null,
+              "hd_cap": null,
+              "hd_min": null,
+              "shape": null,
+              "dimensions": {}
+            },
+            "save": null,
+            "effect": {
+              "kind": "damage",
+              "condition": null,
+              "cures_conditions": [],
+              "cures_effect_kinds": [],
+              "modifiers": [],
+              "params": { "dice": "1d6+1", "touch_attack": true }
+            },
+            "manual": false,
+            "prose": "Inflicts 1d6+1 hit points of damage to a touched creature. In combat, a melee attack roll is required."
+          }
+        ],
+        "duration": null,
+        "duration_spec": null
+      },
+      "modes": [
+        {
+          "key": "heal",
+          "targeting": {
+            "mode": "single",
+            "count": null,
+            "count_dice": null,
+            "hd_budget_dice": null,
+            "hd_cap": null,
+            "hd_min": null,
+            "shape": null,
+            "dimensions": {}
+          },
+          "save": null,
+          "effect": {
+            "kind": "heal",
+            "condition": null,
+            "cures_conditions": [],
+            "cures_effect_kinds": [],
+            "modifiers": [],
+            "params": { "dice": "1d6+1" }
+          },
+          "manual": false,
+          "prose": "Healing a living subject: Restores 1d6+1 hit points of damage. This cannot raise the subject’s hit points above their normal maximum."
+        },
+        {
+          "key": "cure_paralysis",
+          "targeting": {
+            "mode": "single",
+            "count": null,
+            "count_dice": null,
+            "hd_budget_dice": null,
+            "hd_cap": null,
+            "hd_min": null,
+            "shape": null,
+            "dimensions": {}
+          },
+          "save": null,
+          "effect": {
+            "kind": "cure",
+            "condition": null,
+            "cures_conditions": ["paralysed"],
+            "cures_effect_kinds": [],
+            "modifiers": [],
+            "params": {}
+          },
+          "manual": false,
+          "prose": "Curing paralysis: Paralysing effects are negated."
+        }
+      ],
+      "intro": "This spell has two usages:",
+      "conjured_monsters": [],
+      "conjured_monster_ids": [],
+      "overrides_applied": []
+    }
+  },
+  "monsters": [
+    {
+      "id": "acolyte",
+      "name": "Acolyte",
+      "hit_dice": { "count": 1, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": 4, "fixed_hp": null },
+      "ac": 2,
+      "ac_ascending": 17,
+      "xp": 10,
+      "alignment": { "options": ["lawful", "neutral", "chaotic"], "usual": null }
+    },
+    {
+      "id": "amber_golem",
+      "name": "Amber Golem",
+      "hit_dice": {
+        "count": 10,
+        "die": 8,
+        "modifier": 0,
+        "asterisks": 2,
+        "average_hp": 45,
+        "fixed_hp": null
+      },
+      "ac": 6,
+      "ac_ascending": 13,
+      "xp": 2300,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "berserker",
+      "name": "Berserker",
+      "hit_dice": { "count": 1, "die": 8, "modifier": 1, "asterisks": 1, "average_hp": 5, "fixed_hp": null },
+      "ac": 7,
+      "ac_ascending": 12,
+      "xp": 19,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "black_dragon",
+      "name": "Black Dragon",
+      "hit_dice": { "count": 7, "die": 8, "modifier": 0, "asterisks": 2, "average_hp": 31, "fixed_hp": null },
+      "ac": 2,
+      "ac_ascending": 17,
+      "xp": 1250,
+      "alignment": { "options": ["chaotic"], "usual": null }
+    },
+    {
+      "id": "black_widow",
+      "name": "Black Widow",
+      "hit_dice": { "count": 3, "die": 8, "modifier": 0, "asterisks": 1, "average_hp": 13, "fixed_hp": null },
+      "ac": 6,
+      "ac_ascending": 13,
+      "xp": 50,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "bone_golem",
+      "name": "Bone Golem",
+      "hit_dice": { "count": 8, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": 36, "fixed_hp": null },
+      "ac": 2,
+      "ac_ascending": 17,
+      "xp": 650,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "bugbear",
+      "name": "Bugbear",
+      "hit_dice": { "count": 3, "die": 8, "modifier": 1, "asterisks": 0, "average_hp": 14, "fixed_hp": null },
+      "ac": 5,
+      "ac_ascending": 14,
+      "xp": 50,
+      "alignment": { "options": ["chaotic"], "usual": null }
+    },
+    {
+      "id": "carcass_crawler",
+      "name": "Carcass Crawler",
+      "hit_dice": { "count": 3, "die": 8, "modifier": 1, "asterisks": 1, "average_hp": 14, "fixed_hp": null },
+      "ac": 7,
+      "ac_ascending": 12,
+      "xp": 75,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "centipede_giant",
+      "name": "Centipede, Giant",
+      "hit_dice": { "count": 1, "die": 4, "modifier": 0, "asterisks": 1, "average_hp": 2, "fixed_hp": null },
+      "ac": 9,
+      "ac_ascending": 10,
+      "xp": 6,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "crab_giant",
+      "name": "Crab, Giant",
+      "hit_dice": { "count": 3, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": 13, "fixed_hp": null },
+      "ac": 2,
+      "ac_ascending": 17,
+      "xp": 35,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "dervish",
+      "name": "Dervish",
+      "hit_dice": { "count": 1, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": 4, "fixed_hp": null },
+      "ac": 6,
+      "ac_ascending": 13,
+      "xp": 10,
+      "alignment": { "options": ["lawful"], "usual": null }
+    },
+    {
+      "id": "doppelganger",
+      "name": "Doppelgänger",
+      "hit_dice": { "count": 4, "die": 8, "modifier": 0, "asterisks": 1, "average_hp": 18, "fixed_hp": null },
+      "ac": 5,
+      "ac_ascending": 14,
+      "xp": 125,
+      "alignment": { "options": ["chaotic"], "usual": null }
+    },
+    {
+      "id": "driver_ant",
+      "name": "Driver Ant",
+      "hit_dice": { "count": 4, "die": 8, "modifier": 0, "asterisks": 1, "average_hp": 18, "fixed_hp": null },
+      "ac": 3,
+      "ac_ascending": 16,
+      "xp": 125,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "earth_elemental_intermediate",
+      "name": "Earth Elemental (Intermediate)",
+      "hit_dice": {
+        "count": 12,
+        "die": 8,
+        "modifier": 0,
+        "asterisks": 1,
+        "average_hp": 54,
+        "fixed_hp": null
+      },
+      "ac": 0,
+      "ac_ascending": 19,
+      "xp": 1900,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "elf_monster",
+      "name": "Elf (Monster)",
+      "hit_dice": { "count": 1, "die": 8, "modifier": 1, "asterisks": 1, "average_hp": 5, "fixed_hp": null },
+      "ac": 5,
+      "ac_ascending": 14,
+      "xp": 19,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "fire_elemental_intermediate",
+      "name": "Fire Elemental (Intermediate)",
+      "hit_dice": {
+        "count": 12,
+        "die": 8,
+        "modifier": 0,
+        "asterisks": 1,
+        "average_hp": 54,
+        "fixed_hp": null
+      },
+      "ac": 0,
+      "ac_ascending": 19,
+      "xp": 1900,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "freshwater_termite",
+      "name": "Freshwater Termite",
+      "hit_dice": { "count": 2, "die": 8, "modifier": 1, "asterisks": 0, "average_hp": 10, "fixed_hp": null },
+      "ac": 6,
+      "ac_ascending": 13,
+      "xp": 25,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "gecko",
+      "name": "Gecko",
+      "hit_dice": { "count": 3, "die": 8, "modifier": 1, "asterisks": 0, "average_hp": 14, "fixed_hp": null },
+      "ac": 5,
+      "ac_ascending": 14,
+      "xp": 50,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "ghoul",
+      "name": "Ghoul",
+      "hit_dice": { "count": 2, "die": 8, "modifier": 0, "asterisks": 1, "average_hp": 9, "fixed_hp": null },
+      "ac": 6,
+      "ac_ascending": 13,
+      "xp": 25,
+      "alignment": { "options": ["chaotic"], "usual": null }
+    },
+    {
+      "id": "giant_bat",
+      "name": "Giant Bat",
+      "hit_dice": { "count": 2, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": 9, "fixed_hp": null },
+      "ac": 6,
+      "ac_ascending": 13,
+      "xp": 20,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "giant_piranha",
+      "name": "Giant Piranha",
+      "hit_dice": { "count": 3, "die": 8, "modifier": 3, "asterisks": 0, "average_hp": 16, "fixed_hp": null },
+      "ac": 6,
+      "ac_ascending": 13,
+      "xp": 50,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "giant_rat",
+      "name": "Giant Rat",
+      "hit_dice": { "count": 1, "die": 4, "modifier": 0, "asterisks": 0, "average_hp": 2, "fixed_hp": null },
+      "ac": 7,
+      "ac_ascending": 12,
+      "xp": 5,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "giant_rockfish",
+      "name": "Giant Rockfish",
+      "hit_dice": { "count": 5, "die": 8, "modifier": 5, "asterisks": 1, "average_hp": 27, "fixed_hp": null },
+      "ac": 7,
+      "ac_ascending": 12,
+      "xp": 400,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "gnome",
+      "name": "Gnome",
+      "hit_dice": { "count": 1, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": 4, "fixed_hp": null },
+      "ac": 5,
+      "ac_ascending": 14,
+      "xp": 10,
+      "alignment": { "options": ["lawful", "neutral"], "usual": null }
+    },
+    {
+      "id": "goblin",
+      "name": "Goblin",
+      "hit_dice": { "count": 1, "die": 8, "modifier": -1, "asterisks": 0, "average_hp": 3, "fixed_hp": null },
+      "ac": 6,
+      "ac_ascending": 13,
+      "xp": 5,
+      "alignment": { "options": ["chaotic"], "usual": null }
+    },
+    {
+      "id": "great_white_shark",
+      "name": "Great White Shark",
+      "hit_dice": { "count": 8, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": 36, "fixed_hp": null },
+      "ac": 4,
+      "ac_ascending": 15,
+      "xp": 650,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "green_slime",
+      "name": "Green Slime",
+      "hit_dice": { "count": 2, "die": 8, "modifier": 0, "asterisks": 1, "average_hp": 9, "fixed_hp": null },
+      "ac": null,
+      "ac_ascending": null,
+      "xp": 25,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "griffon",
+      "name": "Griffon",
+      "hit_dice": { "count": 7, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": 31, "fixed_hp": null },
+      "ac": 5,
+      "ac_ascending": 14,
+      "xp": 450,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "hellhound_3",
+      "name": "Hellhound (3)",
+      "hit_dice": { "count": 3, "die": 8, "modifier": 0, "asterisks": 1, "average_hp": 13, "fixed_hp": null },
+      "ac": 4,
+      "ac_ascending": 15,
+      "xp": 50,
+      "alignment": { "options": ["chaotic"], "usual": null }
+    },
+    {
+      "id": "hellhound_7",
+      "name": "Hellhound (7)",
+      "hit_dice": { "count": 7, "die": 8, "modifier": 0, "asterisks": 1, "average_hp": 31, "fixed_hp": null },
+      "ac": 4,
+      "ac_ascending": 15,
+      "xp": 850,
+      "alignment": { "options": ["chaotic"], "usual": null }
+    },
+    {
+      "id": "horned_chameleon",
+      "name": "Horned Chameleon",
+      "hit_dice": { "count": 5, "die": 8, "modifier": 0, "asterisks": 1, "average_hp": 22, "fixed_hp": null },
+      "ac": 2,
+      "ac_ascending": 17,
+      "xp": 300,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "hydra_10",
+      "name": "Hydra (10)",
+      "hit_dice": {
+        "count": 10,
+        "die": 8,
+        "modifier": 0,
+        "asterisks": 0,
+        "average_hp": null,
+        "fixed_hp": 80
+      },
+      "ac": 5,
+      "ac_ascending": 14,
+      "xp": 900,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "hydra_5",
+      "name": "Hydra (5)",
+      "hit_dice": { "count": 5, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": null, "fixed_hp": 40 },
+      "ac": 5,
+      "ac_ascending": 14,
+      "xp": 175,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "hydra_9",
+      "name": "Hydra (9)",
+      "hit_dice": { "count": 9, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": null, "fixed_hp": 72 },
+      "ac": 5,
+      "ac_ascending": 14,
+      "xp": 900,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "invisible_stalker_monster",
+      "name": "Invisible Stalker (Monster)",
+      "hit_dice": { "count": 8, "die": 8, "modifier": 0, "asterisks": 1, "average_hp": 36, "fixed_hp": null },
+      "ac": 3,
+      "ac_ascending": 16,
+      "xp": 1200,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "kobold",
+      "name": "Kobold",
+      "hit_dice": { "count": 1, "die": 4, "modifier": 0, "asterisks": 0, "average_hp": 2, "fixed_hp": null },
+      "ac": 7,
+      "ac_ascending": 12,
+      "xp": 5,
+      "alignment": { "options": ["chaotic"], "usual": null }
+    },
+    {
+      "id": "leech_giant",
+      "name": "Leech, Giant",
+      "hit_dice": { "count": 6, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": 27, "fixed_hp": null },
+      "ac": 7,
+      "ac_ascending": 12,
+      "xp": 275,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "lizard_man",
+      "name": "Lizard Man",
+      "hit_dice": { "count": 2, "die": 8, "modifier": 1, "asterisks": 0, "average_hp": 10, "fixed_hp": null },
+      "ac": 5,
+      "ac_ascending": 14,
+      "xp": 25,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "manticore",
+      "name": "Manticore",
+      "hit_dice": { "count": 6, "die": 8, "modifier": 1, "asterisks": 0, "average_hp": 28, "fixed_hp": null },
+      "ac": 4,
+      "ac_ascending": 15,
+      "xp": 350,
+      "alignment": { "options": ["chaotic"], "usual": null }
+    },
+    {
+      "id": "medusa",
+      "name": "Medusa",
+      "hit_dice": { "count": 4, "die": 8, "modifier": 0, "asterisks": 2, "average_hp": 18, "fixed_hp": null },
+      "ac": 8,
+      "ac_ascending": 11,
+      "xp": 175,
+      "alignment": { "options": ["chaotic"], "usual": null }
+    },
+    {
+      "id": "mountain_lion",
+      "name": "Mountain Lion",
+      "hit_dice": { "count": 3, "die": 8, "modifier": 2, "asterisks": 0, "average_hp": 15, "fixed_hp": null },
+      "ac": 6,
+      "ac_ascending": 13,
+      "xp": 50,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "neanderthal_caveman",
+      "name": "Neanderthal (Caveman)",
+      "hit_dice": { "count": 2, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": 9, "fixed_hp": null },
+      "ac": 8,
+      "ac_ascending": 11,
+      "xp": 20,
+      "alignment": { "options": ["lawful"], "usual": null }
+    },
+    {
+      "id": "normal_bat",
+      "name": "Normal Bat",
+      "hit_dice": { "count": 0, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": null, "fixed_hp": 1 },
+      "ac": 6,
+      "ac_ascending": 13,
+      "xp": 5,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "normal_rat",
+      "name": "Normal Rat",
+      "hit_dice": { "count": 0, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": null, "fixed_hp": 1 },
+      "ac": 9,
+      "ac_ascending": 10,
+      "xp": 5,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "octopus_giant",
+      "name": "Octopus, Giant",
+      "hit_dice": { "count": 8, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": 36, "fixed_hp": null },
+      "ac": 7,
+      "ac_ascending": 12,
+      "xp": 650,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "orc",
+      "name": "Orc",
+      "hit_dice": { "count": 1, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": 4, "fixed_hp": null },
+      "ac": 6,
+      "ac_ascending": 13,
+      "xp": 10,
+      "alignment": { "options": ["chaotic"], "usual": null }
+    },
+    {
+      "id": "owl_bear",
+      "name": "Owl Bear",
+      "hit_dice": { "count": 5, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": 22, "fixed_hp": null },
+      "ac": 5,
+      "ac_ascending": 14,
+      "xp": 175,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "pit_viper",
+      "name": "Pit Viper",
+      "hit_dice": { "count": 2, "die": 8, "modifier": 0, "asterisks": 1, "average_hp": 9, "fixed_hp": null },
+      "ac": 6,
+      "ac_ascending": 13,
+      "xp": 25,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "pterodactyl",
+      "name": "Pterodactyl",
+      "hit_dice": { "count": 1, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": 4, "fixed_hp": null },
+      "ac": 7,
+      "ac_ascending": 12,
+      "xp": 10,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "riding_horse",
+      "name": "Riding Horse",
+      "hit_dice": { "count": 2, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": 9, "fixed_hp": null },
+      "ac": 7,
+      "ac_ascending": 12,
+      "xp": 20,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "rock_python",
+      "name": "Rock Python",
+      "hit_dice": { "count": 5, "die": 8, "modifier": 0, "asterisks": 1, "average_hp": 22, "fixed_hp": null },
+      "ac": 6,
+      "ac_ascending": 13,
+      "xp": 300,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "scorpion_giant",
+      "name": "Scorpion, Giant",
+      "hit_dice": { "count": 4, "die": 8, "modifier": 0, "asterisks": 1, "average_hp": 18, "fixed_hp": null },
+      "ac": 2,
+      "ac_ascending": 17,
+      "xp": 125,
+      "alignment": { "options": ["chaotic"], "usual": null }
+    },
+    {
+      "id": "shadow",
+      "name": "Shadow",
+      "hit_dice": { "count": 2, "die": 8, "modifier": 2, "asterisks": 1, "average_hp": 11, "fixed_hp": null },
+      "ac": 7,
+      "ac_ascending": 12,
+      "xp": 35,
+      "alignment": { "options": ["chaotic"], "usual": null }
+    },
+    {
+      "id": "skeleton",
+      "name": "Skeleton",
+      "hit_dice": { "count": 1, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": 4, "fixed_hp": null },
+      "ac": 7,
+      "ac_ascending": 12,
+      "xp": 10,
+      "alignment": { "options": ["chaotic"], "usual": null }
+    },
+    {
+      "id": "small_herd_animal_1",
+      "name": "Small Herd Animal (1)",
+      "hit_dice": { "count": 1, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": 4, "fixed_hp": null },
+      "ac": 7,
+      "ac_ascending": 12,
+      "xp": 10,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "sperm_whale",
+      "name": "Sperm Whale",
+      "hit_dice": {
+        "count": 36,
+        "die": 8,
+        "modifier": 0,
+        "asterisks": 0,
+        "average_hp": 162,
+        "fixed_hp": null
+      },
+      "ac": 6,
+      "ac_ascending": 13,
+      "xp": 6250,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "stegosaurus",
+      "name": "Stegosaurus",
+      "hit_dice": {
+        "count": 11,
+        "die": 8,
+        "modifier": 0,
+        "asterisks": 0,
+        "average_hp": 49,
+        "fixed_hp": null
+      },
+      "ac": 3,
+      "ac_ascending": 16,
+      "xp": 1100,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "swamp_termite",
+      "name": "Swamp Termite",
+      "hit_dice": { "count": 1, "die": 8, "modifier": 1, "asterisks": 0, "average_hp": 5, "fixed_hp": null },
+      "ac": 4,
+      "ac_ascending": 15,
+      "xp": 15,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "tiger_beetle",
+      "name": "Tiger Beetle",
+      "hit_dice": { "count": 3, "die": 8, "modifier": 1, "asterisks": 0, "average_hp": 14, "fixed_hp": null },
+      "ac": 3,
+      "ac_ascending": 16,
+      "xp": 50,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "treant",
+      "name": "Treant",
+      "hit_dice": { "count": 8, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": 36, "fixed_hp": null },
+      "ac": 2,
+      "ac_ascending": 17,
+      "xp": 650,
+      "alignment": { "options": ["lawful"], "usual": null }
+    },
+    {
+      "id": "troll",
+      "name": "Troll",
+      "hit_dice": { "count": 6, "die": 8, "modifier": 3, "asterisks": 1, "average_hp": 30, "fixed_hp": null },
+      "ac": 4,
+      "ac_ascending": 15,
+      "xp": 650,
+      "alignment": { "options": ["chaotic"], "usual": null }
+    },
+    {
+      "id": "tuatara",
+      "name": "Tuatara",
+      "hit_dice": { "count": 6, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": 27, "fixed_hp": null },
+      "ac": 4,
+      "ac_ascending": 15,
+      "xp": 275,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "vampire_8",
+      "name": "Vampire (8)",
+      "hit_dice": { "count": 8, "die": 8, "modifier": 0, "asterisks": 2, "average_hp": 36, "fixed_hp": null },
+      "ac": 2,
+      "ac_ascending": 17,
+      "xp": 1750,
+      "alignment": { "options": ["chaotic"], "usual": null }
+    },
+    {
+      "id": "veteran_1",
+      "name": "Veteran (1)",
+      "hit_dice": { "count": 1, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": 4, "fixed_hp": null },
+      "ac": 2,
+      "ac_ascending": 17,
+      "xp": 10,
+      "alignment": { "options": ["lawful", "neutral", "chaotic"], "usual": null }
+    },
+    {
+      "id": "veteran_2",
+      "name": "Veteran (2)",
+      "hit_dice": { "count": 2, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": 9, "fixed_hp": null },
+      "ac": 2,
+      "ac_ascending": 17,
+      "xp": 20,
+      "alignment": { "options": ["lawful", "neutral", "chaotic"], "usual": null }
+    },
+    {
+      "id": "veteran_3",
+      "name": "Veteran (3)",
+      "hit_dice": { "count": 3, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": 13, "fixed_hp": null },
+      "ac": 2,
+      "ac_ascending": 17,
+      "xp": 35,
+      "alignment": { "options": ["lawful", "neutral", "chaotic"], "usual": null }
+    },
+    {
+      "id": "water_elemental_intermediate",
+      "name": "Water Elemental (Intermediate)",
+      "hit_dice": {
+        "count": 12,
+        "die": 8,
+        "modifier": 0,
+        "asterisks": 1,
+        "average_hp": 54,
+        "fixed_hp": null
+      },
+      "ac": 0,
+      "ac_ascending": 19,
+      "xp": 1900,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "wereboar",
+      "name": "Wereboar",
+      "hit_dice": { "count": 4, "die": 8, "modifier": 1, "asterisks": 1, "average_hp": 19, "fixed_hp": null },
+      "ac": 4,
+      "ac_ascending": 15,
+      "xp": 200,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "werewolf",
+      "name": "Werewolf",
+      "hit_dice": { "count": 4, "die": 8, "modifier": 0, "asterisks": 1, "average_hp": 18, "fixed_hp": null },
+      "ac": 5,
+      "ac_ascending": 14,
+      "xp": 125,
+      "alignment": { "options": ["chaotic"], "usual": null }
+    },
+    {
+      "id": "white_dragon",
+      "name": "White Dragon",
+      "hit_dice": { "count": 6, "die": 8, "modifier": 0, "asterisks": 2, "average_hp": 27, "fixed_hp": null },
+      "ac": 3,
+      "ac_ascending": 16,
+      "xp": 725,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "wight",
+      "name": "Wight",
+      "hit_dice": { "count": 3, "die": 8, "modifier": 0, "asterisks": 1, "average_hp": 13, "fixed_hp": null },
+      "ac": 5,
+      "ac_ascending": 14,
+      "xp": 50,
+      "alignment": { "options": ["chaotic"], "usual": null }
+    },
+    {
+      "id": "woolly_rhinoceros",
+      "name": "Woolly Rhinoceros",
+      "hit_dice": { "count": 8, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": 36, "fixed_hp": null },
+      "ac": 4,
+      "ac_ascending": 15,
+      "xp": 650,
+      "alignment": { "options": ["neutral"], "usual": null }
+    },
+    {
+      "id": "zombie",
+      "name": "Zombie",
+      "hit_dice": { "count": 2, "die": 8, "modifier": 0, "asterisks": 0, "average_hp": 9, "fixed_hp": null },
+      "ac": 8,
+      "ac_ascending": 11,
+      "xp": 20,
+      "alignment": { "options": ["chaotic"], "usual": null }
+    }
+  ],
+  "monsterDetails": {
+    "goblin": {
+      "id": "goblin",
+      "name": "Goblin",
+      "display_name": "goblin",
+      "display_name_plural": "goblins",
+      "family_id": "goblin",
+      "page": "Goblin.md",
+      "intro": "Small, grotesque humanoids with pallid, earth-coloured skin and glowing, red eyes. Dwell underground.",
+      "ac": 6,
+      "ac_ascending": 13,
+      "ac_alternates": [],
+      "attack_roll_required": true,
+      "hit_dice": { "count": 1, "die": 8, "modifier": -1, "asterisks": 0, "average_hp": 3, "fixed_hp": null },
+      "attacks": [
+        {
+          "attacks": [
+            {
+              "count": 1,
+              "name": "weapon",
+              "damage": "1d6",
+              "fixed_damage": null,
+              "fixed_damage_options": [],
+              "by_weapon": true,
+              "by_weapon_modifier": 0,
+              "effects": []
+            }
+          ],
+          "use": "primary"
+        }
+      ],
+      "thac0": 19,
+      "attack_bonus": 0,
+      "movement": [{ "rate_feet": 60, "encounter_rate_feet": 20, "descriptor": null }],
+      "saves": {
+        "values": { "death": 14, "wands": 15, "paralysis": 16, "breath": 17, "spells": 18 },
+        "save_as": "NH"
+      },
+      "morale": 7,
+      "morale_alternates": [{ "score": 9, "condition": "with king" }],
+      "alignment": { "options": ["chaotic"], "usual": null },
+      "xp": 5,
+      "xp_notes": [
+        { "role": "bodyguard", "xp": 20 },
+        { "role": "king", "xp": 35 }
+      ],
+      "number_appearing": {
+        "dungeon": { "dice": "2d4", "fixed": null, "see_below": false },
+        "lair": { "dice": "6d10", "fixed": null, "see_below": false }
+      },
+      "treasure": {
+        "letters": ["R"],
+        "parenthetical": ["C"],
+        "extra_gp": 0,
+        "multiplier": 1,
+        "special": [],
+        "see_below": false
+      },
+      "abilities": [
+        {
+          "tag": "infravision_srd_index_php_hazards_and_challenges_infravision_hazards_and_challenges",
+          "name": "[Infravision](/srd/index.php/Hazards_and_Challenges#Infravision \"Hazards and Challenges\")",
+          "prose": "90’.",
+          "manual": true,
+          "params": {}
+        },
+        {
+          "tag": "hate_the_sun",
+          "name": "Hate the sun",
+          "prose": "-1 to-hit in full daylight.",
+          "manual": true,
+          "params": {}
+        },
+        {
+          "tag": "wolf_riders",
+          "name": "Wolf riders",
+          "prose": "20% of goblin groups encountered have wolf riders: ¼ of the group mounted on dire wolves.",
+          "manual": true,
+          "params": {}
+        },
+        {
+          "tag": "hate_dwarves_srd_index_php_dwarf_monster_dwarf_monster",
+          "name": "Hate [dwarves](/srd/index.php/Dwarf_(Monster) \"Dwarf (Monster)\")",
+          "prose": "Attack on sight.",
+          "manual": true,
+          "params": {}
+        },
+        {
+          "tag": "goblin_king_and_bodyguards",
+          "name": "Goblin king and bodyguards",
+          "prose": "A 3HD (15hp) king and 2d6 2HD (2d6hp) bodyguards live in the goblin lair. They do not suffer attack penalties in daylight. The king gains a +1 bonus to damage.",
+          "manual": true,
+          "params": {}
+        },
+        {
+          "tag": "hoard",
+          "name": "Hoard",
+          "prose": "Only have treasure type C when encountered in the wilderness or in their lair.",
+          "manual": true,
+          "params": {}
+        }
+      ],
+      "defenses": { "harmed_only_by": [], "reductions": [], "energy": {}, "condition_immunities": [] },
+      "categories": ["person"],
+      "overrides_applied": []
+    },
+    "green_slime": {
+      "id": "green_slime",
+      "name": "Green Slime",
+      "display_name": "green slime",
+      "display_name_plural": "green slimes",
+      "family_id": "green_slime",
+      "page": "Green_Slime.md",
+      "intro": "Dripping, green slime that clings to walls and ceilings.",
+      "ac": null,
+      "ac_ascending": null,
+      "ac_alternates": [],
+      "attack_roll_required": false,
+      "hit_dice": { "count": 2, "die": 8, "modifier": 0, "asterisks": 1, "average_hp": 9, "fixed_hp": null },
+      "attacks": [
+        {
+          "attacks": [
+            {
+              "count": 1,
+              "name": "touch",
+              "damage": null,
+              "fixed_damage": null,
+              "fixed_damage_options": [],
+              "by_weapon": false,
+              "by_weapon_modifier": 0,
+              "effects": ["consume_flesh"]
+            }
+          ],
+          "use": "primary"
+        }
+      ],
+      "thac0": 18,
+      "attack_bonus": 1,
+      "movement": [{ "rate_feet": 3, "encounter_rate_feet": 1, "descriptor": null }],
+      "saves": {
+        "values": { "death": 12, "wands": 13, "paralysis": 14, "breath": 15, "spells": 16 },
+        "save_as": "1"
+      },
+      "morale": 12,
+      "morale_alternates": [],
+      "alignment": { "options": ["neutral"], "usual": null },
+      "xp": 25,
+      "xp_notes": [],
+      "number_appearing": {
+        "dungeon": { "dice": null, "fixed": 1, "see_below": false },
+        "lair": { "dice": null, "fixed": 0, "see_below": false }
+      },
+      "treasure": {
+        "letters": [],
+        "parenthetical": [],
+        "extra_gp": 0,
+        "multiplier": 1,
+        "special": [],
+        "see_below": false
+      },
+      "abilities": [
+        {
+          "tag": "surprise",
+          "name": "Surprise",
+          "prose": "Drops down on surprised characters from above.",
+          "manual": true,
+          "params": {}
+        },
+        {
+          "tag": "acid",
+          "name": "Acid",
+          "prose": "When in contact with a victim, sticks on and exudes acid. The acid destroys wood or metal (including armour) in 6 rounds, but cannot affect stone.",
+          "manual": true,
+          "params": {}
+        },
+        {
+          "tag": "consume_flesh",
+          "name": "Consume flesh",
+          "prose": "Once in contact with flesh for 6 rounds, the victim is turned into green slime in a further 1d4 rounds.",
+          "manual": true,
+          "params": {}
+        },
+        {
+          "tag": "removing",
+          "name": "Removing",
+          "prose": "Once stuck on a victim, can only be removed by fire. This inflicts half damage to the victim and half to the slime.",
+          "manual": true,
+          "params": {}
+        },
+        {
+          "tag": "immunity",
+          "name": "Immunity",
+          "prose": "Unharmed by all attacks except cold or fire.",
+          "manual": true,
+          "params": {}
+        }
+      ],
+      "defenses": {
+        "harmed_only_by": ["fire", "cold"],
+        "reductions": [],
+        "energy": {},
+        "condition_immunities": []
+      },
+      "categories": [],
+      "overrides_applied": []
+    },
+    "black_dragon": {
+      "id": "black_dragon",
+      "name": "Black Dragon",
+      "display_name": "black dragon",
+      "display_name_plural": "black dragons",
+      "family_id": "black_dragon",
+      "page": "Dragon.md",
+      "intro": "Dwell in swamps and marshes.",
+      "ac": 2,
+      "ac_ascending": 17,
+      "ac_alternates": [],
+      "attack_roll_required": true,
+      "hit_dice": { "count": 7, "die": 8, "modifier": 0, "asterisks": 2, "average_hp": 31, "fixed_hp": null },
+      "attacks": [
+        {
+          "attacks": [
+            {
+              "count": 2,
+              "name": "claw",
+              "damage": "1d4+1",
+              "fixed_damage": null,
+              "fixed_damage_options": [],
+              "by_weapon": false,
+              "by_weapon_modifier": 0,
+              "effects": []
+            },
+            {
+              "count": 1,
+              "name": "bite",
+              "damage": "2d10",
+              "fixed_damage": null,
+              "fixed_damage_options": [],
+              "by_weapon": false,
+              "by_weapon_modifier": 0,
+              "effects": []
+            }
+          ],
+          "use": "primary"
+        },
+        {
+          "attacks": [
+            {
+              "count": 1,
+              "name": "breath",
+              "damage": null,
+              "fixed_damage": null,
+              "fixed_damage_options": [],
+              "by_weapon": false,
+              "by_weapon_modifier": 0,
+              "effects": []
+            }
+          ],
+          "use": "special"
+        }
+      ],
+      "thac0": 13,
+      "attack_bonus": 6,
+      "movement": [
+        { "rate_feet": 90, "encounter_rate_feet": 30, "descriptor": null },
+        { "rate_feet": 240, "encounter_rate_feet": 80, "descriptor": "flying" }
+      ],
+      "saves": {
+        "values": { "death": 8, "wands": 9, "paralysis": 10, "breath": 10, "spells": 12 },
+        "save_as": "7"
+      },
+      "morale": 8,
+      "morale_alternates": [],
+      "alignment": { "options": ["chaotic"], "usual": null },
+      "xp": 1250,
+      "xp_notes": [],
+      "number_appearing": {
+        "dungeon": { "dice": "1d4", "fixed": null, "see_below": false },
+        "lair": { "dice": "1d4", "fixed": null, "see_below": false }
+      },
+      "treasure": {
+        "letters": ["H"],
+        "parenthetical": [],
+        "extra_gp": 0,
+        "multiplier": 1,
+        "special": [],
+        "see_below": false
+      },
+      "abilities": [
+        {
+          "tag": "breath_weapon",
+          "name": "Breath weapon",
+          "prose": "60’ long line of acid.",
+          "manual": false,
+          "params": {
+            "damage": "current_hp",
+            "element": "acid",
+            "length_feet": 60,
+            "save": "breath",
+            "save_effect": "half",
+            "shape": "line",
+            "targeting": "area",
+            "uses_per_day": 3,
+            "width_feet": 5
+          }
+        },
+        {
+          "tag": "language_srd_index_php_languages_languages_and_spells",
+          "name": "[Language](/srd/index.php/Languages \"Languages\") and spells",
+          "prose": "20%; 4 × 1st level.",
+          "manual": true,
+          "params": {}
+        },
+        { "tag": "sleeping", "name": "Sleeping", "prose": "40%.", "manual": true, "params": {} },
+        {
+          "tag": "behaviour",
+          "name": "Behaviour",
+          "prose": "Chaotic dragons usually try to eat humans, but may sometimes capture them. Neutral dragons may attack or ignore humans. Lawful dragons may aid parties worthy of the honour.",
+          "manual": true,
+          "params": {}
+        },
+        {
+          "tag": "pride",
+          "name": "Pride",
+          "prose": "Dragons are immensely proud creatures and will always listen to flattery.",
+          "manual": true,
+          "params": {}
+        },
+        {
+          "tag": "attack_pattern",
+          "name": "Attack pattern",
+          "prose": "A dragon always attacks first with its breath weapon, then either breathes again or makes melee attacks (equal chance of either).",
+          "manual": true,
+          "params": {}
+        },
+        {
+          "tag": "energy_immunity",
+          "name": "Energy immunity",
+          "prose": "Unharmed by their own breath weapon or lesser versions thereof. Automatically save versus similar attack forms. (For example, a red dragon is immune to flaming oil and suffers half damage from fire ball spells.)",
+          "manual": true,
+          "params": {}
+        },
+        {
+          "tag": "subduing",
+          "name": "Subduing",
+          "prose": "Will surrender if reduced to 0hp by non-lethal attacks (see Subduing), admitting that it has been defeated. (Subdual damage does not reduce the damage done by the breath weapon.) A subdued dragon will attempt to escape or attack its captors, if the opportunity presents itself or if given a suicidal command. A subdued dragon may be sold for up to 1,000gp per hp.",
+          "manual": true,
+          "params": {}
+        },
+        {
+          "tag": "age",
+          "name": "Age",
+          "prose": "The following stats describe dragons of average size. Younger dragons may have up to 3 HD less and ¼ or ½ as much treasure. Older dragons may have up to 3 HD more and twice as much treasure.",
+          "manual": true,
+          "params": {}
+        },
+        {
+          "tag": "lairs",
+          "name": "Lairs",
+          "prose": "A dragon’s treasure is always kept in its well-hidden lair and is seldom unguarded.",
+          "manual": true,
+          "params": {}
+        }
+      ],
+      "defenses": {
+        "harmed_only_by": [],
+        "reductions": [],
+        "energy": { "acid": { "immunity": "nonmagical", "auto_save_magical": true } },
+        "condition_immunities": []
+      },
+      "categories": [],
+      "overrides_applied": []
+    }
+  },
+  "equipment": [
+    { "id": "battle_axe", "name": "Battle axe", "item_type": "weapon", "cost_gp": 7 },
+    { "id": "club", "name": "Club", "item_type": "weapon", "cost_gp": 3 },
+    { "id": "crossbow", "name": "Crossbow", "item_type": "weapon", "cost_gp": 30 },
+    { "id": "dagger", "name": "Dagger", "item_type": "weapon", "cost_gp": 3 },
+    { "id": "hand_axe", "name": "Hand axe", "item_type": "weapon", "cost_gp": 4 },
+    { "id": "javelin", "name": "Javelin", "item_type": "weapon", "cost_gp": 1 },
+    { "id": "lance", "name": "Lance", "item_type": "weapon", "cost_gp": 5 },
+    { "id": "long_bow", "name": "Long bow", "item_type": "weapon", "cost_gp": 40 },
+    { "id": "mace", "name": "Mace", "item_type": "weapon", "cost_gp": 5 },
+    { "id": "pole_arm", "name": "Pole arm", "item_type": "weapon", "cost_gp": 7 },
+    { "id": "short_bow", "name": "Short bow", "item_type": "weapon", "cost_gp": 25 },
+    { "id": "short_sword", "name": "Short sword", "item_type": "weapon", "cost_gp": 7 },
+    { "id": "silver_dagger", "name": "Silver dagger", "item_type": "weapon", "cost_gp": 30 },
+    { "id": "sling", "name": "Sling", "item_type": "weapon", "cost_gp": 2 },
+    { "id": "spear", "name": "Spear", "item_type": "weapon", "cost_gp": 3 },
+    { "id": "staff", "name": "Staff", "item_type": "weapon", "cost_gp": 2 },
+    { "id": "sword", "name": "Sword", "item_type": "weapon", "cost_gp": 10 },
+    { "id": "two_handed_sword", "name": "Two-handed sword", "item_type": "weapon", "cost_gp": 15 },
+    { "id": "war_hammer", "name": "War hammer", "item_type": "weapon", "cost_gp": 5 },
+    { "id": "chainmail", "name": "Chainmail", "item_type": "armour", "cost_gp": 40 },
+    { "id": "leather", "name": "Leather", "item_type": "armour", "cost_gp": 20 },
+    { "id": "plate_mail", "name": "Plate mail", "item_type": "armour", "cost_gp": 60 },
+    { "id": "shield", "name": "Shield", "item_type": "armour", "cost_gp": 10 },
+    { "id": "backpack", "name": "Backpack", "item_type": "gear", "cost_gp": 5 },
+    { "id": "crowbar", "name": "Crowbar", "item_type": "gear", "cost_gp": 10 },
+    { "id": "garlic", "name": "Garlic", "item_type": "gear", "cost_gp": 5 },
+    { "id": "grappling_hook", "name": "Grappling hook", "item_type": "gear", "cost_gp": 25 },
+    { "id": "hammer", "name": "Hammer (small)", "item_type": "gear", "cost_gp": 2 },
+    { "id": "holy_symbol", "name": "Holy symbol", "item_type": "gear", "cost_gp": 25 },
+    { "id": "holy_water", "name": "Holy water (vial)", "item_type": "gear", "cost_gp": 25 },
+    { "id": "iron_spikes", "name": "Iron spikes (12)", "item_type": "gear", "cost_gp": 1 },
+    { "id": "lantern", "name": "Lantern", "item_type": "gear", "cost_gp": 10 },
+    { "id": "mirror", "name": "Mirror (hand-sized, steel)", "item_type": "gear", "cost_gp": 5 },
+    { "id": "oil_flask", "name": "Oil (1 flask)", "item_type": "gear", "cost_gp": 2 },
+    { "id": "pole", "name": "Pole (10’ long, wooden)", "item_type": "gear", "cost_gp": 1 },
+    { "id": "rations_iron", "name": "Rations (iron, 7 days)", "item_type": "gear", "cost_gp": 15 },
+    { "id": "rations_standard", "name": "Rations (standard, 7 days)", "item_type": "gear", "cost_gp": 5 },
+    { "id": "rope", "name": "Rope (50’)", "item_type": "gear", "cost_gp": 1 },
+    { "id": "sack_large", "name": "Sack (large)", "item_type": "gear", "cost_gp": 2 },
+    { "id": "sack_small", "name": "Sack (small)", "item_type": "gear", "cost_gp": 1 },
+    { "id": "stakes_and_mallet", "name": "Stakes (3) and mallet", "item_type": "gear", "cost_gp": 3 },
+    { "id": "thieves_tools", "name": "Thieves’ tools", "item_type": "gear", "cost_gp": 25 },
+    { "id": "tinder_box", "name": "Tinder box (flint & steel)", "item_type": "gear", "cost_gp": 3 },
+    { "id": "torch", "name": "Torches (6)", "item_type": "gear", "cost_gp": 1 },
+    { "id": "waterskin", "name": "Waterskin", "item_type": "gear", "cost_gp": 1 },
+    { "id": "wine", "name": "Wine (2 pints)", "item_type": "gear", "cost_gp": 1 },
+    { "id": "wolfsbane", "name": "Wolfsbane (1 bunch)", "item_type": "gear", "cost_gp": 10 },
+    { "id": "arrows", "name": "Arrows (quiver of 20)", "item_type": "ammunition", "cost_gp": 5 },
+    {
+      "id": "crossbow_bolts",
+      "name": "Crossbow bolts (case of 30)",
+      "item_type": "ammunition",
+      "cost_gp": 10
+    },
+    {
+      "id": "silver_tipped_arrow",
+      "name": "Silver tipped arrow (1)",
+      "item_type": "ammunition",
+      "cost_gp": 5
+    },
+    { "id": "sling_stones", "name": "Sling stones", "item_type": "ammunition", "cost_gp": 0 }
+  ],
+  "equipmentDetails": {
+    "sword": {
+      "item_type": "weapon",
+      "id": "sword",
+      "name": "Sword",
+      "cost_gp": 10,
+      "weight_coins": 60,
+      "damage": "1d8",
+      "qualities": ["melee"],
+      "missile_ranges": null,
+      "material": "standard",
+      "overrides_applied": []
+    },
+    "torch": {
+      "item_type": "gear",
+      "id": "torch",
+      "name": "Torches (6)",
+      "cost_gp": 1,
+      "lot_size": 6,
+      "capacity_coins": null,
+      "combat": { "damage": "1d4", "qualities": ["melee"], "missile_ranges": null },
+      "params": { "brightness": "flame", "burn_turns": 6, "light_radius_feet": 30 },
+      "overrides_applied": []
+    },
+    "long_bow": {
+      "item_type": "weapon",
+      "id": "long_bow",
+      "name": "Long bow",
+      "cost_gp": 40,
+      "weight_coins": 30,
+      "damage": "1d6",
+      "qualities": ["missile", "two_handed"],
+      "missile_ranges": {
+        "short": { "min_feet": 5, "max_feet": 70 },
+        "medium": { "min_feet": 71, "max_feet": 140 },
+        "long": { "min_feet": 141, "max_feet": 210 }
+      },
+      "material": "standard",
+      "overrides_applied": []
+    },
+    "plate_mail": {
+      "item_type": "armour",
+      "id": "plate_mail",
+      "name": "Plate mail",
+      "cost_gp": 60,
+      "weight_coins": 500,
+      "ac": 3,
+      "ac_ascending": 16,
+      "ac_bonus": null,
+      "category": "heavy",
+      "overrides_applied": []
+    },
+    "shield": {
+      "item_type": "armour",
+      "id": "shield",
+      "name": "Shield",
+      "cost_gp": 10,
+      "weight_coins": 100,
+      "ac": null,
+      "ac_ascending": null,
+      "ac_bonus": 1,
+      "category": null,
+      "overrides_applied": []
+    }
+  },
+  "magicItems": [
+    {
+      "id": "amulet_of_protection_against_scrying",
+      "name": "Amulet of Protection Against Scrying",
+      "category": "misc"
+    },
+    { "id": "armour_plus_3", "name": "Armour +3", "category": "armour" },
+    { "id": "axe_plus_1", "name": "Axe +1", "category": "weapon" },
+    { "id": "bag_of_holding", "name": "Bag of Holding", "category": "misc" },
+    {
+      "id": "boots_of_travelling_and_leaping",
+      "name": "Boots of Travelling and Leaping",
+      "category": "misc"
+    },
+    { "id": "crossbow_bolts_plus_1", "name": "Crossbow Bolts +1 (2d6 bolts)", "category": "weapon" },
+    {
+      "id": "crystal_ball_with_clairaudience",
+      "name": "Crystal Ball with Clairaudience",
+      "category": "misc"
+    },
+    { "id": "cursed_armour_minus_1", "name": "Cursed Armour -1", "category": "armour" },
+    { "id": "cursed_scroll", "name": "Cursed Scroll", "category": "scroll" },
+    { "id": "cursed_shield_ac_9", "name": "Cursed Shield, AC 9 [10]", "category": "armour" },
+    {
+      "id": "dagger_plus_2_plus_3_vs_orcs_goblins_and_kobolds",
+      "name": "Dagger +2, +3 vs orcs, goblins, and kobolds",
+      "category": "weapon"
+    },
+    { "id": "efreeti_bottle", "name": "Efreeti Bottle", "category": "misc" },
+    {
+      "id": "elemental_summoning_device_fire",
+      "name": "Elemental Summoning Device: Fire",
+      "category": "misc"
+    },
+    { "id": "flying_carpet", "name": "Flying Carpet", "category": "misc" },
+    { "id": "helm_of_alignment_changing", "name": "Helm of Alignment Changing", "category": "misc" },
+    { "id": "helm_of_teleportation", "name": "Helm of Teleportation", "category": "misc" },
+    { "id": "mace_plus_2", "name": "Mace +2", "category": "weapon" },
+    { "id": "medallion_of_esp_90", "name": "Medallion of ESP 90’", "category": "misc" },
+    { "id": "potion_of_clairvoyance", "name": "Potion of Clairvoyance", "category": "potion" },
+    { "id": "potion_of_control_giant", "name": "Potion of Control Giant", "category": "potion" },
+    { "id": "potion_of_control_undead", "name": "Potion of Control Undead", "category": "potion" },
+    { "id": "potion_of_esp", "name": "Potion of ESP", "category": "potion" },
+    { "id": "potion_of_gaseous_form", "name": "Potion of Gaseous Form", "category": "potion" },
+    { "id": "potion_of_healing", "name": "Potion of Healing", "category": "potion" },
+    { "id": "potion_of_invulnerability", "name": "Potion of Invulnerability", "category": "potion" },
+    { "id": "potion_of_poison", "name": "Potion of Poison", "category": "potion" },
+    { "id": "potion_of_treasure_finding", "name": "Potion of Treasure Finding", "category": "potion" },
+    { "id": "ring_of_controlling_plants", "name": "Ring of Controlling Plants", "category": "ring" },
+    { "id": "ring_of_fire_resistance", "name": "Ring of Fire Resistance", "category": "ring" },
+    { "id": "ring_of_protection_5_radius", "name": "Ring of Protection, 5’ Radius", "category": "ring" },
+    { "id": "ring_of_spell_turning", "name": "Ring of Spell Turning", "category": "ring" },
+    { "id": "ring_of_weakness", "name": "Ring of Weakness", "category": "ring" },
+    { "id": "rod_of_cancellation", "name": "Rod of Cancellation", "category": "rod" },
+    {
+      "id": "scroll_of_protection_from_elementals",
+      "name": "Scroll of Protection from Elementals",
+      "category": "scroll"
+    },
+    {
+      "id": "scroll_of_protection_from_undead",
+      "name": "Scroll of Protection from Undead",
+      "category": "scroll"
+    },
+    { "id": "shield_plus_3", "name": "Shield +3", "category": "armour" },
+    { "id": "spear_plus_2", "name": "Spear +2", "category": "weapon" },
+    { "id": "spell_scroll_2", "name": "Spell Scroll (2 spells)", "category": "scroll" },
+    { "id": "spell_scroll_7", "name": "Spell Scroll (7 spells)", "category": "scroll" },
+    { "id": "staff_of_power", "name": "Staff of Power", "category": "staff" },
+    { "id": "staff_of_snakes", "name": "Staff of Snakes", "category": "staff" },
+    { "id": "staff_of_withering", "name": "Staff of Withering", "category": "staff" },
+    { "id": "sword_minus_2_cursed", "name": "Sword -2, Cursed", "category": "sword" },
+    { "id": "sword_plus_1_flaming", "name": "Sword +1, Flaming", "category": "sword" },
+    {
+      "id": "sword_plus_1_plus_2_vs_lycanthropes",
+      "name": "Sword +1, +2 vs Lycanthropes",
+      "category": "sword"
+    },
+    {
+      "id": "sword_plus_1_plus_3_vs_enchanted_creatures",
+      "name": "Sword +1, +3 vs Enchanted Creatures",
+      "category": "sword"
+    },
+    { "id": "sword_plus_1_wishes", "name": "Sword +1, Wishes", "category": "sword" },
+    { "id": "sword_plus_3", "name": "Sword +3", "category": "sword" },
+    { "id": "treasure_map_iii", "name": "Treasure Map: III", "category": "scroll" },
+    { "id": "treasure_map_v", "name": "Treasure Map: V", "category": "scroll" },
+    { "id": "treasure_map_viii", "name": "Treasure Map: VIII", "category": "scroll" },
+    { "id": "treasure_map_xii", "name": "Treasure Map: XII", "category": "scroll" },
+    { "id": "wand_of_fear", "name": "Wand of Fear", "category": "wand" },
+    { "id": "wand_of_lightning_bolts", "name": "Wand of Lightning Bolts", "category": "wand" },
+    { "id": "wand_of_negation", "name": "Wand of Negation", "category": "wand" },
+    { "id": "wand_of_secret_door_detection", "name": "Wand of Secret Door Detection", "category": "wand" },
+    { "id": "war_hammer_plus_2", "name": "War Hammer +2", "category": "weapon" }
+  ],
+  "magicItemDetails": {
+    "potion_of_healing": {
+      "id": "potion_of_healing",
+      "name": "Potion of Healing",
+      "category": "potion",
+      "base_item_id": null,
+      "attack_bonus": 0,
+      "damage_bonus": 0,
+      "ac_bonus": 0,
+      "ac_set": null,
+      "ac_set_ascending": null,
+      "versus": [],
+      "cursed": false,
+      "charges_dice": null,
+      "quantity_dice": null,
+      "usable_by": { "kind": "all", "class_ids": [], "caster": null },
+      "always_active": false,
+      "effect": {
+        "kind": "healing",
+        "modifiers": [],
+        "condition": null,
+        "damage_dice": null,
+        "heal_dice": "1d6+1",
+        "element": null,
+        "save_category": null,
+        "save_on": null,
+        "shape": null,
+        "dimensions": {},
+        "range_feet": null,
+        "duration_unit": null,
+        "duration_amount": null,
+        "duration_dice": null,
+        "params": { "cures_paralysis": true, "instantaneous": true }
+      },
+      "params": {},
+      "manual": [
+        "Has one of two effects on the character who drinks it:",
+        "Healing a living subject: Restores 1d6+1 hit points of damage. This cannot grant more hit points than the subject’s normal maximum.",
+        "Curing paralysis: Paralysing effects are negated.",
+        "Drinking a potion while already under the effects of another potion is dangerous:",
+        "Sickness: The character is completely disabled for 3 turns, due to sickness.",
+        "Cancellation: The effects of both potions are cancelled.",
+        "This rule does not apply to potions with instantaneous or permanent duration."
+      ],
+      "weight_coins": 10,
+      "hoard_recipe": [],
+      "curses": [],
+      "overrides_applied": []
+    },
+    "staff_of_snakes": {
+      "id": "staff_of_snakes",
+      "name": "Staff of Snakes",
+      "category": "staff",
+      "base_item_id": "staff",
+      "attack_bonus": 1,
+      "damage_bonus": 1,
+      "ac_bonus": 0,
+      "ac_set": null,
+      "ac_set_ascending": null,
+      "versus": [],
+      "cursed": false,
+      "charges_dice": null,
+      "quantity_dice": null,
+      "usable_by": { "kind": "caster", "class_ids": [], "caster": "divine" },
+      "always_active": false,
+      "effect": null,
+      "params": {},
+      "manual": [
+        "A magical staff that has the power to transform into a snake, on command.",
+        "Divine magic: Usable by divine spell casters only.",
+        "In melee: Treated as a staff with a +1 magic bonus to attacks and damage.",
+        "On a successful hit: Upon a human-sized (or smaller) creature, the wielder of the staff may speak the command word, causing it to transform into a serpent and coil around the victim.",
+        "Victims: Must save versus spells or be immobilised in the coils of the snake. Victims are completely helpless while held by the snake (1d4 turns, or released as the wielder of the staff commands).",
+        "Snake: Has AC 5 [14], HD 3 (20hp), and a movement rate of 60’ (20’).",
+        "When the victim is released: The snake returns to the owner and transforms back into a staff. (At this point, it is healed of any damage it has suffered.)",
+        "If the snake is killed: It does not return to its staff form, becoming non-magical.",
+        "No charges: Does not use charges; may be used any number of times.",
+        "Usage: Spell casters. Some staves may only be used by either arcane or divine spell casters (this is noted in the item’s description).",
+        "Dimensions: 2” thick, 6’ long.",
+        "Charges: Unless noted, magic staves contain 3d10 charges when found.",
+        "Although magic-users are generally only allowed to use daggers in combat, they are able to use the staff of power, staff of striking, and staff of wizardry in melee."
+      ],
+      "weight_coins": 40,
+      "hoard_recipe": [],
+      "curses": [],
+      "overrides_applied": []
+    },
+    "cursed_scroll": {
+      "id": "cursed_scroll",
+      "name": "Cursed Scroll",
+      "category": "scroll",
+      "base_item_id": null,
+      "attack_bonus": 0,
+      "damage_bonus": 0,
+      "ac_bonus": 0,
+      "ac_set": null,
+      "ac_set_ascending": null,
+      "versus": [],
+      "cursed": true,
+      "charges_dice": null,
+      "quantity_dice": null,
+      "usable_by": { "kind": "all", "class_ids": [], "caster": null },
+      "always_active": false,
+      "effect": null,
+      "params": {},
+      "manual": [
+        "One use only: When a scroll is read, the words disappear.",
+        "Light: A scroll can only be used if there is enough light to read by."
+      ],
+      "weight_coins": 1,
+      "hoard_recipe": [],
+      "curses": [
+        {
+          "id": "transformation",
+          "name": "Transformation",
+          "prose": "The reader changes into a harmless creature (e.g. a frog).",
+          "wired": false
+        },
+        {
+          "id": "summoning",
+          "name": "Summoning",
+          "prose": "A wandering monster appears next to the reader and attacks (gaining surprise). The monster is of equal level to the reader.",
+          "wired": false
+        },
+        {
+          "id": "lost_item",
+          "name": "Lost item",
+          "prose": "A magic item in the reader’s possession vanishes. The referee may select the item or choose it at random.",
+          "wired": false
+        },
+        {
+          "id": "energy_drain",
+          "name": "Energy drain",
+          "prose": "The reader permanently loses one experience level (or Hit Die). This incurs a loss of one Hit Die of hit points, as well as all other benefits due to the lost level (e.g. spells, saving throws, etc.). A character’s XP is reduced to halfway between the former and new levels. A person who loses all levels dies.",
+          "wired": true
+        },
+        {
+          "id": "ability_score_re_roll",
+          "name": "Ability score re-roll",
+          "prose": "The player must re-roll the character’s prime requisite.",
+          "wired": false
+        },
+        {
+          "id": "slow_healing",
+          "name": "Slow healing",
+          "prose": "The reader’s healing capacity is reduced. Natural healing takes double the normal amount of time, and healing spells only cure half the normal number of hit points.",
+          "wired": true
+        }
+      ],
+      "overrides_applied": []
+    }
+  },
+  "languages": [
+    { "id": "bugbear", "name": "Bugbear", "choosable": true },
+    { "id": "common", "name": "Common", "choosable": false },
+    { "id": "doppelganger", "name": "Doppelgänger", "choosable": true },
+    { "id": "dragon", "name": "Dragon", "choosable": true },
+    { "id": "dwarvish", "name": "Dwarvish", "choosable": true },
+    { "id": "elvish", "name": "Elvish", "choosable": true },
+    { "id": "gargoyle", "name": "Gargoyle", "choosable": true },
+    { "id": "gnoll", "name": "Gnoll", "choosable": true },
+    { "id": "gnomish", "name": "Gnomish", "choosable": true },
+    { "id": "goblin", "name": "Goblin", "choosable": true },
+    { "id": "halfling", "name": "Halfling", "choosable": true },
+    { "id": "harpy", "name": "Harpy", "choosable": true },
+    { "id": "hobgoblin", "name": "Hobgoblin", "choosable": true },
+    { "id": "human_dialect", "name": "Human dialect", "choosable": true },
+    { "id": "kobold", "name": "Kobold", "choosable": true },
+    { "id": "lizard_man", "name": "Lizard man", "choosable": true },
+    { "id": "medusa", "name": "Medusa", "choosable": true },
+    { "id": "minotaur", "name": "Minotaur", "choosable": true },
+    { "id": "ogre", "name": "Ogre", "choosable": true },
+    { "id": "orcish", "name": "Orcish", "choosable": true },
+    { "id": "pixie", "name": "Pixie", "choosable": true }
+  ],
+  "tableNames": ["abilities", "combat", "encounters", "treasure"],
+  "tables": {
+    "abilities": {
+      "strength": [
+        { "min_score": 3, "max_score": 3, "melee": -3, "open_doors": 1 },
+        { "min_score": 4, "max_score": 5, "melee": -2, "open_doors": 1 },
+        { "min_score": 6, "max_score": 8, "melee": -1, "open_doors": 1 },
+        { "min_score": 9, "max_score": 12, "melee": 0, "open_doors": 2 },
+        { "min_score": 13, "max_score": 15, "melee": 1, "open_doors": 3 },
+        { "min_score": 16, "max_score": 17, "melee": 2, "open_doors": 4 },
+        { "min_score": 18, "max_score": 18, "melee": 3, "open_doors": 5 }
+      ],
+      "intelligence": [
+        {
+          "min_score": 3,
+          "max_score": 3,
+          "additional_languages": 0,
+          "literacy": "illiterate",
+          "broken_speech": true
+        },
+        {
+          "min_score": 4,
+          "max_score": 5,
+          "additional_languages": 0,
+          "literacy": "illiterate",
+          "broken_speech": false
+        },
+        {
+          "min_score": 6,
+          "max_score": 8,
+          "additional_languages": 0,
+          "literacy": "basic",
+          "broken_speech": false
+        },
+        {
+          "min_score": 9,
+          "max_score": 12,
+          "additional_languages": 0,
+          "literacy": "literate",
+          "broken_speech": false
+        },
+        {
+          "min_score": 13,
+          "max_score": 15,
+          "additional_languages": 1,
+          "literacy": "literate",
+          "broken_speech": false
+        },
+        {
+          "min_score": 16,
+          "max_score": 17,
+          "additional_languages": 2,
+          "literacy": "literate",
+          "broken_speech": false
+        },
+        {
+          "min_score": 18,
+          "max_score": 18,
+          "additional_languages": 3,
+          "literacy": "literate",
+          "broken_speech": false
+        }
+      ],
+      "wisdom": [
+        { "min_score": 3, "max_score": 3, "magic_saves": -3 },
+        { "min_score": 4, "max_score": 5, "magic_saves": -2 },
+        { "min_score": 6, "max_score": 8, "magic_saves": -1 },
+        { "min_score": 9, "max_score": 12, "magic_saves": 0 },
+        { "min_score": 13, "max_score": 15, "magic_saves": 1 },
+        { "min_score": 16, "max_score": 17, "magic_saves": 2 },
+        { "min_score": 18, "max_score": 18, "magic_saves": 3 }
+      ],
+      "dexterity": [
+        { "min_score": 3, "max_score": 3, "ac": -3, "missile": -3, "initiative": -2 },
+        { "min_score": 4, "max_score": 5, "ac": -2, "missile": -2, "initiative": -1 },
+        { "min_score": 6, "max_score": 8, "ac": -1, "missile": -1, "initiative": -1 },
+        { "min_score": 9, "max_score": 12, "ac": 0, "missile": 0, "initiative": 0 },
+        { "min_score": 13, "max_score": 15, "ac": 1, "missile": 1, "initiative": 1 },
+        { "min_score": 16, "max_score": 17, "ac": 2, "missile": 2, "initiative": 1 },
+        { "min_score": 18, "max_score": 18, "ac": 3, "missile": 3, "initiative": 2 }
+      ],
+      "constitution": [
+        { "min_score": 3, "max_score": 3, "hit_points": -3 },
+        { "min_score": 4, "max_score": 5, "hit_points": -2 },
+        { "min_score": 6, "max_score": 8, "hit_points": -1 },
+        { "min_score": 9, "max_score": 12, "hit_points": 0 },
+        { "min_score": 13, "max_score": 15, "hit_points": 1 },
+        { "min_score": 16, "max_score": 17, "hit_points": 2 },
+        { "min_score": 18, "max_score": 18, "hit_points": 3 }
+      ],
+      "charisma": [
+        { "min_score": 3, "max_score": 3, "npc_reactions": -2, "max_retainers": 1, "retainer_loyalty": 4 },
+        { "min_score": 4, "max_score": 5, "npc_reactions": -1, "max_retainers": 2, "retainer_loyalty": 5 },
+        { "min_score": 6, "max_score": 8, "npc_reactions": -1, "max_retainers": 3, "retainer_loyalty": 6 },
+        { "min_score": 9, "max_score": 12, "npc_reactions": 0, "max_retainers": 4, "retainer_loyalty": 7 },
+        { "min_score": 13, "max_score": 15, "npc_reactions": 1, "max_retainers": 5, "retainer_loyalty": 8 },
+        { "min_score": 16, "max_score": 17, "npc_reactions": 1, "max_retainers": 6, "retainer_loyalty": 9 },
+        { "min_score": 18, "max_score": 18, "npc_reactions": 2, "max_retainers": 7, "retainer_loyalty": 10 }
+      ],
+      "prime_requisite": [
+        { "min_score": 3, "max_score": 5, "xp_modifier_pct": -20 },
+        { "min_score": 6, "max_score": 8, "xp_modifier_pct": -10 },
+        { "min_score": 9, "max_score": 12, "xp_modifier_pct": 0 },
+        { "min_score": 13, "max_score": 15, "xp_modifier_pct": 5 },
+        { "min_score": 16, "max_score": 18, "xp_modifier_pct": 10 }
+      ]
+    },
+    "combat": {
+      "attack_matrix": {
+        "rows": [
+          {
+            "hd_label": "NH",
+            "thac0": 20,
+            "attack_bonus": -1,
+            "by_ac": {
+              "-1": 20,
+              "-2": 20,
+              "-3": 20,
+              "0": 20,
+              "1": 19,
+              "2": 18,
+              "3": 17,
+              "4": 16,
+              "5": 15,
+              "6": 14,
+              "7": 13,
+              "8": 12,
+              "9": 11
+            }
+          },
+          {
+            "hd_label": "Up to 1",
+            "thac0": 19,
+            "attack_bonus": 0,
+            "by_ac": {
+              "-1": 20,
+              "-2": 20,
+              "-3": 20,
+              "0": 19,
+              "1": 18,
+              "2": 17,
+              "3": 16,
+              "4": 15,
+              "5": 14,
+              "6": 13,
+              "7": 12,
+              "8": 11,
+              "9": 10
+            }
+          },
+          {
+            "hd_label": "1+ to 2",
+            "thac0": 18,
+            "attack_bonus": 1,
+            "by_ac": {
+              "-1": 19,
+              "-2": 20,
+              "-3": 20,
+              "0": 18,
+              "1": 17,
+              "2": 16,
+              "3": 15,
+              "4": 14,
+              "5": 13,
+              "6": 12,
+              "7": 11,
+              "8": 10,
+              "9": 9
+            }
+          },
+          {
+            "hd_label": "2+ to 3",
+            "thac0": 17,
+            "attack_bonus": 2,
+            "by_ac": {
+              "-1": 18,
+              "-2": 19,
+              "-3": 20,
+              "0": 17,
+              "1": 16,
+              "2": 15,
+              "3": 14,
+              "4": 13,
+              "5": 12,
+              "6": 11,
+              "7": 10,
+              "8": 9,
+              "9": 8
+            }
+          },
+          {
+            "hd_label": "3+ to 4",
+            "thac0": 16,
+            "attack_bonus": 3,
+            "by_ac": {
+              "-1": 17,
+              "-2": 18,
+              "-3": 19,
+              "0": 16,
+              "1": 15,
+              "2": 14,
+              "3": 13,
+              "4": 12,
+              "5": 11,
+              "6": 10,
+              "7": 9,
+              "8": 8,
+              "9": 7
+            }
+          },
+          {
+            "hd_label": "4+ to 5",
+            "thac0": 15,
+            "attack_bonus": 4,
+            "by_ac": {
+              "-1": 16,
+              "-2": 17,
+              "-3": 18,
+              "0": 15,
+              "1": 14,
+              "2": 13,
+              "3": 12,
+              "4": 11,
+              "5": 10,
+              "6": 9,
+              "7": 8,
+              "8": 7,
+              "9": 6
+            }
+          },
+          {
+            "hd_label": "5+ to 6",
+            "thac0": 14,
+            "attack_bonus": 5,
+            "by_ac": {
+              "-1": 15,
+              "-2": 16,
+              "-3": 17,
+              "0": 14,
+              "1": 13,
+              "2": 12,
+              "3": 11,
+              "4": 10,
+              "5": 9,
+              "6": 8,
+              "7": 7,
+              "8": 6,
+              "9": 5
+            }
+          },
+          {
+            "hd_label": "6+ to 7",
+            "thac0": 13,
+            "attack_bonus": 6,
+            "by_ac": {
+              "-1": 14,
+              "-2": 15,
+              "-3": 16,
+              "0": 13,
+              "1": 12,
+              "2": 11,
+              "3": 10,
+              "4": 9,
+              "5": 8,
+              "6": 7,
+              "7": 6,
+              "8": 5,
+              "9": 4
+            }
+          },
+          {
+            "hd_label": "7+ to 9",
+            "thac0": 12,
+            "attack_bonus": 7,
+            "by_ac": {
+              "-1": 13,
+              "-2": 14,
+              "-3": 15,
+              "0": 12,
+              "1": 11,
+              "2": 10,
+              "3": 9,
+              "4": 8,
+              "5": 7,
+              "6": 6,
+              "7": 5,
+              "8": 4,
+              "9": 3
+            }
+          },
+          {
+            "hd_label": "9+ to 11",
+            "thac0": 11,
+            "attack_bonus": 8,
+            "by_ac": {
+              "-1": 12,
+              "-2": 13,
+              "-3": 14,
+              "0": 11,
+              "1": 10,
+              "2": 9,
+              "3": 8,
+              "4": 7,
+              "5": 6,
+              "6": 5,
+              "7": 4,
+              "8": 3,
+              "9": 2
+            }
+          },
+          {
+            "hd_label": "11+ to 13",
+            "thac0": 10,
+            "attack_bonus": 9,
+            "by_ac": {
+              "-1": 11,
+              "-2": 12,
+              "-3": 13,
+              "0": 10,
+              "1": 9,
+              "2": 8,
+              "3": 7,
+              "4": 6,
+              "5": 5,
+              "6": 4,
+              "7": 3,
+              "8": 2,
+              "9": 2
+            }
+          },
+          {
+            "hd_label": "13+ to 15",
+            "thac0": 9,
+            "attack_bonus": 10,
+            "by_ac": {
+              "-1": 10,
+              "-2": 11,
+              "-3": 12,
+              "0": 9,
+              "1": 8,
+              "2": 7,
+              "3": 6,
+              "4": 5,
+              "5": 4,
+              "6": 3,
+              "7": 2,
+              "8": 2,
+              "9": 2
+            }
+          },
+          {
+            "hd_label": "15+ to 17",
+            "thac0": 8,
+            "attack_bonus": 11,
+            "by_ac": {
+              "-1": 9,
+              "-2": 10,
+              "-3": 11,
+              "0": 8,
+              "1": 7,
+              "2": 6,
+              "3": 5,
+              "4": 4,
+              "5": 3,
+              "6": 2,
+              "7": 2,
+              "8": 2,
+              "9": 2
+            }
+          },
+          {
+            "hd_label": "17+ to 19",
+            "thac0": 7,
+            "attack_bonus": 12,
+            "by_ac": {
+              "-1": 8,
+              "-2": 9,
+              "-3": 10,
+              "0": 7,
+              "1": 6,
+              "2": 5,
+              "3": 4,
+              "4": 3,
+              "5": 2,
+              "6": 2,
+              "7": 2,
+              "8": 2,
+              "9": 2
+            }
+          },
+          {
+            "hd_label": "19+ to 21",
+            "thac0": 6,
+            "attack_bonus": 13,
+            "by_ac": {
+              "-1": 7,
+              "-2": 8,
+              "-3": 9,
+              "0": 6,
+              "1": 5,
+              "2": 4,
+              "3": 3,
+              "4": 2,
+              "5": 2,
+              "6": 2,
+              "7": 2,
+              "8": 2,
+              "9": 2
+            }
+          },
+          {
+            "hd_label": "21+ or more",
+            "thac0": 5,
+            "attack_bonus": 14,
+            "by_ac": {
+              "-1": 6,
+              "-2": 7,
+              "-3": 8,
+              "0": 5,
+              "1": 4,
+              "2": 3,
+              "3": 2,
+              "4": 2,
+              "5": 2,
+              "6": 2,
+              "7": 2,
+              "8": 2,
+              "9": 2
+            }
+          }
+        ]
+      },
+      "monster_saves": [
+        {
+          "label": "NH",
+          "min_hd": null,
+          "max_hd": 0,
+          "saves": { "death": 14, "wands": 15, "paralysis": 16, "breath": 17, "spells": 18 }
+        },
+        {
+          "label": "1–3",
+          "min_hd": 1,
+          "max_hd": 3,
+          "saves": { "death": 12, "wands": 13, "paralysis": 14, "breath": 15, "spells": 16 }
+        },
+        {
+          "label": "4–6",
+          "min_hd": 4,
+          "max_hd": 6,
+          "saves": { "death": 10, "wands": 11, "paralysis": 12, "breath": 13, "spells": 14 }
+        },
+        {
+          "label": "7–9",
+          "min_hd": 7,
+          "max_hd": 9,
+          "saves": { "death": 8, "wands": 9, "paralysis": 10, "breath": 10, "spells": 12 }
+        },
+        {
+          "label": "10–12",
+          "min_hd": 10,
+          "max_hd": 12,
+          "saves": { "death": 6, "wands": 7, "paralysis": 8, "breath": 8, "spells": 10 }
+        },
+        {
+          "label": "13–15",
+          "min_hd": 13,
+          "max_hd": 15,
+          "saves": { "death": 4, "wands": 5, "paralysis": 6, "breath": 5, "spells": 8 }
+        },
+        {
+          "label": "16–18",
+          "min_hd": 16,
+          "max_hd": 18,
+          "saves": { "death": 2, "wands": 3, "paralysis": 4, "breath": 3, "spells": 6 }
+        },
+        {
+          "label": "19–21",
+          "min_hd": 19,
+          "max_hd": 21,
+          "saves": { "death": 2, "wands": 2, "paralysis": 2, "breath": 2, "spells": 4 }
+        },
+        {
+          "label": "22 or more",
+          "min_hd": 22,
+          "max_hd": null,
+          "saves": { "death": 2, "wands": 2, "paralysis": 2, "breath": 2, "spells": 2 }
+        }
+      ],
+      "xp_awards": [
+        { "label": "Less than 1", "base": 5, "bonus": 1 },
+        { "label": "1", "base": 10, "bonus": 3 },
+        { "label": "1+", "base": 15, "bonus": 4 },
+        { "label": "2", "base": 20, "bonus": 5 },
+        { "label": "2+", "base": 25, "bonus": 10 },
+        { "label": "3", "base": 35, "bonus": 15 },
+        { "label": "3+", "base": 50, "bonus": 25 },
+        { "label": "4", "base": 75, "bonus": 50 },
+        { "label": "4+", "base": 125, "bonus": 75 },
+        { "label": "5", "base": 175, "bonus": 125 },
+        { "label": "5+", "base": 225, "bonus": 175 },
+        { "label": "6", "base": 275, "bonus": 225 },
+        { "label": "6+", "base": 350, "bonus": 300 },
+        { "label": "7–7+", "base": 450, "bonus": 400 },
+        { "label": "8–8+", "base": 650, "bonus": 550 },
+        { "label": "9–10+", "base": 900, "bonus": 700 },
+        { "label": "11–12+", "base": 1100, "bonus": 800 },
+        { "label": "13–16+", "base": 1350, "bonus": 950 },
+        { "label": "17–20+", "base": 2000, "bonus": 1150 },
+        { "label": "21–21+", "base": 2500, "bonus": 2000 }
+      ],
+      "turning": {
+        "rows": [
+          {
+            "label": "1",
+            "cells": { "1": "7", "2": "9", "2*": "11", "3": "—", "4": "—", "5": "—", "6": "—", "7-9": "—" }
+          },
+          {
+            "label": "2",
+            "cells": { "1": "T", "2": "7", "2*": "9", "3": "11", "4": "—", "5": "—", "6": "—", "7-9": "—" }
+          },
+          {
+            "label": "3",
+            "cells": { "1": "T", "2": "T", "2*": "7", "3": "9", "4": "11", "5": "—", "6": "—", "7-9": "—" }
+          },
+          {
+            "label": "4",
+            "cells": { "1": "D", "2": "T", "2*": "T", "3": "7", "4": "9", "5": "11", "6": "—", "7-9": "—" }
+          },
+          {
+            "label": "5",
+            "cells": { "1": "D", "2": "D", "2*": "T", "3": "T", "4": "7", "5": "9", "6": "11", "7-9": "—" }
+          },
+          {
+            "label": "6",
+            "cells": { "1": "D", "2": "D", "2*": "D", "3": "T", "4": "T", "5": "7", "6": "9", "7-9": "11" }
+          },
+          {
+            "label": "7",
+            "cells": { "1": "D", "2": "D", "2*": "D", "3": "D", "4": "T", "5": "T", "6": "7", "7-9": "9" }
+          },
+          {
+            "label": "8",
+            "cells": { "1": "D", "2": "D", "2*": "D", "3": "D", "4": "D", "5": "T", "6": "T", "7-9": "7" }
+          },
+          {
+            "label": "9",
+            "cells": { "1": "D", "2": "D", "2*": "D", "3": "D", "4": "D", "5": "D", "6": "T", "7-9": "T" }
+          },
+          {
+            "label": "10",
+            "cells": { "1": "D", "2": "D", "2*": "D", "3": "D", "4": "D", "5": "D", "6": "D", "7-9": "T" }
+          },
+          {
+            "label": "11+",
+            "cells": { "1": "D", "2": "D", "2*": "D", "3": "D", "4": "D", "5": "D", "6": "D", "7-9": "D" }
+          }
+        ]
+      },
+      "reaction": {
+        "bands": [
+          { "label": "2 or less", "text": "Attacks", "min_total": null, "max_total": 2, "result": "attacks" },
+          {
+            "label": "3–5",
+            "text": "Hostile, may attack",
+            "min_total": 3,
+            "max_total": 5,
+            "result": "hostile"
+          },
+          {
+            "label": "6–8",
+            "text": "Uncertain, confused",
+            "min_total": 6,
+            "max_total": 8,
+            "result": "uncertain"
+          },
+          {
+            "label": "9–11",
+            "text": "Indifferent, may negotiate",
+            "min_total": 9,
+            "max_total": 11,
+            "result": "indifferent"
+          },
+          {
+            "label": "12 or more",
+            "text": "Eager, friendly",
+            "min_total": 12,
+            "max_total": null,
+            "result": "friendly"
+          }
+        ]
+      }
+    },
+    "encounters": {
+      "tables": [
+        {
+          "id": "level_1",
+          "label": "Level 1",
+          "min_level": 1,
+          "max_level": 1,
+          "rows": [
+            {
+              "roll": 1,
+              "name": "Acolyte",
+              "entry": { "kind": "monster", "monster_ids": ["acolyte"], "variant_dice": null },
+              "count_dice": "1d8",
+              "count_fixed": null
+            },
+            {
+              "roll": 2,
+              "name": "Bandit",
+              "entry": { "kind": "monster", "monster_ids": ["bandit"], "variant_dice": null },
+              "count_dice": "1d8",
+              "count_fixed": null
+            },
+            {
+              "roll": 3,
+              "name": "Beetle, Fire",
+              "entry": { "kind": "monster", "monster_ids": ["fire_beetle"], "variant_dice": null },
+              "count_dice": "1d8",
+              "count_fixed": null
+            },
+            {
+              "roll": 4,
+              "name": "Dwarf",
+              "entry": { "kind": "monster", "monster_ids": ["dwarf_monster"], "variant_dice": null },
+              "count_dice": "1d6",
+              "count_fixed": null
+            },
+            {
+              "roll": 5,
+              "name": "Gnome",
+              "entry": { "kind": "monster", "monster_ids": ["gnome"], "variant_dice": null },
+              "count_dice": "1d6",
+              "count_fixed": null
+            },
+            {
+              "roll": 6,
+              "name": "Goblin",
+              "entry": { "kind": "monster", "monster_ids": ["goblin"], "variant_dice": null },
+              "count_dice": "2d4",
+              "count_fixed": null
+            }
+          ],
+          "overrides_applied": []
+        },
+        {
+          "id": "level_2",
+          "label": "Level 2",
+          "min_level": 2,
+          "max_level": 2,
+          "rows": [
+            {
+              "roll": 1,
+              "name": "Beetle, Oil",
+              "entry": { "kind": "monster", "monster_ids": ["oil_beetle"], "variant_dice": null },
+              "count_dice": "1d8",
+              "count_fixed": null
+            },
+            {
+              "roll": 2,
+              "name": "Berserker",
+              "entry": { "kind": "monster", "monster_ids": ["berserker"], "variant_dice": null },
+              "count_dice": "1d6",
+              "count_fixed": null
+            },
+            {
+              "roll": 3,
+              "name": "Cat, Mountain Lion",
+              "entry": { "kind": "monster", "monster_ids": ["mountain_lion"], "variant_dice": null },
+              "count_dice": "1d4",
+              "count_fixed": null
+            },
+            {
+              "roll": 4,
+              "name": "Elf",
+              "entry": { "kind": "monster", "monster_ids": ["elf_monster"], "variant_dice": null },
+              "count_dice": "1d4",
+              "count_fixed": null
+            },
+            {
+              "roll": 5,
+              "name": "Ghoul",
+              "entry": { "kind": "monster", "monster_ids": ["ghoul"], "variant_dice": null },
+              "count_dice": "1d6",
+              "count_fixed": null
+            },
+            {
+              "roll": 6,
+              "name": "Gnoll",
+              "entry": { "kind": "monster", "monster_ids": ["gnoll"], "variant_dice": null },
+              "count_dice": "1d6",
+              "count_fixed": null
+            }
+          ],
+          "overrides_applied": []
+        }
+      ],
+      "npc_class_levels": [
+        { "roll": 1, "class_id": "cleric", "basic_dice": "1d3", "expert_dice": "1d6+3" },
+        { "roll": 2, "class_id": "dwarf", "basic_dice": "1d3", "expert_dice": "1d6+6" },
+        { "roll": 3, "class_id": "elf", "basic_dice": "1d3", "expert_dice": "1d6+2" },
+        { "roll": 4, "class_id": "fighter", "basic_dice": "1d3", "expert_dice": "1d6+3" },
+        { "roll": 5, "class_id": "fighter", "basic_dice": "1d3", "expert_dice": "1d6+5" },
+        { "roll": 6, "class_id": "halfling", "basic_dice": "1d3", "expert_dice": "1d6+2" },
+        { "roll": 7, "class_id": "magic_user", "basic_dice": "1d3", "expert_dice": "1d6+3" },
+        { "roll": 8, "class_id": "thief", "basic_dice": "1d3", "expert_dice": "1d6+4" }
+      ],
+      "npc_alignment": [
+        { "roll_min": 1, "roll_max": 2, "alignment": "lawful" },
+        { "roll_min": 3, "roll_max": 4, "alignment": "neutral" },
+        { "roll_min": 5, "roll_max": 6, "alignment": "chaotic" }
+      ],
+      "npc_compositions": [
+        { "kind": "basic", "count_dice": "1d4+4" },
+        { "kind": "expert", "count_dice": "1d6+3" }
+      ]
+    },
+    "treasure": {
+      "treasure_types": [
+        {
+          "letter": "A",
+          "kind": "hoard",
+          "average_gp": 18000.0,
+          "entries": [
+            {
+              "chance_pct": 25,
+              "coins": { "denomination": "cp", "dice": "1d6×1000" },
+              "gems_dice": null,
+              "jewellery_dice": null,
+              "magic": []
+            },
+            {
+              "chance_pct": 30,
+              "coins": { "denomination": "sp", "dice": "1d6×1000" },
+              "gems_dice": null,
+              "jewellery_dice": null,
+              "magic": []
+            },
+            {
+              "chance_pct": 20,
+              "coins": { "denomination": "ep", "dice": "1d4×1000" },
+              "gems_dice": null,
+              "jewellery_dice": null,
+              "magic": []
+            },
+            {
+              "chance_pct": 35,
+              "coins": { "denomination": "gp", "dice": "2d6×1000" },
+              "gems_dice": null,
+              "jewellery_dice": null,
+              "magic": []
+            },
+            {
+              "chance_pct": 25,
+              "coins": { "denomination": "pp", "dice": "1d2×1000" },
+              "gems_dice": null,
+              "jewellery_dice": null,
+              "magic": []
+            },
+            { "chance_pct": 50, "coins": null, "gems_dice": "6d6", "jewellery_dice": null, "magic": [] },
+            { "chance_pct": 50, "coins": null, "gems_dice": null, "jewellery_dice": "6d6", "magic": [] },
+            {
+              "chance_pct": 30,
+              "coins": null,
+              "gems_dice": null,
+              "jewellery_dice": null,
+              "magic": [{ "kind": "any", "categories": [], "count": 3, "count_dice": null, "exclude": [] }]
+            }
+          ]
+        },
+        {
+          "letter": "R",
+          "kind": "individual",
+          "average_gp": 3.0,
+          "entries": [
+            {
+              "chance_pct": 0,
+              "coins": { "denomination": "ep", "dice": "2d6" },
+              "gems_dice": null,
+              "jewellery_dice": null,
+              "magic": []
+            }
+          ]
+        }
+      ],
+      "gems": {
+        "bands": [
+          { "roll_min": 1, "roll_max": 4, "value_gp": 10 },
+          { "roll_min": 5, "roll_max": 9, "value_gp": 50 },
+          { "roll_min": 10, "roll_max": 15, "value_gp": 100 },
+          { "roll_min": 16, "roll_max": 19, "value_gp": 500 },
+          { "roll_min": 20, "roll_max": 20, "value_gp": 1000 }
+        ],
+        "jewellery_dice": "3d6×100",
+        "manual_notes": [
+          "Rough treatment of jewellery (e.g. crushing, intense heat or fire, lightning) can damage it, reducing its value by 50%.",
+          "When a treasure type indicates the presence of multiple gems or pieces of jewellery, the referee may combine the values, as desired. For example, a roll of five 50gp value gems may be placed as a single 250gp gem, a 100gp gem and three 50gp gems, or any other combination."
+        ]
+      },
+      "magic_item_types": {
+        "rows": [
+          { "category": "armour", "basic_min": 1, "basic_max": 10, "expert_min": 1, "expert_max": 10 },
+          { "category": "misc", "basic_min": 11, "basic_max": 15, "expert_min": 11, "expert_max": 15 },
+          { "category": "potion", "basic_min": 16, "basic_max": 40, "expert_min": 16, "expert_max": 35 },
+          { "category": "ring", "basic_min": 41, "basic_max": 45, "expert_min": 36, "expert_max": 40 },
+          {
+            "category": "rod_staff_wand",
+            "basic_min": 46,
+            "basic_max": 50,
+            "expert_min": 41,
+            "expert_max": 45
+          },
+          { "category": "scroll", "basic_min": 51, "basic_max": 70, "expert_min": 46, "expert_max": 75 },
+          { "category": "sword", "basic_min": 71, "basic_max": 90, "expert_min": 76, "expert_max": 95 },
+          { "category": "weapon", "basic_min": 91, "basic_max": 100, "expert_min": 96, "expert_max": 100 }
+        ]
+      },
+      "stocking": {
+        "rows": [
+          { "roll_min": 1, "roll_max": 2, "contents": "empty", "treasure_chance_in_six": 1 },
+          { "roll_min": 3, "roll_max": 4, "contents": "monster", "treasure_chance_in_six": 3 },
+          { "roll_min": 5, "roll_max": 5, "contents": "special", "treasure_chance_in_six": 0 },
+          { "roll_min": 6, "roll_max": 6, "contents": "trap", "treasure_chance_in_six": 2 }
+        ]
+      },
+      "unguarded": {
+        "bands": [
+          {
+            "label": "Level 1",
+            "min_level": 1,
+            "max_level": 1,
+            "entries": [
+              {
+                "chance_pct": 0,
+                "coins": { "denomination": "sp", "dice": "1d6×100" },
+                "gems_dice": null,
+                "jewellery_dice": null,
+                "magic": []
+              },
+              {
+                "chance_pct": 50,
+                "coins": { "denomination": "gp", "dice": "1d6×10" },
+                "gems_dice": null,
+                "jewellery_dice": null,
+                "magic": []
+              },
+              { "chance_pct": 5, "coins": null, "gems_dice": "1d6", "jewellery_dice": null, "magic": [] },
+              { "chance_pct": 2, "coins": null, "gems_dice": null, "jewellery_dice": "1d6", "magic": [] },
+              {
+                "chance_pct": 2,
+                "coins": null,
+                "gems_dice": null,
+                "jewellery_dice": null,
+                "magic": [{ "kind": "any", "categories": [], "count": 1, "count_dice": null, "exclude": [] }]
+              }
+            ]
+          },
+          {
+            "label": "Level 2–3",
+            "min_level": 2,
+            "max_level": 3,
+            "entries": [
+              {
+                "chance_pct": 0,
+                "coins": { "denomination": "sp", "dice": "1d12×100" },
+                "gems_dice": null,
+                "jewellery_dice": null,
+                "magic": []
+              },
+              {
+                "chance_pct": 50,
+                "coins": { "denomination": "gp", "dice": "1d6×100" },
+                "gems_dice": null,
+                "jewellery_dice": null,
+                "magic": []
+              },
+              { "chance_pct": 10, "coins": null, "gems_dice": "1d6", "jewellery_dice": null, "magic": [] },
+              { "chance_pct": 5, "coins": null, "gems_dice": null, "jewellery_dice": "1d6", "magic": [] },
+              {
+                "chance_pct": 8,
+                "coins": null,
+                "gems_dice": null,
+                "jewellery_dice": null,
+                "magic": [{ "kind": "any", "categories": [], "count": 1, "count_dice": null, "exclude": [] }]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "license": {
+    "name": "Open Game License 1.0a",
+    "text": "# Open Game License\n\nThe JSON data files in this directory are machine-readable game content compiled from the [Old-School Essentials System Reference Document](https://oldschoolessentials.necroticgnome.com/srd/) and are Open Game Content under the Open Game License 1.0a, reproduced below with its complete Section 15 copyright notice as published by Necrotic Gnome, plus the osrlib entry for this compilation.\n\nThe osrlib library code is separately licensed under the MIT license and is not Open Game Content.\n\nDESIGNATION OF PRODUCT IDENTITY\n\nAll artwork, logos, and presentation are product identity. The names “Necrotic Gnome” and “Old-School Essentials” are product identity. All text on the main page (<https://oldschoolessentials.necroticgnome.com/srd>) is product identity.\n\nDESIGNATION OF OPEN GAME CONTENT\n\nAll text and tables not declared as product identity are Open Game Content.\n\nOPEN GAME LICENSE Version 1.0a\n\nThe following text is the property of Wizards of the Coast, Inc. and is Copyright 2000 Wizards of the Coast, Inc (“Wizards”). All Rights Reserved.\n\n1. Definitions: (a)”Contributors” means the copyright and/or trademark owners who have contributed Open Game Content; (b)”Derivative Material” means copyrighted material including derivative works and translations (including into other computer languages), potation, modification, correction, addition, extension, upgrade, improvement, compilation, abridgment or other form in which an existing work may be recast, transformed or adapted; (c) “Distribute” means to reproduce, license, rent, lease, sell, broadcast, publicly display, transmit or otherwise distribute; (d)”Open Game Content” means the game mechanic and includes the methods, procedures, processes and routines to the extent such content does not embody the Product Identity and is an enhancement over the prior art and any additional content clearly identified as Open Game Content by the Contributor, and means any work covered by this License, including translations and derivative works under copyright law, but specifically excludes Product Identity. (e) “Product Identity” means product and product line names, logos and identifying marks including trade dress; artifacts; creatures characters; stories, storylines, plots, thematic elements, dialogue, incidents, language, artwork, symbols, designs, depictions, likenesses, formats, poses, concepts, themes and graphic, photographic and other visual or audio representations; names and descriptions of characters, spells, enchantments, personalities, teams, personas, likenesses and special abilities; places, locations, environments, creatures, equipment, magical or supernatural abilities or effects, logos, symbols, or graphic designs; and any other trademark or registered trademark clearly identified as Product identity by the owner of the Product Identity, and which specifically excludes the Open Game Content; (f) “Trademark” means the logos, names, mark, sign, motto, designs that are used by a Contributor to identify itself or its products or the associated products contributed to the Open Game License by the Contributor (g) “Use”, “Used” or “Using” means to use, Distribute, copy, edit, format, modify, translate and otherwise create Derivative Material of Open Game Content. (h) “You” or “Your” means the licensee in terms of this agreement.\n\n2. The License: This License applies to any Open Game Content that contains a notice indicating that the Open Game Content may only be Used under and in terms of this License. You must affix such a notice to any Open Game Content that you Use. No terms may be added to or subtracted from this License except as described by the License itself. No other terms or conditions may be applied to any Open Game Content distributed using this License.\n\n3.Offer and Acceptance: By Using the Open Game Content You indicate Your acceptance of the terms of this License.\n\n4. Grant and Consideration: In consideration for agreeing to use this License, the Contributors grant You a perpetual, worldwide, royalty-free, non-exclusive license with the exact terms of this License to Use, the Open Game Content.\n\n5.Representation of Authority to Contribute: If You are contributing original material as Open Game Content, You represent that Your Contributions are Your original creation and/or You have sufficient rights to grant the rights conveyed by this License.\n\n6.Notice of License Copyright: You must update the COPYRIGHT NOTICE portion of this License to include the exact text of the COPYRIGHT NOTICE of any Open Game Content You are copying, modifying or distributing, and You must add the title, the copyright date, and the copyright holder’s name to the COPYRIGHT NOTICE of any original Open Game Content you Distribute.\n\n7. Use of Product Identity: You agree not to Use any Product Identity, including as an indication as to compatibility, except as expressly licensed in another, independent Agreement with the owner of each element of that Product Identity. You agree not to indicate compatibility or co-adaptability with any Trademark or Registered Trademark in conjunction with a work containing Open Game Content except as expressly licensed in another, independent Agreement with the owner of such Trademark or Registered Trademark. The use of any Product Identity in Open Game Content does not constitute a challenge to the ownership of that Product Identity. The owner of any Product Identity used in Open Game Content shall retain all rights, title and interest in and to that Product Identity.\n\n8. Identification: If you distribute Open Game Content You must clearly indicate which portions of the work that you are distributing are Open Game Content.\n\n9. Updating the License: Wizards or its designated Agents may publish updated versions of this License. You may use any authorized version of this License to copy, modify and distribute any Open Game Content originally distributed under any version of this License.\n\n10 Copy of this License: You MUST include a copy of this License with every copy of the Open Game Content You Distribute.\n\n11. Use of Contributor Credits: You may not market or advertise the Open Game Content using the name of any Contributor unless You have written permission from the Contributor to do so.\n\n12 Inability to Comply: If it is impossible for You to comply with any of the terms of this License with respect to some or all of the Open Game Content due to statute, judicial order, or governmental regulation then You may not Use any Open Game Material so affected.\n\n13 Termination: This License will terminate automatically if You fail to comply with all terms herein and fail to cure such breach within 30 days of becoming aware of the breach. All sublicenses shall survive the termination of this License.\n\n14 Reformation: If any provision of this License is held to be unenforceable, such provision shall be reformed only to the extent necessary to make it enforceable.\n\n15 COPYRIGHT NOTICE\n\nOpen Game License v 1.0 © 2000, Wizards of the Coast, Inc.\n\nSystem Reference Document © 2000, Wizards of the Coast, Inc.; Authors Jonathan Tweet, Monte Cook, Skip Williams, based on original material by E. Gary Gygax and Dave Arneson.\n\nSystem Reference Document © 2000-2003, Wizards of the Coast, Inc.; Authors Jonathan Tweet, Monte Cook, Skip Williams, Rich Baker, Andy Collins, David Noonan, Rich Redman, Bruce R. Cordell, John D. Rateliff, Thomas Reid, James Wyatt, based on original material by E. Gary Gygax and Dave Arneson.\n\nModern System Reference Document © 2002-2004, Wizards of the Coast, Inc.; Authors Bill Slavicsek, Jeff Grubb, Rich Redman, Charles Ryan, Eric Cagle, David Noonan, Stan!, Christopher Perkins, Rodney Thompson, and JD Wiker, based on material by Jonathan Tweet, Monte Cook, Skip Williams, Richard Baker, Peter Adkison, Bruce R. Cordell, John Tynes, Andy Collins, and JD Wiker.\n\nCastles & Crusades: Players Handbook, © 2004, Troll Lord Games; Authors Davis Chenault and Mac Golden.\n\nCave Cricket from the Tome of Horrors, © 2002, Necromancer Games, Inc.; Authors Scott Greene and Clark Peterson, based on original material by Gary Gygax.\n\nCrab, Monstrous from the Tome of Horrors, © 2002, Necromancer Games, Inc.; Author Scott Greene, based on original material by Gary Gygax.\n\nFly, Giant from the Tome of Horrors, © 2002, Necromancer Games, Inc.; Author Scott Greene, based on original material by Gary Gygax.\n\nGolem, Wood from the Tome of Horrors, © 2002, Necromancer Games, Inc.; Authors Scott Greene and Patrick Lawinger.\n\nKamadan from the Tome of Horrors, © 2002, Necromancer Games, Inc.; Author Scott Greene, based on original material by Nick Louth.\n\nRot Grub from the Tome of Horrors, © 2002, Necromancer Games, Inc.; Authors Scott Greene and Clark Peterson, based on original material by Gary Gygax.\n\nLabyrinth Lord™ © 2007-2009, Daniel Proctor. Author Daniel Proctor.\n\nB/X Essentials: Core Rules © 2017 Gavin Norman. Author Gavin Norman.\n\nB/X Essentials: Classes and Equipment © 2017 Gavin Norman. Author Gavin Norman.\n\nB/X Essentials: Cleric and Magic-User Spells © 2017 Gavin Norman. Author Gavin Norman.\n\nB/X Essentials: Monsters © 2017 Gavin Norman. Author Gavin Norman.\n\nB/X Essentials: Adventures and Treasures © 2018 Gavin Norman. Author Gavin Norman.\n\nOld-School Essentials Core Rules © 2018 Gavin Norman.\n\nOld-School Essentials Classic Fantasy: Genre Rules © 2018 Gavin Norman.\n\nOld-School Essentials Classic Fantasy: Cleric and Magic-User Spells © 2018 Gavin Norman.\n\nOld-School Essentials Classic Fantasy: Monsters © 2018 Gavin Norman.\n\nOld-School Essentials Classic Fantasy: Treasures © 2018 Gavin Norman.\n\nOld-School Essentials Classic Fantasy: Rules Tome © 2019 Gavin Norman.\n\nOld-School Essentials System Reference Document © 2019 Gavin Norman. Author Gavin Norman.\n\nosrlib System Reference Document data compilation © 2026 Marsh Macy.\n\nEND OF LICENSE\n"
+  }
+}

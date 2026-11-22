@@ -1,0 +1,16 @@
+.kbd {
+  margin-inline-start: var(--space-1);
+  opacity: 0.75;
+}
+
+.here {
+  border-color: var(--color-border-accent);
+  color: var(--color-accent-text);
+}
+
+/* Below this width the action bar needs the room more than the key hints do. */
+@media (max-width: 1000px) {
+  .kbd {
+    display: none;
+  }
+}

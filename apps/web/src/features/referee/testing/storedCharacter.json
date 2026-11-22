@@ -1,0 +1,60 @@
+{
+  "name": "Hilde",
+  "class_id": "dwarf",
+  "custom_class": null,
+  "race": "dwarf",
+  "level": 1,
+  "xp": 0,
+  "scores": { "str": 11, "int": 12, "wis": 10, "dex": 9, "con": 10, "cha": 11 },
+  "alignment": "lawful",
+  "extra_languages": [],
+  "max_hp": 4,
+  "current_hp": 4,
+  "nonregen_damage": 0,
+  "inventory": {
+    "items": [],
+    "purse": { "pp": 0, "gp": 73, "ep": 0, "sp": 0, "cp": 0 },
+    "valuables": [],
+    "worn_armour": {
+      "instance_type": "item",
+      "template": {
+        "item_type": "armour",
+        "id": "leather",
+        "name": "Leather",
+        "cost_gp": 20,
+        "weight_coins": 200,
+        "ac": 7,
+        "ac_ascending": 12,
+        "ac_bonus": null,
+        "category": "light",
+        "overrides_applied": []
+      },
+      "quantity": 1
+    },
+    "shield": null,
+    "wielded": [
+      {
+        "instance_type": "item",
+        "template": {
+          "item_type": "weapon",
+          "id": "battle_axe",
+          "name": "Battle axe",
+          "cost_gp": 7,
+          "weight_coins": 50,
+          "damage": "1d8",
+          "qualities": ["melee", "slow", "two_handed"],
+          "missile_ranges": null,
+          "material": "standard",
+          "overrides_applied": []
+        },
+        "quantity": 1
+      }
+    ],
+    "rings": []
+  },
+  "carrying_treasure": false,
+  "conditions": [],
+  "stat_modifiers": [],
+  "spell_book": [],
+  "memorized_spells": []
+}

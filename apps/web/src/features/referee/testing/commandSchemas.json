@@ -1,0 +1,1450 @@
+{
+  "activate_quest": {
+    "command_type": "activate_quest",
+    "kind": "referee",
+    "allowed_modes": ["battle", "encounter", "exploring", "game_over", "town", "victory"],
+    "summary": "Referee: put one of the adventure's quests into play.",
+    "json_schema": {
+      "properties": {
+        "command_type": {
+          "const": "activate_quest",
+          "default": "activate_quest",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [{ "minLength": 1, "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Source"
+        },
+        "quest_id": { "minLength": 1, "title": "Quest Id", "type": "string" }
+      },
+      "required": ["quest_id"],
+      "title": "ActivateQuest",
+      "type": "object"
+    }
+  },
+  "add_journal_entry": {
+    "command_type": "add_journal_entry",
+    "kind": "referee",
+    "allowed_modes": ["battle", "encounter", "exploring", "game_over", "town", "victory"],
+    "summary": "Referee: add a line of story text to the session's journal.",
+    "json_schema": {
+      "properties": {
+        "command_type": {
+          "const": "add_journal_entry",
+          "default": "add_journal_entry",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [{ "minLength": 1, "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Source"
+        },
+        "text": { "minLength": 1, "title": "Text", "type": "string" }
+      },
+      "required": ["text"],
+      "title": "AddJournalEntry",
+      "type": "object"
+    }
+  },
+  "add_member": {
+    "command_type": "add_member",
+    "kind": "referee",
+    "allowed_modes": ["exploring", "town"],
+    "summary": "Referee: add a character to the party during play.",
+    "json_schema": {
+      "$defs": {
+        "AbilityScore": {
+          "enum": ["str", "int", "wis", "dex", "con", "cha"],
+          "title": "AbilityScore",
+          "type": "string"
+        },
+        "ActiveCondition": {
+          "properties": {
+            "condition": { "$ref": "#/$defs/Condition" },
+            "effect_id": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "default": null,
+              "title": "Effect Id"
+            }
+          },
+          "required": ["condition"],
+          "title": "ActiveCondition",
+          "type": "object"
+        },
+        "ActiveModifier": {
+          "properties": {
+            "kind": { "title": "Kind", "type": "string" },
+            "value": { "default": 0, "title": "Value", "type": "integer" },
+            "dice": { "anyOf": [{ "type": "string" }, { "type": "null" }], "default": null, "title": "Dice" },
+            "element": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "default": null,
+              "title": "Element"
+            },
+            "versus_other_alignment": {
+              "default": false,
+              "title": "Versus Other Alignment",
+              "type": "boolean"
+            },
+            "save_categories": {
+              "default": [],
+              "items": { "type": "string" },
+              "title": "Save Categories",
+              "type": "array"
+            },
+            "melee_only": { "default": false, "title": "Melee Only", "type": "boolean" },
+            "from_item": { "default": false, "title": "From Item", "type": "boolean" },
+            "effect_id": { "title": "Effect Id", "type": "string" }
+          },
+          "required": ["kind", "effect_id"],
+          "title": "ActiveModifier",
+          "type": "object"
+        },
+        "Alignment": { "enum": ["lawful", "neutral", "chaotic"], "title": "Alignment", "type": "string" },
+        "AmmunitionTemplate": {
+          "properties": {
+            "item_type": {
+              "const": "ammunition",
+              "default": "ammunition",
+              "title": "Item Type",
+              "type": "string"
+            },
+            "id": { "title": "Id", "type": "string" },
+            "name": { "title": "Name", "type": "string" },
+            "cost_gp": { "minimum": 0, "title": "Cost Gp", "type": "integer" },
+            "lot_size": { "default": 1, "minimum": 1, "title": "Lot Size", "type": "integer" },
+            "weight_coins": { "default": 0, "minimum": 0, "title": "Weight Coins", "type": "integer" },
+            "material": { "$ref": "#/$defs/Material", "default": "standard" },
+            "overrides_applied": {
+              "default": [],
+              "items": { "type": "string" },
+              "title": "Overrides Applied",
+              "type": "array"
+            }
+          },
+          "required": ["id", "name", "cost_gp"],
+          "title": "AmmunitionTemplate",
+          "type": "object"
+        },
+        "ArmourCategory": { "enum": ["light", "heavy"], "title": "ArmourCategory", "type": "string" },
+        "ArmourPolicy": {
+          "properties": {
+            "kind": { "$ref": "#/$defs/ArmourPolicyKind" },
+            "shields_allowed": { "title": "Shields Allowed", "type": "boolean" }
+          },
+          "required": ["kind", "shields_allowed"],
+          "title": "ArmourPolicy",
+          "type": "object"
+        },
+        "ArmourPolicyKind": {
+          "enum": ["any", "leather_only", "none"],
+          "title": "ArmourPolicyKind",
+          "type": "string"
+        },
+        "ArmourTemplate": {
+          "properties": {
+            "item_type": { "const": "armour", "default": "armour", "title": "Item Type", "type": "string" },
+            "id": { "title": "Id", "type": "string" },
+            "name": { "title": "Name", "type": "string" },
+            "cost_gp": { "minimum": 0, "title": "Cost Gp", "type": "integer" },
+            "weight_coins": { "minimum": 0, "title": "Weight Coins", "type": "integer" },
+            "ac": { "anyOf": [{ "type": "integer" }, { "type": "null" }], "default": null, "title": "Ac" },
+            "ac_ascending": {
+              "anyOf": [{ "type": "integer" }, { "type": "null" }],
+              "default": null,
+              "title": "Ac Ascending"
+            },
+            "ac_bonus": {
+              "anyOf": [{ "type": "integer" }, { "type": "null" }],
+              "default": null,
+              "title": "Ac Bonus"
+            },
+            "category": {
+              "anyOf": [{ "$ref": "#/$defs/ArmourCategory" }, { "type": "null" }],
+              "default": null
+            },
+            "overrides_applied": {
+              "default": [],
+              "items": { "type": "string" },
+              "title": "Overrides Applied",
+              "type": "array"
+            }
+          },
+          "required": ["id", "name", "cost_gp", "weight_coins"],
+          "title": "ArmourTemplate",
+          "type": "object"
+        },
+        "Character": {
+          "properties": {
+            "id": { "anyOf": [{ "type": "string" }, { "type": "null" }], "default": null, "title": "Id" },
+            "name": { "minLength": 1, "title": "Name", "type": "string" },
+            "class_id": { "title": "Class Id", "type": "string" },
+            "custom_class": {
+              "anyOf": [{ "$ref": "#/$defs/ClassDefinition" }, { "type": "null" }],
+              "default": null
+            },
+            "race": { "pattern": "^[a-z][a-z0-9_]*$", "title": "Race", "type": "string" },
+            "level": { "minimum": 1, "title": "Level", "type": "integer" },
+            "xp": { "minimum": 0, "title": "Xp", "type": "integer" },
+            "scores": {
+              "additionalProperties": { "type": "integer" },
+              "propertyNames": { "$ref": "#/$defs/AbilityScore" },
+              "title": "Scores",
+              "type": "object"
+            },
+            "alignment": { "$ref": "#/$defs/Alignment" },
+            "extra_languages": {
+              "default": [],
+              "items": { "type": "string" },
+              "title": "Extra Languages",
+              "type": "array"
+            },
+            "max_hp": { "minimum": 1, "title": "Max Hp", "type": "integer" },
+            "current_hp": { "minimum": 0, "title": "Current Hp", "type": "integer" },
+            "nonregen_damage": { "default": 0, "minimum": 0, "title": "Nonregen Damage", "type": "integer" },
+            "inventory": { "$ref": "#/$defs/Inventory" },
+            "carrying_treasure": { "default": false, "title": "Carrying Treasure", "type": "boolean" },
+            "conditions": {
+              "default": [],
+              "items": { "$ref": "#/$defs/ActiveCondition" },
+              "title": "Conditions",
+              "type": "array"
+            },
+            "stat_modifiers": {
+              "default": [],
+              "items": { "$ref": "#/$defs/ActiveModifier" },
+              "title": "Stat Modifiers",
+              "type": "array"
+            },
+            "spell_book": {
+              "default": [],
+              "items": { "type": "string" },
+              "title": "Spell Book",
+              "type": "array"
+            },
+            "memorized_spells": {
+              "default": [],
+              "items": { "$ref": "#/$defs/MemorizedSpell" },
+              "title": "Memorized Spells",
+              "type": "array"
+            }
+          },
+          "required": [
+            "name",
+            "class_id",
+            "race",
+            "level",
+            "xp",
+            "scores",
+            "alignment",
+            "max_hp",
+            "current_hp"
+          ],
+          "title": "Character",
+          "type": "object"
+        },
+        "ClassAbility": {
+          "properties": {
+            "tag": { "title": "Tag", "type": "string" },
+            "name": { "title": "Name", "type": "string" },
+            "prose": { "title": "Prose", "type": "string" },
+            "manual": { "default": false, "title": "Manual", "type": "boolean" },
+            "params": {
+              "additionalProperties": { "anyOf": [{ "type": "integer" }, { "type": "string" }] },
+              "default": {},
+              "title": "Params",
+              "type": "object"
+            }
+          },
+          "required": ["tag", "name", "prose"],
+          "title": "ClassAbility",
+          "type": "object"
+        },
+        "ClassDefinition": {
+          "properties": {
+            "id": { "title": "Id", "type": "string" },
+            "name": { "title": "Name", "type": "string" },
+            "race": { "pattern": "^[a-z][a-z0-9_]*$", "title": "Race", "type": "string" },
+            "requirements": {
+              "additionalProperties": { "type": "integer" },
+              "default": {},
+              "propertyNames": { "$ref": "#/$defs/AbilityScore" },
+              "title": "Requirements",
+              "type": "object"
+            },
+            "prime_requisites": {
+              "items": { "$ref": "#/$defs/AbilityScore" },
+              "title": "Prime Requisites",
+              "type": "array"
+            },
+            "xp_tiers": { "items": { "$ref": "#/$defs/XpTier" }, "title": "Xp Tiers", "type": "array" },
+            "hit_die": { "title": "Hit Die", "type": "integer" },
+            "max_level": { "minimum": 1, "title": "Max Level", "type": "integer" },
+            "armour": { "$ref": "#/$defs/ArmourPolicy" },
+            "weapons": { "$ref": "#/$defs/WeaponPolicy" },
+            "languages": { "items": { "type": "string" }, "title": "Languages", "type": "array" },
+            "may_not_lower": {
+              "default": [],
+              "items": { "$ref": "#/$defs/AbilityScore" },
+              "title": "May Not Lower",
+              "type": "array"
+            },
+            "abilities": {
+              "default": [],
+              "items": { "$ref": "#/$defs/ClassAbility" },
+              "title": "Abilities",
+              "type": "array"
+            },
+            "thief_skills": {
+              "default": [],
+              "items": { "$ref": "#/$defs/ThiefSkillRow" },
+              "title": "Thief Skills",
+              "type": "array"
+            },
+            "level_titles": {
+              "default": [],
+              "items": { "type": "string" },
+              "title": "Level Titles",
+              "type": "array"
+            },
+            "progression": {
+              "items": { "$ref": "#/$defs/ProgressionRow" },
+              "title": "Progression",
+              "type": "array"
+            },
+            "overrides_applied": {
+              "default": [],
+              "items": { "type": "string" },
+              "title": "Overrides Applied",
+              "type": "array"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "race",
+            "prime_requisites",
+            "xp_tiers",
+            "hit_die",
+            "max_level",
+            "armour",
+            "weapons",
+            "languages",
+            "progression"
+          ],
+          "title": "ClassDefinition",
+          "type": "object"
+        },
+        "CoinPurse": {
+          "properties": {
+            "pp": { "default": 0, "minimum": 0, "title": "Pp", "type": "integer" },
+            "gp": { "default": 0, "minimum": 0, "title": "Gp", "type": "integer" },
+            "ep": { "default": 0, "minimum": 0, "title": "Ep", "type": "integer" },
+            "sp": { "default": 0, "minimum": 0, "title": "Sp", "type": "integer" },
+            "cp": { "default": 0, "minimum": 0, "title": "Cp", "type": "integer" }
+          },
+          "title": "CoinPurse",
+          "type": "object"
+        },
+        "CombatFacet": {
+          "properties": {
+            "damage": { "title": "Damage", "type": "string" },
+            "qualities": {
+              "items": { "$ref": "#/$defs/WeaponQuality" },
+              "title": "Qualities",
+              "type": "array"
+            },
+            "missile_ranges": {
+              "anyOf": [{ "$ref": "#/$defs/MissileRanges" }, { "type": "null" }],
+              "default": null
+            }
+          },
+          "required": ["damage", "qualities"],
+          "title": "CombatFacet",
+          "type": "object"
+        },
+        "Condition": {
+          "enum": [
+            "paralysed",
+            "asleep",
+            "blind",
+            "charmed",
+            "petrified",
+            "diseased",
+            "exhausted",
+            "lycanthropy_incubation",
+            "averted_eyes",
+            "poisoned",
+            "dead",
+            "silenced",
+            "entangled",
+            "afraid",
+            "feebleminded",
+            "invisible",
+            "turned",
+            "confused",
+            "weakened"
+          ],
+          "title": "Condition",
+          "type": "string"
+        },
+        "GearTemplate": {
+          "properties": {
+            "item_type": { "const": "gear", "default": "gear", "title": "Item Type", "type": "string" },
+            "id": { "title": "Id", "type": "string" },
+            "name": { "title": "Name", "type": "string" },
+            "cost_gp": { "minimum": 0, "title": "Cost Gp", "type": "integer" },
+            "lot_size": { "default": 1, "minimum": 1, "title": "Lot Size", "type": "integer" },
+            "capacity_coins": {
+              "anyOf": [{ "type": "integer" }, { "type": "null" }],
+              "default": null,
+              "title": "Capacity Coins"
+            },
+            "combat": { "anyOf": [{ "$ref": "#/$defs/CombatFacet" }, { "type": "null" }], "default": null },
+            "params": {
+              "additionalProperties": {
+                "anyOf": [{ "type": "integer" }, { "type": "string" }, { "type": "boolean" }]
+              },
+              "default": {},
+              "title": "Params",
+              "type": "object"
+            },
+            "overrides_applied": {
+              "default": [],
+              "items": { "type": "string" },
+              "title": "Overrides Applied",
+              "type": "array"
+            }
+          },
+          "required": ["id", "name", "cost_gp"],
+          "title": "GearTemplate",
+          "type": "object"
+        },
+        "HitDice": {
+          "properties": {
+            "count": { "minimum": 1, "title": "Count", "type": "integer" },
+            "die": { "title": "Die", "type": "integer" },
+            "bonus": { "default": 0, "minimum": 0, "title": "Bonus", "type": "integer" },
+            "con_applies": { "default": true, "title": "Con Applies", "type": "boolean" }
+          },
+          "required": ["count", "die"],
+          "title": "HitDice",
+          "type": "object"
+        },
+        "Inventory": {
+          "properties": {
+            "items": {
+              "default": [],
+              "items": {
+                "discriminator": {
+                  "mapping": { "item": "#/$defs/ItemInstance", "magic_item": "#/$defs/MagicItemInstance" },
+                  "propertyName": "instance_type"
+                },
+                "oneOf": [{ "$ref": "#/$defs/ItemInstance" }, { "$ref": "#/$defs/MagicItemInstance" }]
+              },
+              "title": "Items",
+              "type": "array"
+            },
+            "purse": {
+              "$ref": "#/$defs/CoinPurse",
+              "default": { "pp": 0, "gp": 0, "ep": 0, "sp": 0, "cp": 0 }
+            },
+            "valuables": {
+              "default": [],
+              "items": { "$ref": "#/$defs/ValuableInstance" },
+              "title": "Valuables",
+              "type": "array"
+            },
+            "worn_armour": {
+              "anyOf": [
+                {
+                  "discriminator": {
+                    "mapping": { "item": "#/$defs/ItemInstance", "magic_item": "#/$defs/MagicItemInstance" },
+                    "propertyName": "instance_type"
+                  },
+                  "oneOf": [{ "$ref": "#/$defs/ItemInstance" }, { "$ref": "#/$defs/MagicItemInstance" }]
+                },
+                { "type": "null" }
+              ],
+              "default": null,
+              "title": "Worn Armour"
+            },
+            "shield": {
+              "anyOf": [
+                {
+                  "discriminator": {
+                    "mapping": { "item": "#/$defs/ItemInstance", "magic_item": "#/$defs/MagicItemInstance" },
+                    "propertyName": "instance_type"
+                  },
+                  "oneOf": [{ "$ref": "#/$defs/ItemInstance" }, { "$ref": "#/$defs/MagicItemInstance" }]
+                },
+                { "type": "null" }
+              ],
+              "default": null,
+              "title": "Shield"
+            },
+            "wielded": {
+              "default": [],
+              "items": {
+                "discriminator": {
+                  "mapping": { "item": "#/$defs/ItemInstance", "magic_item": "#/$defs/MagicItemInstance" },
+                  "propertyName": "instance_type"
+                },
+                "oneOf": [{ "$ref": "#/$defs/ItemInstance" }, { "$ref": "#/$defs/MagicItemInstance" }]
+              },
+              "title": "Wielded",
+              "type": "array"
+            },
+            "rings": {
+              "default": [],
+              "items": { "$ref": "#/$defs/MagicItemInstance" },
+              "title": "Rings",
+              "type": "array"
+            }
+          },
+          "title": "Inventory",
+          "type": "object"
+        },
+        "ItemInstance": {
+          "properties": {
+            "instance_type": {
+              "const": "item",
+              "default": "item",
+              "title": "Instance Type",
+              "type": "string"
+            },
+            "template": {
+              "discriminator": {
+                "mapping": {
+                  "ammunition": "#/$defs/AmmunitionTemplate",
+                  "armour": "#/$defs/ArmourTemplate",
+                  "gear": "#/$defs/GearTemplate",
+                  "weapon": "#/$defs/WeaponTemplate"
+                },
+                "propertyName": "item_type"
+              },
+              "oneOf": [
+                { "$ref": "#/$defs/WeaponTemplate" },
+                { "$ref": "#/$defs/ArmourTemplate" },
+                { "$ref": "#/$defs/GearTemplate" },
+                { "$ref": "#/$defs/AmmunitionTemplate" }
+              ],
+              "title": "Template"
+            },
+            "quantity": { "default": 1, "minimum": 1, "title": "Quantity", "type": "integer" }
+          },
+          "required": ["template"],
+          "title": "ItemInstance",
+          "type": "object"
+        },
+        "MagicItemInstance": {
+          "properties": {
+            "instance_type": {
+              "const": "magic_item",
+              "default": "magic_item",
+              "title": "Instance Type",
+              "type": "string"
+            },
+            "instance_id": { "title": "Instance Id", "type": "string" },
+            "template_id": { "title": "Template Id", "type": "string" },
+            "charges_remaining": {
+              "anyOf": [{ "type": "integer" }, { "type": "null" }],
+              "default": null,
+              "title": "Charges Remaining"
+            },
+            "quantity": { "default": 1, "minimum": 0, "title": "Quantity", "type": "integer" },
+            "identified": { "default": false, "title": "Identified", "type": "boolean" },
+            "cursed_revealed": { "default": false, "title": "Cursed Revealed", "type": "boolean" },
+            "base_item_id": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "default": null,
+              "title": "Base Item Id"
+            },
+            "sentience": {
+              "anyOf": [{ "$ref": "#/$defs/SwordSentience" }, { "type": "null" }],
+              "default": null
+            },
+            "state": {
+              "additionalProperties": {
+                "anyOf": [
+                  { "type": "integer" },
+                  { "type": "string" },
+                  { "type": "boolean" },
+                  { "items": { "anyOf": [{ "type": "integer" }, { "type": "string" }] }, "type": "array" }
+                ]
+              },
+              "default": {},
+              "title": "State",
+              "type": "object"
+            }
+          },
+          "required": ["instance_id", "template_id"],
+          "title": "MagicItemInstance",
+          "type": "object"
+        },
+        "Material": { "enum": ["standard", "silver"], "title": "Material", "type": "string" },
+        "MemorizedSpell": {
+          "properties": {
+            "spell_id": { "minLength": 1, "title": "Spell Id", "type": "string" },
+            "reversed": { "default": false, "title": "Reversed", "type": "boolean" }
+          },
+          "required": ["spell_id"],
+          "title": "MemorizedSpell",
+          "type": "object"
+        },
+        "MissileRanges": {
+          "properties": {
+            "short": { "$ref": "#/$defs/RangeBand" },
+            "medium": { "$ref": "#/$defs/RangeBand" },
+            "long": { "$ref": "#/$defs/RangeBand" }
+          },
+          "required": ["short", "medium", "long"],
+          "title": "MissileRanges",
+          "type": "object"
+        },
+        "ProgressionRow": {
+          "properties": {
+            "level": { "minimum": 1, "title": "Level", "type": "integer" },
+            "xp": { "minimum": 0, "title": "Xp", "type": "integer" },
+            "hit_dice": { "$ref": "#/$defs/HitDice" },
+            "thac0": { "maximum": 20, "minimum": 2, "title": "Thac0", "type": "integer" },
+            "attack_bonus": { "minimum": 0, "title": "Attack Bonus", "type": "integer" },
+            "saves": { "$ref": "#/$defs/SavingThrows" },
+            "spell_slots": {
+              "default": [],
+              "items": { "type": "integer" },
+              "title": "Spell Slots",
+              "type": "array"
+            }
+          },
+          "required": ["level", "xp", "hit_dice", "thac0", "attack_bonus", "saves"],
+          "title": "ProgressionRow",
+          "type": "object"
+        },
+        "RangeBand": {
+          "properties": {
+            "min_feet": { "minimum": 0, "title": "Min Feet", "type": "integer" },
+            "max_feet": { "minimum": 0, "title": "Max Feet", "type": "integer" }
+          },
+          "required": ["min_feet", "max_feet"],
+          "title": "RangeBand",
+          "type": "object"
+        },
+        "SavingThrows": {
+          "properties": {
+            "death": { "maximum": 20, "minimum": 2, "title": "Death", "type": "integer" },
+            "wands": { "maximum": 20, "minimum": 2, "title": "Wands", "type": "integer" },
+            "paralysis": { "maximum": 20, "minimum": 2, "title": "Paralysis", "type": "integer" },
+            "breath": { "maximum": 20, "minimum": 2, "title": "Breath", "type": "integer" },
+            "spells": { "maximum": 20, "minimum": 2, "title": "Spells", "type": "integer" }
+          },
+          "required": ["death", "wands", "paralysis", "breath", "spells"],
+          "title": "SavingThrows",
+          "type": "object"
+        },
+        "SwordSentience": {
+          "properties": {
+            "intelligence": { "maximum": 12, "minimum": 7, "title": "Intelligence", "type": "integer" },
+            "ego": { "maximum": 12, "minimum": 1, "title": "Ego", "type": "integer" },
+            "communication": { "title": "Communication", "type": "string" },
+            "reading": { "title": "Reading", "type": "boolean" },
+            "alignment": { "title": "Alignment", "type": "string" },
+            "languages": { "default": 0, "minimum": 0, "title": "Languages", "type": "integer" },
+            "sensory_powers": {
+              "default": [],
+              "items": { "type": "string" },
+              "title": "Sensory Powers",
+              "type": "array"
+            },
+            "extraordinary_powers": {
+              "default": [],
+              "items": { "type": "string" },
+              "title": "Extraordinary Powers",
+              "type": "array"
+            },
+            "special_purpose": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "default": null,
+              "title": "Special Purpose"
+            }
+          },
+          "required": ["intelligence", "ego", "communication", "reading", "alignment"],
+          "title": "SwordSentience",
+          "type": "object"
+        },
+        "ThiefSkillRow": {
+          "properties": {
+            "level": { "minimum": 1, "title": "Level", "type": "integer" },
+            "climb_sheer_surfaces": { "minimum": 0, "title": "Climb Sheer Surfaces", "type": "integer" },
+            "find_remove_treasure_traps": {
+              "minimum": 0,
+              "title": "Find Remove Treasure Traps",
+              "type": "integer"
+            },
+            "hear_noise": { "maximum": 6, "minimum": 1, "title": "Hear Noise", "type": "integer" },
+            "hide_in_shadows": { "minimum": 0, "title": "Hide In Shadows", "type": "integer" },
+            "move_silently": { "minimum": 0, "title": "Move Silently", "type": "integer" },
+            "open_locks": { "minimum": 0, "title": "Open Locks", "type": "integer" },
+            "pick_pockets": { "minimum": 0, "title": "Pick Pockets", "type": "integer" }
+          },
+          "required": [
+            "level",
+            "climb_sheer_surfaces",
+            "find_remove_treasure_traps",
+            "hear_noise",
+            "hide_in_shadows",
+            "move_silently",
+            "open_locks",
+            "pick_pockets"
+          ],
+          "title": "ThiefSkillRow",
+          "type": "object"
+        },
+        "ValuableInstance": {
+          "properties": {
+            "instance_type": {
+              "const": "valuable",
+              "default": "valuable",
+              "title": "Instance Type",
+              "type": "string"
+            },
+            "instance_id": { "title": "Instance Id", "type": "string" },
+            "kind": { "enum": ["gem", "jewellery"], "title": "Kind", "type": "string" },
+            "name": { "default": "", "title": "Name", "type": "string" },
+            "value_gp": { "minimum": 0, "title": "Value Gp", "type": "integer" },
+            "weight_coins": { "default": 0, "minimum": 0, "title": "Weight Coins", "type": "integer" }
+          },
+          "required": ["instance_id", "kind", "value_gp"],
+          "title": "ValuableInstance",
+          "type": "object"
+        },
+        "WeaponPolicy": {
+          "properties": {
+            "kind": { "$ref": "#/$defs/WeaponPolicyKind" },
+            "weapon_ids": {
+              "default": [],
+              "items": { "type": "string" },
+              "title": "Weapon Ids",
+              "type": "array"
+            },
+            "manual_notes": {
+              "default": [],
+              "items": { "type": "string" },
+              "title": "Manual Notes",
+              "type": "array"
+            }
+          },
+          "required": ["kind"],
+          "title": "WeaponPolicy",
+          "type": "object"
+        },
+        "WeaponPolicyKind": {
+          "enum": ["any", "allowed", "forbidden"],
+          "title": "WeaponPolicyKind",
+          "type": "string"
+        },
+        "WeaponQuality": {
+          "enum": ["blunt", "brace", "charge", "melee", "missile", "reload", "slow", "splash", "two_handed"],
+          "title": "WeaponQuality",
+          "type": "string"
+        },
+        "WeaponTemplate": {
+          "properties": {
+            "item_type": { "const": "weapon", "default": "weapon", "title": "Item Type", "type": "string" },
+            "id": { "title": "Id", "type": "string" },
+            "name": { "title": "Name", "type": "string" },
+            "cost_gp": { "minimum": 0, "title": "Cost Gp", "type": "integer" },
+            "weight_coins": { "minimum": 0, "title": "Weight Coins", "type": "integer" },
+            "damage": { "title": "Damage", "type": "string" },
+            "qualities": {
+              "items": { "$ref": "#/$defs/WeaponQuality" },
+              "title": "Qualities",
+              "type": "array"
+            },
+            "missile_ranges": {
+              "anyOf": [{ "$ref": "#/$defs/MissileRanges" }, { "type": "null" }],
+              "default": null
+            },
+            "material": { "$ref": "#/$defs/Material", "default": "standard" },
+            "overrides_applied": {
+              "default": [],
+              "items": { "type": "string" },
+              "title": "Overrides Applied",
+              "type": "array"
+            }
+          },
+          "required": ["id", "name", "cost_gp", "weight_coins", "damage", "qualities"],
+          "title": "WeaponTemplate",
+          "type": "object"
+        },
+        "XpTier": {
+          "properties": {
+            "modifier_pct": { "title": "Modifier Pct", "type": "integer" },
+            "minimums": {
+              "additionalProperties": { "type": "integer" },
+              "propertyNames": { "$ref": "#/$defs/AbilityScore" },
+              "title": "Minimums",
+              "type": "object"
+            }
+          },
+          "required": ["modifier_pct", "minimums"],
+          "title": "XpTier",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "command_type": {
+          "const": "add_member",
+          "default": "add_member",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [{ "minLength": 1, "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Source"
+        },
+        "character": { "$ref": "#/$defs/Character" }
+      },
+      "required": ["character"],
+      "title": "AddMember",
+      "type": "object"
+    }
+  },
+  "advance_time": {
+    "command_type": "advance_time",
+    "kind": "referee",
+    "allowed_modes": ["battle", "encounter", "exploring", "game_over", "town", "victory"],
+    "summary": "Referee: move the game clock forward.",
+    "json_schema": {
+      "$defs": { "TimeUnit": { "enum": ["round", "turn", "day"], "title": "TimeUnit", "type": "string" } },
+      "properties": {
+        "command_type": {
+          "const": "advance_time",
+          "default": "advance_time",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [{ "minLength": 1, "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Source"
+        },
+        "n": { "minimum": 0, "title": "N", "type": "integer" },
+        "unit": { "$ref": "#/$defs/TimeUnit" }
+      },
+      "required": ["n", "unit"],
+      "title": "AdvanceTime",
+      "type": "object"
+    }
+  },
+  "award_xp": {
+    "command_type": "award_xp",
+    "kind": "referee",
+    "allowed_modes": ["battle", "encounter", "exploring", "game_over", "town", "victory"],
+    "summary": "Referee: give one character experience points, apart from the XP the session awards.",
+    "json_schema": {
+      "properties": {
+        "command_type": {
+          "const": "award_xp",
+          "default": "award_xp",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [{ "minLength": 1, "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Source"
+        },
+        "character_id": { "title": "Character Id", "type": "string" },
+        "amount": { "minimum": 0, "title": "Amount", "type": "integer" }
+      },
+      "required": ["character_id", "amount"],
+      "title": "AwardXP",
+      "type": "object"
+    }
+  },
+  "complete_objective": {
+    "command_type": "complete_objective",
+    "kind": "referee",
+    "allowed_modes": ["battle", "encounter", "exploring", "game_over", "town", "victory"],
+    "summary": "Referee: mark one objective of an active quest complete.",
+    "json_schema": {
+      "properties": {
+        "command_type": {
+          "const": "complete_objective",
+          "default": "complete_objective",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [{ "minLength": 1, "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Source"
+        },
+        "quest_id": { "minLength": 1, "title": "Quest Id", "type": "string" },
+        "objective_id": { "minLength": 1, "title": "Objective Id", "type": "string" }
+      },
+      "required": ["quest_id", "objective_id"],
+      "title": "CompleteObjective",
+      "type": "object"
+    }
+  },
+  "complete_quest": {
+    "command_type": "complete_quest",
+    "kind": "referee",
+    "allowed_modes": ["battle", "encounter", "exploring", "game_over", "town", "victory"],
+    "summary": "Referee: complete an active quest, and the adventure when the quest concludes it.",
+    "json_schema": {
+      "properties": {
+        "command_type": {
+          "const": "complete_quest",
+          "default": "complete_quest",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [{ "minLength": 1, "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Source"
+        },
+        "quest_id": { "minLength": 1, "title": "Quest Id", "type": "string" }
+      },
+      "required": ["quest_id"],
+      "title": "CompleteQuest",
+      "type": "object"
+    }
+  },
+  "end_encounter": {
+    "command_type": "end_encounter",
+    "kind": "referee",
+    "allowed_modes": ["battle", "encounter"],
+    "summary": "Referee: close the open encounter when the party talks its way past or walks away.",
+    "json_schema": {
+      "properties": {
+        "command_type": {
+          "const": "end_encounter",
+          "default": "end_encounter",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [{ "minLength": 1, "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Source"
+        },
+        "outcome": { "enum": ["parley", "departed"], "title": "Outcome", "type": "string" },
+        "resolve_area": { "default": false, "title": "Resolve Area", "type": "boolean" }
+      },
+      "required": ["outcome"],
+      "title": "EndEncounter",
+      "type": "object"
+    }
+  },
+  "grant_coins": {
+    "command_type": "grant_coins",
+    "kind": "referee",
+    "allowed_modes": ["battle", "encounter", "exploring", "game_over", "town", "victory"],
+    "summary": "Referee: put coins straight into a member's purse.",
+    "json_schema": {
+      "$defs": {
+        "Coins": {
+          "properties": {
+            "pp": { "default": 0, "minimum": 0, "title": "Pp", "type": "integer" },
+            "gp": { "default": 0, "minimum": 0, "title": "Gp", "type": "integer" },
+            "ep": { "default": 0, "minimum": 0, "title": "Ep", "type": "integer" },
+            "sp": { "default": 0, "minimum": 0, "title": "Sp", "type": "integer" },
+            "cp": { "default": 0, "minimum": 0, "title": "Cp", "type": "integer" }
+          },
+          "title": "Coins",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "command_type": {
+          "const": "grant_coins",
+          "default": "grant_coins",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [{ "minLength": 1, "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Source"
+        },
+        "character_id": { "title": "Character Id", "type": "string" },
+        "coins": { "$ref": "#/$defs/Coins" }
+      },
+      "required": ["character_id", "coins"],
+      "title": "GrantCoins",
+      "type": "object"
+    }
+  },
+  "grant_item": {
+    "command_type": "grant_item",
+    "kind": "referee",
+    "allowed_modes": ["battle", "encounter", "exploring", "game_over", "town", "victory"],
+    "summary": "Referee: put an item straight into a member's pack.",
+    "json_schema": {
+      "properties": {
+        "command_type": {
+          "const": "grant_item",
+          "default": "grant_item",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [{ "minLength": 1, "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Source"
+        },
+        "character_id": { "title": "Character Id", "type": "string" },
+        "item_id": { "title": "Item Id", "type": "string" },
+        "quantity": { "default": 1, "minimum": 1, "title": "Quantity", "type": "integer" }
+      },
+      "required": ["character_id", "item_id"],
+      "title": "GrantItem",
+      "type": "object"
+    }
+  },
+  "identify_item": {
+    "command_type": "identify_item",
+    "kind": "referee",
+    "allowed_modes": ["battle", "encounter", "exploring", "game_over", "town", "victory"],
+    "summary": "Referee: identify a magic item without the party having to use it.",
+    "json_schema": {
+      "properties": {
+        "command_type": {
+          "const": "identify_item",
+          "default": "identify_item",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [{ "minLength": 1, "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Source"
+        },
+        "character_id": { "title": "Character Id", "type": "string" },
+        "item_id": { "title": "Item Id", "type": "string" }
+      },
+      "required": ["character_id", "item_id"],
+      "title": "IdentifyItem",
+      "type": "object"
+    }
+  },
+  "mark_trigger_fired": {
+    "command_type": "mark_trigger_fired",
+    "kind": "referee",
+    "allowed_modes": ["battle", "encounter", "exploring", "game_over", "town", "victory"],
+    "summary": "Referee: record that a trigger has fired.",
+    "json_schema": {
+      "properties": {
+        "command_type": {
+          "const": "mark_trigger_fired",
+          "default": "mark_trigger_fired",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [{ "minLength": 1, "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Source"
+        },
+        "trigger_id": { "minLength": 1, "title": "Trigger Id", "type": "string" },
+        "narrative": {
+          "anyOf": [{ "minLength": 1, "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Narrative"
+        }
+      },
+      "required": ["trigger_id"],
+      "title": "MarkTriggerFired",
+      "type": "object"
+    }
+  },
+  "place_party": {
+    "command_type": "place_party",
+    "kind": "referee",
+    "allowed_modes": ["exploring", "game_over", "town"],
+    "summary": "Referee: move the party straight to a dungeon cell or to town.",
+    "json_schema": {
+      "$defs": {
+        "Direction": { "enum": ["north", "east", "south", "west"], "title": "Direction", "type": "string" },
+        "PartyLocation": {
+          "properties": {
+            "kind": { "enum": ["town", "dungeon"], "title": "Kind", "type": "string" },
+            "dungeon_id": {
+              "anyOf": [{ "type": "string" }, { "type": "null" }],
+              "default": null,
+              "title": "Dungeon Id"
+            },
+            "level_number": {
+              "anyOf": [{ "type": "integer" }, { "type": "null" }],
+              "default": null,
+              "title": "Level Number"
+            },
+            "position": {
+              "anyOf": [
+                {
+                  "maxItems": 2,
+                  "minItems": 2,
+                  "prefixItems": [{ "type": "integer" }, { "type": "integer" }],
+                  "type": "array"
+                },
+                { "type": "null" }
+              ],
+              "default": null,
+              "title": "Position"
+            },
+            "facing": { "anyOf": [{ "$ref": "#/$defs/Direction" }, { "type": "null" }], "default": null }
+          },
+          "required": ["kind"],
+          "title": "PartyLocation",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "command_type": {
+          "const": "place_party",
+          "default": "place_party",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [{ "minLength": 1, "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Source"
+        },
+        "location": { "$ref": "#/$defs/PartyLocation" }
+      },
+      "required": ["location"],
+      "title": "PlaceParty",
+      "type": "object"
+    }
+  },
+  "record_note": {
+    "command_type": "record_note",
+    "kind": "referee",
+    "allowed_modes": ["battle", "encounter", "exploring", "game_over", "town", "victory"],
+    "summary": "Referee: write a note into the logs, with no effect on the game.",
+    "json_schema": {
+      "properties": {
+        "command_type": {
+          "const": "record_note",
+          "default": "record_note",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [{ "minLength": 1, "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Source"
+        },
+        "text": { "minLength": 1, "title": "Text", "type": "string" }
+      },
+      "required": ["text"],
+      "title": "RecordNote",
+      "type": "object"
+    }
+  },
+  "remove_coins": {
+    "command_type": "remove_coins",
+    "kind": "referee",
+    "allowed_modes": ["battle", "encounter", "exploring", "game_over", "town", "victory"],
+    "summary": "Referee: take coins out of a member's purse, the inverse of `GrantCoins`.",
+    "json_schema": {
+      "$defs": {
+        "Coins": {
+          "properties": {
+            "pp": { "default": 0, "minimum": 0, "title": "Pp", "type": "integer" },
+            "gp": { "default": 0, "minimum": 0, "title": "Gp", "type": "integer" },
+            "ep": { "default": 0, "minimum": 0, "title": "Ep", "type": "integer" },
+            "sp": { "default": 0, "minimum": 0, "title": "Sp", "type": "integer" },
+            "cp": { "default": 0, "minimum": 0, "title": "Cp", "type": "integer" }
+          },
+          "title": "Coins",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "command_type": {
+          "const": "remove_coins",
+          "default": "remove_coins",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [{ "minLength": 1, "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Source"
+        },
+        "character_id": { "title": "Character Id", "type": "string" },
+        "coins": { "$ref": "#/$defs/Coins" }
+      },
+      "required": ["character_id", "coins"],
+      "title": "RemoveCoins",
+      "type": "object"
+    }
+  },
+  "remove_item": {
+    "command_type": "remove_item",
+    "kind": "referee",
+    "allowed_modes": ["battle", "encounter", "exploring", "game_over", "town", "victory"],
+    "summary": "Referee: take an item away from a member, the inverse of `GrantItem`.",
+    "json_schema": {
+      "properties": {
+        "command_type": {
+          "const": "remove_item",
+          "default": "remove_item",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [{ "minLength": 1, "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Source"
+        },
+        "character_id": { "title": "Character Id", "type": "string" },
+        "item_id": { "title": "Item Id", "type": "string" },
+        "quantity": { "default": 1, "minimum": 1, "title": "Quantity", "type": "integer" }
+      },
+      "required": ["character_id", "item_id"],
+      "title": "RemoveItem",
+      "type": "object"
+    }
+  },
+  "remove_member": {
+    "command_type": "remove_member",
+    "kind": "referee",
+    "allowed_modes": ["exploring", "town"],
+    "summary": "Referee: take a member out of the party for good.",
+    "json_schema": {
+      "properties": {
+        "command_type": {
+          "const": "remove_member",
+          "default": "remove_member",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [{ "minLength": 1, "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Source"
+        },
+        "character_id": { "title": "Character Id", "type": "string" },
+        "give_to": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Give To"
+        }
+      },
+      "required": ["character_id"],
+      "title": "RemoveMember",
+      "type": "object"
+    }
+  },
+  "reveal_objective": {
+    "command_type": "reveal_objective",
+    "kind": "referee",
+    "allowed_modes": ["battle", "encounter", "exploring", "game_over", "town", "victory"],
+    "summary": "Referee: show the players a hidden objective of an active quest.",
+    "json_schema": {
+      "properties": {
+        "command_type": {
+          "const": "reveal_objective",
+          "default": "reveal_objective",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [{ "minLength": 1, "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Source"
+        },
+        "quest_id": { "minLength": 1, "title": "Quest Id", "type": "string" },
+        "objective_id": { "minLength": 1, "title": "Objective Id", "type": "string" }
+      },
+      "required": ["quest_id", "objective_id"],
+      "title": "RevealObjective",
+      "type": "object"
+    }
+  },
+  "roll_dice": {
+    "command_type": "roll_dice",
+    "kind": "referee",
+    "allowed_modes": ["battle", "encounter", "exploring", "game_over", "town", "victory"],
+    "summary": "Referee: roll dice through the session, so the roll is seeded, logged, and replayed.",
+    "json_schema": {
+      "properties": {
+        "command_type": {
+          "const": "roll_dice",
+          "default": "roll_dice",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [{ "minLength": 1, "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Source"
+        },
+        "expression": { "title": "Expression", "type": "string" }
+      },
+      "required": ["expression"],
+      "title": "RollDice",
+      "type": "object"
+    }
+  },
+  "set_door_state": {
+    "command_type": "set_door_state",
+    "kind": "referee",
+    "allowed_modes": ["battle", "encounter", "exploring", "game_over", "town", "victory"],
+    "summary": "Referee: change the state of a door on any level of any dungeon.",
+    "json_schema": {
+      "$defs": {
+        "Direction": { "enum": ["north", "east", "south", "west"], "title": "Direction", "type": "string" }
+      },
+      "properties": {
+        "command_type": {
+          "const": "set_door_state",
+          "default": "set_door_state",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [{ "minLength": 1, "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Source"
+        },
+        "dungeon_id": { "title": "Dungeon Id", "type": "string" },
+        "level_number": { "minimum": 1, "title": "Level Number", "type": "integer" },
+        "x": { "title": "X", "type": "integer" },
+        "y": { "title": "Y", "type": "integer" },
+        "direction": { "$ref": "#/$defs/Direction" },
+        "open": { "anyOf": [{ "type": "boolean" }, { "type": "null" }], "default": null, "title": "Open" },
+        "wedged": {
+          "anyOf": [{ "type": "boolean" }, { "type": "null" }],
+          "default": null,
+          "title": "Wedged"
+        },
+        "discovered": {
+          "anyOf": [{ "type": "boolean" }, { "type": "null" }],
+          "default": null,
+          "title": "Discovered"
+        },
+        "unlocked": {
+          "anyOf": [{ "type": "boolean" }, { "type": "null" }],
+          "default": null,
+          "title": "Unlocked"
+        }
+      },
+      "required": ["dungeon_id", "level_number", "x", "y", "direction"],
+      "title": "SetDoorState",
+      "type": "object"
+    }
+  },
+  "set_flag": {
+    "command_type": "set_flag",
+    "kind": "referee",
+    "allowed_modes": ["battle", "encounter", "exploring", "game_over", "town", "victory"],
+    "summary": "Referee: set a session flag, like one that records a lever pulled to open a portcullis.",
+    "json_schema": {
+      "properties": {
+        "command_type": {
+          "const": "set_flag",
+          "default": "set_flag",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [{ "minLength": 1, "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Source"
+        },
+        "key": { "minLength": 1, "title": "Key", "type": "string" },
+        "value": {
+          "anyOf": [{ "type": "string" }, { "type": "integer" }, { "type": "boolean" }],
+          "title": "Value"
+        }
+      },
+      "required": ["key", "value"],
+      "title": "SetFlag",
+      "type": "object"
+    }
+  },
+  "spawn_monsters": {
+    "command_type": "spawn_monsters",
+    "kind": "referee",
+    "allowed_modes": ["battle", "encounter", "exploring"],
+    "summary": "Referee: create monsters at a distance from the party, in a new encounter or the open one.",
+    "json_schema": {
+      "properties": {
+        "command_type": {
+          "const": "spawn_monsters",
+          "default": "spawn_monsters",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [{ "minLength": 1, "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Source"
+        },
+        "template_id": { "title": "Template Id", "type": "string" },
+        "count_dice": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Count Dice"
+        },
+        "count_fixed": {
+          "anyOf": [{ "minimum": 1, "type": "integer" }, { "type": "null" }],
+          "default": null,
+          "title": "Count Fixed"
+        },
+        "distance_feet": { "minimum": 0, "title": "Distance Feet", "type": "integer" }
+      },
+      "required": ["template_id", "distance_feet"],
+      "title": "SpawnMonsters",
+      "type": "object"
+    }
+  },
+  "spawn_npc_party": {
+    "command_type": "spawn_npc_party",
+    "kind": "referee",
+    "allowed_modes": ["exploring"],
+    "summary": "Referee: generate a party of NPC adventurers and open an encounter with them.",
+    "json_schema": {
+      "properties": {
+        "command_type": {
+          "const": "spawn_npc_party",
+          "default": "spawn_npc_party",
+          "title": "Command Type",
+          "type": "string"
+        },
+        "source": {
+          "anyOf": [{ "minLength": 1, "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Source"
+        },
+        "party_kind": { "enum": ["basic", "expert"], "title": "Party Kind", "type": "string" },
+        "count_dice": {
+          "anyOf": [{ "type": "string" }, { "type": "null" }],
+          "default": null,
+          "title": "Count Dice"
+        },
+        "count_fixed": {
+          "anyOf": [{ "minimum": 1, "type": "integer" }, { "type": "null" }],
+          "default": null,
+          "title": "Count Fixed"
+        },
+        "distance_feet": { "minimum": 0, "title": "Distance Feet", "type": "integer" }
+      },
+      "required": ["party_kind", "distance_feet"],
+      "title": "SpawnNpcParty",
+      "type": "object"
+    }
+  }
+}

@@ -1,0 +1,551 @@
+{
+  "classes": {
+    "items": [
+      {
+        "id": "cleric",
+        "name": "Cleric",
+        "race": "human",
+        "prime_requisites": ["wis"],
+        "requirements": {},
+        "hit_die": 6,
+        "max_level": 14
+      },
+      {
+        "id": "dwarf",
+        "name": "Dwarf",
+        "race": "dwarf",
+        "prime_requisites": ["str"],
+        "requirements": { "con": 9 },
+        "hit_die": 8,
+        "max_level": 12
+      },
+      {
+        "id": "elf",
+        "name": "Elf",
+        "race": "elf",
+        "prime_requisites": ["int", "str"],
+        "requirements": { "int": 9 },
+        "hit_die": 6,
+        "max_level": 10
+      },
+      {
+        "id": "fighter",
+        "name": "Fighter",
+        "race": "human",
+        "prime_requisites": ["str"],
+        "requirements": {},
+        "hit_die": 8,
+        "max_level": 14
+      },
+      {
+        "id": "halfling",
+        "name": "Halfling",
+        "race": "halfling",
+        "prime_requisites": ["dex", "str"],
+        "requirements": { "con": 9, "dex": 9 },
+        "hit_die": 6,
+        "max_level": 8
+      },
+      {
+        "id": "magic_user",
+        "name": "Magic-User",
+        "race": "human",
+        "prime_requisites": ["int"],
+        "requirements": {},
+        "hit_die": 4,
+        "max_level": 14
+      },
+      {
+        "id": "thief",
+        "name": "Thief",
+        "race": "human",
+        "prime_requisites": ["dex"],
+        "requirements": {},
+        "hit_die": 4,
+        "max_level": 14
+      }
+    ],
+    "total": 7,
+    "limit": 200,
+    "offset": 0
+  },
+  "details": {
+    "fighter": {
+      "id": "fighter",
+      "name": "Fighter",
+      "race": "human",
+      "requirements": {},
+      "prime_requisites": ["str"],
+      "xp_tiers": [
+        { "modifier_pct": 10, "minimums": { "str": 16 } },
+        { "modifier_pct": 5, "minimums": { "str": 13 } },
+        { "modifier_pct": 0, "minimums": { "str": 9 } },
+        { "modifier_pct": -10, "minimums": { "str": 6 } },
+        { "modifier_pct": -20, "minimums": { "str": 3 } }
+      ],
+      "hit_die": 8,
+      "max_level": 14,
+      "armour": { "kind": "any", "shields_allowed": true },
+      "weapons": { "kind": "any", "weapon_ids": [], "manual_notes": [] },
+      "languages": ["common"],
+      "may_not_lower": [],
+      "abilities": [],
+      "thief_skills": [],
+      "level_titles": ["Veteran", "Warrior"],
+      "progression": [
+        {
+          "level": 1,
+          "xp": 0,
+          "hit_dice": { "count": 1, "die": 8, "bonus": 0, "con_applies": true },
+          "thac0": 19,
+          "attack_bonus": 0,
+          "saves": { "death": 12, "wands": 13, "paralysis": 14, "breath": 15, "spells": 16 },
+          "spell_slots": []
+        },
+        {
+          "level": 2,
+          "xp": 2000,
+          "hit_dice": { "count": 2, "die": 8, "bonus": 0, "con_applies": true },
+          "thac0": 19,
+          "attack_bonus": 0,
+          "saves": { "death": 12, "wands": 13, "paralysis": 14, "breath": 15, "spells": 16 },
+          "spell_slots": []
+        }
+      ],
+      "overrides_applied": []
+    },
+    "magic_user": {
+      "id": "magic_user",
+      "name": "Magic-User",
+      "race": "human",
+      "requirements": {},
+      "prime_requisites": ["int"],
+      "xp_tiers": [
+        { "modifier_pct": 10, "minimums": { "int": 16 } },
+        { "modifier_pct": 5, "minimums": { "int": 13 } },
+        { "modifier_pct": 0, "minimums": { "int": 9 } },
+        { "modifier_pct": -10, "minimums": { "int": 6 } },
+        { "modifier_pct": -20, "minimums": { "int": 3 } }
+      ],
+      "hit_die": 4,
+      "max_level": 14,
+      "armour": { "kind": "none", "shields_allowed": false },
+      "weapons": { "kind": "allowed", "weapon_ids": ["dagger"], "manual_notes": [] },
+      "languages": ["common"],
+      "may_not_lower": [],
+      "abilities": [
+        {
+          "tag": "arcane_magic",
+          "name": "Arcane Magic",
+          "prose": "See Spells for full details on arcane magic.\nMagical research: A magic-user of any level may spend time and money on mag",
+          "manual": false,
+          "params": { "spell_list": "magic_user" }
+        }
+      ],
+      "thief_skills": [],
+      "level_titles": ["Medium", "Seer"],
+      "progression": [
+        {
+          "level": 1,
+          "xp": 0,
+          "hit_dice": { "count": 1, "die": 4, "bonus": 0, "con_applies": true },
+          "thac0": 19,
+          "attack_bonus": 0,
+          "saves": { "death": 13, "wands": 14, "paralysis": 13, "breath": 16, "spells": 15 },
+          "spell_slots": [1, 0, 0, 0, 0, 0]
+        },
+        {
+          "level": 2,
+          "xp": 2500,
+          "hit_dice": { "count": 2, "die": 4, "bonus": 0, "con_applies": true },
+          "thac0": 19,
+          "attack_bonus": 0,
+          "saves": { "death": 13, "wands": 14, "paralysis": 13, "breath": 16, "spells": 15 },
+          "spell_slots": [2, 0, 0, 0, 0, 0]
+        }
+      ],
+      "overrides_applied": []
+    },
+    "dwarf": {
+      "id": "dwarf",
+      "name": "Dwarf",
+      "race": "dwarf",
+      "requirements": { "con": 9 },
+      "prime_requisites": ["str"],
+      "xp_tiers": [
+        { "modifier_pct": 10, "minimums": { "str": 16 } },
+        { "modifier_pct": 5, "minimums": { "str": 13 } },
+        { "modifier_pct": 0, "minimums": { "str": 9 } },
+        { "modifier_pct": -10, "minimums": { "str": 6 } },
+        { "modifier_pct": -20, "minimums": { "str": 3 } }
+      ],
+      "hit_die": 8,
+      "max_level": 12,
+      "armour": { "kind": "any", "shields_allowed": true },
+      "weapons": {
+        "kind": "forbidden",
+        "weapon_ids": ["long_bow", "two_handed_sword"],
+        "manual_notes": ["Their stature means they can only use small or normal sized weapons."]
+      },
+      "languages": ["common", "dwarvish", "gnomish", "goblin", "kobold"],
+      "may_not_lower": [],
+      "abilities": [
+        {
+          "tag": "detect_construction_tricks",
+          "name": "Detect Construction Tricks",
+          "prose": "As expert miners, dwarves have a 2-in-6 chance of being able to detect new construction, sliding walls, or sloping passa",
+          "manual": false,
+          "params": { "chance_in_six": 2 }
+        },
+        {
+          "tag": "detect_room_traps",
+          "name": "Detect Room Traps",
+          "prose": "Due to their expertise with construction, dwarves have a 2-in-6 chance of detecting non-magical room traps when searchin",
+          "manual": false,
+          "params": { "chance_in_six": 2 }
+        },
+        {
+          "tag": "infravision",
+          "name": "Infravision",
+          "prose": "Dwarves have infravision to 60\u2019 (see Darkness under Hazards and Challenges).",
+          "manual": false,
+          "params": { "range_feet": 60 }
+        },
+        {
+          "tag": "listening_at_doors",
+          "name": "Listening at Doors",
+          "prose": "Dwarves have a 2-in-6 chance of hearing noises (see Dungeon Adventuring).",
+          "manual": false,
+          "params": { "chance_in_six": 2 }
+        }
+      ],
+      "thief_skills": [],
+      "level_titles": ["Dwarven Veteran", "Dwarven Warrior"],
+      "progression": [
+        {
+          "level": 1,
+          "xp": 0,
+          "hit_dice": { "count": 1, "die": 8, "bonus": 0, "con_applies": true },
+          "thac0": 19,
+          "attack_bonus": 0,
+          "saves": { "death": 8, "wands": 9, "paralysis": 10, "breath": 13, "spells": 12 },
+          "spell_slots": []
+        },
+        {
+          "level": 2,
+          "xp": 2200,
+          "hit_dice": { "count": 2, "die": 8, "bonus": 0, "con_applies": true },
+          "thac0": 19,
+          "attack_bonus": 0,
+          "saves": { "death": 8, "wands": 9, "paralysis": 10, "breath": 13, "spells": 12 },
+          "spell_slots": []
+        }
+      ],
+      "overrides_applied": []
+    }
+  },
+  "abilities": {
+    "strength": [
+      { "min_score": 3, "max_score": 3, "melee": -3, "open_doors": 1 },
+      { "min_score": 4, "max_score": 5, "melee": -2, "open_doors": 1 },
+      { "min_score": 6, "max_score": 8, "melee": -1, "open_doors": 1 },
+      { "min_score": 9, "max_score": 12, "melee": 0, "open_doors": 2 },
+      { "min_score": 13, "max_score": 15, "melee": 1, "open_doors": 3 },
+      { "min_score": 16, "max_score": 17, "melee": 2, "open_doors": 4 },
+      { "min_score": 18, "max_score": 18, "melee": 3, "open_doors": 5 }
+    ],
+    "intelligence": [
+      {
+        "min_score": 3,
+        "max_score": 3,
+        "additional_languages": 0,
+        "literacy": "illiterate",
+        "broken_speech": true
+      },
+      {
+        "min_score": 4,
+        "max_score": 5,
+        "additional_languages": 0,
+        "literacy": "illiterate",
+        "broken_speech": false
+      },
+      {
+        "min_score": 6,
+        "max_score": 8,
+        "additional_languages": 0,
+        "literacy": "basic",
+        "broken_speech": false
+      },
+      {
+        "min_score": 9,
+        "max_score": 12,
+        "additional_languages": 0,
+        "literacy": "literate",
+        "broken_speech": false
+      },
+      {
+        "min_score": 13,
+        "max_score": 15,
+        "additional_languages": 1,
+        "literacy": "literate",
+        "broken_speech": false
+      },
+      {
+        "min_score": 16,
+        "max_score": 17,
+        "additional_languages": 2,
+        "literacy": "literate",
+        "broken_speech": false
+      },
+      {
+        "min_score": 18,
+        "max_score": 18,
+        "additional_languages": 3,
+        "literacy": "literate",
+        "broken_speech": false
+      }
+    ],
+    "wisdom": [
+      { "min_score": 3, "max_score": 3, "magic_saves": -3 },
+      { "min_score": 4, "max_score": 5, "magic_saves": -2 },
+      { "min_score": 6, "max_score": 8, "magic_saves": -1 },
+      { "min_score": 9, "max_score": 12, "magic_saves": 0 },
+      { "min_score": 13, "max_score": 15, "magic_saves": 1 },
+      { "min_score": 16, "max_score": 17, "magic_saves": 2 },
+      { "min_score": 18, "max_score": 18, "magic_saves": 3 }
+    ],
+    "dexterity": [
+      { "min_score": 3, "max_score": 3, "ac": -3, "missile": -3, "initiative": -2 },
+      { "min_score": 4, "max_score": 5, "ac": -2, "missile": -2, "initiative": -1 },
+      { "min_score": 6, "max_score": 8, "ac": -1, "missile": -1, "initiative": -1 },
+      { "min_score": 9, "max_score": 12, "ac": 0, "missile": 0, "initiative": 0 },
+      { "min_score": 13, "max_score": 15, "ac": 1, "missile": 1, "initiative": 1 },
+      { "min_score": 16, "max_score": 17, "ac": 2, "missile": 2, "initiative": 1 },
+      { "min_score": 18, "max_score": 18, "ac": 3, "missile": 3, "initiative": 2 }
+    ],
+    "constitution": [
+      { "min_score": 3, "max_score": 3, "hit_points": -3 },
+      { "min_score": 4, "max_score": 5, "hit_points": -2 },
+      { "min_score": 6, "max_score": 8, "hit_points": -1 },
+      { "min_score": 9, "max_score": 12, "hit_points": 0 },
+      { "min_score": 13, "max_score": 15, "hit_points": 1 },
+      { "min_score": 16, "max_score": 17, "hit_points": 2 },
+      { "min_score": 18, "max_score": 18, "hit_points": 3 }
+    ],
+    "charisma": [
+      { "min_score": 3, "max_score": 3, "npc_reactions": -2, "max_retainers": 1, "retainer_loyalty": 4 },
+      { "min_score": 4, "max_score": 5, "npc_reactions": -1, "max_retainers": 2, "retainer_loyalty": 5 },
+      { "min_score": 6, "max_score": 8, "npc_reactions": -1, "max_retainers": 3, "retainer_loyalty": 6 },
+      { "min_score": 9, "max_score": 12, "npc_reactions": 0, "max_retainers": 4, "retainer_loyalty": 7 },
+      { "min_score": 13, "max_score": 15, "npc_reactions": 1, "max_retainers": 5, "retainer_loyalty": 8 },
+      { "min_score": 16, "max_score": 17, "npc_reactions": 1, "max_retainers": 6, "retainer_loyalty": 9 },
+      { "min_score": 18, "max_score": 18, "npc_reactions": 2, "max_retainers": 7, "retainer_loyalty": 10 }
+    ],
+    "prime_requisite": [
+      { "min_score": 3, "max_score": 5, "xp_modifier_pct": -20 },
+      { "min_score": 6, "max_score": 8, "xp_modifier_pct": -10 },
+      { "min_score": 9, "max_score": 12, "xp_modifier_pct": 0 },
+      { "min_score": 13, "max_score": 15, "xp_modifier_pct": 5 },
+      { "min_score": 16, "max_score": 18, "xp_modifier_pct": 10 }
+    ]
+  },
+  "equipment": {
+    "items": [
+      { "id": "battle_axe", "name": "Battle axe", "item_type": "weapon", "cost_gp": 7 },
+      { "id": "club", "name": "Club", "item_type": "weapon", "cost_gp": 3 },
+      { "id": "crossbow", "name": "Crossbow", "item_type": "weapon", "cost_gp": 30 },
+      { "id": "dagger", "name": "Dagger", "item_type": "weapon", "cost_gp": 3 },
+      { "id": "hand_axe", "name": "Hand axe", "item_type": "weapon", "cost_gp": 4 },
+      { "id": "javelin", "name": "Javelin", "item_type": "weapon", "cost_gp": 1 },
+      { "id": "lance", "name": "Lance", "item_type": "weapon", "cost_gp": 5 },
+      { "id": "long_bow", "name": "Long bow", "item_type": "weapon", "cost_gp": 40 },
+      { "id": "mace", "name": "Mace", "item_type": "weapon", "cost_gp": 5 },
+      { "id": "pole_arm", "name": "Pole arm", "item_type": "weapon", "cost_gp": 7 },
+      { "id": "short_bow", "name": "Short bow", "item_type": "weapon", "cost_gp": 25 },
+      { "id": "short_sword", "name": "Short sword", "item_type": "weapon", "cost_gp": 7 },
+      { "id": "silver_dagger", "name": "Silver dagger", "item_type": "weapon", "cost_gp": 30 },
+      { "id": "sling", "name": "Sling", "item_type": "weapon", "cost_gp": 2 },
+      { "id": "spear", "name": "Spear", "item_type": "weapon", "cost_gp": 3 },
+      { "id": "staff", "name": "Staff", "item_type": "weapon", "cost_gp": 2 },
+      { "id": "sword", "name": "Sword", "item_type": "weapon", "cost_gp": 10 },
+      { "id": "two_handed_sword", "name": "Two-handed sword", "item_type": "weapon", "cost_gp": 15 },
+      { "id": "war_hammer", "name": "War hammer", "item_type": "weapon", "cost_gp": 5 },
+      { "id": "chainmail", "name": "Chainmail", "item_type": "armour", "cost_gp": 40 },
+      { "id": "leather", "name": "Leather", "item_type": "armour", "cost_gp": 20 },
+      { "id": "plate_mail", "name": "Plate mail", "item_type": "armour", "cost_gp": 60 },
+      { "id": "shield", "name": "Shield", "item_type": "armour", "cost_gp": 10 },
+      { "id": "backpack", "name": "Backpack", "item_type": "gear", "cost_gp": 5 },
+      { "id": "crowbar", "name": "Crowbar", "item_type": "gear", "cost_gp": 10 },
+      { "id": "garlic", "name": "Garlic", "item_type": "gear", "cost_gp": 5 },
+      { "id": "grappling_hook", "name": "Grappling hook", "item_type": "gear", "cost_gp": 25 },
+      { "id": "hammer", "name": "Hammer (small)", "item_type": "gear", "cost_gp": 2 },
+      { "id": "holy_symbol", "name": "Holy symbol", "item_type": "gear", "cost_gp": 25 },
+      { "id": "holy_water", "name": "Holy water (vial)", "item_type": "gear", "cost_gp": 25 },
+      { "id": "iron_spikes", "name": "Iron spikes (12)", "item_type": "gear", "cost_gp": 1 },
+      { "id": "lantern", "name": "Lantern", "item_type": "gear", "cost_gp": 10 },
+      { "id": "mirror", "name": "Mirror (hand-sized, steel)", "item_type": "gear", "cost_gp": 5 },
+      { "id": "oil_flask", "name": "Oil (1 flask)", "item_type": "gear", "cost_gp": 2 },
+      { "id": "pole", "name": "Pole (10\u2019 long, wooden)", "item_type": "gear", "cost_gp": 1 },
+      { "id": "rations_iron", "name": "Rations (iron, 7 days)", "item_type": "gear", "cost_gp": 15 },
+      { "id": "rations_standard", "name": "Rations (standard, 7 days)", "item_type": "gear", "cost_gp": 5 },
+      { "id": "rope", "name": "Rope (50\u2019)", "item_type": "gear", "cost_gp": 1 },
+      { "id": "sack_large", "name": "Sack (large)", "item_type": "gear", "cost_gp": 2 },
+      { "id": "sack_small", "name": "Sack (small)", "item_type": "gear", "cost_gp": 1 },
+      { "id": "stakes_and_mallet", "name": "Stakes (3) and mallet", "item_type": "gear", "cost_gp": 3 },
+      { "id": "thieves_tools", "name": "Thieves\u2019 tools", "item_type": "gear", "cost_gp": 25 },
+      { "id": "tinder_box", "name": "Tinder box (flint & steel)", "item_type": "gear", "cost_gp": 3 },
+      { "id": "torch", "name": "Torches (6)", "item_type": "gear", "cost_gp": 1 },
+      { "id": "waterskin", "name": "Waterskin", "item_type": "gear", "cost_gp": 1 },
+      { "id": "wine", "name": "Wine (2 pints)", "item_type": "gear", "cost_gp": 1 },
+      { "id": "wolfsbane", "name": "Wolfsbane (1 bunch)", "item_type": "gear", "cost_gp": 10 },
+      { "id": "arrows", "name": "Arrows (quiver of 20)", "item_type": "ammunition", "cost_gp": 5 },
+      {
+        "id": "crossbow_bolts",
+        "name": "Crossbow bolts (case of 30)",
+        "item_type": "ammunition",
+        "cost_gp": 10
+      },
+      {
+        "id": "silver_tipped_arrow",
+        "name": "Silver tipped arrow (1)",
+        "item_type": "ammunition",
+        "cost_gp": 5
+      },
+      { "id": "sling_stones", "name": "Sling stones", "item_type": "ammunition", "cost_gp": 0 }
+    ],
+    "total": 51,
+    "limit": 200,
+    "offset": 0
+  },
+  "spells": {
+    "items": [
+      {
+        "id": "charm_person",
+        "name": "Charm Person",
+        "level": 1,
+        "spell_list": "magic_user",
+        "range": "120\u2019",
+        "duration": "One or more days (see below)"
+      },
+      {
+        "id": "detect_magic_mu",
+        "name": "Detect Magic",
+        "level": 1,
+        "spell_list": "magic_user",
+        "range": "60\u2019",
+        "duration": "2 turns"
+      },
+      {
+        "id": "floating_disc",
+        "name": "Floating Disc",
+        "level": 1,
+        "spell_list": "magic_user",
+        "range": "6\u2019",
+        "duration": "6 turns"
+      },
+      {
+        "id": "hold_portal",
+        "name": "Hold Portal",
+        "level": 1,
+        "spell_list": "magic_user",
+        "range": "10\u2019",
+        "duration": "2d6 turns"
+      },
+      {
+        "id": "light_mu",
+        "name": "Light",
+        "level": 1,
+        "spell_list": "magic_user",
+        "range": "120\u2019",
+        "duration": "6 turns +1 per level"
+      },
+      {
+        "id": "magic_missile",
+        "name": "Magic Missile",
+        "level": 1,
+        "spell_list": "magic_user",
+        "range": "150\u2019",
+        "duration": "1 turn"
+      },
+      {
+        "id": "protection_from_evil_mu",
+        "name": "Protection from Evil",
+        "level": 1,
+        "spell_list": "magic_user",
+        "range": "The caster",
+        "duration": "6 turns"
+      },
+      {
+        "id": "read_languages",
+        "name": "Read Languages",
+        "level": 1,
+        "spell_list": "magic_user",
+        "range": "The caster",
+        "duration": "2 turns"
+      },
+      {
+        "id": "read_magic",
+        "name": "Read Magic",
+        "level": 1,
+        "spell_list": "magic_user",
+        "range": "The caster",
+        "duration": "1 turn"
+      },
+      {
+        "id": "shield",
+        "name": "Shield",
+        "level": 1,
+        "spell_list": "magic_user",
+        "range": "The caster",
+        "duration": "2 turns"
+      },
+      {
+        "id": "sleep",
+        "name": "Sleep",
+        "level": 1,
+        "spell_list": "magic_user",
+        "range": "240\u2019",
+        "duration": "4d4 turns"
+      },
+      {
+        "id": "ventriloquism",
+        "name": "Ventriloquism",
+        "level": 1,
+        "spell_list": "magic_user",
+        "range": "60\u2019",
+        "duration": "2 turns"
+      }
+    ],
+    "total": 12,
+    "limit": 200,
+    "offset": 0
+  },
+  "languages": {
+    "items": [
+      { "id": "bugbear", "name": "Bugbear", "choosable": true },
+      { "id": "common", "name": "Common", "choosable": false },
+      { "id": "doppelganger", "name": "Doppelg\u00e4nger", "choosable": true },
+      { "id": "dragon", "name": "Dragon", "choosable": true },
+      { "id": "dwarvish", "name": "Dwarvish", "choosable": true },
+      { "id": "elvish", "name": "Elvish", "choosable": true },
+      { "id": "gargoyle", "name": "Gargoyle", "choosable": true },
+      { "id": "gnoll", "name": "Gnoll", "choosable": true },
+      { "id": "gnomish", "name": "Gnomish", "choosable": true },
+      { "id": "goblin", "name": "Goblin", "choosable": true },
+      { "id": "halfling", "name": "Halfling", "choosable": true },
+      { "id": "harpy", "name": "Harpy", "choosable": true },
+      { "id": "hobgoblin", "name": "Hobgoblin", "choosable": true },
+      { "id": "human_dialect", "name": "Human dialect", "choosable": true },
+      { "id": "kobold", "name": "Kobold", "choosable": true },
+      { "id": "lizard_man", "name": "Lizard man", "choosable": true },
+      { "id": "medusa", "name": "Medusa", "choosable": true },
+      { "id": "minotaur", "name": "Minotaur", "choosable": true },
+      { "id": "ogre", "name": "Ogre", "choosable": true },
+      { "id": "orcish", "name": "Orcish", "choosable": true },
+      { "id": "pixie", "name": "Pixie", "choosable": true }
+    ],
+    "total": 21,
+    "limit": 200,
+    "offset": 0
+  }
+}

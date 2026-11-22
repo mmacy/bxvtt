@@ -1,0 +1,86 @@
+.scene {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.star {
+  fill: var(--color-text-strong);
+  opacity: 0.55;
+}
+
+.halo {
+  fill: var(--color-accent-text);
+  opacity: 0.09;
+}
+
+.moon {
+  fill: var(--color-accent-text);
+  opacity: 0.85;
+}
+
+.moonShade {
+  fill: var(--color-bg-stage);
+  opacity: 0.5;
+}
+
+.sky {
+  fill: url(#town-dusk);
+}
+
+.skyTop {
+  stop-color: var(--color-accent-text);
+  stop-opacity: 0;
+}
+
+.skyGlow {
+  stop-color: var(--color-accent-text);
+  stop-opacity: 0.34;
+}
+
+.far {
+  fill: var(--color-surface-3);
+}
+
+.mid {
+  fill: var(--color-surface-2);
+}
+
+.near {
+  fill: var(--color-bg-stage);
+}
+
+.water {
+  fill: var(--color-surface-sunken);
+  opacity: 0.9;
+}
+
+.ripples path {
+  fill: none;
+  stroke: var(--color-text-subtle);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  opacity: 0.4;
+}
+
+.window {
+  fill: var(--color-focus);
+  opacity: 0.9;
+}
+
+.archway {
+  fill: var(--color-surface-1);
+}
+
+.bell {
+  fill: var(--color-accent);
+}
+
+.lantern {
+  fill: var(--color-focus);
+  opacity: 0.22;
+}
+
+.lanternCore {
+  fill: var(--color-focus);
+}

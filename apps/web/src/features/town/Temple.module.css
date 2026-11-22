@@ -1,0 +1,142 @@
+.temple {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: var(--page-max);
+  margin-inline: auto;
+}
+
+.patients {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+
+.label {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.services {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+}
+
+.service {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: var(--border-hair) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+}
+
+.serviceName {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-plain);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+
+.serviceDetail,
+.short,
+.explain,
+.pays {
+  margin: var(--space-0-5) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+}
+
+.short {
+  color: var(--color-warning);
+}
+
+.explain {
+  margin-bottom: var(--space-3);
+}
+
+.price {
+  color: var(--color-gold);
+  font-family: var(--font-numeric);
+  font-size: var(--text-xl);
+  font-variant-numeric: tabular-nums;
+}
+
+.patient {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.deadNote {
+  display: flex;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.purseRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.purses {
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.purseLine {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.gold {
+  color: var(--color-gold);
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
+}
+
+.line {
+  display: block;
+}
+
+@container town (max-width: 900px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.level {
+  max-width: 150px;
+}

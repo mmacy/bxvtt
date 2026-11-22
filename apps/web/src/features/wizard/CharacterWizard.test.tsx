@@ -1,0 +1,161 @@
+import { BxvttProblemError } from '@bxvtt/shared/client';
+import type { CharacterRequest, Problem, StoredCharacter } from '@bxvtt/shared/protocol';
+import { screen, waitFor } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fixtureSnapshot } from '@/app/testing/fixtures';
+import { createFakeApi, renderWithTable, type FakeApi } from '@/app/testing/renderWithTable';
+import catalog from './__fixtures__/catalog.json';
+import stored from './__fixtures__/stored.json';
+import { CharacterWizard } from './CharacterWizard';
+import { draftKey, emptyDraft } from './draft';
+import { DRY_RUN_SENTINEL } from './server';
+
+const ROLL = {
+  id: 'rol_test',
+  scores: { str: 15, int: 9, wis: 10, dex: 12, con: 11, cha: 8 },
+  eligible_class_ids: ['fighter', 'dwarf', 'magic_user'],
+  used: false,
+  created_at: '2026-11-21T00:00:00Z',
+};
+
+function invalid(body: Partial<Problem>): BxvttProblemError {
+  return new BxvttProblemError({
+    type: 'about:blank',
+    title: 'Unprocessable Entity',
+    status: 422,
+    code: 'character_invalid',
+    detail: 'refused',
+    ...body,
+  } as Problem);
+}
+
+function page<T>(items: T[]) {
+  return { items, total: items.length, limit: 200, offset: 0 };
+}
+
+/** A fake API that serves the catalogs and plays bxapi's creation with 60 gp of starting gold. */
+function wizardApi(options: { finalRefusal?: BxvttProblemError } = {}): FakeApi {
+  const api = createFakeApi();
+  api.rules.mockImplementation(async (path: string) => {
+    if (path === 'classes') return page(catalog.classes.items);
+    if (path.startsWith('classes/')) {
+      const id = path.slice('classes/'.length) as keyof typeof catalog.details;
+      return catalog.details[id] ?? catalog.details.fighter;
+    }
+    if (path === 'tables/abilities') return catalog.abilities;
+    if (path === 'equipment') return page(catalog.equipment.items);
+    if (path === 'spells') return page(catalog.spells.items);
+    if (path === 'languages') return page(catalog.languages.items);
+    throw new Error(`No fixture for ${path}`);
+  });
+  api.rollAbilities.mockResolvedValue(ROLL);
+  api.createCharacter.mockImplementation(async (request: CharacterRequest) => {
+    const dry = request.equip_item_ids?.includes(DRY_RUN_SENTINEL) ?? false;
+    const lots =
+      request.purchases?.reduce((sum, p) => sum + (p.item_id === 'torch' ? (p.quantity ?? 1) : 0), 0) ?? 0;
+    if (lots > 60) {
+      throw invalid({
+        rejections: [{ code: 'items.purchase.insufficient_funds', params: { item: 'torch', cost_gp: lots } }],
+      });
+    }
+    if (dry) throw invalid({ field: 'equip_item_ids', id: DRY_RUN_SENTINEL, index: 0 });
+    if (options.finalRefusal) throw options.finalRefusal;
+    return { ...(stored as unknown as StoredCharacter), name: request.name };
+  });
+  return api;
+}
+
+beforeEach(() => {
+  localStorage.clear();
+});
+
+describe('CharacterWizard', () => {
+  it('walks from the roll to a stored character', async () => {
+    const api = wizardApi();
+    const onCreated = vi.fn();
+    const { user } = renderWithTable(<CharacterWizard open onClose={() => {}} onCreated={onCreated} />, {
+      api,
+      snapshot: fixtureSnapshot('lobby', 'player'),
+      preferences: { motion: 'reduce' },
+    });
+
+    await user.click(await screen.findByRole('button', { name: 'Roll ability scores' }));
+    expect(api.rollAbilities).toHaveBeenCalled();
+    expect(await screen.findByRole('group', { name: /^Strength 15/ })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /Continue/ }));
+    await user.click(await screen.findByRole('button', { name: /^Fighter/ }));
+    await user.click(screen.getByRole('button', { name: /Continue/ }));
+
+    // The trade is optional, and skipping still asks the server about the choices so far.
+    await user.click(await screen.findByRole('button', { name: /Skip this step/ }));
+    await user.type(await screen.findByRole('textbox', { name: /Name/ }), 'Wren');
+    await user.click(screen.getByRole('radio', { name: /Lawful/ }));
+    await user.click(screen.getByRole('button', { name: /Continue/ }));
+
+    // The wizard counts the gold the roll gives these choices before the shop opens.
+    expect(await screen.findByText('60')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Add Sword to the cart' }));
+    await waitFor(() =>
+      expect(screen.getByText('The shop and your class accept this outfit.')).toBeInTheDocument(),
+    );
+    await user.click(screen.getByRole('button', { name: /Continue/ }));
+
+    await user.click(await screen.findByRole('button', { name: 'Create character' }));
+    await waitFor(() => expect(onCreated).toHaveBeenCalled());
+    const body = api.createCharacter.mock.calls.at(-1)?.[0];
+    expect(body).toMatchObject({
+      name: 'Wren',
+      class_id: 'fighter',
+      alignment: 'lawful',
+      ability_roll_id: 'rol_test',
+      purchases: [{ item_id: 'sword' }],
+    });
+    expect(body?.equip_item_ids ?? []).not.toContain(DRY_RUN_SENTINEL);
+    expect(await screen.findByText('Wren is ready')).toBeInTheDocument();
+    expect(localStorage.getItem(draftKey(null))).toBeNull();
+  });
+
+  it('takes the player to the step a refusal belongs to', async () => {
+    const api = wizardApi({
+      finalRefusal: invalid({
+        rejections: [
+          { code: 'items.equip.armour_not_allowed', params: { class: 'magic_user', item: 'leather' } },
+        ],
+      }),
+    });
+    localStorage.setItem(
+      draftKey(null),
+      JSON.stringify({
+        ...emptyDraft(),
+        roll: ROLL,
+        classId: 'fighter',
+        name: 'Wren',
+        alignment: 'lawful',
+        step: 'review',
+      }),
+    );
+    const { user } = renderWithTable(<CharacterWizard open onClose={() => {}} onCreated={() => {}} />, {
+      api,
+      snapshot: fixtureSnapshot('lobby', 'player'),
+      preferences: { motion: 'reduce' },
+    });
+    await user.click(await screen.findByRole('button', { name: 'Create character' }));
+    expect(await screen.findByText('The shopping list needs a change')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Outfit' })).toBeInTheDocument();
+  });
+
+  it('keeps the choices when the dialog closes and reopens', async () => {
+    localStorage.setItem(
+      draftKey(null),
+      JSON.stringify({ ...emptyDraft(), roll: ROLL, classId: 'fighter', step: 'identity', name: 'Wren' }),
+    );
+    renderWithTable(<CharacterWizard open onClose={() => {}} onCreated={() => {}} />, {
+      api: wizardApi(),
+      snapshot: fixtureSnapshot('lobby', 'player'),
+      preferences: { motion: 'reduce' },
+    });
+    expect(await screen.findByText('Your character is where you left it')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /Name/ })).toHaveValue('Wren');
+  });
+});

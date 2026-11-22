@@ -8,3 +8,5 @@ adventures/*.json
 playwright-report
 test-results
 *.md
+.bxapi
+.github

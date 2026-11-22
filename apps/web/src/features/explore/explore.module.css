@@ -1,0 +1,690 @@
+/* The map stage ------------------------------------------------------------------------------------------- */
+
+.stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.map {
+  position: absolute;
+  inset: 0;
+}
+
+/* In an encounter or a battle the map stays behind the combat overlays, a little dimmer. */
+.stageCombat .map {
+  filter: saturate(0.7) brightness(0.72);
+  transition: filter var(--duration-slow) var(--ease-standard);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Floating chrome. The surfaces are small and translucent so the map stays the brightest thing on screen. */
+
+.chromeTop {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  z-index: var(--z-raised);
+  display: grid;
+  justify-items: end;
+  gap: var(--space-2);
+  max-width: calc(100% - 420px);
+  pointer-events: none;
+}
+
+.chromeTop > * {
+  pointer-events: auto;
+}
+
+.chromeRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.chromeButton {
+  box-shadow: var(--shadow-1);
+}
+
+.themeSwitch {
+  box-shadow: var(--shadow-1);
+}
+
+.levelName {
+  padding: var(--space-1) var(--space-2-5);
+  border: var(--border-hair) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-surface-2) 88%, transparent);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  box-shadow: var(--shadow-1);
+}
+
+.offLevel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
+  border: var(--border-hair) solid var(--color-border-accent);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-surface-2) 92%, transparent);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  box-shadow: var(--shadow-2);
+}
+
+.offLevel:not(:has(button)) {
+  padding-inline-end: var(--space-3);
+}
+
+.chromeSide {
+  position: absolute;
+  top: 50%;
+  right: var(--space-3);
+  z-index: var(--z-raised);
+  transform: translateY(-50%);
+}
+
+.cameraControls {
+  display: grid;
+  gap: var(--space-0-5);
+  padding: var(--space-1);
+  border: var(--border-hair) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-surface-2) 88%, transparent);
+  box-shadow: var(--shadow-2);
+  backdrop-filter: blur(6px);
+}
+
+.controlDivider {
+  height: 1px;
+  margin: var(--space-0-5) var(--space-1);
+  background: var(--color-border);
+}
+
+.chromeBottomRight {
+  position: absolute;
+  right: var(--space-3);
+  bottom: var(--space-3);
+  z-index: var(--z-raised);
+}
+
+.minimapCard {
+  display: grid;
+  gap: var(--space-1-5);
+  padding: var(--space-1-5);
+  border: var(--border-hair) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-surface-2) 90%, transparent);
+  box-shadow: var(--shadow-2);
+  backdrop-filter: blur(6px);
+}
+
+.minimap {
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.minimapFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-inline: var(--space-0-5);
+}
+
+.compass {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.compassRing {
+  fill: none;
+  stroke: var(--color-border-strong);
+  stroke-width: 1;
+}
+
+.compassBody {
+  fill: var(--color-text-subtle);
+}
+
+.compassNorth {
+  fill: var(--color-accent);
+}
+
+.compassFacing {
+  fill: var(--color-text-strong);
+}
+
+.compassText {
+  display: grid;
+  line-height: var(--leading-tight);
+}
+
+.compassN {
+  color: var(--color-accent-text);
+  font-family: var(--font-display-plain);
+  font-weight: var(--weight-bold);
+}
+
+.scaleNote {
+  display: grid;
+  justify-items: end;
+  gap: var(--space-0-5);
+  color: var(--color-text-subtle);
+  font-size: var(--text-2xs);
+  white-space: nowrap;
+}
+
+.scaleBar {
+  width: 22px;
+  height: 5px;
+  border: var(--border-hair) solid var(--color-text-subtle);
+  border-top: 0;
+}
+
+.chromeBottomLeft {
+  position: absolute;
+  left: var(--space-3);
+  bottom: var(--space-3);
+  z-index: var(--z-raised);
+  max-width: min(420px, calc(100% - 260px));
+}
+
+.chromeBottomLeftRaised {
+  bottom: calc(var(--space-3) + var(--control-lg));
+}
+
+.lightStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1-5) var(--space-3);
+  border: var(--border-hair) solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--color-surface-2) 88%, transparent);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  box-shadow: var(--shadow-1);
+  backdrop-filter: blur(6px);
+}
+
+.lightStatus > svg {
+  flex: none;
+  color: var(--color-gold);
+}
+
+.lightDark {
+  padding-inline-end: var(--space-1);
+  border-color: var(--color-warning);
+  background: color-mix(in srgb, var(--color-surface-2) 94%, transparent);
+  color: var(--color-text-strong);
+}
+
+.lightDark > svg {
+  color: var(--color-warning);
+}
+
+.lightAction {
+  flex: none;
+}
+
+/* A hidden anchor where the context menu opens. */
+.menuAnchor {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* The layer of HTML that follows the camera. */
+.projected {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.projected > [data-wx] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform;
+}
+
+.areaLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  translate: -50% -50%;
+  font-family: var(--font-display-plain);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  white-space: nowrap;
+  text-shadow:
+    0 0 3px var(--halo),
+    0 0 3px var(--halo),
+    0 0 6px var(--halo);
+  opacity: 0.92;
+}
+
+/* Darkness: the party's own cell stays readable, and the dark closes in a few squares out. */
+.darkness {
+  width: 0;
+  height: 0;
+}
+
+.darkness::before {
+  content: '';
+  position: absolute;
+  left: -2400px;
+  top: -2400px;
+  width: 4800px;
+  height: 4800px;
+  background: radial-gradient(
+    circle at center,
+    transparent calc(var(--zoom) * 0.9px),
+    color-mix(in srgb, var(--color-bg-stage) 58%, transparent) calc(var(--zoom) * 2.2px),
+    color-mix(in srgb, var(--color-bg-stage) 84%, transparent) calc(var(--zoom) * 5px)
+  );
+}
+
+.bumpAnchor {
+  width: 0;
+  height: 0;
+}
+
+.bump {
+  position: absolute;
+  display: block;
+  border-radius: var(--radius-pill);
+  background: var(--color-danger);
+  box-shadow: 0 0 10px var(--color-danger);
+  animation: bump-bar var(--duration-slower) var(--ease-out) forwards;
+}
+
+.bump-north,
+.bump-south {
+  width: calc(var(--zoom) * 0.9px);
+  height: 4px;
+  left: calc(var(--zoom) * -0.45px);
+}
+
+.bump-north {
+  top: calc(var(--zoom) * -0.5px - 2px);
+}
+
+.bump-south {
+  top: calc(var(--zoom) * 0.5px - 2px);
+}
+
+.bump-east,
+.bump-west {
+  width: 4px;
+  height: calc(var(--zoom) * 0.9px);
+  top: calc(var(--zoom) * -0.45px);
+}
+
+.bump-east {
+  left: calc(var(--zoom) * 0.5px - 2px);
+}
+
+.bump-west {
+  left: calc(var(--zoom) * -0.5px - 2px);
+}
+
+/* A ring around the party that knocks against the blocked side and settles back. */
+.bumpRing {
+  position: absolute;
+  width: calc(var(--zoom) * 0.8px);
+  height: calc(var(--zoom) * 0.8px);
+  left: calc(var(--zoom) * -0.4px);
+  top: calc(var(--zoom) * -0.4px);
+  border: 2px solid var(--color-danger);
+  border-radius: 50%;
+  animation: bump-ring var(--duration-slower) var(--ease-out) forwards;
+}
+
+.bumpRing-north {
+  --bump-x: 0px;
+  --bump-y: -5px;
+}
+
+.bumpRing-south {
+  --bump-x: 0px;
+  --bump-y: 5px;
+}
+
+.bumpRing-east {
+  --bump-x: 5px;
+  --bump-y: 0px;
+}
+
+.bumpRing-west {
+  --bump-x: -5px;
+  --bump-y: 0px;
+}
+
+@keyframes bump-bar {
+  0% {
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes bump-ring {
+  0% {
+    opacity: 0.9;
+    translate: 0 0;
+  }
+  30% {
+    opacity: 1;
+    translate: var(--bump-x) var(--bump-y);
+  }
+  100% {
+    opacity: 0;
+    translate: 0 0;
+  }
+}
+
+.messageAnchor {
+  width: 0;
+  height: 0;
+}
+
+.message {
+  position: absolute;
+  left: 0;
+  bottom: calc(var(--zoom) * 0.75px);
+  translate: -50% 0;
+  max-width: 280px;
+  width: max-content;
+  padding: var(--space-1) var(--space-2-5);
+  border: var(--border-hair) solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  text-align: center;
+  box-shadow: var(--shadow-2);
+  animation: message-in var(--duration-base) var(--ease-out);
+}
+
+.messageRefused {
+  border-color: var(--color-warning);
+}
+
+@keyframes message-in {
+  from {
+    opacity: 0;
+    translate: -50% 4px;
+  }
+  to {
+    opacity: 1;
+    translate: -50% 0;
+  }
+}
+
+.measureSvg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.measureLine {
+  stroke: var(--color-accent);
+  stroke-width: 2;
+  stroke-dasharray: 6 5;
+  stroke-linecap: round;
+}
+
+.measureAnchor {
+  width: 0;
+  height: 0;
+}
+
+.measureLabel {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  padding: var(--space-0-5) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+  color: var(--color-text-strong);
+  font-family: var(--font-numeric);
+  font-size: var(--text-md);
+  white-space: nowrap;
+  box-shadow: var(--shadow-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bump,
+  .bumpRing,
+  .message {
+    animation: none;
+  }
+  .bump,
+  .bumpRing {
+    opacity: 0;
+  }
+  .stageCombat .map {
+    transition: none;
+  }
+}
+
+/* The scene panel ---------------------------------------------------------------------------------------- */
+
+.scene {
+  width: min(340px, calc(100vw - 2 * var(--space-3)));
+  max-height: min(62vh, 560px);
+  display: flex;
+  flex-direction: column;
+  border: var(--border-hair) solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-surface-2) 94%, transparent);
+  box-shadow: var(--shadow-3);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+  transition: box-shadow var(--duration-slow) var(--ease-standard);
+}
+
+.sceneFresh {
+  box-shadow: var(--glow-accent), var(--shadow-3);
+}
+
+.sceneHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+}
+
+.sceneHeaderIcon {
+  flex: none;
+  color: var(--color-accent);
+}
+
+.sceneTitle {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-text-strong);
+  font-family: var(--font-display-plain);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sceneMeta {
+  flex: none;
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+}
+
+.sceneBody {
+  display: grid;
+  gap: var(--space-2);
+  padding: 0 var(--space-3) var(--space-3);
+  overflow-y: auto;
+}
+
+.sceneParchment {
+  padding: var(--space-3);
+}
+
+.sceneDescription {
+  margin: 0;
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+}
+
+.sceneCorridor {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.sceneList {
+  display: grid;
+  gap: var(--space-0-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sceneList:empty {
+  display: none;
+}
+
+.sceneRow {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: var(--space-2);
+  padding: var(--space-1-5) var(--space-1);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+}
+
+.sceneRow + .sceneRow {
+  border-top: var(--border-hair) solid var(--color-border);
+}
+
+.sceneRowWarning {
+  color: var(--color-text-strong);
+}
+
+.sceneRowWarning .sceneRowIcon {
+  color: var(--color-warning);
+}
+
+.sceneRowIcon {
+  margin-top: 1px;
+  color: var(--color-text-subtle);
+}
+
+.sceneRowText {
+  display: grid;
+  gap: var(--space-0-5);
+  min-width: 0;
+}
+
+.sceneRowAction {
+  align-self: center;
+}
+
+.sceneSub {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+/* Dialogs ------------------------------------------------------------------------------------------------ */
+
+.dialogForm {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.formGroup {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border: var(--border-hair) solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.formLegend {
+  padding: 0 var(--space-1);
+  color: var(--color-text-strong);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.formHint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.formFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.spellList {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.spellTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1-5);
+}
+
+.pinNote {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.pinMeta {
+  margin: var(--space-2) 0 0;
+  color: var(--color-referee);
+  font-size: var(--text-sm);
+}

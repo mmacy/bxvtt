@@ -1,0 +1,100 @@
+.drawer {
+  background: var(--color-surface-1);
+}
+
+.book {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.top {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+  /* The drawer's close button sits in the top right corner. */
+  padding: var(--space-3) var(--space-12) var(--space-2) var(--space-3);
+}
+
+.nav {
+  display: flex;
+  flex: none;
+  gap: var(--space-0-5);
+}
+
+.search {
+  flex: 1;
+}
+
+.searchInput::placeholder {
+  color: var(--color-text-subtle);
+}
+
+.tabs {
+  flex: 1;
+  min-height: 0;
+}
+
+.tabList {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--color-surface-1);
+}
+
+.scroll[data-page^='entry'],
+.scroll[data-page='license'] {
+  background: var(--color-surface-sunken);
+}
+
+.page {
+  width: 100%;
+  max-width: 58rem;
+  margin-inline: auto;
+  padding: var(--space-5);
+}
+
+.footer {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-1-5) var(--space-3) var(--space-1-5) var(--space-4);
+  border-top: var(--border-hair) solid var(--color-border);
+  background: var(--color-surface-1);
+}
+
+.hints {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1-5);
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+}
+
+@media (max-width: 640px) {
+  .hints {
+    display: none;
+  }
+
+  .page {
+    padding: var(--space-3);
+  }
+}

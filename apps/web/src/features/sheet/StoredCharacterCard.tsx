@@ -1,7 +1,19 @@
-import type { ReactNode } from 'react';
 import { classLabel } from '@bxvtt/shared/text';
-import { tokenClass } from '@/app';
-import { Card, TokenPortrait } from '@/ui';
+import { useState, type ReactNode } from 'react';
+import { getApi, tokenClass, useApiAction, useMyCharacters, useStoredCharacter } from '@/app';
+import {
+  Banner,
+  Button,
+  Card,
+  ConfirmDialog,
+  Drawer,
+  IconButton,
+  Skeleton,
+  TokenPortrait,
+  toast,
+} from '@/ui';
+import { StoredSheet } from './StoredSheet';
+import sheetStyles from './sheet.module.css';
 import styles from './StoredCharacterCard.module.css';
 
 export interface StoredCharacterCardProps {
@@ -16,7 +28,8 @@ export interface StoredCharacterCardProps {
 }
 
 /** A stored character in the lobby: on the roster, or in the user's list of characters to add. */
-export function StoredCharacterCard({ summary, owner, actions }: StoredCharacterCardProps) {
+export function StoredCharacterCard({ characterId, summary, owner, actions }: StoredCharacterCardProps) {
+  const [open, setOpen] = useState(false);
   return (
     <Card padding="sm" className={styles.card}>
       <TokenPortrait
@@ -27,13 +40,107 @@ export function StoredCharacterCard({ summary, owner, actions }: StoredCharacter
         decorative
       />
       <div className={styles.text}>
-        <p className={styles.name}>{summary.name}</p>
+        <button type="button" className={styles.nameButton} onClick={() => setOpen(true)}>
+          <span className={styles.name}>{summary.name}</span>
+          <span className="visually-hidden">, open the character sheet</span>
+        </button>
         <p className={styles.meta}>
           Level {summary.level} {classLabel(summary.class_id).toLowerCase()}
           {owner ? <span className={styles.owner}> · {owner.name}</span> : null}
         </p>
       </div>
-      {actions && <div className={styles.actions}>{actions}</div>}
+      <div className={styles.actions}>
+        <IconButton
+          icon="scroll"
+          label={`Open ${summary.name}'s sheet`}
+          variant="ghost"
+          size="sm"
+          onClick={() => setOpen(true)}
+        />
+        {actions}
+      </div>
+      <StoredSheetDrawer
+        characterId={open ? characterId : null}
+        name={summary.name}
+        color={owner?.color}
+        onClose={() => setOpen(false)}
+      />
     </Card>
+  );
+}
+
+interface DrawerProps {
+  characterId: string | null;
+  name: string;
+  color?: string;
+  onClose: () => void;
+}
+
+/** A stored character's sheet in a drawer, with delete for its owner. */
+function StoredSheetDrawer({ characterId, name, color, onClose }: DrawerProps) {
+  const { data, loading, error } = useStoredCharacter(characterId);
+  const mine = useMyCharacters();
+  const { run } = useApiAction();
+  const [confirming, setConfirming] = useState(false);
+  const owned = characterId !== null && (mine.items ?? []).some((c) => c.id === characterId);
+
+  const remove = async () => {
+    if (characterId === null) return;
+    const result = await run(() => getApi().deleteCharacter(characterId), {
+      errorTitle: `Couldn't delete ${name}`,
+    });
+    if (result.ok) {
+      toast.success(`${name} is gone`, { description: 'The character left every party it was in.' });
+      await mine.refresh();
+      onClose();
+    }
+  };
+
+  return (
+    <Drawer
+      open={characterId !== null}
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+      title={name}
+      description="Character sheet"
+      hideTitle
+      width="min(700px, 96vw)"
+      flush
+      footer={
+        owned ? (
+          <div className={sheetStyles.storedFooter}>
+            <span className={sheetStyles.note}>A stored character changes only in a game.</span>
+            <Button variant="danger" icon="trash" size="sm" onClick={() => setConfirming(true)}>
+              Delete character
+            </Button>
+          </div>
+        ) : undefined
+      }
+    >
+      <div className={sheetStyles.sheetScroll}>
+        {loading && <Skeleton shape="block" height={480} />}
+        {error && (
+          <Banner
+            tone="warning"
+            title={error.code === 'not_found' ? "You can't open this sheet" : error.title}
+          >
+            {error.code === 'not_found'
+              ? "Only the character's owner and the referee of a table with this character in its party can read it."
+              : error.detail}
+          </Banner>
+        )}
+        {data && <StoredSheet character={data} color={color} />}
+      </div>
+      <ConfirmDialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        title={`Delete ${name}?`}
+        description={`${name} leaves every lobby party and can't come back. Saved games keep their copy.`}
+        confirmLabel="Delete character"
+        tone="danger"
+        onConfirm={remove}
+      />
+    </Drawer>
   );
 }

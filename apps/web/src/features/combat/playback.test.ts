@@ -1,0 +1,263 @@
+import { contextFromPlayerView } from '@bxvtt/shared/text';
+import { describe, expect, it } from 'vitest';
+import { fixtureSnapshot } from '@/app/testing/fixtures';
+import { summarizeFight, xpSentence } from './fight';
+import {
+  applyEvent,
+  buildBeats,
+  digestRound,
+  monsterGroupsFromRound,
+  sliceBeats,
+  trackFromView,
+  trackStates,
+  withMonsterLabels,
+  type AnyEvent,
+} from './playback';
+
+function battle() {
+  const game = fixtureSnapshot('battle', 'player').game;
+  if (!game) throw new Error('No game in the fixture.');
+  return { view: game.view, encounter: game.view.encounter ?? null, party: game.view.party };
+}
+
+const p = (event: Record<string, unknown>): AnyEvent => ({ visibility: 'player', ...event }) as AnyEvent;
+
+/** A round as bxapi reported it in a real game, trimmed to the parts that matter here. */
+const round: AnyEvent[] = [
+  p({ event_type: 'battle_round', code: 'battle.round.started', round: 2 }),
+  p({
+    event_type: 'initiative_rolled',
+    code: 'combat.initiative.rolled',
+    mode: 'side',
+    entries: [],
+    order: ['character-0001', 'group-0001'],
+  }),
+  p({
+    event_type: 'member_moved',
+    code: 'battle.member.moved',
+    character_id: 'character-0001',
+    move: 'close',
+    advance_feet: 35,
+    group_id: 'group-0001',
+    distance_feet: 5,
+  }),
+  p({
+    event_type: 'member_moved',
+    code: 'battle.member.moved',
+    character_id: 'character-0002',
+    move: 'close',
+    advance_feet: 20,
+    group_id: 'group-0001',
+    distance_feet: 20,
+  }),
+  p({
+    event_type: 'attack_rolled',
+    code: 'combat.attack.hit',
+    attacker_id: 'character-0001',
+    defender_id: 'monster-0002',
+    attack_name: 'Sword',
+    roll: 15,
+    modifier: -1,
+    total: 14,
+    required: 13,
+    defender_ac: 6,
+  }),
+  p({
+    event_type: 'damage_dealt',
+    code: 'combat.damage.dealt',
+    target_id: 'monster-0002',
+    attacker_id: 'character-0001',
+    amount: 6,
+    rolls: [6],
+    keys: [],
+    non_regenerable: false,
+  }),
+  p({ event_type: 'death', code: 'combat.death.died', target_id: 'monster-0002' }),
+  p({
+    event_type: 'attack_rolled',
+    code: 'combat.attack.hit',
+    attacker_id: 'monster-0001',
+    defender_id: 'character-0001',
+    attack_name: 'weapon',
+    roll: 17,
+    modifier: 0,
+    total: 17,
+    required: 14,
+    defender_ac: 4,
+  }),
+  p({
+    event_type: 'damage_dealt',
+    code: 'combat.damage.dealt',
+    target_id: 'character-0001',
+    attacker_id: 'monster-0001',
+    amount: 3,
+    rolls: [3],
+    keys: [],
+    non_regenerable: false,
+  }),
+  p({ event_type: 'monster_fled', code: 'battle.side.fled', group_id: 'group-0001' }),
+  {
+    event_type: 'morale_checked',
+    code: 'combat.morale.broke',
+    visibility: 'referee',
+    subject: 'group-0001',
+    score: 7,
+    roll: 9,
+    modifier: 0,
+    held: false,
+  },
+  {
+    event_type: 'effect_ticked',
+    code: 'effects.effect.ticked',
+    visibility: 'referee',
+    effect_id: 'effect-0001',
+    kind: 'x',
+    target_ref: 'y',
+    round: 2,
+  },
+];
+
+describe('sliceBeats', () => {
+  it('joins an attack with its damage, and moves made together', () => {
+    const slices = sliceBeats(round.filter((e) => e.visibility === 'player'));
+    expect(slices.map((s) => s.map((e) => e.event_type))).toEqual([
+      ['battle_round'],
+      ['initiative_rolled'],
+      ['member_moved', 'member_moved'],
+      ['attack_rolled', 'damage_dealt'],
+      ['death'],
+      ['attack_rolled', 'damage_dealt'],
+      ['monster_fled'],
+    ]);
+  });
+});
+
+describe('buildBeats', () => {
+  const lookup = (id: string) => (id.startsWith('monster-') ? 'group-0001' : null);
+
+  it('keeps referee events out of a player’s playback and bookkeeping out of everyone’s', () => {
+    const { view } = battle();
+    const ctx = contextFromPlayerView(view);
+    const player = buildBeats(round, ctx, { includeReferee: false, lookup });
+    const referee = buildBeats(round, ctx, { includeReferee: true, lookup });
+    expect(player.some((b) => b.referee)).toBe(false);
+    expect(referee.filter((b) => b.referee)).toHaveLength(1);
+    expect(referee.flatMap((b) => b.events).some((e) => e.event_type === 'effect_ticked')).toBe(false);
+  });
+
+  it('floats damage over the target token and shows the attack roll', () => {
+    const { view } = battle();
+    const beats = buildBeats(round, contextFromPlayerView(view), { includeReferee: false, lookup });
+    const hit = beats.find((b) => b.roll !== null && b.focus[0] === 'character-0001');
+    expect(hit?.pops).toEqual([{ tokenId: 'group-0001', kind: 'damage', text: '−6' }]);
+    expect(hit?.roll).toEqual({ natural: 15, modifier: -1, total: 14, hit: true });
+    expect(hit?.lines[0]?.text).toMatch(/Brenna hits/);
+    for (const beat of beats) {
+      expect(beat.durationMs).toBeGreaterThanOrEqual(400);
+      expect(beat.durationMs).toBeLessThanOrEqual(700);
+    }
+  });
+});
+
+describe('the battlefield during playback', () => {
+  it('moves members, lowers hit points, and counts the slain', () => {
+    const { encounter, party } = battle();
+    const lookup = () => 'group-0001';
+    const start = trackFromView(encounter, party);
+    const brenna = start.members['character-0001'];
+    if (!brenna) throw new Error('No Brenna.');
+    let state = start;
+    for (const event of round) state = applyEvent(state, event, lookup);
+    expect(state.members['character-0001']?.advance).toBe(35);
+    expect(state.members['character-0001']?.hp).toBe(brenna.hp - 3);
+    expect(state.groups['group-0001']?.count).toBe((start.groups['group-0001']?.count ?? 0) - 1);
+    expect(state.groups['group-0001']?.fleeing).toBe(true);
+    // The start state is never changed.
+    expect(start.members['character-0001']?.advance).toBe(0);
+  });
+
+  it('gives a state for every beat', () => {
+    const { view, encounter, party } = battle();
+    const lookup = () => 'group-0001';
+    const beats = buildBeats(round, contextFromPlayerView(view), { includeReferee: false, lookup });
+    expect(trackStates(trackFromView(encounter, party), beats, lookup)).toHaveLength(beats.length);
+  });
+});
+
+describe('digestRound', () => {
+  it('sums up who acted first, the damage, the slain, and who flees', () => {
+    const digest = digestRound(round, () => 'group-0001');
+    expect(digest).toMatchObject({
+      round: 2,
+      first: 'party',
+      damageDealt: 6,
+      damageTaken: 3,
+      slain: [{ groupId: 'group-0001', count: 1 }],
+      fleeing: ['group-0001'],
+    });
+  });
+});
+
+describe('naming monsters for players', () => {
+  it('learns a monster’s group from the attack its attacker declared', () => {
+    const pairs = monsterGroupsFromRound(round, { 'character-0001': { target_group_id: 'group-0002' } });
+    expect(pairs).toEqual([['monster-0002', 'group-0002']]);
+  });
+
+  it('names a monster after its group', () => {
+    const { view } = battle();
+    const ctx = contextFromPlayerView(view);
+    const named = withMonsterLabels(ctx, round, (id) => (id === 'monster-0002' ? 'group-0001' : null));
+    expect(named.monsters['monster-0002']?.label).toBe('goblin');
+    expect(named.monsters['monster-0001']).toBeUndefined();
+  });
+});
+
+describe('summarizeFight', () => {
+  it('reports a victory with the defeated, their experience, the loot, and the fallen', () => {
+    const { view } = battle();
+    const events: AnyEvent[] = [
+      p({ event_type: 'battle_round', code: 'battle.round.started', round: 3 }),
+      p({ event_type: 'death', code: 'combat.death.died', target_id: 'character-0002' }),
+      p({ event_type: 'battle_ended', code: 'battle.ended.victory' }),
+      p({ event_type: 'encounter_ended', code: 'encounter.ended', outcome: 'victory' }),
+      p({
+        event_type: 'monster_defeated',
+        code: 'battle.monster.defeated',
+        monster_id: 'monster-0001',
+        template_id: 'goblin',
+        outcome: 'slain',
+        xp: 5,
+      }),
+      p({
+        event_type: 'monster_defeated',
+        code: 'battle.monster.defeated',
+        monster_id: 'monster-0002',
+        template_id: 'goblin',
+        outcome: 'slain',
+        xp: 5,
+      }),
+      p({
+        event_type: 'monster_defeated',
+        code: 'battle.monster.defeated',
+        monster_id: 'monster-0003',
+        template_id: 'goblin',
+        outcome: 'fled',
+        xp: 5,
+      }),
+      p({
+        event_type: 'loot_dropped',
+        code: 'encounter.loot.dropped',
+        item_ids: ['dagger'],
+        coins_gp_value: 12,
+      }),
+    ];
+    const summary = summarizeFight(events, contextFromPlayerView(view));
+    expect(summary.title).toBe('Victory');
+    expect(summary.rounds).toBe(3);
+    expect(summary.defeated.map((d) => d.text)).toEqual(['2 goblins slain', '1 goblin fled']);
+    expect(xpSentence(summary)).toBe('The defeated monsters are worth 15 experience for the party.');
+    expect(summary.loot).toEqual(['coins worth 12 gp', 'a dagger']);
+    expect(summary.fallen).toEqual(['Wren']);
+  });
+});

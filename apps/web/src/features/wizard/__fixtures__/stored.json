@@ -1,0 +1,86 @@
+{
+  "id": "chr_e63BUukL_DvgREtQucuwAw",
+  "name": "Wren",
+  "class_id": "fighter",
+  "level": 1,
+  "created_at": "2026-11-22T06:28:22Z",
+  "character": {
+    "id": null,
+    "name": "Wren",
+    "class_id": "fighter",
+    "custom_class": null,
+    "race": "human",
+    "level": 1,
+    "xp": 0,
+    "scores": { "str": 15, "int": 14, "wis": 11, "dex": 9, "con": 11, "cha": 10 },
+    "alignment": "lawful",
+    "extra_languages": [],
+    "max_hp": 6,
+    "current_hp": 6,
+    "nonregen_damage": 0,
+    "inventory": {
+      "items": [],
+      "purse": { "pp": 0, "gp": 80, "ep": 0, "sp": 0, "cp": 0 },
+      "valuables": [],
+      "worn_armour": {
+        "instance_type": "item",
+        "template": {
+          "item_type": "armour",
+          "id": "leather",
+          "name": "Leather",
+          "cost_gp": 20,
+          "weight_coins": 200,
+          "ac": 7,
+          "ac_ascending": 12,
+          "ac_bonus": null,
+          "category": "light",
+          "overrides_applied": []
+        },
+        "quantity": 1
+      },
+      "shield": null,
+      "wielded": [
+        {
+          "instance_type": "item",
+          "template": {
+            "item_type": "weapon",
+            "id": "sword",
+            "name": "Sword",
+            "cost_gp": 10,
+            "weight_coins": 60,
+            "damage": "1d8",
+            "qualities": ["melee"],
+            "missile_ranges": null,
+            "material": "standard",
+            "overrides_applied": []
+          },
+          "quantity": 1
+        }
+      ],
+      "rings": []
+    },
+    "carrying_treasure": false,
+    "conditions": [],
+    "stat_modifiers": [],
+    "spell_book": [],
+    "memorized_spells": []
+  },
+  "derived": {
+    "thac0": 19,
+    "attack_bonus": 0,
+    "armour_class": 7,
+    "armour_class_ascending": 12,
+    "saves": { "death": 12, "wands": 13, "paralysis": 14, "breath": 15, "spells": 16 },
+    "melee_modifier": 1,
+    "open_doors_chance": 3,
+    "missile_modifier": 0,
+    "initiative_modifier": 0,
+    "hit_point_modifier": 0,
+    "magic_save_modifier": 0,
+    "npc_reaction_modifier": 0,
+    "xp_modifier_pct": 5,
+    "level_title": "Veteran",
+    "alignment_tongue": "alignment_lawful",
+    "languages": ["alignment_lawful", "common"]
+  }
+}
