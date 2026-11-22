@@ -61,8 +61,7 @@ function StatusStrip({ data }: { data: RefereeData }) {
     place?.kind === 'dungeon' && here
       ? `${here.dungeon.name}, level ${here.level.number}`
       : 'The party is in town';
-  const coords =
-    place?.kind === 'dungeon' ? `cell ${place.x}, ${place.y}${here?.area ? ` · ${here.area.id}` : ''}` : null;
+  const coords = place?.kind === 'dungeon' ? `cell ${place.x}, ${place.y}` : null;
   const monsters = encounter?.groups.reduce((sum, g) => sum + g.monster_ids.length, 0) ?? 0;
   return (
     <div className={styles.strip}>
@@ -208,7 +207,13 @@ export function RefereePanel() {
         <div className={styles.tabBar}>
           <TabsList aria-label="Referee tools" stretch className={styles.tabList}>
             {SECTIONS.map((s) => (
-              <TabsTrigger key={s.value} value={s.value} icon={s.icon} iconOnly={!showLabels}>
+              <TabsTrigger
+                key={s.value}
+                value={s.value}
+                icon={s.icon}
+                iconOnly={!showLabels}
+                className={showLabels ? undefined : styles.iconTab}
+              >
                 {showLabels ? s.label : s.title}
               </TabsTrigger>
             ))}

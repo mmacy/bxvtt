@@ -15,7 +15,15 @@ import {
   type Adventure,
   type PlayRecord,
 } from './adventure';
-import { clauseText, conditionText, consequenceText, encounterText, patternText, trapText } from './describe';
+import {
+  clauseText,
+  conditionText,
+  consequenceText,
+  encounterText,
+  flagUses,
+  patternText,
+  trapText,
+} from './describe';
 
 const adventure = asAdventure(bell.payload as unknown as Record<string, unknown>) as Adventure;
 const level1 = findLevel(adventure, 'priory', 1);
@@ -135,5 +143,16 @@ describe('descriptions', () => {
     expect(pit && encounterText(pit, adventure)).toBe(
       '1 drowned prior (seen as a robed corpse) and 2 zombies',
     );
+  });
+});
+
+describe('flagUses', () => {
+  it('says what sets each flag and what reads it', () => {
+    const uses = flagUses(adventure, ctx);
+    expect(uses.get('priory.gashnak')).toEqual([
+      'Set to “dead” when a hobgoblin is slain or routed.',
+      'Checked by the objective Report to Reeve Tamsin Hale.',
+    ]);
+    expect(uses.get('quest.bell')).toEqual(['Set to “silenced” as a reward for Silence the drowned bell.']);
   });
 });

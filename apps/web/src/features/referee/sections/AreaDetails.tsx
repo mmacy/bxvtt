@@ -92,7 +92,7 @@ function FeatureBlock({
         <span className={styles.rowTitle}>
           {isCache ? 'Treasure' : trick ? 'Construction trick' : 'Feature'}
         </span>
-        <span className={styles.secondary}>{feature.id}</span>
+        <span className={styles.idMark}>{feature.id}</span>
         {isCache && <Badge tone={emptied ? 'neutral' : 'gold'}>{emptied ? 'Taken' : 'Still here'}</Badge>}
         {trick && (
           <Badge tone={record.foundTricks.has(ref) ? 'warning' : 'neutral'}>

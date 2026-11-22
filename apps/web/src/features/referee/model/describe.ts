@@ -247,3 +247,64 @@ export function encounterTags(encounter: KeyedEncounter): string[] {
   if (encounter.hoard) tags.push('Lair hoard');
   return tags;
 }
+
+/**
+ * What the adventure does with each flag, as short sentences keyed by flag name: what sets it ("Set to “dead”
+ * when a hobgoblin is slain or routed.") and what reads it ("Checked by the objective Report to Reeve Tamsin
+ * Hale.").
+ */
+export function flagUses(adventure: Adventure, ctx: TextContext): Map<string, string[]> {
+  const uses = new Map<string, string[]>();
+  const add = (key: string, text: string) => {
+    const list = uses.get(key) ?? [];
+    if (!list.includes(text)) list.push(text);
+    uses.set(key, list);
+  };
+  const readBy = (conditions: readonly Condition[] | undefined, what: string) => {
+    for (const condition of conditions ?? []) {
+      if (condition.condition_type === 'flag_equals') add(condition.key, `Checked by ${what}.`);
+    }
+  };
+  const lowerFirst = (text: string) =>
+    text.length === 0 ? text : `${text[0]?.toLowerCase() ?? ''}${text.slice(1)}`;
+  for (const trigger of adventure.triggers) {
+    const when = lowerFirst(patternText(trigger.when, ctx));
+    for (const c of trigger.consequences) {
+      const command = c as unknown as Record<string, unknown>;
+      if (command.command_type === 'set_flag' && typeof command.key === 'string') {
+        add(command.key, `Set to ${flagValue(command.value)} when ${when}.`);
+      }
+    }
+    readBy(trigger.conditions, `the trigger for when ${when}`);
+    if (trigger.when.pattern_type === 'flag_set') add(trigger.when.key, 'Setting it fires a trigger.');
+  }
+  for (const quest of adventure.quests) {
+    for (const reward of quest.rewards) {
+      const command = reward as unknown as Record<string, unknown>;
+      if (command.command_type === 'set_flag' && typeof command.key === 'string') {
+        add(command.key, `Set to ${flagValue(command.value)} as a reward for ${quest.name}.`);
+      }
+    }
+    if (quest.activation) readBy(quest.activation.conditions, `the start of the quest ${quest.name}`);
+    for (const objective of quest.objectives) {
+      readBy(objective.when.conditions, `the objective ${objective.name}`);
+      if (objective.reveal_when)
+        readBy(objective.reveal_when.conditions, `the reveal of the objective ${objective.name}`);
+    }
+  }
+  for (const dungeon of adventure.dungeons) {
+    for (const level of dungeon.levels) {
+      for (const edge of Object.values(level.edges)) {
+        const condition = edge.door?.requires?.condition;
+        if (condition?.condition_type === 'flag_equals')
+          add(condition.key, `Opens a gated door on level ${level.number}.`);
+      }
+      for (const transition of level.transitions) {
+        const condition = transition.requires?.condition;
+        if (condition?.condition_type === 'flag_equals')
+          add(condition.key, `Opens a way out on level ${level.number}.`);
+      }
+    }
+  }
+  return uses;
+}

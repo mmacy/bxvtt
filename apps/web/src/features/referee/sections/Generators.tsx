@@ -26,8 +26,8 @@ import {
   Field,
   NumberInput,
   RadioGroup,
-  SegmentedControl,
   Select,
+  type IconName,
 } from '@/ui';
 import type { GeneratorKind } from '@bxvtt/shared/protocol';
 import { MemberPicker, MonsterPicker } from '../pickers';
@@ -521,22 +521,32 @@ function NpcPartyGenerator() {
 
 type Kind = 'treasure' | 'monsters' | 'room' | 'npcs';
 
+const GENERATORS: ReadonlyArray<{ value: Kind; label: string; icon: IconName }> = [
+  { value: 'treasure', label: 'Treasure', icon: 'coins' },
+  { value: 'monsters', label: 'Monsters', icon: 'skull' },
+  { value: 'room', label: 'Room', icon: 'door' },
+  { value: 'npcs', label: 'NPCs', icon: 'users' },
+];
+
 /** The four generators behind one switch. */
 export function Generators({ data }: { data: RefereeData }) {
   const [kind, setKind] = useState<Kind>('treasure');
   return (
     <div className={styles.section}>
-      <SegmentedControl
-        aria-label="Generator"
-        value={kind}
-        onValueChange={(next) => setKind(next as Kind)}
-        options={[
-          { value: 'treasure', label: 'Treasure', icon: 'coins' },
-          { value: 'monsters', label: 'Monsters', icon: 'skull' },
-          { value: 'room', label: 'Room', icon: 'door' },
-          { value: 'npcs', label: 'NPCs', icon: 'users' },
-        ]}
-      />
+      <div className={styles.generatorSwitch} role="group" aria-label="Generator">
+        {GENERATORS.map((g) => (
+          <Button
+            key={g.value}
+            size="sm"
+            variant={kind === g.value ? 'secondary' : 'ghost'}
+            icon={g.icon}
+            aria-pressed={kind === g.value}
+            onClick={() => setKind(g.value)}
+          >
+            {g.label}
+          </Button>
+        ))}
+      </div>
       <div hidden={kind !== 'treasure'}>
         <TreasureGenerator />
       </div>

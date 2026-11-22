@@ -14,7 +14,7 @@ import {
   type QuestSpec,
   type TriggerSpec,
 } from '../model/adventure';
-import { clauseText, conditionText, consequenceText, patternText } from '../model/describe';
+import { clauseText, conditionText, consequenceText, flagUses, patternText } from '../model/describe';
 import { carriedItems, questStatusLabel } from '../pickers';
 import { CommandOutcome, useRefereeCommand } from '../RefereeCommand';
 import { knownFlagKeys } from '../schema/fields';
@@ -323,6 +323,10 @@ function flagText(value: unknown): string {
 function Flags({ data }: { data: RefereeData }) {
   const flags = data.state?.flags ?? {};
   const known = useMemo(() => knownFlagKeys(data), [data]);
+  const uses = useMemo(
+    () => (data.adventure ? flagUses(data.adventure, data.ctx) : new Map<string, string[]>()),
+    [data.adventure, data.ctx],
+  );
   const [editing, setEditing] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   return (
@@ -338,7 +342,15 @@ function Flags({ data }: { data: RefereeData }) {
             return (
               <li key={key} className={styles.flagRow}>
                 <div className={styles.flagLine}>
-                  <code className={styles.flagKey}>{key}</code>
+                  <div className={styles.flagText}>
+                    <span className={styles.flagUse}>
+                      {uses.get(key)?.[0] ?? 'Not used by this adventure. You or a command set it.'}
+                    </span>
+                    {(uses.get(key)?.length ?? 0) > 1 && (
+                      <span className={styles.secondary}>{uses.get(key)?.slice(1).join(' ')}</span>
+                    )}
+                    <code className={styles.idMark}>{key}</code>
+                  </div>
                   {set ? (
                     <span className={styles.flagValue}>{flagText(flags[key])}</span>
                   ) : (
@@ -455,7 +467,7 @@ function Triggers({ data, adventure }: { data: RefereeData; adventure: Adventure
             title: (
               <span className={styles.triggerTitle}>
                 {patternText(trigger.when, data.ctx)}
-                <span className={styles.secondary}>{trigger.id}</span>
+                <span className={styles.idMark}>{trigger.id}</span>
               </span>
             ),
             meta: <Badge tone={hasFired ? 'success' : 'neutral'}>{hasFired ? 'Fired' : 'Waiting'}</Badge>,
@@ -463,7 +475,17 @@ function Triggers({ data, adventure }: { data: RefereeData; adventure: Adventure
           };
         })}
       />
-      {extra.length > 0 && <p className={styles.secondaryLine}>Also marked fired: {extra.join(', ')}.</p>}
+      {extra.length > 0 && (
+        <p className={styles.secondaryLine}>
+          Marked fired, but not triggers of this adventure:{' '}
+          {extra.map((id, index) => (
+            <span key={id}>
+              {index > 0 ? ', ' : ''}
+              <span className={styles.idMark}>{id}</span>
+            </span>
+          ))}
+        </p>
+      )}
     </>
   );
 }
