@@ -749,3 +749,31 @@
 .quoted {
   color: var(--color-text);
 }
+
+.arrival {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--border-hair) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+}
+
+.followUp {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1-5) var(--space-2);
+}
+
+.followUp > [role='status'],
+.followUp > [role='alert'] {
+  flex-basis: 100%;
+}
+
+.followUpGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}

@@ -37,6 +37,8 @@ import {
 } from '../model/describe';
 import { IdMark } from '../details';
 import { CommandOutcome, useRefereeCommand } from '../RefereeCommand';
+import type { RefereeData } from '../useReferee';
+import { RunTriggerButton, SpawnKeyedButton } from './FollowUps';
 import styles from './sections.module.css';
 
 const TRAP_BADGE: Record<TrapStatus, { label: string; tone: BadgeTone }> = {
@@ -254,6 +256,8 @@ export interface AreaDetailsProps {
   hideDescription?: boolean;
   /** Shows the doors with their controls. */
   showDoors?: boolean;
+  /** The referee data, for the buttons that spawn the keyed monsters and run the area's triggers. */
+  data?: RefereeData;
 }
 
 /** Everything the adventure keys in one area, with its state in play. */
@@ -266,6 +270,7 @@ export function AreaDetails({
   ctx,
   hideDescription = false,
   showDoors = true,
+  data,
 }: AreaDetailsProps) {
   const ref = areaRef(dungeonId, level.number, area.id);
   const encounter = area.encounter;
@@ -303,6 +308,9 @@ export function AreaDetails({
           )}
           {encounter.hoard && record.generatedLairHoards.has(ref) && (
             <p className={styles.secondaryLine}>The lair hoard has been rolled.</p>
+          )}
+          {data && !resolved && !data.state?.encounter && (
+            <SpawnKeyedButton encounter={encounter} adventure={adventure} />
           )}
         </section>
       )}
@@ -365,6 +373,7 @@ export function AreaDetails({
                 </span>
               </div>
               {trigger.narrative?.fired && <p className={styles.prose}>{trigger.narrative.fired}</p>}
+              {data && <RunTriggerButton trigger={trigger} data={data} />}
             </li>
           ))}
         </ul>

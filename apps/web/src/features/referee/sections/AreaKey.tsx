@@ -15,6 +15,7 @@ import {
 import { CommandOutcome, useRefereeCommand } from '../RefereeCommand';
 import type { RefereeData } from '../useReferee';
 import { AreaDetails, ShowOnMapButton } from './AreaDetails';
+import { ArrivalFollowUps } from './FollowUps';
 import { WanderingBlock } from './HereNow';
 import styles from './sections.module.css';
 
@@ -40,12 +41,15 @@ function PlaceHereButton({
   dungeonId,
   level,
   area,
+  data,
 }: {
   dungeonId: string;
   level: LevelSpec;
   area: AreaSpec;
+  data: RefereeData;
 }) {
   const { run, busy, outcome, clear } = useRefereeCommand();
+  const [placed, setPlaced] = useState(false);
   const [x, y] = areaCenter(area);
   return (
     <div className={styles.keyActions}>
@@ -56,8 +60,9 @@ function PlaceHereButton({
           variant="ghost"
           icon="footprints"
           disabled={busy}
-          onClick={() =>
-            run({
+          onClick={async () => {
+            setPlaced(false);
+            const ok = await run({
               command_type: 'place_party',
               location: {
                 kind: 'dungeon',
@@ -66,13 +71,17 @@ function PlaceHereButton({
                 position: [x, y],
                 facing: 'north',
               },
-            })
-          }
+            });
+            setPlaced(ok);
+          }}
         >
           Place the party here
         </Button>
       </div>
       <CommandOutcome outcome={outcome} onDismiss={clear} />
+      {placed && (
+        <ArrivalFollowUps data={data} dungeonId={dungeonId} levelNumber={level.number} area={area} />
+      )}
     </div>
   );
 }
@@ -161,7 +170,7 @@ export function AreaKey({ data }: { data: RefereeData }) {
                   ),
                   content: open.includes(value) ? (
                     <div className={styles.areaKeyBody}>
-                      <PlaceHereButton dungeonId={dungeon.id} level={level} area={area} />
+                      <PlaceHereButton dungeonId={dungeon.id} level={level} area={area} data={data} />
                       <AreaDetails
                         adventure={adventure}
                         dungeonId={dungeon.id}
@@ -169,6 +178,7 @@ export function AreaKey({ data }: { data: RefereeData }) {
                         area={area}
                         record={record}
                         ctx={ctx}
+                        data={data}
                       />
                     </div>
                   ) : null,

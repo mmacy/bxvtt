@@ -11,6 +11,27 @@ import { AreaDetails, DoorRow } from './AreaDetails';
 import { EncounterNow } from './EncounterNow';
 import styles from './sections.module.css';
 
+type TableRow = NonNullable<LevelSpec['wandering']['table']>['rows'][number];
+
+/**
+ * The table's rows with neighbouring die faces that hold the same entry joined into one range, as the
+ * adventure writes the table: `1 to 6, Bandits on their rounds, 1d4`.
+ */
+export function groupRows(rows: readonly TableRow[]): Array<{ row: TableRow; from: number; to: number }> {
+  const same = (a: TableRow, b: TableRow) =>
+    a.name === b.name &&
+    a.count_dice === b.count_dice &&
+    a.count_fixed === b.count_fixed &&
+    JSON.stringify(a.entry) === JSON.stringify(b.entry);
+  const out: Array<{ row: TableRow; from: number; to: number }> = [];
+  for (const row of [...rows].sort((a, b) => a.roll - b.roll)) {
+    const last = out[out.length - 1];
+    if (last && last.to === row.roll - 1 && same(last.row, row)) last.to = row.roll;
+    else out.push({ row, from: row.roll, to: row.roll });
+  }
+  return out;
+}
+
 /** The level's wandering monster check and table. */
 export function WanderingBlock({
   level,
@@ -57,9 +78,9 @@ export function WanderingBlock({
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
-              <tr key={row.roll}>
-                <td className={styles.num}>{row.roll}</td>
+            {groupRows(rows).map(({ row, from, to }) => (
+              <tr key={from}>
+                <td className={styles.num}>{from === to ? from : `${from} to ${to}`}</td>
                 <td>
                   {row.name ??
                     (row.entry.kind === 'monster'
@@ -159,6 +180,7 @@ export function HereNow({ data }: { data: RefereeData }) {
           area={area}
           record={record}
           ctx={ctx}
+          data={data}
         />
       ) : (
         cornerDoors.length > 0 && (

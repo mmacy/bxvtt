@@ -398,8 +398,10 @@ export function SavesDialog({ open, onOpenChange }: SavesDialogProps) {
               {autosaveOn
                 ? 'Autosave is on. The table saves when the party enters a dungeon, reaches another level, meets monsters while exploring, or returns to town, and keeps the newest 10.'
                 : 'Autosave is off, so only the saves you make are kept.'}
+              {referee && !game && ' Change it with “Save automatically” in the table settings.'}
             </p>
-            {referee && (
+            {/* The table settings dialog belongs to the play screen. In the lobby, the table settings card has the switch. */}
+            {referee && game && (
               <Button size="sm" variant="ghost" onClick={() => setSettingsOpen(true)}>
                 {autosaveOn ? 'Change' : 'Turn it on'}
               </Button>
@@ -450,7 +452,7 @@ export function SavesDialog({ open, onOpenChange }: SavesDialogProps) {
                     <SaveRow
                       key={save.id}
                       save={save}
-                      current={save.session_id === game?.session_id}
+                      current={game === null || save.session_id === game.session_id}
                       canManage={referee || save.created_by === me?.id}
                       referee={referee}
                       author={save.created_by ? (names.get(save.created_by) ?? null) : null}

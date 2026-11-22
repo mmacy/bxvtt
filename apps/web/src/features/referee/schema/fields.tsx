@@ -155,7 +155,11 @@ export function FieldList({
         <div className={styles.pickRow}>
           <MapPickButton
             kind={group}
-            prompt={group === 'edge' ? 'Click the door to change.' : 'Click the cell to use.'}
+            prompt={
+              group === 'edge'
+                ? 'Pick the door to change. Click it, or use the arrow keys, press E to turn to its side, and press Enter.'
+                : 'Pick the cell to use. Click it, or use the arrow keys and press Enter.'
+            }
             onPick={(target) => {
               const next: Values = {
                 dungeon_id: target.dungeon_id,
@@ -914,7 +918,7 @@ function LocationEditor(props: FieldEditorProps) {
           <div className={styles.pickRow}>
             <MapPickButton
               kind="cell"
-              prompt="Click the cell to place the party on."
+              prompt="Pick the cell to place the party on. Click it, or use the arrow keys and press Enter."
               onPick={(target) =>
                 set({
                   dungeon_id: target.dungeon_id,

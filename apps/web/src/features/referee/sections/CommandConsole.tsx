@@ -5,8 +5,10 @@
 import { COMMAND_TYPES, commandInfo, sessionModeLabel } from '@bxvtt/shared/text';
 import { useMemo, useState } from 'react';
 import { useCommandCatalog, useLegalCommands } from '@/app';
-import { Accordion, Badge, Banner, Button, SearchInput, Skeleton } from '@/ui';
+import { Accordion, Banner, Button, SearchInput, Skeleton } from '@/ui';
 import { CommandForm } from '../schema/CommandForm';
+import { changesEndedStory, useGameEnded } from '../endedGuard';
+import { NameComma, UnavailableMark } from '../UnavailableMark';
 import styles from './sections.module.css';
 
 /** A catalog summary as plain text: without the `Referee:` prefix and code marks. */
@@ -17,6 +19,7 @@ function plainSummary(summary: string): string {
 export function CommandConsole() {
   const catalog = useCommandCatalog();
   const legal = useLegalCommands();
+  const ended = useGameEnded();
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState('');
   const known = useMemo(() => new Set(COMMAND_TYPES), []);
@@ -84,10 +87,17 @@ export function CommandConsole() {
             title: (
               <span className={styles.triggerTitle}>
                 {c.label}
-                <span className={styles.secondary}>{c.description}</span>
+                <span className={styles.secondary}>
+                  {c.description}
+                  {(!now || (ended && changesEndedStory(c.type))) && <NameComma />}
+                </span>
               </span>
             ),
-            meta: now ? undefined : <Badge tone="neutral">Not now</Badge>,
+            meta: !now ? (
+              <UnavailableMark />
+            ) : ended && changesEndedStory(c.type) ? (
+              <UnavailableMark>The game is over</UnavailableMark>
+            ) : undefined,
             content:
               open === c.type ? (
                 <div className={styles.form}>
@@ -96,7 +106,7 @@ export function CommandConsole() {
                       Allowed in: {c.modes.map((m) => sessionModeLabel(m).toLowerCase()).join(', ')}.
                     </p>
                   )}
-                  <CommandForm commandType={c.type} showSource />
+                  <CommandForm commandType={c.type} />
                 </div>
               ) : null,
           };

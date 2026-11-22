@@ -21,7 +21,7 @@ import {
   Select,
   TextInput,
 } from '@/ui';
-import { areaAt, areaCenter, findArea, findLevel } from '../model/adventure';
+import { areaAt, areaCenter, findArea, findLevel, type AreaSpec } from '../model/adventure';
 import {
   dungeonNumberAppearing,
   MapPickButton,
@@ -34,6 +34,9 @@ import { CommandOutcome, useRefereeCommand } from '../RefereeCommand';
 import { CommandForm } from '../schema/CommandForm';
 import type { RefereeData } from '../useReferee';
 import { EndEncounterForm } from './EncounterNow';
+import { ArrivalFollowUps } from './FollowUps';
+import { changesEndedStory, useGameEnded } from '../endedGuard';
+import { NameComma, UnavailableMark } from '../UnavailableMark';
 import styles from './sections.module.css';
 
 type Toggle<T extends string> = { value: T; label: string };
@@ -383,7 +386,11 @@ function PlacePartyForm({ data }: { data: RefereeData }) {
   const [error, setError] = useState<string | null>(null);
   const areas = useAreaOptions(data.adventure);
   const { run, busy, outcome, clear } = useRefereeCommand();
-  const submit = () => {
+  const [placed, setPlaced] = useState<{ dungeonId: string; levelNumber: number; area: AreaSpec } | null>(
+    null,
+  );
+  const submit = async () => {
+    setPlaced(null);
     if (where === 'town') return void run({ command_type: 'place_party', location: { kind: 'town' } });
     let target = cell;
     if (where === 'area') {
@@ -395,7 +402,7 @@ function PlacePartyForm({ data }: { data: RefereeData }) {
     }
     if (!target) return setError('Pick a cell on the map.');
     setError(null);
-    void run({
+    const ok = await run({
       command_type: 'place_party',
       location: {
         kind: 'dungeon',
@@ -405,6 +412,10 @@ function PlacePartyForm({ data }: { data: RefereeData }) {
         facing,
       },
     });
+    const level = data.adventure ? findLevel(data.adventure, target.dungeon_id, target.level_number) : null;
+    const landed = level ? areaAt(level, target.x, target.y) : null;
+    if (ok && landed)
+      setPlaced({ dungeonId: target.dungeon_id, levelNumber: target.level_number, area: landed });
   };
   return (
     <div className={styles.form}>
@@ -432,7 +443,7 @@ function PlacePartyForm({ data }: { data: RefereeData }) {
           <div className={styles.rowActions}>
             <MapPickButton
               kind="cell"
-              prompt="Click the cell to place the party on."
+              prompt="Pick the cell to place the party on. Click it, or use the arrow keys and press Enter."
               onPick={(t) => setCell(t)}
             />
             {cell && (
@@ -457,11 +468,25 @@ function PlacePartyForm({ data }: { data: RefereeData }) {
         </Field>
       )}
       <div className={styles.rowActions}>
-        <Button size="sm" variant="primary" loading={busy} onClick={submit}>
+        <Button size="sm" variant="primary" loading={busy} onClick={() => void submit()}>
           Place the party
         </Button>
       </div>
+      {where !== 'town' && (
+        <p className={styles.secondaryLine}>
+          Placing the party doesn't start an area's monsters or fire its triggers, as walking in would. The
+          panel offers to start them once the party is there.
+        </p>
+      )}
       <CommandOutcome outcome={outcome} onDismiss={clear} />
+      {placed && (
+        <ArrivalFollowUps
+          data={data}
+          dungeonId={placed.dungeonId}
+          levelNumber={placed.levelNumber}
+          area={placed.area}
+        />
+      )}
     </div>
   );
 }
@@ -589,6 +614,7 @@ export function QuickActions({ data }: { data: RefereeData }) {
   const legalSet = useMemo(() => new Set(legal.map((c) => c.command_type)), [legal]);
   const [open, setOpen] = useState<string>('');
   const inEncounter = data.state?.encounter !== null && data.state?.encounter !== undefined;
+  const ended = useGameEnded();
 
   const groups: Array<{ title: string; actions: ActionDef[] }> = [
     {
@@ -735,10 +761,17 @@ export function QuickActions({ data }: { data: RefereeData }) {
                       size={16}
                       className={available ? styles.actionIcon : styles.actionIconOff}
                     />
-                    {action.label}
+                    <span>
+                      {action.label}
+                      {(!available || (ended && action.commands.every(changesEndedStory))) && <NameComma />}
+                    </span>
                   </span>
                 ),
-                meta: available ? undefined : 'Not now',
+                meta: !available ? (
+                  <UnavailableMark />
+                ) : ended && action.commands.every(changesEndedStory) ? (
+                  <UnavailableMark>The game is over</UnavailableMark>
+                ) : undefined,
                 content: open === action.value ? action.render() : null,
               };
             })}

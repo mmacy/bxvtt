@@ -109,7 +109,7 @@ describe('areas and doors', () => {
 describe('descriptions', () => {
   it('describes trigger patterns and conditions by name', () => {
     const talk = adventure.triggers.find((t) => t.id === 'drain_folk_talk');
-    expect(talk && patternText(talk.when, ctx)).toBe('The party enters Drain Folk warren');
+    expect(talk && patternText(talk.when, ctx)).toBe('The party enters the Drain Folk warren');
     const report = adventure.quests.find((q) => q.id === 'red_thumbs')?.objectives[1];
     expect(report && clauseText(report.when, ctx, adventure)).toBe(
       'The party returns to Hollin Ferry, while the flag set when Gashnak One-Ear is slain or routed reads “dead”.',
@@ -154,5 +154,27 @@ describe('flagUses', () => {
       'Checked by the objective Report to Reeve Tamsin Hale.',
     ]);
     expect(uses.get('quest.bell')).toEqual(['Set to “silenced” as a reward for Silence the drowned bell.']);
+  });
+});
+
+describe('wording in sentences', () => {
+  it('names areas with an article and adventure items after their owner without one', async () => {
+    const { areaInSentence } = await import('./describe');
+    expect(areaInSentence('Gatehouse stair')).toBe('the gatehouse stair');
+    expect(areaInSentence('Drain Folk warren')).toBe('the Drain Folk warren');
+    expect(areaInSentence('The bell pit')).toBe('the bell pit');
+    const { default: toll } = await import('../../../../../../adventures/the-toll-bridge.json');
+    const tollAdventure = asAdventure(toll.payload as unknown as Record<string, unknown>) as Adventure;
+    const tollCtx = extendContextWithReferee(emptyContext(), { adventure: tollAdventure });
+    const quest = tollAdventure.quests.find((q) => q.id === 'millers_strongbox');
+    const kingsway = tollAdventure.quests.find((q) => q.id === 'open_the_kingsway');
+    const find = quest?.objectives[0];
+    expect(find && clauseText(find.when, tollCtx, tollAdventure)).toBe(
+      "A member gets Miller Aske's strongbox.",
+    );
+    const portcullis = kingsway?.objectives.find((o) => o.id === 'raise_portcullis');
+    expect(portcullis && clauseText(portcullis.when, tollCtx, tollAdventure)).toBe(
+      'The party enters the east gatehouse.',
+    );
   });
 });
