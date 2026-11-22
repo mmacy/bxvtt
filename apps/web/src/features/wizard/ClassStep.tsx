@@ -9,9 +9,9 @@ import { useClassDetail } from '../sheet/catalogs';
 
 const RACES: Record<string, string> = {
   human: 'Human',
-  dwarf: 'Demihuman: dwarf',
-  elf: 'Demihuman: elf',
-  halfling: 'Demihuman: halfling',
+  dwarf: 'Demihuman',
+  elf: 'Demihuman',
+  halfling: 'Demihuman',
 };
 
 /** The class's armour rule, as its entry states it. */
@@ -69,13 +69,16 @@ function ClassCard({ summary, scores, eligible, selected, onSelect, equipment }:
       className={cx(styles.classCard, selected && styles.classCardSelected)}
       aria-pressed={selected}
       disabled={!eligible}
-      aria-describedby={!eligible ? reasonId : undefined}
+      aria-labelledby={`class-name-${summary.id}`}
+      aria-describedby={!eligible ? `${reasonId} class-facts-${summary.id}` : `class-facts-${summary.id}`}
       onClick={onSelect}
     >
       <span className={styles.classHead}>
         <TokenPortrait name={summary.name} characterClass={tokenClass(summary.id)} size={40} decorative />
         <span className={styles.classTitle}>
-          <span className={styles.className}>{classLabel(summary.id)}</span>
+          <span id={`class-name-${summary.id}`} className={styles.className}>
+            {classLabel(summary.id)}
+          </span>
           <span className={styles.classRace}>{RACES[summary.race] ?? summary.race}</span>
         </span>
         {selected && (
@@ -89,7 +92,7 @@ function ClassCard({ summary, scores, eligible, selected, onSelect, equipment }:
           Needs {gap}.
         </span>
       )}
-      <dl className={styles.classFacts}>
+      <dl id={`class-facts-${summary.id}`} className={styles.classFacts}>
         <div>
           <dt>Requires</dt>
           <dd>

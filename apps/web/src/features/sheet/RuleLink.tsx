@@ -1,6 +1,7 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import { useTableUi, type CompendiumEntry } from '@/app';
 import { LinkButton } from '@/ui';
+import { capitalizeFirst } from '@bxvtt/shared/text';
 
 /**
  * Whether names on this sheet open the rules reference. The play screen renders the compendium, so the party
@@ -21,9 +22,15 @@ export function RuleLink({ entry, children, className }: RuleLinkProps) {
   const openCompendium = useTableUi((s) => s.openCompendium);
   if (!enabled || entry === null) return <span className={className}>{children}</span>;
   return (
-    <LinkButton tone="quiet" className={className} onClick={() => openCompendium(entry)}>
+    <LinkButton
+      tone="quiet"
+      className={className}
+      aria-label={
+        typeof children === 'string' ? `${capitalizeFirst(children)} in the rules reference` : undefined
+      }
+      onClick={() => openCompendium(entry)}
+    >
       {children}
-      <span className="visually-hidden"> (open in the rules reference)</span>
     </LinkButton>
   );
 }

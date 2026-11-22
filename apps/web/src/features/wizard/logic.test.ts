@@ -2,10 +2,11 @@ import type { AbilityTables, EquipmentSummary } from '@bxvtt/shared/bxapi';
 import { BxvttProblemError } from '@bxvtt/shared/client';
 import type { CharacterRequest, Problem } from '@bxvtt/shared/protocol';
 import { describe, expect, it } from 'vitest';
-import type { ClassDetail } from '@/app';
+import type { ClassDetail, EquipmentDetail } from '@/app';
 import { createFakeApi } from '@/app/testing/renderWithTable';
 import catalog from './__fixtures__/catalog.json';
 import { facesForScore } from './dice';
+import { autoEquip } from './OutfitStep';
 import { emptyDraft, goldKey, parseDraft, requestFromDraft, type WizardDraft } from './draft';
 import { applyKit } from './kits';
 import { suggestName } from './names';
@@ -191,5 +192,26 @@ describe('explaining refusals', () => {
       rejections: [{ code: 'items.purchase.insufficient_funds', params: { item: 'chainmail', cost_gp: 40 } }],
     }).sentences.join(' ');
     expect(text).not.toMatch(/items\.|chainmail_|_/);
+  });
+});
+
+describe('autoEquip', () => {
+  it('puts on the first body armour, shield, and weapon, as a kit would', () => {
+    const byId = new Map(
+      [
+        { id: 'plate_mail', item_type: 'armour', ac: 3, ac_bonus: null },
+        { id: 'leather', item_type: 'armour', ac: 7, ac_bonus: null },
+        { id: 'shield', item_type: 'armour', ac: null, ac_bonus: 1 },
+        { id: 'sword', item_type: 'weapon' },
+        { id: 'dagger', item_type: 'weapon' },
+        { id: 'torch', item_type: 'gear' },
+      ].map((d) => [d.id, d as unknown as EquipmentDetail]),
+    );
+    expect(autoEquip('plate_mail', [], byId)).toBe(true);
+    expect(autoEquip('shield', ['plate_mail'], byId)).toBe(true);
+    expect(autoEquip('leather', ['plate_mail', 'shield'], byId)).toBe(false);
+    expect(autoEquip('sword', ['plate_mail'], byId)).toBe(true);
+    expect(autoEquip('dagger', ['sword'], byId)).toBe(false);
+    expect(autoEquip('torch', [], byId)).toBe(false);
   });
 });

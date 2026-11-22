@@ -58,56 +58,53 @@ export function RefereeNotes({ memberId }: { memberId: string }) {
   const modifiers = character.stat_modifiers ?? [];
   const nothing =
     items.length === 0 && effects.length === 0 && modifiers.length === 0 && character.nonregen_damage === 0;
+  if (nothing) return null;
 
   return (
     <Banner tone="referee" title="Referee only" icon="referee">
-      {nothing ? (
-        <p className={styles.prose}>The referee state adds nothing hidden for {character.name}.</p>
-      ) : (
-        <ul className={styles.refereeList}>
-          {items.map((item) => (
-            <li key={item.id}>
-              <RuleLink entry={item.templateId ? { kind: 'magic-items', id: item.templateId } : null}>
-                {item.name}
-              </RuleLink>
-              {!item.identified && ' (the players see it unidentified)'}
-              {item.charges !== null && `, ${item.charges} ${item.charges === 1 ? 'charge' : 'charges'} left`}
-              {item.cursed && (
-                <>
-                  {' '}
-                  <Badge tone="danger">Curse revealed</Badge>
-                </>
-              )}
+      <ul className={styles.refereeList}>
+        {items.map((item) => (
+          <li key={item.id}>
+            <RuleLink entry={item.templateId ? { kind: 'magic-items', id: item.templateId } : null}>
+              {item.name}
+            </RuleLink>
+            {!item.identified && ' (the players see it unidentified)'}
+            {item.charges !== null && `, ${item.charges} ${item.charges === 1 ? 'charge' : 'charges'} left`}
+            {item.cursed && (
+              <>
+                {' '}
+                <Badge tone="danger">Curse revealed</Badge>
+              </>
+            )}
+          </li>
+        ))}
+        {effects.map((effect) => {
+          const definition: Record<string, unknown> = isRecord(effect.definition) ? effect.definition : {};
+          const kind = typeof definition.kind === 'string' ? definition.kind : 'effect';
+          const left =
+            typeof effect.expires_round === 'number'
+              ? compactDuration(effect.expires_round - referee.clock_rounds)
+              : 'no end';
+          return (
+            <li key={effect.effect_id}>
+              {effectLabel(kind)}: {left} left
             </li>
-          ))}
-          {effects.map((effect) => {
-            const definition: Record<string, unknown> = isRecord(effect.definition) ? effect.definition : {};
-            const kind = typeof definition.kind === 'string' ? definition.kind : 'effect';
-            const left =
-              typeof effect.expires_round === 'number'
-                ? compactDuration(effect.expires_round - referee.clock_rounds)
-                : 'no end';
-            return (
-              <li key={effect.effect_id}>
-                {effectLabel(kind)}: {left} left
-              </li>
-            );
-          })}
-          {modifiers.map((modifier, index) => {
-            const record: Record<string, unknown> = isRecord(modifier) ? modifier : {};
-            const kind = typeof record.kind === 'string' ? prettifyId(record.kind) : 'modifier';
-            const value = typeof record.value === 'number' ? record.value : 0;
-            return (
-              <li key={index}>
-                {capitalizeFirst(kind)} {value >= 0 ? `+${value}` : `−${Math.abs(value)}`}
-              </li>
-            );
-          })}
-          {character.nonregen_damage > 0 && (
-            <li>{character.nonregen_damage} damage that natural healing can't restore</li>
-          )}
-        </ul>
-      )}
+          );
+        })}
+        {modifiers.map((modifier, index) => {
+          const record: Record<string, unknown> = isRecord(modifier) ? modifier : {};
+          const kind = typeof record.kind === 'string' ? prettifyId(record.kind) : 'modifier';
+          const value = typeof record.value === 'number' ? record.value : 0;
+          return (
+            <li key={index}>
+              {capitalizeFirst(kind)} {value >= 0 ? `+${value}` : `−${Math.abs(value)}`}
+            </li>
+          );
+        })}
+        {character.nonregen_damage > 0 && (
+          <li>{character.nonregen_damage} damage that natural healing can't restore</li>
+        )}
+      </ul>
     </Banner>
   );
 }

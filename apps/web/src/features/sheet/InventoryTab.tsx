@@ -495,6 +495,8 @@ function TransferDialog({ mode, member, model, initialKey, onClose }: TransferPr
                   {entry.quantity > 1 || entry.kind === 'item' ? (
                     <NumberInput
                       aria-label={`How many ${entry.units}`}
+                      incrementLabel={`More ${entry.units}`}
+                      decrementLabel={`Fewer ${entry.units}`}
                       value={counts[entry.key] ?? 0}
                       min={0}
                       max={entry.quantity}
@@ -520,6 +522,8 @@ function TransferDialog({ mode, member, model, initialKey, onClose }: TransferPr
             {COINS.filter((c) => model.inventory.purse[c] > 0).map((c) => (
               <Field key={c} label={`${COIN_NAMES[c]} (${model.inventory.purse[c]})`}>
                 <NumberInput
+                  incrementLabel={`More ${COIN_NAMES[c].toLowerCase()} pieces`}
+                  decrementLabel={`Fewer ${COIN_NAMES[c].toLowerCase()} pieces`}
                   value={coins[c]}
                   min={0}
                   max={model.inventory.purse[c]}

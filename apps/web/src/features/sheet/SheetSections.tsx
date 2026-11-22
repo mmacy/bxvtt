@@ -87,22 +87,20 @@ export function SheetHeader({ model, color, controller, actions }: SheetHeaderPr
         decorative
       />
       <div className={styles.headerText}>
-        <h2 className={styles.name}>{model.name}</h2>
+        <p className={styles.name}>{model.name}</p>
         <p className={styles.classLine}>
-          <span>
-            Level {model.level}{' '}
-            <RuleLink entry={{ kind: 'classes', id: model.classId }}>
-              {classLabel(model.classId).toLowerCase()}
-            </RuleLink>
-          </span>
+          Level {model.level}{' '}
+          <RuleLink entry={{ kind: 'classes', id: model.classId }}>
+            {classLabel(model.classId).toLowerCase()}
+          </RuleLink>
           {[model.title, alignmentLabel(model.alignment)]
             .filter((part): part is string => Boolean(part))
             .map((part) => (
               <span key={part}>
+                <span className="visually-hidden">{', '}</span>
                 <span className={styles.dot} aria-hidden="true">
                   ·
                 </span>
-                <span className="visually-hidden">, </span>
                 {part}
               </span>
             ))}

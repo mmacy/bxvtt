@@ -1,7 +1,15 @@
 import type { AbilityTables, EquipmentSummary, SpellSummary } from '@bxvtt/shared/bxapi';
-import { abilityLabel, alignmentLabel, classLabel, languageLabel, saveLabel } from '@bxvtt/shared/text';
+import {
+  abilityLabel,
+  alignmentLabel,
+  capitalizeFirst,
+  classLabel,
+  joinList,
+  languageLabel,
+  saveLabel,
+} from '@bxvtt/shared/text';
 import type { ClassDetail } from '@/app';
-import { Badge, CoinPurse, Parchment, StatBox, formatModifier } from '@/ui';
+import { Badge, Banner, CoinPurse, Parchment, StatBox, formatModifier } from '@/ui';
 import type { WizardDraft } from './draft';
 import { cartPhrase, type CartLine } from './kits';
 import { ABILITIES, headlineModifier, xpModifierFor, type Scores } from './tables';
@@ -49,6 +57,8 @@ export function ReviewStep({
   const con = tables ? headlineModifier(tables, 'con', scores.con) : undefined;
   const languages = [...(detail?.languages ?? []), ...draft.languages];
   const gear = cartNames(draft.cart, draft.equip, equipment);
+  const worn = gear.filter((item) => item.equipped).map((item) => item.name.toLowerCase());
+  const unworn = gear.filter((item) => !item.equipped && (item.kind === 'armour' || item.kind === 'weapon'));
   const edit = (step: WizardDraft['step'], label: string) => (
     <button type="button" className={styles.editLink} onClick={() => onEdit(step)}>
       Change<span className="visually-hidden"> {label}</span>
@@ -115,7 +125,11 @@ export function ReviewStep({
                 ))}
               </dl>
               <p className={styles.reviewNote}>
-                Armour class depends on what you wear, so it appears once the character exists.
+                {worn.length > 0
+                  ? `You go out wearing and wielding ${joinList(worn)}. `
+                  : 'You go out with nothing worn or wielded. '}
+                The rules engine works out armour class from this gear and your Dexterity when it makes the
+                character.
               </p>
             </>
           )}
@@ -161,7 +175,16 @@ export function ReviewStep({
             ))}
           </ul>
         )}
-        {goldLeft !== null && <CoinPurse coins={{ gp: goldLeft }} showEmpty />}
+        {unworn.length > 0 && (
+          <Banner tone="warning" title="Some gear stays in the pack">
+            {`${capitalizeFirst(joinList(unworn.map((item) => item.name.toLowerCase())))} ${
+              unworn.length === 1 ? 'goes' : 'go'
+            } in the pack, so ${unworn.length === 1 ? 'it' : 'they'} won't protect you or fight for you. Choose Change to wear or wield ${
+              unworn.length === 1 ? 'it' : 'them'
+            }.`}
+          </Banner>
+        )}
+        {goldLeft !== null && <CoinPurse coins={{ gp: goldLeft }} />}
       </section>
     </Parchment>
   );

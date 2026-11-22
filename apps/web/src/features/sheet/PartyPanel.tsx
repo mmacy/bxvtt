@@ -1,9 +1,12 @@
 import type { MemberView } from '@bxvtt/shared/bxapi';
 import { classLabel, conditionLabel } from '@bxvtt/shared/text';
-import { useMemo, useState, type DragEvent, type KeyboardEvent } from 'react';
+import { useId, useMemo, useState, type DragEvent, type KeyboardEvent } from 'react';
 import {
   tokenClass,
   useCanSend,
+  useCombatStage,
+  usePartyLocation,
+  useShownMode,
   useLegalCommand,
   useMembers,
   useParty,
@@ -21,12 +24,13 @@ import {
   ConditionChip,
   EmptyState,
   HpBar,
+  SectionLabel,
   Icon,
   IconButton,
   TokenPortrait,
   cx,
 } from '@/ui';
-import { effectLabel, effectRemaining } from './actions';
+import { effectLabel, effectRemaining, lightNoun, lightPhrase } from './actions';
 import { conditionTone } from './SheetSections';
 import styles from './party.module.css';
 
@@ -47,8 +51,21 @@ export function moveTo<T>(ids: readonly T[], from: number, to: number): T[] {
 
 /** The party tab of the dock: every member at a glance, in marching order. Select a member to open their sheet. */
 export function PartyPanel() {
-  const party = useParty();
-  const view = usePlayerView();
+  const liveParty = useParty();
+  const liveView = usePlayerView();
+  const playing = useCombatStage((st) => st.playing);
+  const shownMode = useShownMode();
+  const location = usePartyLocation();
+  // While combat plays a round back, the panel keeps the state from before the round, so nobody shows dead
+  // before the blow that kills them lands on the board.
+  const [held, setHeld] = useState({ party: liveParty, view: liveView });
+  if (!playing && (held.party !== liveParty || held.view !== liveView)) {
+    setHeld({ party: liveParty, view: liveView });
+  }
+  const party = playing ? held.party : liveParty;
+  const view = playing ? held.view : liveView;
+  const ended = shownMode === 'game_over' || shownMode === 'victory';
+  const showLight = location?.kind === 'dungeon' && !ended;
   const seats = useSeats();
   const members = useMembers();
   const me = useTableUser();
@@ -135,77 +152,95 @@ export function PartyPanel() {
     if (from !== -1 && from !== index) move(from, index);
   };
 
-  const lights = (view?.effects ?? []).filter((e) => e.kind === 'light');
+  // One light for each member, the one that lasts longest, as the map counts them.
+  const lights = (view?.effects ?? [])
+    .filter((e) => e.kind === 'light' || e.kind === 'continual_light')
+    .reduce<Array<{ character_id: string; remaining_rounds: number | null }>>((all, effect) => {
+      const existing = all.find((l) => l.character_id === effect.character_id);
+      if (!existing)
+        return [...all, { character_id: effect.character_id, remaining_rounds: effect.remaining_rounds }];
+      if (
+        existing.remaining_rounds !== null &&
+        (effect.remaining_rounds === null || effect.remaining_rounds > existing.remaining_rounds)
+      )
+        existing.remaining_rounds = effect.remaining_rounds;
+      return all;
+    }, []);
   const nameOf = (id: string) => party.find((m) => m.id === id)?.name ?? 'Someone';
   const deprived = Object.entries(view?.deprivation ?? {});
 
   return (
     <div className={styles.panel}>
-      <section className={styles.partyState} aria-label="The party">
-        <div className={styles.stateRow}>
-          <Icon name="torch" size={16} />
-          {lights.length === 0 ? (
-            <span className={styles.dark}>
-              No light. The party is in darkness unless someone lights a torch.
-            </span>
-          ) : (
-            <span>
-              Light from{' '}
-              {lights
-                .map((l) => {
-                  const left = effectRemaining(l.remaining_rounds);
-                  return left ? `${nameOf(l.character_id)} (${left})` : nameOf(l.character_id);
-                })
-                .join(', ')}
-            </span>
+      {(showLight || view?.fatigued || view?.exhausted || deprived.length > 0) && (
+        <section className={styles.partyState} aria-label="The party">
+          {showLight && (
+            <div className={styles.stateRow}>
+              <Icon name="torch" size={16} />
+              {lights.length === 0 ? (
+                <span className={styles.dark}>The party has no light.</span>
+              ) : (
+                <span>
+                  {lights
+                    .map((l) =>
+                      lightPhrase(
+                        nameOf(l.character_id),
+                        l.remaining_rounds,
+                        lightNoun(party.find((m) => m.id === l.character_id)),
+                      ),
+                    )
+                    .join(' · ')}
+                </span>
+              )}
+            </div>
           )}
-        </div>
-        {(view?.fatigued || view?.exhausted || deprived.length > 0) && (
-          <div className={styles.stateRow}>
-            {view?.exhausted ? (
-              <Badge tone="danger" icon="warning">
-                Exhausted
-              </Badge>
-            ) : view?.fatigued ? (
-              <Badge tone="warning" icon="hourglass">
-                Fatigued: rest a turn
-              </Badge>
-            ) : null}
-            {deprived.map(([id, d]) => (
-              <Badge key={id} tone="warning">
-                {nameOf(id)}: {(d.food_days ?? 0) > 0 ? `${d.food_days} days unfed` : ''}
-                {(d.food_days ?? 0) > 0 && (d.water_days ?? 0) > 0 ? ', ' : ''}
-                {(d.water_days ?? 0) > 0 ? `${d.water_days} days without water` : ''}
-              </Badge>
-            ))}
-          </div>
-        )}
-      </section>
+          {(view?.fatigued || view?.exhausted || deprived.length > 0) && (
+            <div className={styles.stateRow}>
+              {view?.exhausted ? (
+                <Badge tone="danger" icon="warning">
+                  Exhausted
+                </Badge>
+              ) : view?.fatigued ? (
+                <Badge tone="warning" icon="hourglass">
+                  Fatigued: rest a turn
+                </Badge>
+              ) : null}
+              {deprived.map(([id, d]) => (
+                <Badge key={id} tone="warning">
+                  {nameOf(id)}: {(d.food_days ?? 0) > 0 ? `${d.food_days} days unfed` : ''}
+                  {(d.food_days ?? 0) > 0 && (d.water_days ?? 0) > 0 ? ', ' : ''}
+                  {(d.water_days ?? 0) > 0 ? `${d.water_days} days without water` : ''}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
-      <div className={styles.header}>
-        <h3 className={styles.title} id="party-order">
-          Marching order
-        </h3>
-        {reorderLegal !== null && (
-          <Button
-            size="sm"
-            variant={editing ? 'secondary' : 'ghost'}
-            icon={editing ? 'check' : 'sort'}
-            disabled={!reorderPermission.allowed}
-            title={reorderPermission.reason ?? undefined}
-            onClick={() => setEditing((e) => !e)}
-          >
-            {editing ? 'Done' : 'Change order'}
-          </Button>
-        )}
-      </div>
+      <SectionLabel
+        actions={
+          reorderLegal !== null ? (
+            <Button
+              size="sm"
+              variant={editing ? 'secondary' : 'ghost'}
+              icon={editing ? 'check' : 'sort'}
+              disabled={!reorderPermission.allowed}
+              title={reorderPermission.reason ?? undefined}
+              onClick={() => setEditing((e) => !e)}
+            >
+              {editing ? 'Done' : 'Change order'}
+            </Button>
+          ) : undefined
+        }
+      >
+        Marching order
+      </SectionLabel>
       {editing && (
         <p className={styles.hint}>
           Drag a character, or focus a handle and press the up and down arrow keys. The front rank leads.
         </p>
       )}
 
-      <ol className={styles.list} aria-labelledby="party-order">
+      <ol className={styles.list} aria-label="Marching order">
         {ordered.map((member, index) => {
           const seat = seats.find((s) => s.member_id === member.id);
           const owner = seat?.user_id ? members.find((m) => m.user_id === seat.user_id) : undefined;
@@ -297,66 +332,84 @@ function MemberRow({ member, rank, color, controller, lit, effects, onOpen }: Me
   const dead = member.conditions.includes('dead');
   const down = member.current_hp <= 0;
   const conditions = member.conditions.filter((c) => c !== 'dead');
+  const detailId = useId();
+  const details = [
+    `${member.current_hp} of ${member.max_hp} hit points`,
+    `armour class ${member.armour_class}`,
+    ...(dead ? ['dead'] : []),
+    ...conditions.map((c) => conditionLabel(c).toLowerCase()),
+    ...(lit ? ['carries a light'] : []),
+    ...effects.map((e) => effectLabel(e.kind).toLowerCase()),
+  ];
   return (
-    <button
-      type="button"
-      className={cx(styles.row, dead && styles.deadRow)}
-      onClick={onOpen}
-      aria-label={`${member.name}, level ${member.level} ${classLabel(member.class_id).toLowerCase()}, ${member.current_hp} of ${member.max_hp} hit points, armour class ${member.armour_class}${dead ? ', dead' : ''}. Open the character sheet.`}
-    >
-      <span className={styles.rank} aria-hidden="true">
-        {rank}
+    <>
+      <span id={detailId} className="visually-hidden">
+        {`${details.join(', ')}. Opens the character sheet.`}
       </span>
-      <TokenPortrait
-        name={member.name}
-        characterClass={tokenClass(member.class_id)}
-        color={color}
-        size={40}
-        state={dead ? 'dead' : down ? 'unconscious' : 'normal'}
-        decorative
-      />
-      <span className={styles.body} aria-hidden="true">
-        <span className={styles.topLine}>
-          <span className={styles.name}>{member.name}</span>
-          {lit && <Icon name="torch" size={14} className={styles.lit} />}
-          {controller ? (
-            <span className={styles.controller}>
-              <Avatar name={controller.name} color={color} size="xs" decorative />
-              <span className={styles.controllerName}>{controller.label}</span>
+      <button
+        type="button"
+        className={cx(styles.row, dead && styles.deadRow)}
+        onClick={onOpen}
+        aria-describedby={detailId}
+      >
+        <span className={styles.rank} aria-hidden="true">
+          {rank}
+        </span>
+        <TokenPortrait
+          name={member.name}
+          characterClass={tokenClass(member.class_id)}
+          color={color}
+          size={40}
+          state={dead ? 'dead' : down ? 'unconscious' : 'normal'}
+          decorative
+        />
+        <span className={styles.body}>
+          <span className={styles.topLine}>
+            <span className={styles.name}>{member.name}</span>
+            <span className="visually-hidden">{', '}</span>
+            {lit && <Icon name="torch" size={14} className={styles.lit} aria-hidden />}
+            {controller ? (
+              <span className={styles.controller}>
+                <Avatar name={controller.name} color={color} size="xs" decorative />
+                <span className={styles.controllerName}>{controller.label}</span>
+              </span>
+            ) : (
+              <span className={styles.empty}>Empty seat</span>
+            )}
+          </span>
+          <span className="visually-hidden">{', '}</span>
+          <span className={styles.meta}>
+            Level {member.level} {classLabel(member.class_id).toLowerCase()}
+          </span>
+          <span className={styles.hpLine} aria-hidden="true">
+            <HpBar
+              current={member.current_hp}
+              max={member.max_hp}
+              size="sm"
+              label={`${member.name}'s hit points`}
+            />
+          </span>
+          {(conditions.length > 0 || dead || effects.length > 0) && (
+            <span className={styles.chips} aria-hidden="true">
+              {dead && <ConditionChip label="Dead" tone="harm" icon="skull" />}
+              {conditions.map((c) => (
+                <ConditionChip key={c} label={conditionLabel(c)} tone={conditionTone(c)} />
+              ))}
+              {effects.map((e, i) => (
+                <ConditionChip
+                  key={`${e.kind}-${i}`}
+                  label={effectLabel(e.kind)}
+                  tone="magic"
+                  duration={effectRemaining(e.remaining_rounds)}
+                />
+              ))}
             </span>
-          ) : (
-            <span className={styles.empty}>Empty seat</span>
           )}
         </span>
-        <span className={styles.meta}>
-          Level {member.level} {classLabel(member.class_id).toLowerCase()}
+        <span className={styles.ac} aria-hidden="true">
+          <AcShield value={member.armour_class} size="sm" />
         </span>
-        <HpBar
-          current={member.current_hp}
-          max={member.max_hp}
-          size="sm"
-          label={`${member.name}'s hit points`}
-        />
-        {(conditions.length > 0 || dead || effects.length > 0) && (
-          <span className={styles.chips}>
-            {dead && <ConditionChip label="Dead" tone="harm" icon="skull" />}
-            {conditions.map((c) => (
-              <ConditionChip key={c} label={conditionLabel(c)} tone={conditionTone(c)} />
-            ))}
-            {effects.map((e, i) => (
-              <ConditionChip
-                key={`${e.kind}-${i}`}
-                label={effectLabel(e.kind)}
-                tone="magic"
-                duration={effectRemaining(e.remaining_rounds)}
-              />
-            ))}
-          </span>
-        )}
-      </span>
-      <span className={styles.ac} aria-hidden="true">
-        <AcShield value={member.armour_class} size="sm" />
-      </span>
-    </button>
+      </button>
+    </>
   );
 }

@@ -166,8 +166,8 @@ export function RollStep({ roll, animate, rolls, rolling, onRoll, classes, table
         <AbilityRow scores={null} play={false} tables={tables} waiting />
         <div className={styles.rollCall}>
           <p className={styles.lead}>
-            Roll 3d6 for each ability, in order: Strength, Intelligence, Wisdom, Dexterity, Constitution, and
-            Charisma. The scores decide which classes you can choose, and you can't rearrange them.
+            The six scores, from Strength to Charisma, decide which classes you can choose, and you can't
+            rearrange them.
           </p>
           <Button variant="primary" icon="dice" size="lg" loading={rolling} onClick={onRoll}>
             Roll ability scores

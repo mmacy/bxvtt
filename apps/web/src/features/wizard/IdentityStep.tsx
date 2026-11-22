@@ -14,6 +14,7 @@ import {
   TextInput,
   cx,
 } from '@/ui';
+import { spellDuration, spellRange } from '../sheet/spellText';
 import { ALIGNMENTS, type Alignment } from './draft';
 import { suggestName } from './names';
 import type { ClassMagic } from './tables';
@@ -72,7 +73,7 @@ function SpellCard({
       >
         <span className={styles.spellName}>{spell.name}</span>
         <span className={styles.spellMeta}>
-          Range {spell.range} · {spell.duration}
+          {spellRange(spell.range)} · {spellDuration(spell.duration)}
         </span>
       </button>
       <Popover

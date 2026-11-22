@@ -1,6 +1,6 @@
 import type { AbilityTables } from '@bxvtt/shared/bxapi';
 import type { CharacterRequest, StoredCharacter } from '@bxvtt/shared/protocol';
-import { classLabel } from '@bxvtt/shared/text';
+import { classLabel, emptyContext, resolveItemNoun } from '@bxvtt/shared/text';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   displayStringProblem,
@@ -217,6 +217,8 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
       ? JSON.stringify(requestFromDraft(draft))
       : null;
   const [cartResult, setCartResult] = useState<{ key: string; state: CheckState } | null>(null);
+  // Items the wizard put on by itself. When the server says the class can't use one, it comes off again.
+  const [autoEquipped, setAutoEquipped] = useState<readonly string[]>([]);
   useEffect(() => {
     if (cartJson === null) return;
     let cancelled = false;
@@ -225,12 +227,31 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
         if (!cancelled) setCartResult({ key: cartJson, state });
       };
       checkChoices(getApi(), JSON.parse(cartJson) as CharacterRequest).then(
-        (result) =>
+        (result) => {
+          const refused = result.problem?.rejections?.[0];
+          const named = refused?.params.item;
+          // A refusal such as "magic-users can't wear armour" names no item, so it falls on the latest item the
+          // wizard put on by itself.
+          const item =
+            typeof named === 'string'
+              ? named
+              : [...autoEquipped]
+                  .reverse()
+                  .find((id) => (JSON.parse(cartJson) as CharacterRequest).equip_item_ids?.includes(id));
+          if (!cancelled && refused?.code.startsWith('items.equip.') && item && autoEquipped.includes(item)) {
+            const sentence = result.problem ? explainInvalid(result.problem).sentences.join(' ') : '';
+            setAutoEquipped((ids) => ids.filter((id) => id !== item));
+            setDraft((d) => ({ ...d, equip: d.equip.filter((id) => id !== item) }));
+            const noun = resolveItemNoun(item, emptyContext()).one;
+            setKitNote(`${sentence} The ${noun} stays in the pack.`);
+            return;
+          }
           settle(
             !result.valid && result.problem
               ? { status: 'invalid', sentences: explainInvalid(result.problem).sentences }
               : { status: 'ok' },
-          ),
+          );
+        },
         (error: unknown) => settle({ status: 'invalid', sentences: explainCreationError(error).sentences }),
       );
     }, CHECK_DELAY_MS);
@@ -238,7 +259,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [cartJson]);
+  }, [cartJson, autoEquipped]);
   const cartCheck: CheckState =
     cartJson === null
       ? { status: 'idle' }
@@ -557,6 +578,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
             gold={gold}
             classId={draft.classId}
             onKit={applyClassKit}
+            onAutoEquip={(id) => setAutoEquipped((ids) => [...ids, id])}
             kitNote={kitNote}
             check={cartCheck}
           />

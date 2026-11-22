@@ -20,6 +20,7 @@ import {
 } from '@/ui';
 import { classMagic, spellSlotsAt } from '../wizard/tables';
 import { useMemberCommand } from './actions';
+import { spellDuration, spellRange } from './spellText';
 import { RuleLink } from './RuleLink';
 import type { SheetModel } from './model';
 import styles from './sheet.module.css';
@@ -163,7 +164,8 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
                   </div>
                   {summary && (
                     <span className={styles.spellMeta}>
-                      {ordinal(summary.level)} level · {summary.range} · {summary.duration}
+                      {ordinal(summary.level)} level · {spellRange(summary.range)} ·{' '}
+                      {spellDuration(summary.duration)}
                     </span>
                   )}
                   <div className={styles.spellActions}>
@@ -224,7 +226,8 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
                     </div>
                     {summary && (
                       <span className={styles.spellMeta}>
-                        {ordinal(summary.level)} level · {summary.range} · {summary.duration}
+                        {ordinal(summary.level)} level · {spellRange(summary.range)} ·{' '}
+                        {spellDuration(summary.duration)}
                       </span>
                     )}
                   </div>
@@ -302,6 +305,8 @@ function PrepareRow({
       </span>
       <NumberInput
         aria-label={`Copies of ${spell.name}`}
+        incrementLabel={`More copies of ${spell.name}`}
+        decrementLabel={`Fewer copies of ${spell.name}`}
         value={counts[`${spell.id}:false`] ?? 0}
         min={0}
         max={9}
@@ -310,6 +315,8 @@ function PrepareRow({
       {reversible && (
         <NumberInput
           aria-label={`Copies of ${detail.data?.reversed_form?.name ?? 'the reversed form'}`}
+          incrementLabel={`More copies of ${detail.data?.reversed_form?.name ?? 'the reversed form'}`}
+          decrementLabel={`Fewer copies of ${detail.data?.reversed_form?.name ?? 'the reversed form'}`}
           value={counts[`${spell.id}:true`] ?? 0}
           min={0}
           max={9}

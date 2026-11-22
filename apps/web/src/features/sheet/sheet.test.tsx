@@ -1,13 +1,14 @@
 import type { CommandResult, StoredCharacter } from '@bxvtt/shared/protocol';
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { resetMyCharacters } from '@/app';
-import { useTableUi } from '@/app';
+import { useCombatStage, useTableUi } from '@/app';
 import stored from '../wizard/__fixtures__/stored.json';
 import { StoredCharacterCard } from './StoredCharacterCard';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { createFakeApi, renderWithTable } from '@/app/testing/renderWithTable';
 import { CharacterSheet } from './CharacterSheet';
+import { lightPhrase } from './actions';
 import { entryRule } from './InventoryTab';
 import { readInventory } from './model';
 import { PartyPanel, moveTo } from './PartyPanel';
@@ -66,10 +67,11 @@ describe('PartyPanel', () => {
   it('lists the party in marching order and opens a sheet', async () => {
     const { user, snapshot } = renderWithTable(<PartyPanel />);
     const party = snapshot.game?.view.party ?? [];
-    const rows = screen.getAllByRole('button', { name: /Open the character sheet/ });
-    expect(rows.map((row) => row.getAttribute('aria-label')?.split(',')[0])).toEqual(
-      party.map((m) => m.name),
-    );
+    const rows = screen.getAllByRole('button', { description: /Opens the character sheet/ });
+    expect(rows).toHaveLength(party.length);
+    party.forEach((member, index) => expect(rows[index]).toHaveAccessibleName(new RegExp(`^${member.name}`)));
+    // The name starts with what the row shows, and the numbers go in the description.
+    expect(rows[0]).toHaveAccessibleDescription(/hit points, armour class/);
     await user.click(rows[1] as HTMLElement);
     expect(useTableUi.getState().sheetMemberId).toBe(party[1]?.id);
   });
@@ -150,9 +152,9 @@ describe('CharacterSheet', () => {
     await user.click(await screen.findByRole('tab', { name: 'Inventory' }));
     await user.click(screen.getByRole('button', { name: 'Give' }));
     const dialog = await screen.findByRole('dialog', { name: /Give from/ });
-    await user.click(within(dialog).getByRole('button', { name: 'Increase How many torches' }));
-    await user.click(within(dialog).getByRole('button', { name: 'Increase How many torches' }));
-    await user.click(within(dialog).getByRole('button', { name: /^Increase Gold/ }));
+    await user.click(within(dialog).getByRole('button', { name: 'More torches' }));
+    await user.click(within(dialog).getByRole('button', { name: 'More torches' }));
+    await user.click(within(dialog).getByRole('button', { name: 'More gold pieces' }));
     await user.click(within(dialog).getByRole('button', { name: 'Give' }));
     await waitFor(() => expect(api.sendCommand).toHaveBeenCalled());
     const command = api.sendCommand.mock.calls[0]?.[1] as Record<string, unknown>;
@@ -202,7 +204,7 @@ describe('rules links', () => {
     const { user } = renderWithTable(<CharacterSheet memberId={brenna?.id ?? null} onClose={() => {}} />, {
       snapshot,
     });
-    await user.click(await screen.findByRole('button', { name: /fighter.*open in the rules reference/i }));
+    await user.click(await screen.findByRole('button', { name: 'Fighter in the rules reference' }));
     expect(useTableUi.getState().compendiumEntry).toEqual({ kind: 'classes', id: 'fighter' });
   });
 
@@ -218,5 +220,44 @@ describe('rules links', () => {
       ],
     }).pack;
     expect(entry && entryRule(entry)).toBeNull();
+  });
+});
+
+describe('party light', () => {
+  it('speaks of light only while the party is in a dungeon', () => {
+    const { unmount } = renderWithTable(<PartyPanel />, { snapshot: fixtureSnapshot('town', 'player') });
+    expect(screen.queryByText('The party has no light.')).toBeNull();
+    unmount();
+    renderWithTable(<PartyPanel />, { snapshot: fixtureSnapshot('exploring', 'player') });
+    expect(screen.getByText('The party has no light.')).toBeInTheDocument();
+  });
+
+  it('words a burning light the way the map does', () => {
+    expect(lightPhrase('Brenna', 359)).toBe("Brenna's light, about 6 turns left");
+    expect(lightPhrase('Brenna', 12, 'torch')).toBe("Brenna's torch, 12 rounds left");
+  });
+});
+
+describe('combat playback', () => {
+  it('keeps the hit points from before the round while the round plays back', async () => {
+    const snapshot = fixtureSnapshot('exploring', 'player');
+    const { store } = renderWithTable(<PartyPanel />, { snapshot });
+    const game = store.getState().game;
+    if (!game) throw new Error('no game');
+    const first = game.view.party[0];
+    if (!first) throw new Error('no member');
+    useCombatStage.getState().setPlaying(true);
+    const hurt = {
+      ...game,
+      revision: game.revision + 1,
+      view: {
+        ...game.view,
+        party: [{ ...first, current_hp: 0, conditions: ['dead'] }, ...game.view.party.slice(1)],
+      },
+    };
+    act(() => store.getState().receiveGame(hurt));
+    expect(screen.queryByText('Dead')).toBeNull();
+    act(() => useCombatStage.getState().setPlaying(false));
+    expect(await screen.findByText('Dead')).toBeInTheDocument();
   });
 });

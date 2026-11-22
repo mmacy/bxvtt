@@ -1,29 +1,38 @@
 import type { EquipmentSummary } from '@bxvtt/shared/bxapi';
-import { itemTypeLabel } from '@bxvtt/shared/text';
+import {
+  capitalizeFirst,
+  emptyContext,
+  formatGold,
+  itemTypeLabel,
+  resolveItemNoun,
+} from '@bxvtt/shared/text';
 import { useMemo, useState } from 'react';
 
+import type { EquipmentDetail } from '@/app';
 import {
-  Badge,
   Banner,
   Button,
   Checkbox,
-  ProgressBar,
+  DataTable,
   EmptyState,
+  Icon,
   IconButton,
-  NumberInput,
   Popover,
+  ProgressBar,
   SearchInput,
   SegmentedControl,
   Skeleton,
   Spinner,
   cx,
+  type DataColumn,
 } from '@/ui';
 import { ItemDetailBody } from '../sheet/ItemDetail';
 import { readEntry } from '../sheet/model';
 import type { CheckState } from './AdjustStep';
-import { cartPhrase, kitLabel, type CartLine } from './kits';
+import { kitLabel, type CartLine } from './kits';
+import { isShield, itemIcon, lotSentence, lotSize, rowSummary, weightCoins } from './shop';
 import styles from './wizard.module.css';
-import { useEquipmentDetail } from '../sheet/catalogs';
+import { useFullCatalog } from '../sheet/catalogs';
 
 /** What the wizard knows about the starting gold. */
 export type GoldState =
@@ -40,6 +49,8 @@ export interface OutfitStepProps {
   onKit: () => void;
   kitNote: string | null;
   check: CheckState;
+  /** Called when adding an item put it on by itself, so a refusal from the server can take it off again. */
+  onAutoEquip?: (itemId: string) => void;
 }
 
 const FILTERS = [
@@ -58,22 +69,79 @@ export function cartCost(cart: readonly CartLine[], equipment: readonly Equipmen
   }, 0);
 }
 
-function EquipmentInfo({ item }: { item: EquipmentSummary }) {
-  const [open, setOpen] = useState(false);
-  const detail = useEquipmentDetail(open ? item.id : null);
-  const entry = detail.data
-    ? readEntry({ instance_type: 'item', template: detail.data, quantity: 1 }, 'pack', 0)
+/** The rules of thumb a kit follows for what to wear: the first body armour, shield, and weapon go on. */
+export function autoEquip(
+  itemId: string,
+  equip: readonly string[],
+  byId: ReadonlyMap<string, EquipmentDetail>,
+): boolean {
+  const detail = byId.get(itemId);
+  if (!detail || (detail.item_type !== 'weapon' && detail.item_type !== 'armour')) return false;
+  const worn = equip.map((id) => byId.get(id)).filter((d): d is EquipmentDetail => d !== undefined);
+  if (detail.item_type === 'weapon') return !worn.some((d) => d.item_type === 'weapon');
+  if (isShield(detail)) return !worn.some((d) => isShield(d));
+  return !worn.some((d) => d.item_type === 'armour' && !isShield(d));
+}
+
+function DetailsButton({ item, detail }: { item: EquipmentSummary; detail: EquipmentDetail | undefined }) {
+  const entry = detail
+    ? readEntry({ instance_type: 'item', template: detail, quantity: 1 }, 'pack', 0)
     : null;
   return (
     <Popover
-      open={open}
-      onOpenChange={setOpen}
       title={item.name}
       width="280px"
-      trigger={<IconButton icon="info" label={`About ${item.name}`} variant="ghost" size="sm" />}
+      trigger={
+        <button type="button" className={styles.shopNameButton}>
+          <span className={styles.shopIcon}>
+            <Icon name={itemIcon(item.id, item.item_type)} size={16} />
+          </span>
+          <span className={styles.shopNameText}>
+            <span className={styles.shopName}>{item.name}</span>{' '}
+            <span className={styles.shopSub}>
+              {rowSummary(item.id, item.name, detail) || itemTypeLabel(item.item_type)}
+            </span>
+            <span className="visually-hidden">, show details</span>
+          </span>
+        </button>
+      }
     >
       {entry ? <ItemDetailBody entry={entry} /> : <Skeleton lines={3} />}
     </Popover>
+  );
+}
+
+/** The minus and plus buttons the Outfitter uses for lots in the cart. */
+function LotStepper({
+  item,
+  lots,
+  bundle,
+  onLots,
+}: {
+  item: EquipmentSummary;
+  lots: number;
+  bundle: boolean;
+  onLots: (lots: number) => void;
+}) {
+  const noun = resolveItemNoun(item.id, emptyContext(), { name: item.name });
+  return (
+    <span className={styles.stepper} role="group" aria-label={`${capitalizeFirst(noun.many)} in the cart`}>
+      <IconButton
+        icon="minus"
+        size="sm"
+        label={bundle ? `Remove one lot of ${noun.many}` : `Remove one ${noun.one}`}
+        onClick={() => onLots(lots - 1)}
+      />
+      <span className={styles.count} aria-live="polite">
+        {lots}
+      </span>
+      <IconButton
+        icon="plus"
+        size="sm"
+        label={bundle ? `Add one lot of ${noun.many}` : `Add one ${noun.one}`}
+        onClick={() => onLots(lots + 1)}
+      />
+    </span>
   );
 }
 
@@ -89,39 +157,112 @@ export function OutfitStep({
   onKit,
   kitNote,
   check,
+  onAutoEquip,
 }: OutfitStepProps) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
+  const full = useFullCatalog('equipment');
   const spent = cartCost(cart, equipment);
   const left = gold.status === 'known' ? gold.gp - spent : null;
   const kit = kitLabel(classId);
 
-  const shown = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return (equipment ?? []).filter(
-      (item) =>
-        (filter === 'all' || item.item_type === filter) && (q === '' || item.name.toLowerCase().includes(q)),
-    );
+  const rows = useMemo(() => {
+    const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+    return (equipment ?? []).filter((item) => {
+      const haystack = `${item.name} ${itemTypeLabel(item.item_type)}`.toLowerCase();
+      return (
+        (filter === 'all' || item.item_type === filter) && words.every((word) => haystack.includes(word))
+      );
+    });
   }, [equipment, query, filter]);
 
-  const add = (itemId: string) => {
+  const setLots = (itemId: string, lots: number) => {
     const line = cart.find((l) => l.itemId === itemId);
-    if (line) onCart(cart.map((l) => (l.itemId === itemId ? { ...l, quantity: l.quantity + 1 } : l)));
-    else onCart([...cart, { itemId, quantity: 1 }]);
-  };
-  const setQuantity = (itemId: string, quantity: number) => {
-    if (quantity <= 0) {
+    if (lots <= 0) {
       onCart(cart.filter((l) => l.itemId !== itemId));
       onEquip(equip.filter((id) => id !== itemId));
-    } else onCart(cart.map((l) => (l.itemId === itemId ? { ...l, quantity } : l)));
+    } else if (line) {
+      onCart(cart.map((l) => (l.itemId === itemId ? { ...l, quantity: lots } : l)));
+    } else {
+      onCart([...cart, { itemId, quantity: lots }]);
+      // Armour and weapons go on as they would from a kit. The server still checks the class can use them.
+      if (autoEquip(itemId, equip, full.byId)) {
+        onEquip([...equip, itemId]);
+        onAutoEquip?.(itemId);
+      }
+    }
   };
+
+  const columns: DataColumn<EquipmentSummary>[] = [
+    {
+      key: 'name',
+      header: 'Item',
+      sortValue: (item) => item.name,
+      cell: (item) => <DetailsButton item={item} detail={full.byId.get(item.id)} />,
+    },
+    {
+      key: 'price',
+      header: 'Price',
+      numeric: true,
+      sortValue: (item) => item.cost_gp,
+      cell: (item) => formatGold(item.cost_gp),
+      width: '84px',
+    },
+    {
+      key: 'weight',
+      header: 'Weight',
+      numeric: true,
+      sortValue: (item) => weightCoins(full.byId.get(item.id)) ?? Number.MAX_SAFE_INTEGER,
+      cell: (item) => {
+        const weight = weightCoins(full.byId.get(item.id));
+        return weight === null ? (
+          <span className={styles.none} title="The catalog lists no weight">
+            -
+          </span>
+        ) : (
+          `${weight}`
+        );
+      },
+      width: '84px',
+    },
+    {
+      key: 'cart',
+      header: 'Cart',
+      align: 'end',
+      width: '132px',
+      cell: (item) => {
+        const lots = cart.find((l) => l.itemId === item.id)?.quantity ?? 0;
+        if (lots === 0) {
+          return (
+            <Button
+              size="sm"
+              variant="secondary"
+              icon="plus"
+              aria-label={`Add ${item.name} to the cart`}
+              onClick={() => setLots(item.id, 1)}
+            >
+              Add
+            </Button>
+          );
+        }
+        return (
+          <LotStepper
+            item={item}
+            lots={lots}
+            bundle={lotSize(full.byId.get(item.id)) > 1}
+            onLots={(next) => setLots(item.id, next)}
+          />
+        );
+      },
+    },
+  ];
 
   return (
     <div className={styles.outfitGrid}>
       <section className={styles.shop} aria-labelledby="wizard-shop">
         <div className={styles.rowBetween}>
           <h3 id="wizard-shop" className={styles.subTitle}>
-            The shop
+            The shelves
           </h3>
           {kit && (
             <Button size="sm" variant="secondary" icon="chest" onClick={onKit} disabled={equipment === null}>
@@ -134,55 +275,42 @@ export function OutfitStep({
           <SearchInput
             value={query}
             onValueChange={setQuery}
-            placeholder="Search the shop"
-            aria-label="Search the shop"
+            placeholder="Search the shelves"
+            aria-label="Search equipment"
           />
           <SegmentedControl
             options={FILTERS}
             value={filter}
             onValueChange={setFilter}
             size="sm"
-            aria-label="Item type"
+            aria-label="Type of equipment"
           />
         </div>
-        {equipment === null ? (
+        {equipment === null || full.items === null ? (
           <Skeleton lines={8} />
-        ) : shown.length === 0 ? (
-          <EmptyState
-            icon="search"
-            size="compact"
-            title="Nothing matches"
-            description="Try another word or type."
-          />
         ) : (
-          <ul className={styles.shopList} aria-label="Items for sale">
-            {shown.map((item) => {
-              const inCart = cart.find((l) => l.itemId === item.id)?.quantity ?? 0;
-              return (
-                <li key={item.id} className={styles.shopRow}>
-                  <span className={styles.shopName}>
-                    {item.name}
-                    {filter === 'all' && (
-                      <span className={styles.shopType}>{itemTypeLabel(item.item_type)}</span>
-                    )}
-                  </span>
-                  {inCart > 0 && <Badge tone="accent">{inCart} in cart</Badge>}
-                  <span className={styles.price}>{item.cost_gp} gp</span>
-                  <EquipmentInfo item={item} />
-                  <IconButton
-                    icon="plus"
-                    label={`Add ${item.name} to the cart`}
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => add(item.id)}
-                  />
-                </li>
-              );
-            })}
-          </ul>
+          <DataTable
+            caption="Equipment for sale"
+            hideCaption
+            density="comfortable"
+            rows={rows}
+            columns={columns}
+            rowKey={(item) => item.id}
+            empty={
+              <EmptyState
+                size="compact"
+                icon="search"
+                title="Nothing on the shelves matches"
+                description="Try fewer words, or choose All."
+              />
+            }
+          />
         )}
+        <p className={styles.muted}>
+          Prices are in gold pieces and weights in coins. A lot is what one purchase delivers: weapons and
+          armour sell one at a time, while gear and ammunition often come in bundles.
+        </p>
       </section>
-
       <aside className={styles.cartPanel} aria-labelledby="wizard-cart">
         <div className={styles.purse}>
           <span className={styles.purseLabel}>Starting gold</span>
@@ -231,15 +359,31 @@ export function OutfitStep({
           <ul className={styles.cartList}>
             {cart.map((line) => {
               const item = equipment?.find((e) => e.id === line.itemId);
+              const detail = full.byId.get(line.itemId);
               const equippable = item?.item_type === 'weapon' || item?.item_type === 'armour';
-              const name = cartPhrase(line.itemId, line.quantity, item?.name);
+              const itemName = item?.name ?? line.itemId;
+              const lot = lotSentence(line.itemId, itemName, detail, line.quantity);
+              const noun = resolveItemNoun(line.itemId, emptyContext(), { name: item?.name }).one;
               return (
                 <li key={line.itemId} className={styles.cartRow}>
                   <span className={styles.cartMain}>
-                    <span className={styles.cartName}>{name}</span>
-                    {equippable && (
+                    <span className={styles.cartName}>
+                      {line.quantity > 1 ? `${line.quantity} × ` : ''}
+                      {itemName}
+                    </span>
+                    {lot && <span className={styles.cartLot}>{lot}</span>}
+                    {equippable && item && (
                       <Checkbox
-                        label={item?.item_type === 'armour' ? 'Wear it' : 'Wield it'}
+                        label={
+                          <>
+                            <span aria-hidden="true">
+                              {item.item_type === 'armour' ? 'Wear it' : 'Wield it'}
+                            </span>
+                            <span className="visually-hidden">
+                              {item.item_type === 'armour' ? `Wear the ${noun}` : `Wield the ${noun}`}
+                            </span>
+                          </>
+                        }
                         checked={equip.includes(line.itemId)}
                         onCheckedChange={(checked) =>
                           onEquip(
@@ -249,22 +393,21 @@ export function OutfitStep({
                       />
                     )}
                   </span>
-                  <NumberInput
-                    aria-label={`How many of ${name}`}
-                    value={line.quantity}
-                    min={0}
-                    max={99}
-                    size="sm"
-                    width={2}
-                    onChange={(value) => setQuantity(line.itemId, value ?? 0)}
-                  />
-                  <span className={styles.price}>{(item?.cost_gp ?? 0) * line.quantity} gp</span>
+                  {item && (
+                    <LotStepper
+                      item={item}
+                      lots={line.quantity}
+                      bundle={lotSize(detail) > 1}
+                      onLots={(next) => setLots(line.itemId, next)}
+                    />
+                  )}
+                  <span className={styles.price}>{formatGold((item?.cost_gp ?? 0) * line.quantity)}</span>
                   <IconButton
                     icon="close"
-                    label={`Take ${name} out of the cart`}
+                    label={`Remove ${itemName} from the cart`}
                     size="sm"
                     variant="ghost"
-                    onClick={() => setQuantity(line.itemId, 0)}
+                    onClick={() => setLots(line.itemId, 0)}
                   />
                 </li>
               );
