@@ -3,7 +3,7 @@
  * and setting out. Ruth referees, Sam plays Brenna and Wren and is the caller, and Alice plays Osric.
  */
 import type { Page } from '@playwright/test';
-import { expect, test } from './support/fixtures';
+import { expect, readFeedLines, test } from './support/fixtures';
 import { stagedTable } from './support/states';
 import { openTable } from './support/table';
 import { AFTER_DELVE, purseOf, returnToTown, townTable } from './support/town';
@@ -162,6 +162,14 @@ test.describe('town', () => {
     await expect(clock(alice.page)).not.toHaveText(before ?? '');
     // A full day of rest heals Brenna's wounds a little.
     await expect(marchingRow(alice.page, 'Brenna')).toHaveAccessibleDescription(/^(8|9|10) of 10 hit points/);
+    // "Recently in town" leads with the rest itself (R-506).
+    await expect(
+      alice.page
+        .getByRole('tabpanel', { name: 'Town square' })
+        .getByRole('listitem')
+        .filter({ hasText: 'The party rests for a full day.' })
+        .first(),
+    ).toBeVisible();
 
     // Only the caller sets out.
     const aliceSetOut = alice.page
@@ -184,6 +192,13 @@ test.describe('town', () => {
       await expect(page.getByRole('banner').getByText('Exploring')).toBeVisible({ timeout: 20_000 });
       await expect(page.getByRole('application', { name: /^Dungeon map/ })).toBeVisible();
     }
+    // The day's rest reads in a few lines: one for the rations, none for members who regain nothing (R-505).
+    await alice.page.getByRole('tab', { name: /^Feed/ }).click();
+    await expect(alice.page.getByRole('region', { name: 'Feed entries' })).toBeVisible();
+    const lines = (await readFeedLines(alice.page)).join('\n');
+    expect(lines).toContain("The party eats and drinks the day's rations.");
+    expect(lines).not.toContain('regains no hit points');
+    expect(lines).not.toContain("eats the day's food");
   });
 
   test('a caster’s button on the rest page opens the sheet at its Spells tab', async ({ crew }) => {

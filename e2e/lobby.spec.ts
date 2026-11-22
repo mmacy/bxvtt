@@ -24,8 +24,8 @@ test.describe('first run and lobby', () => {
     await page.getByRole('textbox', { name: 'Your name' }).fill('Ruth');
     await form.getByRole('button', { name: 'Continue' }).click();
     await expect(page.getByRole('heading', { name: 'Your tables', level: 1 })).toBeVisible();
-    // The name reads "Ruth , your profile" with a stray space for now (R-101), so the space is optional.
-    await expect(page.getByRole('button', { name: /^Ruth ?, your profile$/ })).toBeVisible();
+    // The name has no stray space before the comma (R-101).
+    await expect(page.getByRole('button', { name: 'Ruth, your profile', exact: true })).toBeVisible();
 
     await page.getByRole('textbox', { name: 'Table name' }).fill('Thursday at the bell');
     await page.getByRole('button', { name: 'Create table' }).click();
@@ -38,6 +38,15 @@ test.describe('first run and lobby', () => {
     await expect(page.getByRole('heading', { name: 'Thursday at the bell', level: 1 })).toBeVisible();
     await page.getByRole('link', { name: 'Your tables' }).click();
     await expect(page.getByRole('link', { name: /Thursday at the bell/ })).toBeVisible();
+  });
+
+  test('the lobby fits a phone-width screen', async ({ crew }) => {
+    // R-104: the header used to push the lobby wider than the screen.
+    const ruth = await crew.person('Ruth', { viewport: { width: 390, height: 844 } });
+    const table = await ruth.client.createTable({ name: 'Phone width' });
+    await openTable(ruth.page, `/tables/${table.id}`);
+    await expect(ruth.page.getByRole('heading', { name: 'Phone width', level: 1 })).toBeVisible();
+    expect(await ruth.page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   });
 
   test('a player joins with the invite link and both see each other', async ({ crew }) => {
@@ -313,20 +322,29 @@ test.describe('first run and lobby', () => {
 
     await ruth.page.getByRole('button', { name: 'Table menu' }).click();
     await ruth.page.getByRole('menuitem', { name: 'Return to the lobby' }).click();
-    await ruth.page
-      .getByRole('alertdialog', { name: 'Return the table to its lobby?' })
-      .getByRole('button', { name: /lobby/i })
-      .click();
+    const returning = ruth.page.getByRole('alertdialog', { name: 'Return the table to its lobby?' });
+    // The dialog says what returning does to the characters (R-530).
+    await expect(returning).toContainText('Characters start each new game as they were created');
+    await returning.getByRole('button', { name: /lobby/i }).click();
     for (const page of [ruth.page, sam.page]) {
       await expect(page.getByRole('heading', { name: 'Party', level: 2 })).toBeVisible({ timeout: 20_000 });
     }
 
-    // Sam learns that the referee can continue. Only Ruth gets the button.
-    await expect(sam.page.getByText(/from earlier games\. The referee can continue from one/)).toBeVisible();
+    // Sam learns that a new game starts the characters afresh and that the referee can continue. Only Ruth gets
+    // the button.
+    await expect(
+      sam.page.getByText(/from earlier games\. A new game starts every character as they were created/),
+    ).toBeVisible();
+    await expect(sam.page.getByText(/the referee can continue from a save/)).toBeVisible();
     await expect(sam.page.getByRole('button', { name: 'Continue from a save' })).toHaveCount(0);
     await ruth.page.getByRole('button', { name: 'Continue from a save' }).click();
     const lobbySaves = ruth.page.getByRole('dialog', { name: 'Continue from a save' });
     await expect(lobbySaves.getByRole('textbox', { name: 'Save the game now' })).toHaveCount(0);
+    // In the lobby, no save is badged "Earlier game" (R-111), and the autosave note has no dead "Change" button
+    // (R-103).
+    await expect(lobbySaves.getByText('Earlier game', { exact: true })).toHaveCount(0);
+    await expect(lobbySaves.getByRole('button', { name: 'Change', exact: true })).toHaveCount(0);
+    await expect(lobbySaves).toContainText('Change it with “Save automatically” in the table settings.');
     await lobbySaves.getByRole('button', { name: 'Restore In the chapel' }).click();
     const confirm = ruth.page.getByRole('alertdialog', { name: 'Restore “In the chapel”?' });
     await expect(confirm).toContainText('The party plays on as it was saved');

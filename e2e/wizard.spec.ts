@@ -100,8 +100,16 @@ test.describe('character wizard', () => {
     await sam.seedAbilityRolls([ROLL_SEEDS.fighter]);
     await sam.page.goto(`/tables/${table.id}`);
     const dialog = await openWizard(sam.page);
-    await rollFor(dialog, 'fighter');
+    // While the dice tumble, the step shows neither the qualifying classes nor Continue (R-113).
+    await dialog.getByRole('button', { name: 'Roll ability scores' }).click();
+    const qualifies = dialog.getByRole('region', { name: 'Classes this roll qualifies for' });
+    await expect(qualifies).toHaveCount(0);
+    await expect(qualifies).toBeVisible();
+    await expect(qualifies.getByRole('listitem').filter({ hasText: /^Fighter/ })).not.toContainText(/needs/i);
     await next(dialog);
+    // Class features are in sentence case (R-112).
+    await expect(dialog).toContainText('Detect construction tricks');
+    await expect(dialog).not.toContainText('Detect Construction Tricks');
     await chooseClass(dialog, 'fighter');
 
     // Two points of Intelligence buy one point of Strength, the fighter's prime requisite.
@@ -118,6 +126,8 @@ test.describe('character wizard', () => {
     // Two suits of plate mail cost more than the 110 gp this roll gives a fighter.
     const shop = cart(dialog);
     await expect(shop).toContainText('110 gp');
+    // The coin is drawn, not written as a letter in the text (R-108).
+    await expect(shop).not.toContainText(/gold\s*g\s*\d/);
     await addToCart(dialog, ['Plate mail']);
     await shop.getByRole('button', { name: 'Add one suit of plate mail' }).click();
     await expect(shop.getByRole('alert')).toContainText("there isn't enough gold");
@@ -126,10 +136,12 @@ test.describe('character wizard', () => {
     await shop.getByRole('button', { name: 'Remove Plate mail from the cart' }).click();
     await addToCart(dialog, ['Plate mail', 'Sword', 'Shield', 'Torches (6)']);
     await expect(shop).toContainText('81 gp spent, 29 gp left');
-    // The first armour, shield, and weapon the class can use go on as they're added (D-101).
-    await expect(shop.getByRole('checkbox', { name: 'Wear the suit of plate mail' })).toBeChecked();
-    await expect(shop.getByRole('checkbox', { name: 'Wear the shield' })).toBeChecked();
-    await expect(shop.getByRole('checkbox', { name: 'Wield the sword' })).toBeChecked();
+    // The first armour, shield, and weapon the class can use go on as they're added (D-101). Each checkbox's name is
+    // its visible label (R-102).
+    await expect(shop.getByRole('checkbox', { name: 'Wear the plate mail', exact: true })).toBeChecked();
+    await expect(shop.getByRole('checkbox', { name: 'Wear the shield', exact: true })).toBeChecked();
+    await expect(shop.getByRole('checkbox', { name: 'Wield the sword', exact: true })).toBeChecked();
+    await expect(shop.getByText('Wear the plate mail', { exact: true })).toBeVisible();
     await expect(shop).toContainText('The shop and your class accept this outfit.');
     await next(dialog);
 
@@ -164,6 +176,13 @@ test.describe('character wizard', () => {
     await rollFor(dialog, 'magic_user');
     await next(dialog);
     await chooseClass(dialog, 'magic_user');
+    // Dexterity can't be traded at all, so the refusal gives that one reason (R-105).
+    await dialog.getByRole('button', { name: 'Lower Dexterity' }).click();
+    await expect(dialog).toContainText(
+      "Dexterity can't be lowered. Only Strength, Intelligence, and Wisdom can be traded for points.",
+    );
+    await expect(dialog).not.toContainText('steps of 2');
+    await dialog.getByRole('button', { name: 'Keep the scores as rolled' }).click();
     await dialog.getByRole('button', { name: 'Skip this step' }).click();
     await fillIdentity(dialog, 'Tamsin', 'Neutral');
 
@@ -179,6 +198,9 @@ test.describe('character wizard', () => {
 
     const spells = dialog.getByRole('region', { name: 'First spell' });
     await expect(spells).toContainText('0 of 1 chosen');
+    // Every range is written one way (R-509).
+    await expect(spells.getByRole('button', { name: /^Charm Person / })).toContainText('Range: 120’');
+    await expect(spells.getByRole('button', { name: /^Shield / })).toContainText('Range: the caster');
     // Continuing without a spell isn't possible for an arcane caster.
     await spells.getByRole('button', { name: /^Magic Missile / }).click();
     await expect(spells).toContainText('1 of 1 chosen');
@@ -191,9 +213,10 @@ test.describe('character wizard', () => {
     await expect(dialog.getByRole('region', { name: 'The shelves' })).toContainText(
       "Magic-users can't wear armour. The suit of chainmail stays in the pack.",
     );
-    await expect(shop.getByRole('checkbox', { name: 'Wear the suit of chainmail' })).not.toBeChecked();
+    const wear = shop.getByRole('checkbox', { name: 'Wear the chainmail', exact: true });
+    await expect(wear).not.toBeChecked();
     // Putting it on by hand gets the refusal in the cart.
-    await shop.getByRole('checkbox', { name: 'Wear the suit of chainmail' }).check();
+    await wear.check();
     await expect(shop.getByRole('alert')).toContainText("Magic-users can't wear armour.");
     await expect(dialog.getByRole('contentinfo').getByRole('button', { name: 'Continue' })).toBeDisabled();
     await shop.getByRole('button', { name: 'Remove Chainmail from the cart' }).click();
@@ -204,6 +227,10 @@ test.describe('character wizard', () => {
     await expect(review).toContainText('Elvish');
     await expect(review).toContainText('Goblin');
     await expect(review).toContainText('Magic Missile');
+    // A weapon alone reads as wielding only (R-110).
+    await expect(dialog.getByRole('region', { name: 'Combat' })).toContainText(
+      'You go out wielding a dagger.',
+    );
     await createFromReview(sam.page, dialog, 'Tamsin');
     await expect(
       sam.page

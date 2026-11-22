@@ -312,6 +312,37 @@ test.describe('rejoining a table', () => {
     await expect(page.getByRole('heading', { name: "I've played at this table before" })).toHaveCount(0);
   });
 
+  test('the join page never offers the table’s only referee, and words the way back for anyone', async ({
+    crew,
+  }) => {
+    // Ruth is the only member, and she is offline: nobody could let a visitor back in as her (R-501).
+    const ruth = await crew.person('Ruth');
+    const table = await ruth.client.createTable({ name: 'The bell tolls' });
+    const stranger = await crew.person('Stranger', { signedIn: false });
+    await stranger.page.goto(`/join/${table.invite_code}`);
+    await expect(stranger.page.getByRole('heading', { name: "You're invited to a table" })).toBeVisible();
+    await expect(
+      stranger.page.getByRole('heading', { name: "I've played at this table before" }),
+    ).toHaveCount(0);
+    await expect(stranger.page.getByRole('button', { name: /^Come back in as/ })).toHaveCount(0);
+
+    // Once an offline player can be asked for, the section names only the player, and its text doesn't guess
+    // why the browser forgot the visitor (R-109).
+    const sam = await crew.person('Sam');
+    await sam.client.joinTable(table.invite_code);
+    await stranger.page.reload();
+    await expect(
+      stranger.page.getByRole('heading', { name: "I've played at this table before" }),
+    ).toBeVisible();
+    const offered = candidates(stranger.page).getByRole('button');
+    await expect(offered).toHaveCount(1);
+    await expect(offered).toHaveAccessibleName('Come back in as Sam');
+    await expect(stranger.page.getByText(/address changed/)).toHaveCount(0);
+    await expect(
+      stranger.page.getByText(/^Played here before, but this browser doesn't remember you\?/),
+    ).toBeVisible();
+  });
+
   test('a request ends when the member comes back online elsewhere', async ({ crew }) => {
     const table = await joinedTable(crew);
     const { ruth } = table;

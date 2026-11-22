@@ -3,9 +3,11 @@
  * victory through the interface alone, as a group would. Nothing here calls the SDK.
  *
  * The ability rolls and the session use fixed seeds (added to the requests the interface sends), so every run
- * rolls the same dice. The route is the one a careful group takes: talk at the toll gate and let the referee
- * settle the toll, put the counting room to sleep, climb to the captain's loft and sleep the captain, then walk
- * into the east gatehouse to raise the portcullis. Tamsin dies in the captain's ambush on every run.
+ * rolls the same dice. The route is the one a first group takes on the rebalanced map: talk at the one-cell toll
+ * gate and let the referee settle the toll, light a torch, fight the clerk and his bandit in the counting room and
+ * pick up what they drop, climb the stairs from the counting room's door to the captain's loft, sleep the captain,
+ * take her chest, then walk into the east gatehouse to raise the portcullis. The torch gives the party away in the
+ * loft, and Mag Corrie kills Tamsin before anyone can act, on every run.
  */
 import type { Locator, Page } from '@playwright/test';
 import { expect, test, type Actor } from './support/fixtures';
@@ -114,13 +116,22 @@ async function closeIn(page: Page, name: string, group: string) {
   await declaring(page, () => composer.getByRole('button', { name: `Close in on ${group}` }).click());
 }
 
-/** Declares a melee attack on a group, through the Attack tab. */
-async function attack(page: Page, name: string, group: string) {
+/**
+ * Declares a melee attack through the Attack tab on the first of the groups that is still standing, closing in
+ * first when the group is out of reach.
+ */
+async function attack(page: Page, name: string, ...groups: string[]) {
   const composer = await choicesFor(page, name);
   await composer.getByRole('radio', { name: 'Attack' }).click();
-  await declaring(page, () =>
-    composer.getByRole('button', { name: new RegExp(`^Attack: ${group}, \\d+ feet away$`) }).click(),
-  );
+  for (const group of groups) {
+    const button = composer.getByRole('button', {
+      name: new RegExp(`^(Attack|Close in and attack): ${group}, \\d+ feet away$`),
+    });
+    if ((await button.count()) === 0) continue;
+    await declaring(page, () => button.click());
+    return;
+  }
+  throw new Error(`${name} can't attack any of ${groups.join(', ')}.`);
 }
 
 /** Declares *sleep* by Hit Dice at a group, through the Cast tab. */
@@ -249,9 +260,10 @@ test('a referee and two players play The Toll at Crookback Bridge from table cre
   await test.step('at the toll gate, the caller talks and the referee settles the toll', async () => {
     await stepParty(sam.page, 'ArrowRight', [2, 6]);
     await stepParty(sam.page, 'ArrowRight', [3, 6]);
+    await stepParty(sam.page, 'ArrowRight', [4, 6]);
     for (const page of everyone) {
       await expect(
-        encounterPanel(page).getByRole('heading', { name: 'The party meets 4 bandits' }),
+        encounterPanel(page).getByRole('heading', { name: 'The party meets 3 bandits' }),
       ).toBeVisible();
     }
     await shot(ann.page, 'toll-gate');
@@ -271,23 +283,50 @@ test('a referee and two players play The Toll at Crookback Bridge from table cre
     await settle.getByRole('checkbox', { name: "Keep this area's monsters peaceful" }).click();
     await settle.getByRole('button', { name: 'End the encounter' }).click();
     for (const page of everyone) await expect(encounterPanel(page)).toHaveCount(0);
+    await shot(sam.page, 'toll-gate-settled');
+  });
+
+  await test.step('the caller has Brenna light a torch, and the map and the party panel say so', async () => {
+    await expect(sam.page.getByRole('button', { name: 'Light: The party has no light.' })).toBeVisible();
+    await sam.page
+      .getByRole('toolbar', { name: 'Party actions' })
+      .getByRole('button', { name: 'Light' })
+      .click();
+    await sam.page.getByRole('menuitem', { name: 'Brenna lights a torch' }).click();
+    for (const page of everyone) {
+      await expect(
+        page.getByRole('button', { name: /^Light: Brenna's torch, about \d+ turns left/ }),
+      ).toBeVisible();
+    }
+    await expect(
+      ann.page
+        .getByRole('list', { name: 'Marching order' })
+        .getByRole('listitem')
+        .filter({ hasText: 'Brenna' }),
+    ).toContainText(/Torch, about \d+ turns left/);
+    await shot(ann.page, 'torch-lit');
   });
 
   await test.step('the party crosses the gate and walks the bridge to the counting room', async () => {
-    await stepParty(sam.page, 'ArrowRight', [4, 6]);
-    await stepParty(sam.page, 'ArrowRight', [5, 6]);
     await pinScene(sam.page);
     await openDoor(sam.page, 'east');
-    for (let x = 6; x <= 12; x += 1) await stepParty(sam.page, 'ArrowRight', [x, 6]);
+    for (let x = 5; x <= 12; x += 1) await stepParty(sam.page, 'ArrowRight', [x, 6]);
     await stepParty(sam.page, 'ArrowUp', [12, 5]);
     await openDoor(sam.page, 'north');
     await stepParty(sam.page, 'ArrowUp', [12, 4]);
+    // A single monster reads without a count (R-523).
     for (const page of everyone) {
-      await expect(encounterPanel(page).getByRole('heading', { name: /^The party meets/ })).toBeVisible();
+      await expect(
+        encounterPanel(page).getByRole('heading', {
+          name: 'The party meets an ink-stained clerk and a bandit',
+        }),
+      ).toBeVisible();
     }
+    await expect(encounterPanel(sam.page)).not.toContainText('×1');
+    await shot(sam.page, 'counting-room');
   });
 
-  await test.step('the party fights in the counting room, and Tamsin puts the medium to sleep', async () => {
+  await test.step('the party fights in the counting room, and Tamsin puts the clerk to sleep', async () => {
     await encounterPanel(sam.page).getByRole('button', { name: 'Fight' }).click();
     await newRound(players);
     await closeIn(sam.page, 'Brenna', 'the bandit');
@@ -305,6 +344,8 @@ test('a referee and two players play The Toll at Crookback Bridge from table cre
       await attack(page, name, 'the ink-stained clerk');
     }
     await newRound(players);
+    // One slain clerk reads in the singular (R-523).
+    await expect(battleBoard(sam.page)).toContainText('The ink-stained clerk, slain');
     for (const [page, name] of [
       [sam.page, 'Brenna'],
       [sam.page, 'Osric'],
@@ -317,12 +358,17 @@ test('a referee and two players play The Toll at Crookback Bridge from table cre
       await expect(battleBoard(page)).toHaveCount(0, { timeout: 30_000 });
       await expect(page.getByRole('banner').getByText('Exploring')).toBeVisible();
     }
+    await shot(sam.page, 'counting-room-won');
   });
 
-  await test.step('the party climbs to the captain’s loft, where the captain ambushes it', async () => {
-    await stepParty(sam.page, 'ArrowUp', [12, 3]);
-    await stepParty(sam.page, 'ArrowUp', [12, 2]);
-    await stepParty(sam.page, 'ArrowLeft', [11, 2]);
+  await test.step('the party picks up what the clerk and the bandit dropped, and leaves the trapped strongbox', async () => {
+    const scene = sam.page.getByRole('region', { name: 'Where the party stands' });
+    await scene.getByRole('button', { name: 'Pick up the dropped goods' }).click();
+    await expect(scene.getByRole('button', { name: 'Pick up the dropped goods' })).toHaveCount(0);
+    await shot(sam.page, 'counting-room-pickup');
+  });
+
+  await test.step('the party climbs to the captain’s loft, where the captain attacks at once', async () => {
     await sam.page
       .getByRole('toolbar', { name: 'Party actions' })
       .getByRole('button', { name: /^Climb the stairs/ })
@@ -330,7 +376,7 @@ test('a referee and two players play The Toll at Crookback Bridge from table cre
     for (const page of everyone) {
       await expect(battleBoard(page)).toBeVisible({ timeout: 30_000 });
     }
-    // The captain's first blow kills Tamsin before anyone can act.
+    // The torch gives the party away, so Mag Corrie isn't surprised, and her first blow kills Tamsin.
     await expect(declarationRow(ann.page, 'Tamsin')).toContainText('Dead');
     // The board names Mag Corrie and her bodyguard by their own labels (D-312).
     for (const label of ['Mag Corrie', "Mag's bodyguard"]) {
@@ -345,11 +391,24 @@ test('a referee and two players play The Toll at Crookback Bridge from table cre
     await castSleep(ann.page, 'Wren', 'Mag Corrie');
     await attack(sam.page, 'Brenna', "Mag's bodyguard");
     await attack(sam.page, 'Osric', "Mag's bodyguard");
-    await newRound(players);
-    await attack(sam.page, 'Brenna', 'Mag Corrie');
-    await attack(sam.page, 'Osric', 'Mag Corrie');
-    await attack(ann.page, 'Wren', 'Mag Corrie');
+    await shot(sam.page, 'captains-loft-round-2');
+    for (let round = 3; round <= 10; round += 1) {
+      const fresh = battleBoard(sam.page).getByText(/(?<!\d)0 of \d declared/);
+      await expect(
+        fresh.or(sam.page.getByRole('banner').getByText('Exploring', { exact: true })),
+      ).toBeVisible({
+        timeout: 30_000,
+      });
+      if ((await battleBoard(sam.page).count()) === 0) break;
+      await newRound(players);
+      if (round === 3) await shot(ann.page, 'captains-loft-round-3');
+      // The bodyguard is awake, so the party fights him first, then the sleeping captain.
+      await attack(sam.page, 'Brenna', "Mag's bodyguard", 'Mag Corrie');
+      await attack(sam.page, 'Osric', "Mag's bodyguard", 'Mag Corrie');
+      await attack(ann.page, 'Wren', "Mag's bodyguard", 'Mag Corrie');
+    }
     for (const page of everyone) await expect(battleBoard(page)).toHaveCount(0, { timeout: 30_000 });
+    await shot(sam.page, 'captains-loft-won');
     await ann.page
       .getByRole('tablist', { name: 'Table panels' })
       .getByRole('tab', { name: 'Journal' })
@@ -357,16 +416,22 @@ test('a referee and two players play The Toll at Crookback Bridge from table cre
     await expect(ann.page.getByRole('tabpanel', { name: 'Journal' })).toContainText(/Mag Corrie/);
   });
 
+  await test.step('the party takes the captain’s chest and finds the miller’s strongbox', async () => {
+    const scene = sam.page.getByRole('region', { name: 'Where the party stands' });
+    await scene.getByRole('button', { name: 'Treasure', exact: true }).click();
+    await sam.page.getByRole('menuitem', { name: 'Take the treasure' }).click();
+    await expect(await openFeed(ann.page)).toContainText("Miller Aske's strongbox", { timeout: 20_000 });
+    const pickUp = scene.getByRole('button', { name: 'Pick up the dropped goods' });
+    if ((await pickUp.count()) > 0) await pickUp.click();
+    await shot(sam.page, 'captains-loft-treasure');
+  });
+
   await test.step('the party walks to the east gatehouse, the portcullis rises, and the table wins', async () => {
     await sam.page
       .getByRole('toolbar', { name: 'Party actions' })
       .getByRole('button', { name: /^Go down the stairs/ })
       .click();
-    await expect(sam.page.getByText(/The party is at 11, 2, facing/)).toBeAttached({ timeout: 30_000 });
-    await stepParty(sam.page, 'ArrowRight', [12, 2]);
-    await stepParty(sam.page, 'ArrowDown', [12, 3]);
-    await stepParty(sam.page, 'ArrowDown', [12, 4]);
-    await openDoor(sam.page, 'south');
+    await expect(sam.page.getByText(/The party is at 12, 4, facing/)).toBeAttached({ timeout: 30_000 });
     await stepParty(sam.page, 'ArrowDown', [12, 5]);
     for (let x = 13; x <= 18; x += 1) await stepParty(sam.page, 'ArrowRight', [x, 5]);
     await stepParty(sam.page, 'ArrowDown', [18, 6]);
@@ -382,9 +447,17 @@ test('a referee and two players play The Toll at Crookback Bridge from table cre
     for (const page of everyone) {
       await expect(page.getByRole('heading', { name: 'Victory', level: 2 })).toBeVisible({ timeout: 30_000 });
       await expect(page.getByRole('list', { name: 'The party' }).getByRole('listitem')).toHaveCount(4);
+      // The victory screen tells the ending in the adventure's own words (R-303).
+      await expect(page.getByRole('main')).toContainText(
+        'By evening the first carts are rolling over Crookback Bridge',
+      );
+      await expect(page.getByRole('main')).toContainText(/Quests completed\s*.*Open the Kingsway/);
+      await expect(page.getByRole('main')).toContainText("Miller Aske's strongbox");
+      await expect(page.getByRole('main')).toContainText(/Fallen\s*Tamsin/);
     }
     await expect(ann.page.getByText('The referee decides what comes next')).toBeVisible();
     await expect(ruth.page.getByRole('button', { name: /lobby/i }).first()).toBeVisible();
     await shot(sam.page, 'victory');
+    await shot(ruth.page, 'victory-referee');
   });
 });

@@ -11,6 +11,14 @@ export async function screenshot(page: Page, name: string): Promise<void> {
   await page.screenshot({ path: join(SCREENS_DIR, `${name}.png`) });
 }
 
+/** The prompt above the map while the referee picks the cell to place the party on. It names both ways to pick (R-202). */
+export const PLACE_PROMPT =
+  'Pick the cell to place the party on. Click it, or use the arrow keys and press Enter.';
+
+/** The prompt above the map while the referee picks a door to change. */
+export const DOOR_PROMPT =
+  'Pick the door to change. Click it, or use the arrow keys, press E to turn to its side, and press Enter.';
+
 /** The section titles of the referee tab, which name its tabs when the dock is narrow. */
 export const REFEREE_SECTIONS = {
   now: 'Here and now',
