@@ -100,7 +100,7 @@ test.describe('town', () => {
 
     await openTownTab(sam.page, 'Temple');
     const patients = sam.page.getByRole('group', { name: 'Who is treated' });
-    await expect(patients.getByRole('button', { name: /^Brenna 7 of 10 hp/ })).toHaveAttribute(
+    await expect(patients.getByRole('button', { name: /^Brenna, 7 of 10 hp/ })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
