@@ -1,7 +1,7 @@
 import { Banner, Button, EmptyState, Icon, Spinner, type IconName } from '@/ui';
 import { Fragment } from 'react';
 import { sectionInfo } from './model';
-import { highlight, type ResultKind, type SearchItem } from './search';
+import { bodySnippet, highlight, type ResultKind, type SearchItem } from './search';
 import styles from './results.module.css';
 import type { Row, RowGroup } from './rows';
 
@@ -66,6 +66,7 @@ function RowView({ row, index, active, query, onHover, onChoose }: RowViewProps)
     );
   }
   const item: SearchItem = row.item;
+  const snippet = query === '' ? null : bodySnippet(item, query);
   return (
     <div {...common} className={styles.row} data-active={active || undefined}>
       <span className={styles.rowIcon}>
@@ -75,6 +76,11 @@ function RowView({ row, index, active, query, onHover, onChoose }: RowViewProps)
         <Marked text={item.name} query={query} />
       </span>
       <span className={styles.rowSubtitle}>{item.subtitle}</span>
+      {snippet && (
+        <span className={styles.rowSnippet}>
+          <Marked text={snippet} query={query} />
+        </span>
+      )}
     </div>
   );
 }

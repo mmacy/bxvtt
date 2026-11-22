@@ -1,8 +1,10 @@
 /** Leaving town: the dungeons the party can set out for, and the dialog that confirms the trip. */
+import { nameInSentence } from '@bxvtt/shared/text';
 import { useState } from 'react';
 import { useParty, useSendCommand } from '@/app';
 import { Banner, Button, Dialog, EmptyState, Icon, RadioGroup, Skeleton } from '@/ui';
 import { gaps, readinessChecklist } from './checklist';
+import { SpellActions, hasSpellAdvice, spellAdviceText, useSpellAdvice } from './SpellAdvice';
 import { useDungeons, useLeaveAccess, useTownServices, type Dungeon } from './hooks';
 import { useTownUi } from './townUi';
 import styles from './Road.module.css';
@@ -84,7 +86,8 @@ export function LeaveDialog() {
 
   const list: Dungeon[] = dungeons ?? [];
   const chosen = list.find((dungeon) => dungeon.id === choice) ?? list[0] ?? null;
-  const missing = gaps(readinessChecklist(party));
+  const advice = useSpellAdvice();
+  const missing = gaps(readinessChecklist(party, spellAdviceText(advice)));
 
   const close = (next: boolean) => {
     setOpen(next);
@@ -107,7 +110,9 @@ export function LeaveDialog() {
     <Dialog
       open={open}
       onOpenChange={close}
-      title={chosen ? `Set out for ${chosen.name || 'the dungeon'}?` : 'Set out?'}
+      title={
+        chosen ? `Set out for ${chosen.name ? nameInSentence(chosen.name) : 'the dungeon'}?` : 'Set out?'
+      }
       description="The party leaves town together and arrives at the entrance."
       footer={
         <>
@@ -140,9 +145,14 @@ export function LeaveDialog() {
             <p className={styles.gapsTitle}>Before you go, the party might want:</p>
             <ul className={styles.gapList}>
               {missing.map((line) => (
-                <li key={line.key}>{line.title}</li>
+                <li key={line.key}>{line.key === 'spells' ? line.detail : line.title}</li>
               ))}
             </ul>
+            {hasSpellAdvice(advice) && (
+              <div className={styles.gapActions}>
+                <SpellActions advice={advice} />
+              </div>
+            )}
             <Button
               variant="ghost"
               size="sm"

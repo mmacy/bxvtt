@@ -1,7 +1,8 @@
-import { conditionLabel, formatFeet } from '@bxvtt/shared/text';
+import { capitalizeFirst, conditionLabel, formatFeet, isProperLabel, joinList } from '@bxvtt/shared/text';
 import type { CSSProperties } from 'react';
 import { tokenClass } from '@/app';
 import { cx, Icon, TokenPortrait } from '@/ui';
+import { countBadge, countedGroup, groupHeading, theGroup, type GroupLabels } from './names';
 import type { Pop, TrackGroup, TrackMember, TrackState } from './playback';
 import styles from './track.module.css';
 
@@ -26,6 +27,8 @@ const TOKEN = 32;
 const STACK = 3;
 /** Vertical room for one stacked token with its hit point bar. */
 const ROW = 42;
+/** Room for one group's token and labels, for groups that stand at the same distance. */
+const GROUP_WIDTH = 104;
 
 /** A tick spacing that gives four to eight ticks across the span. */
 function tickStep(span: number): number {
@@ -33,10 +36,19 @@ function tickStep(span: number): number {
   return 500;
 }
 
+function trackLabels(group: TrackGroup): GroupLabels {
+  return { label: group.label, plural: group.labelPlural, count: group.count };
+}
+
+/** The group's label as the track prints it under the token, in lower case unless it is a name. */
+function lowerHeading(group: GroupLabels): string {
+  return group.count === 1 ? group.label : (group.plural ?? group.label);
+}
+
 function memberLabel(member: TrackMember, meleeWith: readonly string[] = []): string {
   const parts = [member.name, `${member.hp} of ${member.maxHp} hit points`];
-  if (meleeWith.length > 0) parts.push(`in melee with the ${meleeWith.join(' and the ')}`);
-  if (member.down) parts.push('down');
+  if (meleeWith.length > 0) parts.push(`in melee with ${joinList(meleeWith)}`);
+  if (member.down) parts.push(member.conditions.includes('dead') ? 'dead' : 'unconscious');
   else if (member.advance !== null && member.advance !== 0)
     parts.push(
       member.advance > 0 ? `${formatFeet(member.advance)} forward` : `${formatFeet(-member.advance)} back`,
@@ -47,7 +59,7 @@ function memberLabel(member: TrackMember, meleeWith: readonly string[] = []): st
 }
 
 function groupLabel(group: TrackGroup, nearest: number | null): string {
-  const parts = [`${group.count} ${group.count === 1 ? group.label : group.labelPlural}`];
+  const parts = [countedGroup(trackLabels(group))];
   if (group.fled) parts.push('fled');
   else if (nearest !== null) parts.push(`${formatFeet(nearest)} from the nearest party member`);
   if (group.fleeing && !group.fled) parts.push('fleeing');
@@ -98,8 +110,12 @@ export function RangeTrack({
   }
   const columns = Math.max(1, ...[...stacks.values()].map((stack) => Math.ceil(stack.length / rows)));
   // Margins in pixels that leave room for the stacked party, the group labels, and the set-aside trays.
-  const leftPx = 8 + columns * (TOKEN + 4) + (fallen.length > 0 ? 44 : 0);
-  const rightPx = 104 + (gone.length > 0 ? 48 : 0);
+  const leftPx = 8 + columns * (TOKEN + 4) + (fallen.length > 0 ? 64 : 0);
+  const sideBySide = Math.max(
+    1,
+    ...present.map((g) => present.filter((other) => other.distance === g.distance).length),
+  );
+  const rightPx = 104 + (sideBySide - 1) * GROUP_WIDTH + (gone.length > 0 ? 64 : 0);
   const fraction = (feet: number) => (feet - min) / (max - min);
   const at = (feet: number, offsetPx = 0) =>
     `calc(${leftPx + offsetPx}px + (100% - ${leftPx + rightPx}px) * ${fraction(feet)})`;
@@ -110,9 +126,16 @@ export function RangeTrack({
     null,
   )?.id;
   const engaged = new Set(present.flatMap((g) => g.frontRank));
-  const meleeOf = (id: string) => present.filter((g) => g.frontRank.includes(id)).map((g) => g.labelPlural);
+  const meleeOf = (id: string) =>
+    present.filter((g) => g.frontRank.includes(id)).map((g) => theGroup(trackLabels(g)));
   const ticks: number[] = [];
   for (let feet = min; feet <= max; feet += step) ticks.push(feet);
+  // Groups at the same distance stand side by side, so their tokens and labels don't overlap.
+  const groupOffset = (group: TrackGroup): CSSProperties => {
+    const same = present.filter((g) => g.distance === group.distance);
+    const index = same.indexOf(group);
+    return index > 0 ? { marginLeft: `${index * GROUP_WIDTH}px` } : {};
+  };
   const popsFor = (id: string) => pops.filter((p) => p.tokenId === id);
   const focusSet = new Set(focus);
 
@@ -132,9 +155,7 @@ export function RangeTrack({
       aria-label="Battlefield: the party on the left, the monsters on the right"
     >
       <div className={styles.lane}>
-        <div className={styles.line} style={{ left: at(0) }} aria-hidden="true">
-          <span className={styles.lineLabel}>Party line</span>
-        </div>
+        <div className={styles.line} style={{ left: at(0) }} aria-hidden="true"></div>
         {ticks.map((feet) => (
           <span key={feet} className={styles.tick} style={{ left: at(feet) }} aria-hidden="true">
             {feet === 0 ? '0' : formatFeet(feet, 'short')}
@@ -155,15 +176,22 @@ export function RangeTrack({
               )}
               <div
                 className={cx(styles.group, lit && styles.focus, group.fleeing && styles.fleeing)}
-                style={{ left: at(group.distance) }}
+                style={{ left: at(group.distance), ...groupOffset(group) }}
               >
                 <span className="visually-hidden">{groupLabel(group, nearest)}</span>
                 <span className={styles.groupToken} aria-hidden="true">
-                  <TokenPortrait name={group.labelPlural} kind="monster" size={TOKEN} decorative />
-                  <span className={styles.count}>×{group.count}</span>
+                  <TokenPortrait
+                    name={groupHeading(trackLabels(group))}
+                    kind="monster"
+                    size={TOKEN}
+                    decorative
+                  />
+                  {countBadge(trackLabels(group)) && (
+                    <span className={styles.count}>{countBadge(trackLabels(group))}</span>
+                  )}
                 </span>
                 <span className={styles.groupName} aria-hidden="true">
-                  {group.count === 1 ? group.label : group.labelPlural}
+                  {isProperLabel(group.label) ? group.label : lowerHeading(trackLabels(group))}
                   {group.fleeing && <Icon name="arrow-right" size={12} />}
                 </span>
                 {nearest !== null && (
@@ -234,9 +262,6 @@ export function RangeTrack({
                 <Pops pops={popsFor(member.id)} popKey={popKey} />
               </div>
             ))}
-            <span className={styles.trayLabel} aria-hidden="true">
-              Fallen
-            </span>
           </div>
         )}
         {gone.length > 0 && (
@@ -245,11 +270,11 @@ export function RangeTrack({
               <div key={group.id} className={styles.goneToken} title={groupLabel(group, null)}>
                 <span className="visually-hidden">
                   {group.count === 0
-                    ? `The ${group.labelPlural}, all slain`
-                    : `The ${group.labelPlural}, fled`}
+                    ? `${capitalizeFirst(theGroup({ ...trackLabels(group), count: isProperLabel(group.label) ? 1 : 2 }))}, slain`
+                    : `${capitalizeFirst(theGroup(trackLabels(group)))}, fled`}
                 </span>
                 <TokenPortrait
-                  name={group.labelPlural}
+                  name={groupHeading(trackLabels(group))}
                   kind="monster"
                   size={24}
                   state={group.count === 0 ? 'dead' : 'normal'}
@@ -258,10 +283,19 @@ export function RangeTrack({
                 <Pops pops={popsFor(group.id)} popKey={popKey} />
               </div>
             ))}
-            <span className={styles.trayLabel} aria-hidden="true">
-              {gone.every((g) => g.count === 0) ? 'Slain' : gone.every((g) => g.fled) ? 'Fled' : 'Gone'}
-            </span>
           </div>
+        )}
+      </div>
+      {/* Labels have a row of their own under the lane, so no token or number covers them. */}
+      <div className={styles.labels} aria-hidden="true">
+        {fallen.length > 0 && <span className={styles.labelStart}>Fallen</span>}
+        <span className={styles.lineLabel} style={{ left: at(0) }}>
+          Party line
+        </span>
+        {gone.length > 0 && (
+          <span className={styles.labelEnd}>
+            {gone.every((g) => g.count === 0) ? 'Slain' : gone.every((g) => g.fled) ? 'Fled' : 'Gone'}
+          </span>
         )}
       </div>
     </figure>

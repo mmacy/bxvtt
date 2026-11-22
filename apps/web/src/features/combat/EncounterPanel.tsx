@@ -7,9 +7,10 @@ import {
   signed,
   stanceDescription,
   stanceLabel,
+  capitalizeFirst,
   type TextContext,
 } from '@bxvtt/shared/text';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   useEncounter,
   useParty,
@@ -18,7 +19,6 @@ import {
   useSendCommand,
   useTableId,
   useTableStoreApi,
-  useTextContext,
 } from '@/app';
 import {
   Badge,
@@ -29,13 +29,16 @@ import {
   cx,
   Field,
   Icon,
+  List,
+  ListItem,
   NumberInput,
   Popover,
+  SectionLabel,
   Select,
   TokenPortrait,
   type IconName,
 } from '@/ui';
-import { mountAftermath } from './Aftermath';
+import { showAftermath } from './Aftermath';
 import { recordSnapshot } from './memory';
 import { memberGear, type CarriedItem } from './model';
 import { PlaybackStrip } from './PlaybackStrip';
@@ -49,6 +52,8 @@ import {
 } from './useEncounterCommands';
 import { ACCEPT_ALL, usePlayback } from './usePlayback';
 import styles from './combat.module.css';
+import { targetLabel, useCombatText, useSceneTargets } from './text';
+import { countBadge, countedGroup, groupHeading, theGroup, viewLabels } from './names';
 
 /** What each bearing means for the party's choices, from the `wait` and `parley` command documentation. */
 const STANCE_IMPLICATIONS: Record<string, string> = {
@@ -71,10 +76,6 @@ function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-function groupNoun(group: EncounterGroupView): string {
-  return group.count === 1 ? group.label : group.label_plural;
-}
-
 /**
  * The encounter overlay: who the party has met, how they bear themselves, any surprise or pursuit, and the
  * party's choices, each explained in a line.
@@ -84,36 +85,35 @@ export function EncounterPanel() {
   const party = useParty();
   const revision = useRevision();
   const tableId = useTableId();
-  const ctx = useTextContext();
+  const ctx = useCombatText();
   const lens = useRefereeLens();
   const store = useTableStoreApi();
   const opening = useEncounterOpening();
   const commands = useEncounterCommands();
-  const rootRef = useRef<HTMLDivElement>(null);
   const playback = usePlayback({ accept: ACCEPT_ALL });
 
   useEffect(() => {
     if (revision !== null) recordSnapshot({ tableId, revision, encounter, party });
   }, [tableId, revision, encounter, party]);
 
-  useEffect(() => {
-    const overlays = rootRef.current?.parentElement?.parentElement ?? null;
-    return () => {
+  useEffect(
+    () => () => {
       const mode = store.getState().game?.mode;
-      if (overlays !== null && overlays.isConnected && mode === 'exploring') mountAftermath(store, overlays);
-    };
-  }, [store]);
+      if (mode === 'exploring' || mode === 'town') showAftermath(store);
+    },
+    [store],
+  );
 
   if (encounter === null) return null;
   const present = encounter.groups.filter((g) => !g.fled && g.count > 0);
   const gap = encounter.pursuit_gap_feet;
   const stance = encounter.stance;
   const title = commands.pursuit
-    ? `The ${joinList(present.map(groupNoun))} ${present.length === 1 && present[0]?.count === 1 ? 'gives' : 'give'} chase`
-    : `The party meets ${joinList(present.map((g) => `${g.count} ${groupNoun(g)}`))}`;
+    ? `${capitalizeFirst(joinList(present.map((g) => theGroup(viewLabels(g)))))} ${present.length === 1 && present[0]?.count === 1 ? 'gives' : 'give'} chase`
+    : `The party meets ${joinList(present.map((g) => countedGroup(viewLabels(g))))}`;
 
   return (
-    <div ref={rootRef} className={styles.board} role="region" aria-label="Encounter">
+    <div className={styles.board} role="region" aria-label="Encounter">
       <header className={styles.boardHead}>
         <div className={styles.boardTitle}>
           <Icon name={commands.pursuit ? 'footprints' : 'eye'} size={18} />
@@ -134,7 +134,9 @@ export function EncounterPanel() {
 
       {stance && !commands.pursuit && (
         <div className={cx(styles.bearing, styles[`bearing-${STANCE_TONE[stance] ?? 'neutral'}`])}>
-          <span className={styles.bearingLabel}>Bearing</span>
+          <SectionLabel level="none" className={styles.bearingLabel}>
+            Bearing
+          </SectionLabel>
           <Badge tone={STANCE_TONE[stance] ?? 'neutral'}>{stanceLabel(stance)}</Badge>
           <span className={styles.bearingText}>
             {stanceDescription(stance)} {STANCE_IMPLICATIONS[stance] ?? ''}
@@ -187,7 +189,7 @@ function GroupCard({ group }: { group: EncounterGroupView }) {
   return (
     <li className={cx(styles.groupCard, group.fled && styles.groupFled)}>
       <TokenPortrait
-        name={group.label_plural}
+        name={groupHeading(viewLabels(group))}
         kind="monster"
         size={40}
         state={group.count === 0 ? 'dead' : 'normal'}
@@ -195,8 +197,10 @@ function GroupCard({ group }: { group: EncounterGroupView }) {
       />
       <div className={styles.groupInfo}>
         <span className={styles.groupTitle}>
-          {capitalize(groupNoun(group))}
-          <span className={styles.groupCount}>×{group.count}</span>
+          {groupHeading(viewLabels(group))}
+          {countBadge(viewLabels(group)) && (
+            <span className={styles.groupCount}>{countBadge(viewLabels(group))}</span>
+          )}
         </span>
         <span className={styles.groupMeta}>
           {group.fled ? 'Fled' : `${formatFeet(group.distance_feet)} away`}
@@ -316,25 +320,24 @@ function PartyOptions({
       popover: {
         title: 'Who speaks for the party?',
         content: (close) => (
-          <div className={styles.popoverList}>
+          <List
+            aria-label="Who speaks for the party"
+            onValueChange={(id) => {
+              commands.talk(id);
+              close();
+            }}
+          >
             {sorted.map((member) => (
-              <Button
+              <ListItem
                 key={member.id}
-                size="sm"
-                variant="ghost"
-                block
-                onClick={() => {
-                  commands.talk(member.id);
-                  close();
-                }}
-              >
-                <span className={styles.popoverItem}>
-                  {member.name}
+                value={member.id}
+                title={member.name}
+                trailing={
                   <span className={styles.popoverMeta}>Reaction {signed(member.npc_reaction_modifier)}</span>
-                </span>
-              </Button>
+                }
+              />
             ))}
-          </div>
+          </List>
         ),
       },
     });
@@ -361,7 +364,13 @@ function PartyOptions({
       popover: {
         title: 'Flee',
         content: (close) => (
-          <div className={styles.popoverList}>
+          <List
+            aria-label="How to flee"
+            onValueChange={(drop) => {
+              commands.flee(drop as 'none' | 'treasure' | 'food');
+              close();
+            }}
+          >
             {(
               [
                 ['none', 'Just run', 'Drop nothing.'],
@@ -369,23 +378,9 @@ function PartyOptions({
                 ['food', 'Drop food', 'One ration from each member. Tempts hungry pursuers.'],
               ] as const
             ).map(([drop, label, hint]) => (
-              <Button
-                key={drop}
-                size="sm"
-                variant="ghost"
-                block
-                onClick={() => {
-                  commands.flee(drop);
-                  close();
-                }}
-              >
-                <span className={styles.popoverItem}>
-                  {label}
-                  <span className={styles.popoverMeta}>{hint}</span>
-                </span>
-              </Button>
+              <ListItem key={drop} value={drop} title={label} description={hint} />
             ))}
-          </div>
+          </List>
         ),
       },
     });
@@ -419,23 +414,22 @@ function PartyOptions({
           ? {
               title: 'Who presents the holy symbol?',
               content: (close) => (
-                <div className={styles.popoverList}>
+                <List
+                  aria-label="Who presents the holy symbol"
+                  onValueChange={(id) => {
+                    commands.turn(id);
+                    close();
+                  }}
+                >
                   {turners.map((member) => (
-                    <Button
+                    <ListItem
                       key={member.id}
-                      size="sm"
-                      variant="ghost"
-                      block
+                      value={member.id}
+                      title={member.name}
                       disabled={!commands.can('turn_undead', member.id).allowed}
-                      onClick={() => {
-                        commands.turn(member.id);
-                        close();
-                      }}
-                    >
-                      {member.name}
-                    </Button>
+                    />
                   ))}
-                </div>
+                </List>
               ),
             }
           : undefined,
@@ -524,6 +518,7 @@ function UseItemPopover({
   encounter: EncounterView;
   ctx: TextContext;
 }) {
+  const sceneTargets = useSceneTargets();
   const { send, pending } = useSendCommand();
   const [open, setOpen] = useState(false);
   const [memberId, setMemberId] = useState(members[0]?.id ?? '');
@@ -543,7 +538,13 @@ function UseItemPopover({
           { value: '', label: 'No target' },
           ...encounter.groups
             .filter((g) => !g.fled && g.count > 0)
-            .map((g) => ({ value: g.id, label: `At the ${g.label_plural}` })),
+            .map((g) => ({ value: g.id, label: `At ${theGroup(viewLabels(g))}` })),
+          ...sceneTargets
+            .filter((t) => !t.defeated && !t.fled)
+            .map((t) => ({
+              value: t.handle,
+              label: `At ${targetLabel(t, sceneTargets, encounter.groups.find((g) => g.id === t.group_id)?.label)}`,
+            })),
           ...encounter.declarers.map((id) => ({ value: id, label: `On ${memberName(id, ctx)}` })),
         ];
   const use = async () => {

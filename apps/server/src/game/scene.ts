@@ -154,6 +154,22 @@ export function templateNames(
 }
 
 /**
+ * The names of the dungeons the party has entered: those on its map, and the one it stands in.
+ *
+ * @param view - The player view.
+ * @param adventure - The adventure.
+ */
+export function enteredDungeonNames(view: PlayerView, adventure: Adventure): Record<string, string> {
+  const ids = new Set(view.explored.map((known) => known.dungeon_id));
+  if (view.location.kind === 'dungeon' && view.location.dungeon_id != null) ids.add(view.location.dungeon_id);
+  const names: Record<string, string> = {};
+  for (const dungeon of adventure.dungeons) {
+    if (ids.has(dungeon.id) && dungeon.name) names[dungeon.id] = dungeon.name;
+  }
+  return names;
+}
+
+/**
  * Builds the scene for a game from the player view and the referee view's adventure and dungeon overlay. See
  * the protocol's `Scene` for the rules. The function errs toward hiding: it reveals only what osrlib marks as
  * known to the party, and leaves the rest for the referee to describe.
@@ -314,6 +330,14 @@ export function buildScene(view: PlayerView, source: SceneSource, names: Map<str
       piles.push([x ?? 0, y ?? 0]);
     }
 
+    // osrlib's travel_to_town works on the level's entrance cell. The cell is part of the map once the party has
+    // seen it, so the scene shows it then.
+    const entranceCell = level.entrance == null ? null : (level.entrance as readonly number[]);
+    const entrance: Position | null =
+      entranceCell !== null && knownCells.has(cellKey(entranceCell))
+        ? [entranceCell[0] ?? 0, entranceCell[1] ?? 0]
+        : null;
+
     levels.push({
       dungeon_id: dungeonId,
       level_number: levelNumber,
@@ -323,6 +347,7 @@ export function buildScene(view: PlayerView, source: SceneSource, names: Map<str
       caches,
       features,
       piles,
+      entrance,
     });
 
     if (partyHere != null) {
@@ -341,9 +366,18 @@ export function buildScene(view: PlayerView, source: SceneSource, names: Map<str
         transitions: transitions.filter((transition) => cellKey(transition.position) === hereKey),
         traps: traps.filter((trap) => trap.area_id !== null && trap.area_id === partyArea?.id),
         pile: cellRef(dungeonId, levelNumber, partyHere) in view.piles,
+        at_entrance: entranceCell !== null && cellKey(entranceCell) === hereKey,
       };
     }
   }
 
-  return { levels, here, names: Object.fromEntries([...names].sort(([a], [b]) => a.localeCompare(b))) };
+  return {
+    levels,
+    here,
+    names: Object.fromEntries([...names].sort(([a], [b]) => a.localeCompare(b))),
+    // The condition of osrlib's `_handle_travel_to_town`, in a mode where the command is allowed.
+    can_travel_to_town: view.mode === 'exploring' && here?.at_entrance === true,
+    targets: [],
+    dungeon_names: enteredDungeonNames(view, source.adventure),
+  };
 }

@@ -3,8 +3,41 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import type { SQLInputValue, StatementSync } from 'node:sqlite';
 
-/** The version of the table layout. A database of another version is refused at startup. */
-export const SCHEMA_VERSION = 1;
+/**
+ * The version of the table layout. The server upgrades a database of an older version at startup with the
+ * steps in {@link MIGRATIONS}, and refuses one of a newer version.
+ */
+export const SCHEMA_VERSION = 3;
+
+/** The table of monster target handles, which layout version 2 added. */
+const TARGET_HANDLES = `
+CREATE TABLE target_handles (
+  table_id TEXT NOT NULL REFERENCES tables(id) ON DELETE CASCADE,
+  session_id TEXT NOT NULL,
+  encounter_key TEXT NOT NULL,
+  monster_id TEXT NOT NULL,
+  handle TEXT NOT NULL UNIQUE,
+  label TEXT NOT NULL,
+  number INTEGER NOT NULL,
+  PRIMARY KEY (session_id, monster_id)
+);
+CREATE INDEX target_handles_by_encounter ON target_handles(session_id, encounter_key, label);
+`;
+
+/** The table of retired token hashes, which layout version 3 added. */
+const RETIRED_TOKENS = `
+CREATE TABLE retired_tokens (
+  token_hash TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  retired_at TEXT NOT NULL
+);
+`;
+
+/** The SQL that upgrades a database from the version before each key to that version. */
+const MIGRATIONS: Record<number, string> = {
+  2: TARGET_HANDLES,
+  3: RETIRED_TOKENS,
+};
 
 const SCHEMA = `
 CREATE TABLE users (
@@ -154,7 +187,7 @@ CREATE TABLE samples (
   uploaded_at TEXT NOT NULL,
   PRIMARY KEY (file_name, content_hash)
 );
-`;
+${TARGET_HANDLES}${RETIRED_TOKENS}`;
 
 /** A row as `node:sqlite` returns it. */
 export type Row = Record<string, SQLInputValue>;
@@ -192,6 +225,10 @@ export class Database {
         );
       }
       this.db.exec(`BEGIN; ${SCHEMA} PRAGMA user_version = ${SCHEMA_VERSION}; COMMIT;`);
+    } else if (version < SCHEMA_VERSION) {
+      for (let next = version + 1; next <= SCHEMA_VERSION; next += 1) {
+        this.db.exec(`BEGIN; ${MIGRATIONS[next] ?? ''} PRAGMA user_version = ${next}; COMMIT;`);
+      }
     } else if (version !== SCHEMA_VERSION) {
       throw new Error(
         `The database ${path} has table layout version ${version}, and this server expects ${SCHEMA_VERSION}.`,

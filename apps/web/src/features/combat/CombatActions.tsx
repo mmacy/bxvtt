@@ -10,7 +10,6 @@ import {
   useSendDeclaration,
   useShortcut,
   useTableSettings,
-  useTextContext,
 } from '@/app';
 import { ActionBarDivider, ActionBarItem, Button, Kbd } from '@/ui';
 import { quickAction, useRepeatLastRound } from './BattleBoard';
@@ -19,6 +18,7 @@ import { useCombatPeople } from './people';
 import { useCombatUi } from './state';
 import { useEncounterCommands } from './useEncounterCommands';
 import styles from './combat.module.css';
+import { useCombatText } from './text';
 
 /** The action bar in `encounter` and `battle` modes: the few primary actions, each with a shortcut. */
 export function CombatActions() {
@@ -35,8 +35,11 @@ function ActionButton({
   icon,
   primary,
   loading,
+  detail,
 }: {
   label: string;
+  /** More about the action for the tooltip, such as who speaks. */
+  detail?: string;
   keys: string;
   onClick: () => void;
   disabled?: boolean;
@@ -53,7 +56,9 @@ function ActionButton({
         icon={icon}
         disabled={disabled}
         loading={loading}
-        title={disabled ? (reason ?? undefined) : `${label} (${formatShortcut(keys)})`}
+        title={
+          disabled ? (reason ?? undefined) : `${detail ? `${detail} ` : ''}${label} (${formatShortcut(keys)})`
+        }
         aria-keyshortcuts={keys}
         onClick={onClick}
       >
@@ -130,7 +135,8 @@ function EncounterActions() {
     <>
       {!commands.pursuit && (
         <ActionButton
-          label={speaker ? `Talk (${speaker.name})` : 'Talk'}
+          label="Talk"
+          detail={speaker ? `${speaker.name} speaks for the party.` : undefined}
           keys="t"
           icon="message"
           onClick={talk}
@@ -178,7 +184,7 @@ function BattleActions() {
   const encounter = useEncounter();
   const party = useParty();
   const declarations = useDeclarations();
-  const ctx = useTextContext();
+  const ctx = useCombatText();
   const people = useCombatPeople();
   const settings = useTableSettings();
   const canResolve = useCanResolveRound();

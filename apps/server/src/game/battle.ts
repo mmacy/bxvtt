@@ -15,6 +15,8 @@ import { ApiError, parseBody } from '../errors';
 import { now } from '../ids';
 import { RESOLVE_ROUND } from './classify';
 import { readSeats } from './seats';
+import { attributeRefusals } from './refusals';
+import { resolveHandles, TARGET_FIELD_NAMES, toHandles, withoutMonsterIds } from './targets';
 import type { GameService, LiveGame } from './service';
 
 /** The path parameters of a declaration route. */
@@ -49,11 +51,21 @@ export class BattleService {
   ) {}
 
   /**
-   * Builds the declarations state of a game, or `null` outside a battle.
+   * Builds the declarations state of a game for one role, or `null` outside a battle. The server stores a
+   * declaration's monster targets as target handles. A player's copy names no monster by ID, even when a
+   * referee aimed at a monster that has no handle.
    *
    * @param live - The game.
+   * @param role - The reader's role.
    */
-  state(live: LiveGame): DeclarationsState | null {
+  state(live: LiveGame, role: Role = 'player'): DeclarationsState | null {
+    const state = this.refereeState(live);
+    if (state === null || role === 'referee') return state;
+    return withoutMonsterIds(state, live.targets);
+  }
+
+  /** Builds the declarations state as stored, which a referee reads. */
+  private refereeState(live: LiveGame): DeclarationsState | null {
     if (!inBattle(live)) return null;
     const round = roundOf(live);
     const declarers = live.view.encounter?.declarers ?? [];
@@ -96,8 +108,12 @@ export class BattleService {
    */
   async pushLocked(tableId: string): Promise<void> {
     const live = await this.game.current(tableId);
-    const declarations = live === null ? null : this.state(live);
-    this.ctx.hub.broadcast(tableId, { type: 'declarations', declarations });
+    const forPlayers = live === null ? null : this.state(live, 'player');
+    const forReferees = live === null ? null : this.state(live, 'referee');
+    this.ctx.hub.send(tableId, ({ role }) => ({
+      type: 'declarations',
+      declarations: role === 'referee' ? forReferees : forPlayers,
+    }));
   }
 
   /**
@@ -141,7 +157,10 @@ export class BattleService {
     return this.game.locked(tableId, async () => {
       const live = await this.requireBattle(tableId);
       this.checkMember(live, user, role, memberId);
-      const stored = { ...declaration, character_id: memberId };
+      // Refuse a target handle the scene doesn't list now, and store monster IDs as handles, because everyone at
+      // the table reads the declarations.
+      resolveHandles(declaration, TARGET_FIELD_NAMES, live.targets, 'declaration');
+      const stored = { ...toHandles(declaration, live.targets), character_id: memberId };
       this.ctx.db.run(
         `INSERT OR REPLACE INTO declarations (table_id, session_id, member_id, round, declaration_json, user_id, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -155,7 +174,7 @@ export class BattleService {
       );
       await this.pushLocked(tableId);
       if (this.ctx.tables.settings(tableId).auto_resolve) {
-        const state = this.state(live);
+        const state = this.refereeState(live);
         if (
           state !== null &&
           state.declarers.length > 0 &&
@@ -169,7 +188,7 @@ export class BattleService {
           }
         }
       }
-      return this.stateOrInactive(await this.game.require(tableId));
+      return this.stateOrInactive(await this.game.require(tableId), role);
     });
   }
 
@@ -192,7 +211,7 @@ export class BattleService {
         memberId,
       );
       await this.pushLocked(tableId);
-      return this.stateOrInactive(live);
+      return this.stateOrInactive(live, role);
     });
   }
 
@@ -225,7 +244,7 @@ export class BattleService {
       const after = await this.game.require(tableId);
       return {
         accepted,
-        declarations: this.stateOrInactive(after),
+        declarations: this.stateOrInactive(after, role),
         game: await this.game.project(after, role),
       };
     });
@@ -241,7 +260,7 @@ export class BattleService {
     await this.game.locked(tableId, async () => {
       const live = await this.game.current(tableId);
       if (live === null) return;
-      const state = this.state(live);
+      const state = this.refereeState(live);
       if (state !== null && state.declarers.length > 0 && state.declared.length === state.declarers.length) {
         await this.resolveLocked(live, user.id, false, 'auto-resolve');
       }
@@ -259,17 +278,20 @@ export class BattleService {
     fillWithHold: boolean,
     requestId: string,
   ): Promise<boolean> {
-    const state = this.state(live);
+    const state = this.refereeState(live);
     if (state === null) throw new ApiError('not_in_battle', "The party isn't in a battle.");
     const missing = state.declarers.filter((memberId) => state.declarations[memberId] === undefined);
     if (missing.length > 0 && !fillWithHold) {
       throw new ApiError('declarations_incomplete', "Some members haven't declared yet.", { missing });
     }
-    const declarations = state.declarers.map(
-      (memberId) => state.declarations[memberId] ?? { character_id: memberId, action: 'hold' },
-    );
+    const declarations = state.declarers.map((memberId) => {
+      const declaration = state.declarations[memberId];
+      if (declaration === undefined) return { character_id: memberId, action: 'hold' };
+      return resolveHandles(declaration, TARGET_FIELD_NAMES, live.targets, `declarations.${memberId}`);
+    });
     const command = { command_type: RESOLVE_ROUND, declarations };
     const outcome = await this.game.executeLocked(live, command, requestId, userId);
+    const revision = live.revision;
     if (outcome.accepted) {
       await this.game.afterAcceptedLocked(live, outcome, {
         userId,
@@ -279,14 +301,24 @@ export class BattleService {
       return true;
     }
     if (outcome.view !== undefined) live.view = outcome.view;
-    const refusals: DeclarationRefusal[] = outcome.rejections.map((rejection) => {
-      const params = (rejection.params ?? {}) as Record<string, unknown>;
-      const memberId =
-        Object.values(params).find(
-          (value): value is string => typeof value === 'string' && state.declarers.includes(value),
-        ) ?? null;
-      return { member_id: memberId, code: rejection.code, params };
-    });
+    const attributed = await attributeRefusals(
+      declarations as BattleDeclaration[],
+      outcome.rejections,
+      async (probe) => {
+        const result = await this.game.probeLocked(live, {
+          command_type: RESOLVE_ROUND,
+          declarations: probe,
+        });
+        return result === null ? null : result.rejections;
+      },
+    );
+    // osrlib refuses every probe, but if bxapi ever accepted one, the round has resolved and these refusals no
+    // longer apply.
+    if (live.revision !== revision) return true;
+    const refusals: DeclarationRefusal[] = attributed.map((refusal) => ({
+      ...refusal,
+      params: toHandles(refusal.params, live.targets),
+    }));
     this.ctx.db.run(
       'INSERT OR REPLACE INTO battle_refusals (table_id, session_id, revision, refusals_json) VALUES (?, ?, ?, ?)',
       live.tableId,
@@ -320,9 +352,9 @@ export class BattleService {
     }
   }
 
-  private stateOrInactive(live: LiveGame): DeclarationsState {
+  private stateOrInactive(live: LiveGame, role: Role): DeclarationsState {
     return (
-      this.state(live) ?? {
+      this.state(live, role) ?? {
         active: false,
         revision: live.revision,
         round: null,
@@ -347,9 +379,9 @@ export function registerBattleRoutes(app: FastifyInstance, ctx: Context): void {
 
   app.get('/api/tables/:tableId/game/declarations', async (request, reply) => {
     const { tableId } = TableParams.parse(request.params);
-    ctx.tables.requireMember(tableId, ctx.auth.user(request));
+    const role = ctx.tables.requireMember(tableId, ctx.auth.user(request));
     const live = await ctx.game.require(tableId);
-    return reply.type('application/json').send(JSON.stringify(battle.state(live)));
+    return reply.type('application/json').send(JSON.stringify(battle.state(live, role)));
   });
 
   app.put('/api/tables/:tableId/game/declarations/:memberId', async (request) => {

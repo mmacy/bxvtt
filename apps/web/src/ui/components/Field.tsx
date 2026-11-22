@@ -5,6 +5,8 @@ import styles from './Field.module.css';
 
 export interface FieldContextValue {
   id: string;
+  /** The id of the field's label element, for a control part that names itself after the field. */
+  labelId: string;
   describedBy: string | undefined;
   invalid: boolean;
   required: boolean;
@@ -54,16 +56,17 @@ export function Field({
 }: FieldProps) {
   const autoId = useId();
   const controlId = id ?? `field-${autoId}`;
+  const labelId = `${controlId}-label`;
   const hintId = `${controlId}-hint`;
   const errorId = `${controlId}-error`;
   const describedBy = error ? errorId : hint ? hintId : undefined;
   return (
     <FieldContext.Provider
-      value={{ id: controlId, describedBy, invalid: Boolean(error), required, disabled }}
+      value={{ id: controlId, labelId, describedBy, invalid: Boolean(error), required, disabled }}
     >
       <div className={cx(styles.field, disabled && styles.disabled, className)}>
         <div className={cx(styles.labelRow, hideLabel && 'visually-hidden')}>
-          <label htmlFor={controlId} className={styles.label}>
+          <label id={labelId} htmlFor={controlId} className={styles.label}>
             {label}
             {required && (
               <span className={styles.required} aria-hidden="true">

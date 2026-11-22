@@ -1,3 +1,4 @@
+import { nameInSentence } from '@bxvtt/shared/text';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { SaveInfo, SessionInfo } from '@bxvtt/shared/bxapi';
@@ -51,9 +52,9 @@ export function autosaveLabel(
   const dungeon = (id: string | null | undefined) => (id == null ? 'the dungeon' : (dungeonNames[id] ?? id));
   let label: string | null = null;
   if (from.kind === 'town' && to.kind === 'dungeon') {
-    label = `Entered ${dungeon(to.dungeon_id)}`;
+    label = `Entered ${nameInSentence(dungeon(to.dungeon_id))}`;
   } else if (from.kind === 'dungeon' && to.kind === 'town') {
-    label = `Returned to ${after.town_name}`;
+    label = `Returned to ${nameInSentence(after.town_name)}`;
   } else if (
     from.kind === 'dungeon' &&
     to.kind === 'dungeon' &&
@@ -65,7 +66,9 @@ export function autosaveLabel(
     (after.mode === 'encounter' || after.mode === 'battle')
   ) {
     const where =
-      to.kind === 'dungeon' ? ` in ${dungeon(to.dungeon_id)}, level ${to.level_number ?? '?'}` : '';
+      to.kind === 'dungeon'
+        ? ` in ${nameInSentence(dungeon(to.dungeon_id))}, level ${to.level_number ?? '?'}`
+        : '';
     label = `Before the battle${where}`;
   }
   return label === null ? null : `Autosave: ${label}`.slice(0, LIMITS.saveLabel);

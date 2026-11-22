@@ -2,6 +2,7 @@ import { Toolbar } from 'radix-ui';
 import { useId, useState, type ReactNode } from 'react';
 import { IconButton } from '../components/Button';
 import { Drawer } from '../components/Dialog';
+import { ariaKeyShortcuts } from '../components/Kbd';
 import { Tooltip } from '../components/Popover';
 import { Splitter } from '../components/ResizablePanels';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/Tabs';
@@ -12,6 +13,9 @@ import { useControllableState, useMediaQuery } from '../lib/hooks';
 import { breakpoints, layout } from '../tokens';
 import { Wordmark } from './Wordmark';
 import styles from './TableLayout.module.css';
+
+export { ActionBar, ActionBarDivider, ActionBarItem, ActionBarMenu } from './ActionBar';
+export type { ActionBarMenuProps, ActionBarProps } from './ActionBar';
 
 export interface TableLayoutProps {
   /** Content of the top bar. Use TableTopBar. */
@@ -95,6 +99,7 @@ export function TableLayout({
 
   return (
     <div
+      data-table-layout=""
       className={cx(styles.table, !toolRail && styles.noRail, className)}
       style={{
         gridTemplateColumns: `${toolRail ? 'var(--rail-width) ' : ''}minmax(0, 1fr) ${dockVisible ? `1px ${width}px` : '0 0'}`,
@@ -276,6 +281,7 @@ export function ToolRailButton({
           disabled={disabled}
           onClick={onClick}
           size="lg"
+          aria-keyshortcuts={shortcut ? ariaKeyShortcuts(shortcut) : undefined}
         />
       </Toolbar.Button>
     </Tooltip>
@@ -286,35 +292,6 @@ export function ToolRailDivider() {
   return <Toolbar.Separator className={styles.toolDivider} />;
 }
 
-export interface ActionBarProps {
-  /** Accessible name, such as "Party actions". */
-  'aria-label': string;
-  /** Text or status on the leading edge, such as "Wren is the caller". */
-  status?: ReactNode;
-  children: ReactNode;
-}
-
-/** Contextual actions under the stage. Arrow keys move between actions. */
-export function ActionBar({ status, children, 'aria-label': ariaLabel }: ActionBarProps) {
-  return (
-    <div className={styles.actionBar}>
-      {status && <div className={styles.actionStatus}>{status}</div>}
-      <Toolbar.Root aria-label={ariaLabel} className={styles.actionItems}>
-        {children}
-      </Toolbar.Root>
-    </div>
-  );
-}
-
-/** Wraps a Button so it joins the ActionBar's arrow-key navigation. */
-export function ActionBarItem({ children }: { children: ReactNode }) {
-  return <Toolbar.Button asChild>{children}</Toolbar.Button>;
-}
-
-export function ActionBarDivider() {
-  return <Toolbar.Separator className={styles.actionDivider} />;
-}
-
 export interface DockTab {
   value: string;
   label: string;
@@ -322,6 +299,11 @@ export interface DockTab {
   /** Unread count, such as new feed entries. */
   count?: number;
   content: ReactNode;
+  /**
+   * Keeps the tab's panel mounted while another tab is active, so its scroll position and state survive a tab
+   * switch. Use it for a panel that is costly to rebuild or that the reader scrolls, such as the feed.
+   */
+  keepMounted?: boolean;
 }
 
 export interface DockProps {
@@ -355,7 +337,12 @@ export function Dock({
         ))}
       </TabsList>
       {tabs.map((tab) => (
-        <TabsContent key={tab.value} value={tab.value} className={styles.dockContent}>
+        <TabsContent
+          key={tab.value}
+          value={tab.value}
+          keepMounted={tab.keepMounted}
+          className={styles.dockContent}
+        >
           {tab.content}
         </TabsContent>
       ))}

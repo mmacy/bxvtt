@@ -3,8 +3,9 @@ import { directionLabel } from '@bxvtt/shared/text';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   canSendCommand,
+  scopedStorage,
   useAdventureDocument,
-  useGameMode,
+  useCombatStage,
   useIsReferee,
   useMapBus,
   useMembers,
@@ -19,6 +20,8 @@ import {
   useSendPing,
   useSendRefereeCommand,
   useShortcut,
+  usePartyLight,
+  useShownMode,
   useTableUser,
   type FocusRequest,
   type GameCommand,
@@ -26,8 +29,7 @@ import {
 import {
   DungeonMap,
   levelKey,
-  measure,
-  measurementLabel,
+  measurementText,
   resolveTheme,
   type Direction,
   type DungeonMapHandle,
@@ -36,27 +38,35 @@ import {
   type MapTool,
   type Point,
 } from '@/map';
-import { Button, DropdownMenu, Icon, cx, type MenuEntry } from '@/ui';
+import { Button, Icon, IconButton, Tooltip, cx, useMediaQuery, type MenuEntry } from '@/ui';
 import { lightEntries } from './actions';
 import { mapMenuEntries } from './contextMenu';
 import { messageDuration, useMapFeedback } from './feedback';
-import { levelLabel, useActionContext, useDungeonNames, useLoreTracker, useSessionLore } from './hooks';
+import { levelLabel, useActionContext, useDungeonNames, useLoreTracker, useSessionDoors } from './hooks';
 import {
-  areaCenterCell,
   buildPlayerLevel,
   buildRefereeLevel,
   levelOptions,
   refereeSource,
-  sceneLevel,
+  wanderingTableName,
   type LevelOption,
 } from './levels';
-import { CameraControls, LayerBadge, LevelSwitcher, MinimapCard, ThemeSwitcher } from './MapChrome';
-import { lightTimeLeft, partyLight } from './party';
+import {
+  CameraControls,
+  LayerBadge,
+  LevelSwitcher,
+  LightIndicator,
+  MinimapCard,
+  ThemeSwitcher,
+} from './MapChrome';
+import { partyLight, shortTimeLeft } from './party';
 import { NewPinDialog, PinDetailDialog } from './PinDialogs';
+import { PinsPanel } from './PinsPanel';
 import { PointMenu } from './PointMenu';
 import { Projected } from './Projected';
 import { STROKE_WIDTH, useMapAnnotations } from './useMapAnnotations';
 import { useExploreSend } from './useExploreSend';
+import { useMapAnnouncements } from './useMapAnnouncements';
 import styles from './explore.module.css';
 
 const KEY_DIRECTIONS: Record<string, Direction> = {
@@ -64,10 +74,6 @@ const KEY_DIRECTIONS: Record<string, Direction> = {
   ArrowDown: 'south',
   ArrowLeft: 'west',
   ArrowRight: 'east',
-  KeyW: 'north',
-  KeyS: 'south',
-  KeyA: 'west',
-  KeyD: 'east',
 };
 
 /** The shortest time between two pings from this browser. The server allows 5 pings in 2 seconds. */
@@ -75,12 +81,13 @@ const PING_INTERVAL_MS = 450;
 
 const FALLBACK_COLOR = '#e69f00';
 
-/** The map's container fills the stage. `DungeonMap` sets its own position, so this overrides it. */
-const MAP_STYLE = { position: 'absolute', inset: 0 } as const;
+/** This browser's choices for the map's chrome. */
+const chromePrefs = scopedStorage('explore');
+const MINIMAP_KEY = 'minimap.open';
 
-/** The direction an arrow key or W, A, S, or D names, or `null`. */
+/** The direction an arrow key names, or `null`. Letters stay with the app's shortcuts. */
 export function keyDirection(event: Pick<KeyboardEvent, 'key' | 'code'>): Direction | null {
-  return KEY_DIRECTIONS[event.key] ?? KEY_DIRECTIONS[event.code] ?? null;
+  return KEY_DIRECTIONS[event.key] ?? null;
 }
 
 /**
@@ -89,7 +96,7 @@ export function keyDirection(event: Pick<KeyboardEvent, 'key' | 'code'>): Direct
  *
  * - The map shows the viewed level: the party's, or another one the switcher picks. A player sees the party's
  *   map with the scene's stairs, caches, and names. A referee with the lens on sees the whole keyed level.
- * - The arrow keys or W, A, S, and D move the party while the map has focus, and Alt with them turns it. A click
+ * - The arrow keys move the party while the map has focus, and Alt with an arrow key turns it. A click
  *   on a neighbouring square steps there. A click or right-click on a door, the party, or a square offers what
  *   bxapi allows there.
  * - The tool rail's tool, the pick requests of other features, and focus requests come over the map bus.
@@ -97,7 +104,8 @@ export function keyDirection(event: Pick<KeyboardEvent, 'key' | 'code'>): Direct
 export function MapStage() {
   const view = usePlayerView();
   const scene = useScene();
-  const mode = useGameMode();
+  // The mode the shell shows, which holds a fight on screen while its last round plays back.
+  const mode = useShownMode();
   const lens = useRefereeLens();
   const isReferee = useIsReferee();
   const refereeState = useRefereeState();
@@ -108,7 +116,7 @@ export function MapStage() {
   const me = useTableUser();
   const members = useMembers();
   const permissions = usePermissionContext();
-  const lore = useSessionLore();
+  const doors = useSessionDoors();
   const names = useDungeonNames();
   const actions = useActionContext();
   const { send } = useExploreSend();
@@ -121,6 +129,7 @@ export function MapStage() {
   const setBusTool = useMapBus((s) => s.setTool);
   const pick = useMapBus((s) => s.pick);
   const fulfilPick = useMapBus((s) => s.fulfilPick);
+  const cancelPick = useMapBus((s) => s.cancelPick);
   const clearFocus = useMapBus((s) => s.clearFocus);
   const viewedLevel = useMapBus((s) => s.viewedLevel);
   const setViewedLevel = useMapBus((s) => s.setViewedLevel);
@@ -131,8 +140,19 @@ export function MapStage() {
   const [menu, setMenu] = useState<{ at: Point; items: MenuEntry[] } | null>(null);
   const [newPin, setNewPin] = useState<Point | null>(null);
   const [pinShown, setPinShown] = useState<string | null>(null);
-  const [measureFrom, setMeasureFrom] = useState<{ x: number; y: number } | null>(null);
-  const [hoverCell, setHoverCell] = useState<{ x: number; y: number } | null>(null);
+  const [measuring, setMeasuring] = useState(false);
+  const [measureText, setMeasureText] = useState<string | null>(null);
+  const wide = useMediaQuery('(min-width: 1100px)');
+  const [minimapPref, setMinimapPref] = useState<boolean | null>(() => {
+    const stored = chromePrefs.read(MINIMAP_KEY);
+    return typeof stored === 'boolean' ? stored : null;
+  });
+  // The browser remembers the choice. Until the user makes one, the minimap starts folded on a narrow screen.
+  const minimapOpen = minimapPref ?? wide;
+  const setMinimapOpen = (open: boolean) => {
+    setMinimapPref(open);
+    chromePrefs.write(MINIMAP_KEY, open);
+  };
   const lastPing = useRef(0);
   const pendingFocus = useRef<Point | 'party' | null>(null);
 
@@ -151,10 +171,8 @@ export function MapStage() {
     null;
   const map = useMemo(() => {
     if (view === null || viewedKey === null) return null;
-    return source
-      ? buildRefereeLevel(source, viewedKey)
-      : buildPlayerLevel(view, scene, viewedKey, lore.doors);
-  }, [view, scene, source, viewedKey, lore.doors]);
+    return source ? buildRefereeLevel(source, viewedKey) : buildPlayerLevel(view, scene, viewedKey, doors);
+  }, [view, scene, source, viewedKey, doors]);
   const mapDungeon = map?.dungeonId ?? null;
   const mapLevel = map?.levelNumber ?? null;
   const levelRef = useMemo<LevelRef | null>(
@@ -165,6 +183,16 @@ export function MapStage() {
   const partyShown = map?.party != null;
   const offLevel = partyLevel !== null && viewedKey !== null && viewedKey !== partyLevel.key;
   const annotations = useMapAnnotations(levelRef);
+  const pinLabels = useMemo(
+    () => new Map(annotations.pins.map((pin) => [pin.id, pin.label])),
+    [annotations.pins],
+  );
+  const announcement = useMapAnnouncements({
+    items: annotations.items,
+    levelKey: map?.key ?? null,
+    levelNumber: map?.levelNumber ?? null,
+    pinLabels,
+  });
 
   const can = useCallback(
     (commandType: string, memberId?: string) => canSendCommand(permissions, commandType, memberId).allowed,
@@ -174,22 +202,31 @@ export function MapStage() {
   const canMove = exploring && can('move_party');
   const canTurn = exploring && can('turn_party');
   const combat = mode === 'encounter' || mode === 'battle';
+  // The after-fight summary takes the bottom of the stage, so the minimap and the light chip step aside.
+  const aftermath = useCombatStage((s) => s.aftermath !== null);
+  const bottomFree = !combat && !aftermath;
 
   // Movement.
   const move = useCallback(
     (direction: Direction) => {
       if (offLevel) setViewedLevel(null);
-      void send({ command_type: 'move_party', direction }, { feedback: 'map' });
+      void send({ command_type: 'move_party', direction }, { feedback: 'map', repeatable: true });
     },
     [send, offLevel, setViewedLevel],
   );
   const turn = useCallback(
     (facing: Direction) => {
       if (offLevel) setViewedLevel(null);
-      void send({ command_type: 'turn_party', facing }, { feedback: 'map' });
+      void send({ command_type: 'turn_party', facing }, { feedback: 'map', repeatable: true });
     },
     [send, offLevel, setViewedLevel],
   );
+
+  // A pick from another feature starts with the map focused, so a keyboard user lands on its cursor.
+  const pickId = pick?.id ?? null;
+  useEffect(() => {
+    if (pickId !== null) mapRef.current?.focus();
+  }, [pickId]);
 
   // The tool: a pick from another feature wins over the rail.
   const tool: MapTool = pick ? (pick.kind === 'cell' ? 'pick-cell' : 'pick-edge') : busTool;
@@ -254,21 +291,22 @@ export function MapStage() {
         world,
         map,
         actions,
-        doors: lore.doors,
+        doors: doors,
         referee: refereeMenu,
         tools: {
           ping,
           pin: (point) => setNewPin(point),
           measureFrom: (cell) => {
-            setMeasureFrom(cell);
-            setHoverCell(cell);
+            mapRef.current?.startMeasure(cell);
+            setMeasuring(true);
+            mapRef.current?.focus();
           },
           move,
         },
       });
       setMenu({ at, items });
     },
-    [map, actions, lore.doors, refereeMenu, ping, move],
+    [map, actions, doors, refereeMenu, ping, move],
   );
   // Keys on the focused map: move, turn, and the context menu. They run before the map's own pan keys.
   const openPartyMenu = useCallback(() => {
@@ -308,6 +346,8 @@ export function MapStage() {
       }
       const direction = keyDirection(event);
       if (direction === null || event.shiftKey) return;
+      // While the map's keyboard cursor or a measurement owns the arrow keys, the map handles them.
+      if (mapRef.current?.hasKeyboardCursor()) return;
       if (event.altKey) {
         if (!state.canTurn) return;
         event.preventDefault();
@@ -410,44 +450,9 @@ export function MapStage() {
     const direction = directionTo(x, y);
     if (direction && canMove) move(direction);
   };
-  const endMeasure = () => {
-    if (measureFrom === null) return false;
-    setMeasureFrom(null);
-    return true;
-  };
-  useShortcut({
-    id: 'explore.measure.cancel',
-    keys: 'escape',
-    label: 'Stop measuring',
-    group: 'Map',
-    enabled: measureFrom !== null && pick === null,
-    run: () => setMeasureFrom(null),
-  });
-
   // Light and darkness on the party's level.
-  const light = view ? partyLight(view) : { lights: [], darkness: false };
+  const light = useMemo(() => (view ? partyLight(view) : { lights: [], darkness: false }), [view]);
   const dark = partyShown && map?.layer === 'player' && (light.lights.length === 0 || light.darkness);
-  const memberName = (id: string) => view?.party.find((member) => member.id === id)?.name ?? 'Someone';
-
-  // Area names for a player's map. The referee map draws its own keyed labels.
-  const areaLabels = useMemo(() => {
-    if (map === null || map.layer === 'referee') return [];
-    const level = sceneLevel(scene, map.key);
-    if (level === null) return [];
-    const hereArea = scene?.here?.area?.id ?? null;
-    return level.areas.flatMap((area) => {
-      if (map.party && area.id === hereArea) return [];
-      const cell = areaCenterCell(area);
-      if (!cell) return [];
-      const occupied =
-        map.features.some((f) => f.x === cell[0] && f.y === cell[1]) ||
-        map.transitions.some((t) => t.kind !== 'passage' && t.x === cell[0] && t.y === cell[1]);
-      const trapped = level.traps.some((trap) => trap.kind === 'room' && trap.area_id === area.id);
-      return [
-        { id: area.id, name: area.name, x: cell[0] + 0.5, y: cell[1] + (occupied ? 0.12 : 0.5), trapped },
-      ];
-    });
-  }, [map, scene]);
 
   // Feedback beside the party.
   const message = useMapFeedback((s) => s.message);
@@ -463,20 +468,28 @@ export function MapStage() {
   const pinLabel = annotations.pins.find((pin) => pin.id === pinShown)?.label ?? '';
   const themeData = resolveTheme(theme);
   const levelName = (option: LevelOption) => levelLabel(option, levels, names);
-  const measurement =
-    measureFrom && hoverCell
-      ? measure(
-          { x: measureFrom.x + 0.5, y: measureFrom.y + 0.5 },
-          { x: hoverCell.x + 0.5, y: hoverCell.y + 0.5 },
-        )
-      : null;
   const lightMenu = actions ? lightEntries(actions) : [];
+  // The words come from the app layer, so the map's chip and the party panel say the same thing.
+  const partyLightNow = usePartyLight();
+  const lightText = useMemo(() => {
+    if (partyLightNow.darkness) return { text: partyLightNow.text, short: 'Darkness', lit: false };
+    if (!partyLightNow.lit) return { text: partyLightNow.text, short: 'No light', lit: false };
+    const longest = Math.max(...partyLightNow.lights.map((entry) => entry.remainingRounds ?? Infinity));
+    return { text: partyLightNow.text, short: shortTimeLeft(longest), lit: true };
+  }, [partyLightNow]);
+  const wandering = useMemo(() => {
+    if (map?.layer !== 'referee' || !map.wandering) return null;
+    const { chanceInSix, intervalTurns } = map.wandering;
+    const turns = intervalTurns === 1 ? 'turn' : `${intervalTurns} turns`;
+    const table = wanderingTableName(adventure.data, map.dungeonId, map.levelNumber);
+    return `Wandering monsters: ${chanceInSix} in 6 every ${turns}${table ? ` (${table})` : ''}`;
+  }, [map, adventure.data]);
 
   if (view === null) return null;
 
   const ariaLabel = canMove
-    ? 'Dungeon map. Arrow keys or W, A, S, and D move the party. Alt and an arrow key turns it. Shift and an arrow key pans. Shift and F10 opens the actions where the party stands.'
-    : 'Dungeon map';
+    ? 'Dungeon map. The arrow keys move the party. Alt and an arrow key turns it. Shift and an arrow key pans. Shift and F10 opens the actions where the party stands. With the pin, ping, ruler, or a picking tool, the arrow keys move a cursor and Enter acts.'
+    : 'Dungeon map. With the pin, ping, ruler, or a picking tool, the arrow keys move a cursor and Enter acts.';
 
   return (
     <div
@@ -499,11 +512,12 @@ export function MapStage() {
         onFollowPartyChange={setFollow}
         reducedMotion={reduceMotion}
         initialView="party"
+        showWandering={false}
+        arrowKeys={canMove ? 'move' : 'pan'}
+        onMoveKey={(direction) => move(direction)}
         ariaLabel={ariaLabel}
         className={styles.map}
-        style={MAP_STYLE}
         onCellClick={(target, info) => {
-          if (endMeasure()) return;
           if (onParty(target.x, target.y)) {
             openMenu(target, info.screen, info.world);
             return;
@@ -513,7 +527,6 @@ export function MapStage() {
             say('Step one square at a time. Click a square beside the party.', 'info');
         }}
         onEdgeClick={(target, info) => {
-          if (endMeasure()) return;
           if (target.edge.kind === 'passage' && target.direction && canMove) {
             move(target.direction);
             return;
@@ -524,31 +537,30 @@ export function MapStage() {
           }
         }}
         onFeatureClick={(target, info) => {
-          if (endMeasure()) return;
           clickAt(target.feature.x, target.feature.y, target, info.screen, info.world);
         }}
         onTransitionClick={(target, info) => {
-          if (endMeasure()) return;
           clickAt(target.transition.x, target.transition.y, target, info.screen, info.world);
         }}
         onPartyClick={(target, info) => {
-          if (endMeasure()) return;
           openMenu(target, info.screen, info.world);
         }}
         onPinClick={(target) => setPinShown(target.pin.id)}
-        onContextMenu={(target, screen, info) => {
-          setMeasureFrom(null);
-          openMenu(target, screen, info.world);
+        onContextMenu={(target, screen, info) => openMenu(target, screen, info.world)}
+        onMeasure={() => {
+          setMeasuring(false);
+          setMeasureText(null);
         }}
-        onHover={(target) => {
-          if (measureFrom === null) return;
-          if (target?.kind === 'cell') setHoverCell({ x: target.x, y: target.y });
-        }}
+        onMeasureChange={(measurement) => setMeasureText(measurement ? measurementText(measurement) : null)}
+        onPickCancel={() => cancelPick()}
         onPing={ping}
         onStrokeComplete={(stroke) =>
           annotations.addStroke(stroke.points, me?.color ?? FALLBACK_COLOR, stroke.width)
         }
-        onStrokeErase={annotations.erase}
+        onStrokeErase={(ids) => {
+          const refused = annotations.erase(ids);
+          if (refused.length > 0) mapRef.current?.restoreErasedStrokes(refused);
+        }}
         onPinCreate={(point) => setNewPin(point)}
         onPickCell={(target) => {
           if (map)
@@ -575,19 +587,6 @@ export function MapStage() {
 
       <Projected map={mapRef}>
         {dark && party && <div className={styles.darkness} data-wx={party.x + 0.5} data-wy={party.y + 0.5} />}
-        {areaLabels.map((area) => (
-          <div
-            key={area.id}
-            className={styles.areaLabel}
-            data-wx={area.x}
-            data-wy={area.y}
-            data-minzoom={16}
-            style={{ color: themeData.label.color, ['--halo' as string]: themeData.label.halo }}
-          >
-            <span>{area.name}</span>
-            {area.trapped && <Icon name="trap" size={12} />}
-          </div>
-        ))}
         {party && bump && (
           <div key={bump.id} className={styles.bumpAnchor} data-wx={party.x + 0.5} data-wy={party.y + 0.5}>
             <span className={cx(styles.bumpRing, styles[`bumpRing-${bump.direction}`])} />
@@ -606,37 +605,19 @@ export function MapStage() {
             </span>
           </div>
         )}
-        {measureFrom && measurement && (
-          <>
-            <svg className={styles.measureSvg}>
-              <line
-                className={styles.measureLine}
-                data-wx1={measureFrom.x + 0.5}
-                data-wy1={measureFrom.y + 0.5}
-                data-wx2={(hoverCell?.x ?? measureFrom.x) + 0.5}
-                data-wy2={(hoverCell?.y ?? measureFrom.y) + 0.5}
-              />
-            </svg>
-            <div
-              className={styles.measureAnchor}
-              data-wx={(hoverCell?.x ?? measureFrom.x) + 0.5}
-              data-wy={(hoverCell?.y ?? measureFrom.y) + 0.5}
-            >
-              <span className={styles.measureLabel}>{measurementLabel(measurement)}</span>
-            </div>
-          </>
-        )}
       </Projected>
 
       {/* Screen readers hear the same lines the map shows beside the party. */}
       <div className={styles.srOnly} aria-live="polite">
         {message?.text ?? ''}
       </div>
+      {/* And what other people do on the map: pings, pins, and drawings. */}
+      <div className={styles.srOnly} aria-live="polite">
+        {announcement}
+      </div>
 
       <div className={styles.chromeTop}>
-        <div className={styles.chromeRow}>
-          {isReferee && map && <LayerBadge layer={map.layer} />}
-          <ThemeSwitcher theme={theme} onChange={(next) => setPreference('mapTheme', next)} />
+        <div className={styles.toolbarGroup} role="toolbar" aria-label="Map view options">
           {levels.length > 1 && (
             <LevelSwitcher
               levels={levels}
@@ -654,7 +635,36 @@ export function MapStage() {
           {levels.length === 1 && levels[0] && (
             <span className={styles.levelName}>{levelName(levels[0])}</span>
           )}
+          <span className={styles.groupDivider} aria-hidden="true" />
+          <ThemeSwitcher theme={theme} onChange={(next) => setPreference('mapTheme', next)} />
+          <span className={styles.groupDivider} aria-hidden="true" />
+          <PinsPanel
+            pins={annotations.pins}
+            records={annotations.pinRecords}
+            partyHere={partyShown}
+            onShow={(pin) => {
+              setFollow(false);
+              mapRef.current?.panTo({ x: pin.x, y: pin.y });
+              mapRef.current?.focus();
+            }}
+            onOpen={(pin) => setPinShown(pin.id)}
+            onAddAtParty={() => {
+              if (party) setNewPin({ x: party.x + 0.5, y: party.y + 0.5 });
+            }}
+          />
+          {partyShown && (
+            <>
+              <span className={styles.groupDivider} aria-hidden="true" />
+              <LightIndicator
+                text={lightText.text}
+                short={lightText.short}
+                lit={lightText.lit}
+                menu={lightMenu}
+              />
+            </>
+          )}
         </div>
+        {isReferee && map && <LayerBadge layer={map.layer} />}
         {offLevel && partyLevel && (
           <div className={styles.offLevel} role="status">
             <Icon name="eye" size={14} />
@@ -664,38 +674,51 @@ export function MapStage() {
             </Button>
           </div>
         )}
-        {measureFrom && (
-          <div className={styles.offLevel} role="status">
+        {(measuring || measureText !== null) && (
+          // The map announces each measurement, so this line only shows it.
+          <div className={styles.offLevel}>
             <Icon name="ruler" size={14} />
-            <span>Point at a square to measure. Click or press Escape to stop.</span>
+            <span className={measureText ? styles.measureDistance : undefined}>
+              {measureText ??
+                'Point at a square to measure. Click or press Enter to keep it, or Escape to stop.'}
+            </span>
           </div>
         )}
       </div>
 
-      <div className={styles.chromeSide}>
-        <CameraControls map={mapRef} follow={follow} onFollowChange={setFollow} partyShown={partyShown} />
+      {/* One cluster at the bottom right: the camera controls beside the minimap. While a fight or its summary
+          holds the bottom of the stage, the controls move to the right edge and the minimap steps aside. */}
+      <div className={bottomFree ? styles.cluster : styles.chromeSide}>
+        {bottomFree && wandering !== null && (
+          <div className={styles.wanderingChip}>
+            <Icon name="referee" size={14} />
+            <span>{wandering}</span>
+          </div>
+        )}
+        <div className={styles.clusterRow}>
+          <CameraControls map={mapRef} follow={follow} onFollowChange={setFollow} partyShown={partyShown} />
+          {bottomFree &&
+            (minimapOpen ? (
+              <MinimapCard
+                map={map}
+                target={mapRef}
+                theme={theme}
+                facing={party?.facing ?? null}
+                onHide={() => setMinimapOpen(false)}
+              />
+            ) : (
+              <Tooltip content="Show the minimap" side="left">
+                <IconButton
+                  icon="map"
+                  label="Show the minimap"
+                  variant="secondary"
+                  className={styles.minimapShow}
+                  onClick={() => setMinimapOpen(true)}
+                />
+              </Tooltip>
+            ))}
+        </div>
       </div>
-
-      {!combat && (
-        <div className={styles.chromeBottomRight}>
-          <MinimapCard map={map} target={mapRef} theme={theme} facing={party?.facing ?? null} />
-        </div>
-      )}
-
-      {!combat && partyShown && (
-        <div
-          className={cx(styles.chromeBottomLeft, map?.layer === 'referee' && styles.chromeBottomLeftRaised)}
-        >
-          <LightStatus
-            lights={light.lights.map((entry) => ({
-              name: memberName(entry.memberId),
-              left: lightTimeLeft(entry.remainingRounds),
-            }))}
-            darkness={light.darkness}
-            menu={lightMenu}
-          />
-        </div>
-      )}
 
       <MoveShortcuts canMove={canMove} canTurn={canTurn} move={move} turn={turn} />
 
@@ -729,47 +752,6 @@ export function MapStage() {
         onRemove={annotations.removePin}
       />
     </div>
-  );
-}
-
-interface LightStatusProps {
-  lights: Array<{ name: string; left: string | null }>;
-  darkness: boolean;
-  menu: MenuEntry[];
-}
-
-/** The party's light: who carries one and how long it has left, or a clear warning in the dark. */
-function LightStatus({ lights, darkness, menu }: LightStatusProps) {
-  const lit = lights.length > 0 && !darkness;
-  const text = darkness
-    ? 'Magical darkness covers the party.'
-    : lit
-      ? lights
-          .map((light) =>
-            light.left ? `${light.name}'s light, ${light.left} left` : `${light.name}'s light`,
-          )
-          .join(' · ')
-      : 'No light. The party is in the dark.';
-  return (
-    <div className={cx(styles.lightStatus, !lit && styles.lightDark)} role="status">
-      <Icon name={lit ? 'torch' : 'moon'} size={16} />
-      <span>{text}</span>
-      {!lit && menu.length > 0 && <LightMenuButton menu={menu} />}
-    </div>
-  );
-}
-
-function LightMenuButton({ menu }: { menu: MenuEntry[] }) {
-  return (
-    <DropdownMenu
-      side="top"
-      items={menu}
-      trigger={
-        <Button size="sm" variant="secondary" icon="torch" className={styles.lightAction}>
-          Light
-        </Button>
-      }
-    />
   );
 }
 

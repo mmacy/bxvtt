@@ -4,6 +4,7 @@ import type {
   Command,
   CommandRequest,
   CommandResult,
+  EntryNames,
   GameEvent,
   GameState,
   LegalCommand,
@@ -16,6 +17,7 @@ import type {
   User,
 } from '@bxvtt/shared/protocol';
 import { REFEREE_VIEW_OMITTED_FIELDS } from '@bxvtt/shared/protocol';
+import { nameInSentence } from '@bxvtt/shared/text';
 import { BxapiProblem, BxapiUnreachable, callBxapi, toApiError } from '../bxapi';
 import type { Context } from '../context';
 import { str } from '../db';
@@ -29,6 +31,10 @@ import { CommandClassifier } from './classify';
 import { SaveService } from './saves';
 import { buildScene, eventItemIds, inventoryNames, templateNames } from './scene';
 import { readSeats, reconcileSeats, seatsFromRoster, writeSeats } from './seats';
+import type { LabelBook } from './labels';
+import { entryNames, learnLabels, newLabelBook } from './labels';
+import type { TargetBook } from './targets';
+import { emptyTargetBook, resolveHandles, syncTargets, toHandles } from './targets';
 
 /** What the server holds in memory about a table's game, at one revision. */
 export interface LiveGame {
@@ -47,6 +53,10 @@ export interface LiveGame {
   scene: Scene;
   /** Display names for item IDs that the party has seen, kept across revisions of the session. */
   names: Map<string, string>;
+  /** The monster target handles of the session, and the ones the scene lists at `revision`. */
+  targets: TargetBook;
+  /** What the players of the session have called each member, group, and monster, for feed entries. */
+  labels: LabelBook;
 }
 
 /** Who sent an accepted command, for the feed. */
@@ -54,6 +64,8 @@ export interface CommandMeta {
   userId: string | null;
   commandType: string;
   class: CommandInfo['class'];
+  /** The party member who acted, when the command names one. */
+  actorId?: string | null;
 }
 
 /** The most attempts the server makes at one command when bxapi is busy or the connection drops. */
@@ -218,6 +230,7 @@ export class GameService {
     );
     const previous = this.live.get(tableId);
     const names = previous?.sessionId === sessionId ? previous.names : new Map<string, string>();
+    const labels = previous?.sessionId === sessionId ? previous.labels : newLabelBook(this.ctx.db, sessionId);
     const live: LiveGame = {
       tableId,
       sessionId,
@@ -228,8 +241,10 @@ export class GameService {
       legal: commands.commands,
       referee: null,
       refereeRevision: -1,
-      scene: { levels: [], here: null, names: {} },
+      scene: { levels: [], here: null, names: {}, can_travel_to_town: false, targets: [] },
       names,
+      targets: emptyTargetBook(),
+      labels,
     };
     if (info.revision === commands.revision) {
       live.referee = refereeState(refereeView);
@@ -266,11 +281,16 @@ export class GameService {
       refereeView.adventure,
       this.equipment ?? new Map(),
     );
-    live.scene = buildScene(
-      live.view,
-      { adventure: refereeView.adventure, dungeonState: refereeView.dungeon_state },
-      live.names,
-    );
+    live.targets = syncTargets(this.ctx.db, live.tableId, live.sessionId, live.view, refereeView);
+    learnLabels(live.labels, live.view, refereeView);
+    live.scene = {
+      ...buildScene(
+        live.view,
+        { adventure: refereeView.adventure, dungeonState: refereeView.dungeon_state },
+        live.names,
+      ),
+      targets: live.targets.targets,
+    };
   }
 
   /**
@@ -480,7 +500,7 @@ export class GameService {
       this.ctx.hub.broadcast(tableId, {
         type: 'notice',
         code: 'game_started',
-        detail: `The game of ${session.adventure_name} has started.`,
+        detail: `The game of ${nameInSentence(session.adventure_name)} has started.`,
       });
       this.ctx.tables.broadcastTable(tableId);
       await this.pushStateLocked(tableId);
@@ -600,6 +620,7 @@ export class GameService {
         );
       }
       this.checkPermission(live, user, role, info, command);
+      const resolved = resolveHandles(command, info.targetFields, live.targets, 'command');
       const unseen = role === 'referee' ? null : unseenTreasure(live, command);
       if (unseen !== null) {
         return {
@@ -613,13 +634,15 @@ export class GameService {
           game: await this.project(live, role),
         };
       }
-      const outcome = await this.executeLocked(live, command, requestId, user.id);
+      const outcome = await this.executeLocked(live, resolved, requestId, user.id);
       if (role !== 'referee' && !outcome.accepted) maskTrapRejections(command, outcome);
       if (outcome.accepted) {
+        const actor = command[info.memberField ?? 'character_id'];
         await this.afterAcceptedLocked(live, outcome, {
           userId: user.id,
           commandType: command.command_type,
           class: info.class,
+          actorId: typeof actor === 'string' ? actor : null,
         });
       } else if (outcome.view !== undefined) {
         live.view = outcome.view;
@@ -630,7 +653,8 @@ export class GameService {
           : playerEvents(outcome.events, outcome.messages);
       return {
         accepted: outcome.accepted,
-        rejections: outcome.rejections,
+        // A player names a monster by its target handle, so a rejection names it the same way.
+        rejections: role === 'referee' ? outcome.rejections : toHandles(outcome.rejections, live.targets),
         events: projected.events,
         messages: projected.messages,
         mode: outcome.mode,
@@ -807,6 +831,46 @@ export class GameService {
   }
 
   /**
+   * Sends bxapi a command that osrlib is certain to refuse, to learn its rejections, such as a battle round with
+   * a declaration that can't stand. The caller holds the table's lock. A refused command changes nothing in the
+   * session, so the probe adds nothing to the revision, the feed, or the session's logs, and it has its own
+   * `Idempotency-Key`, which nothing sends again. The server makes one attempt and gives up on any failure.
+   *
+   * If bxapi ever accepted a probe, the server would treat it as the accepted command it was, so the table
+   * still matches the session.
+   *
+   * @param live - The game.
+   * @param command - The command.
+   * @returns bxapi's outcome of a refused probe, or `null` when it failed or was accepted.
+   */
+  async probeLocked(live: LiveGame, command: Command): Promise<CommandOutcome | null> {
+    let outcome: CommandOutcome;
+    try {
+      outcome = await this.ctx.bxapi.request<CommandOutcome>(
+        'POST',
+        `/v1/sessions/${encodeURIComponent(live.sessionId)}/commands`,
+        {
+          rawBody: JSON.stringify(command),
+          query: { include: 'view', visibility: 'referee', expected_revision: live.revision },
+          idempotencyKey: randomUUID(),
+          requestId: 'probe',
+        },
+      );
+    } catch (error) {
+      this.ctx.log.warn({ err: error, table: live.tableId }, 'a probe of a refused command failed');
+      return null;
+    }
+    if (!outcome.accepted) return outcome;
+    this.ctx.log.error({ table: live.tableId, command: command.command_type }, 'bxapi accepted a probe');
+    await this.afterAcceptedLocked(live, outcome, {
+      userId: null,
+      commandType: command.command_type,
+      class: 'battle',
+    });
+    return null;
+  }
+
+  /**
    * Reloads the game after it changed behind the server's back, and sends everyone the new state.
    *
    * @param live - The game, which this updates in place.
@@ -887,6 +951,13 @@ export class GameService {
         session_id: live.sessionId,
         events: forPlayers.events,
         messages: forPlayers.messages,
+        clock_rounds: live.view.clock_rounds,
+        names: entryNames(forPlayers.events, live.labels, live.names, {
+          view: live.view,
+          dungeons: live.scene.dungeon_names,
+          actorId: meta.class === 'referee' ? null : meta.actorId,
+        }),
+        actor_id: meta.class === 'referee' ? null : (meta.actorId ?? null),
       },
       referee: {
         kind: 'game',
@@ -895,6 +966,13 @@ export class GameService {
         session_id: live.sessionId,
         events: outcome.events,
         messages: outcome.messages,
+        clock_rounds: live.view.clock_rounds,
+        names: entryNames(outcome.events, live.labels, live.names, {
+          view: live.view,
+          dungeons: live.scene.dungeon_names,
+          actorId: meta.actorId,
+        }),
+        actor_id: meta.actorId ?? null,
       },
     });
     this.battle.afterAcceptedLocked(live);
@@ -973,6 +1051,35 @@ export class GameService {
     } catch (error) {
       this.ctx.log.warn({ err: error, session: sessionId }, 'could not delete an unused bxapi session');
     }
+  }
+
+  /**
+   * The game clock at one revision of a session, when the server knows it: the clock of the game it holds in
+   * memory, at that game's current revision.
+   *
+   * @param tableId - The table ID.
+   * @param sessionId - The session ID.
+   * @param revision - The revision.
+   * @returns The clock in rounds, or `null`.
+   */
+  clockAt(tableId: string, sessionId: string, revision: number): number | null {
+    const live = this.live.get(tableId);
+    if (live === undefined || live.sessionId !== sessionId || live.revision !== revision) return null;
+    return live.view.clock_rounds;
+  }
+
+  /**
+   * The names for the IDs in the events of an older feed entry, from what the server knows of the entry's session
+   * now, or `undefined` when the server doesn't hold that session in memory.
+   *
+   * @param tableId - The table ID.
+   * @param sessionId - The entry's session.
+   * @param events - The events of the reader's copy.
+   */
+  namesFor(tableId: string, sessionId: string, events: GameEvent[]): EntryNames | undefined {
+    const live = this.live.get(tableId);
+    if (live === undefined || live.sessionId !== sessionId) return undefined;
+    return entryNames(events, live.labels, live.names, { dungeons: live.scene.dungeon_names });
   }
 
   /**

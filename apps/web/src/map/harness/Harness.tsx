@@ -113,6 +113,8 @@ export function Harness() {
   const [pointers, setPointers] = useState<MapPointer[]>([]);
   const [hover, setHover] = useState<MapTarget | null>(null);
   const [measurement, setMeasurement] = useState<Measurement | null>(null);
+  const [areaNames, setAreaNames] = useState(params.get('areas') !== '0');
+  const [refuseErase, setRefuseErase] = useState(false);
   const [log, setLog] = useState<string[]>([]);
   const [stats, setStats] = useState({ fps: 0, frameMs: 0, worstMs: 0, tiles: 0 });
   const mapRef = useRef<DungeonMapHandle>(null);
@@ -135,8 +137,26 @@ export function Harness() {
       return fromRefereeView(level, world.state, { dungeonId, light: world.lit ? { radiusFeet: 30 } : null });
     }
     const view = world.view ?? playerViewFrom(level, world.state, dungeonId, world.lit);
-    return fromPlayerView(view, world.key);
-  }, [located, layer, world]);
+    // Stands in for the server's scene, which names the areas the party has entered. The map keeps the known cells.
+    const areas = areaNames
+      ? level.areas.map((area) => ({ id: area.id, name: area.name, cells: area.cells }))
+      : undefined;
+    // The scene also describes the features the party has found. The harness offers those on known cells.
+    const known = new Set((view.explored[0]?.cells ?? []).map(([x, y]) => `${x},${y}`));
+    const kinds = { treasure_cache: 'cache', construction_trick: 'trick', custom: 'custom' } as const;
+    const features = areaNames
+      ? [...level.features, ...level.areas.flatMap((area) => area.features)]
+          .filter((f) => f.cell && known.has(`${f.cell[0]},${f.cell[1]}`))
+          .map((f) => ({
+            id: f.id,
+            kind: kinds[f.kind],
+            x: f.cell?.[0] ?? 0,
+            y: f.cell?.[1] ?? 0,
+            description: f.description,
+          }))
+      : undefined;
+    return fromPlayerView(view, world.key, { extras: { areas, features } });
+  }, [located, layer, world, areaNames]);
 
   // Pins: one for everyone and one for referees, placed near the party when the level changes.
   const [pinsFor, setPinsFor] = useState<string | null>(null);
@@ -377,6 +397,15 @@ export function Harness() {
             <Toggle on={reducedMotion} onClick={() => setReducedMotion((r) => !r)}>
               Reduced motion
             </Toggle>
+            <Toggle on={areaNames} onClick={() => setAreaNames((a) => !a)}>
+              Area names
+            </Toggle>
+            <Toggle on={refuseErase} onClick={() => setRefuseErase((r) => !r)}>
+              Refuse erases
+            </Toggle>
+            <Button onClick={() => map?.party && mapRef.current?.startMeasure(map.party)}>
+              Measure from the party
+            </Button>
             <Button onClick={() => setStrokes([])}>Clear drawings</Button>
             <Button onClick={snapshot}>Snapshot</Button>
           </Group>
@@ -405,6 +434,7 @@ export function Harness() {
         <DungeonMap
           ref={mapRef}
           map={map}
+          letterKeys
           theme={theme}
           tool={tool}
           strokes={strokes}
@@ -451,6 +481,12 @@ export function Harness() {
             note(`stroke with ${s.points.length} points`);
           }}
           onStrokeErase={(ids) => {
+            if (refuseErase) {
+              // As if the server refused the erase: the strokes come back.
+              setTimeout(() => mapRef.current?.restoreErasedStrokes(ids), 300);
+              note(`erase of ${ids.length} refused`);
+              return;
+            }
             setStrokes((all) => all.filter((s) => !ids.includes(s.id)));
             note(`erased ${ids.length}`);
           }}

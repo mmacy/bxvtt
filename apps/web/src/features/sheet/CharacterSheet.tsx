@@ -1,5 +1,13 @@
 import { useMemo, useState } from 'react';
-import { useMembers, usePartyMember, usePlayerView, useSeats, useTableUser, useTextContext } from '@/app';
+import {
+  useMembers,
+  usePartyMember,
+  usePlayerView,
+  useSeats,
+  useTableUser,
+  useTextContext,
+  type SheetTab,
+} from '@/app';
 import {
   Avatar,
   ConditionChip,
@@ -15,6 +23,7 @@ import { effectLabel, effectRemaining } from './actions';
 import { InventoryTab } from './InventoryTab';
 import { sheetFromMember } from './model';
 import { RefereeNotes } from './RefereeNotes';
+import { RuleLinksContext } from './RuleLink';
 import {
   AbilityScores,
   Conditions,
@@ -34,6 +43,8 @@ export interface CharacterSheetProps {
   memberId: string | null;
   /** Closes the sheet. */
   onClose: () => void;
+  /** The tab to show when the sheet opens: `sheet` (the default), `inventory`, or `spells`. */
+  tab?: SheetTab;
 }
 
 /** Who plays a member: the seat owner with their color, or the referee for an empty seat. */
@@ -52,7 +63,7 @@ function useController(memberId: string | null) {
  * One party member's sheet: abilities, saves, inventory, spells, and the member actions the user may take.
  * The shell renders it and opens it from `useTableUi().openCharacterSheet(memberId)`.
  */
-export function CharacterSheet({ memberId, onClose }: CharacterSheetProps) {
+export function CharacterSheet({ memberId, onClose, tab }: CharacterSheetProps) {
   const member = usePartyMember(memberId);
   return (
     <Drawer
@@ -73,20 +84,25 @@ export function CharacterSheet({ memberId, onClose }: CharacterSheetProps) {
           description="They may have left the game. Pick another member in the party panel."
         />
       ) : (
-        <SheetContent memberId={member.id} />
+        <SheetContent
+          key={`${member.id}:${tab ?? 'sheet'}`}
+          memberId={member.id}
+          initialTab={tab ?? 'sheet'}
+        />
       )}
     </Drawer>
   );
 }
 
-function SheetContent({ memberId }: { memberId: string }) {
+function SheetContent({ memberId, initialTab }: { memberId: string; initialTab: SheetTab }) {
   const member = usePartyMember(memberId);
   const ctx = useTextContext();
   const view = usePlayerView();
   const controller = useController(memberId);
-  const [tab, setTab] = useState('sheet');
+  const [chosenTab, setTab] = useState<string>(initialTab);
   const model = useMemo(() => (member ? sheetFromMember(member, ctx) : null), [member, ctx]);
   const hasSpells = useHasSpells(model);
+  const tab = chosenTab === 'spells' && !hasSpells ? 'sheet' : chosenTab;
   if (!member || !model) return null;
   const effects = (view?.effects ?? []).filter((e) => e.character_id === memberId);
   const deprivation = view?.deprivation[memberId];
@@ -101,79 +117,81 @@ function SheetContent({ memberId }: { memberId: string }) {
   );
 
   return (
-    <div className={styles.sheetScroll}>
-      <Parchment variant="plain" className={styles.sheetPaper}>
-        <SheetHeader model={model} color={controller.owner?.color} controller={who} />
-        <Tabs value={tab} onValueChange={setTab} variant="line">
-          <TabsList aria-label="Sheet sections" className={styles.tabsBar}>
-            <TabsTrigger value="sheet" icon="scroll">
-              Sheet
-            </TabsTrigger>
-            <TabsTrigger value="inventory" icon="chest">
-              Inventory
-            </TabsTrigger>
-            {hasSpells && (
-              <TabsTrigger value="spells" icon="spell">
-                Spells
+    <RuleLinksContext.Provider value={true}>
+      <div className={styles.sheetScroll}>
+        <Parchment variant="plain" className={styles.sheetPaper}>
+          <SheetHeader model={model} color={controller.owner?.color} controller={who} />
+          <Tabs value={tab} onValueChange={setTab} variant="line">
+            <TabsList aria-label="Sheet sections" className={styles.tabsBar}>
+              <TabsTrigger value="sheet" icon="scroll">
+                Sheet
               </TabsTrigger>
-            )}
-          </TabsList>
-          <TabsContent value="sheet">
-            <div className={styles.tabPanel}>
-              <VitalsRow model={model} />
-              <XpProgress model={model} />
-              {(model.conditions.length > 0 || effects.length > 0 || deprivation) && (
-                <section className={styles.section} aria-labelledby="sheet-conditions">
-                  <h3 id="sheet-conditions" className={styles.sectionTitle}>
-                    Conditions and effects
-                  </h3>
-                  <Conditions conditions={model.conditions} compact />
-                  {effects.length > 0 && (
-                    <ul className={styles.chips} aria-label="Active effects">
-                      {effects.map((effect, index) => (
-                        <li key={`${effect.kind}-${index}`}>
-                          <ConditionChip
-                            label={effectLabel(effect.kind)}
-                            tone={effect.kind === 'light' ? 'boon' : 'magic'}
-                            icon={effect.kind === 'light' ? 'torch' : undefined}
-                            duration={effectRemaining(effect.remaining_rounds)}
-                          />
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  {deprivation && (
-                    <p className={styles.note}>
-                      {(deprivation.food_days ?? 0) > 0 && `${deprivation.food_days} days without food. `}
-                      {(deprivation.water_days ?? 0) > 0 && `${deprivation.water_days} days without water.`}
-                    </p>
-                  )}
-                </section>
+              <TabsTrigger value="inventory" icon="chest">
+                Inventory
+              </TabsTrigger>
+              {hasSpells && (
+                <TabsTrigger value="spells" icon="spell">
+                  Spells
+                </TabsTrigger>
               )}
-              <AbilityScores model={model} />
-              <div className={styles.columns}>
-                <div className={styles.column}>
-                  <ScoreModifiers model={model} />
-                  <ThiefSkills skills={model.thiefSkills} />
+            </TabsList>
+            <TabsContent value="sheet">
+              <div className={styles.tabPanel}>
+                <VitalsRow model={model} />
+                <XpProgress model={model} />
+                {(model.conditions.length > 0 || effects.length > 0 || deprivation) && (
+                  <section className={styles.section} aria-labelledby="sheet-conditions">
+                    <h3 id="sheet-conditions" className={styles.sectionTitle}>
+                      Conditions and effects
+                    </h3>
+                    <Conditions conditions={model.conditions} compact />
+                    {effects.length > 0 && (
+                      <ul className={styles.chips} aria-label="Active effects">
+                        {effects.map((effect, index) => (
+                          <li key={`${effect.kind}-${index}`}>
+                            <ConditionChip
+                              label={effectLabel(effect.kind)}
+                              tone={effect.kind === 'light' ? 'boon' : 'magic'}
+                              icon={effect.kind === 'light' ? 'torch' : undefined}
+                              duration={effectRemaining(effect.remaining_rounds)}
+                            />
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {deprivation && (
+                      <p className={styles.note}>
+                        {(deprivation.food_days ?? 0) > 0 && `${deprivation.food_days} days without food. `}
+                        {(deprivation.water_days ?? 0) > 0 && `${deprivation.water_days} days without water.`}
+                      </p>
+                    )}
+                  </section>
+                )}
+                <AbilityScores model={model} />
+                <div className={styles.columns}>
+                  <div className={styles.column}>
+                    <ScoreModifiers model={model} />
+                    <ThiefSkills skills={model.thiefSkills} />
+                  </div>
+                  <div className={styles.column}>
+                    <SavingThrows model={model} />
+                    <Languages languages={model.languages} />
+                  </div>
                 </div>
-                <div className={styles.column}>
-                  <SavingThrows model={model} />
-                  <Languages languages={model.languages} />
-                </div>
+                <RefereeNotes memberId={memberId} />
               </div>
-              <RefereeNotes memberId={memberId} />
-            </div>
-          </TabsContent>
-          <TabsContent value="inventory">
-            <InventoryTab member={member} model={model} />
-          </TabsContent>
-          {hasSpells && (
-            <TabsContent value="spells">
-              <SpellsTab member={member} model={model} />
             </TabsContent>
-          )}
-        </Tabs>
-      </Parchment>
-    </div>
+            <TabsContent value="inventory">
+              <InventoryTab member={member} model={model} />
+            </TabsContent>
+            {hasSpells && (
+              <TabsContent value="spells">
+                <SpellsTab member={member} model={model} />
+              </TabsContent>
+            )}
+          </Tabs>
+        </Parchment>
+      </div>
+    </RuleLinksContext.Provider>
   );
 }

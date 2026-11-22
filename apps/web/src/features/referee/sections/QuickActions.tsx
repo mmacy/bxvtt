@@ -10,18 +10,26 @@ import {
   Button,
   Combobox,
   DiceRoll,
+  type DieSides,
   Field,
   Icon,
+  type IconName,
   NumberInput,
   RadioGroup,
+  SectionLabel,
   SegmentedControl,
   Select,
   TextInput,
-  type DieSides,
-  type IconName,
 } from '@/ui';
-import { areaCenter, findArea } from '../model/adventure';
-import { MonsterPicker, MapPickButton, useAreaOptions } from '../pickers';
+import { areaAt, areaCenter, findArea, findLevel } from '../model/adventure';
+import {
+  dungeonNumberAppearing,
+  MapPickButton,
+  MonsterPicker,
+  useAreaOptions,
+  useFullMonsters,
+} from '../pickers';
+import { IdMark } from '../details';
 import { CommandOutcome, useRefereeCommand } from '../RefereeCommand';
 import { CommandForm } from '../schema/CommandForm';
 import type { RefereeData } from '../useReferee';
@@ -241,7 +249,17 @@ export function SpawnMonstersForm({
   const [dice, setDice] = useState('1d6');
   const [distance, setDistance] = useState<number | null>(30);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const full = useFullMonsters();
   const { run, busy, outcome, clear } = useRefereeCommand();
+  // A newly chosen monster rolls its dungeon number appearing by default, as its entry prints it.
+  const chooseMonster = (id: string | null) => {
+    setMonster(id);
+    const appearing = dungeonNumberAppearing(full?.find((m) => m.id === id));
+    if (appearing && /d/i.test(appearing)) {
+      setMode('dice');
+      setDice(appearing);
+    }
+  };
   const submit = () => {
     const next: Record<string, string> = {};
     if (!monster) next.monster = 'Choose a monster.';
@@ -264,7 +282,7 @@ export function SpawnMonstersForm({
       <Field label="Monster" error={errors.monster}>
         <MonsterPicker
           value={monster}
-          onChange={setMonster}
+          onChange={chooseMonster}
           adventure={data.adventure}
           invalid={Boolean(errors.monster)}
         />
@@ -344,6 +362,16 @@ function SpawnNpcPartyForm() {
 
 const FACINGS = ['north', 'east', 'south', 'west'] as const;
 
+/** A picked cell in words: `Level 1, Guardroom`, or `Level 2, a corridor`. */
+function pickedPlace(
+  data: RefereeData,
+  cell: { dungeon_id: string; level_number: number; x: number; y: number },
+): string {
+  const level = data.adventure ? findLevel(data.adventure, cell.dungeon_id, cell.level_number) : null;
+  const area = level ? areaAt(level, cell.x, cell.y) : null;
+  return `Level ${cell.level_number}, ${area ? area.name : 'a corridor'}`;
+}
+
 /** Moves the party to town, to an area of the key, or to a cell picked on the map. */
 function PlacePartyForm({ data }: { data: RefereeData }) {
   const [where, setWhere] = useState<'area' | 'cell' | 'town'>('area');
@@ -409,7 +437,10 @@ function PlacePartyForm({ data }: { data: RefereeData }) {
             />
             {cell && (
               <span className={styles.secondary}>
-                Level {cell.level_number}, cell {cell.x}, {cell.y}
+                {pickedPlace(data, cell)}
+                <IdMark className={styles.idMark}>
+                  {' · '}cell {cell.x}, {cell.y}
+                </IdMark>
               </span>
             )}
           </div>
@@ -688,7 +719,7 @@ export function QuickActions({ data }: { data: RefereeData }) {
     <div className={styles.section}>
       {groups.map((group) => (
         <section key={group.title} aria-label={group.title}>
-          <h3 className={styles.subhead}>{group.title}</h3>
+          <SectionLabel level={3}>{group.title}</SectionLabel>
           <Accordion
             type="single"
             value={open}
@@ -702,7 +733,7 @@ export function QuickActions({ data }: { data: RefereeData }) {
                     <Icon
                       name={action.icon}
                       size={16}
-                      className={available ? styles.actionIcon : styles.rowIcon}
+                      className={available ? styles.actionIcon : styles.actionIconOff}
                     />
                     {action.label}
                   </span>

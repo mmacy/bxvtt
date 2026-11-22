@@ -1,8 +1,8 @@
 /** The outfitter's cart for the chosen buyer, and the cards that show what each purchase changed. */
 import type { MemberView } from '@bxvtt/shared/bxapi';
-import { formatCoins } from '@bxvtt/shared/text';
+import { formatCoins, formatGold, joinList } from '@bxvtt/shared/text';
 import { useState } from 'react';
-import { usePartyMember, useSendCommand } from '@/app';
+import { usePartyMember, useSendCommand, useTextContext } from '@/app';
 import { Badge, Banner, Button, CoinPurse, IconButton } from '@/ui';
 import { cartLines, cartTotal } from './cartLines';
 import { isEquippable, lotSentence, type ShopItem } from './equipment';
@@ -25,6 +25,8 @@ export interface CartPanelProps {
   onBuyEveryone: () => void;
   /** Members this cart could be copied to. */
   copyTargets: number;
+  /** Names of members the copy skips because they can't shop. */
+  skipped: string[];
   onCopy: () => void;
 }
 
@@ -41,8 +43,10 @@ export function CartPanel({
   othersWithCarts,
   onBuyEveryone,
   copyTargets,
+  skipped,
   onCopy,
 }: CartPanelProps) {
+  const ctx = useTextContext();
   const lines = cartLines(cart, items);
   const total = cartTotal(lines);
   const gold = buyer ? goldIn(readPurse(buyer)) : 0;
@@ -56,12 +60,12 @@ export function CartPanel({
       {lines.length > 0 && (
         <div className={styles.total}>
           <span>Total</span>
-          <span className={styles.totalValue}>{`${total} gp`}</span>
+          <span className={styles.totalValue}>{formatGold(total)}</span>
         </div>
       )}
       {short && lines.length > 0 && buyer && (
         <p className={styles.hint} role="status">
-          {`That is more than the ${gold} gp ${buyer.name} carries in gold. The shop decides if other coins cover it.`}
+          {`That is more than the ${formatGold(gold)} ${buyer.name} carries in gold. The shop decides if other coins cover it.`}
         </p>
       )}
       {problem !== null && (
@@ -97,7 +101,7 @@ export function CartPanel({
       ) : (
         <ul className={styles.lines} aria-label="Cart">
           {lines.map((line) => {
-            const lot = lotSentence(line.item, line.lots);
+            const lot = lotSentence(line.item, line.lots, ctx);
             return (
               <li key={line.item.summary.id} className={styles.line}>
                 <div className={styles.lineText}>
@@ -107,7 +111,7 @@ export function CartPanel({
                   </span>
                   {lot && <span className={styles.lineLot}>{lot}</span>}
                 </div>
-                <span className={styles.linePrice}>{`${line.costGp} gp`}</span>
+                <span className={styles.linePrice}>{formatGold(line.costGp)}</span>
                 <IconButton
                   icon="close"
                   size="sm"
@@ -122,9 +126,14 @@ export function CartPanel({
       {(copyTargets > 0 && lines.length > 0) || othersWithCarts > 0 ? (
         <div className={styles.party}>
           {copyTargets > 0 && lines.length > 0 && (
-            <Button variant="secondary" size="sm" icon="copy" onClick={onCopy}>
+            <Button variant="ghost" size="sm" icon="copy" onClick={onCopy}>
               Same for everyone you shop for
             </Button>
+          )}
+          {copyTargets > 0 && lines.length > 0 && skipped.length > 0 && (
+            <p
+              className={styles.skipped}
+            >{`Skips ${joinList(skipped)}, who ${skipped.length === 1 ? 'is' : 'are'} dead.`}</p>
           )}
           {othersWithCarts > 0 && (
             <Button variant="secondary" size="sm" icon="users" loading={pending} onClick={onBuyEveryone}>

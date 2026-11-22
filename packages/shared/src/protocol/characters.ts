@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { AbilityRoll, CharacterSummary, GeneratedCharacterResponse, StoredCharacter } from '../bxapi';
+import { Problem } from './problems';
 
 /** The result of a character preview: `seed`, `character`, `derived`, and the creation `rolls`. */
 export type CharacterPreview = GeneratedCharacterResponse;
@@ -40,6 +41,43 @@ export const CharacterRequest = z.looseObject({
 });
 /** Body of `POST /api/characters` and `POST /api/characters/preview`. */
 export type CharacterRequest = z.infer<typeof CharacterRequest>;
+
+/**
+ * Body of `POST /api/characters/check`: the same choices as `POST /api/characters`, with the `ability_roll_id`
+ * of one of the user's stored rolls. The server checks the choices against that roll and stores nothing.
+ */
+export const CharacterCheckRequest = CharacterRequest.extend({
+  ability_roll_id: z.string().min(1).max(64),
+});
+/** Body of `POST /api/characters/check`. */
+export type CharacterCheckRequest = z.infer<typeof CharacterCheckRequest>;
+
+/**
+ * Response of `POST /api/characters/check`.
+ *
+ * The server asks bxapi to create the character with the choices plus one item to equip that no purchase can
+ * include. bxapi checks every choice in its documented order (class, adjustment, starting spells, hit points,
+ * extra languages, gold, purchases, then equipping) and stops at the first choice that breaks a rule. The extra
+ * item always stops creation after every real choice, so bxapi stores nothing and the roll stays unused.
+ */
+export const CharacterCheck = z.object({
+  /** Whether every choice passed. Creating the character with the same body would then succeed. */
+  valid: z.boolean(),
+  /**
+   * bxapi's `character_invalid` problem when a choice breaks a rule, with its `rejections`, or its `field`,
+   * `index`, and `id`, intact. `null` when `valid` is `true`.
+   */
+  problem: Problem.nullable(),
+  /**
+   * The starting gold, in gold pieces, that the roll gives a character of `class_id` with the request's
+   * `hp_reroll_at_first_level`, before any purchase. The hit point roll comes before the gold roll, so the
+   * gold depends on the class's hit die and on the reroll option, and on nothing else. `null` when a choice
+   * that comes before the gold roll (the class or the starting spells) breaks a rule.
+   */
+  gold_gp: z.number().int().nullable(),
+});
+/** Response of `POST /api/characters/check`. */
+export type CharacterCheck = z.infer<typeof CharacterCheck>;
 
 /** Response of `GET /api/characters`: the user's own stored characters, newest first. */
 export const CharacterList = z.object({

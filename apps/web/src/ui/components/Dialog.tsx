@@ -1,10 +1,41 @@
 import { AlertDialog, Dialog as DialogPrimitive } from 'radix-ui';
-import { useState, type ReactElement, type ReactNode } from 'react';
+import { useState, type ReactElement, type ReactNode, type RefObject } from 'react';
 import { Icon } from '../icons/Icon';
 import { cx } from '../lib/cx';
 import { useReturnFocus } from '../lib/hooks';
 import { Button } from './Button';
 import styles from './Dialog.module.css';
+
+/**
+ * Which element takes focus when a dialog or drawer opens: a ref to an element inside it, or `'content'` for the
+ * window itself, so a screen reader starts at the title and no control looks selected. By default Radix focuses
+ * the first focusable element.
+ */
+export type InitialFocus = RefObject<HTMLElement | null> | 'content';
+
+/** Focus handlers that record the opener and then move focus as `initialFocus` asks. */
+function useOpenFocus(enabled: boolean, initialFocus: InitialFocus | undefined) {
+  const focus = useReturnFocus(enabled);
+  return {
+    onOpenAutoFocus: (event: Event) => {
+      focus.onOpenAutoFocus();
+      if (initialFocus === undefined) return;
+      if (initialFocus === 'content') {
+        if (event.currentTarget instanceof HTMLElement) {
+          event.preventDefault();
+          event.currentTarget.focus({ preventScroll: true });
+        }
+        return;
+      }
+      const target = initialFocus.current;
+      if (target) {
+        event.preventDefault();
+        target.focus({ preventScroll: true });
+      }
+    },
+    onCloseAutoFocus: focus.onCloseAutoFocus,
+  };
+}
 
 export interface DialogProps {
   open?: boolean;
@@ -23,6 +54,8 @@ export interface DialogProps {
   hideClose?: boolean;
   /** Puts the body on paper, for handouts and sheets. */
   paper?: boolean;
+  /** Which element takes focus on open. Defaults to the first focusable element. */
+  initialFocus?: InitialFocus;
   className?: string;
 }
 
@@ -41,9 +74,10 @@ export function Dialog({
   size = 'md',
   hideClose = false,
   paper = false,
+  initialFocus,
   className,
 }: DialogProps) {
-  const focus = useReturnFocus(!trigger);
+  const focus = useOpenFocus(!trigger, initialFocus);
   return (
     <DialogPrimitive.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
       {trigger && <DialogPrimitive.Trigger asChild>{trigger}</DialogPrimitive.Trigger>}
@@ -89,8 +123,13 @@ export interface ConfirmDialogProps {
   onOpenChange?: (open: boolean) => void;
   trigger?: ReactElement;
   title: ReactNode;
-  /** What happens if the user confirms, in one or two sentences. */
+  /** What happens if the user confirms, in one or two sentences. It renders inside a paragraph. */
   description: ReactNode;
+  /**
+   * Content below the description, such as a checkbox that changes what the action does. It can hold block
+   * elements, unlike `description`.
+   */
+  children?: ReactNode;
   /** Names the action, such as "Restore save". Never "OK" or "Yes". */
   confirmLabel: string;
   cancelLabel?: string;
@@ -111,6 +150,7 @@ export function ConfirmDialog({
   cancelLabel = 'Cancel',
   tone = 'primary',
   onConfirm,
+  children,
 }: ConfirmDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -150,6 +190,7 @@ export function ConfirmDialog({
               <AlertDialog.Description className={styles.description}>{description}</AlertDialog.Description>
             </div>
           </header>
+          {children !== undefined && <div className={cx(styles.body, styles.confirmBody)}>{children}</div>}
           <footer className={styles.footer}>
             <AlertDialog.Cancel asChild>
               <Button variant="ghost">{cancelLabel}</Button>
@@ -186,6 +227,13 @@ export interface DrawerProps {
   footer?: ReactNode;
   /** Removes padding from the body, for content that manages its own layout. */
   flush?: boolean;
+  /**
+   * Dims the page behind the drawer. Defaults to true. Pass false for a drawer that keeps the table in view, such
+   * as the rules reference. The overlay still catches clicks, so a click outside closes the drawer.
+   */
+  dimmed?: boolean;
+  /** Which element takes focus on open. Defaults to the first focusable element. */
+  initialFocus?: InitialFocus;
   className?: string;
 }
 
@@ -203,14 +251,16 @@ export function Drawer({
   children,
   footer,
   flush = false,
+  dimmed = true,
+  initialFocus,
   className,
 }: DrawerProps) {
-  const focus = useReturnFocus(!trigger);
+  const focus = useOpenFocus(!trigger, initialFocus);
   return (
     <DialogPrimitive.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
       {trigger && <DialogPrimitive.Trigger asChild>{trigger}</DialogPrimitive.Trigger>}
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className={styles.overlay} />
+        <DialogPrimitive.Overlay className={cx(styles.overlay, !dimmed && styles.overlayClear)} />
         <DialogPrimitive.Content
           className={cx(styles.drawer, styles[`drawer-${side}`], className)}
           style={width ? { width } : undefined}

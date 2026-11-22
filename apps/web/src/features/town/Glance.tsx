@@ -2,15 +2,16 @@
  * The town square's small panels: what the town offers, the party at a glance, the ready checklist, the party's
  * business (quests and journal), and what the table just did.
  */
-import { describeEvents, formatGameClock } from '@bxvtt/shared/text';
+import { count, describeEvents, formatGameClock } from '@bxvtt/shared/text';
 import type { FeedEntry } from '@bxvtt/shared/protocol';
 import { useMemo } from 'react';
 import { useFeed, useMember, useParty, usePlayerView, useTextContext } from '@/app';
-import { Badge, Button, ConditionChip, EmptyState, HpBar, Icon, Panel, type IconName } from '@/ui';
+import { Badge, Button, EmptyState, Icon, Panel, type IconName } from '@/ui';
 import { gaps, readinessChecklist } from './checklist';
-import { MemberToken, PurseOf, SeatOwner, classLine } from './parts';
+import { MemberToken, PurseOf, SeatOwner } from './parts';
 import { memberStatus } from './members';
 import { useTownServices } from './hooks';
+import { SpellActions, spellAdviceText, useSpellAdvice } from './SpellAdvice';
 import { parseService, sectionOf } from './services';
 import { useTownUi, type TownSection } from './townUi';
 import styles from './Glance.module.css';
@@ -49,7 +50,7 @@ export function ServicesPanel() {
     return { ...parseService(line), section, icon: section ? SECTION_ICON[section] : 'town' };
   });
   return (
-    <Panel title="What the town offers" meta={lines.length > 0 ? `${lines.length} places` : undefined}>
+    <Panel title="What the town offers" meta={lines.length > 0 ? count(lines.length, 'place') : undefined}>
       {lines.length === 0 ? (
         <EmptyState
           size="compact"
@@ -81,41 +82,24 @@ export function ServicesPanel() {
   );
 }
 
-/** The party at a glance: hit points, purse, status, and who plays each character. */
+/** What the dock's party list doesn't show: each member's coins, and who plays them. */
 export function PartyGlance() {
   const party = useParty();
   const buyerId = useTownUi((s) => s.buyerId);
   return (
-    <Panel title="The party" meta={`${party.length} adventurers`}>
+    <Panel title="Purses and players" meta={count(party.length, 'adventurer')}>
       <ul className={styles.party}>
         {party.map((member) => {
           const status = memberStatus(member);
           return (
             <li key={member.id} className={styles.member}>
-              <MemberToken member={member} size={40} />
+              <MemberToken member={member} size={32} />
               <div className={styles.memberBody}>
                 <div className={styles.memberHead}>
                   <h3 className={styles.memberName}>{member.name}</h3>
-                  <span className={styles.memberClass}>{classLine(member)}</span>
-                  {buyerId === member.id && <Badge tone="accent">You are shopping</Badge>}
+                  {buyerId === member.id && <Badge tone="neutral">You are shopping</Badge>}
                   {status.dead && <Badge tone="danger">Dead</Badge>}
                 </div>
-                {!status.dead && (
-                  <HpBar
-                    current={member.current_hp}
-                    max={member.max_hp}
-                    size="sm"
-                    showValue
-                    label={`${member.name}'s hit points`}
-                  />
-                )}
-                {status.afflictions.length > 0 && (
-                  <div className={styles.chips}>
-                    {status.afflictions.map((label) => (
-                      <ConditionChip key={label} label={label} tone="harm" />
-                    ))}
-                  </div>
-                )}
                 <div className={styles.memberFoot}>
                   <PurseOf member={member} />
                   <SeatOwner memberId={member.id} />
@@ -135,7 +119,8 @@ export function ChecklistPanel({ onShop }: { onShop?: (search: string) => void }
   const services = useTownServices();
   const setSection = useTownUi((s) => s.setSection);
   const setSearch = useTownUi((s) => s.setOutfitterSearch);
-  const checklist = useMemo(() => readinessChecklist(party), [party]);
+  const advice = useSpellAdvice();
+  const checklist = useMemo(() => readinessChecklist(party, spellAdviceText(advice)), [party, advice]);
   const missing = gaps(checklist).length;
   const shop = (search: string) => {
     if (onShop) onShop(search);
@@ -161,7 +146,12 @@ export function ChecklistPanel({ onShop }: { onShop?: (search: string) => void }
               </span>
               <span className={styles.checkDetail}>{line.detail}</span>
             </div>
-            {!line.covered && services.outfitter && (
+            {line.key === 'spells' && (
+              <div className={styles.checkActions}>
+                <SpellActions advice={advice} />
+              </div>
+            )}
+            {!line.covered && line.key !== 'spells' && services.outfitter && (
               <Button size="sm" variant="ghost" onClick={() => shop(line.search)}>
                 Find it
               </Button>

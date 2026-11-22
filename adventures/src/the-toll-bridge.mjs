@@ -12,6 +12,7 @@ import {
   valuable,
   wanderingTable,
 } from '../tools/lib.mjs';
+import { named } from './named-monsters.mjs';
 
 const DUNGEON = 'bridge';
 
@@ -79,7 +80,7 @@ level
     description:
       'A cramped office inside the toll tower, lit by a smoking lamp. Ledgers record every toll in a neat hand. A wizened man in an ink-stained robe sits behind the desk, and a bandit with a crossbow stands at his shoulder. Beside the desk is a square trapdoor with a rope handle, and a ladder climbs to the room above.',
     encounter: monsters([
-      ['medium', 1],
+      ['toll_clerk', 1],
       ['bandit', 1],
     ]),
     features: [
@@ -99,8 +100,8 @@ level
       'The top room of the toll tower, with arrow slits on four sides and a view down the whole gorge. Mag Corrie, who calls herself captain of the bridge, has furnished it with a stolen carpet and a curtained bed. Her bodyguard, a huge bare-chested man with a meat cleaver, never leaves her side.',
     encounter: monsters(
       [
-        ['veteran_2', 1],
-        ['berserker', 1],
+        ['mag_corrie', 1],
+        ['mags_bodyguard', 1],
       ],
       { aware: true },
     ),
@@ -299,12 +300,42 @@ const payload = {
           entrance: [1, 6],
           wandering: { chance_in_six: 1, interval_turns: 2, table },
           guidance:
-            "Play the bandits as lazy and greedy rather than cruel. The toll collectors at the gate would rather take a bribe than fight, and they run when Mag Corrie falls. Mag is clever and proud. She will bargain for her life, and she will lie. The river is the bridge's real danger: anyone who steps off the ledge is swept downstream to the shingle beach. Keep things moving, because the whole adventure should fit in an hour.",
+            "Play the bandits as lazy and greedy rather than cruel. The toll collectors at the gate would rather take a bribe than fight, and they run when Mag Corrie falls. The clerk in the counting room is a hedge-wizard, and the players should learn that only when he casts. Mag is clever and proud. She will bargain for her life, and she will lie. The river is the bridge's real danger: anyone who steps off the ledge is swept downstream to the shingle beach. Keep things moving, because the whole adventure should fit in an hour.",
         }),
       ],
     },
   ],
-  monsters: [],
+  monsters: [
+    named('veteran_2', {
+      id: 'mag_corrie',
+      name: 'Mag Corrie',
+      display_name: 'Mag Corrie',
+      display_name_plural: 'Mag Corries',
+      family_id: 'veteran',
+      intro:
+        'The self-styled captain of Crookback Bridge: a hard, clever fighter who leads the toll bandits.',
+    }),
+    named('berserker', {
+      id: 'mags_bodyguard',
+      name: "Mag Corrie's bodyguard",
+      display_name: "Mag's bodyguard",
+      display_name_plural: "Mag's bodyguards",
+      family_id: 'berserker',
+      intro:
+        'A huge, bare-chested man with a meat cleaver who fights in a rage and never leaves the captain.',
+    }),
+    // The toll clerk looks like a harmless bookkeeper. His family is normal_human so that the encounter
+    // panel doesn't reveal that he casts spells.
+    named('medium', {
+      id: 'toll_clerk',
+      name: 'Toll clerk',
+      display_name: 'ink-stained clerk',
+      display_name_plural: 'ink-stained clerks',
+      family_id: 'normal_human',
+      intro:
+        "The bandits' bookkeeper, a wizened hedge-wizard who passes for a clerk until he starts to cast.",
+    }),
+  ],
   items: [
     {
       item_type: 'gear',
@@ -389,7 +420,7 @@ const payload = {
     },
     {
       id: 'mag_falls',
-      when: { pattern_type: 'monster_defeated', template_id: 'veteran_2' },
+      when: { pattern_type: 'monster_defeated', template_id: 'mag_corrie' },
       conditions: [],
       repeatable: false,
       consequences: [{ command_type: 'set_flag', source: null, key: 'bridge.captain', value: 'beaten' }],
@@ -421,7 +452,7 @@ const payload = {
         {
           id: 'beat_mag_corrie',
           name: 'Beat Mag Corrie',
-          when: clause({ pattern_type: 'monster_defeated', template_id: 'veteran_2' }),
+          when: clause({ pattern_type: 'monster_defeated', template_id: 'mag_corrie' }),
           hidden: false,
           reveal_when: null,
           narrative: narrative({ progress: 'The captain of the bridge has lost her bridge.' }),

@@ -62,6 +62,9 @@ export async function startServer(
       failedHostKey: generous,
       userWrites: generous,
       userPosts: generous,
+      characterChecks: generous,
+      rejoin: generous,
+      rejoinPolls: generous,
       ...overrides.rateLimits,
     },
     quotas: { ...base.quotas, ...overrides.quotas },
@@ -239,6 +242,52 @@ export function findRefereeData(texts: string[], extraMarkers: string[] = []): s
       if (index >= 0) found.push(`${marker}: …${text.slice(Math.max(0, index - 80), index + 80)}…`);
     }
     if (/"referee":\{/.test(text)) found.push('"referee":{ (a referee state)');
+  }
+  return found;
+}
+
+/**
+ * Finds monster IDs in what a player received, outside bxapi's own player events and messages, which may name a
+ * monster by ID. The server names a monster to a player only by its target handle, except in a feed entry's
+ * `names`, which may hold labels for the monster IDs of that entry's own events.
+ *
+ * @param texts - The player's HTTP bodies and WebSocket messages, as text.
+ * @param monsterIds - The monster IDs of the session, from the referee state.
+ * @returns Each ID found, with a little context.
+ */
+export function findMonsterIds(texts: string[], monsterIds: string[]): string[] {
+  // A feed entry's `names` may name the monster IDs of its own events, and nothing more.
+  const namesOnlyFromEvents = (record: Record<string, unknown>): boolean => {
+    const names = record.names as { monsters?: Record<string, unknown> } | undefined;
+    if (!Array.isArray(record.events) || names === undefined) return false;
+    const events = JSON.stringify(record.events);
+    return Object.keys(names.monsters ?? {}).every((id) => events.includes(`"${id}"`));
+  };
+  const withoutEvents = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(withoutEvents);
+    if (typeof value !== 'object' || value === null) return value;
+    const record = value as Record<string, unknown>;
+    const dropNames = namesOnlyFromEvents(record);
+    return Object.fromEntries(
+      Object.entries(record)
+        .filter(([key, entry]) => !((key === 'events' || key === 'messages') && Array.isArray(entry)))
+        .filter(([key]) => !(key === 'names' && dropNames))
+        .map(([key, entry]) => [key, withoutEvents(entry)]),
+    );
+  };
+  const found: string[] = [];
+  for (const text of texts) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      continue;
+    }
+    const rest = JSON.stringify(withoutEvents(parsed));
+    for (const id of monsterIds) {
+      const index = rest.indexOf(`"${id}"`);
+      if (index >= 0) found.push(`${id}: …${rest.slice(Math.max(0, index - 80), index + 80)}…`);
+    }
   }
   return found;
 }

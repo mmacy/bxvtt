@@ -1,7 +1,7 @@
 import type { Language, SpellSummary } from '@bxvtt/shared/bxapi';
 import { alignmentDescription, alignmentLabel, classLabel, languageLabel } from '@bxvtt/shared/text';
 import { useState } from 'react';
-import { displayStringProblem, useRulesEntry, type ClassDetail, type SpellDetail } from '@/app';
+import { useMyCharacters, displayStringProblem, type ClassDetail } from '@/app';
 import {
   Badge,
   Button,
@@ -14,10 +14,13 @@ import {
   TextInput,
   cx,
 } from '@/ui';
+import { spellDuration, spellRange } from '../sheet/spellText';
 import { ALIGNMENTS, type Alignment } from './draft';
 import { suggestName } from './names';
 import type { ClassMagic } from './tables';
+import { RuleLink } from '../sheet/RuleLink';
 import styles from './wizard.module.css';
+import { useSpellDetail } from '../sheet/catalogs';
 
 export interface IdentityStepProps {
   name: string;
@@ -59,7 +62,7 @@ function SpellCard({
   onToggle: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const detail = useRulesEntry<SpellDetail>(open ? `spells/${spell.id}` : null);
+  const detail = useSpellDetail(open ? spell.id : null);
   return (
     <div className={cx(styles.spellChoice, selected && styles.spellChoiceSelected)}>
       <button
@@ -71,7 +74,7 @@ function SpellCard({
       >
         <span className={styles.spellName}>{spell.name}</span>
         <span className={styles.spellMeta}>
-          Range {spell.range} · {spell.duration}
+          {spellRange(spell.range)} · {spellDuration(spell.duration)}
         </span>
       </button>
       <Popover
@@ -89,6 +92,9 @@ function SpellCard({
             {detail.data.modes.map((mode) => (
               <p key={mode.key}>{mode.prose}</p>
             ))}
+            <p>
+              <RuleLink entry={{ kind: 'spells', id: spell.id }}>{spell.name}</RuleLink>
+            </p>
           </div>
         )}
       </Popover>
@@ -117,6 +123,7 @@ export function IdentityStep(props: IdentityStepProps) {
     showErrors,
   } = props;
   const nameProblem = displayStringProblem(name, 100);
+  const taken = (useMyCharacters().items ?? []).map((c) => c.name);
   const native = detail?.languages ?? [];
   const choosable = (languageCatalog ?? []).filter((l) => l.choosable && !native.includes(l.id));
   const firstSpells =
@@ -144,7 +151,7 @@ export function IdentityStep(props: IdentityStepProps) {
                 size="sm"
                 variant="ghost"
                 icon="dice"
-                onClick={() => onName(suggestName(detail?.race, name, Math.random()))}
+                onClick={() => onName(suggestName(detail?.race, name, Math.random(), taken))}
               >
                 Suggest a name
               </Button>
@@ -156,7 +163,7 @@ export function IdentityStep(props: IdentityStepProps) {
           <legend className={styles.subTitle}>Alignment</legend>
           <RadioGroup
             aria-label="Alignment"
-            value={alignment ?? undefined}
+            value={alignment ?? ''}
             onValueChange={(value) => {
               const next = ALIGNMENTS.find((a) => a === value);
               if (next) onAlignment(next);

@@ -10,7 +10,7 @@ The shell (`features/table`) already renders every feature in its place on the p
 | --- | --- | --- |
 | `wizard` | `CharacterWizard({ open, onClose, onCreated(character: StoredCharacter) })` | A dialog from the lobby's "Create a character" button. `onCreated` adds the character to the roster and refreshes the list. |
 | `sheet` | `PartyPanel()` | The Party tab of the dock. |
-| `sheet` | `CharacterSheet({ memberId: string \| null, onClose })` | A drawer the shell opens with `useTableUi().openCharacterSheet(memberId)`. |
+| `sheet` | `CharacterSheet({ memberId: string \| null, onClose, tab? })` | A drawer the shell opens with `useTableUi().openCharacterSheet(memberId, tab?)`. `tab` is `sheet`, `inventory`, or `spells`. |
 | `sheet` | `StoredCharacterCard({ characterId, summary: { name, class_id, level }, owner?, actions? })` | Each roster entry and each of the user's characters in the lobby. The lobby passes its reorder, remove, and add buttons as `actions`. |
 | `explore` | `MapStage()` | The stage whenever the party is in a dungeon, in every mode. |
 | `explore` | `ExploreActions()` | The action bar in `exploring` mode. Render `ActionBarItem` buttons. |
@@ -20,15 +20,22 @@ The shell (`features/table`) already renders every feature in its place on the p
 | `combat` | `EncounterPanel()` | The bottom center of the stage, over the map, in `encounter` mode. |
 | `combat` | `BattleBoard()` | The bottom center of the stage, over the map, in `battle` mode. |
 | `combat` | `CombatActions()` | The action bar in `encounter` and `battle` modes. |
-| `feed` | `FeedPanel()` | The Feed tab of the dock. The shell shows the unread count on the tab. |
+| `combat` | Any content, through `useCombatStage().showAftermath(node)` | The after-fight slot: the bottom center of the stage, over the map, in `exploring` and `town` modes. See "After a fight and at the end of a game". |
+| `feed` | `FeedPanel()` | The Feed tab of the dock. The shell shows the unread count on the tab, and keeps the panel mounted while another tab is active, so it keeps its scroll position and loaded history. |
 | `journal` | `JournalPanel()` | The Journal tab of the dock. |
-| `compendium` | `Compendium({ open, onOpenChange, entry: CompendiumEntry \| null })` | A drawer from the table menu, the rail's book button, the `B` key, and `useTableUi().openCompendium(entry)`. |
+| `compendium` | `Compendium({ open, onOpenChange, entry: CompendiumEntry \| null })` | A drawer from the table menu, the rail's book button (on every screen of play, town included), the `B` key, and `useTableUi().openCompendium(entry)`. `B` closes it again when focus is outside a text field. The lobby and the home page render it too, from the "Rules reference" button in the page header, so `openCompendium` works there. |
 | `referee` | `RefereePanel()` | The Referee tab of the dock, shown only to a referee with the lens on. |
 | `referee` | `SavesDialog({ open, onOpenChange })` | A dialog from the table menu. |
+
+The client loads in parts. The home page loads first. A table page, the lobby, the play screen, the compendium, the referee panel, and the design system gallery each load when someone first needs them, behind a loading state that stays blank for 300 ms. Import another feature through its barrel (`@/features/<name>`) as before. The shell's own modules import the lazily loaded parts with `React.lazy`, so don't import `PlayShell` or `TablePage` statically from outside `features/table`.
+
+The lobby shows a referee "Continue from a save" when the table has saves from earlier games, which opens `SavesDialog` with no game running, and tells players that saves exist.
 
 The shell owns the rest of the play screen: the top bar (name, mode badge, clock, referee lens switch, presence, and the table menu), the map tool rail, the action bar's caller status, the connection banner, the map pick prompt, the end screen for `game_over` and `victory`, the table settings dialog, and the seats dialog. Other directories you may read but not edit: `features/home`, `features/lobby`, and `features/table`.
 
 Stage overlay slots size nothing. A feature in a slot sets its own width, up to 380 px in the corner and 760 px at the bottom center. Each dock tab and the stage sit inside an `ErrorBoundary`, so a crash in one feature leaves the rest of the table running.
+
+The play screen works from 820 px wide. Below 1100 px the dock moves into a drawer. When the actions don't fit the action bar, it first shows only the icons of buttons that have one, and then moves actions from the end into a "More actions" menu. Give every action bar button an `icon`, so it stays recognizable without its label, and use `ActionBarMenu` for a button that opens a menu, so the overflow menu can list its entries.
 
 ## Rules
 
@@ -48,12 +55,15 @@ Import everything from `@/app`.
 
 | Export | What it does |
 | --- | --- |
-| `useIdentity(selector)` | The signed-in user and token, with `create(name)`, `update({ name, color })`, and `forget()`. |
+| `useIdentity(selector)` | The signed-in user and token, with `create(name)`, `update({ name, color })`, `adopt(token, user)` (sign in with a token the server issued, such as after a referee lets a returning player back in), and `forget()`. |
 | `useCurrentUser()` | The signed-in user, or `null`. |
-| `usePreferences(selector)` | Display preferences kept in this browser: `mapTheme`, `dockWidth`, `dockCollapsed`, `dockTab`, `refereeLens`, `sound`, and `motion`, with `set(key, value)`. |
-| `useReduceMotion()` | Whether to reduce motion: the user's choice, or the system setting. |
+| `usePreferences(selector)` | Display preferences kept in this browser: `mapTheme`, `dockWidth`, `dockCollapsed`, `dockTab`, `refereeLens`, `sound` (off until the user turns it on), and `motion`, with `set(key, value)`. |
+| `useReduceMotion()` | Whether to reduce motion: the user's choice, or the system setting. Kit components such as `DiceRoll` already follow it, because the app root renders `AppKitProvider`. |
+| `scopedStorage(scope, area?)` | Browser storage for one feature, under the prefix `bxvtt.<scope>.`, in `local` (the default) or `session` storage. It returns `{ key(name), read(name), write(name, value), remove(name) }`, reads and writes JSON, and keeps a copy in memory when the browser refuses storage. |
+| `readStored(key, area?)`, `writeStored(key, value, area?)`, `STORAGE_KEYS` | The same, for a full key. `STORAGE_KEYS` lists the app layer's own keys. |
+| `toParamMap(params)` | Keeps the params of a rejection that the text layer can read, for `describeRejection`. |
 | `getApi()` | The one `BxvttClient`, with the user's token. Prefer the hooks below. |
-| `describeProblem(error)` | Turns any API error into `{ title, detail }` for the player. |
+| `describeProblem(error)` | Turns any API error into `{ title, detail }` for the player. Every code in `PROBLEM_CODES` has its own words, and a test fails when a new code has none. |
 | `reportError(error, { title })` | Shows an error toast for an API error. |
 | `displayStringProblem(text, max)` | Checks a name or label the way the server does, so a form can stop it first. |
 | `tokenClass(classId)` | The kit's class icon key for a bxapi class ID, for `TokenPortrait`. |
@@ -62,6 +72,10 @@ Import everything from `@/app`.
 const theme = usePreferences((s) => s.mapTheme);
 const setPreference = usePreferences((s) => s.set);
 setPreference('mapTheme', 'torchlit');
+
+const drafts = scopedStorage('feed', 'session');
+drafts.write(`draft.${tableId}`, { text, to });
+const draft = drafts.read(`draft.${tableId}`); // unknown: validate it before use
 ```
 
 ### The table
@@ -85,6 +99,7 @@ Every hook below reads the table of the surrounding `TableProvider`. Each server
 | `usePresence()` | The set of connected user IDs. |
 | `useGame()` | The whole game state. Prefer a narrower hook. |
 | `useGameMode()` | `town`, `exploring`, `encounter`, `battle`, `game_over`, or `victory`. |
+| `useShownMode()` | The mode the play screen shows. It equals `useGameMode()` except while the shell holds a fight on screen before the end screen, when it stays `encounter` or `battle`. Lay out stage chrome by this mode, so it matches the overlays the shell shows. |
 | `useRevision()` | The game's revision. `useSendCommand` sends it for you. |
 | `usePlayerView()` | bxapi's player view. |
 | `useScene()` | The scene: known areas, features, caches, stairs, traps, and `names`. |
@@ -98,6 +113,11 @@ Every hook below reads the table of the surrounding `TableProvider`. Each server
 | `useControllableMembers()` | The member IDs the user can act for: their seats, or every member for a referee. |
 | `useCaller()` | `{ member, isMe }` for the caller. |
 | `useEncounter()` | The open encounter or battle from the player view. |
+| `usePartyLight()` | The party's light in the words the map's light chip and the party panel share: `{ lights, darkness, lit, text }`. `text` is "The party has no light." (`NO_LIGHT_TEXT`), "Magical darkness covers the party." (`DARKNESS_TEXT`), or each light as "Brenna's torch, about 6 turns left", joined with ". ". Each light's source comes from the newest `exploration.light.lit` event in the feed, or from the pack when the member carries one kind of light. `lightLine(name, noun, rounds)` and `lightTimeLeft(rounds)` build the same words. |
+| `useRejoinRequests()`, `useDecideRejoin()` | For a referee, the table's pending requests to come back in as an existing member, and `{ approve(id), decline(id), pending }`. A player gets an empty list. The shell's prompt already uses them. |
+| `cancelRejoin(requestId, secret)`, `cancelRejoinOnLeave(requestId, secret)`, `isTransientFailure(error)` | For the visitor who asked to come back in: end the request before the page stops waiting, end it with a beacon while the page goes away, and tell a failed poll that may pass (a dropped connection, a restarting server) from the server's definite answer. The join page already uses them. |
+| `isRetiredToken(error)` | Whether the server refused the token because a referee let its user back in from another browser (`token_retired`). `useIdentity` then drops the stored user with the notice `retired`, and the name form and the table page explain it instead of offering a second member with the same name. |
+| `useBattleRound()` | The battle round the party is declaring for, from 1, or `null` outside a battle. osrlib's `battle_round` counts resolved rounds, and a monsters' free round counts as the first, so this is `battle_round + 1`. The top bar and the battle board both show it. `battleRound(encounter)` is the same as a pure function. |
 | `useDeclarations()` | The current round's declarations, or `null`. |
 | `useRefereeState()` | The dynamic referee state. Referee with the lens on only. |
 | `useAdventureDocument()` | The full adventure, loaded once per session. Referee with the lens on only. |
@@ -138,13 +158,28 @@ const permission = useCanSend('cast_spell', member.id);
 
 ### Sending commands and showing refusals
 
-`useSendCommand()` returns `{ send, pending, pendingType }`. `send(command, { display })`:
+`useSendCommand()` returns `{ send, pending, pendingType, pendingTypes }`. `send(command, { display, repeatable })`:
 
 - Sends the current revision as `expected_revision`.
-- Sends one command at a time per table, so a double click sends once, and paces commands to `COMMANDS_PER_SECOND` (4), so holding an arrow key never reaches the server's limit of 100 changes every 20 seconds. Call `send` on every key press and let it drop the extras.
+- Sends one command at a time per table, and paces commands to `COMMANDS_PER_SECOND` (4), so the client never reaches the server's limit of 100 changes every 20 seconds.
 - Applies the new game state to the store, so the next render shows it.
 - Explains a refusal with `describeRejection`, as a toast by default.
 - On a revision conflict, shows "The table changed" once and loads the new state.
+
+A send is a deliberate action by default: a click, a menu choice, a form, or a shortcut. The client never drops one silently:
+
+- While another command is in flight, or while the client paces commands, the action waits in a short queue (`MAX_QUEUED_COMMANDS`, 3) and sends in order, with the revision of that moment. The promise resolves when it has sent and landed.
+- The same command with the same fields waits once, so a double click sends once and both clicks get the same result.
+- `pendingType` names the latest action the player asked for that hasn't landed, a waiting one included, so `loading={pendingType === 'rest'}` shows the spinner on Rest while it waits. `pendingTypes` lists all of them, the command in flight first, and `pending` is true while any exist.
+- When its turn comes, a waiting action that no longer fits is dropped with one calm toast, and resolves `skipped` with reason `stale`: the mode changed, bxapi no longer lists the command, or the party moved to another cell and the command names a `direction`, `x`, `y`, or `feature_id`. A command such as `rest` or `search` still sends after a move.
+- An action that waited longer than `QUEUED_COMMAND_MAX_WAIT_MS` (5 seconds) is dropped the same way, with reason `expired`. A full queue refuses a fourth action with a toast and reason `busy`.
+
+Pass `{ repeatable: true }` for an input the player repeats or holds, such as a movement key. A repeatable send is dropped without a word while a command is in flight, while actions wait, or while the client paces commands, so a held key never stacks up steps. Call `send` on every key press and let it drop the extras. The explore feature sends moves and turns this way, from keys and from clicks on the map.
+
+```tsx
+// A held arrow key.
+send({ command_type: 'move_party', direction }, { display: 'inline', repeatable: true });
+```
 
 It resolves to one of:
 
@@ -153,7 +188,7 @@ It resolves to one of:
 | `accepted` | bxapi accepted it. `result` holds the events and messages. |
 | `refused` | bxapi refused it. `message` and `sentences` explain why in the game's terms, and `rejections` holds the codes. |
 | `conflict` | The game moved on first. The store has the new state. Let the user choose again. |
-| `skipped` | The client didn't send it. `reason` is `busy`, `throttled`, `no_game`, or `not_allowed`. Pacing is silent. |
+| `skipped` | The client didn't send it. `reason` is `busy`, `throttled`, `no_game`, `not_allowed`, `stale`, or `expired`. Only a repeatable send is skipped as `busy` or `throttled` without a word. |
 | `error` | The request failed. `message` explains it, and a toast already showed it unless `display` is `inline`. |
 
 ```tsx
@@ -183,7 +218,7 @@ A request can fail with a quota (403 `forbidden`, such as 100 saves per table), 
 
 ### Text
 
-`useTextContext()` returns the `TextContext` for `describeEvents`, `describeRejection`, and `humanizeMessage`. The store builds it from every game state and carries it forward, so names survive a command that removes them from the view. It holds the party, the encounter groups, the scene's area names, and `scene.names`. The hook adds the names of any catalog that has loaded, and for a referee with the lens on, the referee state and the adventure's names.
+`useTextContext()` returns the `TextContext` for `describeEvents`, `describeRejection`, and `humanizeMessage`. The store builds it from every game state and carries it forward, so names survive a command that removes them from the view. It holds the party, the encounter groups, the scene's area names, and `scene.names`. The hook adds the names of any catalog that has loaded, and for a referee with the lens on, the referee state and the adventure's names. Every name goes through the text layer's own functions (`contextFromPlayerView`, `extendContextWithNames`, `extendContextWithCatalog`, and `extendContextWithReferee`), which keep its curated nouns, so a catalog lot name such as `Torches (6)` still reads as "a torch". Don't write into a context's `items` yourself.
 
 ```tsx
 const ctx = useTextContext();
@@ -215,12 +250,34 @@ Each hook fetches its catalog once per page load, shares it with every component
 
 ### Shell overlays
 
-`useTableUi(selector)` opens what the shell renders: `openCharacterSheet(memberId)`, `openCompendium(entry?)`, `setSavesOpen`, `setSettingsOpen`, `setSeatsOpen`, `setShortcutsOpen`, and `setPaletteOpen`.
+`useTableUi(selector)` opens what the shell renders: `openCharacterSheet(memberId, tab?)`, `openCompendium(entry?)`, `toggleCompendium()`, `setSavesOpen`, `setSettingsOpen`, `setSeatsOpen`, `setShortcutsOpen`, and `setPaletteOpen`. `openCompendium()` without an entry opens the compendium at its first page, or leaves it on its current page when it is already open.
 
 ```tsx
 const openSheet = useTableUi((s) => s.openCharacterSheet);
 <Button variant="ghost" onClick={() => openSheet(member.id)}>{member.name}</Button>;
+<Button onClick={() => openSheet(member.id, 'spells')}>Prepare spells</Button>;
 ```
+
+`openCharacterSheet(memberId, 'spells')` opens the sheet at its Spells tab, and a member with no spells sees the first tab. `NoTableProvider` gives a screen outside any table an empty table, where the reader counts as a player with no game, so a feature that reads the table, such as the compendium, renders on the home page.
+
+### After a fight and at the end of a game
+
+`useCombatStage` connects the combat feature to the shell's stage:
+
+- `showAftermath(node)` fills the after-fight slot at the bottom center of the stage, and `closeAftermath()` empties it. The slot shows in `exploring` and `town` modes, and the content renders inside the table's providers, so it can use every hook. The shell empties the slot when the next encounter or battle starts and when the user leaves the table.
+- `setMoment({ round, clockRounds })` publishes the round and the game clock the playback shows, and `setMemberStates(states)` publishes each party member's `{ hp, maxHp, conditions, dead }` at the beat on the board. While playback runs, the top bar shows the moment and the party panel shows the member states, so neither runs ahead of the board. Publish `null` for both when playback ends. `setPlaying(false)` clears them too.
+- `setPlaying(playing)` reports whether combat playback is running. When a fight ends the game (`game_over` or `victory`), the shell keeps the fight on screen, with its overlays and the fight's mode badge, until playback stops. It waits up to 1.5 seconds for playback to start, and never holds the end screen back longer than 20 seconds. During that hold, `useShownMode()` returns the fight's mode.
+
+```tsx
+const setPlaying = useCombatStage((s) => s.setPlaying);
+useEffect(() => setPlaying(playback.playing), [playback.playing, setPlaying]);
+useEffect(() => () => setPlaying(false), [setPlaying]);
+
+// When the board unmounts at the end of a fight:
+useCombatStage.getState().showAftermath(<Aftermath endRevision={revision} afterSeq={seq} onClose={close} />);
+```
+
+`Aftermath`'s close button calls `useCombatStage.getState().closeAftermath()`.
 
 ### Keyboard shortcuts and the command palette
 
@@ -231,7 +288,9 @@ useShortcut({ id: 'explore.search', keys: 's', label: 'Search the area', group: 
 useAction({ id: 'explore.search', label: 'Search the area', group: 'Party', icon: 'search', shortcut: 's', run: search });
 ```
 
-The shell already uses `?`, `mod+k`, `mod+s` (save), `b` (rules reference), `shift+l` (referee lens), `alt+1` to `alt+4` (dock tabs), `escape` (cancel a map pick), and the map tools: `v` select, `h` pan, `r` measure, `p` ping, `d` draw, `n` pin, and `e` erase. Pick other keys, or tell the client lead.
+The shell already uses `?`, `mod+k`, `mod+s` (save), `b` (open or close the rules reference), `shift+l` (referee lens), `alt+1` to `alt+4` (dock tabs), `escape` (cancel a map pick), and the map tools: `v` select, `h` pan, `r` measure, `p` ping, `d` draw, `n` pin, and `e` erase. Pick other keys, or tell the client lead.
+
+The focused map handles only its own keys: the arrow keys, plus, minus, zero, Space, and Escape when it has a measurement to clear. Letters reach your shortcuts even after a click on the map. A feature that handles keys on the map itself in the capture phase takes those keys from every shortcut while the map has focus: `explore` moves the party with the arrow keys and turns it with Alt and an arrow key.
 
 ### The map interaction bus
 
@@ -263,6 +322,8 @@ const fulfilPick = useMapBus((s) => s.fulfilPick);
 ## Test a feature
 
 Web tests run with `npx vitest run --project web`. Write a test for behavior, not for markup.
+
+`src/test-setup.ts` already stubs the browser APIs that jsdom lacks and Radix needs (`ResizeObserver`, `hasPointerCapture`, `setPointerCapture`, `releasePointerCapture`, `scrollIntoView`, and `matchMedia`), so any kit component opens in a test. Remove a feature's own copy of these stubs.
 
 `renderWithTable(ui, options)` from `@/app/testing/renderWithTable` mounts a component inside a fake open table: a table store filled from a snapshot, the kit's providers, a router, and a fake API whose methods are spies. It returns Testing Library's result with `store`, `api`, `user` (a `userEvent` instance), and `snapshot`.
 

@@ -1,7 +1,6 @@
 import type { RollEntry } from '@bxvtt/shared/protocol';
 import { memo, useMemo } from 'react';
 import { Badge, DiceRoll, cx } from '@/ui';
-import { useReduceMotion } from '@/app';
 import { rollSentence, rollView } from './model/dice';
 import { Highlight, useFeedView } from './FeedView';
 import styles from './feed.module.css';
@@ -61,9 +60,8 @@ export const RollCard = memo(function RollCard({
   color: string | undefined;
 }) {
   const view = useFeedView();
-  const reduceMotion = useReduceMotion();
   const roll = useMemo(() => rollView(entry), [entry]);
-  const animate = view.animate(entry.seq) && !reduceMotion;
+  const animate = view.animate(entry.seq);
   const name = view.nameOf(entry.user_id);
   const comment = entry.comment.trim();
   const d20 = roll.expression?.sides === 20;
@@ -85,9 +83,8 @@ export const RollCard = memo(function RollCard({
       </div>
       <div className={styles.rollBody}>
         {roll.drawn !== null ? (
-          // The kit announces its own result. The feed announces the roll with the roller's name instead, so the
-          // tumble is inert.
-          <div inert className={styles.rollDice}>
+          // The feed announces the roll with the roller's name, so the kit's own announcement is off.
+          <div className={styles.rollDice}>
             <DiceRoll
               dice={roll.drawn}
               modifier={roll.modifier}
@@ -97,6 +94,9 @@ export const RollCard = memo(function RollCard({
               animate={animate}
               highlightExtremes={d20}
               hideTotal
+              hideHeader
+              hideSkip
+              announce={false}
             />
           </div>
         ) : null}

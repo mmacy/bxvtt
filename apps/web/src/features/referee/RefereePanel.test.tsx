@@ -1,11 +1,9 @@
 import { screen, waitFor, within } from '@testing-library/react';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { renderWithTable } from '@/app/testing/renderWithTable';
 import { RefereePanel } from './RefereePanel';
-import { commandResult, installDomShims, refereeApi } from './testing/helpers';
-
-beforeAll(installDomShims);
+import { commandResult, refereeApi } from './testing/helpers';
 
 describe('RefereePanel', () => {
   it('shows the key for where the party stands', async () => {
@@ -14,6 +12,20 @@ describe('RefereePanel', () => {
     expect(await screen.findAllByText('Gatehouse stair')).not.toHaveLength(0);
     expect(await screen.findByText(/A flight of worn steps runs down/)).toBeInTheDocument();
     expect(screen.getAllByText(/1 in 6, checked every 2 turns/)).not.toHaveLength(0);
+  });
+
+  it('names things in words, and shows IDs and cells only with Show IDs on', async () => {
+    const api = refereeApi();
+    const { user } = renderWithTable(<RefereePanel />, {
+      snapshot: fixtureSnapshot('exploring', 'referee'),
+      api,
+    });
+    expect(await screen.findByText(/The statue is Saint Corvane/)).toBeInTheDocument();
+    expect(screen.queryByText('fallen_statue')).not.toBeInTheDocument();
+    expect(screen.queryByText(/cell \d+, \d+/)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('switch', { name: 'Show IDs' }));
+    expect(screen.getByText('fallen_statue')).toBeInTheDocument();
+    expect(screen.getAllByText(/cell \d+, \d+/).length).toBeGreaterThan(0);
   });
 
   it('shows nothing of the referee view with the lens off', () => {

@@ -74,6 +74,12 @@ export const TableSummary = z.object({
   role: Role,
   phase: TablePhase,
   member_count: z.number().int(),
+  /**
+   * How many members have a WebSocket open to the table right now, the same users that the table's
+   * `presence` message lists. Optional in the type so that older fixtures still compile. This server always
+   * sends it.
+   */
+  online_count: z.number().int().optional(),
   game: GameSummary.nullable(),
   created_at: Timestamp,
 });

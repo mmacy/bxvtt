@@ -18,7 +18,7 @@ import {
   useTextContext,
 } from '@/app';
 import { Accordion, Banner, Button, EmptyState, Icon, Panel, type IconName } from '@/ui';
-import { commandInfo } from '@bxvtt/shared/text';
+import { commandInfo, count } from '@bxvtt/shared/text';
 import { CommandForm } from './CommandForm';
 import { usePartyAccess } from './hooks';
 import { MemberToken, PlaceHeader, classLine } from './parts';
@@ -28,6 +28,12 @@ import { useTownUi } from './townUi';
 import styles from './RestAndPrepare.module.css';
 
 const REST_ICONS: Record<string, IconName> = { turn: 'hourglass', night: 'moon', day: 'sun' };
+/** What each rest is for, in town. The length shows once, on its own line. */
+const REST_PURPOSE: Record<string, string> = {
+  turn: 'A short breather.',
+  night: 'Counts as sleep, so casters can prepare spells afterward.',
+  day: 'Counts as sleep, and heals everyone who is alive.',
+};
 const REST_LENGTH: Record<string, string> = {
   turn: formatDuration(1, 'turn'),
   night: formatDuration(48, 'turn'),
@@ -46,7 +52,7 @@ export function describeChanges(before: PlayerView | null, after: PlayerView): s
     const was = before?.party.find((candidate) => candidate.id === member.id);
     if (was !== undefined && member.current_hp > was.current_hp) {
       changes.push(
-        `${member.name} recovered ${member.current_hp - was.current_hp} hit points and has ${member.current_hp} of ${member.max_hp}.`,
+        `${member.name} recovered ${count(member.current_hp - was.current_hp, 'hit point')} and has ${member.current_hp} of ${member.max_hp}.`,
       );
     }
   }
@@ -90,7 +96,17 @@ function spellCounts(member: MemberView): { book: number; prepared: number } {
 }
 
 /** Commands this page has a control for elsewhere in town. */
-const HANDLED = new Set(['rest', 'enter_dungeon', 'purchase_equipment', 'sell_treasure', 'purchase_healing']);
+const HANDLED = new Set([
+  'rest',
+  'enter_dungeon',
+  'purchase_equipment',
+  'sell_treasure',
+  'purchase_healing',
+  // Preparing, learning, and casting spells have proper controls on the character sheet.
+  'prepare_spells',
+  'learn_spell',
+  'cast_spell',
+]);
 
 function RestPanel() {
   const access = usePartyAccess('rest');
@@ -105,9 +121,6 @@ function RestPanel() {
   }, [schema.data]);
   return (
     <Panel title="Rest">
-      <p className={styles.lead}>
-        A night of sleep lets casters prepare spells. A full day of rest also heals everyone who is alive.
-      </p>
       <div className={styles.restOptions}>
         {kinds.map((kind) => (
           <div key={kind} className={styles.restOption}>
@@ -116,7 +129,7 @@ function RestPanel() {
             </span>
             <div className={styles.restText}>
               <h3 className={styles.restName}>{restKindLabel(kind)}</h3>
-              <p className={styles.restDetail}>{restKindDescription(kind)}</p>
+              <p className={styles.restDetail}>{REST_PURPOSE[kind] ?? restKindDescription(kind)}</p>
               {REST_LENGTH[kind] && <p className={styles.restLength}>{REST_LENGTH[kind]} of game time</p>}
             </div>
             <Button
@@ -162,11 +175,13 @@ function SheetPanel() {
   return (
     <Panel title="Prepare and manage gear" meta="On the character sheet">
       <p className={styles.lead}>
-        Open a sheet to prepare or learn spells, wield and wear gear, and move items between packs.
+        A caster's button opens the Spells tab, where you prepare, learn, and cast spells. Anyone else's opens
+        the character sheet, where you wield and wear gear and move items between packs.
       </p>
       <ul className={styles.members}>
         {party.map((member) => {
           const counts = spellCounts(member);
+          const caster = counts.book + counts.prepared > 0;
           return (
             <li key={member.id} className={styles.member}>
               <MemberToken member={member} size={32} />
@@ -178,8 +193,13 @@ function SheetPanel() {
                     `, ${counts.book} in the spell book, ${counts.prepared} prepared`}
                 </span>
               </div>
-              <Button size="sm" variant="secondary" icon="book" onClick={() => openSheet(member.id)}>
-                {`Open ${member.name}'s sheet`}
+              <Button
+                size="sm"
+                variant="secondary"
+                icon="book"
+                onClick={() => (caster ? openSheet(member.id, 'spells') : openSheet(member.id))}
+              >
+                {caster ? `Open ${member.name}'s spells` : `Open ${member.name}'s sheet`}
               </Button>
             </li>
           );
@@ -193,7 +213,7 @@ function OtherPanel() {
   const commands = useLegalCommands();
   const others = commands.filter((command) => !HANDLED.has(command.command_type));
   return (
-    <Panel title="Other things the party can do" meta={`${others.length} actions`}>
+    <Panel title="Other things the party can do" meta={count(others.length, 'action')}>
       {others.length === 0 ? (
         <EmptyState size="compact" icon="check" title="Nothing else is open" />
       ) : (

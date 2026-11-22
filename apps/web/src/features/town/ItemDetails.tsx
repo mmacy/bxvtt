@@ -1,5 +1,6 @@
-import { itemTypeLabel } from '@bxvtt/shared/text';
-import { Badge, Button, Icon, Skeleton } from '@/ui';
+import { count, formatGold, itemTypeLabel } from '@bxvtt/shared/text';
+import { useTextContext } from '@/app';
+import { Badge, Button, Icon } from '@/ui';
 import { describeItem, itemIcon, weightCoins, type ShopItem } from './equipment';
 import styles from './ItemDetails.module.css';
 
@@ -13,6 +14,7 @@ export interface ItemDetailsProps {
 
 /** What a buyer needs to know about one item, with a button that puts a lot in the cart. */
 export function ItemDetails({ item, lots, onAdd, buyerName, disabled }: ItemDetailsProps) {
+  const ctx = useTextContext();
   if (item === null) {
     return (
       <div className={styles.empty}>
@@ -21,7 +23,7 @@ export function ItemDetails({ item, lots, onAdd, buyerName, disabled }: ItemDeta
       </div>
     );
   }
-  const facts = describeItem(item);
+  const facts = describeItem(item, ctx);
   const weight = weightCoins(item);
   return (
     <article className={styles.details} aria-label={`${item.summary.name}, details`}>
@@ -33,12 +35,13 @@ export function ItemDetails({ item, lots, onAdd, buyerName, disabled }: ItemDeta
           <h3 className={styles.name}>{item.summary.name}</h3>
           <div className={styles.badges}>
             <Badge tone="neutral">{itemTypeLabel(item.summary.item_type)}</Badge>
-            <Badge tone="gold" icon="coins">{`${item.summary.cost_gp} gp`}</Badge>
-            {weight !== null && <Badge tone="neutral">{`${weight} coins`}</Badge>}
+            <Badge tone="gold" icon="coins">
+              {formatGold(item.summary.cost_gp)}
+            </Badge>
+            {weight !== null && <Badge tone="neutral">{count(weight, 'coin')}</Badge>}
           </div>
         </div>
       </header>
-      {item.detail === null && <Skeleton lines={2} />}
       {facts.facts.length > 0 && (
         <dl className={styles.facts}>
           {facts.facts.map((fact) => (

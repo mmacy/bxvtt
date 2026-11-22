@@ -1,5 +1,5 @@
 import { commandInfo } from '@bxvtt/shared/text';
-import { forwardRef, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   formatShortcut,
   useAction,
@@ -9,16 +9,7 @@ import {
   useTableUi,
   type ActionDefinition,
 } from '@/app';
-import {
-  ActionBarDivider,
-  ActionBarItem,
-  Button,
-  DropdownMenu,
-  Tooltip,
-  type ButtonProps,
-  type IconName,
-  type MenuEntry,
-} from '@/ui';
+import { ActionBarDivider, ActionBarItem, ActionBarMenu, Button, type IconName, type MenuEntry } from '@/ui';
 import {
   doorEntries,
   entryLabel,
@@ -30,49 +21,22 @@ import {
   stairsHere,
   transitionAction,
   treasureEntries,
+  treasureMenuLabel,
   turnEntries,
   type ActionContext,
 } from './actions';
 import { CommandFormDialog } from './CommandForm';
-import { useActionContext, useAtEntrance, useSessionLore } from './hooks';
+import { CUSTOM_COMMANDS, SHEET_COMMANDS } from './commandSets';
+import { useActionContext, useCanTravelToTown, useSessionDoors } from './hooks';
 import { doorLoreKey } from './levels';
 import { livingMembers } from './party';
 import { levelKey } from '@/map';
 import { useExploreSend } from './useExploreSend';
 
-/** The commands this bar, the map, and the scene panel give their own controls. */
-export const CUSTOM_COMMANDS: ReadonlySet<string> = new Set([
-  'move_party',
-  'turn_party',
-  'open_door',
-  'close_door',
-  'force_door',
-  'wedge_door',
-  'listen_at_door',
-  'pick_lock',
-  'search',
-  'inspect_treasure',
-  'remove_treasure_trap',
-  'take_treasure',
-  'light_source',
-  'extinguish_source',
-  'rest',
-  'use_stairs',
-  'travel_to_town',
-]);
-
-/** Commands the character sheet handles, which the More menu opens the sheet for. */
-export const SHEET_COMMANDS: ReadonlySet<string> = new Set([
-  'drop_items',
-  'give_items',
-  'equip_item',
-  'unequip_item',
-]);
-
 /** The listen actions for every closed door beside the party. */
 function listenEntries(
   ctx: ActionContext,
-  doorLore: (direction: string) => ReturnType<typeof useSessionLore>['doors'][string] | undefined,
+  doorLore: (direction: string) => ReturnType<typeof useSessionDoors>[string] | undefined,
 ): MenuEntry[] {
   const closed = doorsHere(ctx.view).filter((door) => !door.open);
   const groups = closed.map((door) => {
@@ -101,17 +65,6 @@ function unwrap(entries: MenuEntry[]): MenuEntry[] {
   return entries;
 }
 
-/** A bar button with a tooltip that passes the props of the toolbar and the menu trigger through to the button. */
-const TipButton = forwardRef<HTMLButtonElement, ButtonProps & { tip: string; keys?: string }>(
-  function TipButton({ tip, keys, ...props }, ref) {
-    return (
-      <Tooltip content={tip} shortcut={keys ? formatShortcut(keys) : undefined}>
-        <Button ref={ref} size="sm" variant="secondary" {...props} />
-      </Tooltip>
-    );
-  },
-);
-
 interface MenuActionProps {
   id: string;
   label: string;
@@ -123,53 +76,24 @@ interface MenuActionProps {
   loading?: boolean;
 }
 
-/**
- * A menu button that joins the action bar's arrow-key navigation. `ActionBarItem` passes the toolbar's props to
- * this component, and it passes them on through the menu trigger to the button.
- */
-const MenuButton = forwardRef<
-  HTMLButtonElement,
-  ButtonProps & MenuActionProps & { open: boolean; onOpenChange: (open: boolean) => void }
->(function MenuButton(
-  { id: _id, label, icon, keys, items, reason, loading, open, onOpenChange, ...rest },
-  ref,
-) {
-  const disabled = reason !== null || items.length === 0;
-  return (
-    <DropdownMenu
-      open={open && !disabled}
-      onOpenChange={onOpenChange}
-      side="top"
-      items={items}
-      trigger={
-        <TipButton
-          ref={ref}
-          {...rest}
-          tip={reason ?? label}
-          keys={keys}
-          icon={icon}
-          iconEnd="chevron-up"
-          disabled={disabled}
-          loading={loading}
-        >
-          {label}
-        </TipButton>
-      }
-    />
-  );
-});
-
 /** An action bar button that opens a menu, with a shortcut that opens it too. */
-function MenuAction(props: MenuActionProps) {
-  const { id, label, icon, keys, items, reason } = props;
+function MenuAction({ id, label, icon, keys, items, reason, loading }: MenuActionProps) {
   const [open, setOpen] = useState(false);
   const disabled = reason !== null || items.length === 0;
   useShortcut({ id, keys, label, group: 'Party', enabled: !disabled, run: () => setOpen(true) });
   useAction({ id, label, group: 'Party', icon, shortcut: keys, disabled, run: () => setOpen(true) });
   return (
-    <ActionBarItem>
-      <MenuButton {...props} open={open} onOpenChange={setOpen} />
-    </ActionBarItem>
+    <ActionBarMenu
+      label={label}
+      icon={icon}
+      items={items}
+      tooltip={reason ?? label}
+      shortcut={formatShortcut(keys)}
+      disabled={disabled}
+      loading={loading}
+      open={open && !disabled}
+      onOpenChange={setOpen}
+    />
   );
 }
 
@@ -189,22 +113,29 @@ function DirectAction({ id, label, icon, keys, run, loading }: DirectActionProps
   useAction(definition);
   return (
     <ActionBarItem>
-      <TipButton tip={label} keys={keys} icon={icon} loading={loading} onClick={run}>
+      <Button
+        size="sm"
+        variant="secondary"
+        icon={icon}
+        loading={loading}
+        title={keys ? `${label} (${formatShortcut(keys).join(' ')})` : undefined}
+        onClick={run}
+      >
         {label}
-      </TipButton>
+      </Button>
     </ActionBarItem>
   );
 }
 
 /**
  * The action bar in `exploring` mode: search, listen, light, rest, and, when they apply here, treasure, stairs,
- * and the way back to town. "More" lists every other legal command, each with a form built from its schema.
+ * and the way back to town. "Other" lists every other legal command, each with a form built from its schema.
  */
 export function ExploreActions() {
   const ctx = useActionContext();
-  const lore = useSessionLore();
+  const doors = useSessionDoors();
   const legal = useLegalCommands();
-  const atEntrance = useAtEntrance();
+  const canTravel = useCanTravelToTown();
   const openSheet = useTableUi((s) => s.openCharacterSheet);
   const { pendingType, send } = useExploreSend();
   const [form, setForm] = useState<string | null>(null);
@@ -219,7 +150,7 @@ export function ExploreActions() {
       (direction !== 'north' && direction !== 'east' && direction !== 'south' && direction !== 'west')
     )
       return undefined;
-    return lore.doors[
+    return doors[
       doorLoreKey(levelKey(here.dungeon_id, here.level_number), here.position[0], here.position[1], direction)
     ];
   };
@@ -227,13 +158,6 @@ export function ExploreActions() {
   const more = useMemo<MenuEntry[]>(() => {
     if (ctx === null) return [];
     const entries: MenuEntry[] = [...turnEntries(ctx)];
-    if (atEntrance !== true && ctx.can('travel_to_town')) {
-      entries.push({
-        label: 'Return to town',
-        icon: 'town',
-        onSelect: () => ctx.run({ command_type: 'travel_to_town' }),
-      });
-    }
     const living = livingMembers(ctx.view.party);
     const sheet: MenuEntry[] = [];
     for (const command of legal) {
@@ -268,7 +192,7 @@ export function ExploreActions() {
       }
     }
     return entries;
-  }, [ctx, legal, atEntrance, openSheet]);
+  }, [ctx, legal, openSheet]);
 
   if (ctx === null || location?.kind !== 'dungeon') return null;
 
@@ -325,11 +249,11 @@ export function ExploreActions() {
         reason={restPermission.allowed ? null : restPermission.reason}
         loading={pendingType === 'rest'}
       />
-      {(treasure.length > 0 || stairs.length > 0 || atEntrance === true) && <ActionBarDivider />}
+      {(treasure.length > 0 || stairs.length > 0 || canTravel) && <ActionBarDivider />}
       {treasure.length > 0 && (
         <MenuAction
           id="explore.treasure"
-          label="Treasure"
+          label={treasureMenuLabel(ctx.scene)}
           icon="chest"
           keys="g"
           items={treasure}
@@ -351,7 +275,7 @@ export function ExploreActions() {
           loading={pendingType === 'use_stairs'}
         />
       )}
-      {atEntrance === true && ctx.can('travel_to_town') && (
+      {canTravel && ctx.can('travel_to_town') && (
         <DirectAction
           id="explore.town"
           label="Return to town"
@@ -361,7 +285,7 @@ export function ExploreActions() {
         />
       )}
       <ActionBarDivider />
-      <MenuAction id="explore.more" label="More" icon="more" keys="m" items={more} reason={null} />
+      <MenuAction id="explore.other" label="Other" icon="more" keys="m" items={more} reason={null} />
       <CommandFormDialog commandType={form} onClose={() => setForm(null)} />
     </>
   );

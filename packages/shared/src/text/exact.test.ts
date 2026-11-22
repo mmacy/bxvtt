@@ -390,7 +390,7 @@ describe('events', () => {
         facing: 'east',
         narrative: null,
       },
-      'The party moves to (2, 0), facing east.',
+      'The party moves east.',
       'neutral',
       'movement',
     ],
@@ -559,7 +559,7 @@ describe('events', () => {
         con_applied: true,
         title: 'Warrior',
       },
-      'Brenna reaches level 2 (Warrior) and gains 4 hit points.',
+      "Brenna reaches level 2 and gains 4 hit points. Brenna's title is now Warrior.",
       'good',
       'xp',
     ],
@@ -588,7 +588,7 @@ describe('events', () => {
         unit: 'turn',
         rounds_total: 3780,
       },
-      'The referee moves the clock forward 3 turns (30 minutes).',
+      'The referee moves the clock forward 3 turns, or 30 minutes.',
       'info',
       'time',
     ],
@@ -804,8 +804,8 @@ describe('humanizeMessage', () => {
       'character-0001 fumbles with the tinder box \u2014 no flame.',
       'Brenna fumbles with the tinder box, no flame.',
     ],
-    ['The party enters dungeon barrow (level 1).', 'The party enters The Barrow (level 1).'],
-    ['The party enters area guard_room (level 1).', 'The party enters the guard room (level 1).'],
+    ['The party enters dungeon barrow (level 1).', 'The party enters the Barrow, level 1.'],
+    ['The party enters area guard_room (level 1).', 'The party enters the guard room.'],
     [
       'A trap springs (hollow:1:pit_room) on character-0003!',
       'A trap springs (the trap in the pit room) on Wren!',
@@ -832,7 +832,7 @@ describe('humanizeMessage', () => {
 describe('contexts', () => {
   it('reads members, groups, magic item displays, valuables, and the town from a player view', () => {
     expect(ctx.members['character-0003']).toEqual({ name: 'Wren', classId: 'thief', level: 1 });
-    expect(ctx.groups['group-0001']).toEqual({ label: 'goblin', labelPlural: 'goblins', count: 3 });
+    expect(ctx.groups['group-0001']).toEqual({ label: 'goblin', labelPlural: 'goblins', count: 3, size: 3 });
     expect(ctx.items['magic-item-0001']).toBe('potion');
     expect(ctx.items['valuable-0001']).toBe('ruby');
     expect(ctx.townName).toBe('Threshold');

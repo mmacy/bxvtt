@@ -2,15 +2,16 @@ import type { AbilityTables, EquipmentSummary } from '@bxvtt/shared/bxapi';
 import { BxvttProblemError } from '@bxvtt/shared/client';
 import type { CharacterRequest, Problem } from '@bxvtt/shared/protocol';
 import { describe, expect, it } from 'vitest';
-import type { ClassDetail } from '@/app';
+import type { ClassDetail, EquipmentDetail } from '@/app';
 import { createFakeApi } from '@/app/testing/renderWithTable';
 import catalog from './__fixtures__/catalog.json';
 import { facesForScore } from './dice';
+import { autoEquip } from './OutfitStep';
 import { emptyDraft, goldKey, parseDraft, requestFromDraft, type WizardDraft } from './draft';
 import { applyKit } from './kits';
 import { suggestName } from './names';
-import { DRY_RUN_SENTINEL, countGold, dryRun, explainCreationError, explainInvalid } from './server';
-import { extraLanguageCount, headlineModifier, xpModifierFor, type Scores } from './tables';
+import { checkChoices, explainCreationError, explainInvalid } from './server';
+import { casterNextStep, extraLanguageCount, headlineModifier, xpModifierFor, type Scores } from './tables';
 
 const tables = catalog.abilities as unknown as AbilityTables;
 const fighter = catalog.details.fighter as unknown as ClassDetail;
@@ -143,43 +144,19 @@ describe('suggestName', () => {
   });
 });
 
-describe('dryRun and countGold', () => {
-  const body: CharacterRequest = { name: 'Wren', class_id: 'fighter', alignment: 'lawful' };
-
-  it('reads the extra equip refusal as every choice passing', async () => {
+describe('checkChoices', () => {
+  it('asks the check route with the roll the choices name', async () => {
     const api = createFakeApi();
-    api.createCharacter.mockRejectedValue(
-      problem({ field: 'equip_item_ids', id: DRY_RUN_SENTINEL, index: 0 }),
-    );
-    await expect(dryRun(api, body)).resolves.toEqual({ kind: 'ok' });
-    expect(api.createCharacter).toHaveBeenCalledWith({ ...body, equip_item_ids: [DRY_RUN_SENTINEL] });
-  });
-
-  it('finds the gold by halving the range of lots', async () => {
-    const api = createFakeApi();
-    const gold = 73;
-    api.createCharacter.mockImplementation(async (request: CharacterRequest) => {
-      const lots = request.purchases?.[0]?.quantity ?? 1;
-      if (lots > gold) {
-        throw problem({
-          rejections: [
-            { code: 'items.purchase.insufficient_funds', params: { item: 'torch', cost_gp: lots } },
-          ],
-        });
-      }
-      throw problem({ field: 'equip_item_ids', id: DRY_RUN_SENTINEL, index: 0 });
-    });
-    await expect(countGold(api, body, 'torch')).resolves.toEqual({ kind: 'gold', gp: 73 });
-    expect(api.createCharacter.mock.calls.length).toBeLessThanOrEqual(12);
-  });
-
-  it('reports a choice that stops creation before the gold', async () => {
-    const api = createFakeApi();
-    api.createCharacter.mockRejectedValue(
-      problem({ rejections: [{ code: 'magic.book.capacity_mismatch', params: {} }] }),
-    );
-    const result = await countGold(api, body, 'torch');
-    expect(result.kind).toBe('invalid');
+    api.checkCharacter.mockResolvedValue({ valid: true, problem: null, gold_gp: 90 });
+    const body: CharacterRequest = {
+      name: 'Wren',
+      class_id: 'fighter',
+      alignment: 'lawful',
+      ability_roll_id: 'rol_test',
+    };
+    await expect(checkChoices(api, body)).resolves.toEqual({ valid: true, problem: null, gold_gp: 90 });
+    expect(api.checkCharacter).toHaveBeenCalledWith(body);
+    expect(api.createCharacter).not.toHaveBeenCalled();
   });
 });
 
@@ -215,5 +192,52 @@ describe('explaining refusals', () => {
       rejections: [{ code: 'items.purchase.insufficient_funds', params: { item: 'chainmail', cost_gp: 40 } }],
     }).sentences.join(' ');
     expect(text).not.toMatch(/items\.|chainmail_|_/);
+  });
+});
+
+describe('autoEquip', () => {
+  it('puts on the first body armour, shield, and weapon, as a kit would', () => {
+    const byId = new Map(
+      [
+        { id: 'plate_mail', item_type: 'armour', ac: 3, ac_bonus: null },
+        { id: 'leather', item_type: 'armour', ac: 7, ac_bonus: null },
+        { id: 'shield', item_type: 'armour', ac: null, ac_bonus: 1 },
+        { id: 'sword', item_type: 'weapon' },
+        { id: 'dagger', item_type: 'weapon' },
+        { id: 'torch', item_type: 'gear' },
+      ].map((d) => [d.id, d as unknown as EquipmentDetail]),
+    );
+    expect(autoEquip('plate_mail', [], byId)).toBe(true);
+    expect(autoEquip('shield', ['plate_mail'], byId)).toBe(true);
+    expect(autoEquip('leather', ['plate_mail', 'shield'], byId)).toBe(false);
+    expect(autoEquip('sword', ['plate_mail'], byId)).toBe(true);
+    expect(autoEquip('dagger', ['sword'], byId)).toBe(false);
+    expect(autoEquip('torch', [], byId)).toBe(false);
+  });
+});
+
+describe('casterNextStep', () => {
+  const mu = catalog.details.magic_user as unknown as ClassDetail;
+  it('tells an arcane caster when the first spell gets memorized', () => {
+    expect(casterNextStep('Tamsin', mu, ['Sleep'])).toBe(
+      "Tamsin starts with Sleep in the spell book, and memorizes it after the party's first night of rest.",
+    );
+  });
+  it('says nothing for a class without spells', () => {
+    expect(casterNextStep('Brenna', fighter, [])).toBeNull();
+  });
+  it("doesn't promise spells the class table doesn't give at first level", () => {
+    const cleric = {
+      ...mu,
+      id: 'cleric',
+      abilities: [{ tag: 'divine_magic', name: 'Divine Magic', prose: '', manual: false, params: {} }],
+      progression: mu.progression.map((row) => ({
+        ...row,
+        spell_slots: row.level === 1 ? [0, 0, 0, 0, 0] : [1, 0, 0, 0, 0],
+      })),
+    } as unknown as ClassDetail;
+    expect(casterNextStep('Osric', cleric, [])).toBe(
+      'Osric casts no spells at first level and gains spell slots at level 2.',
+    );
   });
 });

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAdventureDocument, useGame, usePlayerView, useRefereeState } from '@/app';
-import { Badge, Button, EmptyState, Icon, cx } from '@/ui';
+import { Badge, Button, EmptyState, Icon, SectionLabel, cx } from '@/ui';
 import {
   adventureQuests,
   buildQuestLog,
@@ -43,11 +43,11 @@ function QuestItem({ quest, seen }: { quest: QuestCard; seen: SeenQuests | null 
           {quest.name}
         </h3>
         {change === 'new' && (
-          <Badge tone="accent" appearance="solid">
+          <Badge tone="info" appearance="solid">
             New
           </Badge>
         )}
-        {change === 'updated' && <Badge tone="accent">Updated</Badge>}
+        {change === 'updated' && <Badge tone="info">Updated</Badge>}
         {change === 'completed' && (
           <Badge tone="success" icon="check">
             Completed
@@ -174,10 +174,10 @@ export function Quests() {
   }
   return (
     <div className={styles.questLog}>
-      <section aria-labelledby="quests-active">
-        <h2 id="quests-active" className={styles.sectionTitle}>
-          Active quests <span className={styles.count}>{log.active.length}</span>
-        </h2>
+      <section aria-label="Active quests">
+        <SectionLabel level={2} count={log.active.length}>
+          Active quests
+        </SectionLabel>
         {log.active.length === 0 ? (
           <p className={styles.quiet}>The party has no quest in hand right now.</p>
         ) : (
@@ -185,21 +185,20 @@ export function Quests() {
         )}
       </section>
       {log.completed.length > 0 && (
-        <section aria-labelledby="quests-done">
-          <h2 id="quests-done" className={styles.sectionTitle}>
-            Completed <span className={styles.count}>{log.completed.length}</span>
-          </h2>
+        <section aria-label="Completed quests">
+          <SectionLabel level={2} count={log.completed.length}>
+            Completed
+          </SectionLabel>
           {log.completed.map((quest) => (
             <QuestItem key={quest.id} quest={quest} seen={seen} />
           ))}
         </section>
       )}
       {log.notOffered.length > 0 && (
-        <section aria-labelledby="quests-hidden" className={styles.refereeSection}>
-          <h2 id="quests-hidden" className={styles.sectionTitle}>
-            <Icon name="eye-off" size={13} /> Not offered yet{' '}
-            <span className={styles.count}>{log.notOffered.length}</span>
-          </h2>
+        <section aria-label="Quests not offered yet" className={styles.refereeSection}>
+          <SectionLabel level={2} count={log.notOffered.length}>
+            Not offered yet
+          </SectionLabel>
           <p className={styles.quiet}>Only referees see these quests until the party takes them on.</p>
           {log.notOffered.map((quest) => (
             <QuestItem key={quest.id} quest={quest} seen={null} />

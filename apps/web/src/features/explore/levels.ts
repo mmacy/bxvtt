@@ -104,7 +104,7 @@ function isDirection(value: string | null): value is Direction {
   return value === 'north' || value === 'east' || value === 'south' || value === 'west';
 }
 
-/** What the scene adds to a player's map of one level: transitions, caches, and features. */
+/** What the scene adds to a player's map of one level: transitions, caches, features, and entered areas. */
 export function sceneExtras(level: SceneLevel | null): PlayerMapExtras {
   if (level === null) return {};
   const where = (areaId: string | null, position: [number, number] | null): [number, number] | null => {
@@ -143,6 +143,7 @@ export function sceneExtras(level: SceneLevel | null): PlayerMapExtras {
       side: isDirection(transition.side) ? transition.side : null,
     })),
     features,
+    areas: level.areas.map(({ id, name, description, cells }) => ({ id, name, description, cells })),
   };
 }
 
@@ -205,7 +206,9 @@ export function buildPlayerLevel(
       },
     };
   });
-  return { ...map, features, edges };
+  // The scene states the entrance once its cell is on the party's map, and the map draws it.
+  const entrance = level?.entrance ?? null;
+  return { ...map, features, edges, entrance: entrance ? [entrance[0], entrance[1]] : map.entrance };
 }
 
 /** Builds a referee's map of one level, or `null` when the adventure has no such level. */
@@ -216,4 +219,18 @@ export function buildRefereeLevel(source: RefereeMapSource, key: string): LevelM
 /** The key of the door lore for one side of a cell. */
 export function doorLoreKey(level: string, x: number, y: number, direction: Direction): string {
   return `${level}:${edgeKey(x, y, direction)}`;
+}
+
+/** The name of a level's own wandering monster table in the adventure document, such as "Priory undercroft". */
+export function wanderingTableName(
+  document: Record<string, unknown> | null,
+  dungeonId: string,
+  levelNumber: number,
+): string | null {
+  const dungeon = adventureDungeons(document)?.dungeons.find((d) => d.id === dungeonId);
+  const level = dungeon?.levels.find((l) => l.number === levelNumber);
+  const table = level?.wandering.table;
+  if (!table) return null;
+  const label = (table as { label?: unknown }).label;
+  return typeof label === 'string' && label.trim() !== '' ? label : null;
 }

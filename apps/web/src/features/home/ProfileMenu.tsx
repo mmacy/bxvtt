@@ -109,9 +109,12 @@ export function ProfileMenu() {
       width="300px"
       title="Your profile"
       trigger={
-        <button type="button" className={styles.profileTrigger} aria-label={`Your profile: ${user.name}`}>
+        // The button takes its name from its text, "Ruth, your profile", which starts with the name a speech-input
+        // user sees. The avatar's initial is hidden from assistive technology.
+        <button type="button" className={styles.profileTrigger}>
           <Avatar name={user.name} color={user.color} size="sm" decorative />
           <span className={styles.profileName}>{user.name}</span>
+          <span className="visually-hidden">, your profile</span>
         </button>
       }
     >

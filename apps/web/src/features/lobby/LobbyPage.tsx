@@ -3,12 +3,13 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { describeProblem, getApi, useCaller, useIsReferee, useMembers, useTableDetail } from '@/app';
 import { Badge, Banner, Panel, PageLayout, Wordmark } from '@/ui';
-import { ProfileMenu } from '@/features/home';
+import { ProfileMenu, RulesReference } from '@/features/home';
 import { AdventurePicker } from './AdventurePicker';
 import { InvitePanel } from './InvitePanel';
 import { MembersPanel } from './MembersPanel';
 import { OptionalRules, type RulesetChoices } from './OptionalRules';
 import { RosterPanel } from './RosterPanel';
+import { LobbySaves } from './LobbySaves';
 import { StartGamePanel } from './StartGamePanel';
 import { TableSettingsForm } from './TableSettingsForm';
 import styles from './lobby.module.css';
@@ -80,7 +81,12 @@ export function LobbyPage({ banner }: { banner?: ReactNode }) {
           Your tables
         </RouterLink>
       }
-      headerActions={<ProfileMenu />}
+      headerActions={
+        <>
+          <RulesReference />
+          <ProfileMenu />
+        </>
+      }
     >
       <div className={styles.page}>
         {banner && <div className={styles.stickyBanner}>{banner}</div>}
@@ -99,7 +105,7 @@ export function LobbyPage({ banner }: { banner?: ReactNode }) {
               {online} of {members.length} online
             </Badge>
             {caller.member && (
-              <Badge tone="accent" icon="flag">
+              <Badge tone="neutral" icon="flag">
                 {caller.isMe ? 'You are the caller' : `${caller.member.name} is the caller`}
               </Badge>
             )}
@@ -134,11 +140,15 @@ export function LobbyPage({ banner }: { banner?: ReactNode }) {
             {referee ? (
               <Panel title="Start the game">
                 <StartGamePanel table={table} adventure={adventure} ruleset={ruleset} />
+                <LobbySaves />
               </Panel>
             ) : (
-              <Banner tone="neutral" icon="hourglass" title="Waiting for the referee to start">
-                The game starts for everyone at once. This page switches to the table by itself.
-              </Banner>
+              <>
+                <Banner tone="neutral" icon="hourglass" title="Waiting for the referee to start">
+                  The game starts for everyone at once. This page switches to the table by itself.
+                </Banner>
+                <LobbySaves />
+              </>
             )}
             <Panel title="People at the table" meta={`${members.length}`} bodyPadding="sm">
               <MembersPanel />

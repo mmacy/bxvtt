@@ -17,6 +17,7 @@ import {
   ActionBar,
   ActionBarDivider,
   ActionBarItem,
+  ActionBarMenu,
   Dock,
   GameClock,
   TableLayout,
@@ -309,6 +310,15 @@ export function KitTableMock({ fullscreen = false }: KitTableMockProps) {
                 Open door
               </Button>
             </ActionBarItem>
+            <ActionBarMenu
+              label="Light"
+              icon="torch"
+              shortcut={['T']}
+              items={[
+                { label: 'Wren lights a torch', onSelect: () => toast.info('Wren lights a torch.') },
+                { label: 'Osric lights a lantern', onSelect: () => toast.info('Osric lights a lantern.') },
+              ]}
+            />
             <ActionBarDivider />
             <ActionBarItem>
               <Button variant="ghost" icon="rest">

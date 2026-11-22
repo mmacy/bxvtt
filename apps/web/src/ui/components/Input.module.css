@@ -131,6 +131,23 @@
   outline: none;
 }
 
+/* The caller set the rows, so the rows set the height. */
+.textareaRows {
+  min-height: 0;
+}
+
+.textareaGrow {
+  resize: none;
+  overflow-y: hidden;
+}
+
+/* The kit's clear button replaces the browser's own on a search field. */
+.input[type='search']::-webkit-search-cancel-button,
+.input[type='search']::-webkit-search-decoration {
+  appearance: none;
+  display: none;
+}
+
 /* Number input */
 .number {
   font-family: var(--font-numeric);

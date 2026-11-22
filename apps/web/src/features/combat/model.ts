@@ -11,18 +11,18 @@ import type { BattleDeclaration, EncounterGroupView, EncounterView, MemberView }
 import type { DeclarationBody, DeclarationRefusal, Member, Seat } from '@bxvtt/shared/protocol';
 import {
   describeRejection,
-  equipmentNoun,
   formatFeet,
   groupName,
-  itemName,
+  itemPhrase,
   joinList,
   memberName,
   monsterName,
+  resolveItemNoun,
   spellName,
-  type ParamMap,
-  type ParamValue,
+  withArticle,
   type TextContext,
 } from '@bxvtt/shared/text';
+import { toParamMap } from '@/app';
 
 // Inventory ----------------------------------------------------------------------------------------------------
 
@@ -35,6 +35,11 @@ export interface WeaponInfo {
   missile: boolean;
   /** Whether the weapon has the `reload` quality. */
   reload: boolean;
+  /**
+   * Whether a missile attack throws the weapon rather than shooting from it: a weapon that is also a melee
+   * weapon, such as a dagger or a spear, or a one-handed missile weapon that isn't a sling, such as a javelin.
+   */
+  thrown: boolean;
   /** The far end of the weapon's long range band, in feet, or `null` for a weapon with no ranges. */
   longRangeFeet: number | null;
 }
@@ -85,6 +90,12 @@ function longRange(ranges: unknown): number | null {
   return asNumber(long?.max_feet);
 }
 
+function isThrown(qualities: readonly string[]): boolean {
+  if (!qualities.includes('missile')) return false;
+  if (qualities.includes('melee')) return true;
+  return !qualities.some((q) => q === 'two_handed' || q === 'reload' || q === 'blunt');
+}
+
 /** The kind of a magic item from its catalog ID or its masked display name. */
 export function magicItemKind(templateId: string | null, display: string): ItemKind {
   const text = `${templateId ?? ''} ${display}`.toLowerCase();
@@ -94,11 +105,6 @@ export function magicItemKind(templateId: string | null, display: string): ItemK
   if (/staff/.test(text)) return 'staff';
   if (/\brod\b|rod_of/.test(text)) return 'rod';
   return 'magic';
-}
-
-function lowerName(name: string): string {
-  // Catalog names such as "Oil (1 flask)" read better without the lot size in a sentence.
-  return name.replace(/\s*\([^)]*\)\s*$/, '');
 }
 
 /**
@@ -123,6 +129,7 @@ export function memberGear(member: MemberView, ctx: TextContext): MemberGear {
         melee: qualities.includes('melee'),
         missile: qualities.includes('missile'),
         reload: qualities.includes('reload'),
+        thrown: isThrown(qualities),
         longRangeFeet: longRange(record.missile_ranges),
       });
       continue;
@@ -137,10 +144,11 @@ export function memberGear(member: MemberView, ctx: TextContext): MemberGear {
     if (qualities.length === 0) continue;
     wielded.push({
       id,
-      name: withIndefinite(equipmentNoun(id)?.one ?? itemName(id, ctx).toLowerCase()),
+      name: itemPhrase(resolveItemNoun(id, ctx, { name: asString(template.name) ?? undefined })),
       melee: qualities.includes('melee'),
       missile: qualities.includes('missile') && !qualities.includes('splash'),
       reload: qualities.includes('reload'),
+      thrown: isThrown(qualities),
       longRangeFeet: longRange(template.missile_ranges ?? combat?.missile_ranges),
     });
   }
@@ -169,7 +177,7 @@ export function memberGear(member: MemberView, ctx: TextContext): MemberGear {
     const splash = qualitiesOf(asRecord(template.combat)).includes('splash');
     items.push({
       id,
-      name: equipmentNoun(id)?.one ?? lowerName(asString(template.name) ?? itemName(id, ctx)).toLowerCase(),
+      name: resolveItemNoun(id, ctx, { name: asString(template.name) ?? undefined }).one,
       kind: splash ? 'splash' : 'gear',
       quantity,
       magic: false,
@@ -294,7 +302,9 @@ export function planAttack(
       ...base,
       kind: 'missile',
       weapon: reaching,
-      note: `Shoots with ${reaching.name} from ${formatFeet(distance)}.`,
+      note: reaching.thrown
+        ? `Throws ${reaching.name} ${formatFeet(distance)}.`
+        : `Shoots with ${reaching.name} from ${formatFeet(distance)}.`,
       reason: null,
     };
   }
@@ -363,7 +373,7 @@ function targetPhrase(ids: readonly string[], ctx: TextContext): string {
   for (const id of ids.filter((i) => !i.startsWith('character-'))) {
     const name = monsterName(id, ctx);
     const known = ctx.monsters[id];
-    const sole = Object.values(ctx.groups).find((g) => withIndefinite(g.label) === name);
+    const sole = Object.values(ctx.groups).find((g) => withArticle(g.label) === name);
     const plural = known?.labelPlural ?? sole?.labelPlural ?? 'monsters';
     const entry = counts.get(name) ?? { n: 0, plural };
     entry.n += 1;
@@ -373,16 +383,11 @@ function targetPhrase(ids: readonly string[], ctx: TextContext): string {
   return joinList([...members, ...monsters]);
 }
 
-function itemPhrase(itemId: string | null | undefined, gear: MemberGear | null, ctx: TextContext): string {
+function declaredItem(itemId: string | null | undefined, gear: MemberGear | null, ctx: TextContext): string {
   if (!itemId) return 'an item';
   const carried = gear?.items.find((item) => item.id === itemId);
-  if (carried) return carried.magic ? carried.name : withIndefinite(carried.name);
-  return itemName(itemId, ctx);
-}
-
-function withIndefinite(name: string): string {
-  if (/^(a|an|the|some)\s/i.test(name)) return name;
-  return /^[aeiou]/i.test(name) ? `an ${name}` : `a ${name}`;
+  if (carried?.magic) return carried.name;
+  return itemPhrase(resolveItemNoun(itemId, ctx, carried ? { name: carried.name } : {}));
 }
 
 /**
@@ -424,7 +429,7 @@ export function describeDeclaration(
       break;
     case 'use_item': {
       const carried = d.item_id ? gear?.items.find((item) => item.id === d.item_id) : undefined;
-      const item = itemPhrase(d.item_id, gear, ctx);
+      const item = declaredItem(d.item_id, gear, ctx);
       if (carried?.kind === 'potion') {
         text = targets[0] ? `Give ${memberName(targets[0], ctx)} ${item} to drink` : `Drink ${item}`;
       } else if (carried?.kind === 'splash') {
@@ -441,7 +446,7 @@ export function describeDeclaration(
       break;
     }
     case 'give_item':
-      text = `Give ${itemPhrase(d.item_id, gear, ctx)} to ${targets[0] ? memberName(targets[0], ctx) : 'a party member'}`;
+      text = `Give ${declaredItem(d.item_id, gear, ctx)} to ${targets[0] ? memberName(targets[0], ctx) : 'a party member'}`;
       break;
     case 'turn_undead':
       text = 'Turn undead';
@@ -516,61 +521,37 @@ export function seatOwner(
 
 // Refusals -----------------------------------------------------------------------------------------------------
 
-function isParamValue(value: unknown): value is ParamValue {
-  if (typeof value === 'string' || typeof value === 'number') return true;
-  return Array.isArray(value) && value.every((item) => typeof item === 'string' || typeof item === 'number');
-}
-
-/** Keeps the params of a refusal that the text layer reads: strings, numbers, and lists of them. */
-export function paramMap(params: Record<string, unknown>): ParamMap {
-  const map: Record<string, ParamValue> = {};
-  for (const [key, value] of Object.entries(params)) if (isParamValue(value)) map[key] = value;
-  return map;
-}
-
 /**
  * The text of the last attempt's refusals, by member, and the refusals that name no member under `null`.
  */
 export function refusalTexts(
   refusals: readonly DeclarationRefusal[],
   ctx: TextContext,
-  declarations: Record<string, { action?: string }> = {},
 ): { byMember: Record<string, string[]>; general: string[] } {
   const byMember: Record<string, string[]> = {};
   const general: string[] = [];
+  const add = (memberId: string, text: string) => {
+    const list = byMember[memberId] ?? [];
+    if (!list.includes(text)) list.push(text);
+    byMember[memberId] = list;
+  };
   for (const refusal of refusals) {
-    const text = describeRejection({ code: refusal.code, params: paramMap(refusal.params) }, ctx);
-    const memberId = refusal.member_id ?? soleSuspect(refusal.code, declarations);
-    if (memberId === null) {
-      if (!general.includes(text)) general.push(text);
-    } else {
-      const list = byMember[memberId] ?? [];
-      if (!list.includes(text)) list.push(text);
-      byMember[memberId] = list;
-    }
+    const text = describeRejection({ code: refusal.code, params: toParamMap(refusal.params) }, ctx);
+    const candidates = refusal.candidates ?? [];
+    if (refusal.member_id !== null) add(refusal.member_id, text);
+    else if (candidates.length === 1 && candidates[0]) add(candidates[0], text);
+    else if (candidates.length > 1)
+      for (const id of candidates) add(id, `One of these declarations was refused: ${lowerFirst(text)}`);
+    else if (!general.includes(text)) general.push(text);
   }
   return { byMember, general };
 }
 
-/** The declaration action each family of refusal codes can come from. */
-const CODE_ACTIONS: Array<[RegExp, string[]]> = [
-  [/^magic\.(cast|memorize)\./, ['cast']],
-  [/^magic\.turning\./, ['turn_undead']],
-  [/^items\./, ['use_item', 'give_item']],
-  [/^combat\.attack\./, ['attack']],
-];
-
-/**
- * When a refusal names no member, the one member whose declaration could have caused it, or `null` when that
- * isn't clear. bxapi leaves the member out of some codes, such as `magic.cast.too_many_targets`.
- */
-function soleSuspect(code: string, declarations: Record<string, { action?: string }>): string | null {
-  const actions = CODE_ACTIONS.find(([pattern]) => pattern.test(code))?.[1];
-  if (!actions) return null;
-  const suspects = Object.entries(declarations).filter(
-    ([, d]) => d.action !== undefined && actions.includes(d.action),
-  );
-  return suspects.length === 1 ? (suspects[0]?.[0] ?? null) : null;
+function lowerFirst(text: string): string {
+  // Keep a sentence that starts with a name capitalized.
+  return /^(The|A|An|This|That|It|One|Every|No)\b/.test(text)
+    ? text.charAt(0).toLowerCase() + text.slice(1)
+    : text;
 }
 
 // Spells -------------------------------------------------------------------------------------------------------

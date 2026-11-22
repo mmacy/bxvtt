@@ -83,13 +83,23 @@ fromPlayerView(view, undefined, {
 });
 ```
 
+The player view also names no areas. Pass the areas the party has entered, such as the scene's `levels[].areas`, and the map names them:
+
+```ts
+fromPlayerView(view, key, {
+  extras: { areas: sceneLevel.areas.map(({ id, name, cells }) => ({ id, name, cells })) },
+});
+```
+
+Each area keeps only the cells on the party's map and gets no key number, because players don't see the key. From a zoom of 16 pixels a cell, the map writes the area's name on the widest row of its cells that holds no stairs or feature, so a name never covers a symbol. A long name wraps to two lines inside the area's walls. If it still doesn't fit, it runs up to two cells past the walls where nothing is drawn, then shrinks, and only then ends in an ellipsis. When the party token would cover a name, the name moves above or below the token, to whichever side holds no symbol. Referee labels follow the same rules. The hover tooltip names the area under the pointer. If you draw your own labels, pass `areaLabels={false}` to `DungeonMap` and keep the areas for the tooltip.
+
 Keep extras on the server's player projection or in the player's own store, never from referee data.
 
 ## Model builders
 
 | Function | What it returns |
 | --- | --- |
-| `fromPlayerView(view, levelKey?, options?)` | A player map of one level, or `null`. `options.lightRadiusFeet` sets the light hint, and `options.extras` adds transitions and features. |
+| `fromPlayerView(view, levelKey?, options?)` | A player map of one level, or `null`. `options.lightRadiusFeet` sets the light hint, and `options.extras` adds transitions, features, and areas. |
 | `fromReferee(refereeView, levelKey?)` | A referee map of one level, with the party light read from the effects ledger, or `null`. |
 | `fromRefereeView(levelSpec, dungeonState, { dungeonId, light })` | A referee map from the parts, for when you hold the level and the state separately. |
 | `refereeLight(refereeView)` | `{ radiusFeet }` from the largest light effect on a party member, or `null` when the party has no light or darkness puts it out. |
@@ -102,7 +112,7 @@ A `LevelMap` contains:
 - `edges`: every edge around the floor cells, with `kind` (`wall`, `open`, `door`, or `passage`) and a `door` with `open`, `wedged`, `locked`, `unlocked`, `stuck`, `secret`, `discovered`, and `gated`. A field the player view doesn't report is `null`.
 - `transitions`: stairs up and down, trapdoors, chutes, and passages, with their destination on a referee map.
 - `features`: caches (`emptied`, and a treasure `trap` with its state), rolled caches, piles, construction tricks (`found`), and custom features, each with a `contents` list for a tooltip.
-- `areas`: on a referee map, each keyed area with its `label` (its position in the list, from 1), name, description, cells, label `anchor`, `encounter` summary, `treasure`, and room `trap`.
+- `areas`: on a referee map, each keyed area with its `label` (its position in the list, from 1), name, description, cells, label `anchor`, `encounter` summary, `treasure`, and room `trap`. On a player map, the areas from `extras.areas`, with an empty `label` and no encounter, treasure, or trap.
 - `entrance`, `party` (position and facing), `light`, `wandering` (the level's wandering monster check), `bounds`, and `knownBounds`.
 
 ## Props
@@ -121,13 +131,16 @@ A `LevelMap` contains:
 | `rulerMetric` | `'grid' \| 'diagonal' \| 'straight'` | `'grid'` | How the ruler counts squares. `grid` counts the orthogonal steps the party walks. |
 | `followParty` | `boolean` | `false` | Keeps the camera on the party. A pan turns it off and calls `onFollowPartyChange(false)`. |
 | `arrowKeys` | `'pan' \| 'move'` | `'pan'` | With `'move'`, the arrow keys call `onMoveKey`, and Shift with the arrows pans. |
+| `letterKeys` | `boolean` | `false` | Handles W, A, S, and D (pan), C (centre on the party), and F (follow) on the focused map. Leave it off in the app, so letters reach the app's shortcuts. The harness turns it on. |
 | `reducedMotion` | `boolean` | the user's `prefers-reduced-motion` | Turns off easing, inertia, and flicker. |
 | `refereeMarkers` | `boolean` | `true` | On a referee map, draws area labels and the encounter, treasure, and trap markers. |
+| `areaLabels` | `boolean` | `true` | On a player map, draws the names of the areas from `extras.areas`. |
+| `hideErasedStrokes` | `boolean` | `true` | Hides a stroke as soon as the eraser touches it, until the next `strokes` list arrives or you call `restoreErasedStrokes`. With `false`, the map only reports `onStrokeErase`, and a stroke stays until you remove it from `strokes`. |
 | `showWandering` | `boolean` | `true` | On a referee map, shows the wandering monster chip in the corner. |
 | `zoomLimits` | `{ min, max }` | `{ min: 6, max: 160 }` | Zoom limits in CSS pixels per cell. |
 | `initialView` | `'fit' \| 'party'` | `'fit'` | Where the camera starts on a new level. `fit` shows the known cells on a player map and the whole level on a referee map. |
 | `ariaLabel` | `string` | `'Dungeon map'` | The accessible name. |
-| `className`, `style` | | | Applied to the container. Give the container a size. |
+| `className`, `style` | | | Applied to the container. Give the container a size. The map's own defaults (`position: relative`, `overflow: hidden`, and the theme's rock color as the background) sit in a rule with no specificity, so a class or a style can position the map, such as `position: absolute; inset: 0`. |
 
 ## Callbacks
 
@@ -142,13 +155,16 @@ Every click callback receives a target and a `MapPointerInfo` with the screen po
 | `onHover(target)` | The hovered target changed. The map already shows a tooltip, so use this for a side panel. |
 | `onPing(point)` | Alt and click in any tool, a long press, or a click with the ping tool. Broadcast it and add it to `pings`. |
 | `onStrokeComplete(stroke)` | A finished stroke with the draw tool, already simplified. Give it an id and add it to `strokes`. |
-| `onStrokeErase(ids)` | The eraser touched these strokes. Remove them from `strokes`. |
+| `onStrokeErase(ids)` | The eraser touched these strokes. Remove them from `strokes`. If the server refuses the erase, call `restoreErasedStrokes(ids)` on the handle to show them again. |
 | `onPinCreate(point)` | A click on an empty spot with the pin tool. |
 | `onPickCell(target)`, `onPickEdge(target)` | A click with the pick-a-cell or pick-an-edge tool, for referee tools such as `place_party` and `set_door_state`. `onPickEdge` reports any edge, walls included. |
-| `onMeasure(measurement)` | The ruler finished a measurement, or cleared one with `null`. |
+| `onMeasure(measurement)` | The ruler finished a measurement, or cleared one with `null`. It also reports the end of a measurement from `startMeasure`. |
 | `onFollowPartyChange(follow)` | A pan turned follow mode off, or the F key toggled it. |
 | `onMoveKey(direction, repeat)` | An arrow key with `arrowKeys="move"`. `repeat` is true while the key is held. |
 | `onCameraChange(camera)` | The camera moved. It fires on every animated frame, so don't set React state from it directly. |
+| `onPickCancel()` | Escape with the keyboard cursor in the `pick-cell` or `pick-edge` tool. Leave the pick mode, as your Cancel button does. |
+| `onMeasureChange(measurement)` | The ruler's measurement changed while the user draws it with the pointer or moves it with the keyboard, or it was cleared (`null`). Show it in your status line with `measurementText(measurement)`, which returns text such as "6 squares, 60 feet". |
+| `onCursorChange(target, text)` | The keyboard cursor moved, appeared, or went away (`target` is `null`). `target` is a `CellTarget`, or an `EdgeTarget` in the `pick-edge` tool, and `text` is the sentence the map announces. |
 
 ## Imperative handle
 
@@ -159,6 +175,17 @@ Pass a `ref` to get a `DungeonMapHandle`:
 - `onCamera(listener)`, which subscribes to camera changes and returns an unsubscribe function. The minimap uses it.
 - `toDataURL({ area, type, quality, scale })`, which returns an image. `area: 'viewport'` (the default) captures the screen. `area: 'level'` paints the known level at `scale` device pixels per cell, with strokes, pins, and the party, up to 4096 pixels on a side.
 - `getStats()`, which returns frames per second and frame times, and `focus()`.
+- `startMeasure(cell)`, which starts a measurement from a cell (`{ x, y }` in cells) in any tool, such as for "Measure from here" in a context menu. The ruler runs to the cell under the pointer, and the arrow keys move its far end while the map has focus. A click or Enter ends it and reports the measurement through `onMeasure`, and that click reaches no other callback. Escape, a tool change, a level change, or `cancelMeasure()` ends it and reports `null`. `isMeasuring()` says whether one is running.
+- `restoreErasedStrokes(ids?)`, which shows strokes the eraser hid again: the given ids, or every hidden stroke.
+- `hasKeyboardCursor()`, which says whether the keyboard cursor or a measurement from `startMeasure` owns the arrow keys, Enter, and Escape right now. See [The keyboard cursor](#the-keyboard-cursor).
+
+```tsx
+const mapRef = useRef<DungeonMapHandle>(null);
+// In a context menu on a cell:
+mapRef.current?.startMeasure({ x: target.x, y: target.y });
+// After the server refuses an erase:
+mapRef.current?.restoreErasedStrokes(ids);
+```
 
 ## Tools
 
@@ -176,13 +203,45 @@ Pass a `ref` to get a `DungeonMapHandle`:
 
 In every tool, holding Space and dragging pans, a middle-button drag pans, the wheel or a pinch zooms at the pointer, and two fingers pinch and pan on a touch screen. Alt and click pings, and so does a long press, except that a mouse doesn't long-press in the draw, erase, and ruler tools. A release during a pan keeps the map gliding.
 
-With the map focused, the keyboard works as follows:
+With the map focused, it handles these keys and calls `preventDefault` on each:
 
-- The arrow keys or W, A, S, and D pan. With `arrowKeys="move"`, the arrow keys move and Shift with the arrows pans.
-- Plus and minus zoom.
-- Zero fits the known map, and C centres on the party.
-- F toggles follow mode.
-- Escape clears the ruler.
+- The arrow keys pan. With `arrowKeys="move"`, the arrow keys call `onMoveKey`, and Shift with the arrows pans.
+- Plus (or `=`) and minus (or `_`) zoom, and zero fits the known map.
+- Space pans while you hold it and drag.
+- Escape clears the ruler or a stroke in progress, and ends a measurement from `startMeasure`. With nothing to clear, Escape passes through.
+- During a measurement from `startMeasure`, the arrow keys move its far end and Enter ends it.
+- With `letterKeys`, W, A, S, and D pan, C centres on the party, and F toggles follow mode.
+
+Every other key, and every key pressed with Ctrl, Cmd, or Alt, passes through untouched, so the app's shortcut registry receives it. For example, A after a click on the map reaches the combat feature's "Attack the nearest monsters" shortcut.
+
+The focused map draws a 3-pixel outline in the theme's highlight color inside its edge. The outline follows `:focus-visible`, so it shows when the user reaches the map with the keyboard and not after a click.
+
+### The keyboard cursor
+
+In the tools that pick a place (`pick-cell`, `pick-edge`, `pin`, `ping`, and `ruler`), the keyboard does what a click does. When the map has keyboard focus in one of these tools, it shows a cursor: a bold square on a cell, with a thick bar on one side in the `pick-edge` tool. The cursor starts on the party's cell, or on the cell at the centre of the screen when the party is on another level.
+
+| Key | What it does |
+| --- | --- |
+| Arrow keys | Move the cursor one cell. The first arrow key shows the cursor if focus didn't. Shift and an arrow key still pans. |
+| E, Shift and E | Turn the `pick-edge` cursor to the next side clockwise, or anticlockwise. |
+| Enter | Acts at the cursor: `onPickCell`, `onPickEdge`, `onPinCreate`, or `onPing` with the cell's centre. With the ruler, the first Enter starts a measurement at the cursor, the arrow keys move its far end, and the next Enter keeps it and reports it through `onMeasure`. |
+| Escape | Clears a kept measurement with the ruler, or hides the cursor. In the `pick-cell` and `pick-edge` tools it also calls `onPickCancel`. |
+
+The map pans to keep the cursor two cells inside the screen, and a pointer click hides the cursor until the next arrow key. The canvas carries `data-map-cursor="on"` while the cursor shows.
+
+The map handles these keys in the capture phase on the window, before any handler on an ancestor element. A play screen that moves the party with the arrow keys therefore never receives them while the cursor shows. To keep the two clearly apart, a handler of your own can also return early while `hasKeyboardCursor()` is true.
+
+To start a pick from a button, focus the map after the user presses it, so a keyboard user lands on the cursor:
+
+```tsx
+<Button onClick={() => { startPick('cell'); mapRef.current?.focus(); }}>Pick a cell on the map</Button>
+```
+
+### What the map announces
+
+The map owns a polite live region next to the canvas. It announces each cursor move in words, relative to the party, such as "Guardroom, not yet seen by the party, 2 squares north of the party. Press Enter to choose this square, or Escape to stop." In the `pick-edge` tool it names the side first, such as "North side: a door, closed, locked." It announces a measurement as "6 squares, 60 feet", whether the user draws it with the pointer or moves it with the keyboard, and "Kept: 6 squares, 60 feet." when the user keeps a keyboard measurement. The region empties when the tool changes to one without a cursor.
+
+The hover tooltip stays hidden, and out of the accessibility tree, until it has text to show.
 
 ## Themes
 
@@ -196,7 +255,7 @@ To make a variant, copy a theme, change fields, and pass the object as `theme`. 
 
 ## Minimap
 
-`<Minimap map={map} target={mapRef} />` draws the level, the party, and the main map's viewport. A click or drag on it moves the main map, and the arrow keys pan by a quarter screen when it has focus. Give it the same `map` and `theme` as the main map.
+`<Minimap map={map} target={mapRef} />` draws the level, the party, and the main map's viewport. On a player map it draws only the cells the party knows, with their walls, on the theme's rock color, and it spans at least 16 by 12 cells so a level the party barely knows shows as a small shape. On a referee map it draws the whole level, with unseen cells under the veil. It draws the viewport as an outline, and leaves the outline out when the main map shows more than the minimap covers. A click or drag on it moves the main map, and the arrow keys pan by a quarter screen when it has focus. Give it the same `map` and `theme` as the main map.
 
 ## How it renders
 
@@ -231,7 +290,7 @@ Search and trap rolls are random, so a new capture can differ from the committed
 
 ## Known limits
 
-- A player map can't show emptied caches, stairs, or features unless you pass them as extras, because the player view doesn't include them.
+- A player map can't show emptied caches, stairs, features, or area names unless you pass them as extras, because the player view doesn't include them.
 - The light hint on a player map assumes the radius you pass, because the player view doesn't state it.
 - The map doesn't draw a fog-of-war shape for what the party sees right now. Every known cell looks the same, because the player view doesn't separate walked, remembered, and lit cells.
 - The hover tooltip describes doors, features, and areas in English from `describe.ts`. Move those strings to `@bxvtt/shared/text` if the app gains translations.

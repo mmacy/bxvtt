@@ -113,6 +113,11 @@ export interface EventLine {
   text: string;
   /** Dice and numbers behind the line (attack roll, target number, damage dice), for display on demand. */
   detail?: string;
+  /**
+   * Facts for a referee alone, such as the map cell of a step or a door. Players think in directions, not
+   * coordinates, so show this only to a referee (with the referee lens on), and never in a player's log.
+   */
+  refereeDetail?: string;
   category: EventCategory;
   tone: EventTone;
   icon: EventIcon;

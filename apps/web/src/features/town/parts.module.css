@@ -73,10 +73,10 @@
   place-items: center;
   width: 52px;
   height: 52px;
-  border: var(--border-hair) solid var(--color-border-accent);
+  border: var(--border-hair) solid var(--color-border-strong);
   border-radius: var(--radius-pill);
-  background: var(--color-accent-subtle);
-  color: var(--color-accent-text);
+  background: var(--color-surface-3);
+  color: var(--color-text-muted);
 }
 
 .placeTitle {

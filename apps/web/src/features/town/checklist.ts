@@ -3,12 +3,13 @@
  * wants before it leaves. Nothing here is a rule: every line is advice, and the party can go without any of it.
  */
 import type { MemberView } from '@bxvtt/shared/bxapi';
+import { joinList } from '@bxvtt/shared/text';
 import { countCarried, readInventory } from './inventory';
 
 /** One line of advice. */
 export interface Suggestion {
   /** A stable key for the line. */
-  key: 'light' | 'tinder' | 'rations' | 'rope';
+  key: 'spells' | 'light' | 'tinder' | 'rations' | 'rope';
   /** What to carry, such as "A light source". */
   title: string;
   /** Whether someone in the party carries it. */
@@ -31,29 +32,35 @@ function carriers(party: readonly MemberView[], ids: readonly string[]): string[
     .map((member) => member.name);
 }
 
-function names(list: readonly string[]): string {
-  if (list.length <= 2) return list.join(' and ');
-  return `${list.slice(0, -1).join(', ')}, and ${list.at(-1) ?? ''}`;
+/** The verb for a list of carriers: "Brenna carries", "Brenna and Tamsin carry". */
+function carry(list: readonly string[]): string {
+  return `${joinList([...list])} ${list.length === 1 ? 'carries' : 'carry'}`;
 }
 
 /**
  * Builds the checklist from the party's packs.
  *
  * @param party - The party in marching order.
+ * @param spellsAdvice - What to say about casters with nothing memorized, or empty when there is nothing to say.
  */
-export function readinessChecklist(party: readonly MemberView[]): Suggestion[] {
+export function readinessChecklist(party: readonly MemberView[], spellsAdvice = ''): Suggestion[] {
   const light = carriers(party, LIGHT_IDS);
   const tinder = carriers(party, ['tinder_box']);
   const rations = carriers(party, RATION_IDS);
   const rope = carriers(party, ['rope']);
+  const spells: Suggestion[] =
+    spellsAdvice === ''
+      ? []
+      : [{ key: 'spells', title: 'Spells to prepare', covered: false, detail: spellsAdvice, search: '' }];
   return [
+    ...spells,
     {
       key: 'light',
       title: 'A light source',
       covered: light.length > 0,
       detail:
         light.length > 0
-          ? `${names(light)} carry${light.length === 1 ? 'es' : ''} torches or a lantern.`
+          ? `${carry(light)} torches or a lantern.`
           : 'Torches or a lantern light the way underground.',
       search: 'torch',
     },
@@ -62,9 +69,7 @@ export function readinessChecklist(party: readonly MemberView[]): Suggestion[] {
       title: 'A tinder box to light it',
       covered: tinder.length > 0,
       detail:
-        tinder.length > 0
-          ? `${names(tinder)} carry${tinder.length === 1 ? 'es' : ''} one.`
-          : 'A torch or lantern needs a tinder box to light it.',
+        tinder.length > 0 ? `${carry(tinder)} one.` : 'A torch or lantern needs a tinder box to light it.',
       search: 'tinder',
     },
     {
@@ -72,19 +77,14 @@ export function readinessChecklist(party: readonly MemberView[]): Suggestion[] {
       title: 'Rations',
       covered: rations.length > 0,
       detail:
-        rations.length > 0
-          ? `${names(rations)} carry${rations.length === 1 ? 'es' : ''} rations.`
-          : 'A party that stays out for days needs food.',
+        rations.length > 0 ? `${carry(rations)} rations.` : 'A party that stays out for days needs food.',
       search: 'rations',
     },
     {
       key: 'rope',
       title: 'Rope',
       covered: rope.length > 0,
-      detail:
-        rope.length > 0
-          ? `${names(rope)} carry${rope.length === 1 ? 'es' : ''} rope.`
-          : 'Rope is handy for pits, ledges, and prisoners.',
+      detail: rope.length > 0 ? `${carry(rope)} rope.` : 'Rope is handy for pits, ledges, and prisoners.',
       search: 'rope',
     },
   ];

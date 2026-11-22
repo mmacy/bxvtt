@@ -1,23 +1,26 @@
 import type { GameEntry } from '@bxvtt/shared/protocol';
 import { joinList } from '@bxvtt/shared/text';
 import { useCallback, useEffect, useMemo } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
 import {
-  TableProvider,
+  useCanSend,
+  useCombatStage,
   useFeed,
   useGameMode,
   useReduceMotion,
   useRevision,
-  useTextContext,
+  useParty,
+  useScene,
+  useSendCommand,
   type TableStore,
 } from '@/app';
-import { Badge, Button, cx, Icon, TooltipProvider } from '@/ui';
+import { Badge, Button, cx, Icon } from '@/ui';
 import { fightEvents, summarizeFight, xpSentence } from './fight';
 import { PlaybackStrip } from './PlaybackStrip';
 import { RangeTrack } from './RangeTrack';
 import { useCombatPeople } from './people';
-import { usePlayback } from './usePlayback';
+import { usePlayback, usePublishPlayback } from './usePlayback';
 import styles from './combat.module.css';
+import { useCombatText } from './text';
 
 export interface AftermathProps {
   /** The revision the fight ended at. The entry with this revision is the fight's last. */
@@ -33,22 +36,25 @@ export interface AftermathProps {
  */
 export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
   const feed = useFeed();
-  const ctx = useTextContext();
+  const ctx = useCombatText();
   const people = useCombatPeople();
   const reduce = useReduceMotion();
   const mode = useGameMode();
   const revision = useRevision();
   const accept = useCallback((entry: GameEntry) => entry.revision === endRevision, [endRevision]);
   const playback = usePlayback({ afterSeq, accept });
+  // The party panel and the top bar follow the last round while it plays here, and settle when it ends.
+  usePublishPlayback(playback, useParty());
   const end = feed.find((e) => e.kind === 'game' && e.revision === endRevision && e.seq > afterSeq);
-  const summary = useMemo(
-    () => (end ? summarizeFight(fightEvents(feed, end.seq), ctx) : null),
-    [feed, end, ctx],
-  );
+  const summary = useMemo(() => {
+    if (!end) return null;
+    const fight = fightEvents(feed, end.seq, ctx);
+    return summarizeFight(fight.events, fight.ctx);
+  }, [feed, end, ctx]);
 
   // A new encounter, or the party moving on a few steps, retires the summary.
   useEffect(() => {
-    if (mode !== 'exploring') onClose();
+    if (mode !== 'exploring' && mode !== 'town') onClose();
     else if (revision !== null && revision >= endRevision + 4) onClose();
   }, [mode, revision, endRevision, onClose]);
 
@@ -111,7 +117,7 @@ export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
             {summary.loot.length > 0 && (
               <div className={styles.fact}>
                 <dt>Left behind</dt>
-                <dd>{capitalize(joinList(summary.loot))}, in a pile where the party stands.</dd>
+                <dd>{capitalize(joinList(summary.loot))}, now among the dropped goods here.</dd>
               </div>
             )}
             {summary.fallen.length > 0 && (
@@ -121,6 +127,7 @@ export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
               </div>
             )}
           </dl>
+          <PickUp />
           {playback.last && playback.last.beats.length > 0 && (
             <Button size="sm" variant="ghost" icon="rotate" onClick={playback.replay}>
               {summary.rounds > 0 ? 'Replay the last round' : 'Replay what happened'}
@@ -132,50 +139,83 @@ export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
   );
 }
 
+/** Points the party at what it can pick up where it stands: dropped goods, or a treasure hoard. */
+function PickUp() {
+  const here = useScene()?.here ?? null;
+  const canTake = useCanSend('take_treasure');
+  const { send, pendingType } = useSendCommand();
+  if (here === null) return null;
+  const caches = here.caches.filter((cache) => cache.reachable);
+  if (!here.pile && caches.length === 0) return null;
+  const take = (featureId: string) => void send({ command_type: 'take_treasure', feature_id: featureId });
+  const busy = pendingType === 'take_treasure';
+  return (
+    <div className={styles.pickUp}>
+      {here.pile && (
+        <div className={styles.pickUpRow}>
+          <Icon name="coins" size={16} />
+          <span className={styles.pickUpText}>There are dropped goods here.</span>
+          <Button
+            size="sm"
+            variant="secondary"
+            loading={busy}
+            disabled={!canTake.allowed}
+            title={canTake.reason ?? undefined}
+            onClick={() => take('pile')}
+          >
+            Pick up the dropped goods
+          </Button>
+        </div>
+      )}
+      {caches.map((cache) => (
+        <div key={cache.id} className={styles.pickUpRow}>
+          <Icon name="chest" size={16} />
+          <span className={styles.pickUpText}>
+            {cache.trap
+              ? 'There is treasure here, and the party knows it is trapped. Deal with the trap from the area panel first.'
+              : 'There is treasure here.'}
+          </span>
+          {!cache.trap && (
+            <Button
+              size="sm"
+              variant="secondary"
+              loading={busy}
+              disabled={!canTake.allowed}
+              title={canTake.reason ?? undefined}
+              onClick={() => take(cache.id)}
+            >
+              Take the treasure
+            </Button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-let active: { root: Root; host: HTMLElement } | null = null;
-
-/** Closes the aftermath, if one is open. */
+/** Empties the after-fight slot. */
 export function closeAftermath(): void {
-  if (active === null) return;
-  const { root, host } = active;
-  active = null;
-  // Unmount after the current render, because a component of the root may be the caller.
-  queueMicrotask(() => {
-    root.unmount();
-    host.remove();
-  });
+  useCombatStage.getState().closeAftermath();
 }
 
 /**
- * Shows the aftermath over the map after the battle board or the encounter panel unmounts at the end of a fight.
+ * Shows the aftermath in the shell's after-fight slot, when the battle board or the encounter panel unmounts at
+ * the end of a fight.
  *
- * The shell renders the combat overlays only in `encounter` and `battle` modes, so the summary of a finished fight
- * has no slot of its own in `exploring` mode. This mounts it into the shell's overlay layer, which stays on screen,
- * in a root of its own that shares the table store.
- *
- * @param store - The table store.
- * @param overlays - The shell's overlay layer.
+ * @param store - The table store, to read the revision the fight ended at and the feed so far.
  */
-export function mountAftermath(store: TableStore, overlays: HTMLElement): void {
-  closeAftermath();
+export function showAftermath(store: TableStore): void {
   const state = store.getState();
   const endRevision = state.game?.revision;
   if (endRevision === undefined) return;
   const afterSeq = state.feed.filter((e) => e.kind === 'game' && e.revision < endRevision).at(-1)?.seq ?? 0;
-  const host = document.createElement('div');
-  host.className = styles.aftermathSlot ?? '';
-  overlays.appendChild(host);
-  const root = createRoot(host);
-  active = { root, host };
-  root.render(
-    <TableProvider store={store}>
-      <TooltipProvider>
-        <Aftermath endRevision={endRevision} afterSeq={afterSeq} onClose={closeAftermath} />
-      </TooltipProvider>
-    </TableProvider>,
-  );
+  useCombatStage
+    .getState()
+    .showAftermath(
+      <Aftermath key={endRevision} endRevision={endRevision} afterSeq={afterSeq} onClose={closeAftermath} />,
+    );
 }

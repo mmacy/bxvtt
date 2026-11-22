@@ -1,6 +1,7 @@
-import { useRulesEntry, type MonsterDetail } from '@/app';
+import type { MonsterDetail } from '@/app';
 import { alignmentLabel, formatInteger, saveLabel, signed } from '@bxvtt/shared/text';
 import { Badge } from '@/ui';
+import { useEntry } from '../catalogs';
 import { EntryFrame } from '../Frame';
 import { titleFromId } from '../model';
 import { Block, EntryLink, EntryPage, Inline, Prose, Stat } from '../Parts';
@@ -194,7 +195,7 @@ export function MonsterBody({ monster }: { monster: MonsterDetail }) {
 
 /** A monster as a classic B/X stat block, followed by its abilities and description. */
 export function MonsterEntry({ id }: { id: string }) {
-  const result = useRulesEntry<MonsterDetail>(`monsters/${id}`);
+  const result = useEntry('monsters', id);
   return (
     <EntryFrame result={result} label="this monster" section="monsters">
       {(monster) => (

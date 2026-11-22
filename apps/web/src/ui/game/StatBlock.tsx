@@ -176,14 +176,14 @@ export function CoinPurse({ coins, showEmpty = false, layout = 'row', className 
         const count = coins[kind] ?? 0;
         return (
           <li key={kind} className={cx(styles.coin, count === 0 && styles.coinEmpty)}>
+            {/* The disc paints its letter with generated content, so the letter stays out of the text. */}
             <span
               className={styles.disc}
               style={{ '--coin': coinColors[kind] } as CSSProperties}
+              data-letter={kind.charAt(0)}
               aria-hidden="true"
-            >
-              {kind.charAt(0)}
-            </span>
-            <span className={styles.coinCount}>{count.toLocaleString('en-US')}</span>
+            />
+            <span className={styles.coinCount}>{count.toLocaleString('en-US')}</span>{' '}
             <span className={styles.coinUnit}>
               {kind}
               <span className="visually-hidden"> ({coinNames[kind]})</span>

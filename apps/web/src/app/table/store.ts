@@ -18,6 +18,7 @@ import type {
   Notes,
   Role,
   ServerMessage,
+  RejoinRequestSummary,
   ServerMessageOf,
   TableDetail,
   User,
@@ -26,7 +27,7 @@ import {
   contextFromPlayerView,
   emptyContext,
   extendContextWithCatalog,
-  stripArticle,
+  extendContextWithNames,
   type TextContext,
 } from '@bxvtt/shared/text';
 import { createStore, type StoreApi } from 'zustand/vanilla';
@@ -94,6 +95,10 @@ export interface TableData {
   baseTextContext: TextContext;
   /** The `command_type` of the command this client is sending, or `null`. One command is in flight at a time. */
   pendingCommand: string | null;
+  /** The `command_type` of each action waiting to send after the command in flight, oldest first. */
+  queuedCommands: string[];
+  /** The table's pending requests to rejoin as an existing member. Referees only; empty for a player. */
+  rejoinRequests: RejoinRequestSummary[];
   /** Whether this client is saving or resolving a battle declaration. */
   pendingDeclaration: boolean;
   /** Server time minus local time, in milliseconds, from the last snapshot or heartbeat. */
@@ -155,6 +160,8 @@ export function initialTableData(tableId: string): TableData {
     notices: [],
     baseTextContext: emptyContext(),
     pendingCommand: null,
+    queuedCommands: [],
+    rejoinRequests: [],
     pendingDeclaration: false,
     serverTimeOffsetMs: 0,
     connectionError: null,
@@ -173,7 +180,9 @@ export function newerGame(current: GameState | null, incoming: GameState | null)
 
 /**
  * Builds the player-visible text context for a game state: names from the player view, the area names of the
- * scene, and the scene's item names, on top of the previous context.
+ * scene, and the scene's item names, on top of the previous context. Every name goes through the text layer's own
+ * functions, which keep its curated nouns: the scene names `Torches (6)` for a torch, and the context still says
+ * "a torch".
  */
 export function buildBaseTextContext(previous: TextContext, game: GameState | null): TextContext {
   if (game === null) return previous;
@@ -186,11 +195,7 @@ export function buildBaseTextContext(previous: TextContext, game: GameState | nu
     }
   }
   if (areas.length > 0) ctx = extendContextWithCatalog(ctx, { areas });
-  const names = Object.entries(game.scene.names);
-  if (names.length > 0) {
-    ctx = { ...ctx, items: { ...ctx.items } };
-    for (const [id, name] of names) ctx.items[id] = stripArticle(name);
-  }
+  if (Object.keys(game.scene.names).length > 0) ctx = extendContextWithNames(ctx, game.scene.names);
   return ctx;
 }
 
@@ -256,6 +261,7 @@ export function reduceServerMessage(
         ready: true,
         user: message.user,
         role: message.role,
+        rejoinRequests: message.rejoin_requests ?? [],
         table: message.table,
         online: message.presence.online,
         game,
@@ -321,6 +327,8 @@ export function reduceServerMessage(
       return { removed: message.reason };
     case 'error':
       return { connectionError: { code: message.code, detail: message.detail } };
+    case 'rejoin_requests':
+      return { rejoinRequests: message.requests };
   }
 }
 

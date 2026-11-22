@@ -5,7 +5,15 @@
  * item offers what the chosen member carries. bxapi checks the rest and explains a refusal.
  */
 import type { MemberView, SpellSummary } from '@bxvtt/shared/bxapi';
-import { commandFieldOptionLabel, commandFieldText, commandInfo, spellName } from '@bxvtt/shared/text';
+import {
+  capitalizeFirst,
+  commandFieldOptionLabel,
+  commandFieldText,
+  commandInfo,
+  itemPhrase,
+  resolveItemNoun,
+  spellName,
+} from '@bxvtt/shared/text';
 import { useMemo, useState } from 'react';
 import {
   useCommandSchema,
@@ -274,7 +282,12 @@ function FieldInput({ commandType, field, value, values, onChange, can, actingFi
         for (const item of packItems(owner)) {
           if (seen.has(item.id)) continue;
           seen.add(item.id);
-          options.push({ value: item.id, label: item.name });
+          options.push({
+            value: item.id,
+            label: capitalizeFirst(
+              itemPhrase(resolveItemNoun(item.id, ctx, { name: item.name }), item.quantity),
+            ),
+          });
         }
       }
       return (
@@ -345,7 +358,9 @@ function FieldInput({ commandType, field, value, values, onChange, can, actingFi
             items.map((item) => (
               <Checkbox
                 key={item.id}
-                label={item.name}
+                label={capitalizeFirst(
+                  itemPhrase(resolveItemNoun(item.id, ctx, { name: item.name }), item.quantity),
+                )}
                 checked={chosen.includes(item.id)}
                 onCheckedChange={(checked) =>
                   onChange(checked ? [...chosen, item.id] : chosen.filter((id) => id !== item.id))

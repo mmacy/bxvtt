@@ -57,6 +57,11 @@
   background: var(--color-surface-1);
 }
 
+.scroll:focus-visible {
+  /* The page takes focus after a link turns it, and is not a control. */
+  outline: none;
+}
+
 .scroll[data-page^='entry'],
 .scroll[data-page='license'] {
   background: var(--color-surface-sunken);

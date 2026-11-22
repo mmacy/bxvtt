@@ -1,10 +1,19 @@
 import type { AbilityTables, EquipmentSummary, SpellSummary } from '@bxvtt/shared/bxapi';
-import { abilityLabel, alignmentLabel, classLabel, languageLabel, saveLabel } from '@bxvtt/shared/text';
+import {
+  abilityLabel,
+  alignmentLabel,
+  capitalizeFirst,
+  classLabel,
+  joinList,
+  languageLabel,
+  saveLabel,
+} from '@bxvtt/shared/text';
 import type { ClassDetail } from '@/app';
-import { Badge, CoinPurse, Parchment, StatBox, formatModifier } from '@/ui';
+import { Badge, Banner, CoinPurse, Parchment, StatBox, formatModifier } from '@/ui';
 import type { WizardDraft } from './draft';
-import type { CartLine } from './kits';
-import { ABILITIES, headlineModifier, xpModifierFor, type Scores } from './tables';
+import { cartPhrase, type CartLine } from './kits';
+import { ABILITIES, casterNextStep, headlineModifier, xpModifierFor, type Scores } from './tables';
+import { RuleLink } from '../sheet/RuleLink';
 import styles from './wizard.module.css';
 
 export interface ReviewStepProps {
@@ -23,7 +32,7 @@ function cartNames(cart: CartLine[], equip: string[], equipment: EquipmentSummar
     const item = equipment?.find((e) => e.id === line.itemId);
     return {
       key: line.itemId,
-      name: item?.name ?? line.itemId,
+      name: cartPhrase(line.itemId, line.quantity, item?.name),
       quantity: line.quantity,
       equipped: equip.includes(line.itemId),
       kind: item?.item_type,
@@ -49,6 +58,13 @@ export function ReviewStep({
   const con = tables ? headlineModifier(tables, 'con', scores.con) : undefined;
   const languages = [...(detail?.languages ?? []), ...draft.languages];
   const gear = cartNames(draft.cart, draft.equip, equipment);
+  const nextStep = casterNextStep(
+    draft.name.trim() || 'Your character',
+    detail,
+    draft.spells.map((id) => spells?.find((s) => s.id === id)?.name ?? id),
+  );
+  const worn = gear.filter((item) => item.equipped).map((item) => item.name.toLowerCase());
+  const unworn = gear.filter((item) => !item.equipped && (item.kind === 'armour' || item.kind === 'weapon'));
   const edit = (step: WizardDraft['step'], label: string) => (
     <button type="button" className={styles.editLink} onClick={() => onEdit(step)}>
       Change<span className="visually-hidden"> {label}</span>
@@ -61,7 +77,12 @@ export function ReviewStep({
         <div>
           <h3 className={styles.reviewName}>{draft.name.trim() || 'Unnamed adventurer'}</h3>
           <p className={styles.reviewClass}>
-            Level 1 {detail ? classLabel(detail.id).toLowerCase() : ''}
+            Level 1{' '}
+            {detail ? (
+              <RuleLink entry={{ kind: 'classes', id: detail.id }}>
+                {classLabel(detail.id).toLowerCase()}
+              </RuleLink>
+            ) : null}
             {title ? ` · ${title}` : ''} ·{' '}
             {draft.alignment ? alignmentLabel(draft.alignment) : 'No alignment'}
           </p>
@@ -95,7 +116,7 @@ export function ReviewStep({
         <section className={styles.reviewSection} aria-label="Combat">
           <h4 className={styles.reviewHeading}>Hit points</h4>
           <p className={styles.reviewText}>
-            The rules engine rolls them when you create the character: a d{detail?.hit_die ?? '?'}
+            A d{detail?.hit_die ?? '?'}
             {con !== undefined && con !== 0 ? `, ${formatModifier(con)} for Constitution` : ''}
             {draft.hpReroll ? ', rerolling a 1 or 2' : ''}.
           </p>
@@ -115,7 +136,11 @@ export function ReviewStep({
                 ))}
               </dl>
               <p className={styles.reviewNote}>
-                Armour class depends on what you wear, so it appears once the character exists.
+                {worn.length > 0
+                  ? `You go out wearing and wielding ${joinList(worn)}. `
+                  : 'You go out with nothing worn or wielded. '}
+                The rules engine rolls hit points and works out armour class when it creates the character,
+                and the finished sheet shows both.
               </p>
             </>
           )}
@@ -133,10 +158,18 @@ export function ReviewStep({
             <>
               <h4 className={styles.reviewHeading}>Spell book</h4>
               <p className={styles.reviewText}>
-                {draft.spells.map((id) => spells?.find((s) => s.id === id)?.name ?? id).join(', ')}
+                {draft.spells.map((id, index) => (
+                  <span key={id}>
+                    {index > 0 && ', '}
+                    <RuleLink entry={{ kind: 'spells', id }}>
+                      {spells?.find((s) => s.id === id)?.name ?? id}
+                    </RuleLink>
+                  </span>
+                ))}
               </p>
             </>
           )}
+          {nextStep && <p className={styles.reviewNote}>{nextStep}</p>}
         </section>
       </div>
 
@@ -151,7 +184,6 @@ export function ReviewStep({
           <ul className={styles.reviewGear}>
             {gear.map((item) => (
               <li key={item.key}>
-                {item.quantity > 1 ? `${item.quantity} × ` : ''}
                 {item.name}
                 {item.equipped && (
                   <Badge tone="neutral" appearance="outline">
@@ -162,7 +194,16 @@ export function ReviewStep({
             ))}
           </ul>
         )}
-        {goldLeft !== null && <CoinPurse coins={{ gp: goldLeft }} showEmpty />}
+        {unworn.length > 0 && (
+          <Banner tone="warning" title="Some gear stays in the pack">
+            {`${capitalizeFirst(joinList(unworn.map((item) => item.name.toLowerCase())))} ${
+              unworn.length === 1 ? 'goes' : 'go'
+            } in the pack, so ${unworn.length === 1 ? 'it' : 'they'} won't protect you or fight for you. Choose Change to wear or wield ${
+              unworn.length === 1 ? 'it' : 'them'
+            }.`}
+          </Banner>
+        )}
+        {goldLeft !== null && <CoinPurse coins={{ gp: goldLeft }} />}
       </section>
     </Parchment>
   );

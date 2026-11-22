@@ -1,6 +1,7 @@
 import type { FeedEntry } from '@bxvtt/shared/protocol';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  usePreferences,
   useFeed,
   useMembers,
   useOlderFeed,
@@ -18,13 +19,16 @@ import {
   SearchInput,
   SegmentedControl,
   Spinner,
+  breakpoints,
   cx,
+  useMediaQuery,
   type SegmentedOption,
 } from '@/ui';
-import { watchClock } from './model/clock';
-import { buildRows, estimateRowHeight, type FeedFilter, type FeedRow } from './model/rows';
+import { buildRows, estimateRowHeight, RowCache, type FeedFilter, type FeedRow } from './model/rows';
 import { readLastSeen, writeLastSeen } from './model/storage';
 import { announcementFor } from './announce';
+import { usePageVisible } from './usePageVisible';
+import { useFeedSounds } from './sounds';
 import { searchText } from './search';
 import { FeedRowView } from './FeedRows';
 import { FeedViewProvider, type FeedView } from './FeedView';
@@ -52,6 +56,7 @@ const FILTER_EMPTY: Record<FeedFilter, { title: string; description: string }> =
 };
 
 const getKey = (row: FeedRow) => row.key;
+const renderRow = (row: FeedRow) => <FeedRowView row={row} />;
 
 /** The feed tab of the dock: chat, whispers, dice rolls, and the game log, with a message box. */
 export function FeedPanel() {
@@ -74,8 +79,6 @@ export function FeedPanel() {
   const searchRef = useRef<HTMLInputElement | null>(null);
   const activeFilter: FeedFilter = filter === 'hidden' && !lens ? 'all' : filter;
 
-  useEffect(() => watchClock(store), [store]);
-
   // The newest entry when the panel opened. Rolls after it tumble, and the unread divider starts from the last
   // entry the reader saw before.
   const [opened] = useState(() => {
@@ -88,11 +91,24 @@ export function FeedPanel() {
   });
   const [unreadAfter, setUnreadAfter] = useState<number | null>(opened.unreadAfter);
   const lastSeq = feed.at(-1)?.seq ?? 0;
+  // The dock keeps the feed mounted behind other tabs, so the feed counts as read only while someone can see it.
+  const compact = useMediaQuery(`(max-width: ${breakpoints.tablet - 1}px)`);
+  const tabShown = usePreferences((s) => s.dockTab === 'feed' && (compact || !s.dockCollapsed));
+  const pageVisible = usePageVisible();
+  const shown = tabShown && pageVisible;
   // The newest entry the reader has had in view at the bottom of the list.
   const [seenSeq, setSeenSeq] = useState(lastSeq);
-  if (atBottom && seenSeq !== lastSeq) setSeenSeq(lastSeq);
-  // A divider for entries that arrive while the reader is scrolled up.
-  if (!atBottom && unreadAfter === null && lastSeq > seenSeq) {
+  if (shown && atBottom && seenSeq !== lastSeq) setSeenSeq(lastSeq);
+  // When the feed is hidden, its old divider goes, and entries that arrive meanwhile get a new one.
+  const [wasShown, setWasShown] = useState(shown);
+  const [jumpToUnread, setJumpToUnread] = useState(0);
+  if (shown !== wasShown) {
+    setWasShown(shown);
+    if (!shown && atBottom) setUnreadAfter(null);
+    if (shown && lastSeq > seenSeq) setJumpToUnread((n) => n + 1);
+  }
+  // A divider for entries that arrive while the reader is scrolled up or looking elsewhere.
+  if ((!atBottom || !shown) && unreadAfter === null && lastSeq > seenSeq) {
     if (feed.some((entry) => entry.seq > seenSeq && entry.user_id !== selfId)) setUnreadAfter(seenSeq);
   }
 
@@ -123,19 +139,19 @@ export function FeedPanel() {
     (entry: FeedEntry) => searchText(entry, { ctx, lens, nameOf }),
     [ctx, lens, nameOf],
   );
-  const rows = useMemo(
-    () =>
-      buildRows(feed, {
-        selfId,
-        lens,
-        filter: activeFilter,
-        query: searchOpen ? query : '',
-        textOf,
-        unreadAfter,
-        now: new Date(),
-      }),
-    [feed, selfId, lens, activeFilter, searchOpen, query, textOf, unreadAfter],
-  );
+  const [rowCache] = useState(() => new RowCache());
+  const rows = useMemo(() => {
+    const built = buildRows(feed, {
+      selfId,
+      lens,
+      filter: activeFilter,
+      query: searchOpen ? query : '',
+      textOf,
+      unreadAfter,
+      now: new Date(),
+    });
+    return rowCache.reuse(built);
+  }, [rowCache, feed, selfId, lens, activeFilter, searchOpen, query, textOf, unreadAfter]);
 
   const view: FeedView = useMemo(
     () => ({
@@ -151,13 +167,16 @@ export function FeedPanel() {
     [selfId, lens, ctx, searchOpen, query, activeFilter, nameOf, memberOf, animate],
   );
 
-  // Start at the unread divider when there is one.
+  // Start at the unread divider when there is one, and go back to it when the feed is shown again.
   const startedAtUnread = useRef(false);
   useEffect(() => {
     if (startedAtUnread.current || opened.unreadAfter === null) return;
     startedAtUnread.current = true;
     list.current?.scrollToKey('unread');
   }, [opened.unreadAfter]);
+  useEffect(() => {
+    if (jumpToUnread > 0) list.current?.scrollToKey('unread');
+  }, [jumpToUnread]);
 
   const onScrollStateChange = useCallback(
     (state: ScrollState) => {
@@ -173,12 +192,16 @@ export function FeedPanel() {
   useEffect(() => {
     const fresh = feed.filter((entry) => entry.seq > announced.current);
     announced.current = Math.max(announced.current, lastSeq);
+    // A hidden feed stays quiet. The dock's tab shows the count of new entries instead.
+    if (!shown) return;
     const lines = fresh
       .filter((entry) => entry.user_id !== selfId)
       .map((entry) => announcementFor(entry, { ctx, lens, selfId, nameOf }))
       .filter((line): line is string => line !== null);
     if (lines.length > 0) setAnnouncement(lines.slice(-3).join(' '));
-  }, [feed, lastSeq, selfId, ctx, lens, nameOf]);
+  }, [feed, lastSeq, selfId, ctx, lens, nameOf, shown]);
+
+  useFeedSounds(feed, selfId);
 
   const newCount = atBottom
     ? 0
@@ -310,7 +333,7 @@ export function FeedPanel() {
               items={rows}
               getKey={getKey}
               estimateSize={estimateRowHeight}
-              renderItem={(row) => <FeedRowView row={row} />}
+              renderItem={renderRow}
               followOutput
               onScrollStateChange={onScrollStateChange}
               header={header}

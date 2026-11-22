@@ -76,6 +76,7 @@ export {
   type RulerMetric,
 } from './overlays';
 export { describeTarget, type TargetDescription } from './describe';
+export { isCursorTool, measurementText, type CursorTool } from './cursor';
 export {
   THEMES,
   blueprint,

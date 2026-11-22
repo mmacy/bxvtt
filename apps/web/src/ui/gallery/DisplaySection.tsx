@@ -8,6 +8,7 @@ import { ErrorBoundary } from '../components/ErrorBoundary';
 import { Banner, EmptyState, ProgressBar, Skeleton } from '../components/Feedback';
 import { List, ListItem } from '../components/List';
 import { ResizablePanels } from '../components/ResizablePanels';
+import { SectionLabel } from '../components/SectionLabel';
 import { Spinner } from '../components/Spinner';
 import { Card, Panel, ScrollArea } from '../components/Surfaces';
 import { Icon } from '../icons/Icon';
@@ -232,6 +233,24 @@ export function DisplaySection() {
             <Panel title="Wandering monsters" collapsible defaultOpen={false} bodyPadding="sm">
               <p className={styles.muted}>Check every two turns. A roll of 1 on 1d6 means an encounter.</p>
             </Panel>
+          </Stack>
+        </Specimen>
+        <Specimen
+          title="Section labels"
+          note="A small sentence-case heading for a group. Use it instead of an uppercase, letter-spaced label."
+        >
+          <Stack gap="sm">
+            <SectionLabel
+              count={4}
+              actions={
+                <Button size="sm" variant="ghost" icon="sort">
+                  Change order
+                </Button>
+              }
+            >
+              Marching order
+            </SectionLabel>
+            <SectionLabel count={3}>Active quests</SectionLabel>
           </Stack>
         </Specimen>
         <Specimen title="Empty states">

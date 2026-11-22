@@ -4,15 +4,32 @@
  */
 import type {
   ClassSummary,
+  CommandSummary,
   EquipmentSummary,
   Language,
   MagicItemSummary,
   MonsterSummary,
   SpellSummary,
 } from '@bxvtt/shared/bxapi';
-import { alignmentLabel, abilityLabel, itemTypeLabel, ordinal } from '@bxvtt/shared/text';
+import type { FullCatalogEntries } from '@bxvtt/shared/protocol';
+import {
+  abilityLabel,
+  alignmentLabel,
+  commandInfo,
+  formatDice,
+  itemTypeLabel,
+  ordinal,
+  weaponQualityLabel,
+} from '@bxvtt/shared/text';
 import { SECTIONS, TABLE_ANCHORS, tableSetInfo, titleFromId, type Route, type SectionId } from './model';
-import { formatArmourClass, formatCost, formatHitDice, magicCategoryLabel, normalize } from './typeset';
+import {
+  formatArmourClass,
+  formatCost,
+  formatHitDice,
+  magicCategoryLabel,
+  normalize,
+  stripMarkup,
+} from './typeset';
 
 export type ResultKind = SectionId | 'license';
 
@@ -26,6 +43,10 @@ export interface SearchItem {
   nameNorm: string;
   words: string[];
   tags: string[];
+  /** The words of the entry's text, which match a search only when no name or facet does. */
+  bodyWords: string[];
+  /** The entry's text as written, for a snippet under a result. */
+  bodyText: string;
   /** The spell level, for the facet `level 3`. */
   level?: number;
   /** The monster's hit dice count, for the facet `hd 3`. */
@@ -39,8 +60,12 @@ export interface Catalogs {
   equipment?: readonly EquipmentSummary[] | null;
   magicItems?: readonly MagicItemSummary[] | null;
   languages?: readonly Language[] | null;
-  /** Monster categories by monster ID, once the details have loaded. */
-  monsterCategories?: Readonly<Record<string, readonly string[]>> | null;
+  commands?: readonly CommandSummary[] | null;
+  /** The full entries, once they have loaded, so search can read their text and facets. */
+  fullClasses?: readonly FullCatalogEntries['classes'][] | null;
+  fullSpells?: readonly FullCatalogEntries['spells'][] | null;
+  fullMonsters?: readonly FullCatalogEntries['monsters'][] | null;
+  fullEquipment?: readonly FullCatalogEntries['equipment'][] | null;
 }
 
 const SPELL_LISTS: Record<string, string> = { cleric: 'Cleric', magic_user: 'Magic-user' };
@@ -55,15 +80,45 @@ function words(text: string): string[] {
   return norm === '' ? [] : norm.split(' ');
 }
 
-function item(partial: Omit<SearchItem, 'nameNorm' | 'words' | 'tags'> & { tags?: string }): SearchItem {
-  const { tags = '', ...rest } = partial;
-  return { ...rest, nameNorm: normalize(rest.name), words: words(rest.name), tags: words(tags) };
+function item(
+  partial: Omit<SearchItem, 'nameNorm' | 'words' | 'tags' | 'bodyWords' | 'bodyText'> & {
+    tags?: string;
+    body?: string;
+  },
+): SearchItem {
+  const { tags = '', body = '', ...rest } = partial;
+  return {
+    ...rest,
+    nameNorm: normalize(rest.name),
+    words: words(rest.name),
+    tags: words(tags),
+    bodyWords: [...new Set(words(body))],
+    bodyText: body,
+  };
+}
+
+const lines = (...parts: (string | undefined | null)[]) =>
+  parts.filter((part): part is string => !!part).join(' ');
+
+/** The commands a player sends, which the Actions section lists. Referee commands are not a player's to read about. */
+export function isPlayCommand(command: CommandSummary): boolean {
+  // Nobody sends this one: the battle board resolves a round once the table has declared.
+  return command.kind === 'play' && command.command_type !== 'resolve_battle_round';
+}
+
+function byId<T extends { id: string }>(entries: readonly T[] | null | undefined): Map<string, T> {
+  return new Map((entries ?? []).map((entry) => [entry.id, entry]));
 }
 
 /** Indexes the loaded catalogs. A catalog that hasn't loaded contributes nothing. */
 export function buildSearchItems(catalogs: Catalogs): SearchItem[] {
   const items: SearchItem[] = [];
+  const fullClasses = byId(catalogs.fullClasses);
+  const fullSpells = byId(catalogs.fullSpells);
+  const fullMonsters = byId(catalogs.fullMonsters);
+  const fullEquipment = byId(catalogs.fullEquipment);
   for (const c of catalogs.classes ?? []) {
+    const full = fullClasses.get(c.id);
     items.push(
       item({
         kind: 'classes',
@@ -72,10 +127,12 @@ export function buildSearchItems(catalogs: Catalogs): SearchItem[] {
         subtitle: `Hit die d${c.hit_die}, maximum level ${c.max_level}`,
         route: { page: 'entry', kind: 'classes', id: c.id },
         tags: `class ${c.race} ${c.prime_requisites.map((a) => abilityLabel(a)).join(' ')}`,
+        body: lines(...(full?.abilities ?? []).map((a) => `${stripMarkup(a.name)}. ${stripMarkup(a.prose)}`)),
       }),
     );
   }
   for (const s of catalogs.spells ?? []) {
+    const full = fullSpells.get(s.id);
     items.push(
       item({
         kind: 'spells',
@@ -83,13 +140,21 @@ export function buildSearchItems(catalogs: Catalogs): SearchItem[] {
         name: s.name,
         subtitle: `${spellListLabel(s.spell_list)} spell, level ${s.level}`,
         route: { page: 'entry', kind: 'spells', id: s.id },
-        tags: `spell ${spellListLabel(s.spell_list)} ${s.range} ${s.duration}`,
+        tags: `spell ${spellListLabel(s.spell_list)} ${s.range} ${s.duration} ${full?.reversed_form ? 'reversible reverse ' + full.reversed_form.name : ''}`,
+        body: full
+          ? lines(
+              stripMarkup(full.intro),
+              ...full.modes.map((mode) => stripMarkup(mode.prose)),
+              full.reversed_form ? stripMarkup(full.reversed_form.prose) : null,
+            )
+          : '',
         level: s.level,
       }),
     );
   }
   for (const m of catalogs.monsters ?? []) {
-    const categories = catalogs.monsterCategories?.[m.id] ?? [];
+    const full = fullMonsters.get(m.id);
+    const categories = full?.categories ?? [];
     items.push(
       item({
         kind: 'monsters',
@@ -98,20 +163,35 @@ export function buildSearchItems(catalogs: Catalogs): SearchItem[] {
         subtitle: `Hit dice ${formatHitDice(m.hit_dice)}, armour class ${formatArmourClass(m.ac, m.ac_ascending)}`,
         route: { page: 'entry', kind: 'monsters', id: m.id },
         tags: `monster ${m.alignment.options.map(alignmentLabel).join(' ')} ${categories.join(' ')}`,
+        body: full
+          ? lines(
+              stripMarkup(full.intro),
+              ...full.abilities.map((a) => `${stripMarkup(a.name)}. ${stripMarkup(a.prose)}`),
+            )
+          : '',
         hd: m.hit_dice.count,
       }),
     );
   }
   for (const e of catalogs.equipment ?? []) {
     const type = itemTypeLabel(e.item_type);
+    const full = fullEquipment.get(e.id);
+    const qualities =
+      full?.item_type === 'weapon'
+        ? full.qualities
+        : full?.item_type === 'gear' && full.combat
+          ? full.combat.qualities
+          : [];
+    const damage =
+      full?.item_type === 'weapon' ? full.damage : full?.item_type === 'gear' ? full.combat?.damage : null;
     items.push(
       item({
         kind: 'equipment',
         id: e.id,
         name: e.name,
-        subtitle: `${type}, ${formatCost(e.cost_gp)}`,
+        subtitle: lines(`${type}, ${formatCost(e.cost_gp)}`, damage ? `, ${formatDice(damage)} damage` : ''),
         route: { page: 'entry', kind: 'equipment', id: e.id },
-        tags: `${type} ${e.item_type === 'armour' ? 'armor' : ''}`,
+        tags: `${type} ${e.item_type === 'armour' ? 'armor' : ''} ${qualities.map(weaponQualityLabel).join(' ')} ${damage ?? ''}`,
       }),
     );
   }
@@ -149,6 +229,20 @@ export function buildSearchItems(catalogs: Catalogs): SearchItem[] {
         subtitle: `${set.label} table`,
         route: { page: 'entry', kind: 'tables', id: anchor.set, anchor: anchor.anchor },
         tags: `table ${set.label} ${anchor.keywords}`,
+      }),
+    );
+  }
+  for (const command of (catalogs.commands ?? []).filter(isPlayCommand)) {
+    const info = commandInfo(command.command_type);
+    items.push(
+      item({
+        kind: 'commands',
+        id: command.command_type,
+        name: info.label,
+        subtitle: 'Action',
+        route: { page: 'entry', kind: 'commands', id: command.command_type },
+        tags: 'action command',
+        body: info.description,
       }),
     );
   }
@@ -225,7 +319,28 @@ function wordScore(entry: SearchItem, word: string): number {
   if (best > 0) return best;
   for (const t of entry.tags) if (t.startsWith(word)) return 2;
   if (word.length >= 3 && entry.nameNorm.replace(/ /g, '').includes(word)) return 1;
+  if (word.length >= 3) for (const b of entry.bodyWords) if (b.startsWith(word)) return 0.5;
   return 0;
+}
+
+/**
+ * When a result matches only through the entry's text, the sentence part that holds the first such word, so the
+ * list can show why the entry matched. Returns `null` when the name or a facet matches.
+ */
+export function bodySnippet(entry: SearchItem, query: string): string | null {
+  const needles = parseQuery(query).flatMap((t) => (t.type === 'word' ? [t.value] : []));
+  const text = entry.bodyText;
+  for (const needle of needles) {
+    if (wordScore({ ...entry, bodyWords: [] }, needle) > 0) continue;
+    const at = text.toLowerCase().indexOf(needle);
+    if (at === -1) continue;
+    const start = Math.max(0, text.lastIndexOf(' ', Math.max(0, at - 28)));
+    const end = Math.min(text.length, at + needle.length + 56);
+    const cut = text.indexOf(' ', end);
+    const stop = cut === -1 || cut > end + 12 ? end : cut;
+    return `${start > 0 ? '…' : ''}${text.slice(start, stop).trim()}${stop < text.length ? '…' : ''}`;
+  }
+  return null;
 }
 
 /** How well an item matches the tokens, or 0 when any token fails to match. */

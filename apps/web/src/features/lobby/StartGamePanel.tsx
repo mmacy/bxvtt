@@ -95,11 +95,14 @@ export function StartGamePanel({ table, adventure, ruleset }: StartGamePanelProp
     <div className={styles.start}>
       <div className={styles.startSummary}>
         <p className={styles.startAdventure}>{adventure?.info.name ?? 'No adventure chosen'}</p>
-        <p className={styles.note}>
-          {table.roster.length === 1 ? '1 character' : `${table.roster.length} characters`} ·{' '}
-          {changedRules === 0
-            ? 'Standard rules'
-            : `${changedRules} optional ${changedRules === 1 ? 'rule' : 'rules'} changed`}
+        <p className={styles.metaLine}>
+          <span>{table.roster.length === 1 ? '1 character' : `${table.roster.length} characters`}</span>
+          <span className="visually-hidden">, </span>
+          <span>
+            {changedRules === 0
+              ? 'Standard rules'
+              : `${changedRules} optional ${changedRules === 1 ? 'rule' : 'rules'} changed`}
+          </span>
         </p>
       </div>
       {blockers.length > 0 && (

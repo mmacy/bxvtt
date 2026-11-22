@@ -1,10 +1,18 @@
-import { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
-import { ShortcutLayer, useIdentity } from '@/app';
+import { AppKitProvider, ShortcutLayer, useIdentity } from '@/app';
 import { HomePage, JoinPage, NotFoundPage } from '@/features/home';
-import { TablePage } from '@/features/table';
-import { ErrorBoundary, KitProvider } from '@/ui';
-import { KitGallery, KitTableMock } from '@/ui/gallery';
+// A direct import, because the shell's barrel also exports the play screen, which loads on demand.
+import { LoadingScreen } from '@/features/table/LoadingScreen';
+import { ErrorBoundary } from '@/ui';
+
+// A table page loads on demand with the table's session, and it loads its lobby or play screen in turn. The
+// design system gallery is a development page, so it loads only when someone opens it.
+const TablePage = lazy(() =>
+  import('@/features/table/TablePage').then((module) => ({ default: module.TablePage })),
+);
+const KitGallery = lazy(() => import('@/ui/gallery').then((module) => ({ default: module.KitGallery })));
+const KitTableMock = lazy(() => import('@/ui/gallery').then((module) => ({ default: module.KitTableMock })));
 
 /**
  * The app's routes:
@@ -21,20 +29,41 @@ export function App() {
   }, [load]);
 
   return (
-    <KitProvider>
+    <AppKitProvider>
       <BrowserRouter>
         <ErrorBoundary area="This page">
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/join/:code" element={<JoinPage />} />
-            <Route path="/tables/:tableId" element={<TablePage />} />
-            <Route path="/kit" element={<KitGallery />} />
-            <Route path="/kit/table" element={<KitTableMock fullscreen />} />
+            <Route
+              path="/tables/:tableId"
+              element={
+                <Suspense fallback={<LoadingScreen label="Opening the table" />}>
+                  <TablePage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/kit"
+              element={
+                <Suspense fallback={<LoadingScreen />}>
+                  <KitGallery />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/kit/table"
+              element={
+                <Suspense fallback={<LoadingScreen />}>
+                  <KitTableMock fullscreen />
+                </Suspense>
+              }
+            />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </ErrorBoundary>
         <ShortcutLayer />
       </BrowserRouter>
-    </KitProvider>
+    </AppKitProvider>
   );
 }

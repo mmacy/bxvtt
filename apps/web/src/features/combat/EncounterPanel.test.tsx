@@ -30,14 +30,6 @@ function accepted(game: GameState): CommandResult {
   };
 }
 
-// Radix popovers measure their trigger, and jsdom has no ResizeObserver.
-class NoResizeObserver {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-}
-globalThis.ResizeObserver ??= NoResizeObserver;
-
 beforeEach(() => {
   resetCombatMemory();
   resetCombatUi();
@@ -75,7 +67,7 @@ describe('EncounterPanel', () => {
     api.sendCommand.mockResolvedValue(accepted(snapshot.game as GameState));
     const { user } = renderWithTable(<EncounterPanel />, { snapshot, api });
     await user.click(screen.getByRole('button', { name: 'Talk' }));
-    await user.click(await screen.findByRole('button', { name: /Wren/ }));
+    await user.click(await screen.findByRole('option', { name: /Wren/ }));
     expect(api.sendCommand).toHaveBeenCalledWith(
       expect.any(String),
       { command_type: 'parley', character_id: 'character-0002' },

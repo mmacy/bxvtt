@@ -9,6 +9,11 @@ export const PROBLEM_CODES = {
   bad_request: 400,
   /** 401: the request has no user token, or the token is unknown. */
   unauthorized: 401,
+  /**
+   * 401: the token was this member's, but a referee let the member back in from another browser, which got a new
+   * token. A retired token never works again. Tell the person they are signed in elsewhere now.
+   */
+  token_retired: 401,
   /** 403: the user isn't allowed to do this, for example a player sending another member's command. `detail` says why. */
   forbidden: 403,
   /** 403: only a referee of this table may do this. */
@@ -53,6 +58,20 @@ export const PROBLEM_CODES = {
   session_busy: 409,
   /** 403 (from bxapi): an adventure that comes with bxapi can't be deleted. */
   adventure_read_only: 403,
+  /** 409: the member is online now, so nobody needs to rejoin as them. The request, if any, has ended. */
+  rejoin_member_online: 409,
+  /**
+   * 409: someone else's rejoin request for this member is already waiting, or this address has 3 requests
+   * waiting. Wait for one to end. Asking again from the same address for the same member replaces its request.
+   */
+  rejoin_pending: 409,
+  /** 409: the rejoin request isn't pending anymore: it was decided, it expired, or it was cancelled. */
+  rejoin_not_pending: 409,
+  /**
+   * 409: no referee could approve the request: the member is the table's only referee, and a referee can't approve
+   * their own request. The host keeps their sign-in by opening the server at `http://127.0.0.1:<port>`.
+   */
+  rejoin_no_approver: 409,
   /** 413: the request body or WebSocket message is too large. */
   content_too_large: 413,
   /** 415: the request body isn't JSON. */
@@ -67,6 +86,12 @@ export const PROBLEM_CODES = {
   character_invalid: 422,
   /** 422 (from bxapi): the roster's characters can't form a party. */
   party_invalid: 422,
+  /**
+   * 422: a command or declaration names a target handle (`tgt_...`) that isn't one of the handles in
+   * `game.scene.targets`, for example a handle from an encounter that has ended. Extra members: `field`, the
+   * field that holds it, and `id`, the handle. Read the scene again and pick a target from it.
+   */
+  target_unknown: 422,
   /** 429: too many requests from this address. The `Retry-After` header and the `retry_after` member give the seconds to wait. */
   rate_limited: 429,
   /** 500: a bug in bxvtt. The server logs the cause. */
@@ -75,6 +100,17 @@ export const PROBLEM_CODES = {
   bxapi_error: 502,
   /** 503: bxvtt can't reach bxapi. Start bxapi and try again. */
   bxapi_unavailable: 503,
+  /**
+   * 502, 503, or 504, made by the SDK rather than the server: something between the browser and the bxvtt
+   * server, such as the Vite proxy or a tunnel, answered with an error page instead of a problem document,
+   * usually because the bxvtt server is down. `status` is the status the proxy sent.
+   */
+  server_unavailable: 503,
+  /**
+   * Made by the SDK rather than the server: a response the SDK expected to be JSON wasn't, such as an HTML page
+   * where an API response belongs. `status` is the response's status.
+   */
+  invalid_response: 502,
 } as const;
 
 /** A stable problem code. */

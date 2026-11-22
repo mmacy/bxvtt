@@ -12,6 +12,7 @@ import {
   TokenPortrait,
   toast,
 } from '@/ui';
+import { RuleLinksContext } from './RuleLink';
 import { StoredSheet } from './StoredSheet';
 import sheetStyles from './sheet.module.css';
 import styles from './StoredCharacterCard.module.css';
@@ -45,8 +46,14 @@ export function StoredCharacterCard({ characterId, summary, owner, actions }: St
           <span className="visually-hidden">, open the character sheet</span>
         </button>
         <p className={styles.meta}>
-          Level {summary.level} {classLabel(summary.class_id).toLowerCase()}
-          {owner ? <span className={styles.owner}> · {owner.name}</span> : null}
+          <span>
+            Level {summary.level} {classLabel(summary.class_id).toLowerCase()}
+          </span>
+          {owner ? (
+            <span className={styles.owner}>
+              <span className="visually-hidden">, played by</span> {owner.name}
+            </span>
+          ) : null}
         </p>
       </div>
       <div className={styles.actions}>
@@ -130,7 +137,12 @@ function StoredSheetDrawer({ characterId, name, color, onClose }: DrawerProps) {
               : error.detail}
           </Banner>
         )}
-        {data && <StoredSheet character={data} color={color} />}
+        {data && (
+          // The lobby and the home page render the compendium, so names on a stored sheet open it.
+          <RuleLinksContext.Provider value={true}>
+            <StoredSheet character={data} color={color} />
+          </RuleLinksContext.Provider>
+        )}
       </div>
       <ConfirmDialog
         open={confirming}

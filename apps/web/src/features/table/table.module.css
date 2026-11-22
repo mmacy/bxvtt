@@ -1,4 +1,27 @@
 /* Page states */
+.loadingScreen {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-3);
+  min-height: 100dvh;
+  color: var(--color-text-muted);
+}
+
+.loadingPanel {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-8) var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.loadingScreen p,
+.loadingPanel p {
+  margin: 0;
+}
+
 .centered {
   display: grid;
   justify-items: center;
@@ -103,6 +126,25 @@
   transform: translateX(-50%);
 }
 
+.rejoin {
+  width: 100%;
+  box-shadow: var(--shadow-3);
+  border-radius: var(--radius-md);
+}
+
+.rejoinMore {
+  font-weight: var(--weight-semibold);
+}
+
+.endRejoin {
+  position: absolute;
+  top: var(--space-3);
+  left: 50%;
+  width: min(600px, calc(100% - 2 * var(--space-6)));
+  transform: translateX(-50%);
+  z-index: var(--z-raised);
+}
+
 .floatingBanner {
   width: 100%;
   box-shadow: var(--shadow-3);
@@ -131,29 +173,26 @@
   place-items: start center;
   height: 100%;
   overflow: auto;
-  padding: var(--space-10) var(--space-6);
+  padding: var(--space-8) var(--space-6);
 }
 
 .endCard {
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-3);
   width: min(720px, 100%);
 }
 
 .endKicker {
   margin: 0;
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  color: var(--color-accent-text);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
 }
 
 .endTitle {
   margin: 0;
   font-family: var(--font-display);
   font-variation-settings: var(--font-display-soft);
-  font-size: var(--text-5xl);
+  font-size: var(--text-4xl);
   font-weight: var(--weight-semibold);
   line-height: var(--leading-tight);
   color: var(--color-text-strong);
@@ -163,6 +202,45 @@
   margin: 0;
   font-size: var(--text-lg);
   color: var(--color-text-muted);
+}
+
+.endFacts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+  padding: var(--space-3) 0;
+  border-block: var(--border-hair) solid var(--color-border);
+}
+
+.endFact {
+  display: contents;
+}
+
+.endFact dt {
+  color: var(--color-text-subtle);
+  font-size: var(--text-sm);
+}
+
+.endFact dd {
+  margin: 0;
+  color: var(--color-text);
+}
+
+/* A meta line of separate pieces, spaced apart instead of joined with a dot. */
+.endMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-3);
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-subtle);
+}
+
+.endActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .endNote {

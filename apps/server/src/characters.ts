@@ -1,8 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { AbilityRoll, CharacterSummary, StoredCharacter, User } from '@bxvtt/shared/protocol';
-import { AbilityRollRequest, CharacterRequest } from '@bxvtt/shared/protocol';
+import { AbilityRollRequest, CharacterCheckRequest, CharacterRequest } from '@bxvtt/shared/protocol';
+import { rateLimited } from './auth';
 import { callBxapi } from './bxapi';
+import { CharacterChecker } from './character-check';
 import type { Context } from './context';
 import type { Row } from './db';
 import { num, str } from './db';
@@ -127,6 +129,28 @@ export function registerCharacterRoutes(app: FastifyInstance, ctx: Context): voi
     const body = parseBody(CharacterRequest, request);
     const { ability_roll_id: _roll, ...choices } = body;
     return callBxapi(() => bxapi.post('/v1/generate/character', choices, { requestId: request.id }));
+  });
+
+  const checker = new CharacterChecker(ctx);
+
+  // Checking choices stores nothing, but it counts as a change for the per-user write limit like every POST, and
+  // against its own per-user limit, because one check can cost bxapi several requests.
+  app.post('/api/characters/check', async (request) => {
+    const user = ctx.auth.user(request);
+    const body = parseBody(CharacterCheckRequest, request);
+    checkSeed(ctx, body.seed);
+    if (
+      db.get(
+        'SELECT 1 FROM ability_rolls WHERE id = ? AND owner_user_id = ?',
+        body.ability_roll_id,
+        user.id,
+      ) === undefined
+    ) {
+      notFound('ability roll', body.ability_roll_id);
+    }
+    const retry = ctx.limits.characterChecks.take(user.id);
+    if (retry > 0) throw rateLimited('You are checking characters too fast. Wait a moment.', retry);
+    return checker.check(user, body, request.id);
   });
 
   app.post('/api/characters', async (request, reply) => {

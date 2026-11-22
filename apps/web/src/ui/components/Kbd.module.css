@@ -21,3 +21,9 @@
   font-weight: var(--weight-semibold);
   line-height: 1;
 }
+
+/* A hint inside a control paints its key with generated content, so the key stays out of the control's text,
+ * its accessible name, and copied text. */
+.painted::before {
+  content: attr(data-key);
+}

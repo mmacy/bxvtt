@@ -7,6 +7,9 @@
 /** How close to the bottom, in pixels, counts as "at the bottom". */
 export const BOTTOM_SLACK = 40;
 
+/** How far, in pixels, the viewport can move before the list renders a new window of rows. */
+export const RENDER_SLACK = 240;
+
 /** The row at the top of the viewport, so the list can keep it still when rows above it change. */
 export interface Anchor {
   key: string;
@@ -30,6 +33,10 @@ export class ListModel {
   private heights = new Map<string, number>();
   private listeners = new Set<() => void>();
   private version = 0;
+  /** Changes only when a row or the header is measured, so the row offsets are recomputed only then. */
+  measureVersion = 0;
+  /** The scroll position at the last render. Small scrolls don't render, because the window has overscan. */
+  private renderedTop = 0;
   anchor: Anchor | null = null;
   atBottom = true;
   scrollTop = 0;
@@ -57,23 +64,33 @@ export class ListModel {
 
   /** Tells React that measurements changed. */
   flush(): void {
+    this.measureVersion += 1;
     this.emit();
   }
 
   setHeader(height: number): void {
     if (this.headerHeight === height) return;
     this.headerHeight = height;
+    this.measureVersion += 1;
     this.emit();
   }
 
-  /** Records the viewport after a scroll or a resize. */
-  setViewport(scrollTop: number, height: number, atBottom: boolean): void {
+  /**
+   * Records the viewport after a scroll or a resize. It asks React to render only when the window of rows could
+   * change: the viewport moved more than `slack` pixels since the last render, resized, or reached the bottom.
+   */
+  setViewport(scrollTop: number, height: number, atBottom: boolean, slack = RENDER_SLACK): void {
     const changed =
-      this.scrollTop !== scrollTop || this.viewportHeight !== height || this.atBottom !== atBottom;
+      Math.abs(scrollTop - this.renderedTop) > slack ||
+      this.viewportHeight !== height ||
+      this.atBottom !== atBottom;
     this.scrollTop = scrollTop;
     this.viewportHeight = height;
     this.atBottom = atBottom;
-    if (changed) this.emit();
+    if (changed) {
+      this.renderedTop = scrollTop;
+      this.emit();
+    }
   }
 
   /** The top of each row and, at the end, the total height. */

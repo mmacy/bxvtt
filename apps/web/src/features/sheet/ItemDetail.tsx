@@ -1,9 +1,10 @@
 import { Fragment } from 'react';
-import { useRulesEntry, type MagicItemDetail } from '@/app';
+
 import { formatDice, itemTypeLabel } from '@bxvtt/shared/text';
 import { IconButton, Popover, Skeleton } from '@/ui';
 import type { InventoryEntry } from './model';
 import styles from './sheet.module.css';
+import { useMagicItemDetail } from './catalogs';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -59,7 +60,7 @@ export function templateFacts(entry: InventoryEntry): Array<[string, string]> {
 }
 
 function MagicDetail({ catalogId }: { catalogId: string }) {
-  const entry = useRulesEntry<MagicItemDetail>(`magic-items/${catalogId}`);
+  const entry = useMagicItemDetail(catalogId);
   if (entry.loading) return <Skeleton lines={3} />;
   if (!entry.data) return <p className={styles.detailProse}>The rules reference doesn't have this item.</p>;
   const manual = entry.data.manual;

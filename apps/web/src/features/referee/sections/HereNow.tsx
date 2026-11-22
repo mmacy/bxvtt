@@ -2,8 +2,8 @@
  * Here and now: the key for where the party stands. The encounter under way comes first, then the area's
  * description and key, the doors on its walls, and the level's guidance and wandering monster table.
  */
-import { count, formatDice } from '@bxvtt/shared/text';
-import { Badge, Banner, EmptyState, Icon, Skeleton } from '@/ui';
+import { formatDice, timeUnitNoun } from '@bxvtt/shared/text';
+import { Badge, Banner, EmptyState, Icon, SectionLabel, Skeleton } from '@/ui';
 import { doorsAround, type LevelSpec } from '../model/adventure';
 import { templateLabel } from '../model/describe';
 import type { RefereeData } from '../useReferee';
@@ -33,13 +33,15 @@ export function WanderingBlock({
       <div className={styles.rowHead}>
         <Icon name="footprints" size={16} className={styles.rowIcon} />
         <span className={styles.rowTitle}>
-          {wandering.chance_in_six} in 6, checked every {count(wandering.interval_turns, 'turn')}
+          {wandering.chance_in_six} in 6, checked every {wandering.interval_turns}{' '}
+          {timeUnitNoun('turn', wandering.interval_turns)}
         </span>
       </div>
       {showCounter && (
         <div className={styles.meter}>
           <span className={styles.secondary}>
-            {counter} of {count(wandering.interval_turns, 'turn')} since the last check.
+            {counter} of {wandering.interval_turns} {timeUnitNoun('turn', wandering.interval_turns)} since the
+            last check.
           </span>
           {state?.exploration.noise_since_check && <Badge tone="warning">The party made noise</Badge>}
         </div>
@@ -106,7 +108,7 @@ export function HereNow({ data }: { data: RefereeData }) {
         <p className={styles.description}>{town.description}</p>
         {town.services.length > 0 && (
           <section aria-label="Services">
-            <h4 className={styles.subhead}>Services</h4>
+            <SectionLabel level={4}>Services</SectionLabel>
             <ul className={styles.bullets}>
               {town.services.map((service) => (
                 <li key={service}>{service}</li>
@@ -116,7 +118,7 @@ export function HereNow({ data }: { data: RefereeData }) {
         )}
         {adventure.hooks.length > 0 && (
           <section aria-label="Hooks">
-            <h4 className={styles.subhead}>Rumours and hooks</h4>
+            <SectionLabel level={4}>Rumours and hooks</SectionLabel>
             <ul className={styles.bullets}>
               {adventure.hooks.map((hook) => (
                 <li key={hook}>{hook}</li>
@@ -161,7 +163,7 @@ export function HereNow({ data }: { data: RefereeData }) {
       ) : (
         cornerDoors.length > 0 && (
           <section aria-label="Doors">
-            <h4 className={styles.subhead}>Doors by the party</h4>
+            <SectionLabel level={4}>Doors by the party</SectionLabel>
             <ul className={styles.doorList}>
               {cornerDoors.map((door) => (
                 <DoorRow
@@ -178,7 +180,7 @@ export function HereNow({ data }: { data: RefereeData }) {
       )}
 
       <section aria-label="This level" className={styles.levelBlock}>
-        <h4 className={styles.subhead}>Level {level.number}</h4>
+        <SectionLabel level={4}>Level {level.number}</SectionLabel>
         {level.guidance && <p className={styles.guidance}>{level.guidance}</p>}
         <WanderingBlock level={level} data={data} showCounter />
       </section>

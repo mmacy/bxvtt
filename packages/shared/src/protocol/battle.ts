@@ -23,11 +23,24 @@ export const SaveDeclarationRequest = z.strictObject({
 /** Body of `PUT /api/tables/{table_id}/game/declarations/{member_id}`. */
 export type SaveDeclarationRequest = z.infer<typeof SaveDeclarationRequest>;
 
-/** One rejection bxapi gave a round, with the member whose declaration it concerns, when the rejection names one. */
+/**
+ * One rejection bxapi gave a round, with the member whose declaration it concerns.
+ *
+ * osrlib returns every rejection of a round without saying whose declaration each one is about, and some
+ * rejections name nobody, such as `combat.attack.out_of_reach`. The server attributes each one: from a param
+ * that names a declarer, from the only declaration that isn't a `hold`, or by sending bxapi the round again
+ * with one declaration swapped for one that osrlib always refuses, which never resolves the round. When it still
+ * can't tell, `member_id` is `null` and `candidates` lists the members whose declarations could have caused it.
+ */
 export const DeclarationRefusal = z.object({
   member_id: MemberId.nullable(),
   code: z.string(),
   params: z.record(z.string(), z.unknown()),
+  /**
+   * When `member_id` is `null`, the members whose declarations could have caused the rejection, in marching
+   * order. Absent when `member_id` names the member.
+   */
+  candidates: z.array(MemberId).optional(),
 });
 /** One rejection bxapi gave a round. */
 export type DeclarationRefusal = z.infer<typeof DeclarationRefusal>;

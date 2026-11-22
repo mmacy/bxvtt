@@ -1,9 +1,11 @@
 import { isProblem } from '@bxvtt/shared/client';
-import { useEffect, useState, type ReactNode } from 'react';
+import { Suspense, lazy, useEffect, useState, type ReactNode } from 'react';
 import { Link as RouterLink, useParams } from 'react-router-dom';
 import {
   TableProvider,
   getApi,
+  isRetiredToken,
+  useCombatStage,
   useIdentity,
   useMapBus,
   useTableSession,
@@ -13,10 +15,15 @@ import {
 } from '@/app';
 import { Button, Card, EmptyState, PageLayout, Skeleton, Spinner } from '@/ui';
 import { NameForm, ProfileMenu } from '@/features/home';
-import { LobbyPage } from '@/features/lobby';
 import { ConnectionBanner } from './ConnectionBanner';
-import { PlayShell } from './PlayShell';
+import { LoadingScreen } from './LoadingScreen';
+import { RejoinPrompt } from './RejoinPrompt';
 import styles from './table.module.css';
+
+// The lobby and the play screen load on demand, so the home page never downloads the map, the compendium, or the
+// referee tools, and the lobby never downloads the play screen.
+const LobbyPage = lazy(() => import('@/features/lobby').then((module) => ({ default: module.LobbyPage })));
+const PlayShell = lazy(() => import('./PlayShell').then((module) => ({ default: module.PlayShell })));
 
 function Centered({ children }: { children: ReactNode }) {
   return (
@@ -34,6 +41,25 @@ function HomeButton() {
   );
 }
 
+/**
+ * What a browser whose sign-in was retired shows: a referee let this user back in from another browser, which now
+ * holds the user's token. It offers the ways on, and never makes a second member with the same name by itself.
+ */
+function RetiredSignIn() {
+  return (
+    <EmptyState
+      icon="log-out"
+      title="You've signed in to this table from another browser"
+      description={`A referee let you back in somewhere else, so this browser's sign-in no longer works. Play on in the other browser. To play in this browser instead, open the table's invite link here and choose "I've played at this table before".`}
+      action={
+        <Button asChild variant="secondary" icon="user">
+          <RouterLink to="/">Continue as someone new</RouterLink>
+        </Button>
+      }
+    />
+  );
+}
+
 const REMOVED_TEXT: Record<RemovedReason, { title: string; description: string }> = {
   left: { title: 'You left this table', description: 'To come back, ask the referee for a new invite link.' },
   kicked: {
@@ -46,10 +72,18 @@ const REMOVED_TEXT: Record<RemovedReason, { title: string; description: string }
   },
 };
 
-/** What to show when the server refused the connection: a forgotten user, or a table the user isn't at. */
-function AuthFailed() {
+/**
+ * What to show when the server refused the connection: a sign-in that another browser took over, a forgotten
+ * user, or a table the user isn't at.
+ *
+ * @param wasOpen - Whether this browser was at the table before the server closed the connection. A referee who
+ *   lets this member back in from another browser retires this browser's token, and the server closes its
+ *   connection then.
+ */
+function AuthFailed({ wasOpen }: { wasOpen: boolean }) {
   const forget = useIdentity((s) => s.forget);
   const [checked, setChecked] = useState(false);
+  const [retired, setRetired] = useState(false);
   useEffect(() => {
     let cancelled = false;
     getApi()
@@ -58,15 +92,19 @@ function AuthFailed() {
         () => !cancelled && setChecked(true),
         (error: unknown) => {
           if (cancelled) return;
-          if (isProblem(error, 'unauthorized')) forget('forgotten');
+          // The server says so with `token_retired`. A connection that was open and closed then is the same case.
+          if (isRetiredToken(error)) forget('retired');
+          else if (isProblem(error, 'unauthorized') && wasOpen) setRetired(true);
+          else if (isProblem(error, 'unauthorized')) forget('forgotten');
           setChecked(true);
         },
       );
     return () => {
       cancelled = true;
     };
-  }, [forget]);
+  }, [forget, wasOpen]);
   if (!checked) return <Spinner size={24} label="Checking the table" />;
+  if (retired) return <RetiredSignIn />;
   return (
     <EmptyState
       icon="lock"
@@ -102,7 +140,7 @@ function TableScreen() {
   if (status === 'closed' && closeReason === 'auth_failed') {
     return (
       <Centered>
-        <AuthFailed />
+        <AuthFailed wasOpen={ready} />
       </Centered>
     );
   }
@@ -125,7 +163,13 @@ function TableScreen() {
       </Centered>
     );
   }
-  if (hasGame) return <PlayShell />;
+  if (hasGame) {
+    return (
+      <Suspense fallback={<LoadingScreen label="Opening the table" />}>
+        <PlayShell />
+      </Suspense>
+    );
+  }
   if (playing) {
     return (
       <Centered>
@@ -136,7 +180,18 @@ function TableScreen() {
       </Centered>
     );
   }
-  return <LobbyPage banner={<ConnectionBanner />} />;
+  return (
+    <Suspense fallback={<LoadingScreen label="Opening the lobby" />}>
+      <LobbyPage
+        banner={
+          <>
+            <ConnectionBanner />
+            <RejoinPrompt />
+          </>
+        }
+      />
+    </Suspense>
+  );
 }
 
 /** Opens a table's live session and shows its lobby or its play screen. */
@@ -146,6 +201,7 @@ function TableSessionView({ tableId, token }: { tableId: string; token: string }
     () => () => {
       useMapBus.getState().reset();
       useTableUi.getState().reset();
+      useCombatStage.getState().reset();
     },
     [tableId],
   );
@@ -168,10 +224,18 @@ export function TablePage() {
   const { tableId = '' } = useParams();
   const status = useIdentity((s) => s.status);
   const token = useIdentity((s) => s.token);
+  const notice = useIdentity((s) => s.notice);
   if (status === 'unknown') {
     return (
       <Centered>
         <Spinner size={32} label="Loading" />
+      </Centered>
+    );
+  }
+  if (status === 'anonymous' && notice === 'retired') {
+    return (
+      <Centered>
+        <RetiredSignIn />
       </Centered>
     );
   }

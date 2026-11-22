@@ -3,8 +3,7 @@
   margin: 0;
   padding: var(--space-2) var(--space-3) var(--space-1);
   border-radius: var(--radius-md);
-  background:
-    linear-gradient(90deg, var(--color-accent-subtle), transparent 30%), var(--color-surface-sunken);
+  background: linear-gradient(90deg, var(--color-surface-1), transparent 30%), var(--color-surface-sunken);
   box-shadow: var(--shadow-inset);
 }
 
@@ -19,6 +18,29 @@
   height: 104px;
 }
 
+.labels {
+  position: relative;
+  height: var(--space-4);
+  font-size: var(--text-2xs);
+  line-height: var(--space-4);
+  color: var(--color-text-subtle);
+  white-space: nowrap;
+}
+
+.labelStart {
+  position: absolute;
+  left: 0;
+  width: 60px;
+  text-align: center;
+}
+
+.labelEnd {
+  position: absolute;
+  right: 0;
+  width: 60px;
+  text-align: center;
+}
+
 .line {
   position: absolute;
   top: var(--space-4);
@@ -28,11 +50,7 @@
 
 .lineLabel {
   position: absolute;
-  bottom: 0;
-  left: var(--space-1);
-  font-size: var(--text-2xs);
-  color: var(--color-text-subtle);
-  white-space: nowrap;
+  padding-left: var(--space-1);
 }
 
 .tick {
@@ -112,7 +130,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-0-5);
-  max-width: 120px;
+  max-width: 96px;
   overflow: hidden;
   font-size: var(--text-xs);
   font-weight: var(--weight-medium);
@@ -171,7 +189,7 @@
 
 .focus > :is(svg, span:first-of-type),
 .focus .groupToken {
-  filter: drop-shadow(0 0 6px var(--color-accent));
+  filter: drop-shadow(0 0 6px var(--color-text-strong));
 }
 
 .selected {
@@ -182,12 +200,12 @@
 .gone {
   position: absolute;
   top: var(--space-5);
-  bottom: var(--space-1);
+  bottom: 0;
   display: flex;
-  flex-direction: column;
   flex-wrap: wrap;
   align-content: center;
   justify-content: center;
+  width: 60px;
   gap: var(--space-1);
   padding: var(--space-1);
   border-radius: var(--radius-sm);
@@ -209,16 +227,11 @@
   display: inline-flex;
 }
 
-.trayLabel {
-  font-size: var(--text-2xs);
-  color: var(--color-text-subtle);
-  text-align: center;
-}
-
 .pops {
   position: absolute;
-  bottom: 100%;
+  bottom: calc(100% + var(--space-1));
   left: 50%;
+  z-index: 1;
   display: grid;
   justify-items: center;
   transform: translateX(-50%);

@@ -21,6 +21,8 @@ export interface ExploreSendOptions {
   feedback?: 'map' | 'inline' | 'toast';
   /** What to say when bxapi accepts the command and nothing visible happens. */
   nothingText?: string;
+  /** A held or repeated movement input, which the app drops while busy instead of queueing. */
+  repeatable?: boolean;
 }
 
 /** Commands whose result the map already shows, so no line appears beside the party. */
@@ -84,6 +86,7 @@ export function useExploreSend(): {
       const onMap = options.feedback === 'map';
       const result = await innerSend(command, {
         display: onMap || options.feedback === 'inline' ? 'inline' : 'toast',
+        repeatable: options.repeatable,
       });
       if (before === null) return result;
       const { tableId } = store.getState();
@@ -104,9 +107,8 @@ export function useExploreSend(): {
           }
         }
       } else if (result.status === 'accepted') {
-        const after = result.result.game.view.location;
         updateLore(tableId, sessionId, (lore) =>
-          learnFromEvents(lore, result.result.events, location, after, command),
+          learnFromEvents(lore, result.result.events, location, command),
         );
         if (!result.result.events.some((event) => isPlayerVisible(event))) {
           toast.info(options.nothingText ?? NOTHING_HAPPENS, { id: 'explore-nothing' });

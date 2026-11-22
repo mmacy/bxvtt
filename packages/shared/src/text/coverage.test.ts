@@ -117,7 +117,7 @@ describe('rejection coverage', () => {
 
   it('builds a sentence from the words of a code it does not know', () => {
     expect(describeRejection({ code: 'items.equip.too_heavy', params: {} })).toBe(
-      "That wasn't allowed (equip too heavy).",
+      "That wasn't allowed: equip too heavy.",
     );
   });
 });

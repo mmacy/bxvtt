@@ -6,12 +6,16 @@ import type { FeedEntry } from '@bxvtt/shared/protocol';
 import {
   encounterOutcomeLabel,
   encounterOutcomeSentence,
+  extendContextWithEntryNames,
   extendContextWithEvents,
   idKind,
   itemList,
   joinList,
   memberName,
   pluralize,
+  countedLabel,
+  isProperLabel,
+  capitalizeFirst,
   prettifyId,
   type TextContext,
 } from '@bxvtt/shared/text';
@@ -57,7 +61,10 @@ const DEFEAT_VERB: Record<string, string> = {
  * @param feed - The feed, oldest first.
  * @param endSeq - The `seq` of the entry that ended the fight.
  */
-export function fightEvents(feed: readonly FeedEntry[], endSeq: number): AnyEvent[] {
+export function fightEntries(
+  feed: readonly FeedEntry[],
+  endSeq: number,
+): Array<Extract<FeedEntry, { kind: 'game' }>> {
   const games = feed.filter(
     (e): e is Extract<FeedEntry, { kind: 'game' }> => e.kind === 'game' && e.seq <= endSeq,
   );
@@ -69,7 +76,22 @@ export function fightEvents(feed: readonly FeedEntry[], endSeq: number): AnyEven
       break;
     }
   }
-  return games.slice(start).flatMap((entry) => entry.events as AnyEvent[]);
+  return games.slice(start);
+}
+
+/**
+ * The events of the fight and a text context that knows every name its entries recorded, so a summary names
+ * monsters by their group after the encounter has closed or the page has reloaded.
+ */
+export function fightEvents(
+  feed: readonly FeedEntry[],
+  endSeq: number,
+  ctx: TextContext,
+): { events: AnyEvent[]; ctx: TextContext } {
+  const entries = fightEntries(feed, endSeq);
+  let named = ctx;
+  for (const entry of entries) named = extendContextWithEntryNames(named, entry.names);
+  return { events: entries.flatMap((entry) => entry.events as AnyEvent[]), ctx: named };
 }
 
 /** Sums up a fight from its events. */
@@ -77,11 +99,15 @@ export function summarizeFight(events: readonly AnyEvent[], ctx: TextContext): F
   const learned = extendContextWithEvents(ctx, events as never);
   let outcome: string | null = null;
   let rounds = 0;
-  const defeated = new Map<string, { label: string; verb: string; count: number; xp: number }>();
+  const defeated = new Map<
+    string,
+    { label: string; plural: string | undefined; verb: string; count: number; xp: number }
+  >();
   const awards: FightSummary['awards'] = [];
   const loot: string[] = [];
   const fallen: string[] = [];
   let lootCoins = 0;
+
   const lootItems: string[] = [];
   for (const event of events) {
     switch (event.event_type) {
@@ -106,9 +132,17 @@ export function summarizeFight(events: readonly AnyEvent[], ctx: TextContext): F
         const monsterId = str(event, 'monster_id') ?? '';
         const how = str(event, 'outcome') ?? 'slain';
         const template = str(event, 'template_id') ?? '';
-        const label = learned.monsters[monsterId]?.label ?? prettifyId(template).toLowerCase();
-        const key = `${template}:${how}`;
-        const entry = defeated.get(key) ?? { label, verb: DEFEAT_VERB[how] ?? how, count: 0, xp: 0 };
+        const known = learned.monsters[monsterId];
+        const label = known?.label ?? prettifyId(template).toLowerCase();
+        // By label, so a named individual such as Gashnak One-Ear stays apart from the goblins he leads.
+        const key = `${label}:${how}`;
+        const entry = defeated.get(key) ?? {
+          label,
+          plural: known?.labelPlural,
+          verb: DEFEAT_VERB[how] ?? how,
+          count: 0,
+          xp: 0,
+        };
         entry.count += 1;
         entry.xp += num(event, 'xp') ?? 0;
         defeated.set(key, entry);
@@ -155,17 +189,33 @@ export function summarizeFight(events: readonly AnyEvent[], ctx: TextContext): F
   loot.push(...itemList(lootItems, learned));
 
   const list = [...defeated.values()].map((d) => ({
-    text: `${d.count} ${d.count === 1 ? d.label : pluralize(d.label)} ${d.verb}`,
+    text: `${countedLabel(d.label, d.plural, d.count)} ${d.verb}`,
     xp: d.xp,
   }));
   const xpTotal = list.reduce((sum, d) => sum + d.xp, 0);
   let title: string;
   let sentence: string;
   switch (outcome) {
-    case 'victory':
-      title = 'Victory';
-      sentence = 'The monsters are beaten.';
+    case 'victory': {
+      // Titled for this fight, so it never reads like winning the adventure.
+      const kinds = new Map<string, { plural: string | undefined; count: number }>();
+      for (const d of defeated.values()) {
+        const kind = kinds.get(d.label) ?? { plural: d.plural, count: 0 };
+        kind.count += d.count;
+        kinds.set(d.label, kind);
+      }
+      const names = [...kinds.entries()].map(([label, k]) => {
+        if (isProperLabel(label) && k.count <= 1) return label;
+        return `the ${k.count === 1 ? label : (k.plural ?? pluralize(label))}`;
+      });
+      const one = kinds.size === 1 && [...kinds.values()][0]?.count === 1;
+      title =
+        names.length > 0
+          ? `${capitalizeFirst(joinList(names))} ${one ? 'is' : 'are'} beaten`
+          : 'The monsters are beaten';
+      sentence = 'The party won the fight.';
       break;
+    }
     case 'defeat':
       title = 'Defeat';
       sentence = 'Nobody in the party is left standing.';
@@ -198,10 +248,9 @@ export function summarizeFight(events: readonly AnyEvent[], ctx: TextContext): F
 /** One sentence about the experience the defeated monsters are worth. */
 export function xpSentence(summary: FightSummary): string | null {
   if (summary.awards.length > 0) {
-    const parts = summary.awards.map((a) => `${a.name} ${a.xp}`);
+    const parts = summary.awards.map((a) => `${a.name} ${a.xp} XP`);
     return `Experience awarded: ${joinList(parts)}.`;
   }
-  if (summary.xpTotal > 0)
-    return `The defeated monsters are worth ${summary.xpTotal} experience for the party.`;
+  if (summary.xpTotal > 0) return `The defeated monsters are worth ${summary.xpTotal} XP to the party.`;
   return null;
 }

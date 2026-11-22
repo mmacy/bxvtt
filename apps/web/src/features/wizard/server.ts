@@ -1,103 +1,30 @@
 /**
- * The wizard's questions to the server.
- *
- * bxapi keeps an ability roll's seed secret, and the roll's seed decides the hit points and the starting gold.
- * The preview route (`POST /api/characters/preview`) can't use a stored roll, so it would answer about different
- * scores. To check choices against the player's own roll, the wizard asks `POST /api/characters` for a *dry
- * run*: the real choices, plus one item to equip that the purchases don't include. bxapi runs creation in a fixed
- * order (class, adjustment, spells, hit points, languages, gold, purchases, then equipping), so every real choice
- * is checked before the extra item, and the extra item always stops creation with `character_invalid`. A failed
- * creation stores nothing and leaves the roll unused, as bxapi's spec states.
+ * The wizard's questions to the server. `POST /api/characters/check` checks the choices against the player's
+ * own ability roll and reports the roll's starting gold, storing nothing and leaving the roll unused, so the
+ * wizard asks it at each step and before it creates the character.
  */
 import { isProblem, type BxvttClient } from '@bxvtt/shared/client';
-import type { CharacterRequest, Problem, StoredCharacter } from '@bxvtt/shared/protocol';
-import { describeRejections, emptyContext, itemName, type TextContext } from '@bxvtt/shared/text';
-import { describeProblem } from '@/app';
+import type { CharacterCheck, CharacterRequest, Problem } from '@bxvtt/shared/protocol';
+import {
+  describeRejections,
+  emptyContext,
+  itemPhrase,
+  resolveItemNoun,
+  type TextContext,
+} from '@bxvtt/shared/text';
+import { describeProblem, toParamMap } from '@/app';
 import type { StepId } from './draft';
-import { toParamMap } from './tables';
-
-/** The item to equip that no purchase ever includes, which ends a dry run after every real check. */
-export const DRY_RUN_SENTINEL = 'bxvtt-wizard-dry-run';
-
-/** What a dry run found. */
-export type DryRunResult =
-  /** Every choice passed. */
-  | { kind: 'ok' }
-  /** A choice breaks a rule. */
-  | { kind: 'invalid'; problem: Problem }
-  /** The server stored a character after all. Treat it as created. */
-  | { kind: 'created'; character: StoredCharacter };
 
 /**
- * Asks the server whether a set of choices would make a character from the player's roll, storing nothing.
+ * Checks a set of choices against the roll they name.
  *
  * @param api - The API client.
- * @param body - The choices.
- * @throws Any error other than `character_invalid`, such as a used roll or a network failure.
+ * @param body - The choices, with `ability_roll_id`.
+ * @throws `not_found` for a roll the user doesn't have, `ability_roll_used`, or `rate_limited`.
  */
-export async function dryRun(api: BxvttClient, body: CharacterRequest): Promise<DryRunResult> {
-  try {
-    const character = await api.createCharacter({
-      ...body,
-      equip_item_ids: [...(body.equip_item_ids ?? []), DRY_RUN_SENTINEL],
-    });
-    return { kind: 'created', character };
-  } catch (error) {
-    if (!isProblem(error, 'character_invalid')) throw error;
-    const problem = error.problem;
-    if (problem.field === 'equip_item_ids' && problem.id === DRY_RUN_SENTINEL) return { kind: 'ok' };
-    return { kind: 'invalid', problem };
-  }
-}
-
-/** The result of {@link countGold}. */
-export type GoldResult = { kind: 'gold'; gp: number } | { kind: 'invalid'; problem: Problem };
-
-/**
- * Finds the starting gold that the roll gives these choices, by asking whether the gold covers a number of
- * 1 gp lots of an item and halving the range each time. Each question is a dry run, so nothing is stored.
- *
- * @param api - The API client.
- * @param body - The choices up to the outfit, without purchases.
- * @param probeItemId - An item that costs exactly 1 gp a lot, such as `torch`.
- * @returns The gold in gold pieces, or the problem that stopped creation before the gold roll.
- */
-export async function countGold(
-  api: BxvttClient,
-  body: CharacterRequest,
-  probeItemId: string,
-): Promise<GoldResult> {
-  const { purchases: _purchases, equip_item_ids: _equip, ...base } = body;
-  /** Whether the gold covers `lots` gold pieces, or the problem that stops creation first. */
-  const covers = async (lots: number): Promise<boolean | Problem> => {
-    const result = await dryRun(api, { ...base, purchases: [{ item_id: probeItemId, quantity: lots }] });
-    if (result.kind !== 'invalid') return true;
-    const codes = result.problem.rejections?.map((r) => r.code) ?? [];
-    if (codes.length > 0 && codes.every((code) => code === 'items.purchase.insufficient_funds')) return false;
-    return result.problem;
-  };
-  const first = await covers(1);
-  if (typeof first !== 'boolean') return { kind: 'invalid', problem: first };
-  if (!first) return { kind: 'gold', gp: 0 };
-  // `low` is always covered, and `high` never is.
-  let low = 1;
-  let high = 256;
-  for (;;) {
-    const answer = await covers(high);
-    if (typeof answer !== 'boolean') return { kind: 'invalid', problem: answer };
-    if (!answer) break;
-    low = high;
-    if (high >= 10_000) return { kind: 'gold', gp: high };
-    high = Math.min(10_000, high * 2);
-  }
-  while (high - low > 1) {
-    const middle = Math.floor((low + high) / 2);
-    const answer = await covers(middle);
-    if (typeof answer !== 'boolean') return { kind: 'invalid', problem: answer };
-    if (answer) low = middle;
-    else high = middle;
-  }
-  return { kind: 'gold', gp: low };
+export function checkChoices(api: BxvttClient, body: CharacterRequest): Promise<CharacterCheck> {
+  const { ability_roll_id: rollId, ...rest } = body;
+  return api.checkCharacter({ ...rest, ability_roll_id: rollId ?? '' });
 }
 
 /** A refusal explained for the player, with the step that fixes it. */
@@ -106,6 +33,10 @@ export interface WizardProblem {
   step: StepId | null;
   title: string;
   sentences: string[];
+}
+
+function phrase(id: string, ctx: TextContext): string {
+  return itemPhrase(resolveItemNoun(id, ctx));
 }
 
 function stepForCode(code: string): StepId {
@@ -154,13 +85,13 @@ export function explainInvalid(problem: Problem, ctx: TextContext = emptyContext
       return {
         step: 'outfit',
         title: STEP_TITLES.outfit,
-        sentences: [`The shop doesn't sell ${itemName(id, ctx)}. Take it out of your cart.`],
+        sentences: [`The shop doesn't sell ${phrase(id, ctx)}. Take it out of your cart.`],
       };
     case 'equip_item_ids':
       return {
         step: 'outfit',
         title: STEP_TITLES.outfit,
-        sentences: [`You chose to equip ${itemName(id, ctx)}, but your cart doesn't have it. Buy it first.`],
+        sentences: [`You chose to equip ${phrase(id, ctx)}, but your cart doesn't have it. Buy it first.`],
       };
     default:
       return {
@@ -201,5 +132,11 @@ export function explainCreationError(error: unknown, ctx?: TextContext): WizardP
     };
   }
   const message = describeProblem(error);
-  return { step: null, title: message.title, sentences: [message.detail] };
+  // A failure that never reached the rules engine loses nothing: the draft stays in this browser.
+  const kept = ['server_unavailable', 'network', 'invalid_response', 'rate_limited', 'bxapi_unavailable'];
+  return {
+    step: null,
+    title: message.title,
+    sentences: kept.includes(message.code) ? [message.detail, 'Your choices are kept.'] : [message.detail],
+  };
 }

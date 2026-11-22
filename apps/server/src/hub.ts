@@ -160,6 +160,22 @@ export class Hub {
   }
 
   /**
+   * Closes every connection of a user, on every table, with `auth_failed`, because the token they used no longer
+   * works. The clients stop reconnecting.
+   *
+   * @param userId - The user.
+   */
+  closeUserEverywhere(userId: string): void {
+    for (const set of [...this.byTable.values()]) {
+      for (const connection of [...set]) {
+        if (connection.userId !== userId) continue;
+        connection.socket.close(WS_CLOSE_CODES.auth_failed, 'token replaced');
+        this.remove(connection);
+      }
+    }
+  }
+
+  /**
    * Closes a user's connections with the `resync` code, so their clients reconnect and get a new snapshot.
    *
    * @param tableId - The table.

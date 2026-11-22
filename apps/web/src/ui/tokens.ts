@@ -114,16 +114,21 @@ export const durations = {
   diceRoll: 1100,
 } as const;
 
+/**
+ * Stacking levels. Every portaled layer (dialog, drawer, overlay, menu, select, combobox, popover) shares `layer`,
+ * so the layer opened last stacks on top. Toasts and tooltips stay above.
+ */
 export const zIndex = {
   base: 0,
   raised: 10,
   rail: 20,
   dock: 30,
   topbar: 40,
-  dropdown: 1000,
-  overlay: 1100,
+  layer: 1200,
+  dropdown: 1200,
+  overlay: 1200,
   modal: 1200,
-  popover: 1300,
+  popover: 1200,
   toast: 1400,
   tooltip: 1500,
 } as const;

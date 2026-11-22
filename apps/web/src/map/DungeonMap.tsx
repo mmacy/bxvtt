@@ -9,6 +9,7 @@ import {
   type Ref,
 } from 'react';
 import type { Camera, Viewport, ZoomLimits } from './camera';
+import { measurementText } from './cursor';
 import { describeTarget } from './describe';
 import type { Direction, Point } from './geometry';
 import type {
@@ -24,6 +25,7 @@ import type { LevelMap } from './model';
 import type { MapPin, MapPing, MapPointer, MapStroke, MapTool, Measurement, RulerMetric } from './overlays';
 import { MapRenderer, type MapPointerInfo, type RendererStats } from './render/renderer';
 import { resolveTheme, type MapTheme, type ThemeName } from './themes';
+import styles from './DungeonMap.module.css';
 
 export interface DungeonMapProps {
   /** The level to draw, from `fromPlayerView`, `fromRefereeView`, or `fromReferee`. `null` draws empty rock. */
@@ -50,10 +52,27 @@ export interface DungeonMapProps {
   followParty?: boolean;
   /** What the arrow keys do: pan the camera (default), or call `onMoveKey`. With `'move'`, Shift and the arrows pan. */
   arrowKeys?: 'pan' | 'move';
+  /**
+   * Handles letter keys on the focused map: W, A, S, and D pan, C centres on the party, and F toggles follow mode.
+   * Defaults to false, so letters reach the app's shortcuts. Turn it on where the map is the whole page, such as
+   * the harness.
+   */
+  letterKeys?: boolean;
   /** Turns off easing, inertia, and flicker. Defaults to the user's `prefers-reduced-motion` setting. */
   reducedMotion?: boolean;
   /** On a referee map, draws area labels and the encounter, treasure, and trap markers. Defaults to true. */
   refereeMarkers?: boolean;
+  /**
+   * On a player map, draws the names of the areas passed in `fromPlayerView`'s `extras.areas`. Defaults to true.
+   * Pass false when you draw your own labels and pass the areas only for the hover tooltip.
+   */
+  areaLabels?: boolean;
+  /**
+   * Hides a stroke as soon as the eraser touches it, until the next `strokes` list arrives. Defaults to true. Call
+   * `restoreErasedStrokes` on the handle to show strokes again, such as after the server refused an erase. Pass
+   * false to control erasing fully: the map only reports `onStrokeErase`, and a stroke stays until you remove it.
+   */
+  hideErasedStrokes?: boolean;
   /** Zoom limits in CSS pixels per cell. Defaults to 6 and 160. */
   zoomLimits?: ZoomLimits;
   /** Where the camera starts on a new level: fit the known map (default) or close on the party. */
@@ -62,6 +81,11 @@ export interface DungeonMapProps {
   showWandering?: boolean;
   /** The accessible name of the map. Defaults to "Dungeon map". */
   ariaLabel?: string;
+  /**
+   * Applied to the container, after the map's own defaults (`position: relative`, `overflow: hidden`, and the
+   * theme's rock color as the background), which have no specificity. A class or a style can position the map,
+   * such as `position: absolute; inset: 0`. Give the container a size.
+   */
   className?: string;
   style?: CSSProperties;
 
@@ -101,6 +125,21 @@ export interface DungeonMapProps {
   onFollowPartyChange?: (follow: boolean) => void;
   /** An arrow key with `arrowKeys="move"`. `repeat` is true while the key is held. */
   onMoveKey?: (direction: Direction, repeat: boolean) => void;
+  /**
+   * Escape with the keyboard cursor in the `pick-cell` or `pick-edge` tool. The user stopped picking, so leave the
+   * pick mode, as a Cancel button would.
+   */
+  onPickCancel?: () => void;
+  /**
+   * The ruler's measurement changed while the user draws or moves it, or it was cleared (`null`). Use it for a
+   * status line, such as "6 squares, 60 feet" from `measurementText`. The map also announces the measurement.
+   */
+  onMeasureChange?: (measurement: Measurement | null) => void;
+  /**
+   * The keyboard cursor moved, appeared, or went away (`null`). `text` is the sentence the map announces, such as
+   * "A corridor, 2 squares north of the party. Press Enter to choose this square, or Escape to stop."
+   */
+  onCursorChange?: (target: CellTarget | EdgeTarget | null, text: string) => void;
 
   ref?: Ref<DungeonMapHandle>;
 }
@@ -131,6 +170,25 @@ export interface DungeonMapHandle {
   getStats(): RendererStats;
   /** Focuses the map so it takes keyboard input. */
   focus(): void;
+  /**
+   * Starts a measurement from a cell (`{ x, y }` in cells), in any tool, such as "Measure from here" in a context
+   * menu. The ruler runs to the cell under the pointer, and the arrow keys move its far end while the map has
+   * focus. A click or Enter ends it and reports the measurement through `onMeasure`. The click doesn't reach the
+   * other callbacks. Escape, a tool change, a level change, or `cancelMeasure()` ends it and reports `null`.
+   */
+  startMeasure(from: Point): void;
+  /** Ends a measurement that `startMeasure` began, and reports `null` through `onMeasure`. */
+  cancelMeasure(): void;
+  /** Whether a measurement that `startMeasure` began is running. */
+  isMeasuring(): boolean;
+  /** Shows strokes the eraser hid again: the given ids, or every hidden stroke. */
+  restoreErasedStrokes(ids?: readonly string[]): void;
+  /**
+   * Whether the map's keyboard cursor (in a picking tool with keyboard focus) or a measurement from `startMeasure`
+   * owns the arrow keys, Enter, and Escape right now. A key handler on an ancestor should leave those keys alone
+   * while it is true. The canvas also carries `data-map-cursor="on"` while the cursor shows.
+   */
+  hasKeyboardCursor(): boolean;
 }
 
 function prefersReducedMotion(): boolean {
@@ -162,7 +220,7 @@ export function DungeonMap(props: DungeonMapProps) {
   const tooltipRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<MapRenderer | null>(null);
   const propsRef = useRef(props);
-  const [focusRing, setFocusRing] = useState(false);
+  const [announcement, setAnnouncement] = useState('');
   const helpId = useId();
   const theme = resolveTheme(props.theme);
 
@@ -195,10 +253,28 @@ export function DungeonMap(props: DungeonMapProps) {
       onCameraChange: (c) => p().onCameraChange?.(c),
       onFollowPartyChange: (f) => p().onFollowPartyChange?.(f),
       onMoveKey: (d, r) => p().onMoveKey?.(d, r),
+      onPickCancel: () => p().onPickCancel?.(),
+      onCursorChange: (t, text) => p().onCursorChange?.(t, text),
+      onMeasureChange: (m) => {
+        p().onMeasureChange?.(m);
+        // A pointer measurement is announced here. The keyboard cursor announces its own, with the next step.
+        if (m && !renderer.cursorAnnouncesMeasurement()) announceSoon(measurementText(m));
+      },
       get onContextMenu() {
         const handler = p().onContextMenu;
         return handler ? (t: MapTarget | null, s: Point, i: MapPointerInfo) => handler(t, s, i) : undefined;
       },
+    });
+    // Announcements go to a polite live region. A burst (a drag across many squares) settles before it's read.
+    let announceTimer: ReturnType<typeof setTimeout> | null = null;
+    const announceSoon = (text: string) => {
+      if (announceTimer) clearTimeout(announceTimer);
+      announceTimer = setTimeout(() => setAnnouncement(text), 250);
+    };
+    renderer.setAnnouncer((text) => {
+      if (announceTimer) clearTimeout(announceTimer);
+      announceTimer = null;
+      setAnnouncement(text);
     });
     renderer.setHoverListener((target, screen) => {
       const tip = tooltipRef.current;
@@ -206,7 +282,8 @@ export function DungeonMap(props: DungeonMapProps) {
       if (!tip) return;
       const description = target && map && screen ? describeTarget(target, map) : null;
       if (!description || !screen) {
-        tip.style.opacity = '0';
+        // Hidden, so assistive technology never meets an empty tooltip.
+        tip.hidden = true;
         return;
       }
       const title = tip.firstElementChild;
@@ -217,7 +294,7 @@ export function DungeonMap(props: DungeonMapProps) {
       const x = Math.min(screen.x + 16, Math.max(8, width - 268));
       const y = Math.max(8, screen.y + 18);
       tip.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
-      tip.style.opacity = '1';
+      tip.hidden = false;
     });
     const measure = () => {
       const rect = container.getBoundingClientRect();
@@ -240,6 +317,7 @@ export function DungeonMap(props: DungeonMapProps) {
     };
     watchDpr();
     return () => {
+      if (announceTimer) clearTimeout(announceTimer);
       observer?.disconnect();
       media?.removeEventListener('change', onDpr);
       renderer.destroy();
@@ -262,8 +340,11 @@ export function DungeonMap(props: DungeonMapProps) {
     rulerMetric = 'grid',
     followParty = false,
     arrowKeys = 'pan',
+    letterKeys = false,
     reducedMotion,
     refereeMarkers = true,
+    areaLabels = true,
+    hideErasedStrokes = true,
     zoomLimits,
     initialView = 'fit',
   } = props;
@@ -278,8 +359,11 @@ export function DungeonMap(props: DungeonMapProps) {
       rulerMetric,
       followParty,
       arrowKeys,
+      letterKeys,
       reducedMotion: reduced,
       refereeMarkers,
+      areaLabels,
+      hideErasedStrokes,
       initialView,
     });
   }, [
@@ -290,8 +374,11 @@ export function DungeonMap(props: DungeonMapProps) {
     rulerMetric,
     followParty,
     arrowKeys,
+    letterKeys,
     reduced,
     refereeMarkers,
+    areaLabels,
+    hideErasedStrokes,
     initialView,
   ]);
 
@@ -326,13 +413,18 @@ export function DungeonMap(props: DungeonMapProps) {
       getStats: () =>
         rendererRef.current?.stats ?? { fps: 0, frameMs: 0, worstMs: 0, tilesPainted: 0, tilesCached: 0 },
       focus: () => canvasRef.current?.focus(),
+      startMeasure: (from) => rendererRef.current?.startMeasure(from),
+      cancelMeasure: () => rendererRef.current?.cancelMeasure(),
+      isMeasuring: () => rendererRef.current?.isMeasuring() ?? false,
+      restoreErasedStrokes: (ids) => rendererRef.current?.restoreErasedStrokes(ids),
+      hasKeyboardCursor: () => rendererRef.current?.hasKeyboardCursor() ?? false,
     }),
     [],
   );
 
   useEffect(() => {
     const tip = tooltipRef.current;
-    if (tip) tip.style.opacity = '0';
+    if (tip) tip.hidden = true;
   }, [props.map?.key, tool]);
 
   const map = props.map;
@@ -345,15 +437,14 @@ export function DungeonMap(props: DungeonMapProps) {
   return (
     <div
       ref={containerRef}
-      className={props.className}
-      style={{
-        position: 'relative',
-        overflow: 'hidden',
-        background: theme.rock.color,
-        borderRadius: 'inherit',
-        boxShadow: focusRing ? `inset 0 0 0 2px ${theme.hover.stroke}` : undefined,
-        ...props.style,
-      }}
+      className={[styles.root, props.className].filter(Boolean).join(' ')}
+      style={
+        {
+          '--dungeon-map-rock': theme.rock.color,
+          '--dungeon-map-focus': theme.hover.stroke,
+          ...props.style,
+        } as CSSProperties
+      }
     >
       <canvas
         ref={canvasRef}
@@ -362,22 +453,25 @@ export function DungeonMap(props: DungeonMapProps) {
         aria-roledescription="map"
         aria-label={props.ariaLabel ?? 'Dungeon map'}
         aria-describedby={helpId}
-        onFocus={(e) => setFocusRing(e.currentTarget.matches(':focus-visible'))}
-        onBlur={() => setFocusRing(false)}
-        style={{ display: 'block', width: '100%', height: '100%', outline: 'none', userSelect: 'none' }}
+        className={styles.canvas}
       />
       <div id={helpId} style={hiddenText}>
         {arrowKeys === 'move'
-          ? 'Arrow keys move the party. Shift and the arrow keys or W, A, S, and D pan the map.'
-          : 'Arrow keys or W, A, S, and D pan the map.'}{' '}
-        Plus and minus zoom. Zero fits the explored map. C centres on the party. F follows the party.
+          ? `Arrow keys move the party. Shift and the arrow keys${letterKeys ? ' or W, A, S, and D' : ''} pan the map.`
+          : `Arrow keys${letterKeys ? ' or W, A, S, and D' : ''} pan the map.`}{' '}
+        Plus and minus zoom. Zero fits the explored map.
+        {letterKeys ? ' C centres on the party. F follows the party.' : ''}
       </div>
       <div aria-live="polite" style={hiddenText}>
         {status}
       </div>
+      <div aria-live="polite" style={hiddenText} data-testid="map-announcement">
+        {announcement}
+      </div>
       <div
         ref={tooltipRef}
         role="tooltip"
+        hidden
         style={{
           position: 'absolute',
           left: 0,
@@ -391,8 +485,6 @@ export function DungeonMap(props: DungeonMapProps) {
           boxShadow: '0 4px 14px rgba(0,0,0,0.22)',
           font: '13px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif',
           pointerEvents: 'none',
-          opacity: 0,
-          transition: 'opacity 90ms linear',
           whiteSpace: 'pre-line',
           zIndex: 2,
         }}

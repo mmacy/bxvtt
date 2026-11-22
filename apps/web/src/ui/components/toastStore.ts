@@ -43,6 +43,14 @@ type Listener = () => void;
 
 let toasts: ToastRecord[] = [];
 let counter = 0;
+
+/** What the toast stack's live regions say: the latest polite and the latest assertive message. */
+export interface ToastAnnouncements {
+  polite: { key: number; id: string; text: string } | null;
+  assertive: { key: number; id: string; text: string } | null;
+}
+
+let announcements: ToastAnnouncements = { polite: null, assertive: null };
 const listeners = new Set<Listener>();
 const timers = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -115,6 +123,10 @@ function show(tone: ToastTone, title: string, options: ToastOptions = {}): strin
       );
     }
   }
+  // Each toast is announced once, when it is shown. Errors and warnings interrupt; the rest wait their turn.
+  const text = record.description ? `${record.title}. ${record.description}` : record.title;
+  const urgent = tone === 'error' || tone === 'warning';
+  announcements = { ...announcements, [urgent ? 'assertive' : 'polite']: { key: counter, id, text } };
   setToasts(next);
   schedule(id, record.duration);
   return id;
@@ -145,6 +157,7 @@ export const toast = {
   /** Removes every toast at once, without animation. */
   clear: () => {
     for (const id of timers.keys()) clearTimer(id);
+    announcements = { polite: null, assertive: null };
     setToasts([]);
   },
 };
@@ -158,5 +171,8 @@ export const toastStore = {
   },
   getSnapshot(): ToastRecord[] {
     return toasts;
+  },
+  getAnnouncements(): ToastAnnouncements {
+    return announcements;
   },
 };

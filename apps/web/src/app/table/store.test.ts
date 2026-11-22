@@ -1,7 +1,9 @@
 import type { FeedEntry, GameState, ServerMessage } from '@bxvtt/shared/protocol';
+import { emptyContext, itemName } from '@bxvtt/shared/text';
 import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot } from '../testing/fixtures';
 import {
+  buildBaseTextContext,
   createTableStore,
   dataFromSnapshot,
   initialTableData,
@@ -166,5 +168,37 @@ describe('createTableStore', () => {
     expect(store.getState().game?.revision).toBe(game.revision);
     store.getState().receiveGame(withRevision(game, game.revision + 1));
     expect(store.getState().game?.revision).toBe(game.revision + 1);
+  });
+});
+
+describe('buildBaseTextContext', () => {
+  it("keeps the text layer's nouns when the scene names an item by its catalog lot", () => {
+    const game = fixtureSnapshot('exploring', 'player').game;
+    if (!game) throw new Error('The fixture has no game.');
+    const ctx = buildBaseTextContext(emptyContext(), {
+      ...game,
+      scene: { ...game.scene, names: { ...game.scene.names, torch: 'Torches (6)' } },
+    });
+    expect(itemName('torch', ctx)).toBe('a torch');
+  });
+});
+
+describe('rejoin requests', () => {
+  it('reads them from a referee snapshot and replaces them from each message', () => {
+    const snapshot = fixtureSnapshot('lobby', 'referee');
+    const request = {
+      id: 'rjq_1',
+      table_id: snapshot.table.id,
+      user_id: 'usr_bbbbbbbbbbbbbbbbbbbbbb',
+      name: 'Sam',
+      color: '#cc79a7' as const,
+      role: 'player' as const,
+      created_at: '2026-11-22T05:00:00Z',
+      expires_at: '2026-11-22T05:05:00Z',
+    };
+    let state = apply(initialTableData(snapshot.table.id), { ...snapshot, rejoin_requests: [request] });
+    expect(state.rejoinRequests).toEqual([request]);
+    state = apply(state, { type: 'rejoin_requests', requests: [] });
+    expect(state.rejoinRequests).toEqual([]);
   });
 });

@@ -6,6 +6,8 @@ import { addDie, EMPTY_TRAY, parseDiceExpression, rollSentence, rollView, trayEx
 import { markupText, parseMarkup } from './markup';
 import { movementRunText, movementSteps, narrateEntry } from './narrate';
 import { buildRows, isEntryVisible, type FeedRow, type RowOptions } from './rows';
+import { systemSentence } from './text';
+import { soundFor } from '../sounds';
 
 const RUTH = 'usr_ruthruthruthruthruthr';
 const SAM = 'usr_samsamsamsamsamsamsam';
@@ -278,6 +280,14 @@ describe('game entries', () => {
         { turned: true, facing: 'west' },
       ]),
     ).toBe('The party moves 2 steps and turns once, facing west.');
+    expect(movementRunText([{ turned: false, facing: 'north' }])).toBe('The party moves north.');
+    expect(
+      movementRunText([
+        { turned: false, facing: 'north' },
+        { turned: false, facing: 'north' },
+      ]),
+    ).toBe('The party moves 2 steps north.');
+    expect(movementRunText([{ turned: true, facing: 'west' }])).toBe('The party turns to face west.');
   });
 });
 
@@ -393,8 +403,8 @@ describe('feed rows', () => {
   });
 });
 
-describe('coordinates', () => {
-  it('leaves map coordinates out of the narration', () => {
+describe('referee detail', () => {
+  it('shows the cell of a step only through the lens', () => {
     const entry = game(SAM, 'move_party', [
       step('north'),
       {
@@ -406,10 +416,86 @@ describe('coordinates', () => {
         y: 1,
       },
     ]);
-    const narration = narrateEntry(entry, ctx, { lens: true });
-    expect(narration.text).toContain('The party moves one step, facing north.');
-    expect(narration.text).not.toMatch(/\(\d+, \d+\)/);
-    const door = narration.items.find((item) => item.kind === 'line' && item.line.eventType === 'door');
-    expect(door?.kind === 'line' && door.line.detail).toBeFalsy();
+    const open = narrateEntry(entry, ctx, { lens: true });
+    const closed = narrateEntry(entry, ctx, { lens: false });
+    expect(closed.text).toContain('The party moves north.');
+    const lines = (narration: typeof open) =>
+      narration.items.flatMap((item) => (item.kind === 'line' ? [item.line] : []));
+    expect(lines(open).some((line) => line.refereeDetail !== undefined)).toBe(true);
+    expect(lines(closed).every((line) => line.refereeDetail === undefined)).toBe(true);
+  });
+});
+
+describe('sounds', () => {
+  it('chimes for a whisper to you and clatters for a roll', () => {
+    expect(soundFor([chat(RUTH, 'psst', { visibility: 'users', to: [SAM] })], SAM)).toBe('whisper');
+    expect(soundFor([chat(SAM, 'psst', { visibility: 'users', to: [RUTH] })], SAM)).toBeNull();
+    expect(soundFor([roll(SAM, '1d20', [12])], SAM)).toBe('roll');
+    expect(soundFor([chat(RUTH, 'hello')], SAM)).toBeNull();
+  });
+});
+
+describe('recorded names', () => {
+  it('names a monster from the names the server recorded with the entry', () => {
+    const entry = game(SAM, 'resolve_battle_round', [
+      {
+        event_type: 'attack_rolled',
+        code: 'combat.attack.missed',
+        visibility: 'player',
+        attacker_id: 'monster-0001',
+        defender_id: 'character-0001',
+        roll: 3,
+        modifier: 0,
+        total: 3,
+        target: 12,
+        armour_class: 7,
+        attack_name: 'short sword',
+      },
+    ]);
+    const before = narrateEntry(entry, ctx, { lens: false }).text;
+    entry.names = {
+      members: {},
+      groups: {},
+      monsters: { 'monster-0001': { label: 'goblin', label_plural: 'goblins' } },
+      items: {},
+    };
+    const after = narrateEntry(entry, ctx, { lens: false }).text;
+    expect(before).toContain('A monster misses Brenna');
+    expect(after).toContain('A goblin misses Brenna');
+  });
+});
+
+describe('save notices', () => {
+  it('quotes a save label as a name', () => {
+    const nameOf = () => 'Ruth';
+    expect(
+      systemSentence(
+        system('save_created', { label: "Autosave: Entered the priory on Corvane's Holm", autosave: true }),
+        nameOf,
+        ctx,
+      ),
+    ).toBe("The server saved the game: entered the priory on Corvane's Holm.");
+    expect(
+      systemSentence(system('save_created', { label: 'Before the crypt', autosave: false }), nameOf, ctx),
+    ).toBe('Ruth saved the game as “Before the crypt”.');
+  });
+});
+
+describe('talking', () => {
+  it('shows players who spoke when the reaction roll is hidden', () => {
+    const talk = game(RUTH, 'parley', [
+      {
+        event_type: 'reaction_rolled',
+        code: 'encounter.reaction.rolled',
+        visibility: 'referee',
+        roll: 7,
+        modifier: 0,
+        total: 7,
+        result: 'indifferent',
+      },
+    ]);
+    talk.actor_id = 'character-0001';
+    expect(isEntryVisible(talk, SAM, false)).toBe(true);
+    expect(narrateEntry(talk, ctx, { lens: false }).text).toContain('Brenna talks to');
   });
 });

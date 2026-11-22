@@ -1,18 +1,15 @@
 import { useLanguageCatalog } from '@/app';
-import type { ClassDefinition } from '@bxvtt/shared/bxapi';
 import { Badge } from '@/ui';
-import { useEntries } from '../catalogs';
+import { useFullCatalog } from '../catalogs';
 import { CatalogProblem, PageSkeleton } from '../Frame';
 import { EntryLink, EntryPage, Inline, Stat } from '../Parts';
 import styles from '../book.module.css';
 import { titleFromId } from '../model';
 
-const CLASS_IDS = ['cleric', 'dwarf', 'elf', 'fighter', 'halfling', 'magic_user', 'thief'];
-
 /** A language, and which classes speak it. */
 export function LanguageEntry({ id }: { id: string }) {
   const languages = useLanguageCatalog();
-  const classes = useEntries<ClassDefinition>(CLASS_IDS.map((classId) => `classes/${classId}`));
+  const classes = useFullCatalog('classes');
   const language = languages.data?.find((entry) => entry.id === id);
 
   if (languages.data === null) {
@@ -23,7 +20,7 @@ export function LanguageEntry({ id }: { id: string }) {
     );
   }
   const name = language?.name ?? titleFromId(id);
-  const speakers = Object.values(classes.data)
+  const speakers = (classes.data ?? [])
     .filter((definition) => definition.languages.includes(id))
     .sort((a, b) => a.name.localeCompare(b.name));
   return (
@@ -41,7 +38,7 @@ export function LanguageEntry({ id }: { id: string }) {
       <section className={styles.factSheet} aria-label="Language facts">
         <dl className={styles.statGrid}>
           <Stat label="Spoken by classes" span="full">
-            {classes.loading && speakers.length === 0 ? (
+            {classes.data === null ? (
               'Loading'
             ) : speakers.length === 0 ? (
               'No class speaks it from the start'

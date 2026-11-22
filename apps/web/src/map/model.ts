@@ -220,6 +220,12 @@ export const DEFAULT_LIGHT_RADIUS_FEET = 30;
 /** Extra knowledge a client can add to a player map, such as stairs the party has used. */
 export interface PlayerMapExtras {
   transitions?: { kind: TransitionKind; x: number; y: number; side?: Direction | null }[];
+  /**
+   * Areas the party has entered, such as the scene's `levels[].areas`. The map names each one at a label anchor
+   * clear of stairs and features, and the hover tooltip names the area under the pointer. Pass only what the
+   * party knows: the cells on its map and the name it was told.
+   */
+  areas?: { id: string; name: string; description?: string; cells: readonly (readonly [number, number])[] }[];
   features?: {
     id: string;
     kind: FeatureKind;
@@ -336,6 +342,13 @@ export function fromPlayerView(
     known: seen.has(cellKey(t.x, t.y)),
   }));
 
+  const areas = playerAreas(options.extras?.areas ?? [], seen, features, transitions, dungeonId, levelNumber);
+  if (areas.length > 0) {
+    const areaOf = new Map<string, string>();
+    for (const area of areas) for (const [x, y] of area.cells) areaOf.set(cellKey(x, y), area.id);
+    for (const cell of cells) cell.areaId = areaOf.get(cellKey(cell.x, cell.y)) ?? null;
+  }
+
   const party = partyOn(view.location, dungeonId, levelNumber);
   const lit = hasLight(view.effects.map((effect) => effect.kind));
   const bounds = boundsOf(cells) ?? { minX: 0, minY: 0, maxX: 1, maxY: 1 };
@@ -357,7 +370,7 @@ export function fromPlayerView(
     edges,
     transitions,
     features,
-    areas: [],
+    areas,
     entrance: null,
     party,
     light: party && lit ? { radiusFeet: options.lightRadiusFeet ?? DEFAULT_LIGHT_RADIUS_FEET } : null,
@@ -365,6 +378,43 @@ export function fromPlayerView(
     knownBounds: boundsOf(cells),
     bounds,
   };
+}
+
+/**
+ * The areas a client passed for a player map. Each keeps only the cells on the map, has no number (players don't
+ * see the key), and puts its label on the cell deepest inside it that holds no stairs or feature.
+ */
+function playerAreas(
+  extras: NonNullable<PlayerMapExtras['areas']>,
+  known: ReadonlySet<string>,
+  features: readonly MapFeature[],
+  transitions: readonly MapTransition[],
+  dungeonId: string,
+  levelNumber: number,
+): MapArea[] {
+  const occupied = new Set<string>();
+  for (const t of transitions) if (t.kind !== 'passage') occupied.add(cellKey(t.x, t.y));
+  for (const f of features) occupied.add(cellKey(f.x, f.y));
+  const areas: MapArea[] = [];
+  for (const extra of extras) {
+    const cells = extra.cells.filter(([x, y]) => known.has(cellKey(x, y))).map(([x, y]) => [x, y] as const);
+    if (cells.length === 0) continue;
+    areas.push({
+      id: extra.id,
+      ref: `${dungeonId}:${levelNumber}:${extra.id}`,
+      label: '',
+      name: extra.name,
+      description: extra.description ?? '',
+      cells,
+      anchor: labelAnchor(cells, occupied),
+      bounds: boundsOf(cells.map(([x, y]) => ({ x, y }))) ?? { minX: 0, minY: 0, maxX: 1, maxY: 1 },
+      known: true,
+      encounter: null,
+      treasure: null,
+      trap: null,
+    });
+  }
+  return areas;
 }
 
 export interface RefereeMapOptions {

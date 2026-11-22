@@ -15,7 +15,15 @@ import {
   type Adventure,
   type PlayRecord,
 } from './adventure';
-import { clauseText, conditionText, consequenceText, encounterText, patternText, trapText } from './describe';
+import {
+  clauseText,
+  conditionText,
+  consequenceText,
+  encounterText,
+  flagUses,
+  patternText,
+  trapText,
+} from './describe';
 
 const adventure = asAdventure(bell.payload as unknown as Record<string, unknown>) as Adventure;
 const level1 = findLevel(adventure, 'priory', 1);
@@ -103,8 +111,8 @@ describe('descriptions', () => {
     const talk = adventure.triggers.find((t) => t.id === 'drain_folk_talk');
     expect(talk && patternText(talk.when, ctx)).toBe('The party enters Drain Folk warren');
     const report = adventure.quests.find((q) => q.id === 'red_thumbs')?.objectives[1];
-    expect(report && clauseText(report.when, ctx)).toBe(
-      'The party returns to Hollin Ferry, while the flag priory.gashnak is “dead”.',
+    expect(report && clauseText(report.when, ctx, adventure)).toBe(
+      'The party returns to Hollin Ferry, while the flag set when Gashnak One-Ear is slain or routed reads “dead”.',
     );
     expect(conditionText({ condition_type: 'has_item', item_id: 'holy_water', consumes: true }, ctx)).toBe(
       'a member carries a vial of holy water, which is used up',
@@ -115,7 +123,7 @@ describe('descriptions', () => {
     const sluice = adventure.triggers.find((t) => t.id === 'sluice_runs');
     const lines = sluice?.consequences.map((c) => consequenceText(c, ctx, adventure));
     expect(lines).toEqual([
-      'Set the flag priory.sluice to “open”.',
+      'Set a story flag to “open”. It opens a way out on level 2.',
       'Open and unlock the door on the east side of cell 6, 17 on level 2.',
     ]);
     const reward = adventure.quests.find((q) => q.id === 'red_thumbs')?.rewards[1];
@@ -130,10 +138,21 @@ describe('descriptions', () => {
       'It deals 2d4 damage. A save versus death ray or poison avoids it.',
     );
     const warden = findArea(adventure, 'wardens_cell')?.area.encounter;
-    expect(warden && encounterText(warden, adventure)).toBe('1 hobgoblin and 2 goblins');
+    expect(warden && encounterText(warden, adventure)).toBe('Gashnak One-Ear and 2 goblins');
     const pit = findArea(adventure, 'bell_pit')?.area.encounter;
     expect(pit && encounterText(pit, adventure)).toBe(
       '1 drowned prior (seen as a robed corpse) and 2 zombies',
     );
+  });
+});
+
+describe('flagUses', () => {
+  it('says what sets each flag and what reads it', () => {
+    const uses = flagUses(adventure, ctx);
+    expect(uses.get('priory.gashnak')).toEqual([
+      'Set to “dead” when Gashnak One-Ear is slain or routed.',
+      'Checked by the objective Report to Reeve Tamsin Hale.',
+    ]);
+    expect(uses.get('quest.bell')).toEqual(['Set to “silenced” as a reward for Silence the drowned bell.']);
   });
 });

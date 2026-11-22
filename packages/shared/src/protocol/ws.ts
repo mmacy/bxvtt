@@ -5,6 +5,7 @@ import { DeclarationsState } from './battle';
 import { FeedEntry, FeedPage } from './feed';
 import { GameState } from './game';
 import { Notes } from './notes';
+import { RejoinRequestSummary } from './rejoin';
 import { TableDetail } from './tables';
 import { User } from './users';
 
@@ -20,7 +21,11 @@ export const WS_CLOSE_CODES = {
   server_shutdown: 1001,
   /** A message was larger than the limit. */
   message_too_large: 1009,
-  /** The first message wasn't a valid `auth` message, or the token or table is wrong. */
+  /**
+   * The first message wasn't a valid `auth` message, or the token or table is wrong. The server also closes a
+   * user's connections with it when a referee approves a rejoin request for that user, because the token they
+   * used no longer works.
+   */
   auth_failed: 4001,
   /** The user isn't a member of the table anymore: they left, a referee removed them, or the table was deleted. */
   removed: 4003,
@@ -94,6 +99,11 @@ export const SnapshotMessage = z.object({
   annotations: LevelAnnotations.nullable(),
   notes: z.object({ party: Notes, referee: Notes.nullable() }),
   server_time: Timestamp,
+  /**
+   * For a referee, the table's pending rejoin requests. Absent for a player. Optional in the type so that
+   * older fixtures still compile.
+   */
+  rejoin_requests: z.array(RejoinRequestSummary).optional(),
 });
 
 /** Who is connected changed. */
@@ -143,6 +153,15 @@ export const NoticeMessage = z.object({
   detail: z.string(),
 });
 
+/**
+ * The table's pending rejoin requests changed: one arrived, a referee decided one, or one ended. Referees only.
+ * The message holds every pending request of the table, so it replaces the client's list.
+ */
+export const RejoinRequestsMessage = z.object({
+  type: z.literal('rejoin_requests'),
+  requests: z.array(RejoinRequestSummary),
+});
+
 /** The answer to a client `heartbeat`. */
 export const ServerHeartbeatMessage = z.object({ type: z.literal('heartbeat'), server_time: Timestamp });
 
@@ -170,6 +189,7 @@ export const ServerMessage = z.discriminatedUnion('type', [
   ServerHeartbeatMessage,
   ErrorMessage,
   RemovedMessage,
+  RejoinRequestsMessage,
 ]);
 /** Every message the server sends. */
 export type ServerMessage = z.infer<typeof ServerMessage>;

@@ -50,6 +50,11 @@ const FIXED: Record<string, { title: string; detail: string }> = {
     title: "This server doesn't know your name anymore",
     detail: 'Pick a name again on the home page to continue.',
   },
+  token_retired: {
+    title: "You've signed in from another browser",
+    detail:
+      "A referee let you back in at a table from another browser, so this browser's sign-in stopped working. Play on there, or open the table's invite link here and choose \"I've played at this table before\".",
+  },
   referee_required: { title: 'Only a referee can do that', detail: 'Ask the referee at your table.' },
   host_key_required: {
     title: 'Creating a table here needs the host key',
@@ -150,6 +155,44 @@ const FIXED: Record<string, { title: string; detail: string }> = {
   bxapi_unavailable: {
     title: "The rules engine isn't answering",
     detail: "bxvtt can't reach bxapi. Ask the person who runs this server to start it, then try again.",
+  },
+  method_not_allowed: {
+    title: "The server doesn't take that request",
+    detail: 'Reload the page. The server may have been updated.',
+  },
+  server_unavailable: {
+    title: "The bxvtt server isn't answering",
+    detail: 'It may be starting or restarting. Wait a few seconds and try again.',
+  },
+  invalid_response: {
+    title: "The server's answer couldn't be read",
+    detail: 'Reload the page. If it keeps happening, check that the address points at your bxvtt server.',
+  },
+  target_unknown: {
+    title: "That target isn't there anymore",
+    detail: 'The situation changed. Choose a target again.',
+  },
+  character_invalid: {
+    title: 'That character breaks a rule',
+    detail: "Check the character's choices and try again.",
+  },
+  rejoin_member_online: {
+    title: 'That member is at the table right now',
+    detail: "Nobody needs to come back in as them. If that's you in another browser, keep playing there.",
+  },
+  rejoin_pending: {
+    title: 'A request to come back in is already waiting',
+    detail:
+      'Someone already asked to come back in as this member. Ask again after a referee answers it or it ends, in a few minutes at most.',
+  },
+  rejoin_not_pending: {
+    title: 'That request has ended',
+    detail: 'A referee answered it, it ran out of time, or it was cancelled. Ask again if you still need to.',
+  },
+  rejoin_no_approver: {
+    title: 'No referee can let this member back in',
+    detail:
+      "A referee can't approve their own request. If you run this server, open it on the host computer at its local address, where your sign-in still works.",
   },
 };
 

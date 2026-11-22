@@ -6,3 +6,4 @@ export { SeatsDialog } from './SeatsDialog';
 export { TableSettingsDialog } from './TableSettingsDialog';
 export { MAP_TOOLS } from './MapToolRail';
 export { isGameMode } from './TopBar';
+export { LoadingScreen } from './LoadingScreen';

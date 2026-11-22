@@ -1,6 +1,6 @@
 import type { AbilityTables } from '@bxvtt/shared/bxapi';
 import type { CharacterRequest, StoredCharacter } from '@bxvtt/shared/protocol';
-import { classLabel } from '@bxvtt/shared/text';
+import { classLabel, count, emptyContext, resolveItemNoun } from '@bxvtt/shared/text';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   displayStringProblem,
@@ -10,11 +10,10 @@ import {
   useEquipmentCatalog,
   useLanguageCatalog,
   useRuleTable,
-  useRulesEntry,
   useSpellCatalog,
-  type ClassDetail,
 } from '@/app';
 import { Banner, Button, ConfirmDialog, Dialog, Stepper, type StepperStep } from '@/ui';
+import { RuleLinksContext } from '../sheet/RuleLink';
 import { StoredSheet } from '../sheet/StoredSheet';
 import { AdjustStep, type CheckState } from './AdjustStep';
 import { ClassStep } from './ClassStep';
@@ -31,13 +30,14 @@ import {
   type WizardDraft,
 } from './draft';
 import { IdentityStep } from './IdentityStep';
-import { applyKit } from './kits';
+import { applyKit, cartPhrase } from './kits';
 import { OutfitStep, cartCost, type GoldState } from './OutfitStep';
 import { ReviewStep } from './ReviewStep';
 import { RollStep } from './RollStep';
-import { countGold, dryRun, explainCreationError, explainInvalid, type WizardProblem } from './server';
-import { classMagic, extraLanguageCount, readScores, spellSlotsAt } from './tables';
+import { checkChoices, explainCreationError, explainInvalid, type WizardProblem } from './server';
+import { casterNextStep, classMagic, extraLanguageCount, readScores, spellSlotsAt } from './tables';
 import styles from './wizard.module.css';
+import { useClassDetail } from '../sheet/catalogs';
 
 export interface CharacterWizardProps {
   /** Whether the wizard is open. */
@@ -70,8 +70,8 @@ const STEP_DESCRIPTIONS: Record<StepId, string> = {
   review: 'Check the sheet. The rules engine rolls hit points when you create the character.',
 };
 
-/** Debounce for the live checks, in milliseconds. */
-const CHECK_DELAY_MS = 350;
+/** Debounce for the live checks, in milliseconds. The server allows 60 checks a minute per user. */
+const CHECK_DELAY_MS = 600;
 
 function isAbilityTables(value: unknown): value is AbilityTables {
   return typeof value === 'object' && value !== null && 'strength' in value && 'intelligence' in value;
@@ -104,7 +104,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
   const classes = useClassCatalog();
   const abilityTable = useRuleTable('abilities');
   const tables = isAbilityTables(abilityTable.data) ? abilityTable.data : null;
-  const classEntry = useRulesEntry<ClassDetail>(draft.classId ? `classes/${draft.classId}` : null);
+  const classEntry = useClassDetail(draft.classId ? draft.classId : null);
   const detail = classEntry.data;
   const equipment = useEquipmentCatalog();
   const spellCatalog = useSpellCatalog();
@@ -145,9 +145,9 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
       const settle = (state: CheckState) => {
         if (!cancelled) setAdjustResult({ key: adjustJson, state });
       };
-      dryRun(getApi(), JSON.parse(adjustJson) as CharacterRequest).then(
+      checkChoices(getApi(), JSON.parse(adjustJson) as CharacterRequest).then(
         (result) => {
-          if (result.kind === 'invalid') {
+          if (!result.valid && result.problem) {
             const explained = explainInvalid(result.problem);
             if (explained.step !== null && stepIndex(explained.step) <= stepIndex('adjust')) {
               settle({ status: 'invalid', sentences: explained.sentences });
@@ -171,26 +171,25 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
         ? adjustResult.state
         : { status: 'checking' };
 
-  // Step 5: count the gold the roll gives these choices.
-  const probeItem =
-    equipment.data?.find((item) => item.id === 'torch' && item.cost_gp === 1)?.id ??
-    equipment.data?.find((item) => item.cost_gp === 1)?.id;
+  // Step 5: ask the server for the gold the roll gives these choices.
   const goldJson =
     draft.step === 'outfit' && key !== null && draft.gold?.key !== key
       ? JSON.stringify(requestFromDraft(draft, { withoutOutfit: true }))
       : null;
   const [goldFailure, setGoldFailure] = useState<{ key: string; message: string } | null>(null);
   useEffect(() => {
-    if (goldJson === null || key === null || !probeItem) return;
+    if (goldJson === null || key === null) return;
     let cancelled = false;
-    countGold(getApi(), JSON.parse(goldJson) as CharacterRequest, probeItem).then(
+    checkChoices(getApi(), JSON.parse(goldJson) as CharacterRequest).then(
       (result) => {
         if (cancelled) return;
-        if (result.kind === 'gold') {
-          setDraft((d) => (goldKey(d) === key ? { ...d, gold: { key, gp: result.gp } } : d));
-          return;
+        if (result.gold_gp !== null) {
+          const gp = result.gold_gp;
+          setDraft((d) => (goldKey(d) === key ? { ...d, gold: { key, gp } } : d));
         }
+        if (result.valid || !result.problem) return;
         const explained = explainInvalid(result.problem);
+        if (explained.step === 'outfit' && result.gold_gp !== null) return;
         setProblem(explained);
         setGoldFailure({
           key,
@@ -210,13 +209,8 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
     return () => {
       cancelled = true;
     };
-  }, [goldJson, key, probeItem]);
-  const goldError =
-    goldFailure !== null && goldFailure.key === key
-      ? goldFailure.message
-      : equipment.error
-        ? "The shop's price list didn't load, so the gold can't be counted yet."
-        : null;
+  }, [goldJson, key]);
+  const goldError = goldFailure !== null && goldFailure.key === key ? goldFailure.message : null;
 
   // Step 5: check the cart live.
   const cartJson =
@@ -224,6 +218,8 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
       ? JSON.stringify(requestFromDraft(draft))
       : null;
   const [cartResult, setCartResult] = useState<{ key: string; state: CheckState } | null>(null);
+  // Items the wizard put on by itself. When the server says the class can't use one, it comes off again.
+  const [autoEquipped, setAutoEquipped] = useState<readonly string[]>([]);
   useEffect(() => {
     if (cartJson === null) return;
     let cancelled = false;
@@ -231,13 +227,32 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
       const settle = (state: CheckState) => {
         if (!cancelled) setCartResult({ key: cartJson, state });
       };
-      dryRun(getApi(), JSON.parse(cartJson) as CharacterRequest).then(
-        (result) =>
+      checkChoices(getApi(), JSON.parse(cartJson) as CharacterRequest).then(
+        (result) => {
+          const refused = result.problem?.rejections?.[0];
+          const named = refused?.params.item;
+          // A refusal such as "magic-users can't wear armour" names no item, so it falls on the latest item the
+          // wizard put on by itself.
+          const item =
+            typeof named === 'string'
+              ? named
+              : [...autoEquipped]
+                  .reverse()
+                  .find((id) => (JSON.parse(cartJson) as CharacterRequest).equip_item_ids?.includes(id));
+          if (!cancelled && refused?.code.startsWith('items.equip.') && item && autoEquipped.includes(item)) {
+            const sentence = result.problem ? explainInvalid(result.problem).sentences.join(' ') : '';
+            setAutoEquipped((ids) => ids.filter((id) => id !== item));
+            setDraft((d) => ({ ...d, equip: d.equip.filter((id) => id !== item) }));
+            const noun = resolveItemNoun(item, emptyContext()).one;
+            setKitNote(`${sentence} The ${noun} stays in the pack.`);
+            return;
+          }
           settle(
-            result.kind === 'invalid'
+            !result.valid && result.problem
               ? { status: 'invalid', sentences: explainInvalid(result.problem).sentences }
               : { status: 'ok' },
-          ),
+          );
+        },
         (error: unknown) => settle({ status: 'invalid', sentences: explainCreationError(error).sentences }),
       );
     }, CHECK_DELAY_MS);
@@ -245,7 +260,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [cartJson]);
+  }, [cartJson, autoEquipped]);
   const cartCheck: CheckState =
     cartJson === null
       ? { status: 'idle' }
@@ -287,12 +302,8 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
   const check = async (body: ReturnType<typeof requestFromDraft>, upTo: StepId): Promise<boolean> => {
     setBusy(true);
     try {
-      const result = await dryRun(getApi(), body);
-      if (result.kind === 'created') {
-        finish(result.character);
-        return false;
-      }
-      if (result.kind === 'ok') return true;
+      const result = await checkChoices(getApi(), body);
+      if (result.valid || !result.problem) return true;
       const explained = explainInvalid(result.problem);
       if (
         explained.step !== null &&
@@ -323,7 +334,16 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
     setBusy(true);
     setProblem(null);
     try {
-      finish(await getApi().createCharacter(requestFromDraft(draft)));
+      const body = requestFromDraft(draft);
+      // Checking first keeps a refused choice out of the create route, so the browser logs no error for it.
+      const result = await checkChoices(getApi(), body);
+      if (!result.valid && result.problem) {
+        const explained = explainInvalid(result.problem);
+        setProblem(explained);
+        if (explained.step !== null && explained.step !== 'review') go(explained.step);
+        return;
+      }
+      finish(await getApi().createCharacter(body));
     } catch (error) {
       const explained = explainCreationError(error);
       setProblem(explained);
@@ -387,7 +407,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
     setKitNote(
       result.skipped.length > 0
         ? `The kit fits your gold without ${result.skipped
-            .map((id) => equipment.data?.find((e) => e.id === id)?.name.toLowerCase() ?? id)
+            .map((id) => cartPhrase(id, 1, equipment.data?.find((e) => e.id === id)?.name).toLowerCase())
             .join(', ')}.`
         : 'The kit is a starting point. Change anything you like.',
     );
@@ -426,13 +446,35 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
 
   const title = created ? `${created.name} is ready` : 'Create a character';
 
+  const createdNext = created
+    ? casterNextStep(
+        created.name,
+        detail,
+        created.character.spell_book.map((id) => spellCatalog.data?.find((s) => s.id === id)?.name ?? id),
+      )
+    : null;
+
   let body;
   if (created) {
     body = (
       <div className={styles.created}>
-        <Banner tone="success" title={`${created.name} joins the world`}>
-          The rules engine rolled {created.character.max_hp} hit points and stored the character. You can
-          bring {created.name} to any table.
+        <Banner
+          tone="success"
+          title={`${created.name} joins the world`}
+          actions={
+            <>
+              <Button variant="ghost" size="sm" icon="plus" onClick={startOver}>
+                Make another
+              </Button>
+              <Button variant="primary" size="sm" onClick={onClose}>
+                Done
+              </Button>
+            </>
+          }
+        >
+          The rules engine rolled {count(created.character.max_hp, 'hit point')} and stored the character. You
+          can bring {created.name} to any table.
+          {createdNext && ` ${createdNext}`}
         </Banner>
         <StoredSheet character={created} color={user?.color} />
       </div>
@@ -546,6 +588,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
             gold={gold}
             classId={draft.classId}
             onKit={applyClassKit}
+            onAutoEquip={(id) => setAutoEquipped((ids) => [...ids, id])}
             kitNote={kitNote}
             check={cartCheck}
           />
@@ -569,16 +612,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
     );
   }
 
-  const footer = created ? (
-    <>
-      <Button variant="ghost" icon="plus" onClick={startOver}>
-        Make another character
-      </Button>
-      <Button variant="primary" onClick={onClose}>
-        Done
-      </Button>
-    </>
-  ) : (
+  const footer = created ? undefined : (
     <>
       {draft.roll !== null && (
         <Button
@@ -626,7 +660,10 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
       footer={footer}
       className={styles.dialog}
     >
-      <div className={styles.wizard}>{body}</div>
+      {/* The lobby and the home page render the rules reference, so names in the wizard open it. */}
+      <RuleLinksContext.Provider value={true}>
+        <div className={styles.wizard}>{body}</div>
+      </RuleLinksContext.Provider>
       <ConfirmDialog
         open={confirmReset}
         onOpenChange={setConfirmReset}

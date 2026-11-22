@@ -1,14 +1,21 @@
 import type { EncounterGroupView, EncounterView, MemberView } from '@bxvtt/shared/bxapi';
 import type { DeclarationBody } from '@bxvtt/shared/protocol';
-import { conditionLabel, formatFeet, memberName, spellName, type TextContext } from '@bxvtt/shared/text';
+import {
+  conditionLabel,
+  formatFeet,
+  joinList,
+  memberName,
+  spellName,
+  type TextContext,
+} from '@bxvtt/shared/text';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   getApi,
   loadCatalog,
-  useRefereeState,
+  useMonsterCatalog,
   useRulesEntry,
   useSendDeclaration,
-  useTextContext,
+  useTableUi,
   type ClassDetail,
   type SpellDetail,
 } from '@/app';
@@ -29,6 +36,9 @@ import {
   type MemberGear,
 } from './model';
 import styles from './combat.module.css';
+import { targetLabel, useCombatText, useSceneTargets } from './text';
+import { useCasting } from './casting';
+import { countBadge, groupHeading, theGroup, viewLabels } from './names';
 
 export type ComposerTab = 'attack' | 'cast' | 'move' | 'item' | 'give' | 'turn' | 'hold';
 
@@ -60,10 +70,18 @@ interface MonsterEntry {
  * guard only when one is in the fight.
  */
 export function useGazeGroups(encounter: EncounterView | null): string[] {
+  // A family isn't always a monster ID: `veteran` covers `veteran_1` to `veteran_3`. Read the entry of a monster
+  // that the catalog lists for the family, and skip a family it lists nothing for, so no request fails.
+  const catalog = useMonsterCatalog().data;
+  const ids = catalog?.map((m) => m.id) ?? [];
+  const entryFor = (family: string) =>
+    ids.includes(family) ? family : ids.find((id) => id.startsWith(`${family}_`));
   // A string key, so the effect runs when the groups change and not on every new view object.
   const key = liveGroups(encounter)
-    .filter((g) => typeof g.family_id === 'string')
-    .map((g) => `${g.id}=${g.family_id ?? ''}`)
+    .flatMap((g) => {
+      const entry = g.family_id ? entryFor(g.family_id) : undefined;
+      return entry ? [`${g.id}=${entry}`] : [];
+    })
     .join(',');
   const [gazers, setGazers] = useState<string[]>([]);
   useEffect(() => {
@@ -101,6 +119,8 @@ export interface ComposerProps {
   gear: MemberGear;
   /** The member's saved declaration, to start on its tab. */
   current: DeclarationBody | null;
+  /** The row's suggested action, to start on its tab when the member hasn't declared. */
+  suggested?: DeclarationBody | null;
   /** bxapi's reasons for refusing this member's declaration in the last attempt. */
   refusals: readonly string[];
   /** Called after a declaration is saved. */
@@ -112,8 +132,17 @@ export interface ComposerProps {
 /**
  * Builds one member's declaration for the round from the choices the view supports, and saves it.
  */
-export function Composer({ member, encounter, gear, current, refusals, onDeclared, onClose }: ComposerProps) {
-  const ctx = useTextContext();
+export function Composer({
+  member,
+  encounter,
+  gear,
+  current,
+  suggested = null,
+  refusals,
+  onDeclared,
+  onClose,
+}: ComposerProps) {
+  const ctx = useCombatText();
   const { declare, pending } = useSendDeclaration();
   const abilities = useClassAbilities(member.class_id);
   const gazers = useGazeGroups(encounter);
@@ -124,15 +153,21 @@ export function Composer({ member, encounter, gear, current, refusals, onDeclare
 
   const tabs: ComposerTab[] = [];
   if (groups.length > 0) tabs.push('attack');
-  if (spells.length > 0) tabs.push('cast');
+  const casting = useCasting(member);
+  // A caster with nothing memorized sees the Cast tab, disabled, with the reason under the tabs.
+  if (spells.length > 0 || casting.caster) tabs.push('cast');
   tabs.push('move');
   if (usable.length > 0) tabs.push('item');
   if (gear.items.length > 0 && others.length > 0) tabs.push('give');
   if (abilities.turnUndead) tabs.push('turn');
   tabs.push('hold');
 
-  const initial = tabFor(current?.action) ?? tabs[0] ?? 'hold';
-  const [tab, setTab] = useState<ComposerTab>(tabs.includes(initial) ? initial : (tabs[0] ?? 'hold'));
+  const usableTabs = tabs.filter((t) => t !== 'cast' || spells.length > 0);
+  const initial = tabFor(current?.action ?? suggested?.action) ?? usableTabs[0] ?? 'hold';
+  const [tab, setTab] = useState<ComposerTab>(
+    usableTabs.includes(initial) ? initial : (usableTabs[0] ?? 'hold'),
+  );
+  const openSheet = useTableUi((s) => s.openCharacterSheet);
   const [gaze, setGaze] = useState<string>(
     typeof current?.gaze_defense === 'string' ? current.gaze_defense : 'none',
   );
@@ -159,6 +194,7 @@ export function Composer({ member, encounter, gear, current, refusals, onDeclare
             value,
             label: TAB_LABELS[value].label,
             icon: TAB_LABELS[value].icon,
+            disabled: value === 'cast' && spells.length === 0,
           }))}
         />
         <Button
@@ -171,6 +207,21 @@ export function Composer({ member, encounter, gear, current, refusals, onDeclare
           Close
         </Button>
       </div>
+
+      {casting.reason && (
+        <div className={styles.noSpells}>
+          <Icon name="spell" size={14} />
+          <span className={styles.noSpellsText}>{casting.reason}</span>
+          <Button
+            size="sm"
+            variant="ghost"
+            iconEnd="arrow-right"
+            onClick={() => openSheet(member.id, 'spells')}
+          >
+            Open {member.name}'s spells
+          </Button>
+        </div>
+      )}
 
       {gazers.length > 0 && (
         <div className={styles.gazeRow}>
@@ -334,8 +385,13 @@ function Tile({ title, meta, note, disabledReason, icon, label, onClick, pending
 }
 
 function groupTitle(group: EncounterGroupView): string {
-  const name = group.count === 1 ? group.label : group.label_plural;
-  return name.charAt(0).toUpperCase() + name.slice(1);
+  return groupHeading(viewLabels(group));
+}
+
+/** The tile's meta line: the count, when the group isn't one named individual, and the distance. */
+function groupMeta(group: EncounterGroupView, distance: number): string {
+  const badge = countBadge(viewLabels(group));
+  return badge ? `${badge} · ${formatFeet(distance, 'short')}` : formatFeet(distance, 'short');
 }
 
 function groupConditions(group: EncounterGroupView): string | null {
@@ -403,16 +459,24 @@ function AttackChoices({
           const plan = planAttack(member, encounter, group, gear, chosen);
           const conditions = groupConditions(group);
           const verb =
-            plan.kind === 'missile' ? 'Shoot' : plan.kind === 'close' ? 'Close in and attack' : 'Attack';
+            plan.kind === 'missile'
+              ? plan.weapon?.thrown
+                ? 'Throw'
+                : 'Shoot'
+              : plan.kind === 'close'
+                ? 'Close in and attack'
+                : 'Attack';
           return (
             <Tile
               key={group.id}
-              icon={plan.kind === 'missile' ? 'weapon-bow' : 'weapon-sword'}
+              icon={
+                plan.kind === 'missile' ? (plan.weapon?.thrown ? 'target' : 'weapon-bow') : 'weapon-sword'
+              }
               title={groupTitle(group)}
-              meta={`×${group.count} · ${formatFeet(plan.distance, 'short')}`}
+              meta={groupMeta(group, plan.distance)}
               note={conditions ? `${plan.note} ${capitalize(conditions)}.` : plan.note}
               disabledReason={plan.reason}
-              label={`${verb}: ${groupTitle(group)}, ${formatFeet(plan.distance)} away`}
+              label={`${verb}: ${theGroup(viewLabels(group))}, ${formatFeet(plan.distance)} away`}
               pending={pending}
               onClick={() => void onSubmit(attackDeclaration(plan, { weaponId: chosen, backStab: stab }))}
             />
@@ -477,7 +541,7 @@ function SpellTargets({
   onSubmit,
 }: ChoiceProps & { spellId: string; memorizedReversed: boolean; ctx: TextContext }) {
   const entry = useRulesEntry<SpellDetail>(`spells/${spellId}`);
-  const referee = useRefereeState();
+  const sceneTargets = useSceneTargets();
   const spell = entry.data;
   const modes = spell?.modes ?? [];
   const [modeKey, setModeKey] = useState<string | null>(null);
@@ -511,14 +575,13 @@ function SpellTargets({
     setTargets((list) => (list.includes(id) ? list.filter((t) => t !== id) : single ? [id] : [...list, id]));
 
   const living = encounter.declarers;
-  const monsters = referee
-    ? liveGroups(encounter).flatMap((group) => {
-        const ids = referee.encounter?.groups.find((g) => g.id === group.id)?.monster_ids ?? [];
-        return ids
-          .map((id, index) => ({ id, index, group, monster: referee.monsters.find((m) => m.id === id) }))
-          .filter((m) => m.monster !== undefined && m.monster.current_hp > 0);
-      })
-    : [];
+  const groupsById = new Map(liveGroups(encounter).map((g) => [g.id, g]));
+  // Every monster the party can single out, by the handle the scene gives it. The server swaps the handle for
+  // the monster when the round resolves.
+  const monsters = sceneTargets.flatMap((target) => {
+    const group = groupsById.get(target.group_id);
+    return group && !target.defeated && !target.fled ? [{ target, group }] : [];
+  });
 
   return (
     <div className={styles.choiceStack}>
@@ -563,10 +626,10 @@ function SpellTargets({
                 key={group.id}
                 icon="spell"
                 title={groupTitle(group)}
-                meta={`×${group.count} · ${formatFeet(distance, 'short')}`}
+                meta={groupMeta(group, distance)}
                 note={groupConditions(group) ? capitalize(groupConditions(group) ?? '') : undefined}
                 disabledReason={reason}
-                label={`Cast ${name} at ${groupTitle(group)}`}
+                label={`Cast ${name.toLowerCase()} at ${theGroup(viewLabels(group))}`}
                 pending={pending}
                 onClick={() => void onSubmit({ ...base, target_group_id: group.id })}
               />
@@ -584,7 +647,7 @@ function SpellTargets({
             loading={pending}
             onClick={() => void onSubmit(base)}
           >
-            Cast {name}
+            Cast {name.toLowerCase()}
           </Button>
         </div>
       )}
@@ -617,34 +680,28 @@ function SpellTargets({
               })}
             </div>
           )}
-          {!atMonsters ? null : referee ? (
-            monsters.length > 0 && (
-              <div className={styles.chipGroup} role="group" aria-label="Monsters">
-                <span className={cx(styles.chipLabel, styles.refereeText)}>Monsters</span>
-                {monsters.map(({ id, index, group, monster }) => {
-                  const distance = memberDistance(group, member.id);
-                  const tooFar = range !== null && distance > range;
-                  return (
-                    <Button
-                      key={id}
-                      size="sm"
-                      variant={targets.includes(id) ? 'primary' : 'ghost'}
-                      aria-pressed={targets.includes(id)}
-                      disabled={tooFar}
-                      title={tooFar ? `Out of range: ${formatFeet(distance)} away.` : undefined}
-                      onClick={() => toggle(id)}
-                    >
-                      {capitalize(group.label)} {index + 1} ({monster?.current_hp} hp)
-                    </Button>
-                  );
-                })}
-              </div>
-            )
-          ) : (
-            <p className={styles.choiceHint}>
-              The board names single monsters only for the referee. To aim {name.toLowerCase()} at one
-              monster, ask the referee to declare it for {member.name}.
-            </p>
+          {atMonsters && monsters.length > 0 && (
+            <div className={styles.chipGroup} role="group" aria-label="Monsters">
+              <span className={styles.chipLabel}>Monsters</span>
+              {monsters.map(({ target, group }) => {
+                const distance = memberDistance(group, member.id);
+                const tooFar = range !== null && distance > range;
+                const chosen = targets.includes(target.handle);
+                return (
+                  <Button
+                    key={target.handle}
+                    size="sm"
+                    variant={chosen ? 'primary' : 'ghost'}
+                    aria-pressed={chosen}
+                    disabled={tooFar}
+                    title={tooFar ? `Out of range: ${formatFeet(distance)} away.` : undefined}
+                    onClick={() => toggle(target.handle)}
+                  >
+                    {targetLabel(target, sceneTargets, group.label)}
+                  </Button>
+                );
+              })}
+            </div>
           )}
           <div className={styles.choiceRow}>
             <Button
@@ -656,9 +713,9 @@ function SpellTargets({
               title={targets.length === 0 ? 'Choose a target first.' : undefined}
               onClick={() => void onSubmit({ ...base, targets })}
             >
-              Cast {name}
+              Cast {name.toLowerCase()}
               {targets.length > 0
-                ? ` at ${targets.length === 1 ? targetName(targets[0] ?? '', ctx, monsters) : `${targets.length} targets`}`
+                ? ` at ${targets.length === 1 ? targetName(targets[0] ?? '', ctx) : `${targets.length} targets`}`
                 : ''}
             </Button>
           </div>
@@ -668,13 +725,8 @@ function SpellTargets({
   );
 }
 
-function targetName(
-  id: string,
-  ctx: TextContext,
-  monsters: Array<{ id: string; index: number; group: EncounterGroupView }>,
-): string {
-  const monster = monsters.find((m) => m.id === id);
-  return monster ? `${monster.group.label} ${monster.index + 1}` : memberName(id, ctx);
+function targetName(id: string, ctx: TextContext): string {
+  return ctx.monsters[id]?.name ?? memberName(id, ctx);
 }
 
 function firstSentence(text: string): string {
@@ -705,7 +757,7 @@ function MoveChoices({ member, encounter, ctx, pending, onSubmit }: ChoiceProps 
             <Tile
               key={group.id}
               icon="footprints"
-              title={`Close in on the ${group.count === 1 ? group.label : group.label_plural}`}
+              title={`Close in on ${theGroup(viewLabels(group))}`}
               meta={formatFeet(distance, 'short')}
               note={
                 distance <= 5
@@ -713,7 +765,7 @@ function MoveChoices({ member, encounter, ctx, pending, onSubmit }: ChoiceProps 
                   : `Moves up to ${formatFeet(Math.min(rate, Math.max(0, distance - 5)))} without attacking.`
               }
               disabledReason={stuck}
-              label={`Close in on ${groupTitle(group)}`}
+              label={`Close in on ${theGroup(viewLabels(group))}`}
               pending={pending}
               onClick={() => void onSubmit({ action: 'move', move: 'close', target_group_id: group.id })}
             />
@@ -860,11 +912,13 @@ function ItemChoices({
                   <Tile
                     key={group.id}
                     title={groupTitle(group)}
-                    meta={`×${group.count} · ${formatFeet(distance, 'short')}`}
+                    meta={groupMeta(group, distance)}
                     note={
-                      thrown ? `Throws it ${formatFeet(distance)}.` : `Aims it at the ${group.label_plural}.`
+                      thrown
+                        ? `Throws it ${formatFeet(distance)}.`
+                        : `Aims it at ${theGroup(viewLabels(group))}.`
                     }
-                    label={`${thrown ? 'Throw' : 'Use'} ${item.name} at ${groupTitle(group)}`}
+                    label={`${thrown ? 'Throw' : 'Use'} ${item.name} at ${theGroup(viewLabels(group))}`}
                     pending={pending}
                     onClick={() =>
                       void onSubmit({ action: 'use_item', item_id: item.id, target_group_id: group.id })
@@ -971,7 +1025,7 @@ function TurnChoice({ member, encounter, pending, onSubmit }: ChoiceProps) {
       <Tile
         icon="class-cleric"
         title="Present the holy symbol"
-        note={`Reaches ${undead.map((g) => `the ${g.label_plural}`).join(' and ')}. A hit can't disrupt it.`}
+        note={`Reaches ${joinList(undead.map((g) => theGroup(viewLabels(g))))}. A hit can't disrupt it.`}
         disabledReason={reason}
         label={`${member.name} turns undead`}
         pending={pending}

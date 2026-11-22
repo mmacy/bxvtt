@@ -1,13 +1,15 @@
 import type { CommandResult, StoredCharacter } from '@bxvtt/shared/protocol';
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { resetMyCharacters } from '@/app';
-import { useTableUi } from '@/app';
+import { useCombatStage, useTableUi } from '@/app';
+import catalog from '../wizard/__fixtures__/catalog.json';
 import stored from '../wizard/__fixtures__/stored.json';
 import { StoredCharacterCard } from './StoredCharacterCard';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { createFakeApi, renderWithTable } from '@/app/testing/renderWithTable';
 import { CharacterSheet } from './CharacterSheet';
+import { entryRule } from './InventoryTab';
 import { readInventory } from './model';
 import { PartyPanel, moveTo } from './PartyPanel';
 
@@ -46,7 +48,7 @@ describe('readInventory', () => {
     });
     expect(inventory.pack.map((e) => [e.name, e.commandId, e.identified])).toEqual([
       ['A potion', 'magic-item-0001', false],
-      ['Torches', 'torch', true],
+      ['6 torches', 'torch', true],
     ]);
     expect(inventory.wielded[0]?.commandId).toBe('sword');
     expect(inventory.valuables[0]).toMatchObject({ name: 'Gem', valueGp: 50, commandId: 'valuable-0001' });
@@ -65,10 +67,11 @@ describe('PartyPanel', () => {
   it('lists the party in marching order and opens a sheet', async () => {
     const { user, snapshot } = renderWithTable(<PartyPanel />);
     const party = snapshot.game?.view.party ?? [];
-    const rows = screen.getAllByRole('button', { name: /Open the character sheet/ });
-    expect(rows.map((row) => row.getAttribute('aria-label')?.split(',')[0])).toEqual(
-      party.map((m) => m.name),
-    );
+    const rows = screen.getAllByRole('button', { description: /Opens the character sheet/ });
+    expect(rows).toHaveLength(party.length);
+    party.forEach((member, index) => expect(rows[index]).toHaveAccessibleName(new RegExp(`^${member.name}`)));
+    // The name starts with what the row shows, and the numbers go in the description.
+    expect(rows[0]).toHaveAccessibleDescription(/hit points, armour class/);
     await user.click(rows[1] as HTMLElement);
     expect(useTableUi.getState().sheetMemberId).toBe(party[1]?.id);
   });
@@ -149,9 +152,9 @@ describe('CharacterSheet', () => {
     await user.click(await screen.findByRole('tab', { name: 'Inventory' }));
     await user.click(screen.getByRole('button', { name: 'Give' }));
     const dialog = await screen.findByRole('dialog', { name: /Give from/ });
-    await user.click(within(dialog).getByRole('button', { name: 'One more Torches' }));
-    await user.click(within(dialog).getByRole('button', { name: 'One more Torches' }));
-    await user.click(within(dialog).getByRole('button', { name: 'One more gold piece' }));
+    await user.click(within(dialog).getByRole('button', { name: 'More torches' }));
+    await user.click(within(dialog).getByRole('button', { name: 'More torches' }));
+    await user.click(within(dialog).getByRole('button', { name: 'More gold pieces' }));
     await user.click(within(dialog).getByRole('button', { name: 'Give' }));
     await waitFor(() => expect(api.sendCommand).toHaveBeenCalled());
     const command = api.sendCommand.mock.calls[0]?.[1] as Record<string, unknown>;
@@ -191,5 +194,127 @@ describe('StoredCharacterCard', () => {
     expect(api.deleteCharacter).not.toHaveBeenCalled();
     await user.click(within(confirm).getByRole('button', { name: 'Delete character' }));
     await waitFor(() => expect(api.deleteCharacter).toHaveBeenCalledWith(character.id));
+  });
+});
+
+describe('rules links', () => {
+  it('opens the compendium from the class name', async () => {
+    const snapshot = fixtureSnapshot('exploring', 'player');
+    const brenna = snapshot.game?.view.party[0];
+    const { user } = renderWithTable(<CharacterSheet memberId={brenna?.id ?? null} onClose={() => {}} />, {
+      snapshot,
+    });
+    await user.click(await screen.findByRole('button', { name: 'Fighter in the rules reference' }));
+    expect(useTableUi.getState().compendiumEntry).toEqual({ kind: 'classes', id: 'fighter' });
+  });
+
+  it('never links a masked magic item', () => {
+    const [entry] = readInventory({
+      items: [
+        {
+          instance_type: 'magic_item',
+          instance_id: 'magic-item-0001',
+          display: 'a potion',
+          identified: false,
+        },
+      ],
+    }).pack;
+    expect(entry && entryRule(entry)).toBeNull();
+  });
+});
+
+describe('party light', () => {
+  it('speaks of light only while the party is in a dungeon', () => {
+    const { unmount } = renderWithTable(<PartyPanel />, { snapshot: fixtureSnapshot('town', 'player') });
+    expect(screen.queryByText('The party has no light.')).toBeNull();
+    unmount();
+    renderWithTable(<PartyPanel />, { snapshot: fixtureSnapshot('exploring', 'player') });
+    expect(screen.getByText('The party has no light.')).toBeInTheDocument();
+  });
+});
+
+describe('combat playback', () => {
+  it('keeps the hit points from before the round while the round plays back', async () => {
+    const snapshot = fixtureSnapshot('exploring', 'player');
+    const { store } = renderWithTable(<PartyPanel />, { snapshot });
+    const game = store.getState().game;
+    if (!game) throw new Error('no game');
+    const first = game.view.party[0];
+    if (!first) throw new Error('no member');
+    useCombatStage.getState().setPlaying(true);
+    const hurt = {
+      ...game,
+      revision: game.revision + 1,
+      view: {
+        ...game.view,
+        party: [{ ...first, current_hp: 0, conditions: ['dead'] }, ...game.view.party.slice(1)],
+      },
+    };
+    act(() => store.getState().receiveGame(hurt));
+    expect(screen.queryByText('Dead')).toBeNull();
+    act(() => useCombatStage.getState().setPlaying(false));
+    expect(await screen.findByText('Dead')).toBeInTheDocument();
+  });
+});
+
+describe('a caster with nothing memorized', () => {
+  /** The exploring snapshot with Wren as a magic-user who knows Sleep and has memorized nothing. */
+  function casterSnapshot(stage: 'exploring' | 'town') {
+    const snapshot = fixtureSnapshot(stage, 'player');
+    const party = snapshot.game?.view.party ?? [];
+    const wren = party[1];
+    if (!wren) throw new Error('no Wren');
+    party[1] = { ...wren, class_id: 'magic_user', spell_book: ['sleep'], memorized_spells: [] };
+    return { snapshot, wren: party[1] };
+  }
+  function casterApi() {
+    const api = createFakeApi();
+    api.fullCatalog.mockImplementation(async (name) =>
+      name === 'classes'
+        ? ({ catalog: name, total: 1, items: [catalog.details.magic_user] } as never)
+        : ({ catalog: name, total: 0, items: [] } as never),
+    );
+    return api;
+  }
+
+  it('says why the caster cannot cast and shows the refusal where the player asked', async () => {
+    const { snapshot, wren } = casterSnapshot('exploring');
+    const api = casterApi();
+    const game = snapshot.game;
+    if (!game) throw new Error('no game');
+    api.sendCommand.mockResolvedValue({
+      accepted: false,
+      rejections: [{ code: 'magic.memorize.needs_sleep', params: { character: wren.id } }],
+      events: [],
+      messages: [],
+      game,
+    } as unknown as CommandResult);
+    const { user } = renderWithTable(<CharacterSheet memberId={wren.id} onClose={() => {}} />, {
+      snapshot,
+      api,
+    });
+    await user.click(await screen.findByRole('tab', { name: 'Spells' }));
+    expect(
+      await screen.findByText("Wren knows Sleep but hasn't memorized it, so they can't cast it yet."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("A caster prepares spells after a night's rest.")).toBeInTheDocument();
+    await user.click(screen.getAllByRole('button', { name: 'Prepare spells' })[0] as HTMLElement);
+    const dialog = await screen.findByRole('dialog', { name: /Prepare/ });
+    await user.click(within(dialog).getByRole('button', { name: 'Prepare spells' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /Prepare/ })).toBeNull());
+    expect(screen.queryByText("A caster prepares spells after a night's rest.")).toBeNull();
+    expect(api.sendCommand).toHaveBeenCalledWith(
+      expect.any(String),
+      { command_type: 'prepare_spells', character_id: wren.id, selections: expect.any(Array) },
+      game.revision,
+    );
+  });
+
+  it('marks the caster in the party panel while the party is in town', async () => {
+    const { snapshot, wren } = casterSnapshot('town');
+    const { user } = renderWithTable(<PartyPanel />, { snapshot, api: casterApi() });
+    await user.click(await screen.findByRole('button', { name: /Wren has no spells memorized/ }));
+    expect(useTableUi.getState().sheetMemberId).toBe(wren.id);
+    expect(useTableUi.getState().sheetTab).toBe('spells');
   });
 });

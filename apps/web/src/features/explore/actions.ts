@@ -8,7 +8,14 @@
  */
 import type { MemberView } from '@bxvtt/shared/bxapi';
 import type { PlayerView, Scene, SceneCache, SceneTransition } from '@bxvtt/shared/protocol';
-import { directionLabel, restKindLabel, searchKindLabel } from '@bxvtt/shared/text';
+import {
+  directionLabel,
+  itemPhrase,
+  resolveItemNoun,
+  restKindLabel,
+  searchKindLabel,
+  type TextContext,
+} from '@bxvtt/shared/text';
 import type { GameCommand } from '@/app';
 import type { Direction } from '@/map';
 import type { IconName, MenuEntry } from '@/ui';
@@ -26,6 +33,8 @@ export interface ActionContext {
   can: (commandType: string, memberId?: string) => boolean;
   /** Sends a command. */
   run: (command: GameCommand, options?: ExploreSendOptions) => void;
+  /** Names for items and members, from `useTextContext`. */
+  text: TextContext;
 }
 
 /** A party member's name for a menu. */
@@ -239,7 +248,7 @@ export function lightEntries(ctx: ActionContext): MenuEntry[] {
   for (const light of carriedLights(ctx.view.party)) {
     if (!living.has(light.memberId) || !ctx.can('light_source', light.memberId)) continue;
     entries.push({
-      label: `${name(light.memberId)} lights ${light.itemId === 'lantern' ? 'a lantern' : 'a torch'}`,
+      label: `${name(light.memberId)} lights ${itemPhrase(resolveItemNoun(light.itemId, ctx.text, { name: light.name }))}`,
       icon: light.itemId === 'lantern' ? 'lantern' : 'torch',
       onSelect: () =>
         ctx.run(
@@ -418,16 +427,31 @@ export function turnEntries(ctx: ActionContext): MenuEntry[] {
 export function treasureEntries(ctx: ActionContext): MenuEntry[] {
   const here = ctx.scene?.here;
   if (!here) return [];
-  const entries: MenuEntry[] = [];
+  const caches: MenuEntry[] = [];
   for (const cache of here.caches) {
     const label = cacheLabel(cache, here.caches);
     const items = cacheEntries(ctx, cache, label);
     if (items.length === 0) continue;
-    if (here.caches.length > 1) entries.push({ type: 'label', label });
-    entries.push(...items);
+    if (here.caches.length > 1) caches.push({ type: 'label', label });
+    caches.push(...items);
   }
-  if (here.pile) entries.push(...pileEntries(ctx));
-  return entries;
+  const goods = here.pile ? pileEntries(ctx) : [];
+  // With both here, each group carries its name: "Treasure" for a cache, "Dropped goods" for a pile.
+  if (caches.length > 0 && goods.length > 0) {
+    const named =
+      here.caches.length > 1 ? caches : [{ type: 'label' as const, label: 'Treasure' }, ...caches];
+    return [...named, { type: 'separator' }, { type: 'label', label: 'Dropped goods' }, ...goods];
+  }
+  return [...caches, ...goods];
+}
+
+/** The name of the bar's treasure menu, by what lies here: "Treasure", "Dropped goods", or both. */
+export function treasureMenuLabel(scene: Scene | null): string {
+  const here = scene?.here;
+  const caches = (here?.caches.length ?? 0) > 0;
+  const pile = here?.pile === true;
+  if (caches && pile) return 'Treasure and dropped goods';
+  return pile ? 'Dropped goods' : 'Treasure';
 }
 
 /** Joins groups of entries with separators, dropping empty groups. */

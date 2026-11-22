@@ -13,6 +13,7 @@ import { TextInput } from '../components/TextInput';
 import { toast } from '../components/toastStore';
 import { HpBar } from '../game/StatBlock';
 import { TokenPortrait } from '../game/TokenPortrait';
+import { LayersSpecimen } from './LayersSpecimen';
 import { Caption, Grid, Row, Section, Specimen, Stack } from './parts';
 import styles from './Gallery.module.css';
 
@@ -133,6 +134,7 @@ export function OverlaysSection() {
             </Tabs>
           </Stack>
         </Specimen>
+        <LayersSpecimen />
         <Specimen title="Dialogs and drawers">
           <Stack gap="md">
             <Row>

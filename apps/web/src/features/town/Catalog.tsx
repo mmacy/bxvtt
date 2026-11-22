@@ -1,5 +1,6 @@
 /** The outfitter's catalog: search, a type filter, sortable columns, and a way to put lots in the cart. */
-import { itemTypeLabel } from '@bxvtt/shared/text';
+import { formatGold, itemTypeLabel } from '@bxvtt/shared/text';
+import { useTextContext } from '@/app';
 import { useMemo, useState } from 'react';
 import {
   Banner,
@@ -62,6 +63,7 @@ export function Catalog({
   onSelect,
   disabled,
 }: CatalogProps) {
+  const ctx = useTextContext();
   const [type, setType] = useState('all');
   const rows = useMemo(
     () =>
@@ -78,7 +80,6 @@ export function Catalog({
         <button
           type="button"
           className={styles.nameButton}
-          aria-label={`Details for ${item.summary.name}`}
           aria-current={selectedId === item.summary.id ? 'true' : undefined}
           onClick={() => onSelect(item.summary.id)}
         >
@@ -86,8 +87,11 @@ export function Catalog({
             <Icon name={itemIcon(item.summary)} size={16} />
           </span>
           <span className={styles.nameText}>
-            <span className={styles.name}>{item.summary.name}</span>
-            <span className={styles.sub}>{rowSummary(item) || itemTypeLabel(item.summary.item_type)}</span>
+            <span className={styles.name}>{item.summary.name}</span>{' '}
+            <span className={styles.sub}>
+              {rowSummary(item, ctx) || itemTypeLabel(item.summary.item_type)}
+            </span>
+            <span className="visually-hidden">, show details</span>
           </span>
         </button>
       ),
@@ -97,7 +101,7 @@ export function Catalog({
       header: 'Price',
       numeric: true,
       sortValue: (item) => item.summary.cost_gp,
-      cell: (item) => `${item.summary.cost_gp} gp`,
+      cell: (item) => formatGold(item.summary.cost_gp),
       width: '84px',
     },
     {
@@ -108,10 +112,7 @@ export function Catalog({
       cell: (item) => {
         const weight = weightCoins(item);
         return weight === null ? (
-          <span
-            className={styles.none}
-            title={item.detail === null ? 'Loading' : 'The catalog lists no weight'}
-          >
+          <span className={styles.none} title="The catalog lists no weight">
             -
           </span>
         ) : (
@@ -128,12 +129,12 @@ export function Catalog({
       cell: (item) => {
         const lots = cart[item.summary.id] ?? 0;
         const name = item.summary.name;
-        const sells = lotSize(item) > 1 ? 'lot' : 'one';
+        const bundle = lotSize(item) > 1;
         if (lots === 0) {
           return (
             <Button
               size="sm"
-              variant="secondary"
+              variant="ghost"
               icon="plus"
               disabled={disabled}
               aria-label={`Add ${name} to the cart`}
@@ -148,7 +149,7 @@ export function Catalog({
             <IconButton
               icon="minus"
               size="sm"
-              label={`Remove one ${sells} of ${name}`}
+              label={bundle ? `Remove one lot of ${name}` : `Remove one ${name}`}
               onClick={() => onLots(item.summary.id, lots - 1)}
             />
             <span className={styles.count} aria-live="polite">
@@ -157,7 +158,7 @@ export function Catalog({
             <IconButton
               icon="plus"
               size="sm"
-              label={`Add one ${sells} of ${name}`}
+              label={bundle ? `Add one lot of ${name}` : `Add one ${name}`}
               onClick={() => onLots(item.summary.id, lots + 1)}
             />
           </span>

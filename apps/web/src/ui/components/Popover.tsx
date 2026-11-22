@@ -1,5 +1,5 @@
 import { Popover as PopoverPrimitive, Tooltip as TooltipPrimitive } from 'radix-ui';
-import { createContext, useContext, type ReactElement, type ReactNode } from 'react';
+import { createContext, useContext, useId, type ReactElement, type ReactNode } from 'react';
 import { cx } from '../lib/cx';
 import { Kbd } from './Kbd';
 import styles from './Popover.module.css';
@@ -11,8 +11,13 @@ export interface PopoverProps {
   /** The element that opens the popover, usually a Button or IconButton. */
   trigger: ReactElement;
   children: ReactNode;
-  /** Optional heading inside the popover. */
+  /** Optional heading inside the popover. It also names the popover for assistive technology. */
   title?: ReactNode;
+  /**
+   * Accessible name for a popover without a `title`, such as "Light". Every popover needs a name, because it
+   * opens as a dialog.
+   */
+  label?: string;
   open?: boolean;
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -28,6 +33,7 @@ export function Popover({
   trigger,
   children,
   title,
+  label,
   open,
   defaultOpen,
   onOpenChange,
@@ -36,6 +42,8 @@ export function Popover({
   width,
   className,
 }: PopoverProps) {
+  const titleId = useId();
+  const named = title ? { 'aria-labelledby': titleId } : label ? { 'aria-label': label } : {};
   return (
     <PopoverPrimitive.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
       <PopoverPrimitive.Trigger asChild>{trigger}</PopoverPrimitive.Trigger>
@@ -47,8 +55,13 @@ export function Popover({
           collisionPadding={8}
           className={cx(styles.popover, className)}
           style={width ? { width } : undefined}
+          {...named}
         >
-          {title && <p className={styles.title}>{title}</p>}
+          {title && (
+            <p id={titleId} className={styles.title}>
+              {title}
+            </p>
+          )}
           {children}
           <PopoverPrimitive.Arrow className={styles.arrow} width={12} height={6} />
         </PopoverPrimitive.Content>

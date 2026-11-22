@@ -46,6 +46,7 @@
 
 .row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
   min-height: var(--control-lg);
@@ -77,8 +78,19 @@
   font-weight: var(--weight-medium);
 }
 
+.rowSnippet {
+  flex-basis: 100%;
+  padding-inline-start: calc(16px + var(--space-3));
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .rowSubtitle {
   min-width: 0;
+  max-width: 60%;
   margin-inline-start: auto;
   overflow: hidden;
   color: var(--color-text-subtle);

@@ -1,21 +1,44 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
-import { describeProblem, getApi, useIdentity, type ProblemMessage } from '@/app';
+import type { RejoinLookup } from '@bxvtt/shared/protocol';
+import { describeProblem, getApi, isRetiredToken, useIdentity, type ProblemMessage } from '@/app';
 import { Banner, Button, Card, PageLayout, Spinner } from '@/ui';
 import { NameForm } from './NameForm';
 import { ProfileMenu } from './ProfileMenu';
+import { Rejoin } from './Rejoin';
 import styles from './home.module.css';
 
 /**
- * `/join/:code`: joins the table the invite link names and opens it. A visitor without a name picks one first.
+ * `/join/:code`: joins the table the invite link names and opens it. A visitor without a name picks one first,
+ * or, when the table has members who are offline, can come back in as the member they were.
  */
 export function JoinPage() {
   const { code = '' } = useParams();
   const navigate = useNavigate();
   const status = useIdentity((s) => s.status);
   const token = useIdentity((s) => s.token);
+  const forget = useIdentity((s) => s.forget);
   const [problem, setProblem] = useState<ProblemMessage | null>(null);
   const attempted = useRef<string | null>(null);
+  const [lookup, setLookup] = useState<RejoinLookup | null>(null);
+  const [rejoining, setRejoining] = useState(false);
+
+  // A visitor with no name may be a returning player whose browser lost its sign-in.
+  useEffect(() => {
+    if (status !== 'anonymous') return;
+    let cancelled = false;
+    getApi()
+      .lookupRejoin(code)
+      .then(
+        (found) => !cancelled && setLookup(found),
+        // Without the lookup, the page offers the "new here" path alone. Joining reports a bad code.
+        () => undefined,
+      );
+    return () => {
+      cancelled = true;
+    };
+  }, [status, code]);
+  const returning = lookup !== null && lookup.members.length > 0;
 
   useEffect(() => {
     if (status !== 'ready' || token === null) return;
@@ -26,21 +49,34 @@ export function JoinPage() {
       .joinTable(code)
       .then(
         (table) => navigate(`/tables/${table.id}`, { replace: true }),
-        (error: unknown) => setProblem(describeProblem(error)),
+        (error: unknown) => {
+          // A referee let this user back in from another browser. The name form explains that, and offers to
+          // come back in here.
+          if (isRetiredToken(error)) forget('retired');
+          else setProblem(describeProblem(error));
+        },
       );
-  }, [status, token, code, navigate]);
+  }, [status, token, code, navigate, forget]);
 
   return (
     <PageLayout width="narrow" headerActions={<ProfileMenu />}>
       <div className={styles.joinWrap}>
-        {status === 'anonymous' && (
+        {status === 'anonymous' && !rejoining && (
           <Card padding="lg">
             <NameForm
-              title="You're invited to a table"
-              description="Pick the name the table sees, and you'll go straight to its lobby."
+              title={returning ? "I'm new here" : "You're invited to a table"}
+              description={
+                returning
+                  ? `Pick a name, and you'll go straight to ${lookup.table_name}.`
+                  : "Pick a name, and you'll go straight to the table."
+              }
               submitLabel="Join the table"
+              onInvitePage
             />
           </Card>
+        )}
+        {status === 'anonymous' && returning && (
+          <Rejoin inviteCode={code} members={lookup.members} onActiveChange={setRejoining} />
         )}
         {status === 'anonymous' && (
           <p className={styles.aboutNote}>

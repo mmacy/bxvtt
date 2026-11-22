@@ -6,7 +6,16 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { fixtureSnapshot, type Snapshot } from '@/app/testing/fixtures';
 import { createFakeApi, renderWithTable } from '@/app/testing/renderWithTable';
 import { resetDungeonCache } from './hooks';
-import { accepted, giveValuables, partyWithPackItem, refused, stubCatalog } from './testKit';
+import {
+  accepted,
+  gameEntry,
+  giveValuables,
+  makeCaster,
+  partyWithPackItem,
+  refused,
+  stubCatalog,
+} from './testKit';
+import { useTableUi } from '@/app';
 import { TownActions } from './TownActions';
 import { TownStage } from './TownStage';
 import { useTownUi } from './townUi';
@@ -33,18 +42,17 @@ function setup(snapshot: Snapshot = fixtureSnapshot('town', 'player')) {
   return { ...renderWithTable(<TownStage />, { snapshot, api }), api, snapshot };
 }
 
-// jsdom lacks the pointer-capture and scroll methods that the kit's Select uses to open.
-Element.prototype.hasPointerCapture ??= () => false;
-Element.prototype.setPointerCapture ??= () => {};
-Element.prototype.releasePointerCapture ??= () => {};
-Element.prototype.scrollIntoView ??= () => {};
-
 beforeEach(() => {
   useTownUi.getState().reset();
   resetDungeonCache();
 });
 
 describe('the town square', () => {
+  it('leaves the game clock to the top bar', () => {
+    setup();
+    expect(screen.queryByText(/^Day \d+, \d\d:\d\d$/)).not.toBeInTheDocument();
+  });
+
   it('shows the town, what it offers, and the party', async () => {
     setup();
     expect(screen.getByRole('heading', { level: 2, name: 'Hollin Ferry' })).toBeInTheDocument();
@@ -102,7 +110,7 @@ describe('leaving town', () => {
     if (!game) throw new Error('No game.');
     api.sendCommand.mockResolvedValue(accepted(game));
     await user.click(await screen.findByRole('button', { name: 'Set out' }));
-    const dialog = await screen.findByRole('dialog', { name: "Set out for The priory on Corvane's Holm?" });
+    const dialog = await screen.findByRole('dialog', { name: "Set out for the priory on Corvane's Holm?" });
     expect(within(dialog).getByText('A tinder box to light it')).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Set out' }));
     await waitFor(() =>
@@ -187,7 +195,9 @@ describe('the outfitter', () => {
         game.revision + 1,
       ),
     );
-    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Clerics can use only certain weapons/, { selector: 'span' }),
+    ).toBeInTheDocument();
     expect(screen.getByText(/^Brenna buys /)).toBeInTheDocument();
     expect(useTownUi.getState().carts['character-0001']).toEqual({});
   });
@@ -241,6 +251,21 @@ describe('the outfitter', () => {
     expect(ids).toEqual(['character-0001', 'character-0002', 'character-0003', 'character-0004']);
   });
 
+  it('copies a cart only to members who can shop, and says who it skipped', async () => {
+    const snapshot = fixtureSnapshot('town', 'referee');
+    const osric = snapshot.game?.view.party.find((member) => member.name === 'Osric');
+    if (!osric) throw new Error('No Osric.');
+    osric.conditions = ['dead'];
+    osric.current_hp = 0;
+    const { user } = setup(snapshot);
+    await user.click(screen.getByRole('tab', { name: 'Outfitter' }));
+    await user.click(await screen.findByRole('button', { name: 'Add Rope (50’) to the cart' }));
+    await user.click(screen.getByRole('button', { name: 'Same for everyone you shop for' }));
+    expect(screen.getByText('Skips Osric, who is dead.')).toBeInTheDocument();
+    expect(useTownUi.getState().carts['character-0003']).toBeUndefined();
+    expect(useTownUi.getState().carts['character-0004']).toEqual({ rope: 1 });
+  });
+
   it("offers only the viewer's own members as buyers", async () => {
     const { user } = setup();
     await user.click(screen.getByRole('tab', { name: 'Outfitter' }));
@@ -256,6 +281,7 @@ describe('the outfitter', () => {
     const { user } = setup();
     await user.click(screen.getByRole('tab', { name: 'Outfitter' }));
     await screen.findByRole('button', { name: 'Add Sword to the cart' });
+    expect(screen.getByRole('button', { name: /^Sword 1d8, melee, show details$/ })).toBeInTheDocument();
     await user.type(screen.getByRole('searchbox', { name: 'Search equipment' }), 'rope');
     expect(screen.queryByRole('button', { name: 'Add Sword to the cart' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add Rope (50’) to the cart' })).toBeInTheDocument();
@@ -284,7 +310,7 @@ describe('the temple', () => {
         .map((button) => button.textContent?.slice(0, 5)),
     ).toEqual(['Osric', 'Wren1', 'Brenn', 'Tamsi']);
     expect(screen.getByText('20 gp')).toBeInTheDocument();
-    expect(screen.getByText('1000 gp')).toBeInTheDocument();
+    expect(screen.getByText('1,000 gp')).toBeInTheDocument();
   });
 
   it('sends the service for the chosen patient and explains who pays', async () => {
@@ -349,7 +375,7 @@ describe('the treasure buyers', () => {
     expect(await screen.findByText('Widow Marl, moneychanger')).toBeInTheDocument();
     await user.click(screen.getByRole('checkbox', { name: "The abbot's seal ring" }));
     expect(screen.getByText('1 for 900 gp')).toBeInTheDocument();
-    expect(screen.getByText('2 for 1000 gp')).toBeInTheDocument();
+    expect(screen.getByText('2 for 1,000 gp')).toBeInTheDocument();
     api.sendCommand.mockResolvedValue(
       accepted(game, [
         event({
@@ -400,6 +426,14 @@ describe('rest and preparation', () => {
       ),
     );
     expect(await screen.findByText('The party rests for a night.')).toBeInTheDocument();
+  });
+
+  it('states each length once and gives no dungeon rule', async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole('tab', { name: 'Rest and prepare' }));
+    const lengths = await screen.findAllByText(/of game time$/);
+    expect(lengths).toHaveLength(3);
+    expect(screen.queryByText(/six turns|10 minutes\./)).not.toBeInTheDocument();
   });
 
   it('opens the character sheet from the party list', async () => {
@@ -462,6 +496,7 @@ describe('shortcuts', () => {
     await user.keyboard('m');
     expect(screen.getByRole('tab', { name: 'Treasure buyers', selected: true })).toBeInTheDocument();
     await user.keyboard('{Shift>}r{/Shift}');
+    await user.click(await screen.findByRole('menuitem', { name: 'Open rest and prepare' }));
     expect(screen.getByRole('tab', { name: 'Rest and prepare', selected: true })).toBeInTheDocument();
     await user.keyboard('g');
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
@@ -472,29 +507,25 @@ describe('the generic command form', () => {
   it('builds a form from the schema and sends the command it describes', async () => {
     const api = createFakeApi();
     stubCatalog(api, ADVENTURES);
-    const base = api.rules.getMockImplementation();
-    api.rules.mockImplementation(
-      async (path: string, query?: Record<string, string | number | undefined>) => {
-        if (path === 'commands/light_source') {
-          return {
-            command_type: 'light_source',
-            kind: 'play',
-            allowed_modes: ['town'],
-            summary: 'Light a source.',
-            json_schema: {
-              required: ['character_id', 'item_id'],
-              properties: {
-                command_type: { const: 'light_source' },
-                character_id: { type: 'string' },
-                item_id: { type: 'string' },
-              },
+    api.rules.mockImplementation(async (path: string) => {
+      if (path === 'commands/light_source') {
+        return {
+          command_type: 'light_source',
+          kind: 'play',
+          allowed_modes: ['town'],
+          summary: 'Light a source.',
+          json_schema: {
+            required: ['character_id', 'item_id'],
+            properties: {
+              command_type: { const: 'light_source' },
+              character_id: { type: 'string' },
+              item_id: { type: 'string' },
             },
-          } as never;
-        }
-        if (base === undefined) throw new Error('No catalog.');
-        return base(path, query);
-      },
-    );
+          },
+        } as never;
+      }
+      throw new Error(`The test did not stub ${path}.`);
+    });
     const { store, user } = renderWithTable(<TownStage />, {
       snapshot: fixtureSnapshot('town', 'player'),
       api,
@@ -516,5 +547,67 @@ describe('the generic command form', () => {
         game.revision,
       ),
     );
+  });
+});
+
+describe('spells to prepare', () => {
+  const REST = 'Tamsin has no spells memorized. Rest for a night, then prepare spells.';
+
+  function withMage() {
+    const snapshot = fixtureSnapshot('town', 'player');
+    makeCaster(snapshot, 'Tamsin', 'magic_user', { book: 1 });
+    return snapshot;
+  }
+
+  it('warns on the town square with a button that rests for a night', async () => {
+    const snapshot = withMage();
+    const { api, user, store } = setup(snapshot);
+    const game = store.getState().game;
+    if (!game) throw new Error('No game.');
+    const banner = await screen.findByText("Spells aren't prepared");
+    expect(banner).toBeInTheDocument();
+    expect(screen.getAllByText(REST).length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText('Looks ready')).not.toBeInTheDocument();
+    api.sendCommand.mockResolvedValue(accepted(game));
+    await user.click(screen.getAllByRole('button', { name: 'Rest for a night' })[0] as HTMLElement);
+    await waitFor(() =>
+      expect(api.sendCommand).toHaveBeenCalledWith(
+        store.getState().tableId,
+        { command_type: 'rest', kind: 'night' },
+        game.revision,
+      ),
+    );
+  });
+
+  it('changes to "can prepare" after a night and opens the Spells tab', async () => {
+    const snapshot = withMage();
+    snapshot.feed.entries.push(
+      gameEntry(900, 'rest', [{ event_type: 'rested', code: 'exploration.rest.rested', kind: 'night' }]),
+    );
+    const { user } = setup(snapshot);
+    expect((await screen.findAllByText('Tamsin can prepare spells now.')).length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByRole('button', { name: 'Rest for a night' })).not.toBeInTheDocument();
+    await user.click(screen.getAllByRole('button', { name: "Open Tamsin's spells" })[0] as HTMLElement);
+    expect(useTableUi.getState().sheetMemberId).toBe('character-0004');
+    expect(useTableUi.getState().sheetTab).toBe('spells');
+  });
+
+  it('lists it with the other advice in the set-out dialog', async () => {
+    const { user } = setup(withMage());
+    await screen.findByText("Spells aren't prepared");
+    await user.click(screen.getAllByRole('button', { name: 'Set out' })[0] as HTMLElement);
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(REST)).toBeInTheDocument();
+    expect(within(dialog).getByText('A tinder box to light it')).toBeInTheDocument();
+  });
+
+  it('says nothing about a new first-level cleric', async () => {
+    const snapshot = fixtureSnapshot('town', 'player');
+    makeCaster(snapshot, 'Tamsin', 'cleric');
+    const { api } = setup(snapshot);
+    await screen.findByRole('heading', { name: 'Hollin Ferry' });
+    await waitFor(() => expect(api.fullCatalog).toHaveBeenCalledWith('classes'));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByText("Spells aren't prepared")).not.toBeInTheDocument();
   });
 });

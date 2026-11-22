@@ -55,11 +55,12 @@ export function useControllableState<T>(
  * return focus to whatever had it when the dialog opened.
  */
 export function useReturnFocus(enabled = true) {
+  trackFocus();
   const opener = useRef<HTMLElement | null>(null);
   return {
     onOpenAutoFocus: () => {
       if (!enabled) return;
-      opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      opener.current = focusOrigin();
     },
     onCloseAutoFocus: (event: Event) => {
       const target = opener.current;
@@ -69,4 +70,52 @@ export function useReturnFocus(enabled = true) {
       opener.current = null;
     },
   };
+}
+
+const LAYER = '[role="dialog"], [role="alertdialog"], [role="menu"]';
+
+/** The element that last had focus outside every dialog and menu, or `null` once focus fell to the page. */
+let lastOutside: HTMLElement | null = null;
+let tracking = false;
+
+function trackFocus(): void {
+  if (tracking || typeof document === 'undefined') return;
+  tracking = true;
+  document.addEventListener(
+    'focusin',
+    (event) => {
+      if (event.target instanceof HTMLElement && event.target.closest(LAYER) === null)
+        lastOutside = event.target;
+    },
+    true,
+  );
+  document.addEventListener(
+    'focusout',
+    (event) => {
+      if (event.relatedTarget === null && event.target === lastOutside) lastOutside = null;
+    },
+    true,
+  );
+}
+
+/**
+ * The element focus should return to when a dialog closes: whatever has focus now. When that is an item of a
+ * menu that is about to close, it is the button that opened the menu. When it is inside a dialog that is closing,
+ * or on the page itself because that dialog is gone, such as the command palette that ran the action, it is the
+ * element that had focus before that dialog.
+ */
+function focusOrigin(): HTMLElement | null {
+  const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  // The layer that ran the action may already be gone, which leaves focus on the page itself.
+  if (active === null || active === document.body) return lastOutside?.isConnected ? lastOutside : null;
+  if (active.closest('[role="menu"]') !== null) {
+    const triggers = document.querySelectorAll<HTMLElement>('[aria-haspopup="menu"][aria-expanded="true"]');
+    for (const trigger of triggers) if (trigger.closest('[role="menu"]') === null) return trigger;
+    return lastOutside;
+  }
+  if (
+    active.closest('[role="dialog"][data-state="closed"], [role="alertdialog"][data-state="closed"]') !== null
+  )
+    return lastOutside;
+  return active;
 }

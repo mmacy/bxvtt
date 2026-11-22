@@ -68,7 +68,7 @@ bxapi resolves a battle round from one declaration for each member in `view.enco
 
 1. A player saves a declaration for one member. The server stores it and tells every member who has declared, without revealing a player's choice to anyone who shouldn't see it. Party members see each other's declarations, because the party plans together.
 2. When every declarer has a declaration and the table setting `auto_resolve` is on, the server sends `resolve_battle_round`. Otherwise the caller or a referee asks the server to resolve the round, or any member with a seat when `party_control` is `anyone`. A referee can resolve a round early, and the server then fills each missing declaration with `hold`.
-3. If bxapi refuses the round, the server keeps the declarations, tells the table which declaration bxapi refused and why, and the player fixes it.
+3. If bxapi refuses the round, the server keeps the declarations and tells the table which member's declaration bxapi refused and why, and the player fixes it. Some of bxapi's rejections don't name a member. For those, the server works out the member by sending the round again with one declaration replaced by a hold that bxapi always refuses, so the check can never resolve the round. When the server still can't tell, the refusal lists the members whose declarations could have caused it.
 4. If bxapi accepts the round, the server clears the declarations and broadcasts the result.
 
 ## What each role receives
@@ -76,6 +76,7 @@ bxapi resolves a battle round from one declaration for each member in `view.enco
 After every accepted command the server holds the command outcome with every event, and it builds two projections:
 
 - **Players** receive the bxapi player view, the scene, the events whose `visibility` is `player`, and the matching messages.
+- **Players** also receive target handles: one opaque handle for each monster the party can see, with a label such as "Goblin 2". A player aims a spell or an item at one monster by handle, and the server translates the handle to bxapi's monster ID.
 - **Referees** receive everything a player receives, and also the referee view, the referee-only events, and the adventure's full map and key. The WebSocket carries only the dynamic part of the referee view. A referee's client reads the adventure from a cached HTTP route and the event log from the events route, because both grow too large to push after every command.
 
 The player view draws the map but names no areas and shows no treasure caches, stairs, or found traps. So the server acts as the referee who describes what the party sees: it derives a *scene* from the referee view and sends it to every member with the player view. The scene lists the areas the party has entered with their names and descriptions, the caches, features, and transitions the party can perceive with the IDs that commands need, the traps the party has found, and display names for item IDs. It follows osrlib's record of what the party knows, and when that record doesn't settle a question, it hides the thing and leaves it to the referee. `apps/server/README.md` lists the rules.

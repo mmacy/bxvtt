@@ -2,6 +2,7 @@ import { Slot } from 'radix-ui';
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { Icon, type IconName } from '../icons/Icon';
 import { cx } from '../lib/cx';
+import { Kbd, KbdControlScope, ariaKeyShortcuts } from './Kbd';
 import { Spinner } from './Spinner';
 import styles from './Button.module.css';
 
@@ -21,6 +22,12 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   block?: boolean;
   /** Renders the single child element with button styles, such as a router link. */
   asChild?: boolean;
+  /**
+   * Keys of the button's keyboard shortcut as `Kbd` shows them, such as `'G'` or `['Shift', 'R']`. The button
+   * shows them after its label, keeps them out of its accessible name, and sets `aria-keyshortcuts` (unless you
+   * pass your own). Register the shortcut itself with the app's shortcut hook.
+   */
+  shortcut?: string | string[];
   children?: ReactNode;
 }
 
@@ -36,6 +43,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     loading = false,
     block = false,
     asChild = false,
+    shortcut,
     className,
     disabled,
     children,
@@ -45,6 +53,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   },
   ref,
 ) {
+  const keyShortcuts = rest['aria-keyshortcuts'] ?? (shortcut ? ariaKeyShortcuts(shortcut) : undefined);
   const classes = cx(
     styles.button,
     styles[variant],
@@ -55,9 +64,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   );
   if (asChild) {
     return (
-      <Slot.Root ref={ref} className={classes} {...rest}>
-        {children}
-      </Slot.Root>
+      <KbdControlScope>
+        <Slot.Root ref={ref} className={classes} {...rest} aria-keyshortcuts={keyShortcuts}>
+          {children}
+        </Slot.Root>
+      </KbdControlScope>
     );
   }
   return (
@@ -70,14 +81,22 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       aria-disabled={loading || undefined}
       onClick={loading ? (event) => event.preventDefault() : onClick}
       {...rest}
+      aria-keyshortcuts={keyShortcuts}
     >
-      {loading ? (
-        <Spinner size={iconSize[size]} label="" className={styles.spinner} />
-      ) : (
-        icon && <Icon name={icon} size={iconSize[size]} />
-      )}
-      {children !== undefined && <span className={styles.label}>{children}</span>}
-      {iconEnd && !loading && <Icon name={iconEnd} size={iconSize[size]} />}
+      <KbdControlScope>
+        {loading ? (
+          <Spinner size={iconSize[size]} label="" className={styles.spinner} />
+        ) : (
+          icon && <Icon name={icon} size={iconSize[size]} />
+        )}
+        {children !== undefined && (
+          <span className={styles.label} data-button-label="">
+            {children}
+          </span>
+        )}
+        {shortcut !== undefined && <Kbd keys={shortcut} decorative className={styles.shortcut} />}
+        {iconEnd && !loading && <Icon name={iconEnd} size={iconSize[size]} />}
+      </KbdControlScope>
     </button>
   );
 });

@@ -1,27 +1,32 @@
-import { useRulesEntry, type EquipmentDetail } from '@/app';
 import type { RangeBand } from '@bxvtt/shared/bxapi';
-import { formatDice, formatInteger, itemTypeLabel, signed } from '@bxvtt/shared/text';
+import {
+  formatDice,
+  formatInteger,
+  itemTypeLabel,
+  signed,
+  weaponQualityDescription,
+  weaponQualityLabel,
+} from '@bxvtt/shared/text';
 import { Badge } from '@/ui';
+import { useEntry } from '../catalogs';
 import { EntryFrame } from '../Frame';
 import { EntryPage, Stat } from '../Parts';
 import styles from '../book.module.css';
 import { titleFromId } from '../model';
 import { formatArmourClass, formatCost, formatWeight, isNumber } from '../typeset';
 
-const QUALITY_LABELS: Record<string, string> = {
-  blunt: 'Blunt',
-  brace: 'Brace',
-  charge: 'Charge',
-  melee: 'Melee',
-  missile: 'Missile',
-  reload: 'Reload',
-  slow: 'Slow',
-  splash: 'Splash',
-  two_handed: 'Two-handed',
-};
-
-export function qualityLabel(quality: string): string {
-  return QUALITY_LABELS[quality] ?? titleFromId(quality);
+/** The qualities of a weapon, each with what it means. */
+function Qualities({ qualities }: { qualities: readonly string[] }) {
+  return (
+    <ul className={styles.qualityList}>
+      {qualities.map((quality) => (
+        <li key={quality}>
+          <strong>{weaponQualityLabel(quality)}</strong>
+          <span>{weaponQualityDescription(quality)}</span>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 const PARAM_LABELS: Record<string, (value: unknown) => [string, string] | null> = {
@@ -66,7 +71,7 @@ function Ranges({ ranges }: { ranges: { short: RangeBand; medium: RangeBand; lon
 
 /** A weapon, a suit of armour, gear, or ammunition, with every field the catalog states. */
 export function EquipmentEntry({ id }: { id: string }) {
-  const result = useRulesEntry<EquipmentDetail>(`equipment/${id}`);
+  const result = useEntry('equipment', id);
   return (
     <EntryFrame result={result} label="this item" section="equipment">
       {(item) => (
@@ -94,11 +99,7 @@ export function EquipmentEntry({ id }: { id: string }) {
                     <span className={styles.big}>{formatDice(item.damage)}</span>
                   </Stat>
                   <Stat label="Qualities" span="full">
-                    <ul className={styles.chipList}>
-                      {item.qualities.map((quality) => (
-                        <li key={quality}>{qualityLabel(quality)}</li>
-                      ))}
-                    </ul>
+                    <Qualities qualities={item.qualities} />
                   </Stat>
                   {item.missile_ranges && (
                     <Stat label="Range" span="full">
@@ -134,11 +135,7 @@ export function EquipmentEntry({ id }: { id: string }) {
                         <span className={styles.big}>{formatDice(item.combat.damage)}</span>
                       </Stat>
                       <Stat label="Qualities" span="full">
-                        <ul className={styles.chipList}>
-                          {item.combat.qualities.map((quality) => (
-                            <li key={quality}>{qualityLabel(quality)}</li>
-                          ))}
-                        </ul>
+                        <Qualities qualities={item.combat.qualities} />
                       </Stat>
                       {item.combat.missile_ranges && (
                         <Stat label="Range" span="full">

@@ -3,7 +3,7 @@ import { useEffect, useId, useMemo, useState, type KeyboardEvent } from 'react';
 import { Icon, type IconName } from '../icons/Icon';
 import { cx } from '../lib/cx';
 import { useReturnFocus } from '../lib/hooks';
-import { Kbd } from './Kbd';
+import { Kbd, ariaKeyShortcuts } from './Kbd';
 import styles from './CommandPalette.module.css';
 
 export interface CommandAction {
@@ -131,7 +131,7 @@ export function CommandPalette({
               }}
               onKeyDown={onKeyDown}
             />
-            <Kbd keys="Esc" />
+            <Kbd keys="Esc" decorative />
           </div>
           <ul id={listId} role="listbox" aria-label="Commands" className={styles.list}>
             {results.length === 0 && <li className={styles.empty}>{emptyText}</li>}
@@ -150,6 +150,7 @@ export function CommandPalette({
                     role="option"
                     aria-selected={index === activeIndex}
                     aria-disabled={action.disabled || undefined}
+                    aria-keyshortcuts={action.shortcut ? ariaKeyShortcuts(action.shortcut) : undefined}
                     className={cx(styles.option, index === activeIndex && styles.active)}
                     onMouseMove={() => setActive(index)}
                     onClick={() => run(action)}
@@ -158,7 +159,7 @@ export function CommandPalette({
                       {action.icon && <Icon name={action.icon} size={16} />}
                     </span>
                     <span className={styles.optionLabel}>{action.label}</span>
-                    {action.shortcut && <Kbd keys={action.shortcut} />}
+                    {action.shortcut && <Kbd keys={action.shortcut} decorative />}
                   </div>
                 </li>
               );

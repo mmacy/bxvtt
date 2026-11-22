@@ -7,6 +7,11 @@
   pointer-events: none;
 }
 
+/* On the play screen, toasts sit above the action bar, so they never cover its buttons. */
+:global(:root:has([data-table-layout])) .viewport {
+  bottom: calc(var(--actionbar-height) + var(--space-3));
+}
+
 .list {
   display: flex;
   flex-direction: column;

@@ -4,7 +4,13 @@
  * movement folded into one expandable line.
  */
 import type { GameEntry } from '@bxvtt/shared/protocol';
-import { describeEvents, facingLabel, type EventLine, type TextContext } from '@bxvtt/shared/text';
+import {
+  describeGameEntry,
+  extendContextWithEntryNames,
+  facingLabel,
+  type EventLine,
+  type TextContext,
+} from '@bxvtt/shared/text';
 
 /** How much a line matters: a step down a corridor is `minor`, and a party member's death is `critical`. */
 export type LineWeight = 'minor' | 'normal' | 'major' | 'critical';
@@ -84,69 +90,26 @@ export function lineWeight(line: EventLine, ctx: TextContext): LineWeight {
   return 'normal';
 }
 
-/** The events and messages of an entry that the reader should see. A referee with the lens off sees what players see. */
-export function visibleEvents(
-  entry: GameEntry,
-  lens: boolean,
-): { events: GameEntry['events']; messages: string[] } {
-  if (lens) return { events: entry.events, messages: entry.messages };
-  const events: GameEntry['events'] = [];
-  const messages: string[] = [];
-  entry.events.forEach((event, index) => {
-    if ((event as { visibility?: string }).visibility === 'referee') return;
-    events.push(event);
-    const message = entry.messages[index];
-    if (message !== undefined) messages.push(message);
-  });
-  return { events, messages };
-}
-
-/** Drops a line that repeats an earlier line of the same entry, keeping the copy players can see. */
-function dropRepeats(lines: EventLine[]): EventLine[] {
-  const kept: EventLine[] = [];
-  const byText = new Map<string, number>();
-  for (const line of lines) {
-    const seen = byText.get(line.text);
-    if (seen === undefined) {
-      byText.set(line.text, kept.length);
-      kept.push(line);
-      continue;
-    }
-    const earlier = kept[seen];
-    if (earlier && earlier.visibility === 'referee' && line.visibility === 'player') kept[seen] = line;
-  }
-  return kept;
+/** The events of an entry that the reader should see. A referee with the lens off sees what players see. */
+export function visibleEvents(entry: GameEntry, lens: boolean): GameEntry['events'] {
+  if (lens) return entry.events;
+  return entry.events.filter((event) => (event as { visibility?: string }).visibility !== 'referee');
 }
 
 const ROUND = /^Round (\d+) begins\.$/;
-const STEP = /^The party moves to \(-?\d+, -?\d+\), (facing [^.]+)\.(.*)$/s;
-const DOOR_CELL = /^Door cell \(-?\d+, -?\d+\), side \w+\.$/;
-
-/**
- * Takes map coordinates out of a line. The text layer names the cell a party steps to and the cell of a door,
- * which reads like a log rather than a referee, and the map already shows where the party is.
- */
-export function withoutCoordinates(line: EventLine): EventLine {
-  let next = line;
-  const step = STEP.exec(line.text);
-  if (step) next = { ...next, text: `The party moves one step, ${step[1]}.${step[2] ?? ''}` };
-  if (next.detail !== undefined && DOOR_CELL.test(next.detail)) {
-    const { detail: _detail, ...rest } = next;
-    next = rest;
-  }
-  return next;
-}
 
 /**
  * Describes a game entry for the feed.
  *
  * @param entry - The game entry.
- * @param ctx - The text context from `useTextContext`.
+ * @param base - The text context from `useTextContext`. The entry's own recorded names are added to it.
  * @param options - `lens` is whether the reader is a referee with the lens on.
  */
-export function narrateEntry(entry: GameEntry, ctx: TextContext, options: { lens: boolean }): Narration {
-  const { events, messages } = visibleEvents(entry, options.lens);
-  const described = dropRepeats(describeEvents(events, ctx, { messages }));
+export function narrateEntry(entry: GameEntry, base: TextContext, options: { lens: boolean }): Narration {
+  // The text layer narrates the whole entry with the names the server recorded and the member who acted. The
+  // same names tell a party member from a monster when a line is weighed.
+  const ctx = extendContextWithEntryNames(base, entry.names);
+  const described = describeGameEntry(entry, base, options.lens ? {} : { only: 'player' });
   let headline: string | null = null;
   const lines: NarratedLine[] = [];
   described.forEach((line, index) => {
@@ -155,7 +118,10 @@ export function narrateEntry(entry: GameEntry, ctx: TextContext, options: { lens
       headline = `Round ${round[1]}`;
       return;
     }
-    lines.push({ ...withoutCoordinates(line), key: `${entry.seq}-${index}`, weight: lineWeight(line, ctx) });
+    // The cell of a step or a door is for a referee with the lens on.
+    const { refereeDetail, ...rest } = line;
+    const shown = options.lens && refereeDetail !== undefined ? { ...rest, refereeDetail } : rest;
+    lines.push({ ...shown, key: `${entry.seq}-${index}`, weight: lineWeight(line, ctx) });
   });
 
   const items: NarrationItem[] = [];
@@ -226,7 +192,7 @@ export function movementSteps(
   lens: boolean,
 ): { steps: PartyStep[]; checks: number } | null {
   if (entry.command_type === null || !MOVE_COMMANDS.has(entry.command_type)) return null;
-  const { events } = visibleEvents(entry, lens);
+  const events = visibleEvents(entry, lens);
   const steps: PartyStep[] = [];
   let checks = 0;
   for (const raw of events) {
@@ -254,11 +220,20 @@ export function movementSteps(
   return { steps, checks };
 }
 
-/** A sentence for a run of party movement: "The party moves 6 times and turns once, and now faces west." */
+/** A sentence for a run of party movement: "The party moves 6 steps and turns once, facing west." */
 export function movementRunText(steps: readonly PartyStep[]): string {
   const moves = steps.filter((step) => !step.turned).length;
   const turns = steps.length - moves;
   const last = steps.at(-1);
+  // A single step or turn reads the way the text layer says it.
+  if (steps.length === 1 && last !== undefined && last.facing !== '') {
+    return last.turned ? `The party turns to face ${last.facing}.` : `The party moves ${last.facing}.`;
+  }
+  // Steps that all go one way read as a direction: "The party moves 3 steps north."
+  const facings = new Set(steps.map((step) => step.facing));
+  if (turns === 0 && facings.size === 1 && last !== undefined && last.facing !== '') {
+    return `The party moves ${moves} steps ${last.facing}.`;
+  }
   const parts: string[] = [];
   if (moves > 0) parts.push(moves === 1 ? 'moves one step' : `moves ${moves} steps`);
   if (turns > 0) parts.push(turns === 1 ? 'turns once' : `turns ${turns} times`);

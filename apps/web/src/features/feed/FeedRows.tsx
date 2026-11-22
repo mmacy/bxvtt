@@ -1,8 +1,7 @@
 import type { ChatEntry, GameEntry, SystemEntry } from '@bxvtt/shared/protocol';
 import { formatGameClock, joinList } from '@bxvtt/shared/text';
 import { memo, useId, useMemo, useState, type CSSProperties } from 'react';
-import { Avatar, Badge, Icon, cx } from '@/ui';
-import { clockAt, useClockVersion } from './model/clock';
+import { Avatar, Badge, Icon, Parchment, cx } from '@/ui';
 import { parseMarkup } from './model/markup';
 import {
   movementRunText,
@@ -32,11 +31,10 @@ function Time({ iso }: { iso: string }) {
   );
 }
 
-/** The game time of a game entry, when this browser saw it. */
+/** The game time after a game entry's command. Entries stored before the server recorded it have none. */
 function GameClock({ entry }: { entry: GameEntry }) {
-  useClockVersion();
-  const rounds = clockAt(entry.session_id, entry.revision);
-  if (rounds === null) return null;
+  const rounds = entry.clock_rounds;
+  if (rounds === null || rounds === undefined) return null;
   const text = formatGameClock(rounds);
   return (
     <span className={styles.clock} title={`Game time: ${text}`}>
@@ -205,8 +203,24 @@ function LineView({ line }: { line: NarratedLine }) {
     styles[`cat-${line.category}`],
     styles[`tone-${line.tone}`],
     hidden && styles.hiddenLine,
-    journal && styles.journalLine,
   );
+  if (journal) {
+    // A journal entry is a handout the party reads, so it sits on a scrap of paper.
+    return (
+      <li className={styles.line}>
+        <Parchment variant="plain" className={styles.handout}>
+          <p className={styles.handoutLabel}>
+            <Icon name="journal" size={12} />
+            <span>Journal{line.detail !== undefined ? ` · ${line.detail.replace(/\.$/, '')}` : ''}</span>
+          </p>
+          <p className={styles.handoutText}>
+            <Highlight text={text} query={view.query} />
+          </p>
+        </Parchment>
+      </li>
+    );
+  }
+  const hasDetail = line.detail !== undefined || line.refereeDetail !== undefined;
   const body = (
     <>
       <span className={styles.lineIcon} aria-hidden="true">
@@ -214,7 +228,6 @@ function LineView({ line }: { line: NarratedLine }) {
       </span>
       <span className={styles.lineText}>
         {hidden && <span className="visually-hidden">Hidden from players. </span>}
-        {journal && <span className={styles.journalLabel}>Journal</span>}
         <Highlight text={text} query={view.query} />
       </span>
       {hidden && (
@@ -222,14 +235,14 @@ function LineView({ line }: { line: NarratedLine }) {
           <Icon name="eye-off" size={12} />
         </span>
       )}
-      {line.detail !== undefined && (
+      {hasDetail && (
         <span className={styles.detailCue} aria-hidden="true">
           <Icon name={open ? 'chevron-up' : 'dice'} size={12} />
         </span>
       )}
     </>
   );
-  if (line.detail === undefined) {
+  if (!hasDetail) {
     return (
       <li className={className}>
         <div className={styles.lineRow}>{body}</div>
@@ -247,9 +260,16 @@ function LineView({ line }: { line: NarratedLine }) {
       >
         {body}
       </button>
-      <p id={detailId} className={styles.detail} hidden={!open}>
-        {line.detail}
-      </p>
+      <div id={detailId} className={styles.detail} hidden={!open}>
+        {line.detail !== undefined && <p>{line.detail}</p>}
+        {line.refereeDetail !== undefined && (
+          <p className={styles.refereeDetail}>
+            <Icon name="eye-off" size={12} />
+            <span className="visually-hidden">Hidden from players. </span>
+            {line.refereeDetail}
+          </p>
+        )}
+      </div>
     </li>
   );
 }
@@ -456,8 +476,8 @@ const MovesRow = memo(function MovesRow({
   );
 });
 
-/** Renders one row of the feed list. */
-export function FeedRowView({ row }: { row: FeedRow }) {
+/** Renders one row of the feed list. A row object that didn't change skips rendering. */
+export const FeedRowView = memo(function FeedRowView({ row }: { row: FeedRow }) {
   switch (row.type) {
     case 'day':
       return <DayDivider label={row.label} />;
@@ -474,4 +494,4 @@ export function FeedRowView({ row }: { row: FeedRow }) {
     case 'moves':
       return <MovesRow entries={row.entries} steps={row.steps} checks={row.checks} userId={row.userId} />;
   }
-}
+});

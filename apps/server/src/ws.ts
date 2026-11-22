@@ -67,7 +67,7 @@ export async function buildSnapshot(
       table: ctx.tables.detail(tableId),
       presence: ctx.hub.presence(tableId),
       game,
-      declarations: live === null ? null : ctx.game.battle.state(live),
+      declarations: live === null ? null : ctx.game.battle.state(live, role),
       feed: ctx.feed.page(
         tableId,
         user.id,
@@ -88,6 +88,7 @@ export async function buildSnapshot(
         referee: role === 'referee' ? readNotes(ctx, tableId, 'referee') : null,
       },
       server_time: now(),
+      ...(role === 'referee' ? { rejoin_requests: ctx.rejoin.pending(tableId) } : {}),
     };
   });
 }
@@ -166,6 +167,11 @@ export function registerWebSocket(app: FastifyInstance, ctx: Context): void {
       try {
         found = ctx.auth.authenticate(token, request.clientIp);
       } catch (error) {
+        if (error instanceof ApiError && error.code === 'token_retired') {
+          fail('token_retired', error.message);
+          socket.close(WS_CLOSE_CODES.auth_failed, 'token retired');
+          return;
+        }
         fail('rate_limited', error instanceof Error ? error.message : 'Too many attempts.');
         socket.close(WS_CLOSE_CODES.rate_limited, 'rate limited');
         return;
@@ -182,6 +188,7 @@ export function registerWebSocket(app: FastifyInstance, ctx: Context): void {
       }
       user = found;
       connection = ctx.hub.add(socket, tableId, found.id);
+      ctx.rejoin.memberOnline(tableId, found.id);
       await deliverSnapshot(connection, found, feedAfter);
     };
 

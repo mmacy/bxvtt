@@ -27,6 +27,7 @@ import {
   type ConditionTone,
 } from '@/ui';
 import type { SheetModel } from './model';
+import { RuleLink } from './RuleLink';
 import styles from './sheet.module.css';
 
 const ABILITY_ORDER = ['str', 'int', 'wis', 'dex', 'con', 'cha'] as const;
@@ -55,12 +56,6 @@ function headline(model: SheetModel, ability: string): number | undefined {
   }
 }
 
-/** How a sheet names its class and level: "Level 1 fighter · Veteran". */
-export function classLine(model: Pick<SheetModel, 'level' | 'classId' | 'title'>): string {
-  const base = `Level ${model.level} ${classLabel(model.classId).toLowerCase()}`;
-  return model.title ? `${base} · ${model.title}` : base;
-}
-
 export interface SheetHeaderProps {
   model: SheetModel;
   /** The seat owner's player color. */
@@ -86,24 +81,20 @@ export function SheetHeader({ model, color, controller, actions }: SheetHeaderPr
         decorative
       />
       <div className={styles.headerText}>
-        <h2 className={styles.name}>{model.name}</h2>
+        <p className={styles.name}>{model.name}</p>
         <p className={styles.classLine}>
-          {[
-            `Level ${model.level} ${classLabel(model.classId).toLowerCase()}`,
-            model.title,
-            alignmentLabel(model.alignment),
-          ]
+          Level {model.level}{' '}
+          <RuleLink entry={{ kind: 'classes', id: model.classId }}>
+            {classLabel(model.classId).toLowerCase()}
+          </RuleLink>
+          {[model.title, alignmentLabel(model.alignment)]
             .filter((part): part is string => Boolean(part))
-            .map((part, index) => (
+            .map((part) => (
               <span key={part}>
-                {index > 0 && (
-                  <>
-                    <span className={styles.dot} aria-hidden="true">
-                      ·
-                    </span>
-                    <span className="visually-hidden">, </span>
-                  </>
-                )}
+                <span className="visually-hidden">{', '}</span>
+                <span className={styles.dot} aria-hidden="true">
+                  ·
+                </span>
                 {part}
               </span>
             ))}

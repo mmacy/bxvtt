@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { isProblem } from '@bxvtt/shared/client';
+import { BxvttClient, isProblem } from '@bxvtt/shared/client';
 import type { GameState, ServerMessage } from '@bxvtt/shared/protocol';
 import { WS_CLOSE_CODES } from '@bxvtt/shared/protocol';
 import type { TestServer, TestUser } from './helpers';
@@ -175,6 +175,9 @@ describe('authorization across tables, roles, and seats', () => {
       () => c.getNotes(tableId, 'referee'),
       () => c.updateNotes(tableId, 'party', 'x', 0),
       () => c.generate(tableId, 'monsters', { monster_id: 'goblin' }),
+      () => c.listRejoinRequests(tableId),
+      () => c.approveRejoin(tableId, 'rjn_unknown'),
+      () => c.declineRejoin(tableId, 'rjn_unknown'),
     ];
     for (const call of calls) {
       await expect(call()).rejects.toSatisfy((error) => isProblem(error, 'not_found'));
@@ -507,6 +510,42 @@ describe('treasure the party has not found', () => {
     });
     expect(tried.accepted).toBe(false);
     expect(tried.rejections.map((rejection) => rejection.code)).toEqual(['exploration.trap.not_found']);
+  });
+});
+
+describe('rejoining as an existing member', () => {
+  let server: TestServer;
+
+  beforeAll(async () => {
+    server = await startServer();
+  });
+
+  afterAll(async () => {
+    await server.close();
+  });
+
+  it('never lets a retired token authenticate, and never hands a token to anyone but the claiming browser', async () => {
+    const host = await createUser(server, 'Rhea');
+    const alice = await createUser(server, 'Alice');
+    const table = await createTable(host, [alice]);
+    const browser = new BxvttClient({ baseUrl: server.url });
+    const ticket = await browser.requestRejoin(table.invite_code, alice.id);
+    // The referee's answers and lists carry no token.
+    const approved = await host.client.approveRejoin(table.id, ticket.request_id);
+    expect(JSON.stringify(approved)).not.toMatch(/bxt_/);
+    expect(JSON.stringify(host.received)).not.toMatch(/"token":"bxt_/);
+    const claimed = await browser.rejoinStatus(ticket.request_id, ticket.secret);
+    expect(claimed.token).toMatch(/^bxt_/);
+    for (const call of [
+      () => alice.client.me(),
+      () => alice.client.getTable(table.id),
+      () => alice.client.listTables(),
+      () => alice.client.postFeed(table.id, { text: 'still me?' }),
+    ]) {
+      await expect(call()).rejects.toSatisfy((error) => isProblem(error, 'token_retired'));
+    }
+    // A retired token isn't a guess, so it doesn't count toward the unknown-token block, and it never works.
+    expect((await browser.me()).id).toBe(alice.id);
   });
 });
 

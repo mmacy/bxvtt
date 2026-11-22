@@ -20,6 +20,53 @@ export function lowerFirst(text: string): string {
   return text.length === 0 ? text : text.charAt(0).toLowerCase() + text.slice(1);
 }
 
+/**
+ * A name as it reads in the middle of a sentence. A leading "The" is an article, so it reads "the", and the rest
+ * of the name keeps its capitals: `The priory on Corvane's Holm` gives `the priory on Corvane's Holm`, and
+ * `The Barrow` gives `the Barrow`. Every other name is returned as written.
+ *
+ * This is the one rule for names with a leading article, for dungeons, areas, towns, and adventure titles. At
+ * the start of a sentence, use the name as written.
+ *
+ * ```ts
+ * `Set out for ${nameInSentence('The priory on Corvane\'s Holm')}?`; // "Set out for the priory on Corvane's Holm?"
+ * ```
+ */
+export function nameInSentence(name: string): string {
+  return name.replace(/^the\s+/i, 'the ');
+}
+
+/** Words that end the head of a place name, such as the `of` in `Chapel of Saint Corvane`. */
+const PLACE_LINKS = new Set(['of', 'on', 'in', 'at', 'under', 'by', 'beyond', 'below', 'above', 'to']);
+
+/**
+ * A place's name as it reads in the middle of a sentence after a word such as "enters". The name's head is its
+ * words before a linking word such as "of" or "under". Three kinds of name:
+ *
+ * - **Its own article:** a leading "The" reads "the", as in {@link nameInSentence}: `The priory on Corvane's
+ *   Holm` gives `the priory on Corvane's Holm`, and `The Kingsway` gives `the Kingsway`.
+ * - **A proper name:** a head of two or more words whose last word is capitalized takes no article: `Crookback
+ *   Bridge`, `Hollin Ferry`.
+ * - **A common noun:** anything else takes "the". Its first word reads in lower case unless another word of the
+ *   head is capitalized: `Guardroom` gives `the guardroom`, `Chapel of Saint Corvane` gives `the chapel of Saint
+ *   Corvane`, `Captain's loft` gives `the captain's loft`, and `Drain Folk warren` gives `the Drain Folk warren`.
+ *
+ * A one-word proper name, such as a dungeon called `Blackmoor`, reads as a common noun, because nothing in the
+ * word tells the two apart. Write it with "The", or name it in two words.
+ */
+export function placeInSentence(name: string): string {
+  const trimmed = name.trim();
+  if (/^the\s/i.test(trimmed)) return nameInSentence(trimmed);
+  const words = trimmed.split(/\s+/);
+  const link = words.findIndex((word, index) => index > 0 && PLACE_LINKS.has(word.toLowerCase()));
+  const head = link < 0 ? words : words.slice(0, link);
+  const capital = (word: string) => /^\p{Lu}/u.test(word);
+  const last = head[head.length - 1] ?? '';
+  if (head.length >= 2 && capital(last)) return trimmed;
+  const otherCapitals = head.slice(1).some(capital);
+  return `the ${otherCapitals ? trimmed : lowerFirst(trimmed)}`;
+}
+
 /** Turn an ID or enum value such as `magic_user` or `jade-idol` into plain words such as `magic user`. */
 export function prettifyId(value: string): string {
   return value.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -46,10 +93,16 @@ const IRREGULAR_PLURALS: Record<string, string> = {
   'magic-user': 'magic-users',
 };
 
-/** Regular English plural of a noun or noun phrase. A phrase such as `flask of oil` pluralizes its head noun. */
+/**
+ * Regular English plural of a noun or noun phrase. A phrase such as `flask of oil` pluralizes its head noun, and
+ * a phrase with a trailing bonus such as `sword +1` pluralizes the noun before it: `swords +1`.
+ */
 export function pluralize(noun: string): string {
-  const ofIndex = noun.indexOf(' of ');
-  if (ofIndex > 0) return `${pluralize(noun.slice(0, ofIndex))}${noun.slice(ofIndex)}`;
+  const preposition = / (?:of|with|from|for|in|on) /.exec(noun);
+  if (preposition && preposition.index > 0)
+    return `${pluralize(noun.slice(0, preposition.index))}${noun.slice(preposition.index)}`;
+  const bonus = /^(.*[A-Za-z])(\s+[+-]\d.*)$/.exec(noun);
+  if (bonus?.[1] !== undefined && bonus[2] !== undefined) return `${pluralize(bonus[1])}${bonus[2]}`;
   const lastWord = /[A-Za-z-]+$/.exec(noun)?.[0] ?? noun;
   const irregular = IRREGULAR_PLURALS[lastWord.toLowerCase()];
   if (irregular)
@@ -60,6 +113,30 @@ export function pluralize(noun: string): string {
     return noun.replace(/fe$/i, 'ves').replace(/f$/i, 'ves');
   }
   return `${noun}s`;
+}
+
+const IRREGULAR_SINGULARS: Record<string, string> = Object.fromEntries(
+  Object.entries(IRREGULAR_PLURALS).map(([singular, plural]) => [plural, singular]),
+);
+
+/**
+ * Singular of an English plural noun, the reverse of `pluralize` for the nouns that game names use: `torches`
+ * gives `torch`, `spikes` gives `spike`, and `rations` gives `ration`. A word that isn't a plural comes back
+ * unchanged.
+ */
+export function singularize(noun: string): string {
+  const lastWord = /[A-Za-z-]+$/.exec(noun)?.[0];
+  if (lastWord === undefined) return noun;
+  const head = noun.slice(0, noun.length - lastWord.length);
+  const lower = lastWord.toLowerCase();
+  const irregular = IRREGULAR_SINGULARS[lower];
+  if (irregular) return `${head}${irregular}`;
+  if (/(?:ss|us|is)$/.test(lower) || !lower.endsWith('s')) return noun;
+  if (/[^aeiou]ies$/.test(lower)) return `${head}${lastWord.slice(0, -3)}y`;
+  if (/(?:ches|shes|xes|zes|sses)$/.test(lower)) return `${head}${lastWord.slice(0, -2)}`;
+  if (/(?:ives|lves|rves)$/.test(lower))
+    return `${head}${lastWord.slice(0, -3)}${lower.endsWith('ives') ? 'fe' : 'f'}`;
+  return `${head}${lastWord.slice(0, -1)}`;
 }
 
 /** Return `1 torch` or `3 torches`. Pass `plural` for an irregular plural such as `wolves`. */

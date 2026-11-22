@@ -34,8 +34,8 @@ export interface Config {
   allowCharacterSeeds: boolean;
   /**
    * Rate limits. `createUser`, `join`, `failedAuth`, and `failedHostKey` count requests per network address (an
-   * IPv6 address counts by its /64 prefix). `userWrites` counts every request that changes something, and
-   * `userPosts` counts feed posts and new annotations, per user.
+   * IPv6 address counts by its /64 prefix). `userWrites` counts every request that changes something,
+   * `userPosts` counts feed posts and new annotations, and `characterChecks` counts character checks, per user.
    */
   rateLimits: {
     createUser: RateLimit;
@@ -44,7 +44,16 @@ export interface Config {
     failedHostKey: RateLimit;
     userWrites: RateLimit;
     userPosts: RateLimit;
+    characterChecks: RateLimit;
+    rejoin: RateLimit;
+    rejoinPolls: RateLimit;
   };
+  /** How long a rejoin request waits for a referee, in milliseconds. */
+  rejoinTtlMs: number;
+  /** How long a rejoin request lasts without a poll from the visitor before it counts as abandoned. */
+  rejoinAbandonMs: number;
+  /** How long an approved rejoin request waits for the visitor to claim it before the approval lapses. */
+  rejoinClaimMs: number;
   /** Caps on what one user or table can store, so nobody can fill the disk of bxvtt or bxapi. */
   quotas: Quotas;
   /** How long a bxapi request may take before the server gives up, in milliseconds. */
@@ -166,7 +175,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
       failedHostKey: { capacity: 10, windowMs: 10 * 60_000 },
       userWrites: { capacity: 100 * relax, windowMs: 20_000 },
       userPosts: { capacity: 30 * relax, windowMs: 30_000 },
+      characterChecks: { capacity: 60 * relax, windowMs: 60_000 },
+      rejoin: { capacity: 5 * relax, windowMs: 10 * 60_000 },
+      rejoinPolls: { capacity: 120 * relax, windowMs: 60_000 },
     },
+    rejoinTtlMs: 5 * 60_000,
+    rejoinAbandonMs: 20_000,
+    rejoinClaimMs: 30_000,
     quotas: { ...DEFAULT_QUOTAS },
     bxapiTimeoutMs: 15_000,
   };

@@ -15,7 +15,16 @@ declare module 'fastify' {
 }
 
 /** The routes under `/api` that need no token. */
-const PUBLIC_ROUTES = new Set(['GET /api/health', 'HEAD /api/health', 'POST /api/users']);
+const PUBLIC_ROUTES = new Set([
+  'GET /api/health',
+  'HEAD /api/health',
+  'POST /api/users',
+  'POST /api/rejoin/lookup',
+  'POST /api/rejoin',
+]);
+
+/** The routes with a path parameter that need no token: a visitor's poll of a rejoin request. */
+const PUBLIC_PATTERNS = [/^POST \/api\/rejoin\/[^/]+\/(?:status|cancel)$/];
 
 /**
  * Checks bearer tokens. Every route under `/api` except the health check and user creation needs one. Failed
@@ -45,7 +54,8 @@ export class Auth {
       request.clientIp = clientAddress(request.socket.remoteAddress, request.headers);
       const path = requestPath(request);
       if (!path.startsWith('/api/') && path !== '/api') return;
-      if (PUBLIC_ROUTES.has(`${request.method} ${path}`)) return;
+      const route = `${request.method} ${path}`;
+      if (PUBLIC_ROUTES.has(route) || PUBLIC_PATTERNS.some((pattern) => pattern.test(route))) return;
       const header = request.headers.authorization;
       const match = typeof header === 'string' ? /^Bearer\s+(\S+)$/i.exec(header) : null;
       const token = match?.[1];
@@ -81,6 +91,14 @@ export class Auth {
     const blocked = this.failedAuth.peek(key);
     const user = token.length <= 200 ? this.users.byToken(token) : null;
     if (user !== null) return user;
+    if (token.length <= 200 && this.users.isRetired(token)) {
+      throw new ApiError(
+        'token_retired',
+        'A referee let this member back in from another browser, so this sign-in no longer works.',
+        {},
+        { headers: { 'WWW-Authenticate': 'Bearer' } },
+      );
+    }
     if (blocked > 0)
       throw rateLimited('This address has sent too many unknown tokens. Try again later.', blocked);
     this.failedAuth.take(key);

@@ -14,6 +14,16 @@ export default defineConfig({
       { find: '@', replacement: fileURLToPath(new URL('./src', import.meta.url)) },
     ],
   },
+  build: {
+    rollupOptions: {
+      treeshake: {
+        // The shared package's modules only define schemas, data, and functions, so a module whose exports
+        // nothing uses can go. Without this, the home page would ship every zod schema and the whole text layer.
+        // The web app's own modules say the same in its package.json `sideEffects`.
+        moduleSideEffects: (id) => !id.includes('/packages/shared/src/'),
+      },
+    },
+  },
   server: {
     port: Number(process.env.BXVTT_WEB_PORT ?? 5180),
     strictPort: true,

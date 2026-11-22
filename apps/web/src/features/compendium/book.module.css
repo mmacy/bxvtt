@@ -287,19 +287,25 @@
   font-size: var(--text-lg);
 }
 
-.chipList {
+.qualityList {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1-5);
+  flex-direction: column;
+  gap: var(--space-1);
   font-size: var(--text-md);
 }
 
-.chipList li {
-  padding: 0 var(--space-2);
-  border: var(--border-hair) solid var(--color-border-strong);
-  border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--color-surface-2) 70%, transparent);
-  font-size: var(--text-sm);
+.qualityList li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-0-5) var(--space-2);
+}
+
+.qualityList strong {
+  min-width: 5.5rem;
+}
+
+.qualityList span {
+  color: var(--color-text-muted);
 }
 
 .rangeList {
@@ -316,11 +322,6 @@
 .rangeName {
   color: var(--color-text-muted);
   font-size: var(--text-sm);
-}
-
-.entryLink {
-  font: inherit;
-  text-align: start;
 }
 
 /* Rule tables. */
@@ -564,6 +565,15 @@
 
   .saves {
     grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: var(--space-1);
+  }
+
+  .save {
+    padding-inline: var(--space-0-5);
+  }
+
+  .saveLabel {
+    font-size: var(--text-2xs);
   }
 
   .ability {

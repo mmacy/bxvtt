@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { describeTarget } from './describe';
 import { fixture, fixtureLevel } from './fixtures/fixtures';
 import {
   currentLevelKey,
@@ -55,6 +56,34 @@ describe('fromPlayerView', () => {
     expect(map.areas).toEqual([]);
     expect(map.features.map((f) => f.kind)).toEqual(['pile']);
     expect(map.features[0]).toMatchObject({ x: 6, y: 9, contents: ['dagger×1'] });
+  });
+
+  it('names the areas a client passes, on known cells only, with no key numbers', () => {
+    const level = fixtureLevel(explored, 'vault', 1);
+    const known = new Set(explored.view.explored[0]?.cells.map(([x, y]) => `${x},${y}`));
+    const entered = level.areas.filter((area) => area.cells.some(([x, y]) => known.has(`${x},${y}`)));
+    const hidden = level.areas.find((area) => area.cells.every(([x, y]) => !known.has(`${x},${y}`)));
+    const map = fromPlayerView(explored.view, undefined, {
+      extras: { areas: level.areas.map((area) => ({ id: area.id, name: area.name, cells: area.cells })) },
+    });
+    if (!map) throw new Error('no map');
+    expect(map.areas.map((area) => area.id)).toEqual(entered.map((area) => area.id));
+    if (hidden) expect(map.areas.some((area) => area.id === hidden.id)).toBe(false);
+    for (const area of map.areas) {
+      expect(area.label).toBe('');
+      expect(area.cells.every(([x, y]) => known.has(`${x},${y}`))).toBe(true);
+      const anchorCell = `${Math.floor(area.anchor.x)},${Math.floor(area.anchor.y)}`;
+      expect(area.cells.some(([x, y]) => `${x},${y}` === anchorCell)).toBe(true);
+    }
+    const first = map.areas[0];
+    if (!first) throw new Error('no area');
+    const [x, y] = first.cells[0] ?? [0, 0];
+    expect(map.cells.find((cell) => cell.x === x && cell.y === y)?.areaId).toBe(first.id);
+    const description = describeTarget(
+      { kind: 'cell', x, y, floor: true, known: true, areaId: first.id, direction: null },
+      map,
+    );
+    expect(description?.title).toBe(first.name);
   });
 
   it('sizes the grid to the known cells only', () => {

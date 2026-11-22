@@ -5,9 +5,11 @@
  */
 import { directionLabel, formatCoins, itemList, type TextContext } from '@bxvtt/shared/text';
 import { useMapBus } from '@/app';
-import { Badge, Button, Icon, type BadgeTone } from '@/ui';
+import { Badge, type BadgeTone, Button, Icon, SectionLabel } from '@/ui';
 import {
+  areaAt,
   areaCenter,
+  findLevel,
   areaRef,
   doorNow,
   doorsAround,
@@ -23,6 +25,7 @@ import {
   type PlayRecord,
   type TrapSpec,
   type TrapStatus,
+  type TransitionSpec,
 } from '../model/adventure';
 import {
   clauseText,
@@ -32,6 +35,7 @@ import {
   trapText,
   trapTriggerText,
 } from '../model/describe';
+import { IdMark } from '../details';
 import { CommandOutcome, useRefereeCommand } from '../RefereeCommand';
 import styles from './sections.module.css';
 
@@ -92,14 +96,14 @@ function FeatureBlock({
         <span className={styles.rowTitle}>
           {isCache ? 'Treasure' : trick ? 'Construction trick' : 'Feature'}
         </span>
-        <span className={styles.secondary}>{feature.id}</span>
+        <IdMark className={styles.idMark}>{feature.id}</IdMark>
         {isCache && <Badge tone={emptied ? 'neutral' : 'gold'}>{emptied ? 'Taken' : 'Still here'}</Badge>}
         {trick && (
           <Badge tone={record.foundTricks.has(ref) ? 'warning' : 'neutral'}>
             {record.foundTricks.has(ref) ? 'Found' : 'Not found'}
           </Badge>
         )}
-        {feature.cell && <span className={styles.secondary}>at {feature.cell.join(', ')}</span>}
+        {feature.cell && <IdMark className={styles.idMark}>cell {feature.cell.join(', ')}</IdMark>}
       </div>
       <p className={styles.prose}>{feature.description}</p>
       {contents.length > 0 && (
@@ -130,11 +134,13 @@ export function DoorRow({
   dungeonId,
   levelNumber,
   ctx,
+  adventure = null,
 }: {
   door: DoorFacts;
   dungeonId: string;
   levelNumber: number;
   ctx: TextContext;
+  adventure?: Adventure | null;
 }) {
   const now = doorNow(door);
   const { run, busy, outcome, clear } = useRefereeCommand();
@@ -168,9 +174,9 @@ export function DoorRow({
           className={styles.rowIcon}
         />
         <span className={styles.rowTitle}>{label}</span>
-        <span className={styles.secondary}>
-          {door.x}, {door.y}
-        </span>
+        <IdMark className={styles.idMark}>
+          cell {door.x}, {door.y}, {door.direction} side
+        </IdMark>
       </div>
       <div className={styles.doorBar}>
         <div className={styles.tags}>
@@ -205,7 +211,7 @@ export function DoorRow({
         <div className={styles.gate}>
           <p className={styles.prose}>
             <strong>Opens when </strong>
-            {conditionText(gate.condition, ctx)}.
+            {conditionText(gate.condition, ctx, adventure)}.
           </p>
           {gate.narrative?.refusal && <p className={styles.quote}>{gate.narrative.refusal}</p>}
         </div>
@@ -213,6 +219,20 @@ export function DoorRow({
       <CommandOutcome outcome={outcome} onDismiss={clear} />
     </li>
   );
+}
+
+/** Where a transition leads, in words: `to level 2, Brothers' crypt`. */
+function transitionDestination(
+  adventure: Adventure,
+  t: TransitionSpec,
+  dungeonId: string,
+  ctx: TextContext,
+): string {
+  const level = findLevel(adventure, t.to_dungeon_id, t.to_level_number);
+  const area = level ? areaAt(level, t.to_position[0], t.to_position[1]) : null;
+  const dungeon =
+    t.to_dungeon_id !== dungeonId ? ` of ${ctx.dungeons[t.to_dungeon_id] ?? 'another dungeon'}` : '';
+  return `to level ${t.to_level_number}${dungeon}, ${area ? area.name : 'a corridor'}`;
 }
 
 const TRANSITION_LABEL: Record<string, string> = {
@@ -327,13 +347,8 @@ export function AreaDetails({
             <li key={index} className={styles.rowHead}>
               <Icon name="stairs" size={16} className={styles.rowIcon} />
               <span className={styles.rowTitle}>{TRANSITION_LABEL[t.kind] ?? 'Way out'}</span>
-              <span className={styles.secondary}>
-                to level {t.to_level_number}
-                {t.to_dungeon_id !== dungeonId
-                  ? ` of ${ctx.dungeons[t.to_dungeon_id] ?? 'another dungeon'}`
-                  : ''}
-                , at {t.position.join(', ')}
-              </span>
+              <span className={styles.secondary}>{transitionDestination(adventure, t, dungeonId, ctx)}</span>
+              <IdMark className={styles.idMark}>cell {t.position.join(', ')}</IdMark>
             </li>
           ))}
         </ul>
@@ -346,7 +361,7 @@ export function AreaDetails({
               <div className={styles.rowHead}>
                 <Icon name="flag" size={16} className={styles.rowIcon} />
                 <span className={styles.rowTitle}>
-                  {clauseText({ pattern: trigger.when, conditions: trigger.conditions }, ctx)}
+                  {clauseText({ pattern: trigger.when, conditions: trigger.conditions }, ctx, adventure)}
                 </span>
               </div>
               {trigger.narrative?.fired && <p className={styles.prose}>{trigger.narrative.fired}</p>}
@@ -357,7 +372,7 @@ export function AreaDetails({
 
       {doors.length > 0 && (
         <section aria-label="Doors">
-          <h4 className={styles.subhead}>Doors</h4>
+          <SectionLabel level={4}>Doors</SectionLabel>
           <ul className={styles.doorList}>
             {doors.map((door) => (
               <DoorRow

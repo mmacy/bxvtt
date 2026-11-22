@@ -145,7 +145,7 @@ describe('autosaves', () => {
     const autosaves = saves.filter((save) => save.autosave);
     expect(autosaves).toHaveLength(10);
     expect(autosaves[0]?.label).toBe('Autosave: Returned to Threshold');
-    expect(autosaves[1]?.label).toBe('Autosave: Entered The Barrow');
+    expect(autosaves[1]?.label).toBe('Autosave: Entered the Barrow');
     // Turning the setting off stops the autosaves.
     await referee.client.updateTable(table.id, { settings: { autosave: false } });
     await referee.client.sendCommand(table.id, { command_type: 'enter_dungeon', dungeon_id: 'barrow' });

@@ -289,6 +289,10 @@
   line-height: 1;
 }
 
+.disc::before {
+  content: attr(data-letter);
+}
+
 .coinCount {
   font-family: var(--font-numeric);
   font-size: var(--text-lg);
@@ -309,42 +313,56 @@
 
 /* ConditionChip */
 .condition {
-  --tone: var(--color-text-muted);
+  --chip-text: var(--color-chip-neutral-text);
+  --chip-bg: var(--color-chip-neutral-bg);
+  --chip-edge: var(--color-chip-neutral-edge);
 
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
   height: 22px;
   padding: 0 var(--space-2) 0 var(--space-1-5);
-  border: var(--border-hair) solid color-mix(in srgb, var(--tone) 45%, transparent);
+  border: var(--border-hair) solid var(--chip-edge);
   border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--tone) 12%, transparent);
-  color: var(--tone);
+  background: var(--chip-bg);
+  color: var(--chip-text);
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
   white-space: nowrap;
 }
 
+.condition > svg {
+  color: var(--chip-edge);
+}
+
 .cond-harm {
-  --tone: var(--color-damage);
+  --chip-text: var(--color-chip-harm-text);
+  --chip-bg: var(--color-chip-harm-bg);
+  --chip-edge: var(--color-chip-harm-edge);
 }
 
 .cond-boon {
-  --tone: var(--color-heal);
+  --chip-text: var(--color-chip-boon-text);
+  --chip-bg: var(--color-chip-boon-bg);
+  --chip-edge: var(--color-chip-boon-edge);
 }
 
 .cond-magic {
-  --tone: var(--color-magic);
+  --chip-text: var(--color-chip-magic-text);
+  --chip-bg: var(--color-chip-magic-bg);
+  --chip-edge: var(--color-chip-magic-edge);
 }
 
 .cond-neutral {
-  --tone: var(--color-text-muted);
+  --chip-text: var(--color-chip-neutral-text);
+  --chip-bg: var(--color-chip-neutral-bg);
+  --chip-edge: var(--color-chip-neutral-edge);
 }
 
 .condDuration {
   padding-inline-start: var(--space-1);
-  border-inline-start: var(--border-hair) solid color-mix(in srgb, var(--tone) 35%, transparent);
-  color: var(--color-text-muted);
+  border-inline-start: var(--border-hair) solid var(--chip-edge);
+  color: var(--chip-text);
   font-family: var(--font-numeric);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);

@@ -1,10 +1,11 @@
 import './cleanup';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { Button } from '../components/Button';
-import { ConfirmDialog, Dialog } from '../components/Dialog';
+import { Checkbox } from '../components/Choice';
+import { ConfirmDialog, Dialog, Drawer } from '../components/Dialog';
 import { TextInput } from '../components/TextInput';
 
 function RenameDialog() {
@@ -82,5 +83,57 @@ describe('ConfirmDialog', () => {
     );
     expect(onConfirm).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+});
+
+describe('Drawer', () => {
+  it('focuses the element the caller names when it opens', async () => {
+    function Book() {
+      const search = useRef<HTMLInputElement>(null);
+      return (
+        <Drawer defaultOpen title="Rules reference" initialFocus={search} dimmed={false}>
+          <Button>Spells</Button>
+          <TextInput ref={search} aria-label="Search the rules" />
+        </Drawer>
+      );
+    }
+    render(<Book />);
+    await waitFor(() => expect(screen.getByRole('textbox', { name: 'Search the rules' })).toHaveFocus());
+  });
+
+  it('can focus the drawer itself', async () => {
+    render(
+      <Drawer defaultOpen title="Hobgoblin" initialFocus="content">
+        <Button>Place on map</Button>
+      </Drawer>,
+    );
+    await waitFor(() => expect(screen.getByRole('dialog', { name: 'Hobgoblin' })).toHaveFocus());
+  });
+});
+
+describe('ConfirmDialog with content', () => {
+  it('shows block content under the description', async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn();
+    function End() {
+      const [keep, setKeep] = useState(true);
+      return (
+        <ConfirmDialog
+          open
+          title="Return the table to its lobby?"
+          description="The game ends for everyone."
+          confirmLabel="Return to the lobby"
+          onConfirm={() => onConfirm(keep)}
+        >
+          <Checkbox label="Keep the saves" checked={keep} onCheckedChange={setKeep} />
+        </ConfirmDialog>
+      );
+    }
+    render(<End />);
+    const dialog = screen.getByRole('alertdialog', { name: 'Return the table to its lobby?' });
+    expect(dialog).toHaveAccessibleDescription('The game ends for everyone.');
+    await user.click(screen.getByRole('checkbox', { name: 'Keep the saves' }));
+    await user.click(screen.getByRole('button', { name: 'Return to the lobby' }));
+    expect(onConfirm).toHaveBeenCalledWith(false);
   });
 });

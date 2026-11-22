@@ -3,16 +3,18 @@
  * pace the table can follow, skippable, and instant with reduced motion.
  */
 import type { GameEntry } from '@bxvtt/shared/protocol';
-import { idKind } from '@bxvtt/shared/text';
+import { describeGameEntry, extendContextWithEntryNames, idKind, type EventLine } from '@bxvtt/shared/text';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { MemberView } from '@bxvtt/shared/bxapi';
 import {
+  useCombatStage,
   useEncounter,
   useFeed,
   useReduceMotion,
   useRefereeLens,
   useRefereeState,
   useTableId,
-  useTextContext,
+  type PlaybackMemberState,
 } from '@/app';
 import { learnMonsterGroups, snapshotBefore, useCombatMemory } from './memory';
 import {
@@ -22,12 +24,13 @@ import {
   trackFromView,
   trackStates,
   type AnyEvent,
+  BEAT_MS,
   type Beat,
   type MonsterGroupLookup,
   type RoundDigest,
   type TrackState,
-  withMonsterLabels,
 } from './playback';
+import { useCombatText } from './text';
 
 /**
  * Finds the group of a monster: from the referee state for a referee with the lens on, and otherwise from what
@@ -38,7 +41,7 @@ export function useMonsterLookup(): MonsterGroupLookup {
   const referee = useRefereeState();
   const encounter = useEncounter();
   const learned = useCombatMemory((s) => s.monsterGroups);
-  const ctx = useTextContext();
+  const ctx = useCombatText();
   return useMemo(() => {
     const exact = new Map<string, string>();
     for (const group of referee?.encounter?.groups ?? []) {
@@ -57,6 +60,20 @@ export function useMonsterLookup(): MonsterGroupLookup {
       return null;
     };
   }, [referee, encounter, learned, tableId, ctx]);
+}
+
+/** One beat for each line, for an entry the text layer narrates as a whole. */
+function linesToBeats(lines: readonly EventLine[]): Beat[] {
+  return lines.map((line, index) => ({
+    index,
+    events: [],
+    lines: [line],
+    durationMs: BEAT_MS.base,
+    pops: [],
+    focus: [],
+    roll: null,
+    referee: line.visibility === 'referee',
+  }));
 }
 
 /** The group each member last declared against, from the remembered declarations. */
@@ -83,6 +100,8 @@ export interface PlaybackItem {
   /** The battlefield before the first beat. */
   start: TrackState | null;
   digest: RoundDigest;
+  /** The game clock, in rounds, before the entry's command ran, when the feed recorded it. */
+  clockBefore: number | null;
 }
 
 export interface PlaybackView {
@@ -124,11 +143,13 @@ export function usePlayback(options: PlaybackOptions): PlaybackView {
   const tableId = useTableId();
   const reduce = useReduceMotion();
   const lens = useRefereeLens();
-  const ctx = useTextContext();
+  const ctx = useCombatText();
   const lookup = useMonsterLookup();
   // Entries already in the feed when the overlay opens are history, not news.
   const [startSeq] = useState(() => options.afterSeq ?? feed.at(-1)?.seq ?? 0);
   const [done, setDone] = useState(startSeq);
+  // Entries at or below the floor never play by themselves. A replay lowers it, so the history entry can replay.
+  const [floor, setFloor] = useState(startSeq);
   const [cursor, setCursor] = useState<{ seq: number; index: number } | null>(null);
   const accept = options.accept;
 
@@ -153,18 +174,24 @@ export function usePlayback(options: PlaybackOptions): PlaybackView {
     () =>
       entries.map((entry): PlaybackItem => {
         const events = entry.events as AnyEvent[];
-        // What this round reveals counts at once, before the memory catches up.
+        // The entry's own names label each monster by its group, even after a reload or once the encounter
+        // has closed. The round's attacks and spells, and those labels, place each monster's numbers on its group.
+        const named = extendContextWithEntryNames(ctx, entry.names);
         const before = snapshotBefore(tableId, entry.revision);
-        const pairs = new Map(
-          monsterGroupsFromRound(events, declaredGroups(tableId), before?.encounter?.groups),
-        );
-        const local = (id: string) => pairs.get(id) ?? lookup(id);
-        const named = withMonsterLabels(ctx, events, local);
-        const beats = buildBeats(events, named, {
-          includeReferee: lens,
-          messages: entry.messages,
-          lookup: local,
-        });
+        const pairs = new Map(monsterGroupsFromRound(events, declaredGroups(tableId)));
+        const groups = before?.encounter?.groups ?? [];
+        const local = (id: string) => {
+          const known = pairs.get(id) ?? lookup(id);
+          if (known) return known;
+          const label = named.monsters[id]?.label;
+          const matches = label ? groups.filter((g) => g.label === label) : [];
+          return matches.length === 1 ? (matches[0]?.id ?? null) : null;
+        };
+        // A parley is narrated as a whole by the text layer, with the speaker the entry names.
+        const beats =
+          entry.command_type === 'parley'
+            ? linesToBeats(describeGameEntry(entry, ctx, lens ? {} : { only: 'player' }))
+            : buildBeats(events, named, { includeReferee: lens, messages: entry.messages, lookup: local });
         const start = before ? trackFromView(before.encounter, before.party) : null;
         return {
           seq: entry.seq,
@@ -174,14 +201,20 @@ export function usePlayback(options: PlaybackOptions): PlaybackView {
           start,
           states: start ? trackStates(start, beats, local) : [],
           digest: digestRound(events, local),
+          clockBefore:
+            feed
+              .filter((e): e is GameEntry => e.kind === 'game' && e.seq < entry.seq)
+              .map((e) => e.clock_rounds)
+              .filter((c): c is number => typeof c === 'number')
+              .at(-1) ?? null,
         };
       }),
-    [entries, ctx, lens, lookup, tableId],
+    [entries, ctx, lens, lookup, tableId, feed],
   );
 
   const current = reduce
     ? null
-    : (items.find((item) => item.seq > done && item.seq > startSeq && item.beats.length > 0) ?? null);
+    : (items.find((item) => item.seq > done && item.seq > floor && item.beats.length > 0) ?? null);
   const beatIndex = current !== null && cursor?.seq === current.seq ? cursor.index : 0;
   const beat = current?.beats[beatIndex] ?? null;
   const last =
@@ -211,14 +244,59 @@ export function usePlayback(options: PlaybackOptions): PlaybackView {
 
   const lastSeq = last?.seq ?? null;
   const replayFrom =
-    lastSeq === null ? null : (items.filter((item) => item.seq < lastSeq).at(-1)?.seq ?? startSeq);
+    lastSeq === null ? null : (items.filter((item) => item.seq < lastSeq).at(-1)?.seq ?? lastSeq - 1);
   const replay = useCallback(() => {
     if (replayFrom === null || reduce) return;
     setCursor(null);
     setDone(replayFrom);
+    setFloor((f) => Math.min(f, replayFrom));
   }, [replayFrom, reduce]);
 
   const track =
     current !== null && current.start !== null ? (current.states[beatIndex] ?? current.start) : null;
   return { current, beat, beatIndex, track, last, playing: current !== null, skip, replay };
+}
+
+/**
+ * Tells the shell about a playback: whether it runs, so the end screen and the party panel wait for it; the round
+ * and clock it shows, for the top bar; and each member's hit points and conditions at the beat on screen, for the
+ * party panel. Everything clears when the playback ends or the component unmounts.
+ *
+ * @param playback - The playback.
+ * @param party - The party's sheets, for each member's maximum hit points.
+ */
+export function usePublishPlayback(playback: PlaybackView, party: readonly MemberView[]): void {
+  const setPlaying = useCombatStage((s) => s.setPlaying);
+  const setMoment = useCombatStage((s) => s.setMoment);
+  const setMemberStates = useCombatStage((s) => s.setMemberStates);
+  useEffect(() => setPlaying(playback.playing), [playback.playing, setPlaying]);
+  const round = playback.current?.digest.round ?? null;
+  const clock = playback.current?.clockBefore ?? null;
+  useEffect(() => {
+    if (playback.playing && clock !== null) setMoment({ round, clockRounds: clock });
+    else setMoment(null);
+  }, [playback.playing, round, clock, setMoment]);
+  const beatMembers = playback.playing ? (playback.track?.members ?? null) : null;
+  useEffect(() => {
+    if (beatMembers === null) {
+      setMemberStates(null);
+      return;
+    }
+    const states: Record<string, PlaybackMemberState> = {};
+    for (const member of party) {
+      const shown = beatMembers[member.id];
+      if (!shown) continue;
+      const dead = shown.down && shown.conditions.includes('dead');
+      states[member.id] = { hp: shown.hp, maxHp: member.max_hp, conditions: shown.conditions, dead };
+    }
+    setMemberStates(states);
+  }, [beatMembers, party, setMemberStates]);
+  useEffect(
+    () => () => {
+      setPlaying(false);
+      setMoment(null);
+      setMemberStates(null);
+    },
+    [setPlaying, setMoment, setMemberStates],
+  );
 }

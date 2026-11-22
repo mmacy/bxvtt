@@ -7,6 +7,7 @@ import { LIMITS } from '@bxvtt/shared/protocol';
 import { AdventureCatalog, registerAdventureRoutes } from './adventures';
 import { registerAnnotationRoutes } from './annotations';
 import { Auth } from './auth';
+import { registerCatalogRoutes } from './catalogs';
 import { BxapiClient } from './bxapi';
 import { CharacterStore, registerCharacterRoutes } from './characters';
 import type { Config } from './config';
@@ -21,6 +22,7 @@ import { GameService } from './game/service';
 import { registerHealthRoute } from './health';
 import { Hub } from './hub';
 import { registerNotesRoutes } from './notes';
+import { registerRejoinRoutes, RejoinService } from './rejoin';
 import { registerRulesRoutes, RulesCache } from './rules';
 import { registerTableRoutes, TableStore } from './tables';
 import { registerUserRoutes, UserStore } from './users';
@@ -125,6 +127,9 @@ export async function createServer(config: Config): Promise<Server> {
       join: new RateLimiter(config.rateLimits.join),
       failedHostKey: new RateLimiter(config.rateLimits.failedHostKey),
       userPosts: new RateLimiter(config.rateLimits.userPosts),
+      characterChecks: new RateLimiter(config.rateLimits.characterChecks),
+      rejoin: new RateLimiter(config.rateLimits.rejoin),
+      rejoinPolls: new RateLimiter(config.rateLimits.rejoinPolls),
     },
     rules: new RulesCache(bxapi, config.quotas.rulesCacheBytes),
     startedAt: Date.now(),
@@ -140,6 +145,7 @@ export async function createServer(config: Config): Promise<Server> {
   ctx.feed = new FeedStore(ctx);
   ctx.adventures = new AdventureCatalog(ctx);
   ctx.game = new GameService(ctx);
+  ctx.rejoin = new RejoinService(ctx);
 
   app.addHook('onRequest', async (request, reply) => {
     reply.header('X-Request-Id', request.id);
@@ -212,6 +218,7 @@ export async function createServer(config: Config): Promise<Server> {
   registerTableRoutes(app, ctx);
   registerCharacterRoutes(app, ctx);
   registerRulesRoutes(app, ctx);
+  registerCatalogRoutes(app, ctx);
   registerAdventureRoutes(app, ctx);
   registerGameRoutes(app, ctx);
   registerBattleRoutes(app, ctx);
@@ -219,6 +226,7 @@ export async function createServer(config: Config): Promise<Server> {
   registerFeedRoutes(app, ctx);
   registerAnnotationRoutes(app, ctx);
   registerNotesRoutes(app, ctx);
+  registerRejoinRoutes(app, ctx);
   registerWebSocket(app, ctx);
 
   app.addHook('preClose', async () => {

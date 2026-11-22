@@ -1,16 +1,18 @@
 import type { ClassSummary, EquipmentSummary } from '@bxvtt/shared/bxapi';
-import { abilityLabel, classLabel, itemNoun, joinList, emptyContext } from '@bxvtt/shared/text';
-import { tokenClass, useRulesEntry, type ClassDetail } from '@/app';
+import { abilityLabel, classLabel, emptyContext, joinList, resolveItemNoun } from '@bxvtt/shared/text';
+import { tokenClass, type ClassDetail } from '@/app';
 import { Accordion, Badge, Checkbox, Skeleton, TokenPortrait, cx, formatModifier } from '@/ui';
 import { requirementGap } from './RollStep';
 import { xpModifierFor, type Scores } from './tables';
+import { RuleLink } from '../sheet/RuleLink';
 import styles from './wizard.module.css';
+import { useClassDetail } from '../sheet/catalogs';
 
 const RACES: Record<string, string> = {
   human: 'Human',
-  dwarf: 'Demihuman: dwarf',
-  elf: 'Demihuman: elf',
-  halfling: 'Demihuman: halfling',
+  dwarf: 'Demihuman',
+  elf: 'Demihuman',
+  halfling: 'Demihuman',
 };
 
 /** The class's armour rule, as its entry states it. */
@@ -32,7 +34,7 @@ export function armourText(detail: ClassDetail): string {
 export function weaponText(detail: ClassDetail, equipment: readonly EquipmentSummary[] | null): string {
   const ctx = emptyContext();
   const names = detail.weapons.weapon_ids.map(
-    (id) => equipment?.find((item) => item.id === id)?.name.toLowerCase() ?? itemNoun(id, ctx),
+    (id) => resolveItemNoun(id, ctx, { name: equipment?.find((item) => item.id === id)?.name }).one,
   );
   switch (detail.weapons.kind) {
     case 'any':
@@ -56,7 +58,7 @@ interface CardProps {
 }
 
 function ClassCard({ summary, scores, eligible, selected, onSelect, equipment }: CardProps) {
-  const entry = useRulesEntry<ClassDetail>(`classes/${summary.id}`);
+  const entry = useClassDetail(summary.id);
   const detail = entry.data;
   const gap = requirementGap(summary, scores);
   const xp = detail ? xpModifierFor(detail, scores) : null;
@@ -68,13 +70,16 @@ function ClassCard({ summary, scores, eligible, selected, onSelect, equipment }:
       className={cx(styles.classCard, selected && styles.classCardSelected)}
       aria-pressed={selected}
       disabled={!eligible}
-      aria-describedby={!eligible ? reasonId : undefined}
+      aria-labelledby={`class-name-${summary.id}`}
+      aria-describedby={!eligible ? `${reasonId} class-facts-${summary.id}` : `class-facts-${summary.id}`}
       onClick={onSelect}
     >
       <span className={styles.classHead}>
         <TokenPortrait name={summary.name} characterClass={tokenClass(summary.id)} size={40} decorative />
         <span className={styles.classTitle}>
-          <span className={styles.className}>{classLabel(summary.id)}</span>
+          <span id={`class-name-${summary.id}`} className={styles.className}>
+            {classLabel(summary.id)}
+          </span>
           <span className={styles.classRace}>{RACES[summary.race] ?? summary.race}</span>
         </span>
         {selected && (
@@ -88,7 +93,7 @@ function ClassCard({ summary, scores, eligible, selected, onSelect, equipment }:
           Needs {gap}.
         </span>
       )}
-      <dl className={styles.classFacts}>
+      <dl id={`class-facts-${summary.id}`} className={styles.classFacts}>
         <div>
           <dt>Requires</dt>
           <dd>
@@ -154,7 +159,7 @@ export function ClassStep({
   onHpReroll,
   equipment,
 }: ClassStepProps) {
-  const selected = useRulesEntry<ClassDetail>(classId ? `classes/${classId}` : null);
+  const selected = useClassDetail(classId ? classId : null);
   if (classes === null) return <Skeleton shape="block" height={360} />;
   const sorted = [...classes].sort(
     (a, b) => Number(eligible.includes(b.id)) - Number(eligible.includes(a.id)),
@@ -177,7 +182,11 @@ export function ClassStep({
       {selected.data && (
         <section className={styles.classDetail} aria-labelledby="class-detail-title">
           <h3 id="class-detail-title" className={styles.subTitle}>
-            What a {classLabel(selected.data.id).toLowerCase()} can do
+            What a{' '}
+            <RuleLink entry={{ kind: 'classes', id: selected.data.id }}>
+              {classLabel(selected.data.id).toLowerCase()}
+            </RuleLink>{' '}
+            can do
           </h3>
           {selected.data.abilities.length === 0 ? (
             <p className={styles.muted}>

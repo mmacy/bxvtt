@@ -1,32 +1,34 @@
+import type { MemberView, PlayerView } from '@bxvtt/shared/bxapi';
+import { contextFromPlayerView } from '@bxvtt/shared/text';
 import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { cartCount, cartLines, cartTotal, purchaseItemIds } from './cartLines';
 import { gaps, readinessChecklist } from './checklist';
-import { lotSentence, type ShopItem } from './equipment';
+import { describeItem, lotSentence, type ShopItem } from './equipment';
+import { describeChanges } from './RestAndPrepare';
+import { hasSleptSincePreparing, spellAdvice, spellAdviceText } from './SpellAdvice';
+import { CLASSES, gameEntry, makeCaster } from './testKit';
 import { readInventory } from './inventory';
 import { neediestFirst, memberStatus } from './members';
 import { buildCommand, missingRequired, readFields } from './schemaForm';
 import { parseService, placeName, sectionOf, townListsService } from './services';
 
-function shopItem(id: string, name: string, cost: number, lotSize?: number): ShopItem {
-  return {
-    summary: { id, name, item_type: 'gear', cost_gp: cost },
-    detail:
-      lotSize === undefined
-        ? null
-        : ({
-            item_type: 'gear',
-            id,
-            name,
-            cost_gp: cost,
-            lot_size: lotSize,
-            capacity_coins: null,
-            combat: null,
-            params: {},
-            overrides_applied: [],
-          } as unknown as ShopItem['detail']),
-  };
+function shopItem(id: string, name: string, cost: number, lotSize = 1): ShopItem {
+  const detail = {
+    item_type: 'gear',
+    id,
+    name,
+    cost_gp: cost,
+    lot_size: lotSize,
+    capacity_coins: null,
+    combat: null,
+    params: {},
+    overrides_applied: [],
+  } as unknown as ShopItem['detail'];
+  return { summary: { id, name, item_type: 'gear', cost_gp: cost }, detail };
 }
+
+const CTX = contextFromPlayerView(fixtureSnapshot('town', 'player').game?.view as PlayerView);
 
 describe('the cart', () => {
   const torch = shopItem('torch', 'Torches (6)', 1, 6);
@@ -45,11 +47,11 @@ describe('the cart', () => {
   });
 
   it('explains a purchase lot in plain words', () => {
-    expect(lotSentence(torch)).toBe('1 lot is 6 torches');
-    expect(lotSentence(torch, 3)).toBe('3 lots are 18 torches');
-    expect(lotSentence(rope)).toBeNull();
-    expect(lotSentence(shopItem('rations_standard', 'Rations (standard, 7 days)', 5, 7))).toBe(
-      '1 lot is rations (standard, 7 days)',
+    expect(lotSentence(torch, 1, CTX)).toBe('1 lot is 6 torches');
+    expect(lotSentence(torch, 3, CTX)).toBe('3 lots are 18 torches');
+    expect(lotSentence(rope, 1, CTX)).toBeNull();
+    expect(lotSentence(shopItem('rations_standard', 'Rations (standard, 7 days)', 5, 7), 1, CTX)).toBe(
+      '1 lot is 7 standard rations',
     );
   });
 });
@@ -62,6 +64,92 @@ describe('the readiness checklist', () => {
     expect(light?.covered).toBe(true);
     expect(light?.detail).toBe('Brenna and Tamsin carry torches or a lantern.');
     expect(gaps(checklist).map((line) => line.key)).toEqual(['tinder', 'rations', 'rope']);
+  });
+});
+
+function packWith(party: MemberView[], names: string[], ids: string[]): MemberView[] {
+  const copy = structuredClone(party);
+  for (const member of copy) {
+    const inventory = member.inventory as { items: unknown[] };
+    inventory.items = names.includes(member.name)
+      ? ids.map((id) => ({
+          instance_type: 'item',
+          template: { item_type: 'gear', id, name: id },
+          quantity: 1,
+        }))
+      : [];
+  }
+  return copy;
+}
+
+describe('the checklist wording', () => {
+  const base = fixtureSnapshot('town', 'player').game?.view.party ?? [];
+  const kit = ['torch', 'tinder_box', 'rations_standard', 'rope'];
+  const details = (party: MemberView[]) => readinessChecklist(party).map((line) => line.detail);
+
+  it('uses carries for one member', () => {
+    expect(details(packWith(base, ['Brenna'], kit))).toEqual([
+      'Brenna carries torches or a lantern.',
+      'Brenna carries one.',
+      'Brenna carries rations.',
+      'Brenna carries rope.',
+    ]);
+  });
+
+  it('uses carry for two or more members', () => {
+    expect(details(packWith(base, ['Brenna', 'Wren'], kit))).toEqual([
+      'Brenna and Wren carry torches or a lantern.',
+      'Brenna and Wren carry one.',
+      'Brenna and Wren carry rations.',
+      'Brenna and Wren carry rope.',
+    ]);
+    expect(details(packWith(base, ['Brenna', 'Wren', 'Osric'], ['rope']))[3]).toBe(
+      'Brenna, Wren, and Osric carry rope.',
+    );
+  });
+
+  it('reads as a suggestion when nobody carries the item', () => {
+    expect(details(packWith(base, [], kit))).toEqual([
+      'Torches or a lantern light the way underground.',
+      'A torch or lantern needs a tinder box to light it.',
+      'A party that stays out for days needs food.',
+      'Rope is handy for pits, ledges, and prisoners.',
+    ]);
+  });
+});
+
+describe('counted words', () => {
+  it('uses the singular for one', () => {
+    const torch = {
+      summary: { id: 'torch', name: 'Torches (6)', item_type: 'gear', cost_gp: 1 },
+      detail: {
+        item_type: 'gear',
+        id: 'torch',
+        name: 'Torches (6)',
+        cost_gp: 1,
+        lot_size: 6,
+        capacity_coins: 1,
+        combat: null,
+        params: { light_radius_feet: 1, burn_turns: 1 },
+        overrides_applied: [],
+      },
+    } as unknown as ShopItem;
+    const facts = describeItem(torch, CTX);
+    expect(facts.notes).toContain('Light reaches 1 foot. Burns for 1 turn.');
+    expect(facts.facts).toContainEqual({ label: 'Holds', value: '1 coin' });
+  });
+
+  it('says one hit point, not one hit points', () => {
+    const before = structuredClone(fixtureSnapshot('town', 'player').game?.view) as PlayerView;
+    const after = structuredClone(before);
+    const wren = after.party.find((member) => member.name === 'Wren');
+    const was = before.party.find((member) => member.name === 'Wren');
+    if (!wren || !was) throw new Error('No Wren.');
+    was.current_hp = wren.max_hp - 1;
+    wren.current_hp = wren.max_hp;
+    expect(describeChanges(before, after)).toEqual([
+      `Wren recovered 1 hit point and has ${wren.max_hp} of ${wren.max_hp}.`,
+    ]);
   });
 });
 
@@ -186,5 +274,86 @@ describe("the town's service lines", () => {
     expect(townListsService('outfitter', [lines[0] ?? ''])).toBe(true);
     expect(townListsService('temple', [])).toBe(true);
     expect(townListsService('temple', ['A quiet crossroads'])).toBe(true);
+  });
+});
+
+describe('spells to prepare', () => {
+  const classes = CLASSES as Parameters<typeof spellAdvice>[1];
+  const night = gameEntry(10, 'rest', [
+    { event_type: 'rested', code: 'exploration.rest.rested', kind: 'night' },
+  ]);
+  const prepared = (caster: string) =>
+    gameEntry(11, 'prepare_spells', [
+      { event_type: 'spells_memorized', code: 'magic.memorize.prepared', caster_id: caster },
+    ]);
+
+  function party(mutate: (snapshot: ReturnType<typeof fixtureSnapshot>) => void) {
+    const snapshot = fixtureSnapshot('town', 'player');
+    mutate(snapshot);
+    return snapshot.game?.view.party ?? [];
+  }
+
+  it('warns about a magic-user with a book and nothing memorized, by name', () => {
+    const members = party((s) => makeCaster(s, 'Tamsin', 'magic_user', { book: 1 }));
+    const advice = spellAdvice(members, classes, []);
+    expect(advice.needRest.map((m) => m.name)).toEqual(['Tamsin']);
+    expect(spellAdviceText(advice)).toBe(
+      'Tamsin has no spells memorized. Rest for a night, then prepare spells.',
+    );
+  });
+
+  it('says have for two casters and can prepare after a night', () => {
+    const members = party((s) => {
+      makeCaster(s, 'Tamsin', 'magic_user', { book: 1 });
+      makeCaster(s, 'Wren', 'magic_user', { book: 2 });
+    });
+    expect(spellAdviceText(spellAdvice(members, classes, []))).toBe(
+      'Wren and Tamsin have no spells memorized. Rest for a night, then prepare spells.',
+    );
+    expect(spellAdviceText(spellAdvice(members, classes, [night]))).toBe(
+      'Wren and Tamsin can prepare spells now.',
+    );
+  });
+
+  it('needs a new night after each preparation', () => {
+    expect(hasSleptSincePreparing([night], 'character-0004')).toBe(true);
+    expect(hasSleptSincePreparing([night, prepared('character-0004')], 'character-0004')).toBe(false);
+    expect(hasSleptSincePreparing([night, prepared('character-0001')], 'character-0004')).toBe(true);
+    const interrupted = gameEntry(12, 'rest', [
+      { event_type: 'rested', code: 'exploration.rest.interrupted', kind: 'night' },
+    ]);
+    expect(hasSleptSincePreparing([interrupted], 'character-0004')).toBe(false);
+    const turn = gameEntry(13, 'rest', [
+      { event_type: 'rested', code: 'exploration.rest.rested', kind: 'turn' },
+    ]);
+    expect(hasSleptSincePreparing([turn], 'character-0004')).toBe(false);
+  });
+
+  it('gives no warning to a first-level cleric, a mage with an empty book, or a member with spells memorized', () => {
+    expect(
+      spellAdvice(
+        party((s) => makeCaster(s, 'Osric', 'cleric')),
+        classes,
+        [],
+      ),
+    ).toEqual({ needRest: [], canPrepare: [] });
+    expect(
+      spellAdvice(
+        party((s) => makeCaster(s, 'Tamsin', 'magic_user', { book: 0 })),
+        classes,
+        [],
+      ),
+    ).toEqual({ needRest: [], canPrepare: [] });
+    const memorized = party((s) => {
+      makeCaster(s, 'Tamsin', 'magic_user', { book: 1 });
+      const tamsin = s.game?.view.party.find((m) => m.name === 'Tamsin');
+      if (tamsin) tamsin.memorized_spells = [{ spell_id: 'sleep' }];
+    });
+    expect(spellAdvice(memorized, classes, [])).toEqual({ needRest: [], canPrepare: [] });
+  });
+
+  it('warns about a second-level cleric, who has slots and no book', () => {
+    const members = party((s) => makeCaster(s, 'Osric', 'cleric', { level: 2 }));
+    expect(spellAdvice(members, classes, []).needRest.map((m) => m.name)).toEqual(['Osric']);
   });
 });

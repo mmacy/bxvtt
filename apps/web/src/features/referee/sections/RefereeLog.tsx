@@ -28,7 +28,18 @@ import {
 } from '@bxvtt/shared/text';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getApi, describeProblem, useRevision, useTableId, useTextContext } from '@/app';
-import { Banner, Button, Icon, SearchInput, SegmentedControl, Select, Skeleton, type IconName } from '@/ui';
+import {
+  Banner,
+  Button,
+  Icon,
+  LinkButton,
+  SearchInput,
+  SegmentedControl,
+  Select,
+  Skeleton,
+  type IconName,
+} from '@/ui';
+import { IdMark } from '../details';
 import styles from './sections.module.css';
 
 const ICONS: Record<EventIcon, IconName> = {
@@ -212,19 +223,14 @@ function LogLine({ line }: { line: EventLine }) {
           {line.text}
           {line.visibility === 'referee' && <span className={styles.logMark}>Referee</span>}
         </p>
+        {line.refereeDetail && <IdMark className={styles.logWhere}>{line.refereeDetail}</IdMark>}
         {line.detail &&
           (open ? (
             <p className={styles.logDetail}>{line.detail}</p>
           ) : (
-            <Button
-              size="sm"
-              variant="ghost"
-              className={styles.diceButton}
-              onClick={() => setOpen(true)}
-              aria-label={`Show the dice: ${line.text}`}
-            >
+            <LinkButton tone="quiet" onClick={() => setOpen(true)} aria-label={`Show the dice: ${line.text}`}>
               Dice
-            </Button>
+            </LinkButton>
           ))}
       </div>
     </li>
@@ -255,7 +261,7 @@ export function RefereeLog() {
   const shown = lines.filter(
     (l) =>
       (category === 'all' || l.category === category) &&
-      words.every((w) => `${l.text} ${l.detail ?? ''}`.toLowerCase().includes(w)),
+      words.every((w) => `${l.text} ${l.detail ?? ''} ${l.refereeDetail ?? ''}`.toLowerCase().includes(w)),
   );
 
   if (error && !loaded)

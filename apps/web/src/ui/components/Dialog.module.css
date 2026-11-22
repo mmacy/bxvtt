@@ -10,6 +10,11 @@
   animation: fadeOut var(--duration-fast) var(--ease-standard) forwards;
 }
 
+/* A drawer that keeps the page in view. The overlay stays to catch the click that closes the drawer. */
+.overlayClear {
+  background: transparent;
+}
+
 .dialog {
   position: fixed;
   z-index: var(--z-modal);
@@ -105,6 +110,18 @@
   padding: var(--space-1) var(--space-6) var(--space-5);
 }
 
+/* Content under a confirmation's description, such as a checkbox. */
+.confirmBody {
+  display: grid;
+  gap: var(--space-3);
+  padding-top: 0;
+}
+
+/* A footer whose content renders nothing, such as a wizard step without buttons, takes no space. */
+.footer:empty {
+  display: none;
+}
+
 .footer {
   display: flex;
   justify-content: flex-end;
@@ -179,11 +196,25 @@
 
 .headerHidden {
   position: absolute;
-  top: 0;
-  right: 0;
+  top: var(--space-2);
+  right: var(--space-2);
   z-index: 1;
-  padding: var(--space-1);
+  padding: 0;
   border: 0;
+}
+
+/* With no header around it, the close button carries its own surface, so it reads on paper and on chrome. */
+.headerHidden .close {
+  margin: 0;
+  border: var(--border-hair) solid var(--color-border-strong);
+  background: var(--color-surface-2);
+  box-shadow: var(--edge-highlight), var(--shadow-1);
+  color: var(--color-text-muted);
+}
+
+.headerHidden .close:hover {
+  background: var(--color-surface-3);
+  color: var(--color-text-strong);
 }
 
 .drawerBody {

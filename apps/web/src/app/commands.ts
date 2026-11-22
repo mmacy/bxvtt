@@ -4,7 +4,8 @@
  *
  * Every path shows bxapi's refusal in the game's terms with `describeRejection`, as a toast by default or
  * returned to the caller for inline display, and handles a revision conflict with a calm "the table changed"
- * notice. A client sends one command at a time per table, so a double click never sends twice.
+ * notice. A client sends one command at a time per table. A deliberate action that arrives while another is in
+ * flight waits its turn, and a repeatable input such as a held key is dropped instead.
  */
 import { isProblem } from '@bxvtt/shared/client';
 import type {
@@ -14,8 +15,8 @@ import type {
   Rejection,
   ResolveRoundResult,
 } from '@bxvtt/shared/protocol';
-import { describeRejection, describeRejections, type TextContext } from '@bxvtt/shared/text';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { commandInfo, describeRejection, describeRejections, type TextContext } from '@bxvtt/shared/text';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from '@/ui';
 import { describeProblem, getApi, type ProblemMessage } from './api';
 import { toParamMap } from './params';
@@ -39,10 +40,17 @@ export type RefusalDisplay = 'toast' | 'inline';
 
 export interface SendOptions {
   display?: RefusalDisplay;
+  /**
+   * Marks a repeatable input, such as a held or repeated movement key. While another command is in flight, or
+   * while the client paces rapid commands, a repeatable send is dropped without a word, so a held key never stacks
+   * up steps. Leave it out for a deliberate action (a click, a menu choice, a form, a shortcut): the client
+   * queues it and sends it as soon as it can.
+   */
+  repeatable?: boolean;
 }
 
 /** Why the client didn't send a command. */
-export type SkipReason = 'busy' | 'throttled' | 'no_game' | 'not_allowed';
+export type SkipReason = 'busy' | 'throttled' | 'no_game' | 'not_allowed' | 'stale' | 'expired';
 
 /**
  * The most commands one client sends in a second. The server allows each user 100 requests that change
@@ -50,6 +58,12 @@ export type SkipReason = 'busy' | 'throttled' | 'no_game' | 'not_allowed';
  * holds an arrow key to walk the party.
  */
 export const COMMANDS_PER_SECOND = 4;
+
+/** The most deliberate actions that wait behind the command in flight. */
+export const MAX_QUEUED_COMMANDS = 3;
+
+/** How long a deliberate action may wait to send, in milliseconds. After that the client drops it and says so. */
+export const QUEUED_COMMAND_MAX_WAIT_MS = 5000;
 
 const recentSends = new WeakMap<TableStore, number[]>();
 
@@ -69,6 +83,13 @@ export function takeSendSlot(store: TableStore, now: number = Date.now()): boole
   return true;
 }
 
+/** Milliseconds until {@link takeSendSlot} allows another send. */
+function slotWait(store: TableStore, now: number): number {
+  const recent = (recentSends.get(store) ?? []).filter((time) => now - time < 1000);
+  if (recent.length < COMMANDS_PER_SECOND) return 0;
+  return Math.max(1, (recent[0] ?? now) + 1000 - now);
+}
+
 /** What happened to a command. */
 export type SendResult =
   /** bxapi accepted it. The store already holds the new game state. */
@@ -85,7 +106,9 @@ export type SendResult =
   | { status: 'conflict' }
   /**
    * The client didn't send it. `reason` says why: another command is in flight (`busy`), the client is pacing
-   * rapid commands (`throttled`), no game is running (`no_game`), or the user may not send it (`not_allowed`).
+   * rapid commands (`throttled`), no game is running (`no_game`), the user may not send it (`not_allowed`), the
+   * game changed while the action waited, so it no longer fits (`stale`), or it waited too long (`expired`).
+   * Only a repeatable send is skipped as `busy` or `throttled` without a word.
    */
   | { status: 'skipped'; reason: SkipReason; message: string }
   /** The request failed. */
@@ -124,84 +147,302 @@ function useLatest<T>(value: T) {
   return ref;
 }
 
+// The send lane ---------------------------------------------------------------------------------------------
+
+/** Fields that name a place relative to the party, so the command means something else once the party moves. */
+const PLACE_FIELDS = ['direction', 'x', 'y', 'feature_id'] as const;
+
+/** What the player saw when they chose an action, to tell whether it still fits when it would send. */
+interface Situation {
+  mode: string | null;
+  /** The party's cell, or `null` in town. */
+  cell: string | null;
+  /** Whether bxapi listed the command as legal. */
+  legal: boolean;
+}
+
+function situationOf(store: TableStore, commandType: string): Situation {
+  const game = store.getState().game;
+  const location = game?.view.location;
+  return {
+    mode: game?.mode ?? null,
+    cell:
+      location?.kind === 'dungeon'
+        ? `${location.dungeon_id}:${location.level_number}:${location.position?.join(',') ?? ''}`
+        : null,
+    legal: game?.commands.some((command) => command.command_type === commandType) ?? false,
+  };
+}
+
+const MODE_CHANGES: Record<string, string> = {
+  encounter: 'monsters appeared',
+  battle: 'a battle began',
+  exploring: 'the fight ended',
+  town: 'the party is in town now',
+  game_over: 'the game ended',
+  victory: 'the game ended',
+};
+
+/** Why a waiting action no longer fits, or `null` when it still does. */
+function staleReason(command: GameCommand, then: Situation, now: Situation): string | null {
+  if (now.mode !== then.mode) return MODE_CHANGES[now.mode ?? ''] ?? 'the game moved on';
+  if (then.legal && !now.legal) return "it isn't possible now";
+  if (now.cell !== then.cell && PLACE_FIELDS.some((field) => field in command))
+    return 'the party moved first';
+  return null;
+}
+
+function droppedMessage(command: GameCommand, reason: string): string {
+  return `Your choice to ${commandInfo(command.command_type).phrase} wasn't sent, because ${reason}. Choose it again if you still want it.`;
+}
+
+interface Waiting {
+  key: string;
+  command: GameCommand;
+  display: RefusalDisplay;
+  situation: Situation;
+  queuedAt: number;
+  ctx: { current: TextContext };
+  promise: Promise<SendResult>;
+  resolve: (result: SendResult) => void;
+}
+
+interface Lane {
+  inFlight: { key: string; promise: Promise<SendResult> } | null;
+  queue: Waiting[];
+  timer: ReturnType<typeof setTimeout> | null;
+}
+
+const lanes = new WeakMap<TableStore, Lane>();
+
+function laneOf(store: TableStore): Lane {
+  let lane = lanes.get(store);
+  if (!lane) {
+    lane = { inFlight: null, queue: [], timer: null };
+    lanes.set(store, lane);
+  }
+  return lane;
+}
+
+function publishQueue(store: TableStore, lane: Lane): void {
+  store.setState({ queuedCommands: lane.queue.map((waiting) => waiting.command.command_type) });
+}
+
+/** The same command with the same fields, so a double click on one control queues once. */
+function commandKey(command: GameCommand): string {
+  return JSON.stringify(
+    Object.keys(command)
+      .sort()
+      .map((field) => [field, command[field]]),
+  );
+}
+
+/** Sends one command now and records it as the lane's command in flight. */
+function transmit(
+  store: TableStore,
+  lane: Lane,
+  key: string,
+  command: GameCommand,
+  display: RefusalDisplay,
+  ctx: { current: TextContext },
+): Promise<SendResult> {
+  const state = store.getState();
+  const game = state.game;
+  if (game === null) {
+    pump(store, lane);
+    return Promise.resolve({ status: 'skipped', reason: 'no_game', message: 'No game is running.' });
+  }
+  const run = async (): Promise<SendResult> => {
+    store.setState({ pendingCommand: command.command_type });
+    try {
+      const result = await getApi().sendCommand(state.tableId, command, game.revision);
+      store.getState().receiveGame(result.game);
+      if (!result.accepted) {
+        const sentences = describeRejections(result.rejections, ctx.current);
+        if (display === 'toast') refusalToast(sentences);
+        return {
+          status: 'refused',
+          message: sentences.join(' '),
+          sentences,
+          rejections: result.rejections,
+          result,
+        };
+      }
+      return { status: 'accepted', result };
+    } catch (error) {
+      if (isProblem(error, 'revision_conflict')) {
+        announceNotice('table_changed');
+        await refreshGame(store);
+        return { status: 'conflict' };
+      }
+      return errorResult(error, display);
+    } finally {
+      lane.inFlight = null;
+      store.setState({ pendingCommand: null });
+      pump(store, lane);
+    }
+  };
+  const promise = run();
+  lane.inFlight = { key, promise };
+  return promise;
+}
+
+/**
+ * Sends the next waiting action when nothing is in flight and the pacing allows. An action that waited too long,
+ * or whose situation changed, is dropped with one calm line instead.
+ */
+function pump(store: TableStore, lane: Lane): void {
+  if (lane.timer !== null) {
+    clearTimeout(lane.timer);
+    lane.timer = null;
+  }
+  const now = Date.now();
+  while (lane.queue.length > 0) {
+    const head = lane.queue[0];
+    if (!head) break;
+    let message: string | null = null;
+    let reason: SkipReason = 'stale';
+    if (now - head.queuedAt >= QUEUED_COMMAND_MAX_WAIT_MS) {
+      message = droppedMessage(head.command, 'the action before it took too long');
+      reason = 'expired';
+    } else if (lane.inFlight === null) {
+      const stale = staleReason(head.command, head.situation, situationOf(store, head.command.command_type));
+      if (stale !== null) message = droppedMessage(head.command, stale);
+    }
+    if (message !== null) {
+      lane.queue.shift();
+      if (head.display === 'toast') toast.info(message, { id: 'command-dropped' });
+      head.resolve({ status: 'skipped', reason, message });
+      continue;
+    }
+    if (lane.inFlight !== null) {
+      // Wake up to drop the head if the command in flight takes too long.
+      lane.timer = setTimeout(() => pump(store, lane), head.queuedAt + QUEUED_COMMAND_MAX_WAIT_MS - now);
+      break;
+    }
+    const wait = slotWait(store, now);
+    if (wait > 0) {
+      lane.timer = setTimeout(() => pump(store, lane), wait);
+      break;
+    }
+    lane.queue.shift();
+    takeSendSlot(store, now);
+    const sent = transmit(store, lane, head.key, head.command, head.display, head.ctx);
+    void sent.then(head.resolve);
+    break;
+  }
+  publishQueue(store, lane);
+}
+
 /**
  * Sends bxapi commands for the open table.
  *
- * `send` attaches the current revision as `expected_revision`, refuses to start while another command is in
- * flight (so a double click sends once), applies the new game state, and explains a refusal with
- * `describeRejection`.
+ * `send` attaches the current revision as `expected_revision`, applies the new game state, and explains a
+ * refusal with `describeRejection`. One command is in flight at a time, and the client sends at most
+ * {@link COMMANDS_PER_SECOND} a second:
+ *
+ * - A deliberate action (the default) never drops silently. While another command is in flight or the client
+ *   paces commands, it waits in a short queue and sends in order with the revision of that moment. The same
+ *   command twice, such as a double click, waits once. A waiting action that no longer fits when its turn comes
+ *   (the mode changed, bxapi no longer lists it, or the party moved to another cell and the command names a
+ *   direction, cell, or feature), or that waited longer than {@link QUEUED_COMMAND_MAX_WAIT_MS}, is dropped
+ *   with one calm line.
+ * - A repeatable input (`{ repeatable: true }`), such as a held movement key, is dropped without a word while
+ *   another command is in flight, while actions wait, or while the client paces commands.
+ *
+ * `pendingType` names the action the player asked for most recently that hasn't finished: a waiting action,
+ * or the command in flight. So `loading={pendingType === 'rest'}` shows a spinner on Rest while it waits.
  *
  * ```tsx
- * const { send, pending } = useSendCommand();
- * <Button loading={pending} onClick={() => send({ command_type: 'search', kind: 'secret_doors' })}>Search</Button>
+ * const { send, pendingType } = useSendCommand();
+ * <Button loading={pendingType === 'search'} onClick={() => send({ command_type: 'search', kind: 'secret_doors' })}>Search</Button>
+ *
+ * // A held movement key: drop the extra presses.
+ * send({ command_type: 'move_party', direction: 'north' }, { repeatable: true });
  *
  * // Inline display: show the refusal next to the form instead of a toast.
  * const result = await send(command, { display: 'inline' });
  * if (result.status === 'refused') setError(result.message);
  * ```
  *
- * @returns `send`, whether any command of this client is in flight, and its type.
+ * @returns `send`; whether a command is in flight or waiting; the latest such command type; and every one of
+ *   them, the command in flight first.
  */
 export function useSendCommand(): {
   send: (command: GameCommand, options?: SendOptions) => Promise<SendResult>;
   pending: boolean;
   pendingType: string | null;
+  pendingTypes: readonly string[];
 } {
   const store = useTableStoreApi();
-  const pendingType = useTableStore((s) => s.pendingCommand);
+  const inFlightType = useTableStore((s) => s.pendingCommand);
+  const queued = useTableStore((s) => s.queuedCommands);
   const ctxRef = useLatest<TextContext>(useTextContext());
 
   const send = useCallback(
     async (command: GameCommand, options: SendOptions = {}): Promise<SendResult> => {
       const display = options.display ?? 'toast';
-      const state = store.getState();
-      if (state.pendingCommand !== null) {
-        return { status: 'skipped', reason: 'busy', message: 'Another action is still on its way.' };
-      }
-      if (state.game === null) {
+      const lane = laneOf(store);
+      if (store.getState().game === null) {
         const message = 'No game is running.';
         if (display === 'toast') toast.warning(message);
         return { status: 'skipped', reason: 'no_game', message };
       }
-      // Pacing is silent: a held key drops the extra presses instead of stacking notices.
-      if (!takeSendSlot(store)) {
-        return {
-          status: 'skipped',
-          reason: 'throttled',
-          message: 'Slow down a little. The table is catching up.',
-        };
-      }
-      store.setState({ pendingCommand: command.command_type });
-      try {
-        const result = await getApi().sendCommand(state.tableId, command, state.game.revision);
-        store.getState().receiveGame(result.game);
-        if (!result.accepted) {
-          const sentences = describeRejections(result.rejections, ctxRef.current);
-          if (display === 'toast') refusalToast(sentences);
+      const busy = lane.inFlight !== null || lane.queue.length > 0;
+
+      if (options.repeatable) {
+        // Pacing is silent: a held key drops the extra presses instead of stacking notices or steps.
+        if (busy)
+          return { status: 'skipped', reason: 'busy', message: 'Another action is still on its way.' };
+        if (!takeSendSlot(store))
           return {
-            status: 'refused',
-            message: sentences.join(' '),
-            sentences,
-            rejections: result.rejections,
-            result,
+            status: 'skipped',
+            reason: 'throttled',
+            message: 'Slow down a little. The table is catching up.',
           };
-        }
-        return { status: 'accepted', result };
-      } catch (error) {
-        if (isProblem(error, 'revision_conflict')) {
-          announceNotice('table_changed');
-          await refreshGame(store);
-          return { status: 'conflict' };
-        }
-        return errorResult(error, display);
-      } finally {
-        store.setState({ pendingCommand: null });
+        return transmit(store, lane, commandKey(command), command, display, ctxRef);
       }
+
+      const key = commandKey(command);
+      if (lane.inFlight?.key === key) return lane.inFlight.promise;
+      const twin = lane.queue.find((waiting) => waiting.key === key);
+      if (twin) return twin.promise;
+      if (!busy && takeSendSlot(store)) return transmit(store, lane, key, command, display, ctxRef);
+      if (lane.queue.length >= MAX_QUEUED_COMMANDS) {
+        const message = 'Several actions are still on their way. Try again when they land.';
+        if (display === 'toast') toast.info(message, { id: 'command-queue-full' });
+        return { status: 'skipped', reason: 'busy', message };
+      }
+      let resolve: (result: SendResult) => void = () => {};
+      const promise = new Promise<SendResult>((done) => {
+        resolve = done;
+      });
+      lane.queue.push({
+        key,
+        command,
+        display,
+        situation: situationOf(store, command.command_type),
+        queuedAt: Date.now(),
+        ctx: ctxRef,
+        promise,
+        resolve,
+      });
+      pump(store, lane);
+      return promise;
     },
     [store, ctxRef],
   );
 
-  return { send, pending: pendingType !== null, pendingType };
+  const pendingTypes = useMemo(
+    () => (inFlightType === null ? queued : [inFlightType, ...queued]),
+    [inFlightType, queued],
+  );
+  return {
+    send,
+    pending: pendingTypes.length > 0,
+    pendingType: queued.at(-1) ?? inFlightType,
+    pendingTypes,
+  };
 }
 
 /**

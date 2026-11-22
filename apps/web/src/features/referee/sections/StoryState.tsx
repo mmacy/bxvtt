@@ -4,10 +4,26 @@
  */
 import type { TextContext } from '@bxvtt/shared/text';
 import { useMemo, useState } from 'react';
-import { Accordion, Badge, Button, EmptyState, Icon, IconButton, Skeleton } from '@/ui';
-import { type Adventure, type ObjectiveSpec, type QuestSpec, type TriggerSpec } from '../model/adventure';
-import { clauseText, conditionText, consequenceText, patternText } from '../model/describe';
-import { questStatusLabel } from '../pickers';
+import { useParty } from '@/app';
+import { Accordion, Badge, Button, EmptyState, Icon, IconButton, SectionLabel, Select, Skeleton } from '@/ui';
+import {
+  type Adventure,
+  type CharacterSheet,
+  type Consequence,
+  type ObjectiveSpec,
+  type QuestSpec,
+  type TriggerSpec,
+} from '../model/adventure';
+import {
+  clauseText,
+  conditionText,
+  consequenceText,
+  flagPhrase,
+  flagUses,
+  patternText,
+} from '../model/describe';
+import { carriedItems, questStatusLabel } from '../pickers';
+import { IdMark } from '../details';
 import { CommandOutcome, useRefereeCommand } from '../RefereeCommand';
 import { knownFlagKeys } from '../schema/fields';
 import { CommandForm } from '../schema/CommandForm';
@@ -22,12 +38,14 @@ function ObjectiveRow({
   state,
   questActive,
   ctx,
+  adventure,
 }: {
   quest: QuestSpec;
   objective: ObjectiveSpec;
   state: { revealed: boolean; complete: boolean } | undefined;
   questActive: boolean;
   ctx: TextContext;
+  adventure: Adventure;
 }) {
   const { run, busy, outcome, clear } = useRefereeCommand();
   const revealed = state?.revealed ?? !objective.hidden;
@@ -53,12 +71,12 @@ function ObjectiveRow({
       </div>
       <p className={styles.secondaryLine}>
         <strong>Done when: </strong>
-        {clauseText(objective.when, ctx)}
+        {clauseText(objective.when, ctx, adventure)}
       </p>
       {!revealed && objective.reveal_when && (
         <p className={styles.secondaryLine}>
           <strong>Shown when: </strong>
-          {clauseText(objective.reveal_when, ctx)}
+          {clauseText(objective.reveal_when, ctx, adventure)}
         </p>
       )}
       {questActive && !complete && (
@@ -78,21 +96,105 @@ function ObjectiveRow({
   );
 }
 
+const EVERYONE = '__everyone__';
+
+/**
+ * One quest reward with the commands to give it. A reward written for the party names its receiver with a
+ * selector (`@party`, `@first`, or `@carrier`), because the adventure can't know member IDs. The row starts
+ * with the member the selector points at and lets the referee choose another.
+ */
+function RewardRow({
+  questId,
+  reward,
+  ctx,
+  adventure,
+  sheets,
+}: {
+  questId: string;
+  reward: Consequence;
+  ctx: TextContext;
+  adventure: Adventure;
+  sheets: readonly CharacterSheet[];
+}) {
+  const party = useParty();
+  const fields = reward as unknown as Record<string, unknown> & { command_type: string };
+  const selector = typeof fields.character_id === 'string' ? fields.character_id : null;
+  const standing = party.filter((m) => m.current_hp > 0);
+  const initial = useMemo(() => {
+    if (selector === '@party') return EVERYONE;
+    if (selector === '@carrier' && typeof fields.item_id === 'string') {
+      const itemId = fields.item_id;
+      const carrier = sheets.find((sheet) => carriedItems(sheet, ctx).some((item) => item.id === itemId));
+      return carrier?.id ?? null;
+    }
+    if (selector === '@first') return standing[0]?.id ?? null;
+    return selector;
+  }, [selector, fields.item_id, sheets, ctx, standing]);
+  const [who, setWho] = useState<string | null>(null);
+  const target = who ?? initial;
+  const { runAll, busy, outcome, clear } = useRefereeCommand();
+  const give = () => {
+    const { source: _source, ...rest } = fields;
+    const base = { ...rest, source: `quest:${questId}` };
+    if (selector === null) return void runAll([base]);
+    const ids = target === EVERYONE ? standing.map((m) => m.id) : target ? [target] : [];
+    if (ids.length > 0) void runAll(ids.map((id) => ({ ...base, character_id: id })));
+  };
+  return (
+    <li className={styles.reward}>
+      <span className={styles.prose}>{consequenceText(reward, ctx, adventure)}</span>
+      <div className={styles.inlineForm}>
+        {selector !== null && (
+          <Select
+            size="sm"
+            aria-label={`Who receives: ${consequenceText(reward, ctx, adventure)}`}
+            value={target ?? undefined}
+            placeholder="Choose a member"
+            onValueChange={setWho}
+            options={[
+              ...(selector === '@party' ? [{ value: EVERYONE, label: 'Every living member' }] : []),
+              ...party.map((m) => ({ value: m.id, label: m.name })),
+            ]}
+          />
+        )}
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={busy || (selector !== null && !target)}
+          onClick={give}
+        >
+          Give
+        </Button>
+      </div>
+      <CommandOutcome outcome={outcome} onDismiss={clear} />
+    </li>
+  );
+}
+
 function QuestBody({
   quest,
   states,
   ctx,
   adventure,
+  sheets,
 }: {
   quest: QuestSpec;
   states: QuestStates;
   ctx: TextContext;
   adventure: Adventure;
+  sheets: readonly CharacterSheet[];
 }) {
   const state = states[quest.id];
   const status = state?.status ?? 'inactive';
   const { run, busy, outcome, clear } = useRefereeCommand();
   const narrative = quest.narrative;
+  const done = quest.objectives.filter((o) => state?.objectives[o.id]?.complete).length;
+  // The game completes a quest from its own rules. When the referee marks the objectives done instead, the
+  // quest waits for the referee to complete it, so the panel says so.
+  const ready =
+    status === 'active' &&
+    quest.objectives.length > 0 &&
+    (quest.completion === 'any' ? done > 0 : done === quest.objectives.length);
   return (
     <div className={styles.questBody}>
       {narrative?.offer && (
@@ -104,7 +206,7 @@ function QuestBody({
       {quest.activation && status === 'inactive' && (
         <p className={styles.secondaryLine}>
           <strong>Starts when: </strong>
-          {clauseText(quest.activation, ctx)}
+          {clauseText(quest.activation, ctx, adventure)}
         </p>
       )}
       <ul className={styles.objectiveList} aria-label="Objectives">
@@ -116,6 +218,7 @@ function QuestBody({
             state={state?.objectives[objective.id]}
             questActive={status === 'active'}
             ctx={ctx}
+            adventure={adventure}
           />
         ))}
       </ul>
@@ -126,14 +229,30 @@ function QuestBody({
         {quest.concludes_adventure ? ' Completing it ends the adventure.' : ''}
       </p>
       {quest.rewards.length > 0 && (
-        <div>
+        <div className={styles.rewards}>
           <h5 className={styles.minorHead}>Rewards</h5>
-          <ul className={styles.bullets}>
+          <p className={styles.secondaryLine}>
+            Completing the quest gives nothing by itself. Give each reward when the party earns it.
+          </p>
+          <ul className={styles.rewardList}>
             {quest.rewards.map((reward, index) => (
-              <li key={index}>{consequenceText(reward, ctx, adventure)}</li>
+              <RewardRow
+                key={index}
+                questId={quest.id}
+                reward={reward}
+                ctx={ctx}
+                adventure={adventure}
+                sheets={sheets}
+              />
             ))}
           </ul>
         </div>
+      )}
+      {ready && (
+        <p className={styles.readyLine}>
+          {quest.completion === 'any' ? 'An objective is done.' : 'Every objective is done.'} Complete the
+          quest to close it{quest.concludes_adventure ? ' and end the adventure' : ''}, then give the rewards.
+        </p>
       )}
       <div className={styles.rowActions}>
         {status === 'inactive' && (
@@ -149,7 +268,7 @@ function QuestBody({
         {status === 'active' && (
           <Button
             size="sm"
-            variant="secondary"
+            variant={ready ? 'primary' : 'secondary'}
             disabled={busy}
             onClick={() => run({ command_type: 'complete_quest', quest_id: quest.id })}
           >
@@ -162,7 +281,7 @@ function QuestBody({
   );
 }
 
-const STATUS_TONE = { inactive: 'neutral', active: 'accent', completed: 'success' } as const;
+const STATUS_TONE = { inactive: 'neutral', active: 'info', completed: 'success' } as const;
 
 function Quests({ data, adventure }: { data: RefereeData; adventure: Adventure }) {
   const states = data.state?.quests ?? {};
@@ -191,7 +310,15 @@ function Quests({ data, adventure }: { data: RefereeData; adventure: Adventure }
               <Badge tone={STATUS_TONE[status]}>{questStatusLabel(status)}</Badge>
             </span>
           ),
-          content: <QuestBody quest={quest} states={states} ctx={data.ctx} adventure={adventure} />,
+          content: (
+            <QuestBody
+              quest={quest}
+              states={states}
+              ctx={data.ctx}
+              adventure={adventure}
+              sheets={data.state?.party.members ?? []}
+            />
+          ),
         };
       })}
     />
@@ -207,6 +334,10 @@ function flagText(value: unknown): string {
 function Flags({ data }: { data: RefereeData }) {
   const flags = data.state?.flags ?? {};
   const known = useMemo(() => knownFlagKeys(data), [data]);
+  const uses = useMemo(
+    () => (data.adventure ? flagUses(data.adventure, data.ctx) : new Map<string, string[]>()),
+    [data.adventure, data.ctx],
+  );
   const [editing, setEditing] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   return (
@@ -222,7 +353,16 @@ function Flags({ data }: { data: RefereeData }) {
             return (
               <li key={key} className={styles.flagRow}>
                 <div className={styles.flagLine}>
-                  <code className={styles.flagKey}>{key}</code>
+                  <div className={styles.flagText}>
+                    <span className={styles.flagUse}>
+                      {uses.get(key)?.[0] ??
+                        `“${key}”: a flag set during play. The adventure doesn't read it.`}
+                    </span>
+                    {(uses.get(key)?.length ?? 0) > 1 && (
+                      <span className={styles.secondary}>{uses.get(key)?.slice(1).join(' ')}</span>
+                    )}
+                    {uses.has(key) && <IdMark className={styles.idMark}>{key}</IdMark>}
+                  </div>
                   {set ? (
                     <span className={styles.flagValue}>{flagText(flags[key])}</span>
                   ) : (
@@ -232,7 +372,7 @@ function Flags({ data }: { data: RefereeData }) {
                     icon="edit"
                     size="sm"
                     variant="ghost"
-                    label={`Set ${key}`}
+                    label={`Change ${uses.has(key) ? flagPhrase(key, data.ctx, data.adventure) : `the flag “${key}”`}`}
                     pressed={editing === key}
                     onClick={() => setEditing(editing === key ? null : key)}
                   />
@@ -278,9 +418,9 @@ function TriggerRow({
     <div className={styles.questBody}>
       <p className={styles.prose}>
         <strong>When: </strong>
-        {patternText(trigger.when, ctx)}
+        {patternText(trigger.when, ctx, adventure)}
         {trigger.conditions.length > 0
-          ? `, while ${trigger.conditions.map((c) => conditionText(c, ctx)).join(' and ')}`
+          ? `, while ${trigger.conditions.map((c) => conditionText(c, ctx, adventure)).join(' and ')}`
           : ''}
         .{trigger.repeatable ? ' Fires every time.' : ' Fires once.'}
       </p>
@@ -338,8 +478,8 @@ function Triggers({ data, adventure }: { data: RefereeData; adventure: Adventure
             value: trigger.id,
             title: (
               <span className={styles.triggerTitle}>
-                {patternText(trigger.when, data.ctx)}
-                <span className={styles.secondary}>{trigger.id}</span>
+                {patternText(trigger.when, data.ctx, adventure)}
+                <IdMark className={styles.idMark}>{trigger.id}</IdMark>
               </span>
             ),
             meta: <Badge tone={hasFired ? 'success' : 'neutral'}>{hasFired ? 'Fired' : 'Waiting'}</Badge>,
@@ -347,7 +487,17 @@ function Triggers({ data, adventure }: { data: RefereeData; adventure: Adventure
           };
         })}
       />
-      {extra.length > 0 && <p className={styles.secondaryLine}>Also marked fired: {extra.join(', ')}.</p>}
+      {extra.length > 0 && (
+        <p className={styles.secondaryLine}>
+          Marked fired from outside this adventure:{' '}
+          {extra.map((id, index) => (
+            <span key={id}>
+              {index > 0 ? ', ' : ''}
+              <span className={styles.quoted}>“{id}”</span>
+            </span>
+          ))}
+        </p>
+      )}
     </>
   );
 }
@@ -371,15 +521,15 @@ export function StoryState({ data }: { data: RefereeData }) {
   return (
     <div className={styles.section}>
       <section aria-label="Quests">
-        <h3 className={styles.subhead}>Quests</h3>
+        <SectionLabel level={3}>Quests</SectionLabel>
         <Quests data={data} adventure={adventure} />
       </section>
       <section aria-label="Flags">
-        <h3 className={styles.subhead}>Flags</h3>
+        <SectionLabel level={3}>Flags</SectionLabel>
         <Flags data={data} />
       </section>
       <section aria-label="Triggers">
-        <h3 className={styles.subhead}>Triggers</h3>
+        <SectionLabel level={3}>Triggers</SectionLabel>
         <Triggers data={data} adventure={adventure} />
       </section>
     </div>

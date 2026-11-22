@@ -1797,6 +1797,20 @@
       }
     }
   },
+  "enums": {
+    "weapon_qualities": [
+      "blunt",
+      "brace",
+      "charge",
+      "melee",
+      "missile",
+      "reload",
+      "slow",
+      "splash",
+      "two_handed"
+    ],
+    "time_units": ["round", "turn", "day"]
+  },
   "clock": {
     "seconds_per_round": 10,
     "rounds_per_turn": 60,

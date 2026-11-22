@@ -1,20 +1,13 @@
 import type { MemberView, SpellSummary } from '@bxvtt/shared/bxapi';
-import { capitalizeFirst, ordinal, prettifyId, spellCatalogName } from '@bxvtt/shared/text';
+import { capitalizeFirst, joinList, ordinal, prettifyId, spellCatalogName } from '@bxvtt/shared/text';
 import { useMemo, useState } from 'react';
-import {
-  useParty,
-  usePartyLocation,
-  useRulesEntry,
-  useSendCommand,
-  useSpellCatalog,
-  type ClassDetail,
-  type SpellDetail,
-} from '@/app';
+import { useParty, usePartyLocation, useSendCommand, useSpellCatalog } from '@/app';
 import {
   Badge,
   Banner,
   Button,
   Checkbox,
+  Combobox,
   Dialog,
   EmptyState,
   Field,
@@ -27,17 +20,20 @@ import {
 } from '@/ui';
 import { classMagic, spellSlotsAt } from '../wizard/tables';
 import { useMemberCommand } from './actions';
+import { spellDuration, spellRange } from './spellText';
+import { RuleLink } from './RuleLink';
 import type { SheetModel } from './model';
 import styles from './sheet.module.css';
+import { useClassDetail, useSpellDetail } from './catalogs';
 
 /** A spell's name from the catalog, or the built-in name. */
 function nameOf(id: string, catalog: readonly SpellSummary[] | null): string {
-  return catalog?.find((s) => s.id === id)?.name ?? spellCatalogName(id) ?? capitalizeFirst(prettifyId(id));
+  return catalog?.find((s) => s.id === id)?.name ?? capitalizeFirst(spellCatalogName(id) ?? prettifyId(id));
 }
 
 /** A spell's full text: the introduction and each way to cast it. */
 export function SpellDetailBody({ spellId }: { spellId: string }) {
-  const entry = useRulesEntry<SpellDetail>(`spells/${spellId}`);
+  const entry = useSpellDetail(spellId);
   if (entry.loading) return <Skeleton lines={4} />;
   if (!entry.data) return <p className={styles.detailProse}>The rules reference doesn't have this spell.</p>;
   const spell = entry.data;
@@ -84,14 +80,15 @@ function SpellInfo({ spellId, name }: { spellId: string; name: string }) {
  * spells when bxapi offers those commands.
  */
 export function SpellsTab({ member, model }: { member: MemberView; model: SheetModel }) {
-  const classEntry = useRulesEntry<ClassDetail>(`classes/${model.classId}`);
+  const classEntry = useClassDetail(model.classId);
   const catalog = useSpellCatalog();
   const magic = classMagic(classEntry.data);
   const slots = spellSlotsAt(classEntry.data, model.level);
   const prepare = useMemberCommand('prepare_spells', member.id);
   const learn = useMemberCommand('learn_spell', member.id);
   const cast = useMemberCommand('cast_spell', member.id);
-  const [preparing, setPreparing] = useState(false);
+  const [preparing, setPreparing] = useState<'header' | 'notice' | null>(null);
+  const [prepareRefusal, setPrepareRefusal] = useState<string | null>(null);
   const [casting, setCasting] = useState<{ spellId: string; reversed: boolean } | null>(null);
   const [learning, setLearning] = useState(false);
   const spells = catalog.data;
@@ -108,9 +105,44 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
   }, [model.memorized]);
 
   const blocked = [prepare, learn, cast].find((c) => c.legal !== null && !c.permission.allowed);
+  const bookNames = model.spellBook.map((id) => nameOf(id, spells));
+  // A caster whose class table gives slots at this level but who has nothing memorized can't cast yet.
+  const unprepared = magic !== null && model.memorized.length === 0 && slots.some((n) => n > 0);
 
   return (
     <div className={styles.tabPanel}>
+      {unprepared && (
+        <Banner
+          tone={prepareRefusal ? 'warning' : 'info'}
+          icon="book"
+          title={
+            magic.kind === 'arcane' && bookNames.length > 0
+              ? `${member.name} knows ${joinList(bookNames)} but hasn't memorized ${
+                  bookNames.length === 1 ? 'it' : 'them'
+                }, so they can't cast ${bookNames.length === 1 ? 'it' : 'them'} yet.`
+              : `${member.name} has no spells memorized, so they can't cast any yet.`
+          }
+          actions={
+            prepare.legal ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                icon="book"
+                disabled={!prepare.permission.allowed}
+                title={prepare.permission.reason ?? undefined}
+                onClick={() => {
+                  setPrepareRefusal(null);
+                  setPreparing('notice');
+                }}
+              >
+                Prepare spells
+              </Button>
+            ) : undefined
+          }
+        >
+          {prepareRefusal ?? "A caster prepares spells after a night's rest."}
+        </Banner>
+      )}
       {blocked && !blocked.permission.allowed && (
         <Banner tone="neutral" icon="lock">
           {blocked.permission.reason}
@@ -121,14 +153,14 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
           <h3 id="spells-memorized" className={styles.sectionTitle}>
             Memorized spells
           </h3>
-          {prepare.legal && (
+          {prepare.legal && !unprepared && (
             <Button
               size="sm"
               variant="secondary"
               icon="book"
               disabled={!prepare.permission.allowed}
               title={prepare.permission.reason ?? undefined}
-              onClick={() => setPreparing(true)}
+              onClick={() => setPreparing('header')}
             >
               Prepare spells
             </Button>
@@ -161,14 +193,15 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
                 <div key={`${copy.spellId}:${copy.reversed}`} className={styles.spellCard}>
                   <div className={styles.spellTop}>
                     <span className={styles.spellName}>
-                      {name}
+                      <RuleLink entry={{ kind: 'spells', id: copy.spellId }}>{name}</RuleLink>
                       {copy.reversed && ' (reversed)'}
                     </span>
                     {copy.count > 1 && <Badge tone="magic">×{copy.count}</Badge>}
                   </div>
                   {summary && (
                     <span className={styles.spellMeta}>
-                      {ordinal(summary.level)} level · {summary.range} · {summary.duration}
+                      {ordinal(summary.level)} level · {spellRange(summary.range)} ·{' '}
+                      {spellDuration(summary.duration)}
                     </span>
                   )}
                   <div className={styles.spellActions}>
@@ -222,12 +255,15 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
                 return (
                   <div key={id} className={styles.spellCard}>
                     <div className={styles.spellTop}>
-                      <span className={styles.spellName}>{name}</span>
+                      <span className={styles.spellName}>
+                        <RuleLink entry={{ kind: 'spells', id }}>{name}</RuleLink>
+                      </span>
                       <SpellInfo spellId={id} name={name} />
                     </div>
                     {summary && (
                       <span className={styles.spellMeta}>
-                        {ordinal(summary.level)} level · {summary.range} · {summary.duration}
+                        {ordinal(summary.level)} level · {spellRange(summary.range)} ·{' '}
+                        {spellDuration(summary.duration)}
                       </span>
                     )}
                   </div>
@@ -245,7 +281,15 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
           spellList={magic.spellList}
           arcane={magic.kind === 'arcane'}
           slots={slots}
-          onClose={() => setPreparing(false)}
+          onClose={() => setPreparing(null)}
+          onRefused={
+            preparing === 'notice'
+              ? (message) => {
+                  setPrepareRefusal(message);
+                  setPreparing(null);
+                }
+              : undefined
+          }
         />
       )}
       {casting && (
@@ -270,7 +314,7 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
 
 /** Whether a member has any magic to show a spells tab for. */
 export function useHasSpells(model: Pick<SheetModel, 'classId' | 'spellBook' | 'memorized'> | null): boolean {
-  const classEntry = useRulesEntry<ClassDetail>(model ? `classes/${model.classId}` : null);
+  const classEntry = useClassDetail(model ? model.classId : null);
   if (!model) return false;
   return model.spellBook.length > 0 || model.memorized.length > 0 || classMagic(classEntry.data) !== null;
 }
@@ -282,6 +326,8 @@ interface PrepareProps {
   arcane: boolean;
   slots: number[];
   onClose: () => void;
+  /** Takes a refusal back to where the player asked to prepare, instead of showing it in the dialog. */
+  onRefused?: (message: string) => void;
 }
 
 function PrepareRow({
@@ -295,7 +341,7 @@ function PrepareRow({
   counts: Record<string, number>;
   setCount: (key: string, value: number) => void;
 }) {
-  const detail = useRulesEntry<SpellDetail>(arcane ? `spells/${spell.id}` : null);
+  const detail = useSpellDetail(arcane ? spell.id : null);
   const reversible = arcane && detail.data?.reversed_form;
   return (
     <li className={styles.pickRow}>
@@ -305,8 +351,8 @@ function PrepareRow({
       </span>
       <NumberInput
         aria-label={`Copies of ${spell.name}`}
-        incrementLabel={`One more copy of ${spell.name}`}
-        decrementLabel={`One fewer copy of ${spell.name}`}
+        incrementLabel={`More copies of ${spell.name}`}
+        decrementLabel={`Fewer copies of ${spell.name}`}
         value={counts[`${spell.id}:false`] ?? 0}
         min={0}
         max={9}
@@ -315,8 +361,8 @@ function PrepareRow({
       {reversible && (
         <NumberInput
           aria-label={`Copies of ${detail.data?.reversed_form?.name ?? 'the reversed form'}`}
-          incrementLabel={`One more reversed copy of ${spell.name}`}
-          decrementLabel={`One fewer reversed copy of ${spell.name}`}
+          incrementLabel={`More copies of ${detail.data?.reversed_form?.name ?? 'the reversed form'}`}
+          decrementLabel={`Fewer copies of ${detail.data?.reversed_form?.name ?? 'the reversed form'}`}
           value={counts[`${spell.id}:true`] ?? 0}
           min={0}
           max={9}
@@ -328,7 +374,7 @@ function PrepareRow({
 }
 
 /** Chooses the spells to memorize, level by level, within the slots the class table lists. */
-function PrepareDialog({ member, model, spellList, arcane, slots, onClose }: PrepareProps) {
+function PrepareDialog({ member, model, spellList, arcane, slots, onClose, onRefused }: PrepareProps) {
   const catalog = useSpellCatalog();
   const { send, pending } = useSendCommand();
   const [error, setError] = useState<string | null>(null);
@@ -337,6 +383,19 @@ function PrepareDialog({ member, model, spellList, arcane, slots, onClose }: Pre
     for (const copy of model.memorized) {
       const key = `${copy.spellId}:${copy.reversed}`;
       initial[key] = (initial[key] ?? 0) + 1;
+    }
+    // With nothing memorized, an arcane caster starts from one copy of each spell in the book, as far as the
+    // slots at each level go. The player changes it before preparing.
+    if (arcane && model.memorized.length === 0) {
+      slots.forEach((n, index) => {
+        const level = index + 1;
+        (catalog.data ?? [])
+          .filter((spell) => spell.level === level && model.spellBook.includes(spell.id))
+          .slice(0, n)
+          .forEach((spell) => {
+            initial[`${spell.id}:false`] = 1;
+          });
+      });
     }
     return initial;
   });
@@ -363,7 +422,10 @@ function PrepareDialog({ member, model, spellList, arcane, slots, onClose }: Pre
       { display: 'inline' },
     );
     if (result.status === 'accepted') onClose();
-    else if (result.status !== 'conflict') setError(result.message);
+    else if (result.status !== 'conflict') {
+      if (onRefused) onRefused(result.message);
+      else setError(result.message);
+    }
   };
 
   return (
@@ -468,7 +530,7 @@ function CastDialog({
   arcane: boolean;
   onClose: () => void;
 }) {
-  const entry = useRulesEntry<SpellDetail>(`spells/${copy.spellId}`);
+  const entry = useSpellDetail(copy.spellId);
   const party = useParty();
   const location = usePartyLocation();
   const { send, pending } = useSendCommand();
@@ -621,15 +683,10 @@ function LearnDialog({
   const { send, pending } = useSendCommand();
   const [spellId, setSpellId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const options = [1, 2, 3, 4, 5, 6]
-    .map((level) => ({
-      label: `${ordinal(level)} level`,
-      options: (catalog.data ?? [])
-        .filter((s) => s.level === level && s.spell_list === spellList && !model.spellBook.includes(s.id))
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .map((s) => ({ value: s.id, label: s.name })),
-    }))
-    .filter((group) => group.options.length > 0);
+  const options = (catalog.data ?? [])
+    .filter((s) => s.spell_list === spellList && !model.spellBook.includes(s.id))
+    .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
+    .map((s) => ({ value: s.id, label: s.name, description: `${ordinal(s.level)} level` }));
 
   const submit = async () => {
     if (!spellId) return;
@@ -675,12 +732,7 @@ function LearnDialog({
           </Banner>
         )}
         <Field label="Spell">
-          <Select
-            value={spellId ?? ''}
-            onValueChange={setSpellId}
-            options={options}
-            placeholder="Choose a spell"
-          />
+          <Combobox value={spellId} onChange={setSpellId} options={options} placeholder="Search spells" />
         </Field>
         {spellId && <SpellDetailBody spellId={spellId} />}
       </div>

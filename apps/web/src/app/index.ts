@@ -5,9 +5,10 @@
  */
 export { describeProblem, displayStringProblem, getApi, isNetworkError, reportError, setApi } from './api';
 export type { ProblemMessage } from './api';
-export { useCurrentUser, useIdentity } from './identity';
+export { isRetiredToken, useCurrentUser, useIdentity } from './identity';
 export type { IdentityState, IdentityStatus } from './identity';
 export { DEFAULT_PREFERENCES, usePreferences, useReduceMotion } from './preferences';
+export { AppKitProvider } from './AppKitProvider';
 export type { DockTabId, MapThemeName, MotionPreference, Preferences } from './preferences';
 export {
   canActForParty,
@@ -20,6 +21,7 @@ export {
 } from './permissions';
 export type { Permission, PermissionContext } from './permissions';
 export { TableProvider, useTableStore, useTableStoreApi } from './table/context';
+export { NoTableProvider } from './table/NoTableProvider';
 export * from './table/hooks';
 export { useAdventureDocument } from './table/referee';
 export { PING_LIFETIME_MS, RESYNC_INTERVAL_MS, announceNotice, useTableSession } from './table/session';
@@ -35,6 +37,8 @@ export type {
 } from './table/store';
 export {
   COMMANDS_PER_SECOND,
+  MAX_QUEUED_COMMANDS,
+  QUEUED_COMMAND_MAX_WAIT_MS,
   useApiAction,
   useSendCommand,
   useSendDeclaration,
@@ -67,7 +71,7 @@ export type {
   PickTarget,
 } from './mapBus';
 export { useTableUi } from './ui';
-export type { CompendiumEntry, TableUiState } from './ui';
+export type { CompendiumEntry, SheetTab, TableUiState } from './ui';
 export {
   ShortcutLayer,
   formatShortcut,
@@ -78,3 +82,26 @@ export {
 } from './shortcuts';
 export type { ActionDefinition, ShortcutDefinition } from './shortcuts';
 export { tokenClass } from './display';
+export { STORAGE_KEYS, readStored, scopedStorage, writeStored } from './storage';
+export type { ScopedStorage, StorageArea } from './storage';
+export { toParamMap } from './params';
+export { useCombatStage } from './combatStage';
+export { battleRound, useBattleRound } from './battle';
+export {
+  cancelRejoin,
+  cancelRejoinOnLeave,
+  isTransientFailure,
+  useDecideRejoin,
+  useRejoinRequests,
+} from './rejoin';
+export {
+  DARKNESS_TEXT,
+  NO_LIGHT_TEXT,
+  lightLine,
+  lightTimeLeft,
+  partyLightFrom,
+  usePartyLight,
+} from './light';
+export type { MemberLight, PartyLight } from './light';
+export { END_GRACE_MS, END_MAX_HOLD_MS, ShownModeProvider, useHeldMode, useShownMode } from './shownMode';
+export type { CombatStageState, PlaybackMemberState, PlaybackMoment } from './combatStage';

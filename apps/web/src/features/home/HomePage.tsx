@@ -8,6 +8,7 @@ import { Badge, Banner, Button, Card, EmptyState, Field, Icon, PageLayout, Skele
 import { HealthBanner } from './HealthBanner';
 import { NameForm } from './NameForm';
 import { ProfileMenu } from './ProfileMenu';
+import { RulesReference } from './RulesReference';
 import styles from './home.module.css';
 
 /**
@@ -54,9 +55,10 @@ function Intro() {
   );
 }
 
-function tableStatus(table: TableSummary): string {
-  if (table.game === null || table.phase === 'lobby') return 'In the lobby';
-  return `${table.game.adventure_name} · ${sessionModeLabel(table.game.mode)}`;
+/** What a table is doing, as separate facts: where it is, and in a game, the adventure and the mode. */
+function tableStatus(table: TableSummary): string[] {
+  if (table.game === null || table.phase === 'lobby') return ['In the lobby'];
+  return [table.game.adventure_name, sessionModeLabel(table.game.mode)];
 }
 
 function TableList({
@@ -112,8 +114,15 @@ function TableList({
               <span className={styles.tableText}>
                 <span className={styles.tableName}>{table.name}</span>
                 <span className={styles.tableMeta}>
-                  {tableStatus(table)} ·{' '}
-                  {table.member_count === 1 ? '1 member' : `${table.member_count} members`}
+                  {[
+                    ...tableStatus(table),
+                    table.member_count === 1 ? '1 member' : `${table.member_count} members`,
+                  ].map((fact, index) => (
+                    <span key={index}>
+                      {index > 0 && <span className="visually-hidden">, </span>}
+                      {fact}
+                    </span>
+                  ))}
                 </span>
               </span>
               <Badge
@@ -142,7 +151,23 @@ function CreateTable() {
   const [hostKey, setHostKey] = useState('');
   const [needsKey, setNeedsKey] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [keyError, setKeyError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // The server says whether creating a table needs the host key, so the field shows before the first attempt.
+  useEffect(() => {
+    let cancelled = false;
+    getApi()
+      .health()
+      .then(
+        (health) => !cancelled && health.host_key_required === true && setNeedsKey(true),
+        // A failed health check leaves the form as it is. Creating the table reports the problem.
+        () => undefined,
+      );
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -158,6 +183,7 @@ function CreateTable() {
     }
     setBusy(true);
     setError(null);
+    setKeyError(null);
     try {
       const table = await getApi().createTable({
         name: trimmed,
@@ -168,7 +194,7 @@ function CreateTable() {
       if (isProblem(problem, 'host_key_required')) {
         const hadKey = needsKey && hostKey.trim() !== '';
         setNeedsKey(true);
-        setError(
+        setKeyError(
           hadKey
             ? "That host key isn't right. Check it with the person who runs this server."
             : 'This server needs a host key to create a table. Enter the key that the person who runs it gave you.',
@@ -186,7 +212,7 @@ function CreateTable() {
       <form className={styles.form} onSubmit={(event) => void submit(event)}>
         <h2 className={styles.cardTitle}>Create a table</h2>
         <p className={styles.cardLead}>You'll be its referee. Invite players with a link from the lobby.</p>
-        <Field label="Table name" error={needsKey ? undefined : (error ?? undefined)}>
+        <Field label="Table name" error={error ?? undefined}>
           <TextInput
             value={name}
             maxLength={LIMITS.tableName}
@@ -195,12 +221,12 @@ function CreateTable() {
           />
         </Field>
         {needsKey && (
-          <Field label="Host key" error={error ?? undefined} hint="Only the host of this server has it.">
+          <Field label="Host key" error={keyError ?? undefined} hint="Only the host of this server has it.">
             <TextInput
               type="password"
               value={hostKey}
               autoComplete="off"
-              autoFocus
+              autoFocus={keyError !== null}
               onChange={(event) => setHostKey(event.target.value)}
             />
           </Field>
@@ -307,7 +333,14 @@ function SignedInHome() {
 export function HomePage() {
   const status = useIdentity((s) => s.status);
   return (
-    <PageLayout headerActions={<ProfileMenu />}>
+    <PageLayout
+      headerActions={
+        <>
+          {status === 'ready' && <RulesReference away />}
+          <ProfileMenu />
+        </>
+      }
+    >
       <div className={styles.stack}>
         <HealthBanner />
         {status === 'unknown' && <Skeleton shape="block" height={240} />}

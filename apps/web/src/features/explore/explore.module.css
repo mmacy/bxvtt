@@ -40,7 +40,7 @@
   display: grid;
   justify-items: end;
   gap: var(--space-2);
-  max-width: calc(100% - 420px);
+  max-width: calc(100% - 364px);
   pointer-events: none;
 }
 
@@ -48,30 +48,14 @@
   pointer-events: auto;
 }
 
-.chromeRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.chromeButton {
-  box-shadow: var(--shadow-1);
-}
-
 .themeSwitch {
-  box-shadow: var(--shadow-1);
+  box-shadow: none;
 }
 
 .levelName {
-  padding: var(--space-1) var(--space-2-5);
-  border: var(--border-hair) solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-surface-2) 88%, transparent);
+  padding: 0 var(--space-2);
   color: var(--color-text-muted);
   font-size: var(--text-sm);
-  box-shadow: var(--shadow-1);
 }
 
 .offLevel {
@@ -79,7 +63,7 @@
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
-  border: var(--border-hair) solid var(--color-border-accent);
+  border: var(--border-hair) solid var(--color-border-strong);
   border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--color-surface-2) 92%, transparent);
   color: var(--color-text);
@@ -87,8 +71,87 @@
   box-shadow: var(--shadow-2);
 }
 
+.measureDistance {
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
+}
+
 .offLevel:not(:has(button)) {
   padding-inline-end: var(--space-3);
+}
+
+.toolbarGroup {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border: var(--border-hair) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-surface-2) 88%, transparent);
+  box-shadow: var(--shadow-1);
+  backdrop-filter: blur(6px);
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.groupDivider {
+  width: 1px;
+  height: 18px;
+  background: var(--color-border);
+}
+
+.lightIndicator {
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
+}
+
+.lightIndicator svg {
+  color: var(--color-gold);
+}
+
+.lightOut,
+.lightOut svg {
+  color: var(--color-warning);
+}
+
+.lightStatic {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.cluster {
+  position: absolute;
+  right: var(--space-3);
+  bottom: var(--space-3);
+  z-index: var(--z-raised);
+  display: grid;
+  justify-items: end;
+  gap: var(--space-1-5);
+}
+
+.clusterRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-1-5);
+}
+
+.minimapFrame {
+  position: relative;
+}
+
+.minimapHide {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  background: color-mix(in srgb, var(--color-surface-2) 80%, transparent);
+}
+
+.minimapShow {
+  box-shadow: var(--shadow-2);
 }
 
 .chromeSide {
@@ -114,13 +177,6 @@
   height: 1px;
   margin: var(--space-0-5) var(--space-1);
   background: var(--color-border);
-}
-
-.chromeBottomRight {
-  position: absolute;
-  right: var(--space-3);
-  bottom: var(--space-3);
-  z-index: var(--z-raised);
 }
 
 .minimapCard {
@@ -166,7 +222,7 @@
 }
 
 .compassNorth {
-  fill: var(--color-accent);
+  fill: var(--color-text-strong);
 }
 
 .compassFacing {
@@ -179,7 +235,7 @@
 }
 
 .compassN {
-  color: var(--color-accent-text);
+  color: var(--color-text-strong);
   font-family: var(--font-display-plain);
   font-weight: var(--weight-bold);
 }
@@ -200,50 +256,21 @@
   border-top: 0;
 }
 
-.chromeBottomLeft {
-  position: absolute;
-  left: var(--space-3);
-  bottom: var(--space-3);
-  z-index: var(--z-raised);
-  max-width: min(420px, calc(100% - 260px));
-}
-
-.chromeBottomLeftRaised {
-  bottom: calc(var(--space-3) + var(--control-lg));
-}
-
-.lightStatus {
+.wanderingChip {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-1-5) var(--space-3);
-  border: var(--border-hair) solid var(--color-border);
+  gap: var(--space-1-5);
+  width: max-content;
+  padding: var(--space-1) var(--space-2-5);
+  border: var(--border-hair) dashed var(--color-referee);
   border-radius: var(--radius-pill);
   background: color-mix(in srgb, var(--color-surface-2) 88%, transparent);
   color: var(--color-text-muted);
-  font-size: var(--text-sm);
-  box-shadow: var(--shadow-1);
-  backdrop-filter: blur(6px);
+  font-size: var(--text-xs);
 }
 
-.lightStatus > svg {
-  flex: none;
-  color: var(--color-gold);
-}
-
-.lightDark {
-  padding-inline-end: var(--space-1);
-  border-color: var(--color-warning);
-  background: color-mix(in srgb, var(--color-surface-2) 94%, transparent);
-  color: var(--color-text-strong);
-}
-
-.lightDark > svg {
-  color: var(--color-warning);
-}
-
-.lightAction {
-  flex: none;
+.wanderingChip > svg {
+  color: var(--color-referee);
 }
 
 /* A hidden anchor where the context menu opens. */
@@ -270,23 +297,6 @@
   top: 0;
   left: 0;
   will-change: transform;
-}
-
-.areaLabel {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  translate: -50% -50%;
-  font-family: var(--font-display-plain);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-wide);
-  white-space: nowrap;
-  text-shadow:
-    0 0 3px var(--halo),
-    0 0 3px var(--halo),
-    0 0 6px var(--halo);
-  opacity: 0.92;
 }
 
 /* Darkness: the party's own cell stays readable, and the dark closes in a few squares out. */
@@ -452,40 +462,6 @@
   }
 }
 
-.measureSvg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-
-.measureLine {
-  stroke: var(--color-accent);
-  stroke-width: 2;
-  stroke-dasharray: 6 5;
-  stroke-linecap: round;
-}
-
-.measureAnchor {
-  width: 0;
-  height: 0;
-}
-
-.measureLabel {
-  position: absolute;
-  left: 10px;
-  top: 10px;
-  padding: var(--space-0-5) var(--space-2);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-2);
-  color: var(--color-text-strong);
-  font-family: var(--font-numeric);
-  font-size: var(--text-md);
-  white-space: nowrap;
-  box-shadow: var(--shadow-2);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .bump,
   .bumpRing,
@@ -518,7 +494,9 @@
 }
 
 .sceneFresh {
-  box-shadow: var(--glow-accent), var(--shadow-3);
+  box-shadow:
+    0 0 0 1px var(--color-border-strong),
+    var(--shadow-3);
 }
 
 .sceneHeader {
@@ -530,7 +508,7 @@
 
 .sceneHeaderIcon {
   flex: none;
-  color: var(--color-accent);
+  color: var(--color-text-subtle);
 }
 
 .sceneTitle {
@@ -687,4 +665,90 @@
   margin: var(--space-2) 0 0;
   color: var(--color-referee);
   font-size: var(--text-sm);
+}
+
+/* The pin list ------------------------------------------------------------------------------------------- */
+
+.pinsRoot {
+  position: relative;
+}
+
+.pinsPanel {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: var(--z-raised);
+  display: grid;
+  gap: var(--space-3);
+  width: min(320px, calc(100vw - 2 * var(--space-6)));
+  padding: var(--space-3);
+  border: var(--border-hair) solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+  box-shadow: var(--shadow-3);
+}
+
+.pinsTitle {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-family: var(--font-display-plain);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+
+.pinsList {
+  display: grid;
+  gap: var(--space-1);
+  max-height: 320px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.pinsItem {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: var(--space-2);
+  padding: var(--space-1-5) 0;
+}
+
+.pinsItem + .pinsItem {
+  border-top: var(--border-hair) solid var(--color-border);
+}
+
+.pinsLabel {
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-3);
+  color: var(--color-text-strong);
+  font-family: var(--font-numeric);
+  font-size: var(--text-xs);
+}
+
+.pinsText {
+  display: grid;
+  gap: var(--space-0-5);
+  min-width: 0;
+}
+
+.pinsNote {
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.pinsMeta {
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+}
+
+.pinsActions {
+  display: flex;
+  gap: var(--space-0-5);
 }

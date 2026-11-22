@@ -53,8 +53,8 @@
   width: var(--control-lg);
   height: var(--control-lg);
   border-radius: var(--radius-pill);
-  background: var(--color-accent-subtle);
-  color: var(--color-accent-text);
+  background: var(--color-surface-3);
+  color: var(--color-text-muted);
 }
 
 .restName {

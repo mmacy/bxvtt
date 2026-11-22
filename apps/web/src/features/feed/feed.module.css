@@ -31,10 +31,6 @@
   border-bottom: var(--border-hair) solid var(--color-border);
 }
 
-.search input::-webkit-search-cancel-button {
-  appearance: none;
-}
-
 .searchCount {
   margin: 0;
   font-size: var(--text-xs);
@@ -197,9 +193,9 @@
 .mark {
   padding: 0 1px;
   border-radius: var(--radius-xs);
-  background: var(--color-accent-subtle);
-  color: var(--color-accent-text);
-  box-shadow: 0 0 0 1px var(--color-border-accent);
+  background: var(--color-warning-subtle);
+  color: var(--color-text-strong);
+  box-shadow: 0 0 0 1px var(--color-warning-strong);
 }
 
 .code {
@@ -220,7 +216,6 @@
   padding: var(--space-4) var(--space-3) var(--space-1);
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-wide);
   color: var(--color-text-subtle);
 }
 
@@ -236,12 +231,12 @@
 
 .unread {
   padding-top: var(--space-2);
-  color: var(--color-accent-text);
+  color: var(--color-info);
 }
 
 .unread::before,
 .unread::after {
-  background: var(--color-border-accent);
+  background: var(--color-info-strong);
 }
 
 .session {
@@ -257,7 +252,7 @@
   align-items: center;
   gap: var(--space-2);
   width: 100%;
-  color: var(--color-accent-text);
+  color: var(--color-text-subtle);
 }
 
 .sessionRule::before,
@@ -265,7 +260,7 @@
   content: '';
   flex: 1;
   height: var(--border-hair);
-  background: linear-gradient(to var(--rule-to, right), transparent, var(--color-border-accent));
+  background: linear-gradient(to var(--rule-to, right), transparent, var(--color-border-strong));
 }
 
 .sessionRule::after {
@@ -358,11 +353,8 @@
 
 .roleTag {
   flex: none;
-  font-size: var(--text-2xs);
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-wide);
+  font-size: var(--text-xs);
   color: var(--color-text-subtle);
-  text-transform: uppercase;
 }
 
 .chatText {
@@ -467,16 +459,6 @@
   min-width: 0;
 }
 
-/* The tumble is inert in the feed, so its skip button can't be pressed. */
-.rollDice button {
-  display: none;
-}
-
-/* The roll header already names the dice, so the kit's formula line is redundant here. */
-.rollDice > [role='group'] > [aria-hidden='true']:first-child {
-  display: none;
-}
-
 .breakdown {
   display: inline-flex;
   flex-wrap: wrap;
@@ -512,7 +494,7 @@
   font-size: var(--text-3xl);
   font-weight: var(--weight-bold);
   line-height: 1;
-  color: var(--color-accent-text);
+  color: var(--color-text-strong);
 }
 
 /* Game entries */
@@ -662,7 +644,20 @@
   color: var(--color-referee);
 }
 
+.detail p {
+  margin: 0;
+}
+
+.refereeDetail {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-referee);
+}
+
 .detail {
+  display: grid;
+  gap: 2px;
   margin: 2px 0 var(--space-1) calc(16px + var(--space-2) + var(--space-1-5));
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);
@@ -691,9 +686,8 @@
   color: var(--color-gold);
 }
 
-.cat-quest .lineIcon,
-.cat-journal .lineIcon {
-  color: var(--color-accent-text);
+.cat-quest .lineIcon {
+  color: var(--color-info);
 }
 
 .cat-encounter .lineIcon {
@@ -744,14 +738,12 @@
   background: var(--color-gold-subtle);
 }
 
-.weight-major.cat-quest,
-.weight-major.cat-journal {
-  --major-edge: var(--color-accent);
+.weight-major.cat-quest {
+  --major-edge: var(--color-info);
 }
 
-.weight-major.cat-quest > .lineRow,
-.weight-major.cat-journal > .lineRow {
-  background: var(--color-accent-subtle);
+.weight-major.cat-quest > .lineRow {
+  background: var(--color-info-subtle);
 }
 
 .weight-major.cat-encounter {
@@ -799,23 +791,30 @@
   color: var(--color-danger);
 }
 
-.journalLine .lineText {
+.handout {
+  display: grid;
+  gap: var(--space-1);
+  margin-block: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+}
+
+.handoutLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--color-paper-ink-subtle);
+}
+
+.handoutText {
+  margin: 0;
   font-family: var(--font-display);
   font-variation-settings: var(--font-display-plain);
   font-style: italic;
-  font-weight: var(--weight-regular);
+  font-size: var(--text-md);
   line-height: var(--leading-normal);
-}
-
-.journalLabel {
-  margin-right: var(--space-1-5);
-  font-family: var(--font-ui);
-  font-size: var(--text-2xs);
-  font-style: normal;
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  color: var(--color-accent-text);
+  color: var(--color-paper-ink);
 }
 
 .hiddenLine > .lineRow {

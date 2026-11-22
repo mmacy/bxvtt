@@ -1,7 +1,7 @@
 import type { StoredCharacter } from '@bxvtt/shared/protocol';
 import { capitalizeFirst, ordinal, prettifyId, spellCatalogName } from '@bxvtt/shared/text';
 import { useMemo } from 'react';
-import { useRulesEntry, useSpellCatalog, type ClassDetail } from '@/app';
+import { useSpellCatalog } from '@/app';
 import { CoinPurse, Parchment } from '@/ui';
 import { ItemDetailButton } from './ItemDetail';
 import { equippedEntries, sheetFromStored, type InventoryEntry, type SheetModel } from './model';
@@ -17,6 +17,7 @@ import {
   XpProgress,
 } from './SheetSections';
 import styles from './sheet.module.css';
+import { useClassDetail } from './catalogs';
 
 const SLOT_LABELS: Record<string, string> = {
   armour: 'Worn',
@@ -35,7 +36,6 @@ function EntryList({ entries }: { entries: InventoryEntry[] }) {
             <span className={styles.itemName}>{entry.name}</span>
             {entry.slot !== 'pack' && <span className={styles.itemFacts}>{SLOT_LABELS[entry.slot]}</span>}
           </span>
-          {entry.quantity > 1 && <span className={styles.qty}>{entry.quantity}</span>}
           <span className={styles.itemActions}>
             <ItemDetailButton entry={entry} />
           </span>
@@ -69,7 +69,7 @@ function ReadOnlySpells({ model }: { model: SheetModel }) {
   const catalog = useSpellCatalog();
   if (model.spellBook.length === 0 && model.memorized.length === 0) return null;
   const name = (id: string) =>
-    catalog.data?.find((s) => s.id === id)?.name ?? spellCatalogName(id) ?? capitalizeFirst(prettifyId(id));
+    catalog.data?.find((s) => s.id === id)?.name ?? capitalizeFirst(spellCatalogName(id) ?? prettifyId(id));
   const level = (id: string) => catalog.data?.find((s) => s.id === id)?.level;
   return (
     <section className={styles.section} aria-labelledby="stored-spells">
@@ -97,7 +97,7 @@ function ReadOnlySpells({ model }: { model: SheetModel }) {
  * actions: a stored character changes only in a game.
  */
 export function StoredSheet({ character, color }: { character: StoredCharacter; color?: string }) {
-  const classEntry = useRulesEntry<ClassDetail>(`classes/${character.class_id}`);
+  const classEntry = useClassDetail(character.class_id);
   const model = useMemo(() => {
     const progression = classEntry.data?.progression;
     const next = progression?.find((row) => row.level === character.level + 1);

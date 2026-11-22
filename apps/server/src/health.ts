@@ -30,25 +30,50 @@ export async function checkHealth(ctx: Context): Promise<Health> {
     error =
       caught instanceof BxapiProblem
         ? `bxapi answered ${caught.status} ${caught.code}.`
-        : 'bxapi is unreachable. Start it with scripts/dev-bxapi.sh or check BXAPI_URL.';
+        : `bxapi is unreachable at ${ctx.config.bxapiUrl}. Check that bxapi is running and that BXAPI_URL is its address. In development, npm run dev:bxapi starts one.`;
   }
   return {
     status: meta !== null && error === null ? 'ok' : 'degraded',
     version: SERVER_VERSION,
+    host_key_required: ctx.config.hostKey !== null,
     uptime_seconds: Math.round((Date.now() - ctx.startedAt) / 1000),
     bxapi: { reachable: meta !== null, meta, error },
   };
 }
 
 /**
- * Registers `GET /api/health`, which needs no token. It answers 200 when bxapi is reachable and 503 otherwise.
+ * The part of the health that anyone may read: the status, the version, whether a host key is needed, and
+ * whether bxapi is reachable. bxapi's versions and storage, and the cause of a failure, go only to a user.
+ *
+ * @param health - The full health.
+ */
+export function publicHealth(health: Health): Health {
+  return {
+    ...health,
+    bxapi: {
+      reachable: health.bxapi.reachable,
+      meta: null,
+      error: health.bxapi.error === null ? null : "bxvtt can't use bxapi, the rules server, now.",
+    },
+  };
+}
+
+/**
+ * Registers `GET /api/health`, which needs no token. It answers 200 when bxapi is reachable and 503 otherwise. A
+ * request with a user's token gets bxapi's details too.
  *
  * @param app - The Fastify instance.
  * @param ctx - The server's services.
  */
 export function registerHealthRoute(app: FastifyInstance, ctx: Context): void {
-  app.get('/api/health', async (_request, reply) => {
+  app.get('/api/health', async (request, reply) => {
     const health = await checkHealth(ctx);
-    return reply.status(health.bxapi.reachable ? 200 : 503).send(health);
+    const header = request.headers.authorization;
+    const token = typeof header === 'string' ? /^Bearer\s+(\S+)$/i.exec(header)?.[1] : undefined;
+    // A token is optional here, so a wrong one counts as none and not as a failed sign-in.
+    const user = token !== undefined && token.length <= 200 ? ctx.users.byToken(token) : null;
+    return reply
+      .status(health.bxapi.reachable ? 200 : 503)
+      .send(user === null ? publicHealth(health) : health);
   });
 }
