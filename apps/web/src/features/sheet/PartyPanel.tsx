@@ -25,6 +25,7 @@ import {
   ConditionChip,
   EmptyState,
   HpBar,
+  LinkButton,
   SectionLabel,
   Icon,
   IconButton,
@@ -33,6 +34,8 @@ import {
 } from '@/ui';
 import { effectLabel, effectRemaining } from './actions';
 import { conditionTone } from './SheetSections';
+import { useFullCatalog } from './catalogs';
+import { classMagic, spellSlotsAt } from '../wizard/tables';
 import styles from './party.module.css';
 
 /**
@@ -83,6 +86,14 @@ export function PartyPanel() {
   const showLight = location?.kind === 'dungeon' && !ended;
   // The same words as the map's light chip, from one place in the app layer.
   const light = usePartyLight();
+  const classes = useFullCatalog('classes');
+  const inTown = location?.kind === 'town' && !ended;
+  /** A caster whose class table gives slots at their level, with nothing memorized. */
+  const unprepared = (member: MemberView) =>
+    member.memorized_spells.length === 0 &&
+    member.conditions.indexOf('dead') === -1 &&
+    classMagic(classes.byId.get(member.class_id)) !== null &&
+    spellSlotsAt(classes.byId.get(member.class_id), member.level).some((n) => n > 0);
   const seats = useSeats();
   const members = useMembers();
   const me = useTableUser();
@@ -297,19 +308,32 @@ export function PartyPanel() {
                   />
                 </div>
               )}
-              <MemberRow
-                member={member}
-                rank={index + 1}
-                color={owner?.color}
-                controller={
-                  owner ? { name: owner.name, label: owner.user_id === me?.id ? 'You' : owner.name } : null
-                }
-                lit={lights.some((l) => l.character_id === member.id)}
-                effects={(view?.effects ?? []).filter(
-                  (e) => e.character_id === member.id && e.kind !== 'light',
+              <div className={styles.rowStack}>
+                <MemberRow
+                  member={member}
+                  rank={index + 1}
+                  color={owner?.color}
+                  controller={
+                    owner ? { name: owner.name, label: owner.user_id === me?.id ? 'You' : owner.name } : null
+                  }
+                  lit={lights.some((l) => l.character_id === member.id)}
+                  effects={(view?.effects ?? []).filter(
+                    (e) => e.character_id === member.id && e.kind !== 'light',
+                  )}
+                  onOpen={() => openSheet(member.id)}
+                />
+                {inTown && unprepared(member) && (
+                  <LinkButton
+                    tone="quiet"
+                    className={styles.spellMarker}
+                    onClick={() => openSheet(member.id, 'spells')}
+                    aria-label={`${member.name} has no spells memorized. Open the Spells tab.`}
+                  >
+                    <Icon name="spell" size={12} />
+                    No spells memorized
+                  </LinkButton>
                 )}
-                onOpen={() => openSheet(member.id)}
-              />
+              </div>
             </li>
           );
         })}

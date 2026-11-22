@@ -11,7 +11,7 @@ import { emptyDraft, goldKey, parseDraft, requestFromDraft, type WizardDraft } f
 import { applyKit } from './kits';
 import { suggestName } from './names';
 import { checkChoices, explainCreationError, explainInvalid } from './server';
-import { extraLanguageCount, headlineModifier, xpModifierFor, type Scores } from './tables';
+import { casterNextStep, extraLanguageCount, headlineModifier, xpModifierFor, type Scores } from './tables';
 
 const tables = catalog.abilities as unknown as AbilityTables;
 const fighter = catalog.details.fighter as unknown as ClassDetail;
@@ -213,5 +213,31 @@ describe('autoEquip', () => {
     expect(autoEquip('sword', ['plate_mail'], byId)).toBe(true);
     expect(autoEquip('dagger', ['sword'], byId)).toBe(false);
     expect(autoEquip('torch', [], byId)).toBe(false);
+  });
+});
+
+describe('casterNextStep', () => {
+  const mu = catalog.details.magic_user as unknown as ClassDetail;
+  it('tells an arcane caster when the first spell gets memorized', () => {
+    expect(casterNextStep('Tamsin', mu, ['Sleep'])).toBe(
+      "Tamsin starts with Sleep in the spell book, and memorizes it after the party's first night of rest.",
+    );
+  });
+  it('says nothing for a class without spells', () => {
+    expect(casterNextStep('Brenna', fighter, [])).toBeNull();
+  });
+  it("doesn't promise spells the class table doesn't give at first level", () => {
+    const cleric = {
+      ...mu,
+      id: 'cleric',
+      abilities: [{ tag: 'divine_magic', name: 'Divine Magic', prose: '', manual: false, params: {} }],
+      progression: mu.progression.map((row) => ({
+        ...row,
+        spell_slots: row.level === 1 ? [0, 0, 0, 0, 0] : [1, 0, 0, 0, 0],
+      })),
+    } as unknown as ClassDetail;
+    expect(casterNextStep('Osric', cleric, [])).toBe(
+      'Osric casts no spells at first level and gains spell slots at level 2.',
+    );
   });
 });

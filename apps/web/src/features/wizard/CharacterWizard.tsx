@@ -1,6 +1,6 @@
 import type { AbilityTables } from '@bxvtt/shared/bxapi';
 import type { CharacterRequest, StoredCharacter } from '@bxvtt/shared/protocol';
-import { classLabel, emptyContext, resolveItemNoun } from '@bxvtt/shared/text';
+import { classLabel, count, emptyContext, resolveItemNoun } from '@bxvtt/shared/text';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   displayStringProblem,
@@ -35,7 +35,7 @@ import { OutfitStep, cartCost, type GoldState } from './OutfitStep';
 import { ReviewStep } from './ReviewStep';
 import { RollStep } from './RollStep';
 import { checkChoices, explainCreationError, explainInvalid, type WizardProblem } from './server';
-import { classMagic, extraLanguageCount, readScores, spellSlotsAt } from './tables';
+import { casterNextStep, classMagic, extraLanguageCount, readScores, spellSlotsAt } from './tables';
 import styles from './wizard.module.css';
 import { useClassDetail } from '../sheet/catalogs';
 
@@ -446,6 +446,14 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
 
   const title = created ? `${created.name} is ready` : 'Create a character';
 
+  const createdNext = created
+    ? casterNextStep(
+        created.name,
+        detail,
+        created.character.spell_book.map((id) => spellCatalog.data?.find((s) => s.id === id)?.name ?? id),
+      )
+    : null;
+
   let body;
   if (created) {
     body = (
@@ -464,8 +472,9 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
             </>
           }
         >
-          The rules engine rolled {created.character.max_hp} hit points and stored the character. You can
-          bring {created.name} to any table.
+          The rules engine rolled {count(created.character.max_hp, 'hit point')} and stored the character. You
+          can bring {created.name} to any table.
+          {createdNext && ` ${createdNext}`}
         </Banner>
         <StoredSheet character={created} color={user?.color} />
       </div>

@@ -3,6 +3,7 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { resetMyCharacters } from '@/app';
 import { useCombatStage, useTableUi } from '@/app';
+import catalog from '../wizard/__fixtures__/catalog.json';
 import stored from '../wizard/__fixtures__/stored.json';
 import { StoredCharacterCard } from './StoredCharacterCard';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
@@ -253,5 +254,67 @@ describe('combat playback', () => {
     expect(screen.queryByText('Dead')).toBeNull();
     act(() => useCombatStage.getState().setPlaying(false));
     expect(await screen.findByText('Dead')).toBeInTheDocument();
+  });
+});
+
+describe('a caster with nothing memorized', () => {
+  /** The exploring snapshot with Wren as a magic-user who knows Sleep and has memorized nothing. */
+  function casterSnapshot(stage: 'exploring' | 'town') {
+    const snapshot = fixtureSnapshot(stage, 'player');
+    const party = snapshot.game?.view.party ?? [];
+    const wren = party[1];
+    if (!wren) throw new Error('no Wren');
+    party[1] = { ...wren, class_id: 'magic_user', spell_book: ['sleep'], memorized_spells: [] };
+    return { snapshot, wren: party[1] };
+  }
+  function casterApi() {
+    const api = createFakeApi();
+    api.fullCatalog.mockImplementation(async (name) =>
+      name === 'classes'
+        ? ({ catalog: name, total: 1, items: [catalog.details.magic_user] } as never)
+        : ({ catalog: name, total: 0, items: [] } as never),
+    );
+    return api;
+  }
+
+  it('says why the caster cannot cast and shows the refusal where the player asked', async () => {
+    const { snapshot, wren } = casterSnapshot('exploring');
+    const api = casterApi();
+    const game = snapshot.game;
+    if (!game) throw new Error('no game');
+    api.sendCommand.mockResolvedValue({
+      accepted: false,
+      rejections: [{ code: 'magic.memorize.needs_sleep', params: { character: wren.id } }],
+      events: [],
+      messages: [],
+      game,
+    } as unknown as CommandResult);
+    const { user } = renderWithTable(<CharacterSheet memberId={wren.id} onClose={() => {}} />, {
+      snapshot,
+      api,
+    });
+    await user.click(await screen.findByRole('tab', { name: 'Spells' }));
+    expect(
+      await screen.findByText("Wren knows Sleep but hasn't memorized it, so they can't cast it yet."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("A caster prepares spells after a night's rest.")).toBeInTheDocument();
+    await user.click(screen.getAllByRole('button', { name: 'Prepare spells' })[0] as HTMLElement);
+    const dialog = await screen.findByRole('dialog', { name: /Prepare/ });
+    await user.click(within(dialog).getByRole('button', { name: 'Prepare spells' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: /Prepare/ })).toBeNull());
+    expect(screen.queryByText("A caster prepares spells after a night's rest.")).toBeNull();
+    expect(api.sendCommand).toHaveBeenCalledWith(
+      expect.any(String),
+      { command_type: 'prepare_spells', character_id: wren.id, selections: expect.any(Array) },
+      game.revision,
+    );
+  });
+
+  it('marks the caster in the party panel while the party is in town', async () => {
+    const { snapshot, wren } = casterSnapshot('town');
+    const { user } = renderWithTable(<PartyPanel />, { snapshot, api: casterApi() });
+    await user.click(await screen.findByRole('button', { name: /Wren has no spells memorized/ }));
+    expect(useTableUi.getState().sheetMemberId).toBe(wren.id);
+    expect(useTableUi.getState().sheetTab).toBe('spells');
   });
 });

@@ -12,7 +12,7 @@ import type { ClassDetail } from '@/app';
 import { Badge, Banner, CoinPurse, Parchment, StatBox, formatModifier } from '@/ui';
 import type { WizardDraft } from './draft';
 import { cartPhrase, type CartLine } from './kits';
-import { ABILITIES, headlineModifier, xpModifierFor, type Scores } from './tables';
+import { ABILITIES, casterNextStep, headlineModifier, xpModifierFor, type Scores } from './tables';
 import { RuleLink } from '../sheet/RuleLink';
 import styles from './wizard.module.css';
 
@@ -58,6 +58,11 @@ export function ReviewStep({
   const con = tables ? headlineModifier(tables, 'con', scores.con) : undefined;
   const languages = [...(detail?.languages ?? []), ...draft.languages];
   const gear = cartNames(draft.cart, draft.equip, equipment);
+  const nextStep = casterNextStep(
+    draft.name.trim() || 'Your character',
+    detail,
+    draft.spells.map((id) => spells?.find((s) => s.id === id)?.name ?? id),
+  );
   const worn = gear.filter((item) => item.equipped).map((item) => item.name.toLowerCase());
   const unworn = gear.filter((item) => !item.equipped && (item.kind === 'armour' || item.kind === 'weapon'));
   const edit = (step: WizardDraft['step'], label: string) => (
@@ -164,6 +169,7 @@ export function ReviewStep({
               </p>
             </>
           )}
+          {nextStep && <p className={styles.reviewNote}>{nextStep}</p>}
         </section>
       </div>
 

@@ -69,7 +69,7 @@ function ReadOnlySpells({ model }: { model: SheetModel }) {
   const catalog = useSpellCatalog();
   if (model.spellBook.length === 0 && model.memorized.length === 0) return null;
   const name = (id: string) =>
-    catalog.data?.find((s) => s.id === id)?.name ?? spellCatalogName(id) ?? capitalizeFirst(prettifyId(id));
+    catalog.data?.find((s) => s.id === id)?.name ?? capitalizeFirst(spellCatalogName(id) ?? prettifyId(id));
   const level = (id: string) => catalog.data?.find((s) => s.id === id)?.level;
   return (
     <section className={styles.section} aria-labelledby="stored-spells">

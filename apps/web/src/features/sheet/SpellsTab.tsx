@@ -1,5 +1,5 @@
 import type { MemberView, SpellSummary } from '@bxvtt/shared/bxapi';
-import { capitalizeFirst, ordinal, prettifyId, spellCatalogName } from '@bxvtt/shared/text';
+import { capitalizeFirst, joinList, ordinal, prettifyId, spellCatalogName } from '@bxvtt/shared/text';
 import { useMemo, useState } from 'react';
 import { useParty, usePartyLocation, useSendCommand, useSpellCatalog } from '@/app';
 import {
@@ -28,7 +28,7 @@ import { useClassDetail, useSpellDetail } from './catalogs';
 
 /** A spell's name from the catalog, or the built-in name. */
 function nameOf(id: string, catalog: readonly SpellSummary[] | null): string {
-  return catalog?.find((s) => s.id === id)?.name ?? spellCatalogName(id) ?? capitalizeFirst(prettifyId(id));
+  return catalog?.find((s) => s.id === id)?.name ?? capitalizeFirst(spellCatalogName(id) ?? prettifyId(id));
 }
 
 /** A spell's full text: the introduction and each way to cast it. */
@@ -87,7 +87,8 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
   const prepare = useMemberCommand('prepare_spells', member.id);
   const learn = useMemberCommand('learn_spell', member.id);
   const cast = useMemberCommand('cast_spell', member.id);
-  const [preparing, setPreparing] = useState(false);
+  const [preparing, setPreparing] = useState<'header' | 'notice' | null>(null);
+  const [prepareRefusal, setPrepareRefusal] = useState<string | null>(null);
   const [casting, setCasting] = useState<{ spellId: string; reversed: boolean } | null>(null);
   const [learning, setLearning] = useState(false);
   const spells = catalog.data;
@@ -104,9 +105,44 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
   }, [model.memorized]);
 
   const blocked = [prepare, learn, cast].find((c) => c.legal !== null && !c.permission.allowed);
+  const bookNames = model.spellBook.map((id) => nameOf(id, spells));
+  // A caster whose class table gives slots at this level but who has nothing memorized can't cast yet.
+  const unprepared = magic !== null && model.memorized.length === 0 && slots.some((n) => n > 0);
 
   return (
     <div className={styles.tabPanel}>
+      {unprepared && (
+        <Banner
+          tone={prepareRefusal ? 'warning' : 'info'}
+          icon="book"
+          title={
+            magic.kind === 'arcane' && bookNames.length > 0
+              ? `${member.name} knows ${joinList(bookNames)} but hasn't memorized ${
+                  bookNames.length === 1 ? 'it' : 'them'
+                }, so they can't cast ${bookNames.length === 1 ? 'it' : 'them'} yet.`
+              : `${member.name} has no spells memorized, so they can't cast any yet.`
+          }
+          actions={
+            prepare.legal ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                icon="book"
+                disabled={!prepare.permission.allowed}
+                title={prepare.permission.reason ?? undefined}
+                onClick={() => {
+                  setPrepareRefusal(null);
+                  setPreparing('notice');
+                }}
+              >
+                Prepare spells
+              </Button>
+            ) : undefined
+          }
+        >
+          {prepareRefusal ?? "A caster prepares spells after a night's rest."}
+        </Banner>
+      )}
       {blocked && !blocked.permission.allowed && (
         <Banner tone="neutral" icon="lock">
           {blocked.permission.reason}
@@ -117,14 +153,14 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
           <h3 id="spells-memorized" className={styles.sectionTitle}>
             Memorized spells
           </h3>
-          {prepare.legal && (
+          {prepare.legal && !unprepared && (
             <Button
               size="sm"
               variant="secondary"
               icon="book"
               disabled={!prepare.permission.allowed}
               title={prepare.permission.reason ?? undefined}
-              onClick={() => setPreparing(true)}
+              onClick={() => setPreparing('header')}
             >
               Prepare spells
             </Button>
@@ -245,7 +281,15 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
           spellList={magic.spellList}
           arcane={magic.kind === 'arcane'}
           slots={slots}
-          onClose={() => setPreparing(false)}
+          onClose={() => setPreparing(null)}
+          onRefused={
+            preparing === 'notice'
+              ? (message) => {
+                  setPrepareRefusal(message);
+                  setPreparing(null);
+                }
+              : undefined
+          }
         />
       )}
       {casting && (
@@ -282,6 +326,8 @@ interface PrepareProps {
   arcane: boolean;
   slots: number[];
   onClose: () => void;
+  /** Takes a refusal back to where the player asked to prepare, instead of showing it in the dialog. */
+  onRefused?: (message: string) => void;
 }
 
 function PrepareRow({
@@ -328,7 +374,7 @@ function PrepareRow({
 }
 
 /** Chooses the spells to memorize, level by level, within the slots the class table lists. */
-function PrepareDialog({ member, model, spellList, arcane, slots, onClose }: PrepareProps) {
+function PrepareDialog({ member, model, spellList, arcane, slots, onClose, onRefused }: PrepareProps) {
   const catalog = useSpellCatalog();
   const { send, pending } = useSendCommand();
   const [error, setError] = useState<string | null>(null);
@@ -337,6 +383,19 @@ function PrepareDialog({ member, model, spellList, arcane, slots, onClose }: Pre
     for (const copy of model.memorized) {
       const key = `${copy.spellId}:${copy.reversed}`;
       initial[key] = (initial[key] ?? 0) + 1;
+    }
+    // With nothing memorized, an arcane caster starts from one copy of each spell in the book, as far as the
+    // slots at each level go. The player changes it before preparing.
+    if (arcane && model.memorized.length === 0) {
+      slots.forEach((n, index) => {
+        const level = index + 1;
+        (catalog.data ?? [])
+          .filter((spell) => spell.level === level && model.spellBook.includes(spell.id))
+          .slice(0, n)
+          .forEach((spell) => {
+            initial[`${spell.id}:false`] = 1;
+          });
+      });
     }
     return initial;
   });
@@ -363,7 +422,10 @@ function PrepareDialog({ member, model, spellList, arcane, slots, onClose }: Pre
       { display: 'inline' },
     );
     if (result.status === 'accepted') onClose();
-    else if (result.status !== 'conflict') setError(result.message);
+    else if (result.status !== 'conflict') {
+      if (onRefused) onRefused(result.message);
+      else setError(result.message);
+    }
   };
 
   return (

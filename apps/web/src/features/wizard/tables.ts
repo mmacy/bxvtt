@@ -4,6 +4,7 @@
  * functions only look a score up in a table row, the way a player reads the table in the rulebook.
  */
 import type { AbilityTables } from '@bxvtt/shared/bxapi';
+import { joinList } from '@bxvtt/shared/text';
 import type { ClassDetail } from '@/app';
 
 /** The six abilities in the order B/X lists them, which is also the order bxapi rolls them. */
@@ -203,4 +204,37 @@ export function classMagic(detail: ClassDetail | null | undefined): ClassMagic |
 export function spellSlotsAt(detail: ClassDetail | null | undefined, level: number): number[] {
   const row = detail?.progression.find((entry) => entry.level === level);
   return row?.spell_slots ?? [];
+}
+
+/** The first level at which the class table gives any spell slot, or `null` for a class without one. */
+export function firstSpellLevel(detail: ClassDetail | null | undefined): number | null {
+  const row = detail?.progression.find((entry) => entry.spell_slots.some((n) => n > 0));
+  return row?.level ?? null;
+}
+
+/**
+ * What happens next for a new caster, in one sentence, from the class table: an arcane caster memorizes the
+ * starting spells after the first night's rest, and a class with no slots at first level casts nothing yet.
+ *
+ * @param name - The character's name.
+ * @param detail - The class entry.
+ * @param spellNames - The names of the starting spells.
+ * @returns The sentence, or `null` for a class that casts no spells.
+ */
+export function casterNextStep(
+  name: string,
+  detail: ClassDetail | null | undefined,
+  spellNames: readonly string[],
+): string | null {
+  const magic = classMagic(detail);
+  if (!magic) return null;
+  const first = firstSpellLevel(detail);
+  if (first === null) return null;
+  if (first > 1) return `${name} casts no spells at first level and gains spell slots at level ${first}.`;
+  if (magic.kind === 'arcane' && spellNames.length > 0) {
+    return `${name} starts with ${joinList(spellNames)} in the spell book, and memorizes ${
+      spellNames.length === 1 ? 'it' : 'them'
+    } after the party's first night of rest.`;
+  }
+  return `${name} prepares spells after the party's first night of rest.`;
 }
