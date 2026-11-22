@@ -1,11 +1,51 @@
-import { usePartyMember } from '@/app';
-import { Drawer, EmptyState } from '@/ui';
+import { useMemo, useState } from 'react';
+import { useMembers, usePartyMember, usePlayerView, useSeats, useTableUser, useTextContext } from '@/app';
+import {
+  Avatar,
+  ConditionChip,
+  Drawer,
+  EmptyState,
+  Parchment,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@/ui';
+import { effectLabel, effectRemaining } from './actions';
+import { InventoryTab } from './InventoryTab';
+import { sheetFromMember } from './model';
+import { RefereeNotes } from './RefereeNotes';
+import {
+  AbilityScores,
+  Conditions,
+  Languages,
+  SavingThrows,
+  ScoreModifiers,
+  SheetHeader,
+  ThiefSkills,
+  VitalsRow,
+  XpProgress,
+} from './SheetSections';
+import { SpellsTab, useHasSpells } from './SpellsTab';
+import styles from './sheet.module.css';
 
 export interface CharacterSheetProps {
   /** The party member to show, such as `character-0001`, or `null` when the sheet is closed. */
   memberId: string | null;
   /** Closes the sheet. */
   onClose: () => void;
+}
+
+/** Who plays a member: the seat owner with their color, or the referee for an empty seat. */
+function useController(memberId: string | null) {
+  const seats = useSeats();
+  const members = useMembers();
+  const me = useTableUser();
+  return useMemo(() => {
+    const seat = seats.find((s) => s.member_id === memberId);
+    const owner = seat?.user_id ? (members.find((m) => m.user_id === seat.user_id) ?? null) : null;
+    return { owner, mine: owner !== null && owner.user_id === me?.id, empty: !seat?.user_id };
+  }, [seats, members, memberId, me]);
 }
 
 /**
@@ -21,13 +61,119 @@ export function CharacterSheet({ memberId, onClose }: CharacterSheetProps) {
         if (!open) onClose();
       }}
       title={member?.name ?? 'Character sheet'}
-      width="min(560px, 94vw)"
+      description={member ? 'Character sheet' : undefined}
+      hideTitle={member !== null}
+      width="min(700px, 96vw)"
+      flush
     >
-      <EmptyState
-        icon="scroll"
-        title="Character sheet"
-        description="The full sheet shows here: abilities, saving throws, inventory, spells, and actions."
-      />
+      {member === null ? (
+        <EmptyState
+          icon="scroll"
+          title="This character isn't in the party"
+          description="They may have left the game. Pick another member in the party panel."
+        />
+      ) : (
+        <SheetContent memberId={member.id} />
+      )}
     </Drawer>
+  );
+}
+
+function SheetContent({ memberId }: { memberId: string }) {
+  const member = usePartyMember(memberId);
+  const ctx = useTextContext();
+  const view = usePlayerView();
+  const controller = useController(memberId);
+  const [tab, setTab] = useState('sheet');
+  const model = useMemo(() => (member ? sheetFromMember(member, ctx) : null), [member, ctx]);
+  const hasSpells = useHasSpells(model);
+  if (!member || !model) return null;
+  const effects = (view?.effects ?? []).filter((e) => e.character_id === memberId);
+  const deprivation = view?.deprivation[memberId];
+
+  const who = controller.owner ? (
+    <>
+      <Avatar name={controller.owner.name} color={controller.owner.color} size="xs" decorative />
+      {controller.mine ? 'You play this character' : `Played by ${controller.owner.name}`}
+    </>
+  ) : (
+    'Empty seat. The referee plays this character.'
+  );
+
+  return (
+    <div className={styles.sheetScroll}>
+      <Parchment variant="plain" className={styles.sheetPaper}>
+        <SheetHeader model={model} color={controller.owner?.color} controller={who} />
+        <Tabs value={tab} onValueChange={setTab} variant="line">
+          <TabsList aria-label="Sheet sections" className={styles.tabsBar}>
+            <TabsTrigger value="sheet" icon="scroll">
+              Sheet
+            </TabsTrigger>
+            <TabsTrigger value="inventory" icon="chest">
+              Inventory
+            </TabsTrigger>
+            {hasSpells && (
+              <TabsTrigger value="spells" icon="spell">
+                Spells
+              </TabsTrigger>
+            )}
+          </TabsList>
+          <TabsContent value="sheet">
+            <div className={styles.tabPanel}>
+              <VitalsRow model={model} />
+              <XpProgress model={model} />
+              {(model.conditions.length > 0 || effects.length > 0 || deprivation) && (
+                <section className={styles.section} aria-labelledby="sheet-conditions">
+                  <h3 id="sheet-conditions" className={styles.sectionTitle}>
+                    Conditions and effects
+                  </h3>
+                  <Conditions conditions={model.conditions} compact />
+                  {effects.length > 0 && (
+                    <ul className={styles.chips} aria-label="Active effects">
+                      {effects.map((effect, index) => (
+                        <li key={`${effect.kind}-${index}`}>
+                          <ConditionChip
+                            label={effectLabel(effect.kind)}
+                            tone={effect.kind === 'light' ? 'boon' : 'magic'}
+                            icon={effect.kind === 'light' ? 'torch' : undefined}
+                            duration={effectRemaining(effect.remaining_rounds)}
+                          />
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {deprivation && (
+                    <p className={styles.note}>
+                      {(deprivation.food_days ?? 0) > 0 && `${deprivation.food_days} days without food. `}
+                      {(deprivation.water_days ?? 0) > 0 && `${deprivation.water_days} days without water.`}
+                    </p>
+                  )}
+                </section>
+              )}
+              <AbilityScores model={model} />
+              <div className={styles.columns}>
+                <div className={styles.column}>
+                  <ScoreModifiers model={model} />
+                  <ThiefSkills skills={model.thiefSkills} />
+                </div>
+                <div className={styles.column}>
+                  <SavingThrows model={model} />
+                  <Languages languages={model.languages} />
+                </div>
+              </div>
+              <RefereeNotes memberId={memberId} />
+            </div>
+          </TabsContent>
+          <TabsContent value="inventory">
+            <InventoryTab member={member} model={model} />
+          </TabsContent>
+          {hasSpells && (
+            <TabsContent value="spells">
+              <SpellsTab member={member} model={model} />
+            </TabsContent>
+          )}
+        </Tabs>
+      </Parchment>
+    </div>
   );
 }

@@ -1,5 +1,43 @@
-import type { StoredCharacter } from '@bxvtt/shared/protocol';
-import { Button, Dialog, EmptyState } from '@/ui';
+import type { AbilityTables } from '@bxvtt/shared/bxapi';
+import type { CharacterRequest, StoredCharacter } from '@bxvtt/shared/protocol';
+import { classLabel } from '@bxvtt/shared/text';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  displayStringProblem,
+  getApi,
+  useClassCatalog,
+  useCurrentUser,
+  useEquipmentCatalog,
+  useLanguageCatalog,
+  useRuleTable,
+  useRulesEntry,
+  useSpellCatalog,
+  type ClassDetail,
+} from '@/app';
+import { Banner, Button, ConfirmDialog, Dialog, Stepper, type StepperStep } from '@/ui';
+import { StoredSheet } from '../sheet/StoredSheet';
+import { AdjustStep, type CheckState } from './AdjustStep';
+import { ClassStep } from './ClassStep';
+import {
+  STEP_IDS,
+  adjustedScores,
+  emptyDraft,
+  goldKey,
+  hasAdjustment,
+  loadDraft,
+  requestFromDraft,
+  saveDraft,
+  type StepId,
+  type WizardDraft,
+} from './draft';
+import { IdentityStep } from './IdentityStep';
+import { applyKit } from './kits';
+import { OutfitStep, cartCost, type GoldState } from './OutfitStep';
+import { ReviewStep } from './ReviewStep';
+import { RollStep } from './RollStep';
+import { countGold, dryRun, explainCreationError, explainInvalid, type WizardProblem } from './server';
+import { classMagic, extraLanguageCount, readScores, spellSlotsAt } from './tables';
+import styles from './wizard.module.css';
 
 export interface CharacterWizardProps {
   /** Whether the wizard is open. */
@@ -14,26 +52,589 @@ export interface CharacterWizardProps {
   onCreated: (character: StoredCharacter) => void;
 }
 
+const STEP_LABELS: Record<StepId, string> = {
+  roll: 'Roll abilities',
+  class: 'Choose a class',
+  adjust: 'Adjust scores',
+  identity: 'Identity',
+  outfit: 'Outfit',
+  review: 'Review',
+};
+
+const STEP_DESCRIPTIONS: Record<StepId, string> = {
+  roll: 'Roll 3d6 for each ability, in order.',
+  class: 'Your scores decide which classes you can play.',
+  adjust: 'Trade points into a prime requisite, or keep the scores as rolled.',
+  identity: 'Name your character and choose what they believe.',
+  outfit: 'Spend your starting gold on gear.',
+  review: 'Check the sheet. The rules engine rolls hit points when you create the character.',
+};
+
+/** Debounce for the live checks, in milliseconds. */
+const CHECK_DELAY_MS = 350;
+
+function isAbilityTables(value: unknown): value is AbilityTables {
+  return typeof value === 'object' && value !== null && 'strength' in value && 'intelligence' in value;
+}
+
+function stepIndex(step: StepId): number {
+  return STEP_IDS.indexOf(step);
+}
+
 /** The character wizard: rolls abilities, picks a class and gear, and stores a character for the user. */
-export function CharacterWizard({ open, onClose }: CharacterWizardProps) {
+export function CharacterWizard({ open, onClose, onCreated }: CharacterWizardProps) {
+  return open ? <WizardDialog onClose={onClose} onCreated={onCreated} /> : null;
+}
+
+function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>) {
+  const user = useCurrentUser();
+  const userId = user?.id ?? null;
+  const [initial] = useState(() => loadDraft(userId));
+  const [draft, setDraft] = useState<WizardDraft>(() => initial ?? emptyDraft());
+  const [restored, setRestored] = useState(initial !== null);
+  const [freshRollId, setFreshRollId] = useState<string | null>(null);
+  const [rolling, setRolling] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [problem, setProblem] = useState<WizardProblem | null>(null);
+  const [showErrors, setShowErrors] = useState(false);
+  const [created, setCreated] = useState<StoredCharacter | null>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [kitNote, setKitNote] = useState<string | null>(null);
+
+  const classes = useClassCatalog();
+  const abilityTable = useRuleTable('abilities');
+  const tables = isAbilityTables(abilityTable.data) ? abilityTable.data : null;
+  const classEntry = useRulesEntry<ClassDetail>(draft.classId ? `classes/${draft.classId}` : null);
+  const detail = classEntry.data;
+  const equipment = useEquipmentCatalog();
+  const spellCatalog = useSpellCatalog();
+  const languageCatalog = useLanguageCatalog();
+
+  const scores = useMemo(() => readScores(draft.roll?.scores), [draft.roll]);
+  const adjusted = useMemo(() => (scores ? adjustedScores(scores, draft.adjustment) : null), [scores, draft]);
+  const magic = classMagic(detail);
+  const bookSize = magic?.kind === 'arcane' ? (spellSlotsAt(detail, 1)[0] ?? 0) : 0;
+  const extraLanguages = tables && adjusted ? extraLanguageCount(tables, adjusted.int) : 0;
+  const key = goldKey(draft);
+  // Keep the draft in this browser, so closing the dialog by accident loses nothing.
+  useEffect(() => {
+    if (created === null) saveDraft(userId, draft);
+  }, [draft, userId, created]);
+
+  const update = useCallback((change: Partial<WizardDraft>) => setDraft((d) => ({ ...d, ...change })), []);
+
+  const go = useCallback(
+    (step: StepId) => {
+      setShowErrors(false);
+      update({ step });
+    },
+    [update],
+  );
+
+  // Step 3: check the trade live. Each answer is stored with the request it answers, so a stale answer shows
+  // as "checking" until the current request's answer arrives.
+  const adjustJson =
+    draft.step === 'adjust' && draft.roll && draft.classId && hasAdjustment(draft.adjustment)
+      ? JSON.stringify(requestFromDraft(draft, { withoutOutfit: true, placeholderIdentity: true }))
+      : null;
+  const [adjustResult, setAdjustResult] = useState<{ key: string; state: CheckState } | null>(null);
+  useEffect(() => {
+    if (adjustJson === null) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      const settle = (state: CheckState) => {
+        if (!cancelled) setAdjustResult({ key: adjustJson, state });
+      };
+      dryRun(getApi(), JSON.parse(adjustJson) as CharacterRequest).then(
+        (result) => {
+          if (result.kind === 'invalid') {
+            const explained = explainInvalid(result.problem);
+            if (explained.step !== null && stepIndex(explained.step) <= stepIndex('adjust')) {
+              settle({ status: 'invalid', sentences: explained.sentences });
+              return;
+            }
+          }
+          settle({ status: 'ok' });
+        },
+        (error: unknown) => settle({ status: 'invalid', sentences: explainCreationError(error).sentences }),
+      );
+    }, CHECK_DELAY_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [adjustJson]);
+  const adjustCheck: CheckState =
+    adjustJson === null
+      ? { status: 'idle' }
+      : adjustResult?.key === adjustJson
+        ? adjustResult.state
+        : { status: 'checking' };
+
+  // Step 5: count the gold the roll gives these choices.
+  const probeItem =
+    equipment.data?.find((item) => item.id === 'torch' && item.cost_gp === 1)?.id ??
+    equipment.data?.find((item) => item.cost_gp === 1)?.id;
+  const goldJson =
+    draft.step === 'outfit' && key !== null && draft.gold?.key !== key
+      ? JSON.stringify(requestFromDraft(draft, { withoutOutfit: true }))
+      : null;
+  const [goldFailure, setGoldFailure] = useState<{ key: string; message: string } | null>(null);
+  useEffect(() => {
+    if (goldJson === null || key === null || !probeItem) return;
+    let cancelled = false;
+    countGold(getApi(), JSON.parse(goldJson) as CharacterRequest, probeItem).then(
+      (result) => {
+        if (cancelled) return;
+        if (result.kind === 'gold') {
+          setDraft((d) => (goldKey(d) === key ? { ...d, gold: { key, gp: result.gp } } : d));
+          return;
+        }
+        const explained = explainInvalid(result.problem);
+        setProblem(explained);
+        setGoldFailure({
+          key,
+          message: "The gold can't be counted until the choices before this step are fixed.",
+        });
+        if (explained.step !== null && explained.step !== 'outfit') {
+          setShowErrors(false);
+          setDraft((d) => ({ ...d, step: explained.step ?? d.step }));
+        }
+      },
+      (error: unknown) => {
+        if (cancelled) return;
+        const explained = explainCreationError(error);
+        setGoldFailure({ key, message: `${explained.title}. ${explained.sentences.join(' ')}` });
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [goldJson, key, probeItem]);
+  const goldError =
+    goldFailure !== null && goldFailure.key === key
+      ? goldFailure.message
+      : equipment.error
+        ? "The shop's price list didn't load, so the gold can't be counted yet."
+        : null;
+
+  // Step 5: check the cart live.
+  const cartJson =
+    draft.step === 'outfit' && draft.cart.length > 0 && draft.gold !== null && draft.gold.key === key
+      ? JSON.stringify(requestFromDraft(draft))
+      : null;
+  const [cartResult, setCartResult] = useState<{ key: string; state: CheckState } | null>(null);
+  useEffect(() => {
+    if (cartJson === null) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      const settle = (state: CheckState) => {
+        if (!cancelled) setCartResult({ key: cartJson, state });
+      };
+      dryRun(getApi(), JSON.parse(cartJson) as CharacterRequest).then(
+        (result) =>
+          settle(
+            result.kind === 'invalid'
+              ? { status: 'invalid', sentences: explainInvalid(result.problem).sentences }
+              : { status: 'ok' },
+          ),
+        (error: unknown) => settle({ status: 'invalid', sentences: explainCreationError(error).sentences }),
+      );
+    }, CHECK_DELAY_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [cartJson]);
+  const cartCheck: CheckState =
+    cartJson === null
+      ? { status: 'idle' }
+      : cartResult?.key === cartJson
+        ? cartResult.state
+        : { status: 'checking' };
+
+  const gold: GoldState =
+    draft.gold && draft.gold.key === key
+      ? { status: 'known', gp: draft.gold.gp }
+      : goldError
+        ? { status: 'unknown', message: goldError }
+        : { status: 'counting' };
+  const goldLeft = gold.status === 'known' ? gold.gp - cartCost(draft.cart, equipment.data) : null;
+
+  const roll = async () => {
+    setRolling(true);
+    setProblem(null);
+    try {
+      const result = await getApi().rollAbilities();
+      setFreshRollId(result.id);
+      setRestored(false);
+      setDraft((d) => ({
+        ...emptyDraft(),
+        name: d.name,
+        alignment: d.alignment,
+        rolls: d.rolls + 1,
+        roll: result,
+        step: 'roll',
+      }));
+    } catch (error) {
+      setProblem({ ...explainCreationError(error), step: 'roll' });
+    } finally {
+      setRolling(false);
+    }
+  };
+
+  /** Asks the server about the choices so far, and blocks when a choice up to `upTo` breaks a rule. */
+  const check = async (body: ReturnType<typeof requestFromDraft>, upTo: StepId): Promise<boolean> => {
+    setBusy(true);
+    try {
+      const result = await dryRun(getApi(), body);
+      if (result.kind === 'created') {
+        finish(result.character);
+        return false;
+      }
+      if (result.kind === 'ok') return true;
+      const explained = explainInvalid(result.problem);
+      if (
+        explained.step !== null &&
+        stepIndex(explained.step) > stepIndex(upTo) &&
+        explained.step !== 'review'
+      )
+        return true;
+      setProblem(explained);
+      if (explained.step !== null && explained.step !== draft.step) go(explained.step);
+      return false;
+    } catch (error) {
+      const explained = explainCreationError(error);
+      setProblem(explained);
+      if (explained.step !== null && explained.step !== draft.step) go(explained.step);
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const finish = (character: StoredCharacter) => {
+    saveDraft(userId, null);
+    setCreated(character);
+    onCreated(character);
+  };
+
+  const create = async () => {
+    setBusy(true);
+    setProblem(null);
+    try {
+      finish(await getApi().createCharacter(requestFromDraft(draft)));
+    } catch (error) {
+      const explained = explainCreationError(error);
+      setProblem(explained);
+      if (explained.step !== null && explained.step !== 'review') go(explained.step);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const next = async () => {
+    setProblem(null);
+    switch (draft.step) {
+      case 'roll':
+        go('class');
+        return;
+      case 'class':
+        go('adjust');
+        return;
+      case 'adjust':
+        if (
+          await check(requestFromDraft(draft, { withoutOutfit: true, placeholderIdentity: true }), 'adjust')
+        )
+          go('identity');
+        return;
+      case 'identity': {
+        setShowErrors(true);
+        if (displayStringProblem(draft.name, 100) !== null || draft.alignment === null) return;
+        if (magic?.kind === 'arcane' && draft.spells.length !== bookSize) return;
+        if (await check(requestFromDraft(draft, { withoutOutfit: true }), 'identity')) go('outfit');
+        return;
+      }
+      case 'outfit':
+        if (await check(requestFromDraft(draft), 'outfit')) go('review');
+        return;
+      case 'review':
+        await create();
+        return;
+    }
+  };
+
+  const back = () => {
+    setProblem(null);
+    const index = stepIndex(draft.step);
+    const previous = STEP_IDS[index - 1];
+    if (previous) go(previous);
+  };
+
+  const startOver = () => {
+    saveDraft(userId, null);
+    setDraft(emptyDraft());
+    setCreated(null);
+    setProblem(null);
+    setRestored(false);
+    setFreshRollId(null);
+  };
+
+  const applyClassKit = () => {
+    if (!draft.classId || !equipment.data) return;
+    const result = applyKit(draft.classId, equipment.data, gold.status === 'known' ? gold.gp : null);
+    update({ cart: result.cart, equip: result.equip });
+    setKitNote(
+      result.skipped.length > 0
+        ? `The kit fits your gold without ${result.skipped
+            .map((id) => equipment.data?.find((e) => e.id === id)?.name.toLowerCase() ?? id)
+            .join(', ')}.`
+        : 'The kit is a starting point. Change anything you like.',
+    );
+  };
+
+  const eligible = draft.roll?.eligible_class_ids ?? [];
+  const canContinue = (() => {
+    switch (draft.step) {
+      case 'roll':
+        return draft.roll !== null && eligible.length > 0;
+      case 'class':
+        return draft.classId !== null && eligible.includes(draft.classId);
+      case 'adjust':
+        return adjustCheck.status !== 'invalid' && adjustCheck.status !== 'checking';
+      case 'outfit':
+        return (
+          gold.status !== 'counting' && cartCheck.status !== 'invalid' && cartCheck.status !== 'checking'
+        );
+      default:
+        return true;
+    }
+  })();
+
+  const steps: StepperStep[] = STEP_IDS.map((id) => ({
+    id,
+    label: STEP_LABELS[id],
+    description:
+      id === 'class' && draft.classId && stepIndex(draft.step) > 1
+        ? classLabel(draft.classId)
+        : id === 'identity' && draft.name.trim() && stepIndex(draft.step) > 3
+          ? draft.name.trim()
+          : id === 'outfit' && goldLeft !== null && stepIndex(draft.step) > 4
+            ? `${goldLeft} gp left`
+            : undefined,
+  }));
+
+  const title = created ? `${created.name} is ready` : 'Create a character';
+
+  let body;
+  if (created) {
+    body = (
+      <div className={styles.created}>
+        <Banner tone="success" title={`${created.name} joins the world`}>
+          The rules engine rolled {created.character.max_hp} hit points and stored the character. You can
+          bring {created.name} to any table.
+        </Banner>
+        <StoredSheet character={created} color={user?.color} />
+      </div>
+    );
+  } else if (!scores && draft.step !== 'roll') {
+    body = null;
+  } else {
+    const step = draft.step;
+    body = (
+      <>
+        <Stepper
+          steps={steps}
+          current={stepIndex(step)}
+          onStepClick={(index) => {
+            const target = STEP_IDS[index];
+            if (target) {
+              setProblem(null);
+              go(target);
+            }
+          }}
+          aria-label="Character creation"
+          className={styles.stepper}
+        />
+        <div className={styles.stepHeading}>
+          <h3 className={styles.stepTitle}>{STEP_LABELS[step]}</h3>
+          <p className={styles.stepDescription}>{STEP_DESCRIPTIONS[step]}</p>
+        </div>
+        {restored && step !== 'roll' && (
+          <Banner
+            tone="info"
+            title="Your character is where you left it"
+            onDismiss={() => setRestored(false)}
+            dismissLabel="Hide this message"
+          >
+            The wizard kept your choices in this browser.
+          </Banner>
+        )}
+        {problem && (problem.step === null || problem.step === step) && (
+          <Banner
+            tone="warning"
+            title={problem.title}
+            onDismiss={() => setProblem(null)}
+            dismissLabel="Hide this message"
+          >
+            {problem.sentences.join(' ')}
+          </Banner>
+        )}
+        {step === 'roll' && (
+          <RollStep
+            roll={draft.roll}
+            animate={draft.roll !== null && draft.roll.id === freshRollId}
+            rolls={draft.rolls}
+            rolling={rolling}
+            onRoll={() => void roll()}
+            classes={classes.data}
+            tables={tables}
+          />
+        )}
+        {step === 'class' && scores && (
+          <ClassStep
+            classes={classes.data}
+            scores={scores}
+            eligible={eligible}
+            classId={draft.classId}
+            onSelect={(classId) =>
+              classId !== draft.classId &&
+              update({ classId, adjustment: { lowered: {}, raised: {} }, spells: [], languages: [] })
+            }
+            hpReroll={draft.hpReroll}
+            onHpReroll={(hpReroll) => update({ hpReroll })}
+            equipment={equipment.data}
+          />
+        )}
+        {step === 'adjust' && scores && (
+          <AdjustStep
+            scores={scores}
+            adjustment={draft.adjustment}
+            onChange={(adjustment) => update({ adjustment, languages: [] })}
+            detail={detail}
+            tables={tables}
+            check={adjustCheck}
+          />
+        )}
+        {step === 'identity' && adjusted && (
+          <IdentityStep
+            name={draft.name}
+            onName={(name) => update({ name })}
+            alignment={draft.alignment}
+            onAlignment={(alignment) => update({ alignment })}
+            detail={detail}
+            extraLanguages={extraLanguages}
+            intelligence={adjusted.int}
+            languages={draft.languages}
+            onLanguages={(languages) => update({ languages })}
+            languageCatalog={languageCatalog.data}
+            magic={magic}
+            bookSize={bookSize}
+            spells={draft.spells}
+            onSpells={(spells) => update({ spells })}
+            spellCatalog={spellCatalog.data}
+            showErrors={showErrors}
+          />
+        )}
+        {step === 'outfit' && (
+          <OutfitStep
+            equipment={equipment.data}
+            cart={draft.cart}
+            equip={draft.equip}
+            onCart={(cart) => update({ cart })}
+            onEquip={(equip) => update({ equip })}
+            gold={gold}
+            classId={draft.classId}
+            onKit={applyClassKit}
+            kitNote={kitNote}
+            check={cartCheck}
+          />
+        )}
+        {step === 'review' && adjusted && (
+          <ReviewStep
+            draft={draft}
+            scores={adjusted}
+            detail={detail}
+            tables={tables}
+            equipment={equipment.data}
+            spells={spellCatalog.data}
+            goldLeft={goldLeft}
+            onEdit={(target) => {
+              setProblem(null);
+              go(target);
+            }}
+          />
+        )}
+      </>
+    );
+  }
+
+  const footer = created ? (
+    <>
+      <Button variant="ghost" icon="plus" onClick={startOver}>
+        Make another character
+      </Button>
+      <Button variant="primary" onClick={onClose}>
+        Done
+      </Button>
+    </>
+  ) : (
+    <>
+      {draft.roll !== null && (
+        <Button
+          variant="ghost"
+          icon="undo"
+          className={styles.footerStart}
+          onClick={() => setConfirmReset(true)}
+        >
+          Start over
+        </Button>
+      )}
+      {stepIndex(draft.step) > 0 && (
+        <Button variant="secondary" icon="arrow-left" onClick={back} disabled={busy}>
+          Back
+        </Button>
+      )}
+      {draft.step === 'review' ? (
+        <Button variant="primary" icon="check" loading={busy} onClick={() => void next()}>
+          Create character
+        </Button>
+      ) : (
+        draft.roll !== null && (
+          <Button
+            variant="primary"
+            iconEnd="arrow-right"
+            loading={busy}
+            disabled={!canContinue}
+            onClick={() => void next()}
+          >
+            {draft.step === 'adjust' && !hasAdjustment(draft.adjustment) ? 'Skip this step' : 'Continue'}
+          </Button>
+        )
+      )}
+    </>
+  );
+
   return (
     <Dialog
-      open={open}
+      open
       onOpenChange={(next) => {
         if (!next) onClose();
       }}
-      title="Create a character"
-      size="lg"
-      footer={
-        <Button variant="secondary" onClick={onClose}>
-          Close
-        </Button>
-      }
+      title={title}
+      size="xl"
+      footer={footer}
+      className={styles.dialog}
     >
-      <EmptyState
-        icon="user"
-        title="Character wizard"
-        description="The character wizard isn't built yet. It will roll ability scores, help you pick a class, and buy starting gear."
+      <div className={styles.wizard}>{body}</div>
+      <ConfirmDialog
+        open={confirmReset}
+        onOpenChange={setConfirmReset}
+        title="Start over?"
+        description="This clears your scores and every choice. You roll new ability scores next."
+        confirmLabel="Start over"
+        tone="danger"
+        onConfirm={startOver}
       />
     </Dialog>
   );
