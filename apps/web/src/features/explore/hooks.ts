@@ -17,7 +17,7 @@ import {
 } from '@/app';
 import type { ActionContext } from './actions';
 import { adventureDungeons, type LevelOption } from './levels';
-import { learnFromFeed, observeLocation, useLore, useLoreStore, type Lore } from './lore';
+import { learnFromFeed, observeLocation, useLorePart, useLoreStore, type Lore } from './lore';
 import { useExploreSend } from './useExploreSend';
 
 /**
@@ -51,11 +51,18 @@ export function useActionContext(): ActionContext | null {
   );
 }
 
-/** The lore of the open table's current session. */
-export function useSessionLore(): Lore {
+/** What the table learned about doors this session, by `{dungeon}:{level}:{edge key}`. */
+export function useSessionDoors(): Lore['doors'] {
   const tableId = useTableId();
   const sessionId = useTableStore((s) => s.game?.session_id ?? null);
-  return useLore(tableId, sessionId);
+  return useLorePart(tableId, sessionId, 'doors');
+}
+
+/** The source of each member's burning light this session, such as `torch`. */
+export function useSessionLights(): Lore['lights'] {
+  const tableId = useTableId();
+  const sessionId = useTableStore((s) => s.game?.session_id ?? null);
+  return useLorePart(tableId, sessionId, 'lights');
 }
 
 /**

@@ -1,5 +1,5 @@
 import type { CommandResult } from '@bxvtt/shared/protocol';
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { useMapBus } from '@/app';
 import { ActionBar } from '@/ui';
@@ -122,7 +122,7 @@ describe('MapStage', () => {
   it('says plainly when the party has no light', () => {
     const { snapshot } = exploring();
     renderWithTable(<MapStage />, { snapshot });
-    expect(screen.getByText('No light. The party is in the dark.')).toBeInTheDocument();
+    expect(screen.getByText('The party has no light.')).toBeInTheDocument();
   });
 
   it('tells a referee which map they see', () => {
@@ -144,6 +144,75 @@ describe('MapStage', () => {
       x: 14,
       y: 22,
     });
+  });
+});
+
+describe('MapStage for keyboard and screen reader users', () => {
+  it('lists the pins of the level with their notes, and pins the party’s square', async () => {
+    const { snapshot } = exploring();
+    snapshot.annotations = {
+      dungeon_id: 'priory',
+      level_number: 1,
+      items: [
+        {
+          id: 'ann_1',
+          kind: 'pin',
+          dungeon_id: 'priory',
+          level_number: 1,
+          author_id: snapshot.user.id,
+          created_at: '2026-11-22T05:18:28Z',
+          x: 14.5,
+          y: 21.5,
+          text: 'Painted monks',
+          color: '#e69f00',
+          visibility: 'everyone',
+        },
+      ],
+    };
+    const { user } = renderWithTable(<MapStage />, { snapshot });
+    await user.click(screen.getByRole('button', { name: 'Pins: 1 on this level' }));
+    const list = await screen.findByRole('list', { name: 'Pins on this level' });
+    expect(within(list).getByText('Painted monks')).toBeInTheDocument();
+    expect(within(list).getByRole('button', { name: 'Show pin 1 on the map' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Add a pin where the party stands' }));
+    expect(await screen.findByRole('dialog', { name: 'Add a pin' })).toBeInTheDocument();
+  });
+
+  it('announces another member’s ping politely, with their name', async () => {
+    const { snapshot, game } = exploring();
+    const { store } = renderWithTable(<MapStage />, { snapshot });
+    const other = snapshot.table.members.find((member) => member.user_id !== snapshot.user.id);
+    if (!other) throw new Error('No other member.');
+    act(() => {
+      store.getState().receive({
+        type: 'ping',
+        dungeon_id: 'priory',
+        level_number: game.view.location.level_number ?? 1,
+        x: 14.5,
+        y: 21.5,
+        user_id: other.user_id,
+        at: '2026-11-22T05:18:30Z',
+      });
+    });
+    expect(await screen.findByText(`${other.name} pinged the map.`)).toBeInTheDocument();
+  });
+
+  it('tells a referee only referees will see a private pin', async () => {
+    const { snapshot } = exploring('referee');
+    const { user } = renderWithTable(<MapStage />, { snapshot });
+    await user.click(screen.getByRole('button', { name: /^Pins/ }));
+    await user.click(await screen.findByRole('button', { name: 'Add a pin where the party stands' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Add a pin' });
+    expect(within(dialog).getByText(/Everyone at the table sees/)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Only referees see this pin' }));
+    expect(within(dialog).getByText(/Only referees see this pin and its note/)).toBeInTheDocument();
+  });
+
+  it('names the light and its time in the same words as the party panel', () => {
+    const { snapshot, game } = exploring();
+    game.view.effects = [{ character_id: 'character-0001', kind: 'light', remaining_rounds: 360 }];
+    renderWithTable(<MapStage />, { snapshot });
+    expect(screen.getByText("Brenna's torch, about 6 turns left")).toBeInTheDocument();
   });
 });
 
@@ -223,7 +292,8 @@ describe('ExploreActions', () => {
     const { user } = renderWithTable(<Bar />, { snapshot, api });
     await user.click(screen.getByRole('button', { name: 'Rest' }));
     await user.click(await screen.findByRole('menuitem', { name: /Rest for one turn/i }));
-    expect(await screen.findByText('Nothing seems to happen.')).toBeInTheDocument();
+    // The toast shows the line, and the kit repeats it in a live region.
+    expect((await screen.findAllByText('Nothing seems to happen.')).length).toBeGreaterThan(0);
   });
 
   it('offers every other legal command under Other, and the character sheet for items', async () => {

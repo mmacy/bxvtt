@@ -13,6 +13,8 @@ import {
   searchEntries,
   transitionAction,
   transitionDescription,
+  treasureEntries,
+  treasureMenuLabel,
   type ActionContext,
 } from './actions';
 
@@ -177,6 +179,26 @@ describe('cacheEntries', () => {
     expect(cacheEntries(ctx, { ...cache, reachable: false }, 'The treasure').map(entryLabel)).toEqual([
       'Check it for traps: Wren',
     ]);
+  });
+});
+
+describe('treasureEntries', () => {
+  it('names the treasure and the dropped goods when both lie here, with the scene panel’s verbs', () => {
+    const { ctx } = context('player');
+    const here = ctx.scene?.here;
+    if (!here) throw new Error('No scene here.');
+    here.caches = [
+      { id: 'chest', source: 'authored', area_id: null, position: null, reachable: true, trap: null },
+    ];
+    here.pile = true;
+    const labels = treasureEntries(ctx).map(entryLabel);
+    expect(labels).toEqual(
+      expect.arrayContaining(['Treasure', 'Take the treasure', 'Dropped goods', 'Pick up the dropped goods']),
+    );
+    expect(treasureMenuLabel(ctx.scene)).toBe('Treasure and dropped goods');
+    here.caches = [];
+    expect(treasureEntries(ctx).map(entryLabel)).toEqual(['Pick up the dropped goods']);
+    expect(treasureMenuLabel(ctx.scene)).toBe('Dropped goods');
   });
 });
 

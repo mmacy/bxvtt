@@ -39,15 +39,31 @@ import { Button, DropdownMenu, Icon, cx, type MenuEntry } from '@/ui';
 import { lightEntries } from './actions';
 import { mapMenuEntries } from './contextMenu';
 import { messageDuration, useMapFeedback } from './feedback';
-import { levelLabel, useActionContext, useDungeonNames, useLoreTracker, useSessionLore } from './hooks';
-import { buildPlayerLevel, buildRefereeLevel, levelOptions, refereeSource, type LevelOption } from './levels';
+import {
+  levelLabel,
+  useActionContext,
+  useDungeonNames,
+  useLoreTracker,
+  useSessionDoors,
+  useSessionLights,
+} from './hooks';
+import {
+  buildPlayerLevel,
+  buildRefereeLevel,
+  levelOptions,
+  refereeSource,
+  wanderingTableName,
+  type LevelOption,
+} from './levels';
 import { CameraControls, LayerBadge, LevelSwitcher, MinimapCard, ThemeSwitcher } from './MapChrome';
-import { lightTimeLeft, partyLight } from './party';
+import { NO_LIGHT_TEXT, lightLine, lightSourceNoun, partyLight } from './party';
 import { NewPinDialog, PinDetailDialog } from './PinDialogs';
+import { PinsPanel } from './PinsPanel';
 import { PointMenu } from './PointMenu';
 import { Projected } from './Projected';
 import { STROKE_WIDTH, useMapAnnotations } from './useMapAnnotations';
 import { useExploreSend } from './useExploreSend';
+import { useMapAnnouncements } from './useMapAnnouncements';
 import styles from './explore.module.css';
 
 const KEY_DIRECTIONS: Record<string, Direction> = {
@@ -93,7 +109,8 @@ export function MapStage() {
   const me = useTableUser();
   const members = useMembers();
   const permissions = usePermissionContext();
-  const lore = useSessionLore();
+  const doors = useSessionDoors();
+  const lights = useSessionLights();
   const names = useDungeonNames();
   const actions = useActionContext();
   const { send } = useExploreSend();
@@ -135,10 +152,8 @@ export function MapStage() {
     null;
   const map = useMemo(() => {
     if (view === null || viewedKey === null) return null;
-    return source
-      ? buildRefereeLevel(source, viewedKey)
-      : buildPlayerLevel(view, scene, viewedKey, lore.doors);
-  }, [view, scene, source, viewedKey, lore.doors]);
+    return source ? buildRefereeLevel(source, viewedKey) : buildPlayerLevel(view, scene, viewedKey, doors);
+  }, [view, scene, source, viewedKey, doors]);
   const mapDungeon = map?.dungeonId ?? null;
   const mapLevel = map?.levelNumber ?? null;
   const levelRef = useMemo<LevelRef | null>(
@@ -149,6 +164,16 @@ export function MapStage() {
   const partyShown = map?.party != null;
   const offLevel = partyLevel !== null && viewedKey !== null && viewedKey !== partyLevel.key;
   const annotations = useMapAnnotations(levelRef);
+  const pinLabels = useMemo(
+    () => new Map(annotations.pins.map((pin) => [pin.id, pin.label])),
+    [annotations.pins],
+  );
+  const announcement = useMapAnnouncements({
+    items: annotations.items,
+    levelKey: map?.key ?? null,
+    levelNumber: map?.levelNumber ?? null,
+    pinLabels,
+  });
 
   const can = useCallback(
     (commandType: string, memberId?: string) => canSendCommand(permissions, commandType, memberId).allowed,
@@ -166,14 +191,14 @@ export function MapStage() {
   const move = useCallback(
     (direction: Direction) => {
       if (offLevel) setViewedLevel(null);
-      void send({ command_type: 'move_party', direction }, { feedback: 'map' });
+      void send({ command_type: 'move_party', direction }, { feedback: 'map', repeatable: true });
     },
     [send, offLevel, setViewedLevel],
   );
   const turn = useCallback(
     (facing: Direction) => {
       if (offLevel) setViewedLevel(null);
-      void send({ command_type: 'turn_party', facing }, { feedback: 'map' });
+      void send({ command_type: 'turn_party', facing }, { feedback: 'map', repeatable: true });
     },
     [send, offLevel, setViewedLevel],
   );
@@ -241,7 +266,7 @@ export function MapStage() {
         world,
         map,
         actions,
-        doors: lore.doors,
+        doors: doors,
         referee: refereeMenu,
         tools: {
           ping,
@@ -255,7 +280,7 @@ export function MapStage() {
       });
       setMenu({ at, items });
     },
-    [map, actions, lore.doors, refereeMenu, ping, move],
+    [map, actions, doors, refereeMenu, ping, move],
   );
   // Keys on the focused map: move, turn, and the context menu. They run before the map's own pan keys.
   const openPartyMenu = useCallback(() => {
@@ -295,6 +320,8 @@ export function MapStage() {
       }
       const direction = keyDirection(event);
       if (direction === null || event.shiftKey) return;
+      // While a measurement runs, the arrow keys move the ruler's far end, which the map handles.
+      if (mapRef.current?.isMeasuring()) return;
       if (event.altKey) {
         if (!state.canTurn) return;
         event.preventDefault();
@@ -400,7 +427,6 @@ export function MapStage() {
   // Light and darkness on the party's level.
   const light = view ? partyLight(view) : { lights: [], darkness: false };
   const dark = partyShown && map?.layer === 'player' && (light.lights.length === 0 || light.darkness);
-  const memberName = (id: string) => view?.party.find((member) => member.id === id)?.name ?? 'Someone';
 
   // Feedback beside the party.
   const message = useMapFeedback((s) => s.message);
@@ -417,6 +443,13 @@ export function MapStage() {
   const themeData = resolveTheme(theme);
   const levelName = (option: LevelOption) => levelLabel(option, levels, names);
   const lightMenu = actions ? lightEntries(actions) : [];
+  const wandering = useMemo(() => {
+    if (map?.layer !== 'referee' || !map.wandering) return null;
+    const { chanceInSix, intervalTurns } = map.wandering;
+    const turns = intervalTurns === 1 ? 'turn' : `${intervalTurns} turns`;
+    const table = wanderingTableName(adventure.data, map.dungeonId, map.levelNumber);
+    return `Wandering monsters: ${chanceInSix} in 6 every ${turns}${table ? ` (${table})` : ''}`;
+  }, [map, adventure.data]);
 
   if (view === null) return null;
 
@@ -445,6 +478,9 @@ export function MapStage() {
         onFollowPartyChange={setFollow}
         reducedMotion={reduceMotion}
         initialView="party"
+        showWandering={false}
+        arrowKeys={canMove ? 'move' : 'pan'}
+        onMoveKey={(direction) => move(direction)}
         ariaLabel={ariaLabel}
         className={styles.map}
         onCellClick={(target, info) => {
@@ -536,10 +572,28 @@ export function MapStage() {
       <div className={styles.srOnly} aria-live="polite">
         {message?.text ?? ''}
       </div>
+      {/* And what other people do on the map: pings, pins, and drawings. */}
+      <div className={styles.srOnly} aria-live="polite">
+        {announcement}
+      </div>
 
       <div className={styles.chromeTop}>
         <div className={styles.chromeRow}>
           {isReferee && map && <LayerBadge layer={map.layer} />}
+          <PinsPanel
+            pins={annotations.pins}
+            records={annotations.pinRecords}
+            partyHere={partyShown}
+            onShow={(pin) => {
+              setFollow(false);
+              mapRef.current?.panTo({ x: pin.x, y: pin.y });
+              mapRef.current?.focus();
+            }}
+            onOpen={(pin) => setPinShown(pin.id)}
+            onAddAtParty={() => {
+              if (party) setNewPin({ x: party.x + 0.5, y: party.y + 0.5 });
+            }}
+          />
           <ThemeSwitcher theme={theme} onChange={(next) => setPreference('mapTheme', next)} />
           {levels.length > 1 && (
             <LevelSwitcher
@@ -586,18 +640,28 @@ export function MapStage() {
         </div>
       )}
 
-      {bottomFree && partyShown && (
-        <div
-          className={cx(styles.chromeBottomLeft, map?.layer === 'referee' && styles.chromeBottomLeftRaised)}
-        >
-          <LightStatus
-            lights={light.lights.map((entry) => ({
-              name: memberName(entry.memberId),
-              left: lightTimeLeft(entry.remainingRounds),
-            }))}
-            darkness={light.darkness}
-            menu={lightMenu}
-          />
+      {bottomFree && (wandering !== null || partyShown) && (
+        <div className={styles.chromeBottomLeft}>
+          {wandering !== null && (
+            <div className={styles.wanderingChip}>
+              <Icon name="referee" size={14} />
+              <span>{wandering}</span>
+            </div>
+          )}
+          {partyShown && (
+            <LightStatus
+              lights={light.lights.map((entry) => {
+                const member = view.party.find((m) => m.id === entry.memberId);
+                return lightLine(
+                  member?.name ?? 'Someone',
+                  lightSourceNoun(member, lights[entry.memberId]),
+                  entry.remainingRounds,
+                );
+              })}
+              darkness={light.darkness}
+              menu={lightMenu}
+            />
+          )}
         </div>
       )}
 
@@ -637,7 +701,8 @@ export function MapStage() {
 }
 
 interface LightStatusProps {
-  lights: Array<{ name: string; left: string | null }>;
+  /** One line for each burning light, such as "Brenna's torch, about 6 turns left". */
+  lights: string[];
   darkness: boolean;
   menu: MenuEntry[];
 }
@@ -645,15 +710,7 @@ interface LightStatusProps {
 /** The party's light: who carries one and how long it has left, or a clear warning in the dark. */
 function LightStatus({ lights, darkness, menu }: LightStatusProps) {
   const lit = lights.length > 0 && !darkness;
-  const text = darkness
-    ? 'Magical darkness covers the party.'
-    : lit
-      ? lights
-          .map((light) =>
-            light.left ? `${light.name}'s light, ${light.left} left` : `${light.name}'s light`,
-          )
-          .join(' · ')
-      : 'No light. The party is in the dark.';
+  const text = darkness ? 'Magical darkness covers the party.' : lit ? lights.join('. ') : NO_LIGHT_TEXT;
   return (
     <div className={cx(styles.lightStatus, !lit && styles.lightDark)} role="status">
       <Icon name={lit ? 'torch' : 'moon'} size={16} />

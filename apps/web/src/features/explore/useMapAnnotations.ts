@@ -48,6 +48,8 @@ function merge(current: LevelAnnotations | null, level: LevelRef, added: Annotat
 }
 
 export interface MapAnnotations {
+  /** Every annotation of the level, or `null` while they load. */
+  items: readonly Annotation[] | null;
   strokes: MapStroke[];
   pins: MapPin[];
   /** The pins with their author and visibility, by ID. */
@@ -240,6 +242,7 @@ export function useMapAnnotations(level: LevelRef | null): MapAnnotations {
   const visiblePins = useMemo(() => pins.filter((pin) => !hidden.has(pin.id)), [pins, hidden]);
 
   return {
+    items: items ?? null,
     strokes,
     pins: visiblePins,
     pinRecords,

@@ -1,6 +1,6 @@
 /**
  * What the table has learned this session that the player view doesn't state: whether a door turned out to be
- * locked or stuck, what a listener heard at it, and who already tried a lock. It comes from bxapi's events in the
+ * locked or stuck, what a listener heard at it, who already tried a lock, and what each member's light is. It comes from bxapi's events in the
  * feed and from the refusals of this user's own commands. This browser keeps it in session storage, so a reload
  * keeps it for as long as the tab is open.
  *
@@ -32,14 +32,19 @@ export interface Lore {
   sessionId: string | null;
   /** By `{dungeon}:{level}:{edge key}`. */
   doors: Record<string, DoorLore>;
+  /** The source of each member's burning light, such as `torch` or `lantern`, from bxapi's light events. */
+  lights: Record<string, string>;
   /** The party's location at each revision this browser saw, oldest first. */
   history: Array<{ revision: number; location: PartyLocation }>;
-  /** The feed entries already read. */
-  seenSeqs: Record<number, true>;
+  /**
+   * The `seq` of the newest feed entry already read. The feed is in `seq` order, so each update reads only the
+   * entries after it.
+   */
+  lastSeq: number;
 }
 
 export function emptyLore(sessionId: string | null = null): Lore {
-  return { sessionId, doors: {}, history: [], seenSeqs: {} };
+  return { sessionId, doors: {}, lights: {}, history: [], lastSeq: 0 };
 }
 
 const HISTORY_LIMIT = 400;
@@ -85,12 +90,12 @@ export function observeLocation(lore: Lore, revision: number, location: PartyLoc
 
 /** The location at the latest revision before `revision` that this browser saw, or `null`. */
 export function locationBefore(lore: Lore, revision: number): PartyLocation | null {
-  let found: PartyLocation | null = null;
-  for (const entry of lore.history) {
-    if (entry.revision < revision) found = entry.location;
-    else break;
+  // From the newest end, because a feed entry is nearly always newer than most of the history.
+  for (let i = lore.history.length - 1; i >= 0; i -= 1) {
+    const entry = lore.history[i];
+    if (entry && entry.revision < revision) return entry.location;
   }
-  return found;
+  return null;
 }
 
 function str(event: GameEvent, field: string): string | null {
@@ -157,6 +162,21 @@ export function learnFromEvents(
         }));
         break;
       }
+      case 'light': {
+        const member = str(event, 'character_id');
+        const source = str(event, 'source');
+        if (member === null) break;
+        if (event.code === 'exploration.light.lit' && source !== null) {
+          next = { ...next, lights: { ...next.lights, [member]: source } };
+        } else if (
+          event.code === 'exploration.light.expired' ||
+          event.code === 'exploration.light.extinguished'
+        ) {
+          const { [member]: _gone, ...rest } = next.lights;
+          next = { ...next, lights: rest };
+        }
+        break;
+      }
       default:
         break;
     }
@@ -220,37 +240,40 @@ export function learnFromRefusal(
 }
 
 /**
- * Reads the feed entries this browser hasn't read yet. An entry is read once the browser has seen the game
- * revision it produced, so the party's location before it is known.
+ * Reads the feed entries this browser hasn't read yet, in order. A game entry waits until the browser has seen
+ * the revision it produced, so the party's location before it is known. Each call visits only the new entries.
  *
  * @param lore - The lore so far.
  * @param feed - The feed, oldest first.
  * @param sessionId - The current session.
  * @param latestRevision - The newest revision this browser has.
+ * @param stats - Counts the entries visited, for a test that the work grows linearly with the feed.
  */
 export function learnFromFeed(
   lore: Lore,
   feed: readonly FeedEntry[],
   sessionId: string,
   latestRevision: number,
+  stats?: { visited: number },
 ): Lore {
+  // Walk back from the end to the first unread entry, so an update costs the new entries, not the whole feed.
+  let start = feed.length;
+  while (start > 0 && (feed[start - 1]?.seq ?? 0) > lore.lastSeq) start -= 1;
+  if (start === feed.length) return lore;
   let next = lore;
-  for (const entry of feed) {
-    if (next.seenSeqs[entry.seq]) continue;
-    if (entry.kind !== 'game') {
-      next = { ...next, seenSeqs: { ...next.seenSeqs, [entry.seq]: true } };
-      continue;
+  let lastSeq = lore.lastSeq;
+  for (let i = start; i < feed.length; i += 1) {
+    const entry = feed[i];
+    if (entry === undefined) break;
+    if (stats) stats.visited += 1;
+    if (entry.kind === 'game' && entry.session_id === sessionId) {
+      // Wait for the game state this entry produced, so the party's location before it is known.
+      if (entry.revision > latestRevision) break;
+      next = learnFromEvents(next, entry.events, locationBefore(next, entry.revision));
     }
-    if (entry.session_id !== sessionId) {
-      next = { ...next, seenSeqs: { ...next.seenSeqs, [entry.seq]: true } };
-      continue;
-    }
-    if (entry.revision > latestRevision) continue;
-    const before = locationBefore(next, entry.revision);
-    next = learnFromEvents(next, entry.events, before);
-    next = { ...next, seenSeqs: { ...next.seenSeqs, [entry.seq]: true } };
+    lastSeq = entry.seq;
   }
-  return next;
+  return lastSeq === lore.lastSeq && next === lore ? lore : { ...next, lastSeq };
 }
 
 /** Session storage for the lore, so a reload keeps what the table learned, such as a refusal only this user saw. */
@@ -275,16 +298,26 @@ function readDoor(value: unknown): DoorLore | null {
   return door;
 }
 
-/** The doors this browser stored for a table's session, read with checks, since storage can hold anything. */
-export function readStoredDoors(tableId: string, sessionId: string): Record<string, DoorLore> {
+/** What this browser stored for a table's session, read with checks, since storage can hold anything. */
+export function readStoredLore(tableId: string, sessionId: string): Pick<Lore, 'doors' | 'lights'> {
   const raw = stored.read(storageName(tableId, sessionId));
-  if (typeof raw !== 'object' || raw === null) return {};
-  const doors: Record<string, DoorLore> = {};
-  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
-    const door = readDoor(value);
-    if (door) doors[key] = door;
+  const out: Pick<Lore, 'doors' | 'lights'> = { doors: {}, lights: {} };
+  if (typeof raw !== 'object' || raw === null) return out;
+  const record = raw as Record<string, unknown>;
+  const doors = record['doors'];
+  if (typeof doors === 'object' && doors !== null) {
+    for (const [key, value] of Object.entries(doors as Record<string, unknown>)) {
+      const door = readDoor(value);
+      if (door) out.doors[key] = door;
+    }
   }
-  return doors;
+  const lights = record['lights'];
+  if (typeof lights === 'object' && lights !== null) {
+    for (const [member, source] of Object.entries(lights as Record<string, unknown>)) {
+      if (typeof source === 'string') out.lights[member] = source;
+    }
+  }
+  return out;
 }
 
 interface LoreStore {
@@ -301,21 +334,29 @@ export const useLoreStore = create<LoreStore>()((set) => ({
       const base =
         current && current.sessionId === sessionId
           ? current
-          : { ...emptyLore(sessionId), doors: readStoredDoors(tableId, sessionId) };
+          : { ...emptyLore(sessionId), ...readStoredLore(tableId, sessionId) };
       const next = change(base);
       if (next === current) return state;
-      if (next.doors !== base.doors || base !== current)
-        stored.write(storageName(tableId, sessionId), next.doors);
+      if (next.doors !== base.doors || next.lights !== base.lights || base !== current)
+        stored.write(storageName(tableId, sessionId), { doors: next.doors, lights: next.lights });
       return { byTable: { ...state.byTable, [tableId]: next } };
     }),
 }));
 
 const EMPTY = emptyLore();
 
-/** The lore of one table and session. */
-export function useLore(tableId: string, sessionId: string | null): Lore {
+/**
+ * One part of the lore of a table and session, such as `doors`. Selecting a part keeps a component from
+ * rendering again when only the read position or the location history changes, which happens on every feed
+ * entry and every move.
+ */
+export function useLorePart<K extends 'doors' | 'lights'>(
+  tableId: string,
+  sessionId: string | null,
+  part: K,
+): Lore[K] {
   return useLoreStore((s) => {
     const lore = s.byTable[tableId];
-    return lore && lore.sessionId === sessionId ? lore : EMPTY;
+    return (lore && lore.sessionId === sessionId ? lore : EMPTY)[part];
   });
 }

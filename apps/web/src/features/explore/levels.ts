@@ -220,3 +220,17 @@ export function buildRefereeLevel(source: RefereeMapSource, key: string): LevelM
 export function doorLoreKey(level: string, x: number, y: number, direction: Direction): string {
   return `${level}:${edgeKey(x, y, direction)}`;
 }
+
+/** The name of a level's own wandering monster table in the adventure document, such as "Priory undercroft". */
+export function wanderingTableName(
+  document: Record<string, unknown> | null,
+  dungeonId: string,
+  levelNumber: number,
+): string | null {
+  const dungeon = adventureDungeons(document)?.dungeons.find((d) => d.id === dungeonId);
+  const level = dungeon?.levels.find((l) => l.number === levelNumber);
+  const table = level?.wandering.table;
+  if (!table) return null;
+  const label = (table as { label?: unknown }).label;
+  return typeof label === 'string' && label.trim() !== '' ? label : null;
+}

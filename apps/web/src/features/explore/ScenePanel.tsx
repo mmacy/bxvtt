@@ -1,7 +1,7 @@
-import type { SceneTrap } from '@bxvtt/shared/protocol';
-import { directionLabel } from '@bxvtt/shared/text';
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { usePlayerView, useScene } from '@/app';
+import type { GameEvent, SceneHere, SceneTrap } from '@bxvtt/shared/protocol';
+import { describeEvent, directionLabel, type TextContext } from '@bxvtt/shared/text';
+import { useEffect, useId, useState, type ReactNode } from 'react';
+import { usePlayerView, useScene, useTextContext } from '@/app';
 import { Button, DropdownMenu, Icon, IconButton, Parchment, cx, type IconName, type MenuEntry } from '@/ui';
 import {
   cacheEntries,
@@ -13,10 +13,29 @@ import {
   transitionAction,
   transitionDescription,
 } from './actions';
-import { useActionContext, useSessionLore } from './hooks';
+import { useActionContext, useSessionDoors } from './hooks';
 import { doorLoreKey } from './levels';
 import { levelKey } from '@/map';
 import styles from './explore.module.css';
+
+/**
+ * The sentence the feed uses for entering an area, such as "The party enters the kitchen.", from the text layer.
+ */
+export function enteredText(areaId: string, here: SceneHere, ctx: TextContext): string {
+  const event = {
+    event_type: 'location_entered',
+    code: 'exploration.location.entered',
+    visibility: 'player',
+    location_kind: 'area',
+    location_id: areaId,
+    level_number: here.level_number,
+    dungeon_id: here.dungeon_id,
+    narrative: null,
+    via: null,
+    transition_ref: null,
+  } as unknown as GameEvent;
+  return describeEvent(event, ctx)?.text ?? 'The party enters a new area.';
+}
 
 /** What a known trap means to the party, in one sentence. */
 export function trapSentence(trap: Pick<SceneTrap, 'kind' | 'trigger' | 'state'>): string {
@@ -84,7 +103,8 @@ export function ScenePanel() {
   const scene = useScene();
   const view = usePlayerView();
   const ctx = useActionContext();
-  const lore = useSessionLore();
+  const ctxText = useTextContext();
+  const doorLore = useSessionDoors();
   const [open, setOpen] = useState(true);
   const [fresh, setFresh] = useState(false);
   const [announcement, setAnnouncement] = useState('');
@@ -92,17 +112,20 @@ export function ScenePanel() {
   const here = scene?.here ?? null;
   const area = here?.area ?? null;
   const areaId = area?.id ?? null;
-  const previous = useRef<string | null | undefined>(undefined);
-
+  // A new area speaks once. The check runs during render, as React recommends for state that follows a prop.
+  const [lastArea, setLastArea] = useState<string | null | undefined>(undefined);
+  if (lastArea !== areaId) {
+    if (lastArea !== undefined && area !== null && here !== null) {
+      setAnnouncement(enteredText(area.id, here, ctxText));
+      setFresh(true);
+    }
+    setLastArea(areaId);
+  }
   useEffect(() => {
-    const before = previous.current;
-    previous.current = areaId;
-    if (before === undefined || before === areaId || area === null) return;
-    setAnnouncement(`The party enters ${area.name}.`);
-    setFresh(true);
+    if (!fresh) return;
     const timer = setTimeout(() => setFresh(false), 1600);
     return () => clearTimeout(timer);
-  }, [areaId, area]);
+  }, [fresh]);
 
   if (here === null || view === null || ctx === null) return null;
   const facing = view.location.kind === 'dungeon' ? view.location.facing : null;
@@ -209,7 +232,7 @@ export function ScenePanel() {
               );
             })}
             {here.pile && (
-              <Row icon="coins" action={<Actions entries={pileEntries(ctx)} label="Goods" />}>
+              <Row icon="coins" action={<Actions entries={pileEntries(ctx)} label="Dropped goods" />}>
                 Dropped goods lie here.
               </Row>
             )}
@@ -219,7 +242,7 @@ export function ScenePanel() {
                 ctx,
                 door.direction,
                 door,
-                lore.doors[doorLoreKey(key, x, y, door.direction)],
+                doorLore[doorLoreKey(key, x, y, door.direction)],
               );
               const known = entries.length > 1 && entries[1]?.type === 'label' ? entries[1].label : null;
               return (

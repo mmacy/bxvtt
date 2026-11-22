@@ -132,3 +132,39 @@ export function lightTimeLeft(rounds: number | null): string | null {
 export function lightTimeLeftFull(rounds: number | null): string | null {
   return rounds === null ? null : formatDurationRounds(rounds);
 }
+
+/** The light a member carries, as a noun for "Brenna's torch": from the light event when known, or the pack. */
+export function lightSourceNoun(member: MemberView | undefined, source: string | undefined): string {
+  switch (source) {
+    case 'torch':
+    case 'lantern':
+      return source;
+    case 'light':
+      return 'magical light';
+    case 'sword':
+      return 'glowing sword';
+    default:
+      break;
+  }
+  if (member) {
+    const kinds = new Set(
+      packItems(member)
+        .filter((item) => typeof item.params['light_radius_feet'] === 'number')
+        .map((item) => item.id),
+    );
+    if (kinds.size === 1) {
+      const [only] = kinds;
+      if (only === 'torch' || only === 'lantern') return only;
+    }
+  }
+  return 'light';
+}
+
+/** The words for the party's light, as the map and the party panel both say it. */
+export const NO_LIGHT_TEXT = 'The party has no light.';
+
+/** One burning light in words: "Brenna's torch, about 6 turns left". */
+export function lightLine(name: string, noun: string, remainingRounds: number | null): string {
+  const left = lightTimeLeft(remainingRounds);
+  return left ? `${name}'s ${noun}, ${left} left` : `${name}'s ${noun}`;
+}

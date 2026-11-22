@@ -5,7 +5,7 @@ import {
   learnFromEvents,
   learnFromFeed,
   learnFromRefusal,
-  readStoredDoors,
+  readStoredLore,
   useLoreStore,
   observeLocation,
   type PartyLocation,
@@ -114,6 +114,21 @@ describe('learnFromFeed', () => {
       messages: [],
     }) as unknown as FeedEntry;
 
+  it('visits each entry once as the feed grows, so the work is linear in its length', () => {
+    const stats = { visited: 0 };
+    const feed: FeedEntry[] = [];
+    let lore = observeLocation(emptyLore('s'), 0, at(1, 1));
+    for (let seq = 1; seq <= 5000; seq += 1) {
+      feed.push(entry(seq, 0, []));
+      lore = learnFromFeed(lore, feed, 's', 0, stats);
+    }
+    expect(stats.visited).toBe(5000);
+    expect(lore.lastSeq).toBe(5000);
+    // A call with nothing new visits nothing and returns the same lore.
+    expect(learnFromFeed(lore, feed, 's', 0, stats)).toBe(lore);
+    expect(stats.visited).toBe(5000);
+  });
+
   it('reads each entry once, after this browser has seen its revision', () => {
     const opened = event({
       event_type: 'door',
@@ -148,8 +163,39 @@ describe('stored lore', () => {
       );
     // A reload starts with an empty store, and the first update reads what session storage kept.
     useLoreStore.setState({ byTable: {} });
-    expect(readStoredDoors('tbl', 'ses')).toEqual({ 'priory:1:2,19:north': { locked: true } });
+    expect(readStoredLore('tbl', 'ses').doors).toEqual({ 'priory:1:2,19:north': { locked: true } });
     useLoreStore.getState().update('tbl', 'ses', (lore) => lore);
     expect(useLoreStore.getState().byTable['tbl']?.doors['priory:1:2,19:north']).toEqual({ locked: true });
+  });
+});
+
+describe('light sources', () => {
+  it('remembers what each member lit until it goes out', () => {
+    let lore = learnFromEvents(
+      emptyLore('s'),
+      [
+        event({
+          event_type: 'light',
+          code: 'exploration.light.lit',
+          character_id: 'character-0003',
+          source: 'lantern',
+        }),
+      ],
+      at(1, 1),
+    );
+    expect(lore.lights).toEqual({ 'character-0003': 'lantern' });
+    lore = learnFromEvents(
+      lore,
+      [
+        event({
+          event_type: 'light',
+          code: 'exploration.light.expired',
+          character_id: 'character-0003',
+          source: 'lantern',
+        }),
+      ],
+      at(1, 1),
+    );
+    expect(lore.lights).toEqual({});
   });
 });

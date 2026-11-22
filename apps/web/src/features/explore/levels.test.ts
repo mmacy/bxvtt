@@ -1,7 +1,14 @@
 import type { Scene } from '@bxvtt/shared/protocol';
 import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
-import { areaCenterCell, buildPlayerLevel, levelOptions, refereeSource, sceneExtras } from './levels';
+import {
+  areaCenterCell,
+  buildPlayerLevel,
+  levelOptions,
+  refereeSource,
+  sceneExtras,
+  wanderingTableName,
+} from './levels';
 
 function exploring() {
   const snapshot = fixtureSnapshot('exploring', 'player');
@@ -115,5 +122,18 @@ describe('refereeSource', () => {
     expect(refereeSource(referee, { name: 'No dungeons' })).toBeNull();
     expect(refereeSource(null, { dungeons: [] })).toBeNull();
     expect(refereeSource(referee, { dungeons: [] })?.adventure.dungeons).toEqual([]);
+  });
+});
+
+describe('wanderingTableName', () => {
+  it('names the level’s own wandering monster table from the adventure', () => {
+    const document = {
+      dungeons: [
+        { id: 'priory', levels: [{ number: 1, wandering: { table: { label: 'Priory undercroft' } } }] },
+      ],
+    };
+    expect(wanderingTableName(document, 'priory', 1)).toBe('Priory undercroft');
+    expect(wanderingTableName(document, 'priory', 2)).toBeNull();
+    expect(wanderingTableName(null, 'priory', 1)).toBeNull();
   });
 });

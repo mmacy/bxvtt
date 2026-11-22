@@ -21,12 +21,13 @@ import {
   stairsHere,
   transitionAction,
   treasureEntries,
+  treasureMenuLabel,
   turnEntries,
   type ActionContext,
 } from './actions';
 import { CommandFormDialog } from './CommandForm';
 import { CUSTOM_COMMANDS, SHEET_COMMANDS } from './commandSets';
-import { useActionContext, useCanTravelToTown, useSessionLore } from './hooks';
+import { useActionContext, useCanTravelToTown, useSessionDoors } from './hooks';
 import { doorLoreKey } from './levels';
 import { livingMembers } from './party';
 import { levelKey } from '@/map';
@@ -35,7 +36,7 @@ import { useExploreSend } from './useExploreSend';
 /** The listen actions for every closed door beside the party. */
 function listenEntries(
   ctx: ActionContext,
-  doorLore: (direction: string) => ReturnType<typeof useSessionLore>['doors'][string] | undefined,
+  doorLore: (direction: string) => ReturnType<typeof useSessionDoors>[string] | undefined,
 ): MenuEntry[] {
   const closed = doorsHere(ctx.view).filter((door) => !door.open);
   const groups = closed.map((door) => {
@@ -132,7 +133,7 @@ function DirectAction({ id, label, icon, keys, run, loading }: DirectActionProps
  */
 export function ExploreActions() {
   const ctx = useActionContext();
-  const lore = useSessionLore();
+  const doors = useSessionDoors();
   const legal = useLegalCommands();
   const canTravel = useCanTravelToTown();
   const openSheet = useTableUi((s) => s.openCharacterSheet);
@@ -149,7 +150,7 @@ export function ExploreActions() {
       (direction !== 'north' && direction !== 'east' && direction !== 'south' && direction !== 'west')
     )
       return undefined;
-    return lore.doors[
+    return doors[
       doorLoreKey(levelKey(here.dungeon_id, here.level_number), here.position[0], here.position[1], direction)
     ];
   };
@@ -252,7 +253,7 @@ export function ExploreActions() {
       {treasure.length > 0 && (
         <MenuAction
           id="explore.treasure"
-          label="Treasure"
+          label={treasureMenuLabel(ctx.scene)}
           icon="chest"
           keys="g"
           items={treasure}

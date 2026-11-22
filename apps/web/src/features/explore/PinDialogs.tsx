@@ -47,7 +47,11 @@ export function NewPinDialog({ open, referee, onCancel, onSave }: NewPinDialogPr
         if (!next) close();
       }}
       title="Add a pin"
-      description="Everyone at the table sees the pin and its note on this level."
+      description={
+        refereesOnly
+          ? 'Only referees see this pin and its note. Players never receive it.'
+          : 'Everyone at the table sees the pin and its note on this level.'
+      }
       size="sm"
       footer={
         <>
@@ -89,7 +93,6 @@ export function NewPinDialog({ open, referee, onCancel, onSave }: NewPinDialogPr
         {referee && (
           <Checkbox
             label="Only referees see this pin"
-            description="Players never receive it."
             checked={refereesOnly}
             onCheckedChange={setRefereesOnly}
           />
