@@ -1,0 +1,117 @@
+.badge {
+  --tone: var(--color-text-muted);
+  --tone-bg: var(--color-surface-3);
+
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 20px;
+  padding: 0 var(--space-1-5);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.soft {
+  background: var(--tone-bg);
+  color: var(--tone);
+}
+
+.outline {
+  border: var(--border-hair) solid color-mix(in srgb, var(--tone) 55%, transparent);
+  color: var(--tone);
+}
+
+.solid {
+  background: var(--tone);
+  color: var(--color-text-inverse);
+  min-width: 20px;
+  justify-content: center;
+  font-family: var(--font-numeric);
+  font-size: var(--text-sm);
+}
+
+.neutral {
+  --tone: var(--color-text-muted);
+  --tone-bg: var(--color-surface-3);
+}
+
+.accent {
+  --tone: var(--color-accent-text);
+  --tone-bg: var(--color-accent-subtle);
+}
+
+.success {
+  --tone: var(--color-success);
+  --tone-bg: var(--color-success-subtle);
+}
+
+.warning {
+  --tone: var(--color-warning);
+  --tone-bg: var(--color-warning-subtle);
+}
+
+.danger {
+  --tone: var(--color-danger);
+  --tone-bg: var(--color-danger-subtle);
+}
+
+.info {
+  --tone: var(--color-info);
+  --tone-bg: var(--color-info-subtle);
+}
+
+.magic {
+  --tone: var(--color-magic);
+  --tone-bg: var(--color-magic-subtle);
+}
+
+.gold {
+  --tone: var(--color-gold);
+  --tone-bg: var(--color-gold-subtle);
+}
+
+.referee {
+  --tone: var(--color-referee);
+  --tone-bg: var(--color-danger-subtle);
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  height: 24px;
+  padding: 0 var(--space-1) 0 var(--space-2);
+  border: var(--border-hair) solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+}
+
+.tag:not(:has(.remove)) {
+  padding-inline-end: var(--space-2);
+}
+
+.swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-xs);
+  color: var(--color-text-subtle);
+}
+
+.remove:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-strong);
+}

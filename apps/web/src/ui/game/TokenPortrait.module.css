@@ -1,0 +1,110 @@
+.token {
+  --token-color: var(--player-slate);
+  --token-radius: 50%;
+
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  border-radius: var(--token-radius);
+  transition:
+    box-shadow var(--duration-base) var(--ease-standard),
+    filter var(--duration-base) var(--ease-standard);
+}
+
+.round {
+  --token-radius: 50%;
+}
+
+.square {
+  --token-radius: 18%;
+}
+
+.token svg {
+  overflow: visible;
+  filter: drop-shadow(0 1px 1.5px rgb(0 0 0 / 0.6));
+}
+
+.field {
+  fill: var(--palette-ink-850);
+}
+
+.tint {
+  fill: var(--token-color);
+  fill-opacity: 0.2;
+}
+
+.division {
+  fill: var(--token-color);
+  fill-opacity: 0.32;
+}
+
+.ring {
+  fill: none;
+  stroke: var(--token-color);
+}
+
+.icon {
+  color: var(--palette-bone-50);
+}
+
+.initials,
+.initialsSmall {
+  fill: var(--palette-bone-50);
+  font-family: var(--font-ui);
+  font-weight: var(--weight-black);
+  letter-spacing: -0.02em;
+}
+
+.initialsSmall {
+  font-size: 15px;
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.04em;
+  fill: color-mix(in srgb, var(--token-color) 55%, var(--palette-bone-50));
+}
+
+/* States */
+.selected {
+  box-shadow:
+    0 0 0 2px var(--color-bg-app),
+    0 0 0 4px var(--color-focus),
+    0 0 16px 2px rgb(255 196 94 / 0.45);
+}
+
+.unconscious svg {
+  opacity: 0.62;
+}
+
+.unconscious .ring {
+  stroke-dasharray: 9 7;
+}
+
+.dead {
+  filter: grayscale(1) brightness(0.8);
+}
+
+.dead .ring {
+  stroke: var(--palette-bone-500);
+}
+
+.dead .icon {
+  color: var(--palette-bone-300);
+}
+
+.badge {
+  position: absolute;
+  top: -8%;
+  right: -8%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38%;
+  height: 38%;
+  min-width: 12px;
+  min-height: 12px;
+  border-radius: 50%;
+  background: var(--palette-blueline-900);
+  color: var(--palette-blueline-300);
+  box-shadow:
+    0 0 0 1.5px var(--palette-blueline-400),
+    0 1px 2px rgb(0 0 0 / 0.5);
+}

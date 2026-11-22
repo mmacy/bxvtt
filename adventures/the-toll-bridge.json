@@ -1,0 +1,2728 @@
+{
+  "kind": "adventure",
+  "schema_version": 4,
+  "engine_version": "2.5.0",
+  "payload": {
+    "name": "The Toll at Crookback Bridge",
+    "description": "Bandits have taken the toll tower on Crookback Bridge, and they charge whatever they like to cross the gorge. A short adventure for three to six characters of first or second level, written to be played in about an hour.",
+    "hooks": [
+      "Reeve Odo Pell of Wethercote wants the bandits off the bridge and the east portcullis raised, so the carts can run again.",
+      "Miller Aske refused to pay the toll. The bandits took his strongbox and threw his cart into the river, and he wants the box back."
+    ],
+    "party": {
+      "min_level": 1,
+      "max_level": 2,
+      "min_size": 3,
+      "max_size": 6
+    },
+    "town": {
+      "name": "Wethercote",
+      "description": "A market village of stone barns and sheep pens at the foot of the Kingsway. Since the bandits took the bridge, no carts have come up from the lowlands, and prices in the market have doubled.",
+      "services": [
+        "Hob Tanner's smithy and store: weapons, armour, and gear",
+        "Wayside shrine of the Shepherd: healing at high prices, and raise dead for a fortune",
+        "Old Nan Colley buys gems and jewellery",
+        "The Drover's Rest: beds and supper"
+      ],
+      "travel_turns": {
+        "bridge": 1
+      },
+      "healing_prices": {
+        "cure_light_wounds": 30,
+        "cure_serious_wounds": 120,
+        "raise_dead": 2000
+      }
+    },
+    "dungeons": [
+      {
+        "id": "bridge",
+        "name": "Crookback Bridge",
+        "levels": [
+          {
+            "number": 1,
+            "width": 26,
+            "height": 14,
+            "edges": {
+              "21,0:west": {
+                "kind": "open",
+                "door": null
+              },
+              "22,0:west": {
+                "kind": "open",
+                "door": null
+              },
+              "23,0:west": {
+                "kind": "open",
+                "door": null
+              },
+              "20,1:north": {
+                "kind": "open",
+                "door": null
+              },
+              "21,1:north": {
+                "kind": "open",
+                "door": null
+              },
+              "21,1:west": {
+                "kind": "open",
+                "door": null
+              },
+              "22,1:north": {
+                "kind": "open",
+                "door": null
+              },
+              "22,1:west": {
+                "kind": "open",
+                "door": null
+              },
+              "23,1:north": {
+                "kind": "open",
+                "door": null
+              },
+              "23,1:west": {
+                "kind": "open",
+                "door": null
+              },
+              "4,2:west": {
+                "kind": "open",
+                "door": null
+              },
+              "5,2:west": {
+                "kind": "open",
+                "door": null
+              },
+              "12,2:west": {
+                "kind": "open",
+                "door": null
+              },
+              "13,2:west": {
+                "kind": "open",
+                "door": null
+              },
+              "14,2:west": {
+                "kind": "open",
+                "door": null
+              },
+              "20,2:north": {
+                "kind": "open",
+                "door": null
+              },
+              "21,2:north": {
+                "kind": "open",
+                "door": null
+              },
+              "21,2:west": {
+                "kind": "open",
+                "door": null
+              },
+              "22,2:north": {
+                "kind": "open",
+                "door": null
+              },
+              "22,2:west": {
+                "kind": "open",
+                "door": null
+              },
+              "23,2:north": {
+                "kind": "open",
+                "door": null
+              },
+              "23,2:west": {
+                "kind": "open",
+                "door": null
+              },
+              "3,3:north": {
+                "kind": "open",
+                "door": null
+              },
+              "4,3:north": {
+                "kind": "open",
+                "door": null
+              },
+              "4,3:west": {
+                "kind": "open",
+                "door": null
+              },
+              "5,3:north": {
+                "kind": "open",
+                "door": null
+              },
+              "5,3:west": {
+                "kind": "open",
+                "door": null
+              },
+              "11,3:north": {
+                "kind": "open",
+                "door": null
+              },
+              "12,3:north": {
+                "kind": "open",
+                "door": null
+              },
+              "12,3:west": {
+                "kind": "open",
+                "door": null
+              },
+              "13,3:north": {
+                "kind": "open",
+                "door": null
+              },
+              "13,3:west": {
+                "kind": "open",
+                "door": null
+              },
+              "14,3:north": {
+                "kind": "open",
+                "door": null
+              },
+              "14,3:west": {
+                "kind": "open",
+                "door": null
+              },
+              "3,4:north": {
+                "kind": "open",
+                "door": null
+              },
+              "4,4:north": {
+                "kind": "open",
+                "door": null
+              },
+              "4,4:west": {
+                "kind": "open",
+                "door": null
+              },
+              "5,4:north": {
+                "kind": "open",
+                "door": null
+              },
+              "5,4:west": {
+                "kind": "open",
+                "door": null
+              },
+              "11,4:north": {
+                "kind": "open",
+                "door": null
+              },
+              "12,4:north": {
+                "kind": "open",
+                "door": null
+              },
+              "12,4:west": {
+                "kind": "open",
+                "door": null
+              },
+              "13,4:north": {
+                "kind": "open",
+                "door": null
+              },
+              "13,4:west": {
+                "kind": "open",
+                "door": null
+              },
+              "14,4:north": {
+                "kind": "open",
+                "door": null
+              },
+              "14,4:west": {
+                "kind": "open",
+                "door": null
+              },
+              "1,5:west": {
+                "kind": "open",
+                "door": null
+              },
+              "2,5:west": {
+                "kind": "open",
+                "door": null
+              },
+              "3,5:west": {
+                "kind": "open",
+                "door": null
+              },
+              "4,5:north": {
+                "kind": "door",
+                "door": {
+                  "kind": "normal",
+                  "stuck": false,
+                  "locked": false,
+                  "starts_open": false,
+                  "requires": null
+                }
+              },
+              "4,5:west": {
+                "kind": "open",
+                "door": null
+              },
+              "5,5:west": {
+                "kind": "open",
+                "door": null
+              },
+              "7,5:west": {
+                "kind": "open",
+                "door": null
+              },
+              "8,5:west": {
+                "kind": "open",
+                "door": null
+              },
+              "9,5:west": {
+                "kind": "open",
+                "door": null
+              },
+              "10,5:west": {
+                "kind": "open",
+                "door": null
+              },
+              "11,5:west": {
+                "kind": "open",
+                "door": null
+              },
+              "12,5:north": {
+                "kind": "door",
+                "door": {
+                  "kind": "normal",
+                  "stuck": false,
+                  "locked": false,
+                  "starts_open": false,
+                  "requires": null
+                }
+              },
+              "12,5:west": {
+                "kind": "open",
+                "door": null
+              },
+              "13,5:west": {
+                "kind": "open",
+                "door": null
+              },
+              "14,5:west": {
+                "kind": "open",
+                "door": null
+              },
+              "15,5:west": {
+                "kind": "open",
+                "door": null
+              },
+              "16,5:west": {
+                "kind": "open",
+                "door": null
+              },
+              "17,5:west": {
+                "kind": "open",
+                "door": null
+              },
+              "18,5:west": {
+                "kind": "open",
+                "door": null
+              },
+              "19,5:west": {
+                "kind": "open",
+                "door": null
+              },
+              "21,5:west": {
+                "kind": "open",
+                "door": null
+              },
+              "22,5:west": {
+                "kind": "open",
+                "door": null
+              },
+              "24,5:west": {
+                "kind": "open",
+                "door": null
+              },
+              "25,5:west": {
+                "kind": "open",
+                "door": null
+              },
+              "0,6:north": {
+                "kind": "open",
+                "door": null
+              },
+              "1,6:north": {
+                "kind": "open",
+                "door": null
+              },
+              "1,6:west": {
+                "kind": "open",
+                "door": null
+              },
+              "2,6:north": {
+                "kind": "open",
+                "door": null
+              },
+              "2,6:west": {
+                "kind": "open",
+                "door": null
+              },
+              "3,6:north": {
+                "kind": "open",
+                "door": null
+              },
+              "3,6:west": {
+                "kind": "open",
+                "door": null
+              },
+              "4,6:north": {
+                "kind": "open",
+                "door": null
+              },
+              "4,6:west": {
+                "kind": "open",
+                "door": null
+              },
+              "5,6:north": {
+                "kind": "open",
+                "door": null
+              },
+              "5,6:west": {
+                "kind": "open",
+                "door": null
+              },
+              "6,6:north": {
+                "kind": "open",
+                "door": null
+              },
+              "6,6:west": {
+                "kind": "door",
+                "door": {
+                  "kind": "normal",
+                  "stuck": false,
+                  "locked": false,
+                  "starts_open": false,
+                  "requires": null
+                }
+              },
+              "7,6:north": {
+                "kind": "open",
+                "door": null
+              },
+              "7,6:west": {
+                "kind": "open",
+                "door": null
+              },
+              "8,6:north": {
+                "kind": "open",
+                "door": null
+              },
+              "8,6:west": {
+                "kind": "open",
+                "door": null
+              },
+              "9,6:north": {
+                "kind": "open",
+                "door": null
+              },
+              "9,6:west": {
+                "kind": "open",
+                "door": null
+              },
+              "10,6:north": {
+                "kind": "open",
+                "door": null
+              },
+              "10,6:west": {
+                "kind": "open",
+                "door": null
+              },
+              "11,6:north": {
+                "kind": "open",
+                "door": null
+              },
+              "11,6:west": {
+                "kind": "open",
+                "door": null
+              },
+              "12,6:north": {
+                "kind": "open",
+                "door": null
+              },
+              "12,6:west": {
+                "kind": "open",
+                "door": null
+              },
+              "13,6:north": {
+                "kind": "open",
+                "door": null
+              },
+              "13,6:west": {
+                "kind": "open",
+                "door": null
+              },
+              "14,6:north": {
+                "kind": "open",
+                "door": null
+              },
+              "14,6:west": {
+                "kind": "open",
+                "door": null
+              },
+              "15,6:north": {
+                "kind": "open",
+                "door": null
+              },
+              "15,6:west": {
+                "kind": "open",
+                "door": null
+              },
+              "16,6:north": {
+                "kind": "open",
+                "door": null
+              },
+              "16,6:west": {
+                "kind": "open",
+                "door": null
+              },
+              "17,6:north": {
+                "kind": "open",
+                "door": null
+              },
+              "17,6:west": {
+                "kind": "open",
+                "door": null
+              },
+              "18,6:north": {
+                "kind": "open",
+                "door": null
+              },
+              "18,6:west": {
+                "kind": "open",
+                "door": null
+              },
+              "19,6:north": {
+                "kind": "open",
+                "door": null
+              },
+              "19,6:west": {
+                "kind": "open",
+                "door": null
+              },
+              "20,6:north": {
+                "kind": "open",
+                "door": null
+              },
+              "20,6:west": {
+                "kind": "door",
+                "door": {
+                  "kind": "normal",
+                  "stuck": false,
+                  "locked": false,
+                  "starts_open": true,
+                  "requires": null
+                }
+              },
+              "21,6:north": {
+                "kind": "open",
+                "door": null
+              },
+              "21,6:west": {
+                "kind": "open",
+                "door": null
+              },
+              "22,6:north": {
+                "kind": "open",
+                "door": null
+              },
+              "22,6:west": {
+                "kind": "open",
+                "door": null
+              },
+              "23,6:north": {
+                "kind": "open",
+                "door": null
+              },
+              "23,6:west": {
+                "kind": "door",
+                "door": {
+                  "kind": "normal",
+                  "stuck": false,
+                  "locked": true,
+                  "starts_open": false,
+                  "requires": null
+                }
+              },
+              "24,6:north": {
+                "kind": "open",
+                "door": null
+              },
+              "24,6:west": {
+                "kind": "open",
+                "door": null
+              },
+              "25,6:north": {
+                "kind": "open",
+                "door": null
+              },
+              "25,6:west": {
+                "kind": "open",
+                "door": null
+              },
+              "0,7:north": {
+                "kind": "open",
+                "door": null
+              },
+              "1,7:north": {
+                "kind": "open",
+                "door": null
+              },
+              "1,7:west": {
+                "kind": "open",
+                "door": null
+              },
+              "2,7:north": {
+                "kind": "open",
+                "door": null
+              },
+              "2,7:west": {
+                "kind": "open",
+                "door": null
+              },
+              "3,7:north": {
+                "kind": "open",
+                "door": null
+              },
+              "3,7:west": {
+                "kind": "open",
+                "door": null
+              },
+              "4,7:north": {
+                "kind": "open",
+                "door": null
+              },
+              "4,7:west": {
+                "kind": "open",
+                "door": null
+              },
+              "5,7:north": {
+                "kind": "open",
+                "door": null
+              },
+              "5,7:west": {
+                "kind": "open",
+                "door": null
+              },
+              "6,7:north": {
+                "kind": "open",
+                "door": null
+              },
+              "7,7:north": {
+                "kind": "open",
+                "door": null
+              },
+              "7,7:west": {
+                "kind": "open",
+                "door": null
+              },
+              "8,7:north": {
+                "kind": "open",
+                "door": null
+              },
+              "8,7:west": {
+                "kind": "open",
+                "door": null
+              },
+              "9,7:north": {
+                "kind": "open",
+                "door": null
+              },
+              "9,7:west": {
+                "kind": "open",
+                "door": null
+              },
+              "10,7:north": {
+                "kind": "open",
+                "door": null
+              },
+              "10,7:west": {
+                "kind": "open",
+                "door": null
+              },
+              "11,7:north": {
+                "kind": "open",
+                "door": null
+              },
+              "11,7:west": {
+                "kind": "open",
+                "door": null
+              },
+              "12,7:north": {
+                "kind": "open",
+                "door": null
+              },
+              "12,7:west": {
+                "kind": "open",
+                "door": null
+              },
+              "13,7:north": {
+                "kind": "open",
+                "door": null
+              },
+              "13,7:west": {
+                "kind": "open",
+                "door": null
+              },
+              "14,7:north": {
+                "kind": "open",
+                "door": null
+              },
+              "14,7:west": {
+                "kind": "open",
+                "door": null
+              },
+              "15,7:north": {
+                "kind": "open",
+                "door": null
+              },
+              "15,7:west": {
+                "kind": "open",
+                "door": null
+              },
+              "16,7:north": {
+                "kind": "open",
+                "door": null
+              },
+              "16,7:west": {
+                "kind": "open",
+                "door": null
+              },
+              "17,7:north": {
+                "kind": "open",
+                "door": null
+              },
+              "17,7:west": {
+                "kind": "open",
+                "door": null
+              },
+              "18,7:north": {
+                "kind": "open",
+                "door": null
+              },
+              "18,7:west": {
+                "kind": "open",
+                "door": null
+              },
+              "19,7:north": {
+                "kind": "open",
+                "door": null
+              },
+              "19,7:west": {
+                "kind": "open",
+                "door": null
+              },
+              "20,7:north": {
+                "kind": "open",
+                "door": null
+              },
+              "21,7:north": {
+                "kind": "open",
+                "door": null
+              },
+              "21,7:west": {
+                "kind": "open",
+                "door": null
+              },
+              "22,7:north": {
+                "kind": "open",
+                "door": null
+              },
+              "22,7:west": {
+                "kind": "open",
+                "door": null
+              },
+              "23,7:north": {
+                "kind": "open",
+                "door": null
+              },
+              "24,7:north": {
+                "kind": "open",
+                "door": null
+              },
+              "24,7:west": {
+                "kind": "open",
+                "door": null
+              },
+              "25,7:north": {
+                "kind": "open",
+                "door": null
+              },
+              "25,7:west": {
+                "kind": "open",
+                "door": null
+              },
+              "4,8:north": {
+                "kind": "door",
+                "door": {
+                  "kind": "normal",
+                  "stuck": false,
+                  "locked": false,
+                  "starts_open": false,
+                  "requires": null
+                }
+              },
+              "4,8:west": {
+                "kind": "open",
+                "door": null
+              },
+              "5,8:west": {
+                "kind": "open",
+                "door": null
+              },
+              "3,9:north": {
+                "kind": "open",
+                "door": null
+              },
+              "4,9:north": {
+                "kind": "open",
+                "door": null
+              },
+              "4,9:west": {
+                "kind": "open",
+                "door": null
+              },
+              "5,9:north": {
+                "kind": "open",
+                "door": null
+              },
+              "5,9:west": {
+                "kind": "open",
+                "door": null
+              },
+              "11,9:west": {
+                "kind": "open",
+                "door": null
+              },
+              "12,9:west": {
+                "kind": "open",
+                "door": null
+              },
+              "3,10:north": {
+                "kind": "open",
+                "door": null
+              },
+              "4,10:north": {
+                "kind": "open",
+                "door": null
+              },
+              "4,10:west": {
+                "kind": "open",
+                "door": null
+              },
+              "5,10:north": {
+                "kind": "open",
+                "door": null
+              },
+              "5,10:west": {
+                "kind": "open",
+                "door": null
+              },
+              "10,10:north": {
+                "kind": "open",
+                "door": null
+              },
+              "11,10:north": {
+                "kind": "open",
+                "door": null
+              },
+              "11,10:west": {
+                "kind": "open",
+                "door": null
+              },
+              "12,10:north": {
+                "kind": "open",
+                "door": null
+              },
+              "12,10:west": {
+                "kind": "open",
+                "door": null
+              },
+              "13,10:west": {
+                "kind": "open",
+                "door": null
+              },
+              "14,10:west": {
+                "kind": "open",
+                "door": null
+              },
+              "15,10:west": {
+                "kind": "open",
+                "door": null
+              },
+              "16,10:west": {
+                "kind": "open",
+                "door": null
+              },
+              "17,10:west": {
+                "kind": "open",
+                "door": null
+              },
+              "18,10:west": {
+                "kind": "open",
+                "door": null
+              },
+              "1,11:west": {
+                "kind": "open",
+                "door": null
+              },
+              "2,11:west": {
+                "kind": "open",
+                "door": null
+              },
+              "3,11:west": {
+                "kind": "open",
+                "door": null
+              },
+              "4,11:west": {
+                "kind": "open",
+                "door": null
+              },
+              "9,11:west": {
+                "kind": "open",
+                "door": null
+              },
+              "10,11:north": {
+                "kind": "open",
+                "door": null
+              },
+              "10,11:west": {
+                "kind": "door",
+                "door": {
+                  "kind": "secret",
+                  "stuck": false,
+                  "locked": false,
+                  "starts_open": false,
+                  "requires": null
+                }
+              },
+              "11,11:north": {
+                "kind": "open",
+                "door": null
+              },
+              "11,11:west": {
+                "kind": "open",
+                "door": null
+              },
+              "12,11:north": {
+                "kind": "open",
+                "door": null
+              },
+              "12,11:west": {
+                "kind": "open",
+                "door": null
+              },
+              "13,11:north": {
+                "kind": "open",
+                "door": null
+              },
+              "14,11:north": {
+                "kind": "open",
+                "door": null
+              },
+              "14,11:west": {
+                "kind": "open",
+                "door": null
+              },
+              "15,11:north": {
+                "kind": "open",
+                "door": null
+              },
+              "15,11:west": {
+                "kind": "open",
+                "door": null
+              },
+              "16,11:north": {
+                "kind": "open",
+                "door": null
+              },
+              "16,11:west": {
+                "kind": "open",
+                "door": null
+              },
+              "17,11:north": {
+                "kind": "open",
+                "door": null
+              },
+              "17,11:west": {
+                "kind": "open",
+                "door": null
+              },
+              "18,11:north": {
+                "kind": "open",
+                "door": null
+              },
+              "18,11:west": {
+                "kind": "open",
+                "door": null
+              },
+              "19,11:west": {
+                "kind": "open",
+                "door": null
+              },
+              "20,11:west": {
+                "kind": "open",
+                "door": null
+              },
+              "0,12:north": {
+                "kind": "open",
+                "door": null
+              },
+              "1,12:north": {
+                "kind": "open",
+                "door": null
+              },
+              "1,12:west": {
+                "kind": "open",
+                "door": null
+              },
+              "2,12:north": {
+                "kind": "open",
+                "door": null
+              },
+              "2,12:west": {
+                "kind": "open",
+                "door": null
+              },
+              "3,12:north": {
+                "kind": "open",
+                "door": null
+              },
+              "3,12:west": {
+                "kind": "open",
+                "door": null
+              },
+              "4,12:north": {
+                "kind": "open",
+                "door": null
+              },
+              "4,12:west": {
+                "kind": "open",
+                "door": null
+              },
+              "8,12:north": {
+                "kind": "open",
+                "door": null
+              },
+              "9,12:north": {
+                "kind": "open",
+                "door": null
+              },
+              "9,12:west": {
+                "kind": "open",
+                "door": null
+              },
+              "13,12:north": {
+                "kind": "open",
+                "door": null
+              },
+              "14,12:north": {
+                "kind": "open",
+                "door": null
+              },
+              "14,12:west": {
+                "kind": "open",
+                "door": null
+              },
+              "15,12:north": {
+                "kind": "open",
+                "door": null
+              },
+              "15,12:west": {
+                "kind": "open",
+                "door": null
+              },
+              "16,12:north": {
+                "kind": "open",
+                "door": null
+              },
+              "16,12:west": {
+                "kind": "open",
+                "door": null
+              },
+              "17,12:north": {
+                "kind": "open",
+                "door": null
+              },
+              "17,12:west": {
+                "kind": "open",
+                "door": null
+              },
+              "18,12:north": {
+                "kind": "open",
+                "door": null
+              },
+              "18,12:west": {
+                "kind": "open",
+                "door": null
+              },
+              "19,12:north": {
+                "kind": "open",
+                "door": null
+              },
+              "19,12:west": {
+                "kind": "open",
+                "door": null
+              },
+              "20,12:north": {
+                "kind": "open",
+                "door": null
+              },
+              "20,12:west": {
+                "kind": "open",
+                "door": null
+              }
+            },
+            "areas": [
+              {
+                "id": "kingsway",
+                "name": "The Kingsway",
+                "description": "The old high road climbs out of the pines and runs straight at the bridge. A board nailed to a post reads TOLL in red letters a foot high. To the south-west, a goat path drops over the edge of the gorge.",
+                "cells": [
+                  [
+                    0,
+                    5
+                  ],
+                  [
+                    1,
+                    5
+                  ],
+                  [
+                    2,
+                    5
+                  ],
+                  [
+                    0,
+                    6
+                  ],
+                  [
+                    1,
+                    6
+                  ],
+                  [
+                    2,
+                    6
+                  ],
+                  [
+                    0,
+                    7
+                  ],
+                  [
+                    1,
+                    7
+                  ],
+                  [
+                    2,
+                    7
+                  ]
+                ],
+                "encounter": null,
+                "features": [],
+                "trap": null,
+                "treasure": null
+              },
+              {
+                "id": "toll_gate",
+                "name": "Toll gate",
+                "description": "A squat stone arch closes the west end of Crookback Bridge, and a striped pole is lowered across the road. Under the arch, four bandits in odd pieces of armour lounge on upturned barrels with cudgels across their knees. A slate by the pole reads: ONE GOLD A HEAD. NO ARGUING.",
+                "cells": [
+                  [
+                    3,
+                    5
+                  ],
+                  [
+                    4,
+                    5
+                  ],
+                  [
+                    5,
+                    5
+                  ],
+                  [
+                    3,
+                    6
+                  ],
+                  [
+                    4,
+                    6
+                  ],
+                  [
+                    5,
+                    6
+                  ],
+                  [
+                    3,
+                    7
+                  ],
+                  [
+                    4,
+                    7
+                  ],
+                  [
+                    5,
+                    7
+                  ]
+                ],
+                "encounter": {
+                  "monsters": [
+                    {
+                      "template_id": "bandit",
+                      "count_dice": null,
+                      "count_fixed": 4
+                    }
+                  ],
+                  "alignment": "neutral",
+                  "aware": false,
+                  "stance": "indifferent",
+                  "hoard": false
+                },
+                "features": [],
+                "trap": null,
+                "treasure": null
+              },
+              {
+                "id": "kennel",
+                "name": "Kennel",
+                "description": "Straw, gnawed bones, and the rank smell of animals. Two lean grey wolves, bought as cubs from a trapper and kept hungry ever since, rise out of the straw with their hackles up.",
+                "cells": [
+                  [
+                    3,
+                    2
+                  ],
+                  [
+                    4,
+                    2
+                  ],
+                  [
+                    5,
+                    2
+                  ],
+                  [
+                    3,
+                    3
+                  ],
+                  [
+                    4,
+                    3
+                  ],
+                  [
+                    5,
+                    3
+                  ],
+                  [
+                    3,
+                    4
+                  ],
+                  [
+                    4,
+                    4
+                  ],
+                  [
+                    5,
+                    4
+                  ]
+                ],
+                "encounter": {
+                  "monsters": [
+                    {
+                      "template_id": "normal_wolf",
+                      "count_dice": null,
+                      "count_fixed": 2
+                    }
+                  ],
+                  "alignment": null,
+                  "aware": false,
+                  "stance": "attacks",
+                  "hoard": false
+                },
+                "features": [],
+                "trap": null,
+                "treasure": null
+              },
+              {
+                "id": "bunkroom",
+                "name": "Bunkroom",
+                "description": "Six bunks, three of them full of snoring bandits. Boots, dice, and empty wine jugs cover the floor, and a battered sea chest sits under the window.",
+                "cells": [
+                  [
+                    3,
+                    8
+                  ],
+                  [
+                    4,
+                    8
+                  ],
+                  [
+                    5,
+                    8
+                  ],
+                  [
+                    3,
+                    9
+                  ],
+                  [
+                    4,
+                    9
+                  ],
+                  [
+                    5,
+                    9
+                  ],
+                  [
+                    3,
+                    10
+                  ],
+                  [
+                    4,
+                    10
+                  ],
+                  [
+                    5,
+                    10
+                  ]
+                ],
+                "encounter": {
+                  "monsters": [
+                    {
+                      "template_id": "bandit",
+                      "count_dice": null,
+                      "count_fixed": 3
+                    }
+                  ],
+                  "alignment": null,
+                  "aware": false,
+                  "stance": null,
+                  "hoard": false
+                },
+                "features": [
+                  {
+                    "id": "sea_chest",
+                    "kind": "treasure_cache",
+                    "description": "The bandits' pooled winnings from a month of dice, and a good crossbow.",
+                    "cell": null,
+                    "item_ids": [
+                      "crossbow",
+                      "crossbow_bolts"
+                    ],
+                    "magic_item_ids": [],
+                    "coins": {
+                      "pp": 0,
+                      "gp": 0,
+                      "ep": 0,
+                      "sp": 180,
+                      "cp": 300
+                    },
+                    "valuables": [],
+                    "trap": null
+                  }
+                ],
+                "trap": null,
+                "treasure": null
+              },
+              {
+                "id": "counting_room",
+                "name": "Counting room",
+                "description": "A cramped office inside the toll tower, lit by a smoking lamp. Ledgers record every toll in a neat hand. A wizened man in an ink-stained robe sits behind the desk, and a bandit with a crossbow stands at his shoulder. Beside the desk is a square trapdoor with a rope handle, and a ladder climbs to the room above.",
+                "cells": [
+                  [
+                    11,
+                    2
+                  ],
+                  [
+                    12,
+                    2
+                  ],
+                  [
+                    13,
+                    2
+                  ],
+                  [
+                    14,
+                    2
+                  ],
+                  [
+                    11,
+                    3
+                  ],
+                  [
+                    12,
+                    3
+                  ],
+                  [
+                    13,
+                    3
+                  ],
+                  [
+                    14,
+                    3
+                  ],
+                  [
+                    11,
+                    4
+                  ],
+                  [
+                    12,
+                    4
+                  ],
+                  [
+                    13,
+                    4
+                  ],
+                  [
+                    14,
+                    4
+                  ]
+                ],
+                "encounter": {
+                  "monsters": [
+                    {
+                      "template_id": "medium",
+                      "count_dice": null,
+                      "count_fixed": 1
+                    },
+                    {
+                      "template_id": "bandit",
+                      "count_dice": null,
+                      "count_fixed": 1
+                    }
+                  ],
+                  "alignment": null,
+                  "aware": false,
+                  "stance": null,
+                  "hoard": false
+                },
+                "features": [
+                  {
+                    "id": "toll_strongbox",
+                    "kind": "treasure_cache",
+                    "description": "The week's takings, in a strongbox bolted to the floor under the desk.",
+                    "cell": null,
+                    "item_ids": [],
+                    "magic_item_ids": [],
+                    "coins": {
+                      "pp": 0,
+                      "gp": 90,
+                      "ep": 0,
+                      "sp": 240,
+                      "cp": 0
+                    },
+                    "valuables": [],
+                    "trap": {
+                      "kind": "treasure",
+                      "trigger": "open",
+                      "effect": {
+                        "damage_dice": "1d4",
+                        "volley_dice": null,
+                        "save": {
+                          "category": "death",
+                          "modifier": 0,
+                          "on_save": "negates"
+                        },
+                        "kills": false,
+                        "condition": null,
+                        "condition_duration_dice": null,
+                        "condition_duration_amount": null,
+                        "condition_duration_unit": null,
+                        "fall_feet": null,
+                        "transition": null,
+                        "manual": null
+                      },
+                      "affects": "triggerer"
+                    }
+                  }
+                ],
+                "trap": null,
+                "treasure": null
+              },
+              {
+                "id": "captains_loft",
+                "name": "Captain's loft",
+                "description": "The top room of the toll tower, with arrow slits on four sides and a view down the whole gorge. Mag Corrie, who calls herself captain of the bridge, has furnished it with a stolen carpet and a curtained bed. Her bodyguard, a huge bare-chested man with a meat cleaver, never leaves her side.",
+                "cells": [
+                  [
+                    20,
+                    0
+                  ],
+                  [
+                    21,
+                    0
+                  ],
+                  [
+                    22,
+                    0
+                  ],
+                  [
+                    23,
+                    0
+                  ],
+                  [
+                    20,
+                    1
+                  ],
+                  [
+                    21,
+                    1
+                  ],
+                  [
+                    22,
+                    1
+                  ],
+                  [
+                    23,
+                    1
+                  ],
+                  [
+                    20,
+                    2
+                  ],
+                  [
+                    21,
+                    2
+                  ],
+                  [
+                    22,
+                    2
+                  ],
+                  [
+                    23,
+                    2
+                  ]
+                ],
+                "encounter": {
+                  "monsters": [
+                    {
+                      "template_id": "veteran_2",
+                      "count_dice": null,
+                      "count_fixed": 1
+                    },
+                    {
+                      "template_id": "berserker",
+                      "count_dice": null,
+                      "count_fixed": 1
+                    }
+                  ],
+                  "alignment": null,
+                  "aware": true,
+                  "stance": null,
+                  "hoard": false
+                },
+                "features": [
+                  {
+                    "id": "captains_chest",
+                    "kind": "treasure_cache",
+                    "description": "Mag Corrie's share of the tolls, a silver brooch, a well-made sword, and a small iron box with a miller's mark on the lid.",
+                    "cell": null,
+                    "item_ids": [
+                      "millers_strongbox"
+                    ],
+                    "magic_item_ids": [
+                      "sword_plus_1"
+                    ],
+                    "coins": {
+                      "pp": 0,
+                      "gp": 220,
+                      "ep": 0,
+                      "sp": 0,
+                      "cp": 0
+                    },
+                    "valuables": [
+                      {
+                        "kind": "jewellery",
+                        "name": "Silver brooch",
+                        "value_gp": 120,
+                        "weight_coins": 0
+                      }
+                    ],
+                    "trap": null
+                  }
+                ],
+                "trap": null,
+                "treasure": null
+              },
+              {
+                "id": "east_gatehouse",
+                "name": "East gatehouse",
+                "description": "The east end of the bridge is closed by a rusted portcullis, worked from this room by a great winch. A bandit dozes by the winch with a crossbow across his knees.",
+                "cells": [
+                  [
+                    20,
+                    5
+                  ],
+                  [
+                    21,
+                    5
+                  ],
+                  [
+                    22,
+                    5
+                  ],
+                  [
+                    20,
+                    6
+                  ],
+                  [
+                    21,
+                    6
+                  ],
+                  [
+                    22,
+                    6
+                  ],
+                  [
+                    20,
+                    7
+                  ],
+                  [
+                    21,
+                    7
+                  ],
+                  [
+                    22,
+                    7
+                  ]
+                ],
+                "encounter": {
+                  "monsters": [
+                    {
+                      "template_id": "bandit",
+                      "count_dice": null,
+                      "count_fixed": 1
+                    }
+                  ],
+                  "alignment": null,
+                  "aware": false,
+                  "stance": null,
+                  "hoard": false
+                },
+                "features": [],
+                "trap": null,
+                "treasure": null
+              },
+              {
+                "id": "far_road",
+                "name": "The far road",
+                "description": "Beyond the east gate, the Kingsway runs on into the hills toward the lowland towns. A cart with a broken axle stands at the roadside, long since emptied.",
+                "cells": [
+                  [
+                    23,
+                    5
+                  ],
+                  [
+                    24,
+                    5
+                  ],
+                  [
+                    25,
+                    5
+                  ],
+                  [
+                    23,
+                    6
+                  ],
+                  [
+                    24,
+                    6
+                  ],
+                  [
+                    25,
+                    6
+                  ],
+                  [
+                    23,
+                    7
+                  ],
+                  [
+                    24,
+                    7
+                  ],
+                  [
+                    25,
+                    7
+                  ]
+                ],
+                "encounter": null,
+                "features": [],
+                "trap": null,
+                "treasure": null
+              },
+              {
+                "id": "pier_undercroft",
+                "name": "Pier undercroft",
+                "description": "A dark chamber inside the central pier of the bridge, reached by an iron ladder from the deck. The river roars somewhere below. Bats hang in the vault, and their droppings make the floor treacherous.",
+                "cells": [
+                  [
+                    10,
+                    9
+                  ],
+                  [
+                    11,
+                    9
+                  ],
+                  [
+                    12,
+                    9
+                  ],
+                  [
+                    10,
+                    10
+                  ],
+                  [
+                    11,
+                    10
+                  ],
+                  [
+                    12,
+                    10
+                  ],
+                  [
+                    10,
+                    11
+                  ],
+                  [
+                    11,
+                    11
+                  ],
+                  [
+                    12,
+                    11
+                  ]
+                ],
+                "encounter": {
+                  "monsters": [
+                    {
+                      "template_id": "giant_bat",
+                      "count_dice": null,
+                      "count_fixed": 2
+                    }
+                  ],
+                  "alignment": null,
+                  "aware": false,
+                  "stance": null,
+                  "hoard": false
+                },
+                "features": [],
+                "trap": null,
+                "treasure": null
+              },
+              {
+                "id": "smugglers_hole",
+                "name": "Smugglers' hole",
+                "description": "A dry niche cut into the pier behind a false wall of fitted stone. One of the bandits has been keeping things here that he did not want to share with the rest of the band.",
+                "cells": [
+                  [
+                    8,
+                    11
+                  ],
+                  [
+                    9,
+                    11
+                  ],
+                  [
+                    8,
+                    12
+                  ],
+                  [
+                    9,
+                    12
+                  ]
+                ],
+                "encounter": null,
+                "features": [
+                  {
+                    "id": "hidden_bundle",
+                    "kind": "treasure_cache",
+                    "description": "An oilcloth bundle tied with wire. A small crossbow mechanism is fixed to the shelf behind it, pointing out.",
+                    "cell": null,
+                    "item_ids": [],
+                    "magic_item_ids": [
+                      "potion_of_healing"
+                    ],
+                    "coins": {
+                      "pp": 0,
+                      "gp": 75,
+                      "ep": 0,
+                      "sp": 0,
+                      "cp": 0
+                    },
+                    "valuables": [
+                      {
+                        "kind": "gem",
+                        "name": "Amber",
+                        "value_gp": 100,
+                        "weight_coins": 0
+                      }
+                    ],
+                    "trap": {
+                      "kind": "treasure",
+                      "trigger": "open",
+                      "effect": {
+                        "damage_dice": "1d3",
+                        "volley_dice": "1d4",
+                        "save": null,
+                        "kills": false,
+                        "condition": null,
+                        "condition_duration_dice": null,
+                        "condition_duration_amount": null,
+                        "condition_duration_unit": null,
+                        "fall_feet": null,
+                        "transition": null,
+                        "manual": null
+                      },
+                      "affects": "triggerer"
+                    }
+                  }
+                ],
+                "trap": null,
+                "treasure": null
+              },
+              {
+                "id": "ledge",
+                "name": "Ledge under the arch",
+                "description": "A narrow stone ledge runs along the inside of the arch, slick with spray. A few feet below, the river runs fast and white.",
+                "cells": [
+                  [
+                    13,
+                    10
+                  ],
+                  [
+                    14,
+                    10
+                  ],
+                  [
+                    15,
+                    10
+                  ],
+                  [
+                    16,
+                    10
+                  ],
+                  [
+                    17,
+                    10
+                  ],
+                  [
+                    18,
+                    10
+                  ]
+                ],
+                "encounter": null,
+                "features": [],
+                "trap": null,
+                "treasure": null
+              },
+              {
+                "id": "river",
+                "name": "The river",
+                "description": "Fast, cold water, white over the rocks, and much deeper than it looked.",
+                "cells": [
+                  [
+                    13,
+                    11
+                  ],
+                  [
+                    14,
+                    11
+                  ],
+                  [
+                    15,
+                    11
+                  ],
+                  [
+                    16,
+                    11
+                  ],
+                  [
+                    17,
+                    11
+                  ],
+                  [
+                    18,
+                    11
+                  ],
+                  [
+                    19,
+                    11
+                  ],
+                  [
+                    20,
+                    11
+                  ],
+                  [
+                    13,
+                    12
+                  ],
+                  [
+                    14,
+                    12
+                  ],
+                  [
+                    15,
+                    12
+                  ],
+                  [
+                    16,
+                    12
+                  ],
+                  [
+                    17,
+                    12
+                  ],
+                  [
+                    18,
+                    12
+                  ],
+                  [
+                    19,
+                    12
+                  ],
+                  [
+                    20,
+                    12
+                  ]
+                ],
+                "encounter": null,
+                "features": [],
+                "trap": null,
+                "treasure": null
+              },
+              {
+                "id": "shingle_beach",
+                "name": "Shingle beach",
+                "description": "A beach of grey stones under the west end of the gorge, strewn with driftwood and with what is left of travellers who would not pay. A goat path climbs the cliff to the road above. Something pale and many-legged sits very still among the rocks.",
+                "cells": [
+                  [
+                    0,
+                    11
+                  ],
+                  [
+                    1,
+                    11
+                  ],
+                  [
+                    2,
+                    11
+                  ],
+                  [
+                    3,
+                    11
+                  ],
+                  [
+                    4,
+                    11
+                  ],
+                  [
+                    0,
+                    12
+                  ],
+                  [
+                    1,
+                    12
+                  ],
+                  [
+                    2,
+                    12
+                  ],
+                  [
+                    3,
+                    12
+                  ],
+                  [
+                    4,
+                    12
+                  ]
+                ],
+                "encounter": {
+                  "monsters": [
+                    {
+                      "template_id": "crab_spider",
+                      "count_dice": null,
+                      "count_fixed": 1
+                    }
+                  ],
+                  "alignment": null,
+                  "aware": false,
+                  "stance": null,
+                  "hoard": false
+                },
+                "features": [
+                  {
+                    "id": "drowned_pack",
+                    "kind": "treasure_cache",
+                    "description": "A drowned pedlar's pack, wedged between two rocks.",
+                    "cell": null,
+                    "item_ids": [
+                      "lantern",
+                      "oil_flask",
+                      "oil_flask"
+                    ],
+                    "magic_item_ids": [],
+                    "coins": {
+                      "pp": 0,
+                      "gp": 30,
+                      "ep": 0,
+                      "sp": 0,
+                      "cp": 0
+                    },
+                    "valuables": [],
+                    "trap": null
+                  }
+                ],
+                "trap": null,
+                "treasure": null
+              }
+            ],
+            "features": [],
+            "transitions": [
+              {
+                "side": null,
+                "requires": null,
+                "kind": "stairs_up",
+                "position": [
+                  11,
+                  2
+                ],
+                "to_dungeon_id": "bridge",
+                "to_level_number": 1,
+                "to_position": [
+                  21,
+                  1
+                ],
+                "to_facing": "south"
+              },
+              {
+                "side": null,
+                "requires": null,
+                "kind": "stairs_down",
+                "position": [
+                  21,
+                  1
+                ],
+                "to_dungeon_id": "bridge",
+                "to_level_number": 1,
+                "to_position": [
+                  11,
+                  2
+                ],
+                "to_facing": "south"
+              },
+              {
+                "side": null,
+                "requires": null,
+                "kind": "trapdoor",
+                "position": [
+                  14,
+                  3
+                ],
+                "to_dungeon_id": "bridge",
+                "to_level_number": 1,
+                "to_position": [
+                  14,
+                  10
+                ],
+                "to_facing": "west"
+              },
+              {
+                "side": null,
+                "requires": null,
+                "kind": "stairs_down",
+                "position": [
+                  11,
+                  7
+                ],
+                "to_dungeon_id": "bridge",
+                "to_level_number": 1,
+                "to_position": [
+                  11,
+                  9
+                ],
+                "to_facing": "south"
+              },
+              {
+                "side": null,
+                "requires": null,
+                "kind": "stairs_up",
+                "position": [
+                  11,
+                  9
+                ],
+                "to_dungeon_id": "bridge",
+                "to_level_number": 1,
+                "to_position": [
+                  11,
+                  7
+                ],
+                "to_facing": "north"
+              },
+              {
+                "side": null,
+                "requires": null,
+                "kind": "stairs_down",
+                "position": [
+                  0,
+                  7
+                ],
+                "to_dungeon_id": "bridge",
+                "to_level_number": 1,
+                "to_position": [
+                  1,
+                  11
+                ],
+                "to_facing": "east"
+              },
+              {
+                "side": null,
+                "requires": null,
+                "kind": "stairs_up",
+                "position": [
+                  1,
+                  11
+                ],
+                "to_dungeon_id": "bridge",
+                "to_level_number": 1,
+                "to_position": [
+                  0,
+                  7
+                ],
+                "to_facing": "east"
+              }
+            ],
+            "wandering": {
+              "chance_in_six": 1,
+              "interval_turns": 2,
+              "table": {
+                "id": "crookback_bridge",
+                "label": "Crookback Bridge",
+                "min_level": 1,
+                "max_level": 1,
+                "rows": [
+                  {
+                    "roll": 1,
+                    "name": "Bandits on their rounds",
+                    "entry": {
+                      "kind": "monster",
+                      "monster_ids": [
+                        "bandit"
+                      ],
+                      "variant_dice": null
+                    },
+                    "count_dice": "1d4",
+                    "count_fixed": null
+                  },
+                  {
+                    "roll": 2,
+                    "name": "Bandits on their rounds",
+                    "entry": {
+                      "kind": "monster",
+                      "monster_ids": [
+                        "bandit"
+                      ],
+                      "variant_dice": null
+                    },
+                    "count_dice": "1d4",
+                    "count_fixed": null
+                  },
+                  {
+                    "roll": 3,
+                    "name": "Bandits on their rounds",
+                    "entry": {
+                      "kind": "monster",
+                      "monster_ids": [
+                        "bandit"
+                      ],
+                      "variant_dice": null
+                    },
+                    "count_dice": "1d4",
+                    "count_fixed": null
+                  },
+                  {
+                    "roll": 4,
+                    "name": "Bandits on their rounds",
+                    "entry": {
+                      "kind": "monster",
+                      "monster_ids": [
+                        "bandit"
+                      ],
+                      "variant_dice": null
+                    },
+                    "count_dice": "1d4",
+                    "count_fixed": null
+                  },
+                  {
+                    "roll": 5,
+                    "name": "Bandits on their rounds",
+                    "entry": {
+                      "kind": "monster",
+                      "monster_ids": [
+                        "bandit"
+                      ],
+                      "variant_dice": null
+                    },
+                    "count_dice": "1d4",
+                    "count_fixed": null
+                  },
+                  {
+                    "roll": 6,
+                    "name": "Bandits on their rounds",
+                    "entry": {
+                      "kind": "monster",
+                      "monster_ids": [
+                        "bandit"
+                      ],
+                      "variant_dice": null
+                    },
+                    "count_dice": "1d4",
+                    "count_fixed": null
+                  },
+                  {
+                    "roll": 7,
+                    "name": "Giant bats",
+                    "entry": {
+                      "kind": "monster",
+                      "monster_ids": [
+                        "giant_bat"
+                      ],
+                      "variant_dice": null
+                    },
+                    "count_dice": "1d3",
+                    "count_fixed": null
+                  },
+                  {
+                    "roll": 8,
+                    "name": "Giant bats",
+                    "entry": {
+                      "kind": "monster",
+                      "monster_ids": [
+                        "giant_bat"
+                      ],
+                      "variant_dice": null
+                    },
+                    "count_dice": "1d3",
+                    "count_fixed": null
+                  },
+                  {
+                    "roll": 9,
+                    "name": "Giant bats",
+                    "entry": {
+                      "kind": "monster",
+                      "monster_ids": [
+                        "giant_bat"
+                      ],
+                      "variant_dice": null
+                    },
+                    "count_dice": "1d3",
+                    "count_fixed": null
+                  },
+                  {
+                    "roll": 10,
+                    "name": "Wolves",
+                    "entry": {
+                      "kind": "monster",
+                      "monster_ids": [
+                        "normal_wolf"
+                      ],
+                      "variant_dice": null
+                    },
+                    "count_dice": "1d2",
+                    "count_fixed": null
+                  },
+                  {
+                    "roll": 11,
+                    "name": "Wolves",
+                    "entry": {
+                      "kind": "monster",
+                      "monster_ids": [
+                        "normal_wolf"
+                      ],
+                      "variant_dice": null
+                    },
+                    "count_dice": "1d2",
+                    "count_fixed": null
+                  },
+                  {
+                    "roll": 12,
+                    "name": "Wolves",
+                    "entry": {
+                      "kind": "monster",
+                      "monster_ids": [
+                        "normal_wolf"
+                      ],
+                      "variant_dice": null
+                    },
+                    "count_dice": "1d2",
+                    "count_fixed": null
+                  },
+                  {
+                    "roll": 13,
+                    "name": "Crab spider",
+                    "entry": {
+                      "kind": "monster",
+                      "monster_ids": [
+                        "crab_spider"
+                      ],
+                      "variant_dice": null
+                    },
+                    "count_dice": null,
+                    "count_fixed": 1
+                  },
+                  {
+                    "roll": 14,
+                    "name": "Crab spider",
+                    "entry": {
+                      "kind": "monster",
+                      "monster_ids": [
+                        "crab_spider"
+                      ],
+                      "variant_dice": null
+                    },
+                    "count_dice": null,
+                    "count_fixed": 1
+                  },
+                  {
+                    "roll": 15,
+                    "name": "Travellers waiting to cross",
+                    "entry": {
+                      "kind": "monster",
+                      "monster_ids": [
+                        "trader"
+                      ],
+                      "variant_dice": null
+                    },
+                    "count_dice": "1d4",
+                    "count_fixed": null
+                  },
+                  {
+                    "roll": 16,
+                    "name": "Travellers waiting to cross",
+                    "entry": {
+                      "kind": "monster",
+                      "monster_ids": [
+                        "trader"
+                      ],
+                      "variant_dice": null
+                    },
+                    "count_dice": "1d4",
+                    "count_fixed": null
+                  },
+                  {
+                    "roll": 17,
+                    "name": "Travellers waiting to cross",
+                    "entry": {
+                      "kind": "monster",
+                      "monster_ids": [
+                        "trader"
+                      ],
+                      "variant_dice": null
+                    },
+                    "count_dice": "1d4",
+                    "count_fixed": null
+                  },
+                  {
+                    "roll": 18,
+                    "name": "Travellers waiting to cross",
+                    "entry": {
+                      "kind": "monster",
+                      "monster_ids": [
+                        "trader"
+                      ],
+                      "variant_dice": null
+                    },
+                    "count_dice": "1d4",
+                    "count_fixed": null
+                  },
+                  {
+                    "roll": 19,
+                    "name": "Rock baboons",
+                    "entry": {
+                      "kind": "monster",
+                      "monster_ids": [
+                        "rock_baboon"
+                      ],
+                      "variant_dice": null
+                    },
+                    "count_dice": "1d4",
+                    "count_fixed": null
+                  },
+                  {
+                    "roll": 20,
+                    "name": "Rock baboons",
+                    "entry": {
+                      "kind": "monster",
+                      "monster_ids": [
+                        "rock_baboon"
+                      ],
+                      "variant_dice": null
+                    },
+                    "count_dice": "1d4",
+                    "count_fixed": null
+                  }
+                ],
+                "overrides_applied": []
+              }
+            },
+            "entrance": [
+              1,
+              6
+            ],
+            "guidance": "Play the bandits as lazy and greedy rather than cruel. The toll collectors at the gate would rather take a bribe than fight, and they run when Mag Corrie falls. Mag is clever and proud. She will bargain for her life, and she will lie. The river is the bridge's real danger: anyone who steps off the ledge is swept downstream to the shingle beach. Keep things moving, because the whole adventure should fit in an hour."
+          }
+        ]
+      }
+    ],
+    "monsters": [],
+    "items": [
+      {
+        "item_type": "gear",
+        "id": "millers_strongbox",
+        "name": "Miller Aske's strongbox",
+        "cost_gp": 0,
+        "lot_size": 1,
+        "capacity_coins": null,
+        "combat": null,
+        "params": {},
+        "overrides_applied": []
+      }
+    ],
+    "spells": [],
+    "triggers": [
+      {
+        "id": "pay_the_toll",
+        "when": {
+          "pattern_type": "area_entered",
+          "dungeon_id": "bridge",
+          "level_number": 1,
+          "area_id": "toll_gate"
+        },
+        "conditions": [],
+        "repeatable": false,
+        "consequences": [
+          {
+            "command_type": "remove_coins",
+            "source": null,
+            "character_id": "@party",
+            "coins": {
+              "pp": 0,
+              "gp": 1,
+              "ep": 0,
+              "sp": 0,
+              "cp": 0
+            }
+          }
+        ],
+        "narrative": {
+          "refusal": "",
+          "success": "",
+          "fired": "Each member who has a gold piece loses one to the toll collectors. Members with no gold keep their purses.",
+          "offer": "",
+          "progress": "",
+          "completion": "",
+          "journal": "Hands dart into your purses as you duck under the arch. \"One gold a head,\" says the largest bandit, grinning. \"Paid in full. Now, are you crossing or are you staying?\"",
+          "guidance": "",
+          "speaker": ""
+        }
+      },
+      {
+        "id": "portcullis_rises",
+        "when": {
+          "pattern_type": "area_entered",
+          "dungeon_id": "bridge",
+          "level_number": 1,
+          "area_id": "east_gatehouse"
+        },
+        "conditions": [],
+        "repeatable": false,
+        "consequences": [
+          {
+            "command_type": "set_door_state",
+            "source": null,
+            "dungeon_id": "bridge",
+            "level_number": 1,
+            "x": 22,
+            "y": 6,
+            "direction": "east",
+            "open": true,
+            "wedged": null,
+            "discovered": null,
+            "unlocked": true
+          },
+          {
+            "command_type": "set_flag",
+            "source": null,
+            "key": "bridge.portcullis",
+            "value": "raised"
+          }
+        ],
+        "narrative": {
+          "refusal": "",
+          "success": "",
+          "fired": "The portcullis is up. It stays up unless the referee lowers it.",
+          "offer": "",
+          "progress": "",
+          "completion": "",
+          "journal": "Someone kicks the winch pawl loose. The great wheel spins, chains rattle up through the floor, and the east portcullis rises with a shriek of rust.",
+          "guidance": "",
+          "speaker": ""
+        }
+      },
+      {
+        "id": "swept_away",
+        "when": {
+          "pattern_type": "area_entered",
+          "dungeon_id": "bridge",
+          "level_number": 1,
+          "area_id": "river"
+        },
+        "conditions": [],
+        "repeatable": true,
+        "consequences": [
+          {
+            "command_type": "advance_time",
+            "source": null,
+            "n": 1,
+            "unit": "turn"
+          },
+          {
+            "command_type": "place_party",
+            "source": null,
+            "location": {
+              "kind": "dungeon",
+              "dungeon_id": "bridge",
+              "level_number": 1,
+              "position": [
+                3,
+                12
+              ],
+              "facing": "north"
+            }
+          }
+        ],
+        "narrative": {
+          "refusal": "",
+          "success": "",
+          "fired": "The river takes the party downstream to the shingle beach. A turn passes.",
+          "offer": "",
+          "progress": "",
+          "completion": "",
+          "journal": "The current snatches you off your feet and rolls you over and over through the white water. Battered and half drowned, you wash up on a beach of grey stones below the west end of the gorge.",
+          "guidance": "",
+          "speaker": ""
+        }
+      },
+      {
+        "id": "mag_falls",
+        "when": {
+          "pattern_type": "monster_defeated",
+          "template_id": "veteran_2"
+        },
+        "conditions": [],
+        "repeatable": false,
+        "consequences": [
+          {
+            "command_type": "set_flag",
+            "source": null,
+            "key": "bridge.captain",
+            "value": "beaten"
+          }
+        ],
+        "narrative": {
+          "refusal": "",
+          "success": "",
+          "fired": "Mag Corrie is beaten. Any bandit who meets the party from now on checks morale at once.",
+          "offer": "",
+          "progress": "",
+          "completion": "",
+          "journal": "Mag Corrie is beaten, and word of it runs along the bridge faster than you can walk.",
+          "guidance": "",
+          "speaker": ""
+        }
+      },
+      {
+        "id": "gate_surrenders",
+        "when": {
+          "pattern_type": "area_entered",
+          "dungeon_id": "bridge",
+          "level_number": 1,
+          "area_id": "toll_gate"
+        },
+        "conditions": [
+          {
+            "condition_type": "flag_equals",
+            "key": "bridge.captain",
+            "value": "beaten"
+          }
+        ],
+        "repeatable": false,
+        "consequences": [
+          {
+            "command_type": "end_encounter",
+            "source": null,
+            "outcome": "parley",
+            "resolve_area": true
+          }
+        ],
+        "narrative": {
+          "refusal": "",
+          "success": "",
+          "fired": "The toll collectors give up without a fight. Their encounter ends and the gate is clear for good.",
+          "offer": "",
+          "progress": "",
+          "completion": "",
+          "journal": "The toll collectors have heard about their captain. They throw down their cudgels, lift the pole for you, and run for the trees.",
+          "guidance": "",
+          "speaker": ""
+        }
+      }
+    ],
+    "quests": [
+      {
+        "id": "open_the_kingsway",
+        "name": "Open the Kingsway",
+        "activation": null,
+        "objectives": [
+          {
+            "id": "beat_mag_corrie",
+            "name": "Beat Mag Corrie",
+            "when": {
+              "pattern": {
+                "pattern_type": "monster_defeated",
+                "template_id": "veteran_2"
+              },
+              "conditions": []
+            },
+            "hidden": false,
+            "reveal_when": null,
+            "narrative": {
+              "refusal": "",
+              "success": "",
+              "fired": "",
+              "offer": "",
+              "progress": "The captain of the bridge has lost her bridge.",
+              "completion": "",
+              "journal": "",
+              "guidance": "",
+              "speaker": ""
+            }
+          },
+          {
+            "id": "raise_portcullis",
+            "name": "Raise the east portcullis",
+            "when": {
+              "pattern": {
+                "pattern_type": "flag_set",
+                "key": "bridge.portcullis",
+                "value": "raised"
+              },
+              "conditions": []
+            },
+            "hidden": false,
+            "reveal_when": null,
+            "narrative": {
+              "refusal": "",
+              "success": "",
+              "fired": "",
+              "offer": "",
+              "progress": "The east portcullis stands open, and the road runs through.",
+              "completion": "",
+              "journal": "",
+              "guidance": "",
+              "speaker": ""
+            }
+          }
+        ],
+        "rewards": [
+          {
+            "command_type": "grant_coins",
+            "source": null,
+            "character_id": "@party",
+            "coins": {
+              "pp": 0,
+              "gp": 25,
+              "ep": 0,
+              "sp": 0,
+              "cp": 0
+            }
+          },
+          {
+            "command_type": "award_xp",
+            "source": null,
+            "character_id": "@party",
+            "amount": 150
+          }
+        ],
+        "completion": "all",
+        "concludes_adventure": true,
+        "narrative": {
+          "refusal": "",
+          "success": "",
+          "fired": "",
+          "offer": "Reeve Odo Pell wants Crookback Bridge back. Drive off the bandits, beat their captain, and raise the east portcullis so the carts can cross.",
+          "progress": "",
+          "completion": "By evening the first carts are rolling over Crookback Bridge, and the drovers cheer you all the way down to Wethercote. The reeve pays out of his own purse.",
+          "journal": "",
+          "guidance": "",
+          "speaker": "Reeve Odo Pell"
+        }
+      },
+      {
+        "id": "millers_strongbox",
+        "name": "Miller Aske's strongbox",
+        "activation": null,
+        "objectives": [
+          {
+            "id": "find_strongbox",
+            "name": "Find the strongbox",
+            "when": {
+              "pattern": {
+                "pattern_type": "item_acquired",
+                "item_id": "millers_strongbox"
+              },
+              "conditions": []
+            },
+            "hidden": false,
+            "reveal_when": null,
+            "narrative": {
+              "refusal": "",
+              "success": "",
+              "fired": "",
+              "offer": "",
+              "progress": "The miller's mark is on the lid, and the box is still locked.",
+              "completion": "",
+              "journal": "",
+              "guidance": "",
+              "speaker": ""
+            }
+          }
+        ],
+        "rewards": [
+          {
+            "command_type": "grant_coins",
+            "source": null,
+            "character_id": "@first",
+            "coins": {
+              "pp": 0,
+              "gp": 50,
+              "ep": 0,
+              "sp": 0,
+              "cp": 0
+            }
+          },
+          {
+            "command_type": "award_xp",
+            "source": null,
+            "character_id": "@party",
+            "amount": 50
+          }
+        ],
+        "completion": "any",
+        "concludes_adventure": false,
+        "narrative": {
+          "refusal": "",
+          "success": "",
+          "fired": "",
+          "offer": "Miller Aske promises 50 gp to whoever brings back the strongbox the bandits took as his toll.",
+          "progress": "",
+          "completion": "Tucked into the strap of the strongbox is a note in the miller's hand: FOR THE FINDER. It is wrapped around fifty gold pieces.",
+          "journal": "",
+          "guidance": "",
+          "speaker": "Miller Aske"
+        }
+      }
+    ]
+  }
+}

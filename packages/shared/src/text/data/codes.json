@@ -1,0 +1,1920 @@
+{
+  "osrlib_version": "2.5.0",
+  "rejections": {
+    "battle.declaration.back_stab_no_ability": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": ["crawl/battle.py:2714"]
+    },
+    "battle.declaration.back_stab_not_attack": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": ["crawl/battle.py:2712"]
+    },
+    "battle.declaration.back_stab_not_melee": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": ["crawl/battle.py:2803"]
+    },
+    "battle.declaration.back_stab_target_aware": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": ["crawl/battle.py:2716"]
+    },
+    "battle.declaration.cannot_move": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": ["crawl/battle.py:2780", "crawl/battle.py:2798"]
+    },
+    "battle.declaration.cast_cannot_move": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": ["crawl/battle.py:2604"]
+    },
+    "battle.declaration.invisible_target": {
+      "params": ["target"],
+      "param_sets": [["target"]],
+      "sources": ["crawl/battle.py:2937"]
+    },
+    "battle.declaration.item_unusable": {
+      "params": ["item"],
+      "param_sets": [["item"]],
+      "sources": ["crawl/battle.py:2796", "crawl/battle.py:2826", "crawl/battle.py:3133"]
+    },
+    "battle.declaration.member_out_of_reach": {
+      "params": ["character", "target"],
+      "param_sets": [["character", "target"]],
+      "sources": ["crawl/battle.py:1647"]
+    },
+    "battle.declaration.missing_move": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": ["crawl/battle.py:2774"]
+    },
+    "battle.declaration.missing_spell": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": ["crawl/battle.py:2843"]
+    },
+    "battle.declaration.move_not_combinable": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": ["crawl/battle.py:2605"]
+    },
+    "battle.declaration.no_mirror": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": ["crawl/battle.py:3557"]
+    },
+    "battle.declaration.no_target": {
+      "params": ["character", "group"],
+      "param_sets": [["character"], ["group"]],
+      "sources": [
+        "crawl/battle.py:2788",
+        "crawl/battle.py:2829",
+        "crawl/battle.py:2839",
+        "crawl/battle.py:3129"
+      ]
+    },
+    "battle.declaration.not_in_front_rank": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": ["crawl/battle.py:1897"]
+    },
+    "battle.declaration.replacement_unavailable": {
+      "params": ["character", "replacement"],
+      "param_sets": [["character", "replacement"]],
+      "sources": ["crawl/battle.py:2658", "crawl/battle.py:2683"]
+    },
+    "battle.declaration.roster_mismatch": {
+      "params": ["declared", "expected"],
+      "param_sets": [["declared", "expected"]],
+      "sources": ["crawl/battle.py:3609"]
+    },
+    "battle.declaration.unknown_action": {
+      "params": ["action"],
+      "param_sets": [["action"]],
+      "sources": ["crawl/battle.py:2871"]
+    },
+    "battle.declaration.unknown_group": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": [
+        "crawl/battle.py:2778",
+        "crawl/battle.py:2785",
+        "crawl/battle.py:2821",
+        "crawl/battle.py:2914",
+        "crawl/battle.py:3123"
+      ]
+    },
+    "battle.declaration.weapon_not_wielded": {
+      "params": ["item"],
+      "param_sets": [["item"]],
+      "sources": ["crawl/battle.py:2792"]
+    },
+    "battle.none_active": {
+      "params": [],
+      "param_sets": [[]],
+      "sources": ["crawl/battle.py:3605"]
+    },
+    "combat.attack.attacker_blind": {
+      "params": ["attacker"],
+      "param_sets": [["attacker"]],
+      "sources": ["core/combat.py:1322"]
+    },
+    "combat.attack.attacker_incapacitated": {
+      "params": ["attacker", "condition"],
+      "param_sets": [["attacker", "condition"]],
+      "sources": ["core/combat.py:1315"]
+    },
+    "combat.attack.out_of_range": {
+      "params": ["attacker", "distance_feet"],
+      "param_sets": [["attacker", "distance_feet"]],
+      "sources": ["core/combat.py:1328"]
+    },
+    "combat.attack.out_of_reach": {
+      "params": ["attacker", "distance_feet", "target"],
+      "param_sets": [["distance_feet"], ["attacker", "distance_feet"], ["distance_feet", "target"]],
+      "sources": ["core/combat.py:1339", "crawl/battle.py:1895", "crawl/battle.py:3203"]
+    },
+    "combat.attack.reload": {
+      "params": ["attacker"],
+      "param_sets": [["attacker"]],
+      "sources": ["core/combat.py:1335"]
+    },
+    "combat.breath.exhausted": {
+      "params": ["monster", "uses_per_day"],
+      "param_sets": [["monster", "uses_per_day"]],
+      "sources": ["core/combat.py:3898"]
+    },
+    "combat.breath.no_breath_weapon": {
+      "params": ["monster"],
+      "param_sets": [["monster"]],
+      "sources": ["core/combat.py:3894"]
+    },
+    "creation.adjustment.above_cap": {
+      "params": ["ability", "amount", "score"],
+      "param_sets": [["ability", "amount", "score"]],
+      "sources": ["core/abilities.py:1092"]
+    },
+    "creation.adjustment.below_floor": {
+      "params": ["ability", "amount", "score"],
+      "param_sets": [["ability", "amount", "score"]],
+      "sources": ["core/abilities.py:1080"]
+    },
+    "creation.adjustment.class_restriction": {
+      "params": ["ability"],
+      "param_sets": [["ability"]],
+      "sources": ["core/abilities.py:1073"]
+    },
+    "creation.adjustment.not_lowerable": {
+      "params": ["ability"],
+      "param_sets": [["ability"]],
+      "sources": ["core/abilities.py:1067"]
+    },
+    "creation.adjustment.points_mismatch": {
+      "params": ["points_available", "points_spent"],
+      "param_sets": [["points_available", "points_spent"]],
+      "sources": ["core/abilities.py:1101"]
+    },
+    "creation.adjustment.prime_requisite_lowered": {
+      "params": ["ability"],
+      "param_sets": [["ability"]],
+      "sources": ["core/abilities.py:1070"]
+    },
+    "creation.adjustment.raise_not_prime_requisite": {
+      "params": ["ability"],
+      "param_sets": [["ability"]],
+      "sources": ["core/abilities.py:1088"]
+    },
+    "creation.adjustment.reduction_not_even": {
+      "params": ["ability", "amount"],
+      "param_sets": [["ability", "amount"]],
+      "sources": ["core/abilities.py:1076"]
+    },
+    "creation.class.requirements_not_met": {
+      "params": ["ability", "class", "minimum", "score"],
+      "param_sets": [["ability", "class", "minimum", "score"]],
+      "sources": ["core/character.py:1090"]
+    },
+    "creation.languages.duplicate_choice": {
+      "params": ["language"],
+      "param_sets": [["language"]],
+      "sources": ["core/character.py:1210"]
+    },
+    "creation.languages.duplicates_native": {
+      "params": ["language"],
+      "param_sets": [["language"]],
+      "sources": ["core/character.py:1216"]
+    },
+    "creation.languages.not_available": {
+      "params": ["language"],
+      "param_sets": [["language"]],
+      "sources": ["core/character.py:1214"]
+    },
+    "creation.languages.too_many": {
+      "params": ["allowed", "chosen"],
+      "param_sets": [["allowed", "chosen"]],
+      "sources": ["core/character.py:1197"]
+    },
+    "encounter.evade.already_evading": {
+      "params": [],
+      "param_sets": [[]],
+      "sources": ["crawl/encounter.py:905"]
+    },
+    "encounter.evade.nothing_to_drop": {
+      "params": ["drop"],
+      "param_sets": [["drop"]],
+      "sources": ["crawl/encounter.py:909", "crawl/encounter.py:919"]
+    },
+    "encounter.none_active": {
+      "params": [],
+      "param_sets": [[]],
+      "sources": [
+        "crawl/encounter.py:866",
+        "crawl/encounter.py:875",
+        "crawl/encounter.py:903",
+        "crawl/encounter.py:965",
+        "crawl/encounter.py:981",
+        "crawl/encounter.py:1033"
+      ]
+    },
+    "encounter.parley.mid_pursuit": {
+      "params": [],
+      "param_sets": [[]],
+      "sources": ["crawl/encounter.py:877"]
+    },
+    "encounter.spawn.mid_pursuit": {
+      "params": [],
+      "param_sets": [[]],
+      "sources": ["crawl/session.py:2796"]
+    },
+    "encounter.turning.mid_pursuit": {
+      "params": [],
+      "param_sets": [[]],
+      "sources": ["crawl/encounter.py:983"]
+    },
+    "exploration.action.requires_light": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": ["crawl/_light.py:183"]
+    },
+    "exploration.door.already_closed": {
+      "params": [],
+      "param_sets": [[]],
+      "sources": ["crawl/_doors.py:167"]
+    },
+    "exploration.door.already_open": {
+      "params": [],
+      "param_sets": [[]],
+      "sources": ["crawl/_doors.py:131", "crawl/_doors.py:184"]
+    },
+    "exploration.door.gate_refused": {
+      "params": ["direction", "refusal"],
+      "param_sets": [["direction", "refusal"]],
+      "sources": ["crawl/_doors.py:141", "crawl/_doors.py:196"]
+    },
+    "exploration.door.locked": {
+      "params": [],
+      "param_sets": [[]],
+      "sources": ["crawl/_doors.py:133", "crawl/_doors.py:186"]
+    },
+    "exploration.door.no_door": {
+      "params": ["direction"],
+      "param_sets": [["direction"]],
+      "sources": [
+        "crawl/_doors.py:128",
+        "crawl/_doors.py:164",
+        "crawl/_doors.py:181",
+        "crawl/_doors.py:236",
+        "crawl/_doors.py:267",
+        "crawl/_doors.py:314"
+      ]
+    },
+    "exploration.door.no_spike": {
+      "params": [],
+      "param_sets": [[]],
+      "sources": ["crawl/_doors.py:249"]
+    },
+    "exploration.door.not_stuck": {
+      "params": [],
+      "param_sets": [[]],
+      "sources": ["crawl/_doors.py:188"]
+    },
+    "exploration.door.stuck": {
+      "params": [],
+      "param_sets": [[]],
+      "sources": ["crawl/_doors.py:135"]
+    },
+    "exploration.door.wedged": {
+      "params": [],
+      "param_sets": [[]],
+      "sources": ["crawl/_doors.py:169", "crawl/_doors.py:239"]
+    },
+    "exploration.feature.emptied": {
+      "params": ["feature"],
+      "param_sets": [["feature"]],
+      "sources": ["crawl/_hauling.py:73"]
+    },
+    "exploration.feature.unknown": {
+      "params": ["feature"],
+      "param_sets": [["feature"]],
+      "sources": [
+        "crawl/_hauling.py:52",
+        "crawl/_hauling.py:61",
+        "crawl/_hauling.py:70",
+        "crawl/_search.py:169",
+        "crawl/_search.py:216"
+      ]
+    },
+    "exploration.give.same_member": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": ["crawl/_items.py:75", "crawl/battle.py:3229"]
+    },
+    "exploration.item.not_carried": {
+      "params": ["item"],
+      "param_sets": [["item"]],
+      "sources": [
+        "crawl/_items.py:51",
+        "crawl/_items.py:62",
+        "crawl/_items.py:66",
+        "crawl/_items.py:188",
+        "crawl/_light.py:197",
+        "crawl/_light.py:201",
+        "crawl/_light.py:203",
+        "crawl/_light.py:205",
+        "crawl/_magic_items.py:652",
+        "crawl/_town.py:75"
+      ]
+    },
+    "exploration.item.not_equipped": {
+      "params": ["item"],
+      "param_sets": [["item"]],
+      "sources": ["crawl/_items.py:218"]
+    },
+    "exploration.light.no_flame": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": ["crawl/_light.py:208"]
+    },
+    "exploration.light.not_a_source": {
+      "params": ["item"],
+      "param_sets": [["item"]],
+      "sources": ["crawl/_light.py:191"]
+    },
+    "exploration.light.not_burning": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": ["crawl/_light.py:296"]
+    },
+    "exploration.listen.already_tried": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": ["crawl/_doors.py:274"]
+    },
+    "exploration.lock.locked_out": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": ["crawl/_doors.py:324"]
+    },
+    "exploration.lock.no_tools": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": ["crawl/_doors.py:311"]
+    },
+    "exploration.lock.not_a_thief": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": ["crawl/_doors.py:309"]
+    },
+    "exploration.lock.not_locked": {
+      "params": [],
+      "param_sets": [[]],
+      "sources": ["crawl/_doors.py:317"]
+    },
+    "exploration.move.blocked": {
+      "params": ["direction"],
+      "param_sets": [["direction"]],
+      "sources": ["crawl/_movement.py:49"]
+    },
+    "exploration.move.cannot_move": {
+      "params": ["character", "reason"],
+      "param_sets": [["character"], ["reason"]],
+      "sources": ["crawl/_movement.py:35", "crawl/_movement.py:38"]
+    },
+    "exploration.party.bad_order": {
+      "params": [],
+      "param_sets": [[]],
+      "sources": ["crawl/_movement.py:124"]
+    },
+    "exploration.search.already_tried": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": ["crawl/_search.py:39", "crawl/_search.py:176", "crawl/_search.py:228"]
+    },
+    "exploration.stairs.none": {
+      "params": [],
+      "param_sets": [[]],
+      "sources": ["crawl/_movement.py:138"]
+    },
+    "exploration.transition.gate_refused": {
+      "params": ["refusal"],
+      "param_sets": [["refusal"]],
+      "sources": ["crawl/_movement.py:90", "crawl/_movement.py:144"]
+    },
+    "exploration.trap.already_resolved": {
+      "params": ["feature"],
+      "param_sets": [["feature"]],
+      "sources": ["crawl/_search.py:222"]
+    },
+    "exploration.trap.not_a_thief": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": ["crawl/_search.py:163", "crawl/_search.py:213"]
+    },
+    "exploration.trap.not_found": {
+      "params": ["feature"],
+      "param_sets": [["feature"]],
+      "sources": ["crawl/_search.py:220"]
+    },
+    "exploration.travel.not_at_entrance": {
+      "params": [],
+      "param_sets": [[]],
+      "sources": ["crawl/_movement.py:188"]
+    },
+    "items.coins.insufficient": {
+      "params": ["character", "coin"],
+      "param_sets": [["character", "coin"]],
+      "sources": ["crawl/session.py:2393"]
+    },
+    "items.curse.stuck": {
+      "params": ["item"],
+      "param_sets": [["item"]],
+      "sources": ["core/items.py:3150", "crawl/_items.py:48"]
+    },
+    "items.device.inert": {
+      "params": ["item"],
+      "param_sets": [["item"]],
+      "sources": ["crawl/_magic_items.py:569", "crawl/battle.py:3116"]
+    },
+    "items.equip.armour_forbidden": {
+      "params": ["class"],
+      "param_sets": [["class"]],
+      "sources": ["core/items.py:3243"]
+    },
+    "items.equip.armour_not_allowed": {
+      "params": ["class", "item"],
+      "param_sets": [["class", "item"]],
+      "sources": ["core/items.py:3246"]
+    },
+    "items.equip.not_equippable": {
+      "params": ["item"],
+      "param_sets": [["item"]],
+      "sources": ["core/items.py:3076", "core/items.py:3080", "core/items.py:3083", "core/items.py:3256"]
+    },
+    "items.equip.not_usable": {
+      "params": ["item"],
+      "param_sets": [["item"]],
+      "sources": ["core/items.py:3088"]
+    },
+    "items.equip.shield_forbidden": {
+      "params": ["class"],
+      "param_sets": [["class"]],
+      "sources": ["core/items.py:3236"]
+    },
+    "items.equip.two_handed_with_shield": {
+      "params": ["class", "item"],
+      "param_sets": [["class"], ["item"]],
+      "sources": ["core/items.py:3111", "core/items.py:3240"]
+    },
+    "items.equip.weapon_forbidden": {
+      "params": ["class", "item"],
+      "param_sets": [["class", "item"]],
+      "sources": ["core/items.py:3104"]
+    },
+    "items.equip.weapon_not_allowed": {
+      "params": ["class", "item"],
+      "param_sets": [["class", "item"]],
+      "sources": ["core/items.py:3102"]
+    },
+    "items.purchase.insufficient_funds": {
+      "params": ["cost_gp", "item"],
+      "param_sets": [["cost_gp"], ["cost_gp", "item"]],
+      "sources": ["core/items.py:2928", "crawl/_town.py:51", "crawl/_town.py:156"]
+    },
+    "items.purchase.not_stocked": {
+      "params": ["item"],
+      "param_sets": [["item"]],
+      "sources": ["crawl/_town.py:47"]
+    },
+    "items.remove.not_carried": {
+      "params": ["character", "item"],
+      "param_sets": [["character", "item"]],
+      "sources": ["crawl/session.py:2335"]
+    },
+    "items.ring.hands_full": {
+      "params": ["item"],
+      "param_sets": [["item"]],
+      "sources": ["core/items.py:3073"]
+    },
+    "items.scroll.no_such_spell": {
+      "params": ["spell"],
+      "param_sets": [["spell"]],
+      "sources": ["crawl/_magic_items.py:379", "crawl/battle.py:3077"]
+    },
+    "items.scroll.spent": {
+      "params": ["item"],
+      "param_sets": [["item"]],
+      "sources": ["crawl/_magic_items.py:376", "crawl/battle.py:3074"]
+    },
+    "items.scroll.wrong_caster": {
+      "params": ["item"],
+      "param_sets": [["item"]],
+      "sources": [
+        "crawl/_magic_items.py:388",
+        "crawl/_magic_items.py:393",
+        "crawl/battle.py:3085",
+        "crawl/battle.py:3089"
+      ]
+    },
+    "items.use.battle_only": {
+      "params": ["item"],
+      "param_sets": [["item"]],
+      "sources": ["crawl/_magic_items.py:581"]
+    },
+    "items.use.not_usable": {
+      "params": ["item"],
+      "param_sets": [["item"]],
+      "sources": ["crawl/_magic_items.py:567", "crawl/_magic_items.py:664", "crawl/battle.py:3114"]
+    },
+    "items.use.target_cannot_be_healed": {
+      "params": ["item", "target"],
+      "param_sets": [["item", "target"]],
+      "sources": ["crawl/_magic_items.py:174"]
+    },
+    "items.use.target_cannot_drink": {
+      "params": ["item", "target"],
+      "param_sets": [["item", "target"]],
+      "sources": ["crawl/_magic_items.py:152"]
+    },
+    "items.use.target_not_allowed": {
+      "params": ["item", "target"],
+      "param_sets": [["item", "target"]],
+      "sources": ["crawl/_magic_items.py:148"]
+    },
+    "items.use.target_required": {
+      "params": ["item"],
+      "param_sets": [["item"]],
+      "sources": ["crawl/_magic_items.py:576"]
+    },
+    "items.use.unknown_target": {
+      "params": ["target"],
+      "param_sets": [["target"]],
+      "sources": ["crawl/_magic_items.py:171", "crawl/_magic_items.py:579", "crawl/battle.py:3182"]
+    },
+    "magic.book.already_chosen": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": ["core/character.py:1366"]
+    },
+    "magic.book.capacity_exceeded": {
+      "params": ["capacity", "spell", "spell_level"],
+      "param_sets": [["capacity", "spell", "spell_level"]],
+      "sources": ["core/spells.py:1639"]
+    },
+    "magic.book.capacity_mismatch": {
+      "params": ["capacity", "chosen", "spell_level"],
+      "param_sets": [["capacity", "chosen", "spell_level"]],
+      "sources": ["core/character.py:1297"]
+    },
+    "magic.book.duplicate": {
+      "params": ["spell"],
+      "param_sets": [["spell"]],
+      "sources": ["core/character.py:1277", "core/spells.py:1632"]
+    },
+    "magic.book.not_arcane": {
+      "params": ["class"],
+      "param_sets": [["class"]],
+      "sources": ["core/character.py:1270", "core/spells.py:1620"]
+    },
+    "magic.book.unknown_spell": {
+      "params": ["spell"],
+      "param_sets": [["spell"]],
+      "sources": ["core/character.py:1283", "core/spells.py:1624", "crawl/_spells.py:65"]
+    },
+    "magic.book.wrong_list": {
+      "params": ["list", "spell"],
+      "param_sets": [["list", "spell"]],
+      "sources": ["core/character.py:1287", "core/spells.py:1628"]
+    },
+    "magic.cast.anti_magic_shell": {
+      "params": ["caster"],
+      "param_sets": [["caster"]],
+      "sources": ["core/spells.py:2063"]
+    },
+    "magic.cast.caster_incapacitated": {
+      "params": ["caster", "condition"],
+      "param_sets": [["caster", "condition"]],
+      "sources": ["core/spells.py:2048"]
+    },
+    "magic.cast.caster_restrained": {
+      "params": ["caster", "restraint"],
+      "param_sets": [["caster", "restraint"]],
+      "sources": ["core/spells.py:2055"]
+    },
+    "magic.cast.not_memorized": {
+      "params": ["reversed", "spell"],
+      "param_sets": [["reversed", "spell"]],
+      "sources": ["core/spells.py:2071", "crawl/_spells.py:94", "crawl/battle.py:2859"]
+    },
+    "magic.cast.not_reversible": {
+      "params": ["spell"],
+      "param_sets": [["spell"]],
+      "sources": ["core/spells.py:2065"]
+    },
+    "magic.cast.out_of_range": {
+      "params": ["distance_feet", "range_feet", "spell"],
+      "param_sets": [["distance_feet", "range_feet", "spell"]],
+      "sources": ["core/spells.py:2114"]
+    },
+    "magic.cast.silenced_area": {
+      "params": ["caster"],
+      "param_sets": [["caster"]],
+      "sources": ["crawl/_spells.py:79", "crawl/battle.py:2849"]
+    },
+    "magic.cast.target_count": {
+      "params": ["expected", "mode", "supplied"],
+      "param_sets": [["expected", "mode", "supplied"]],
+      "sources": [
+        "core/spells.py:2077",
+        "core/spells.py:2081",
+        "core/spells.py:2088",
+        "core/spells.py:2095",
+        "core/spells.py:2099"
+      ]
+    },
+    "magic.cast.target_must_be_creature": {
+      "params": ["mode", "spell", "target"],
+      "param_sets": [["mode", "spell", "target"]],
+      "sources": ["core/spells.py:2103"]
+    },
+    "magic.cast.unknown_mode": {
+      "params": ["mode", "spell"],
+      "param_sets": [["mode"], ["mode", "spell"]],
+      "sources": ["core/spells.py:2069", "crawl/battle.py:2902"]
+    },
+    "magic.cast.unknown_spell": {
+      "params": ["spell"],
+      "param_sets": [["spell"]],
+      "sources": ["crawl/_spells.py:77", "crawl/battle.py:2847"]
+    },
+    "magic.cast.unknown_target": {
+      "params": ["target"],
+      "param_sets": [["target"]],
+      "sources": ["crawl/_magic_items.py:404", "crawl/_spells.py:88", "crawl/battle.py:2934"]
+    },
+    "magic.memorize.divine_reverses_at_cast": {
+      "params": ["spell"],
+      "param_sets": [["spell"]],
+      "sources": ["core/spells.py:1408"]
+    },
+    "magic.memorize.needs_sleep": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": ["crawl/_spells.py:43"]
+    },
+    "magic.memorize.not_a_caster": {
+      "params": ["class"],
+      "param_sets": [["class"]],
+      "sources": ["core/spells.py:1388"]
+    },
+    "magic.memorize.not_in_book": {
+      "params": ["spell"],
+      "param_sets": [["spell"]],
+      "sources": ["core/spells.py:1413"]
+    },
+    "magic.memorize.not_reversible": {
+      "params": ["spell"],
+      "param_sets": [["spell"]],
+      "sources": ["core/spells.py:1416"]
+    },
+    "magic.memorize.slots_exceeded": {
+      "params": ["selected", "slots", "spell_level"],
+      "param_sets": [["selected", "slots", "spell_level"]],
+      "sources": ["core/spells.py:1424"]
+    },
+    "magic.memorize.unknown_spell": {
+      "params": ["spell"],
+      "param_sets": [["spell"]],
+      "sources": ["core/spells.py:1396"]
+    },
+    "magic.memorize.wrong_list": {
+      "params": ["list", "spell"],
+      "param_sets": [["list", "spell"]],
+      "sources": ["core/spells.py:1400"]
+    },
+    "magic.turning.caster_incapacitated": {
+      "params": ["caster", "condition"],
+      "param_sets": [["caster", "condition"]],
+      "sources": ["core/spells.py:3818"]
+    },
+    "magic.turning.not_a_turner": {
+      "params": ["class"],
+      "param_sets": [["class"]],
+      "sources": ["core/spells.py:3813"]
+    },
+    "party.add.carries_instances": {
+      "params": ["item", "name"],
+      "param_sets": [["item", "name"]],
+      "sources": ["crawl/session.py:2415"]
+    },
+    "party.add.id_assigned": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": ["crawl/session.py:2406"]
+    },
+    "party.add.under_effects": {
+      "params": ["name"],
+      "param_sets": [["name"]],
+      "sources": ["crawl/session.py:2408"]
+    },
+    "party.remove.carries_quest_item": {
+      "params": ["character", "item"],
+      "param_sets": [["character", "item"]],
+      "sources": ["crawl/session.py:2456"]
+    },
+    "party.remove.last_standing": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": ["crawl/session.py:2447"]
+    },
+    "party.remove.same_member": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": ["crawl/session.py:2443"]
+    },
+    "session.command.member_incapacitated": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": ["crawl/_party_members.py:16", "crawl/session.py:2445"]
+    },
+    "session.command.no_door": {
+      "params": ["x", "y"],
+      "param_sets": [["x", "y"]],
+      "sources": ["crawl/session.py:2878"]
+    },
+    "session.command.no_living_members": {
+      "params": [],
+      "param_sets": [[]],
+      "sources": ["crawl/_hauling.py:38"]
+    },
+    "session.command.out_of_bounds": {
+      "params": [],
+      "param_sets": [[]],
+      "sources": ["crawl/session.py:2926"]
+    },
+    "session.command.quest_state": {
+      "params": ["objective", "quest", "state"],
+      "param_sets": [["objective", "quest", "state"]],
+      "sources": ["crawl/session.py:2667"]
+    },
+    "session.command.unknown_item": {
+      "params": ["item"],
+      "param_sets": [["item"]],
+      "sources": ["crawl/_town.py:46", "crawl/session.py:2282", "crawl/session.py:2863"]
+    },
+    "session.command.unknown_location": {
+      "params": ["dungeon"],
+      "param_sets": [["dungeon"]],
+      "sources": [
+        "crawl/_movement.py:168",
+        "crawl/_movement.py:171",
+        "crawl/session.py:2872",
+        "crawl/session.py:2924"
+      ]
+    },
+    "session.command.unknown_member": {
+      "params": ["character"],
+      "param_sets": [["character"]],
+      "sources": [
+        "crawl/_party_members.py:14",
+        "crawl/_town.py:139",
+        "crawl/session.py:2270",
+        "crawl/session.py:2301",
+        "crawl/session.py:2344",
+        "crawl/session.py:2385",
+        "crawl/session.py:2435",
+        "crawl/session.py:2441",
+        "crawl/session.py:2597",
+        "crawl/session.py:2860"
+      ]
+    },
+    "session.command.unknown_monster": {
+      "params": ["template"],
+      "param_sets": [["template"]],
+      "sources": ["crawl/session.py:2792"]
+    },
+    "session.command.unknown_objective": {
+      "params": ["objective", "quest"],
+      "param_sets": [["objective", "quest"]],
+      "sources": ["crawl/session.py:2661"]
+    },
+    "session.command.unknown_quest": {
+      "params": ["quest"],
+      "param_sets": [["quest"]],
+      "sources": ["crawl/session.py:2655"]
+    },
+    "session.command.wrong_mode": {
+      "params": ["command", "mode"],
+      "param_sets": [["command", "mode"]],
+      "sources": ["crawl/session.py:1238"]
+    },
+    "town.healing.caster_level_out_of_range": {
+      "params": ["caster_level", "item", "maximum", "minimum"],
+      "param_sets": [["caster_level", "item", "maximum", "minimum"]],
+      "sources": ["crawl/_town.py:147"]
+    },
+    "town.healing.no_effect": {
+      "params": ["character", "item"],
+      "param_sets": [["character", "item"]],
+      "sources": ["crawl/_town.py:160"]
+    },
+    "town.sell.no_fixed_value": {
+      "params": ["item"],
+      "param_sets": [["item"]],
+      "sources": ["crawl/_town.py:65"]
+    }
+  },
+  "events": {
+    "adventure_completed": {
+      "class": "AdventureCompletedEvent",
+      "visibility": "player",
+      "codes": ["session.adventure.completed"],
+      "fields": {
+        "quest_id": "<class 'str'>",
+        "name": "<class 'str'>",
+        "narrative": "str | None"
+      }
+    },
+    "adventure_xp_award": {
+      "class": "AdventureXpAwardEvent",
+      "visibility": "player",
+      "codes": ["session.xp.adventure_award"],
+      "fields": {
+        "monster_xp": "<class 'int'>",
+        "treasure_xp": "<class 'int'>",
+        "share": "<class 'int'>",
+        "survivors": "tuple[str, ...]"
+      }
+    },
+    "attack_rolled": {
+      "class": "AttackRolledEvent",
+      "visibility": "player",
+      "codes": ["combat.attack.auto_hit", "combat.attack.hit", "combat.attack.missed"],
+      "fields": {
+        "attacker_id": "<class 'str'>",
+        "defender_id": "<class 'str'>",
+        "attack_name": "<class 'str'>",
+        "roll": "int | None",
+        "modifier": "<class 'int'>",
+        "total": "int | None",
+        "required": "int | None",
+        "defender_ac": "int | None",
+        "natural": "int | None",
+        "back_stab": "<class 'bool'>"
+      }
+    },
+    "battle_ended": {
+      "class": "BattleEndedEvent",
+      "visibility": "player",
+      "codes": ["battle.ended.defeat", "battle.ended.fled", "battle.ended.victory"],
+      "fields": {}
+    },
+    "battle_round": {
+      "class": "BattleRoundEvent",
+      "visibility": "player",
+      "codes": ["battle.round.started"],
+      "fields": {
+        "round": "<class 'int'>"
+      }
+    },
+    "battle_started": {
+      "class": "BattleStartedEvent",
+      "visibility": "player",
+      "codes": ["battle.started"],
+      "fields": {}
+    },
+    "condition_gained": {
+      "class": "ConditionGainedEvent",
+      "visibility": "player",
+      "codes": ["effects.condition.gained"],
+      "fields": {
+        "target_id": "<class 'str'>",
+        "condition": "<class 'str'>",
+        "effect_id": "str | None"
+      }
+    },
+    "condition_removed": {
+      "class": "ConditionRemovedEvent",
+      "visibility": "player",
+      "codes": ["effects.condition.removed"],
+      "fields": {
+        "target_id": "<class 'str'>",
+        "condition": "<class 'str'>",
+        "effect_id": "str | None"
+      }
+    },
+    "curse_revealed": {
+      "class": "CurseRevealedEvent",
+      "visibility": "player",
+      "codes": ["items.curse.revealed"],
+      "fields": {
+        "character_id": "<class 'str'>",
+        "instance_id": "<class 'str'>",
+        "template_id": "<class 'str'>"
+      }
+    },
+    "damage_absorbed": {
+      "class": "DamageAbsorbedEvent",
+      "visibility": "player",
+      "codes": ["combat.damage.absorbed"],
+      "fields": {
+        "target_id": "<class 'str'>",
+        "attacker_id": "str | None",
+        "keys": "tuple[str, ...]"
+      }
+    },
+    "damage_dealt": {
+      "class": "DamageDealtEvent",
+      "visibility": "player",
+      "codes": ["combat.damage.dealt"],
+      "fields": {
+        "target_id": "<class 'str'>",
+        "attacker_id": "str | None",
+        "amount": "<class 'int'>",
+        "rolls": "tuple[int, ...]",
+        "keys": "tuple[str, ...]",
+        "non_regenerable": "<class 'bool'>"
+      }
+    },
+    "death": {
+      "class": "DeathEvent",
+      "visibility": "player",
+      "codes": ["combat.death.died", "combat.death.permanent"],
+      "fields": {
+        "target_id": "<class 'str'>"
+      }
+    },
+    "declaration_fizzled": {
+      "class": "DeclarationFizzledEvent",
+      "visibility": "player",
+      "codes": ["battle.melee.fizzled", "magic.device.fizzled", "magic.turning.fizzled"],
+      "fields": {
+        "actor_id": "<class 'str'>",
+        "item_id": "str | None",
+        "group_id": "str | None",
+        "reason": "<class 'str'>"
+      }
+    },
+    "detection_rolled": {
+      "class": "DetectionRolledEvent",
+      "visibility": "referee",
+      "codes": ["exploration.detection.rolled"],
+      "fields": {
+        "character_id": "str | None",
+        "kind": "<class 'str'>",
+        "chance": "<class 'int'>",
+        "roll": "int | None",
+        "passed": "<class 'bool'>"
+      }
+    },
+    "dice_rolled": {
+      "class": "DiceRolledEvent",
+      "visibility": "referee",
+      "codes": ["adjudication.dice_rolled"],
+      "fields": {
+        "expression": "<class 'str'>",
+        "total": "<class 'int'>",
+        "rolls": "tuple[int, ...]"
+      }
+    },
+    "door": {
+      "class": "DoorEvent",
+      "visibility": "player",
+      "codes": [
+        "exploration.door.closed",
+        "exploration.door.forced",
+        "exploration.door.opened",
+        "exploration.door.stuck",
+        "exploration.door.swung_shut",
+        "exploration.door.unlocked",
+        "exploration.door.wedged"
+      ],
+      "fields": {
+        "x": "<class 'int'>",
+        "y": "<class 'int'>",
+        "direction": "<class 'str'>",
+        "character_id": "str | None",
+        "narrative": "str | None"
+      }
+    },
+    "effect_attached": {
+      "class": "EffectAttachedEvent",
+      "visibility": "referee",
+      "codes": ["effects.effect.attached"],
+      "fields": {
+        "effect_id": "<class 'str'>",
+        "kind": "<class 'str'>",
+        "target_ref": "<class 'str'>",
+        "expires_round": "int | None"
+      }
+    },
+    "effect_expired": {
+      "class": "EffectExpiredEvent",
+      "visibility": "referee",
+      "codes": ["effects.effect.expired"],
+      "fields": {
+        "effect_id": "<class 'str'>",
+        "kind": "<class 'str'>",
+        "target_ref": "<class 'str'>",
+        "round": "<class 'int'>"
+      }
+    },
+    "effect_released": {
+      "class": "EffectReleasedEvent",
+      "visibility": "referee",
+      "codes": ["effects.effect.released"],
+      "fields": {
+        "effect_id": "<class 'str'>",
+        "kind": "<class 'str'>",
+        "target_ref": "<class 'str'>"
+      }
+    },
+    "effect_ticked": {
+      "class": "EffectTickedEvent",
+      "visibility": "referee",
+      "codes": ["effects.effect.ticked"],
+      "fields": {
+        "effect_id": "<class 'str'>",
+        "kind": "<class 'str'>",
+        "target_ref": "<class 'str'>",
+        "round": "<class 'int'>"
+      }
+    },
+    "encounter_ended": {
+      "class": "EncounterEndedEvent",
+      "visibility": "player",
+      "codes": ["encounter.ended"],
+      "fields": {
+        "outcome": "<class 'str'>"
+      }
+    },
+    "encounter_group_joined": {
+      "class": "EncounterGroupJoinedEvent",
+      "visibility": "player",
+      "codes": ["encounter.group.joined"],
+      "fields": {
+        "group_id": "<class 'str'>",
+        "label": "<class 'str'>",
+        "label_plural": "<class 'str'>",
+        "count": "<class 'int'>",
+        "distance_feet": "<class 'int'>"
+      }
+    },
+    "encounter_started": {
+      "class": "EncounterStartedEvent",
+      "visibility": "player",
+      "codes": ["encounter.started"],
+      "fields": {
+        "monster_name": "<class 'str'>",
+        "monster_name_plural": "<class 'str'>",
+        "count": "<class 'int'>",
+        "distance_feet": "<class 'int'>",
+        "party_surprised": "<class 'bool'>",
+        "monsters_surprised": "<class 'bool'>"
+      }
+    },
+    "equipment_destroyed": {
+      "class": "EquipmentDestroyedEvent",
+      "visibility": "player",
+      "codes": ["combat.equipment.destroyed"],
+      "fields": {
+        "target_id": "<class 'str'>",
+        "item_names": "tuple[str, ...]",
+        "saved_items": "tuple[str, ...]"
+      }
+    },
+    "evasion": {
+      "class": "EvasionEvent",
+      "visibility": "player",
+      "codes": ["encounter.evasion.pursuit", "encounter.evasion.succeeded"],
+      "fields": {}
+    },
+    "exhaustion": {
+      "class": "ExhaustionEvent",
+      "visibility": "player",
+      "codes": ["encounter.exhaustion.gained", "encounter.exhaustion.recovered"],
+      "fields": {}
+    },
+    "fatigue": {
+      "class": "FatigueEvent",
+      "visibility": "player",
+      "codes": ["exploration.fatigue.gained", "exploration.fatigue.recovered"],
+      "fields": {}
+    },
+    "flag_set": {
+      "class": "FlagSetEvent",
+      "visibility": "referee",
+      "codes": ["session.flag.set"],
+      "fields": {
+        "key": "<class 'str'>",
+        "value": "str | int | bool"
+      }
+    },
+    "game_over": {
+      "class": "GameOverEvent",
+      "visibility": "player",
+      "codes": ["session.game_over"],
+      "fields": {
+        "reason": "<class 'str'>"
+      }
+    },
+    "group_moved": {
+      "class": "GroupMovedEvent",
+      "visibility": "player",
+      "codes": ["battle.group.moved"],
+      "fields": {
+        "group_id": "<class 'str'>",
+        "distance_feet": "<class 'int'>"
+      }
+    },
+    "healing_applied": {
+      "class": "HealingAppliedEvent",
+      "visibility": "player",
+      "codes": ["combat.healing.applied", "combat.healing.blocked"],
+      "fields": {
+        "target_id": "<class 'str'>",
+        "amount": "<class 'int'>",
+        "source": "<class 'str'>"
+      }
+    },
+    "healing_purchased": {
+      "class": "HealingPurchasedEvent",
+      "visibility": "player",
+      "codes": ["town.healing.purchased"],
+      "fields": {
+        "character_id": "<class 'str'>",
+        "service": "<class 'str'>",
+        "cost_gp": "<class 'int'>",
+        "payers": "tuple[str, ...]",
+        "payments_gp": "tuple[int, ...]"
+      }
+    },
+    "hit_points_reported": {
+      "class": "HitPointsReportedEvent",
+      "visibility": "referee",
+      "codes": ["combat.state.hit_points"],
+      "fields": {
+        "target_id": "<class 'str'>",
+        "current_hp": "<class 'int'>",
+        "max_hp": "<class 'int'>"
+      }
+    },
+    "hoard_generated": {
+      "class": "HoardGeneratedEvent",
+      "visibility": "referee",
+      "codes": ["treasure.hoard.generated"],
+      "fields": {
+        "cache_ref": "<class 'str'>",
+        "treasure_types": "tuple[str, ...]",
+        "coins_gp_value": "<class 'int'>",
+        "valuable_ids": "tuple[str, ...]",
+        "magic_item_ids": "tuple[str, ...]"
+      }
+    },
+    "initiative_rolled": {
+      "class": "InitiativeRolledEvent",
+      "visibility": "player",
+      "codes": ["combat.initiative.rolled"],
+      "fields": {
+        "mode": "Literal['side', 'individual']",
+        "entries": "tuple[osrlib.core.events.InitiativeRoll, ...]",
+        "order": "tuple[str, ...]"
+      }
+    },
+    "item_acquired": {
+      "class": "ItemAcquiredEvent",
+      "visibility": "player",
+      "codes": ["exploration.item.acquired"],
+      "fields": {
+        "character_id": "<class 'str'>",
+        "item_ids": "tuple[str, ...]",
+        "coins_gp_value": "<class 'int'>",
+        "origin": "str | None"
+      }
+    },
+    "item_consumed": {
+      "class": "ItemConsumedEvent",
+      "visibility": "player",
+      "codes": ["exploration.item.consumed"],
+      "fields": {
+        "character_id": "<class 'str'>",
+        "item_id": "<class 'str'>"
+      }
+    },
+    "item_identified": {
+      "class": "ItemIdentifiedEvent",
+      "visibility": "player",
+      "codes": ["items.item.identified"],
+      "fields": {
+        "instance_id": "<class 'str'>",
+        "template_id": "<class 'str'>"
+      }
+    },
+    "item_used": {
+      "class": "ItemUsedEvent",
+      "visibility": "player",
+      "codes": [
+        "items.device.activated",
+        "items.potion.drunk",
+        "items.potion.mixed",
+        "items.scroll.cursed",
+        "items.scroll.read"
+      ],
+      "fields": {
+        "character_id": "<class 'str'>",
+        "instance_id": "<class 'str'>",
+        "manual": "tuple[str, ...]",
+        "target_id": "str | None"
+      }
+    },
+    "items_dropped": {
+      "class": "ItemsDroppedEvent",
+      "visibility": "player",
+      "codes": ["exploration.item.dropped"],
+      "fields": {
+        "character_id": "<class 'str'>",
+        "item_ids": "tuple[str, ...]",
+        "coins_gp_value": "<class 'int'>"
+      }
+    },
+    "items_given": {
+      "class": "ItemsGivenEvent",
+      "visibility": "player",
+      "codes": ["exploration.item.given"],
+      "fields": {
+        "character_id": "<class 'str'>",
+        "recipient_id": "<class 'str'>",
+        "item_ids": "tuple[str, ...]",
+        "coins_gp_value": "<class 'int'>"
+      }
+    },
+    "items_left_behind": {
+      "class": "ItemsLeftBehindEvent",
+      "visibility": "player",
+      "codes": ["exploration.item.left_behind"],
+      "fields": {
+        "item_ids": "tuple[str, ...]",
+        "coins_gp_value": "<class 'int'>"
+      }
+    },
+    "items_removed": {
+      "class": "ItemsRemovedEvent",
+      "visibility": "player",
+      "codes": ["session.items.removed"],
+      "fields": {
+        "character_id": "<class 'str'>",
+        "item_ids": "tuple[str, ...]",
+        "coins_gp_value": "<class 'int'>"
+      }
+    },
+    "journal_entry_added": {
+      "class": "JournalEntryAddedEvent",
+      "visibility": "player",
+      "codes": ["session.journal.entry_added"],
+      "fields": {
+        "text": "<class 'str'>",
+        "rounds": "<class 'int'>"
+      }
+    },
+    "level_drained": {
+      "class": "LevelDrainedEvent",
+      "visibility": "player",
+      "codes": ["combat.drain.drained", "combat.drain.slain"],
+      "fields": {
+        "target_id": "<class 'str'>",
+        "levels_lost": "<class 'int'>",
+        "new_level": "<class 'int'>",
+        "hp_lost": "<class 'int'>",
+        "xp_after": "int | None",
+        "spawn_consequence": "str | None"
+      }
+    },
+    "leveled_up": {
+      "class": "CharacterLeveledUpEvent",
+      "visibility": "player",
+      "codes": ["session.level.gained"],
+      "fields": {
+        "character_id": "<class 'str'>",
+        "level_before": "<class 'int'>",
+        "level_after": "<class 'int'>",
+        "hp_gained": "<class 'int'>",
+        "hp_roll": "int | None",
+        "con_applied": "<class 'bool'>",
+        "title": "str | None"
+      }
+    },
+    "light": {
+      "class": "LightEvent",
+      "visibility": "player",
+      "codes": [
+        "exploration.light.expired",
+        "exploration.light.extinguished",
+        "exploration.light.failed",
+        "exploration.light.lit"
+      ],
+      "fields": {
+        "character_id": "str | None",
+        "source": "<class 'str'>"
+      }
+    },
+    "listened": {
+      "class": "ListenedEvent",
+      "visibility": "player",
+      "codes": ["exploration.listen.heard", "exploration.listen.silent"],
+      "fields": {
+        "character_id": "<class 'str'>",
+        "direction": "<class 'str'>"
+      }
+    },
+    "location_entered": {
+      "class": "LocationEnteredEvent",
+      "visibility": "player",
+      "codes": ["exploration.location.entered"],
+      "fields": {
+        "location_kind": "<class 'str'>",
+        "location_id": "<class 'str'>",
+        "level_number": "int | None",
+        "dungeon_id": "str | None",
+        "narrative": "str | None",
+        "via": "str | None",
+        "transition_ref": "str | None"
+      }
+    },
+    "loot_dropped": {
+      "class": "LootDroppedEvent",
+      "visibility": "player",
+      "codes": ["encounter.loot.dropped"],
+      "fields": {
+        "item_ids": "tuple[str, ...]",
+        "coins_gp_value": "<class 'int'>"
+      }
+    },
+    "magic_dispelled": {
+      "class": "MagicDispelledEvent",
+      "visibility": "player",
+      "codes": ["magic.dispel.resolved"],
+      "fields": {
+        "caster_id": "<class 'str'>",
+        "released_effect_ids": "tuple[str, ...]",
+        "surviving_effect_ids": "tuple[str, ...]"
+      }
+    },
+    "member_added": {
+      "class": "MemberAddedEvent",
+      "visibility": "player",
+      "codes": ["session.member.added"],
+      "fields": {
+        "character_id": "<class 'str'>",
+        "name": "<class 'str'>",
+        "class_id": "<class 'str'>",
+        "level": "<class 'int'>"
+      }
+    },
+    "member_moved": {
+      "class": "MemberMovedEvent",
+      "visibility": "player",
+      "codes": ["battle.member.moved"],
+      "fields": {
+        "character_id": "<class 'str'>",
+        "move": "<class 'str'>",
+        "advance_feet": "<class 'int'>",
+        "group_id": "<class 'str'>",
+        "distance_feet": "<class 'int'>"
+      }
+    },
+    "member_removed": {
+      "class": "MemberRemovedEvent",
+      "visibility": "player",
+      "codes": ["session.member.removed"],
+      "fields": {
+        "character_id": "<class 'str'>",
+        "name": "<class 'str'>",
+        "given_to": "str | None"
+      }
+    },
+    "member_withdrew": {
+      "class": "MemberWithdrewEvent",
+      "visibility": "player",
+      "codes": ["battle.member.retreated", "battle.member.withdrew"],
+      "fields": {
+        "character_id": "<class 'str'>",
+        "replacement_id": "<class 'str'>"
+      }
+    },
+    "monster_defeated": {
+      "class": "MonsterDefeatedEvent",
+      "visibility": "player",
+      "codes": ["battle.monster.defeated"],
+      "fields": {
+        "monster_id": "<class 'str'>",
+        "template_id": "<class 'str'>",
+        "outcome": "<class 'str'>",
+        "xp": "<class 'int'>"
+      }
+    },
+    "monster_fled": {
+      "class": "MonsterFledEvent",
+      "visibility": "player",
+      "codes": ["battle.side.fled"],
+      "fields": {
+        "group_id": "<class 'str'>"
+      }
+    },
+    "monster_revived": {
+      "class": "MonsterRevivedEvent",
+      "visibility": "player",
+      "codes": ["effects.regeneration.revived"],
+      "fields": {
+        "target_id": "<class 'str'>"
+      }
+    },
+    "monsters_left_behind": {
+      "class": "MonstersLeftBehindEvent",
+      "visibility": "player",
+      "codes": ["battle.group.left_behind"],
+      "fields": {
+        "group_id": "<class 'str'>",
+        "source_group_id": "<class 'str'>",
+        "count": "<class 'int'>"
+      }
+    },
+    "monsters_spawned": {
+      "class": "MonstersSpawnedEvent",
+      "visibility": "referee",
+      "codes": ["session.monsters.spawned"],
+      "fields": {
+        "template_id": "<class 'str'>",
+        "monster_ids": "tuple[str, ...]"
+      }
+    },
+    "morale_checked": {
+      "class": "MoraleCheckedEvent",
+      "visibility": "referee",
+      "codes": ["combat.morale.broke", "combat.morale.exempt", "combat.morale.held"],
+      "fields": {
+        "subject": "<class 'str'>",
+        "score": "<class 'int'>",
+        "roll": "int | None",
+        "modifier": "<class 'int'>",
+        "held": "bool | None"
+      }
+    },
+    "note_recorded": {
+      "class": "NoteRecordedEvent",
+      "visibility": "referee",
+      "codes": ["session.note.recorded"],
+      "fields": {
+        "text": "<class 'str'>"
+      }
+    },
+    "npc_party_spawned": {
+      "class": "NpcPartySpawnedEvent",
+      "visibility": "referee",
+      "codes": ["encounter.npc_party.spawned"],
+      "fields": {
+        "party_kind": "<class 'str'>",
+        "npc_ids": "tuple[str, ...]",
+        "class_ids": "tuple[str, ...]",
+        "levels": "tuple[int, ...]",
+        "alignment": "<class 'str'>"
+      }
+    },
+    "objective_completed": {
+      "class": "ObjectiveCompletedEvent",
+      "visibility": "player",
+      "codes": ["session.quest.objective_completed"],
+      "fields": {
+        "quest_id": "<class 'str'>",
+        "quest_name": "<class 'str'>",
+        "objective_id": "<class 'str'>",
+        "name": "<class 'str'>",
+        "narrative": "str | None"
+      }
+    },
+    "objective_revealed": {
+      "class": "ObjectiveRevealedEvent",
+      "visibility": "player",
+      "codes": ["session.quest.objective_revealed"],
+      "fields": {
+        "quest_id": "<class 'str'>",
+        "quest_name": "<class 'str'>",
+        "objective_id": "<class 'str'>",
+        "name": "<class 'str'>",
+        "narrative": "str | None"
+      }
+    },
+    "party_moved": {
+      "class": "PartyMovedEvent",
+      "visibility": "player",
+      "codes": ["exploration.party.moved", "exploration.party.turned"],
+      "fields": {
+        "x": "<class 'int'>",
+        "y": "<class 'int'>",
+        "facing": "<class 'str'>",
+        "narrative": "str | None"
+      }
+    },
+    "party_reordered": {
+      "class": "PartyReorderedEvent",
+      "visibility": "player",
+      "codes": ["exploration.party.reordered"],
+      "fields": {
+        "order": "tuple[str, ...]"
+      }
+    },
+    "provisions": {
+      "class": "ProvisionsEvent",
+      "visibility": "player",
+      "codes": ["exploration.provisions.consumed", "exploration.provisions.short"],
+      "fields": {
+        "character_id": "<class 'str'>",
+        "kind": "<class 'str'>"
+      }
+    },
+    "pursuit": {
+      "class": "PursuitEvent",
+      "visibility": "player",
+      "codes": [
+        "encounter.pursuit.caught",
+        "encounter.pursuit.distracted",
+        "encounter.pursuit.escaped",
+        "encounter.pursuit.round"
+      ],
+      "fields": {
+        "round": "<class 'int'>",
+        "gap_feet": "<class 'int'>"
+      }
+    },
+    "quest_activated": {
+      "class": "QuestActivatedEvent",
+      "visibility": "player",
+      "codes": ["session.quest.activated"],
+      "fields": {
+        "quest_id": "<class 'str'>",
+        "name": "<class 'str'>",
+        "narrative": "str | None"
+      }
+    },
+    "quest_completed": {
+      "class": "QuestCompletedEvent",
+      "visibility": "player",
+      "codes": ["session.quest.completed"],
+      "fields": {
+        "quest_id": "<class 'str'>",
+        "name": "<class 'str'>",
+        "narrative": "str | None"
+      }
+    },
+    "reaction_rolled": {
+      "class": "ReactionRolledEvent",
+      "visibility": "referee",
+      "codes": ["encounter.reaction.rolled"],
+      "fields": {
+        "roll": "<class 'int'>",
+        "modifier": "<class 'int'>",
+        "total": "<class 'int'>",
+        "result": "<class 'str'>"
+      }
+    },
+    "rested": {
+      "class": "RestedEvent",
+      "visibility": "player",
+      "codes": ["exploration.rest.interrupted", "exploration.rest.rested"],
+      "fields": {
+        "kind": "<class 'str'>"
+      }
+    },
+    "saving_throw_rolled": {
+      "class": "SavingThrowRolledEvent",
+      "visibility": "player",
+      "codes": ["combat.save.auto", "combat.save.failed", "combat.save.passed"],
+      "fields": {
+        "target_id": "<class 'str'>",
+        "category": "<class 'str'>",
+        "roll": "int | None",
+        "modifier": "<class 'int'>",
+        "required": "int | None"
+      }
+    },
+    "search_completed": {
+      "class": "SearchCompletedEvent",
+      "visibility": "player",
+      "codes": ["exploration.search.found", "exploration.search.nothing"],
+      "fields": {
+        "character_id": "<class 'str'>",
+        "kind": "<class 'str'>",
+        "found": "tuple[str, ...]"
+      }
+    },
+    "spell_book_updated": {
+      "class": "SpellBookUpdatedEvent",
+      "visibility": "player",
+      "codes": ["magic.book.added"],
+      "fields": {
+        "caster_id": "<class 'str'>",
+        "spell_id": "<class 'str'>"
+      }
+    },
+    "spell_cast": {
+      "class": "SpellCastEvent",
+      "visibility": "player",
+      "codes": ["magic.cast.cast", "magic.cast.no_effect"],
+      "fields": {
+        "caster_id": "<class 'str'>",
+        "spell_id": "<class 'str'>",
+        "mode": "<class 'str'>",
+        "reversed": "<class 'bool'>",
+        "target_ids": "tuple[str, ...]",
+        "manual": "<class 'bool'>"
+      }
+    },
+    "spell_declared": {
+      "class": "SpellDeclaredEvent",
+      "visibility": "player",
+      "codes": ["battle.spell.declared"],
+      "fields": {
+        "caster_id": "<class 'str'>",
+        "spell_id": "<class 'str'>",
+        "reversed": "<class 'bool'>"
+      }
+    },
+    "spell_disrupted": {
+      "class": "SpellDisruptedEvent",
+      "visibility": "player",
+      "codes": ["magic.cast.disrupted", "magic.cast.fizzled"],
+      "fields": {
+        "caster_id": "<class 'str'>",
+        "spell_id": "<class 'str'>",
+        "reversed": "<class 'bool'>",
+        "reason": "str | None"
+      }
+    },
+    "spell_forgotten": {
+      "class": "SpellForgottenEvent",
+      "visibility": "player",
+      "codes": ["magic.memory.forgotten"],
+      "fields": {
+        "caster_id": "<class 'str'>",
+        "spell_id": "<class 'str'>",
+        "reversed": "<class 'bool'>"
+      }
+    },
+    "spells_memorized": {
+      "class": "SpellsMemorizedEvent",
+      "visibility": "player",
+      "codes": ["magic.memorize.prepared"],
+      "fields": {
+        "caster_id": "<class 'str'>",
+        "prepared": "tuple[osrlib.core.events.PreparedSpell, ...]"
+      }
+    },
+    "stance_changed": {
+      "class": "StanceChangedEvent",
+      "visibility": "player",
+      "codes": ["encounter.stance.changed"],
+      "fields": {
+        "stance": "<class 'str'>"
+      }
+    },
+    "surprise_rolled": {
+      "class": "SurpriseRolledEvent",
+      "visibility": "referee",
+      "codes": ["encounter.surprise.rolled"],
+      "fields": {
+        "side": "<class 'str'>",
+        "threshold": "<class 'int'>",
+        "roll": "int | None",
+        "surprised": "<class 'bool'>"
+      }
+    },
+    "targets_selected": {
+      "class": "TargetsSelectedEvent",
+      "visibility": "referee",
+      "codes": ["combat.targeting.selected"],
+      "fields": {
+        "mode": "<class 'str'>",
+        "target_ids": "tuple[str, ...]"
+      }
+    },
+    "time_advanced": {
+      "class": "TimeAdvancedEvent",
+      "visibility": "referee",
+      "codes": ["session.time.advanced"],
+      "fields": {
+        "n": "<class 'int'>",
+        "unit": "<class 'str'>",
+        "rounds_total": "<class 'int'>"
+      }
+    },
+    "trap": {
+      "class": "TrapEvent",
+      "visibility": "player",
+      "codes": [
+        "exploration.trap.found",
+        "exploration.trap.removal_failed",
+        "exploration.trap.removed",
+        "exploration.trap.safe",
+        "exploration.trap.sprung"
+      ],
+      "fields": {
+        "trap_ref": "<class 'str'>",
+        "character_id": "str | None",
+        "direction": "str | None"
+      }
+    },
+    "treasure_sold": {
+      "class": "TreasureSoldEvent",
+      "visibility": "player",
+      "codes": ["town.treasure.sold"],
+      "fields": {
+        "character_id": "<class 'str'>",
+        "instance_ids": "tuple[str, ...]",
+        "gp_value": "<class 'int'>"
+      }
+    },
+    "trigger_fired": {
+      "class": "TriggerFiredEvent",
+      "visibility": "referee",
+      "codes": ["session.trigger.fired"],
+      "fields": {
+        "trigger_id": "<class 'str'>",
+        "narrative": "str | None"
+      }
+    },
+    "undead_turned": {
+      "class": "UndeadTurnedEvent",
+      "visibility": "player",
+      "codes": ["magic.turning.destroyed", "magic.turning.failed", "magic.turning.turned"],
+      "fields": {
+        "caster_id": "<class 'str'>",
+        "roll": "<class 'int'>",
+        "hd_pool": "int | None",
+        "types": "tuple[osrlib.core.events.TurningTypeOutcome, ...]",
+        "affected_ids": "tuple[str, ...]"
+      }
+    },
+    "wandering_check": {
+      "class": "WanderingCheckEvent",
+      "visibility": "referee",
+      "codes": ["exploration.wandering.checked"],
+      "fields": {
+        "chance": "<class 'int'>",
+        "roll": "int | None",
+        "encounter": "<class 'bool'>"
+      }
+    },
+    "xp_awarded": {
+      "class": "XpAwardedEvent",
+      "visibility": "player",
+      "codes": ["session.xp.awarded"],
+      "fields": {
+        "character_id": "<class 'str'>",
+        "award": "<class 'int'>",
+        "modified_award": "<class 'int'>",
+        "level_after": "<class 'int'>"
+      }
+    }
+  },
+  "clock": {
+    "seconds_per_round": 10,
+    "rounds_per_turn": 60,
+    "turns_per_day": 144,
+    "rounds_per_day": 8640,
+    "samples": [
+      {
+        "rounds": 0,
+        "turns": 0,
+        "days": 0
+      },
+      {
+        "rounds": 1,
+        "turns": 0,
+        "days": 0
+      },
+      {
+        "rounds": 59,
+        "turns": 0,
+        "days": 0
+      },
+      {
+        "rounds": 60,
+        "turns": 1,
+        "days": 0
+      },
+      {
+        "rounds": 61,
+        "turns": 1,
+        "days": 0
+      },
+      {
+        "rounds": 359,
+        "turns": 5,
+        "days": 0
+      },
+      {
+        "rounds": 360,
+        "turns": 6,
+        "days": 0
+      },
+      {
+        "rounds": 600,
+        "turns": 10,
+        "days": 0
+      },
+      {
+        "rounds": 3840,
+        "turns": 64,
+        "days": 0
+      },
+      {
+        "rounds": 8639,
+        "turns": 143,
+        "days": 0
+      },
+      {
+        "rounds": 8640,
+        "turns": 144,
+        "days": 1
+      },
+      {
+        "rounds": 8641,
+        "turns": 144,
+        "days": 1
+      },
+      {
+        "rounds": 12000,
+        "turns": 200,
+        "days": 1
+      },
+      {
+        "rounds": 12480,
+        "turns": 208,
+        "days": 1
+      },
+      {
+        "rounds": 17280,
+        "turns": 288,
+        "days": 2
+      },
+      {
+        "rounds": 25920,
+        "turns": 432,
+        "days": 3
+      },
+      {
+        "rounds": 86400,
+        "turns": 1440,
+        "days": 10
+      }
+    ],
+    "advance": [
+      {
+        "amount": 1,
+        "unit": "turn",
+        "rounds": 60
+      },
+      {
+        "amount": 6,
+        "unit": "turn",
+        "rounds": 360
+      },
+      {
+        "amount": 48,
+        "unit": "turn",
+        "rounds": 2880
+      },
+      {
+        "amount": 144,
+        "unit": "turn",
+        "rounds": 8640
+      },
+      {
+        "amount": 1,
+        "unit": "day",
+        "rounds": 8640
+      }
+    ]
+  }
+}

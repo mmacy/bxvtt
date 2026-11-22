@@ -1,0 +1,34 @@
+.link {
+  border-radius: var(--radius-xs);
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: 1px;
+  transition: color var(--duration-fast) var(--ease-standard);
+  cursor: pointer;
+}
+
+.inline {
+  color: var(--color-accent-text);
+  text-decoration-line: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 45%, transparent);
+}
+
+.inline:hover {
+  color: var(--color-text-strong);
+  text-decoration-color: currentColor;
+}
+
+.quiet {
+  color: var(--color-text-muted);
+  text-decoration: none;
+}
+
+.quiet:hover {
+  color: var(--color-text-strong);
+  text-decoration: underline;
+}
+
+.externalIcon {
+  display: inline-block;
+  margin-inline-start: 0.2em;
+  vertical-align: -0.05em;
+}

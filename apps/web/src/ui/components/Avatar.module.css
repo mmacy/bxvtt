@@ -1,0 +1,112 @@
+.avatar {
+  --avatar-color: var(--player-slate);
+  --avatar-size: 32px;
+
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--avatar-size);
+  height: var(--avatar-size);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 30%, rgb(255 255 255 / 0.22), transparent 60%), var(--avatar-color);
+  box-shadow:
+    inset 0 0 0 1px rgb(0 0 0 / 0.25),
+    0 0 0 2px var(--color-bg-app);
+  color: var(--palette-ink-950);
+  user-select: none;
+}
+
+.xs {
+  --avatar-size: 20px;
+}
+
+.sm {
+  --avatar-size: 26px;
+}
+
+.md {
+  --avatar-size: 32px;
+}
+
+.lg {
+  --avatar-size: 44px;
+}
+
+.initials {
+  font-family: var(--font-ui);
+  font-size: calc(var(--avatar-size) * 0.4);
+  font-weight: var(--weight-black);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.xs .initials {
+  font-size: 9px;
+}
+
+.offline {
+  filter: grayscale(0.85) brightness(0.7);
+}
+
+.presence {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: max(8px, calc(var(--avatar-size) * 0.3));
+  height: max(8px, calc(var(--avatar-size) * 0.3));
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--color-bg-app);
+}
+
+.online {
+  background: var(--color-success);
+}
+
+.away {
+  background: var(--color-warning);
+}
+
+.presence.offline {
+  background: var(--color-text-disabled);
+  filter: none;
+}
+
+.referee {
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: max(11px, calc(var(--avatar-size) * 0.4));
+  height: max(11px, calc(var(--avatar-size) * 0.4));
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: var(--color-gold);
+  color: var(--palette-ink-950);
+  box-shadow: 0 0 0 2px var(--color-bg-app);
+}
+
+.stack {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.stacked {
+  flex: none;
+}
+
+.more {
+  --avatar-color: var(--color-surface-3);
+  color: var(--color-text-muted);
+  background: var(--color-surface-3);
+}
+
+.more .initials {
+  font-size: calc(var(--avatar-size) * 0.36);
+  font-weight: var(--weight-bold);
+}

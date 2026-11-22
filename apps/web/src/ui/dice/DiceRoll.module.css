@@ -1,0 +1,140 @@
+.roll {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+  min-width: 0;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.label {
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-strong);
+}
+
+.formula {
+  font-family: var(--font-numeric);
+  font-size: var(--text-md);
+  color: var(--color-text-subtle);
+}
+
+.body {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.dice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: default;
+}
+
+.rolling .dice {
+  cursor: pointer;
+}
+
+.slot {
+  display: inline-flex;
+}
+
+.tumbling {
+  animation: tumble var(--land) var(--ease-out) both;
+}
+
+.landing {
+  animation: land 220ms var(--ease-settle) both;
+}
+
+@keyframes tumble {
+  0% {
+    opacity: 0;
+    transform: translate(-28px, -18px) rotate(-200deg) scale(0.7);
+  }
+  15% {
+    opacity: 1;
+  }
+  45% {
+    transform: translate(6px, 4px) rotate(40deg) scale(1.04);
+  }
+  70% {
+    transform: translate(-2px, -3px) rotate(-12deg) scale(1);
+  }
+  100% {
+    transform: translate(0, 0) rotate(4deg) scale(1);
+  }
+}
+
+@keyframes land {
+  0% {
+    transform: rotate(4deg) scale(1.08);
+  }
+  60% {
+    transform: rotate(-1deg) scale(0.97);
+  }
+  100% {
+    transform: rotate(0) scale(1);
+  }
+}
+
+.total {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition:
+    opacity var(--duration-base) var(--ease-out),
+    transform var(--duration-base) var(--ease-out);
+}
+
+.totalShown {
+  opacity: 1;
+  transform: none;
+}
+
+.equals {
+  font-family: var(--font-numeric);
+  font-size: var(--text-2xl);
+  color: var(--color-text-subtle);
+}
+
+.totalValue {
+  min-width: 1.4em;
+  font-family: var(--font-numeric);
+  font-size: var(--text-4xl);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+  color: var(--color-accent-text);
+  text-shadow: 0 0 18px rgb(255 196 94 / 0.25);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.skip {
+  height: 24px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+}
+
+.skip:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text-strong);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tumbling,
+  .landing {
+    animation: none;
+  }
+}

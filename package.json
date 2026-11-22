@@ -16,6 +16,7 @@
     "dev:bxapi": "scripts/dev-bxapi.sh",
     "build": "npm run build -w @bxvtt/web && npm run build -w @bxvtt/server",
     "start": "npm run start -w @bxvtt/server",
+    "share": "node apps/server/scripts/share.mjs",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint .",
     "format": "prettier --write .",

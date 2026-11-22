@@ -1,0 +1,84 @@
+.die {
+  display: inline-flex;
+  flex: none;
+  line-height: 0;
+}
+
+.pair {
+  gap: 2px;
+}
+
+.svg {
+  overflow: visible;
+  filter: drop-shadow(0 2px 2px rgb(0 0 0 / 0.55)) drop-shadow(0 6px 8px rgb(0 0 0 / 0.3));
+  transition: filter var(--duration-slow) var(--ease-standard);
+}
+
+.outline {
+  fill: var(--color-die-face);
+}
+
+.facet {
+  stroke: var(--color-die-edge);
+  stroke-width: 0.9;
+  stroke-linejoin: round;
+  stroke-opacity: 0.45;
+}
+
+.facetLight {
+  fill: var(--color-die-facet-light);
+}
+
+.facetMid {
+  fill: var(--color-die-facet-mid);
+}
+
+.facetDark {
+  fill: var(--color-die-facet-dark);
+}
+
+.face {
+  fill: var(--color-die-face);
+  stroke: var(--color-die-edge);
+  stroke-width: 0.9;
+  stroke-linejoin: round;
+  stroke-opacity: 0.55;
+}
+
+.edge {
+  fill: none;
+  stroke: var(--color-die-edge);
+  stroke-width: 2.2;
+  stroke-linejoin: round;
+}
+
+.numeral {
+  fill: color-mix(in srgb, var(--die-crayon, var(--color-die-ink)) 78%, var(--color-die-ink));
+  stroke: color-mix(in srgb, var(--die-crayon, var(--color-die-ink)) 45%, var(--color-die-ink));
+  stroke-width: 1.4;
+  paint-order: stroke;
+  font-family: var(--font-numeric);
+  font-weight: var(--weight-black);
+  letter-spacing: -0.02em;
+}
+
+.blankLabel {
+  fill: var(--color-die-edge);
+  stroke: none;
+  font-weight: var(--weight-semibold);
+  opacity: 0.65;
+}
+
+.underline {
+  stroke: color-mix(in srgb, var(--die-crayon, var(--color-die-ink)) 60%, var(--color-die-ink));
+  stroke-linecap: round;
+}
+
+.max {
+  filter: drop-shadow(0 0 1px var(--palette-candle)) drop-shadow(0 0 10px rgb(255 196 94 / 0.75))
+    drop-shadow(0 2px 2px rgb(0 0 0 / 0.5));
+}
+
+.min {
+  filter: drop-shadow(0 0 6px rgb(230 100 76 / 0.6)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.5));
+}

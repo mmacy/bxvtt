@@ -1,0 +1,81 @@
+.page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  background-color: var(--color-bg-app);
+  /* Faint graph paper, as under a hand-drawn dungeon, lit by a candle at the top. */
+  background-image:
+    radial-gradient(ellipse 70% 45% at 50% -5%, rgb(255 196 94 / 0.09), transparent 70%),
+    linear-gradient(rgb(220 174 98 / 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(220 174 98 / 0.035) 1px, transparent 1px);
+  background-size:
+    100% 100%,
+    24px 24px,
+    24px 24px;
+}
+
+.inner {
+  width: 100%;
+  margin: 0 auto;
+  padding-inline: var(--space-6);
+}
+
+.narrow {
+  max-width: 560px;
+}
+
+.default {
+  max-width: var(--page-max);
+}
+
+.wide {
+  max-width: 1440px;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-topbar);
+  border-bottom: var(--border-hair) solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-app) 92%, transparent);
+}
+
+.headerInner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  height: 56px;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.main {
+  flex: 1;
+  padding-block: var(--space-10) var(--space-16);
+}
+
+.footer {
+  border-top: var(--border-hair) solid var(--color-border);
+  padding-block: var(--space-4);
+  color: var(--color-text-subtle);
+  font-size: var(--text-sm);
+}
+
+@media (max-width: 640px) {
+  .inner {
+    padding-inline: var(--space-4);
+  }
+
+  .main {
+    padding-block: var(--space-6) var(--space-10);
+  }
+}
