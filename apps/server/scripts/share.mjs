@@ -127,8 +127,9 @@ function announce() {
   console.log('');
   console.log(`  bxvtt is shared at ${publicUrl}`);
   console.log(`  Host key (needed to create a table): ${hostKey}`);
+  console.log(`  Run your own table at http://127.0.0.1:${port}, so your sign-in survives the next session.`);
   console.log(
-    '  Open the address above to create your table. Players join with an invite link and need no key.',
+    '  Players open the shared address and paste your invite link into "Join a table". They need no key.',
   );
   console.log('  Press Ctrl+C to stop sharing.');
   console.log('');
