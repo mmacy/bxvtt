@@ -14,7 +14,7 @@ import {
   TextInput,
   cx,
 } from '@/ui';
-import { spellDuration, spellRange } from '../sheet/spellText';
+import { spellDuration, spellRange, withoutPointers } from '../sheet/spellText';
 import { ALIGNMENTS, type Alignment } from './draft';
 import { suggestName } from './names';
 import type { ClassMagic } from './tables';
@@ -88,9 +88,9 @@ function SpellCard({
           <Skeleton lines={4} />
         ) : (
           <div className={styles.spellProse}>
-            {detail.data.intro && <p>{detail.data.intro}</p>}
+            {detail.data.intro && <p>{withoutPointers(detail.data.intro)}</p>}
             {detail.data.modes.map((mode) => (
-              <p key={mode.key}>{mode.prose}</p>
+              <p key={mode.key}>{withoutPointers(mode.prose)}</p>
             ))}
             <p>
               <RuleLink entry={{ kind: 'spells', id: spell.id }}>{spell.name}</RuleLink>

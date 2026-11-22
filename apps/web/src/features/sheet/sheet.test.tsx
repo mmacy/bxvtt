@@ -12,6 +12,7 @@ import { CharacterSheet } from './CharacterSheet';
 import { entryRule } from './InventoryTab';
 import { readInventory } from './model';
 import { PartyPanel, moveTo } from './PartyPanel';
+import { spellDuration, withoutPointers } from './spellText';
 
 function accepted(snapshot: ReturnType<typeof fixtureSnapshot>): CommandResult {
   const game = snapshot.game;
@@ -20,6 +21,21 @@ function accepted(snapshot: ReturnType<typeof fixtureSnapshot>): CommandResult {
 }
 
 beforeEach(() => resetMyCharacters());
+
+describe('withoutPointers', () => {
+  it('drops references to rulebook text the card does not show', () => {
+    expect(withoutPointers('A single creature with 4+1 Hit Dice (see Hit point modifiers).')).toBe(
+      'A single creature with 4+1 Hit Dice.',
+    );
+    expect(spellDuration('4d4 turns (see below)')).toBe('4d4 turns');
+    expect(withoutPointers('Lasts 1 turn per level (See Light), then ends')).toBe(
+      'Lasts 1 turn per level, then ends',
+    );
+    expect(withoutPointers('Up to 2d8 Hit Dice (creatures of 4 Hit Dice or fewer).')).toBe(
+      'Up to 2d8 Hit Dice (creatures of 4 Hit Dice or fewer).',
+    );
+  });
+});
 
 describe('readInventory', () => {
   it('keeps masked names and the IDs commands take', () => {
@@ -69,11 +85,39 @@ describe('PartyPanel', () => {
     const party = snapshot.game?.view.party ?? [];
     const rows = screen.getAllByRole('button', { description: /Opens the character sheet/ });
     expect(rows).toHaveLength(party.length);
-    party.forEach((member, index) => expect(rows[index]).toHaveAccessibleName(new RegExp(`^${member.name}`)));
-    // The name starts with what the row shows, and the numbers go in the description.
-    expect(rows[0]).toHaveAccessibleDescription(/hit points, armour class/);
+    // Each row's button shows only the name, so its accessible name is exactly its visible text (axe's
+    // label-in-name check), and everything else the row shows goes in the description.
+    party.forEach((member, index) => {
+      const row = rows[index] as HTMLElement;
+      expect(row).toHaveAccessibleName(member.name);
+      expect(row.textContent).toBe(member.name);
+    });
+    expect(rows[0]).toHaveAccessibleDescription(
+      /^(You|.+), level \d+ .+, \d+ of \d+ hit points, armour class/,
+    );
     await user.click(rows[1] as HTMLElement);
     expect(useTableUi.getState().sheetMemberId).toBe(party[1]?.id);
+  });
+
+  it('names each row with only the text its button shows, whatever state the member is in', () => {
+    const snapshot = fixtureSnapshot('exploring', 'player');
+    const game = snapshot.game;
+    if (!game) throw new Error('fixture has no game');
+    const [brenna, wren, osric] = game.view.party;
+    if (!brenna || !wren || !osric) throw new Error('fixture party is too small');
+    Object.assign(brenna, { current_hp: 0, conditions: ['dead'] });
+    Object.assign(wren, { current_hp: 0, conditions: ['unconscious'] });
+    Object.assign(osric, { conditions: ['paralyzed'] });
+    game.seats = game.seats.map((seat) => (seat.member_id === osric.id ? { ...seat, user_id: null } : seat));
+    renderWithTable(<PartyPanel />, { snapshot });
+    const rows = screen.getAllByRole('button', { description: /Opens the character sheet/ });
+    game.view.party.forEach((member, index) => {
+      expect(rows[index]).toHaveAccessibleName(member.name);
+      expect(rows[index]?.textContent).toBe(member.name);
+    });
+    expect(rows[0]).toHaveAccessibleDescription(/0 of \d+ hit points, armour class -?\d+, dead\./);
+    expect(rows[1]).toHaveAccessibleDescription(/unconscious/);
+    expect(rows[2]).toHaveAccessibleDescription(/^empty seat, .*paralyzed/);
   });
 
   it('lets the caller move a member back with the keyboard', async () => {
@@ -324,7 +368,7 @@ describe('a caster with nothing memorized', () => {
   it('marks the caster in the party panel while the party is in town', async () => {
     const { snapshot, wren } = casterSnapshot('town');
     const { user } = renderWithTable(<PartyPanel />, { snapshot, api: casterApi() });
-    await user.click(await screen.findByRole('button', { name: /Wren has no spells memorized/ }));
+    await user.click(await screen.findByRole('button', { name: /^No spells memorized for Wren/ }));
     expect(useTableUi.getState().sheetMemberId).toBe(wren.id);
     expect(useTableUi.getState().sheetTab).toBe('spells');
   });

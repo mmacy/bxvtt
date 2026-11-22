@@ -42,11 +42,11 @@ export function StoredCharacterCard({ characterId, summary, owner, actions }: St
         <p className={styles.meta}>
           <span>
             Level {summary.level} {classLabel(summary.class_id).toLowerCase()}
-            {owner ? <span className="visually-hidden">,</span> : null}
+            {owner ? <span className="visually-hidden-inline">,</span> : null}
           </span>
           {owner ? (
             <span className={styles.owner}>
-              <span className="visually-hidden">played by </span>
+              <span className="visually-hidden-inline">played by </span>
               {owner.name}
             </span>
           ) : null}

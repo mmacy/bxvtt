@@ -100,6 +100,7 @@
 }
 
 .row {
+  position: relative;
   flex: 1;
   min-width: 0;
   display: flex;
@@ -116,6 +117,33 @@
   transition:
     background var(--duration-fast) var(--ease-standard),
     border-color var(--duration-fast) var(--ease-standard);
+}
+
+/* The name is the row's only button; its hit area and focus ring cover the whole row. */
+.nameButton {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  text-align: start;
+  cursor: pointer;
+}
+
+.nameButton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-md);
+}
+
+.nameButton:focus-visible {
+  outline: none;
+}
+
+.nameButton:focus-visible::after {
+  box-shadow: var(--focus-ring);
 }
 
 .row:hover {
