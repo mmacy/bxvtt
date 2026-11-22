@@ -182,3 +182,23 @@ describe('buildBaseTextContext', () => {
     expect(itemName('torch', ctx)).toBe('a torch');
   });
 });
+
+describe('rejoin requests', () => {
+  it('reads them from a referee snapshot and replaces them from each message', () => {
+    const snapshot = fixtureSnapshot('lobby', 'referee');
+    const request = {
+      id: 'rjq_1',
+      table_id: snapshot.table.id,
+      user_id: 'usr_bbbbbbbbbbbbbbbbbbbbbb',
+      name: 'Sam',
+      color: '#cc79a7' as const,
+      role: 'player' as const,
+      created_at: '2026-11-22T05:00:00Z',
+      expires_at: '2026-11-22T05:05:00Z',
+    };
+    let state = apply(initialTableData(snapshot.table.id), { ...snapshot, rejoin_requests: [request] });
+    expect(state.rejoinRequests).toEqual([request]);
+    state = apply(state, { type: 'rejoin_requests', requests: [] });
+    expect(state.rejoinRequests).toEqual([]);
+  });
+});

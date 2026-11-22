@@ -44,6 +44,11 @@ export interface IdentityState {
   update: (body: UpdateUserRequest) => Promise<User>;
   /** Forgets the stored user, for example after the server answers 401 to the stored token. */
   forget: (notice?: IdentityNotice) => void;
+  /**
+   * Signs this browser in as an existing user with a token the server issued, such as the token a referee's
+   * approval of a rejoin request returns. Stores it like a new user's token.
+   */
+  adopt: (token: string, user: User) => void;
 }
 
 interface StoredIdentity {
@@ -112,6 +117,12 @@ export const useIdentity = create<IdentityState>()((set, get) => ({
     if (token !== null) writeStored(STORAGE_KEYS.identity, { token, user });
     set({ user, lastName: user.name });
     return user;
+  },
+
+  adopt: (token, user) => {
+    getApi().setToken(token);
+    writeStored(STORAGE_KEYS.identity, { token, user });
+    set({ status: 'ready', user, token, notice: null, lastName: user.name });
   },
 
   forget: (notice = null) => {

@@ -151,6 +151,43 @@ const FIXED: Record<string, { title: string; detail: string }> = {
     title: "The rules engine isn't answering",
     detail: "bxvtt can't reach bxapi. Ask the person who runs this server to start it, then try again.",
   },
+  method_not_allowed: {
+    title: "The server doesn't take that request",
+    detail: 'Reload the page. The server may have been updated.',
+  },
+  server_unavailable: {
+    title: "The bxvtt server isn't answering",
+    detail: 'It may be starting or restarting. Wait a few seconds and try again.',
+  },
+  invalid_response: {
+    title: "The server's answer couldn't be read",
+    detail: 'Reload the page. If it keeps happening, check that the address points at your bxvtt server.',
+  },
+  target_unknown: {
+    title: "That target isn't there anymore",
+    detail: 'The situation changed. Choose a target again.',
+  },
+  character_invalid: {
+    title: 'That character breaks a rule',
+    detail: "Check the character's choices and try again.",
+  },
+  rejoin_member_online: {
+    title: 'That member is at the table right now',
+    detail: "Nobody needs to come back in as them. If that's you in another browser, keep playing there.",
+  },
+  rejoin_pending: {
+    title: 'A request to come back in is already waiting',
+    detail: 'Wait for a referee to answer it, or for it to end in a few minutes.',
+  },
+  rejoin_not_pending: {
+    title: 'That request has ended',
+    detail: 'A referee answered it, it ran out of time, or it was cancelled. Ask again if you still need to.',
+  },
+  rejoin_no_approver: {
+    title: 'No referee can let this member back in',
+    detail:
+      "A referee can't approve their own request. If you run this server, open it on the host computer at its local address, where your sign-in still works.",
+  },
 };
 
 function describeKnownProblem(problem: Problem): ProblemMessage {

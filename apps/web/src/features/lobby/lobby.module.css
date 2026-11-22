@@ -9,6 +9,8 @@
   position: sticky;
   top: var(--space-16);
   z-index: var(--z-raised);
+  display: grid;
+  gap: var(--space-2);
 }
 
 .stickyBanner:empty {
@@ -40,11 +42,8 @@
 
 .kicker {
   margin: 0;
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  color: var(--color-accent-text);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
 }
 
 .title {
@@ -87,6 +86,25 @@
 .grow {
   flex: 1;
   min-width: 0;
+}
+
+.continue {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: var(--border-hair) solid var(--color-border);
+}
+
+/* A line of separate facts, spaced apart instead of joined with a dot. */
+.metaLine {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-3);
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-subtle);
 }
 
 .note {
@@ -144,7 +162,7 @@
   font-family: var(--font-numeric);
   font-size: var(--text-2xl);
   font-weight: var(--weight-semibold);
-  color: var(--color-accent-text);
+  color: var(--color-text-subtle);
 }
 
 .mine {
@@ -253,7 +271,7 @@
 
 .adventureMeta {
   font-size: var(--text-sm);
-  color: var(--color-accent-text);
+  color: var(--color-text-muted);
 }
 
 .adventureDescription {
@@ -281,11 +299,9 @@
 }
 
 .hooksTitle {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  color: var(--color-text-subtle);
+  color: var(--color-text-muted);
 }
 
 .hookList {
@@ -295,7 +311,7 @@
 
 .hook {
   padding-inline-start: var(--space-3);
-  border-inline-start: var(--border-thick) solid var(--color-border-accent);
+  border-inline-start: var(--border-thick) solid var(--color-border-strong);
   font-size: var(--text-sm);
   color: var(--color-text);
 }

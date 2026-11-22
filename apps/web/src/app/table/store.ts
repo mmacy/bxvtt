@@ -18,6 +18,7 @@ import type {
   Notes,
   Role,
   ServerMessage,
+  RejoinRequestSummary,
   ServerMessageOf,
   TableDetail,
   User,
@@ -94,6 +95,10 @@ export interface TableData {
   baseTextContext: TextContext;
   /** The `command_type` of the command this client is sending, or `null`. One command is in flight at a time. */
   pendingCommand: string | null;
+  /** The `command_type` of each action waiting to send after the command in flight, oldest first. */
+  queuedCommands: string[];
+  /** The table's pending requests to rejoin as an existing member. Referees only; empty for a player. */
+  rejoinRequests: RejoinRequestSummary[];
   /** Whether this client is saving or resolving a battle declaration. */
   pendingDeclaration: boolean;
   /** Server time minus local time, in milliseconds, from the last snapshot or heartbeat. */
@@ -155,6 +160,8 @@ export function initialTableData(tableId: string): TableData {
     notices: [],
     baseTextContext: emptyContext(),
     pendingCommand: null,
+    queuedCommands: [],
+    rejoinRequests: [],
     pendingDeclaration: false,
     serverTimeOffsetMs: 0,
     connectionError: null,
@@ -254,6 +261,7 @@ export function reduceServerMessage(
         ready: true,
         user: message.user,
         role: message.role,
+        rejoinRequests: message.rejoin_requests ?? [],
         table: message.table,
         online: message.presence.online,
         game,
@@ -319,6 +327,8 @@ export function reduceServerMessage(
       return { removed: message.reason };
     case 'error':
       return { connectionError: { code: message.code, detail: message.detail } };
+    case 'rejoin_requests':
+      return { rejoinRequests: message.requests };
   }
 }
 

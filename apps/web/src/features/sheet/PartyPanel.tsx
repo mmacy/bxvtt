@@ -10,6 +10,7 @@ import {
   useLegalCommand,
   useMembers,
   useParty,
+  usePartyLight,
   usePlayerView,
   useSeats,
   useSendCommand,
@@ -30,7 +31,7 @@ import {
   TokenPortrait,
   cx,
 } from '@/ui';
-import { effectLabel, effectRemaining, lightNoun, lightPhrase } from './actions';
+import { effectLabel, effectRemaining } from './actions';
 import { conditionTone } from './SheetSections';
 import styles from './party.module.css';
 
@@ -62,10 +63,26 @@ export function PartyPanel() {
   if (!playing && (held.party !== liveParty || held.view !== liveView)) {
     setHeld({ party: liveParty, view: liveView });
   }
-  const party = playing ? held.party : liveParty;
+  // During playback, the board publishes each member's state at the beat it shows, and the panel follows it.
+  const memberStates = useCombatStage((st) => st.memberStates);
+  const heldParty = playing ? held.party : liveParty;
+  const party = useMemo(
+    () =>
+      memberStates === null
+        ? heldParty
+        : heldParty.map((member) => {
+            const state = memberStates[member.id];
+            return state
+              ? { ...member, current_hp: state.hp, max_hp: state.maxHp, conditions: state.conditions }
+              : member;
+          }),
+    [heldParty, memberStates],
+  );
   const view = playing ? held.view : liveView;
   const ended = shownMode === 'game_over' || shownMode === 'victory';
   const showLight = location?.kind === 'dungeon' && !ended;
+  // The same words as the map's light chip, from one place in the app layer.
+  const light = usePartyLight();
   const seats = useSeats();
   const members = useMembers();
   const me = useTableUser();
@@ -176,21 +193,7 @@ export function PartyPanel() {
           {showLight && (
             <div className={styles.stateRow}>
               <Icon name="torch" size={16} />
-              {lights.length === 0 ? (
-                <span className={styles.dark}>The party has no light.</span>
-              ) : (
-                <span>
-                  {lights
-                    .map((l) =>
-                      lightPhrase(
-                        nameOf(l.character_id),
-                        l.remaining_rounds,
-                        lightNoun(party.find((m) => m.id === l.character_id)),
-                      ),
-                    )
-                    .join(' · ')}
-                </span>
-              )}
+              <span className={light.lit ? undefined : styles.dark}>{light.text}</span>
             </div>
           )}
           {(view?.fatigued || view?.exhausted || deprived.length > 0) && (

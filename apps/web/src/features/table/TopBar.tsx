@@ -5,7 +5,8 @@ import {
   formatShortcut,
   getApi,
   useApiAction,
-  useEncounter,
+  useBattleRound,
+  useCombatStage,
   useIsReferee,
   useShownMode,
   useMembers,
@@ -41,7 +42,9 @@ export function ShellTopBar() {
   const table = useTableDetail();
   const mode = useShownMode();
   const view = usePlayerView();
-  const encounter = useEncounter();
+  const battleRoundNow = useBattleRound();
+  const playing = useCombatStage((s) => s.playing);
+  const moment = useCombatStage((s) => s.moment);
   const members = useMembers();
   const referee = useIsReferee();
   const lens = usePreferences((s) => s.refereeLens);
@@ -112,7 +115,10 @@ export function ShellTopBar() {
     });
   };
 
-  const round = encounter?.battle_round ?? undefined;
+  // While combat plays back, the round and the clock follow the playback, so they never run ahead of the board.
+  // Otherwise the round is the one the party is declaring for, as the battle board shows it.
+  const round = playing && moment !== null ? moment.round : battleRoundNow;
+  const clockRounds = playing && moment !== null ? moment.clockRounds : view?.clock_rounds;
   return (
     <>
       <TableTopBar
@@ -123,8 +129,8 @@ export function ShellTopBar() {
             <Tooltip content="Game time since the adventure began. A turn is 10 minutes, a round is 10 seconds.">
               <span className={styles.clockWrap} tabIndex={0}>
                 <GameClock
-                  time={formatGameClock(view.clock_rounds)}
-                  round={mode === 'battle' && round !== undefined && round > 0 ? round : undefined}
+                  time={formatGameClock(clockRounds ?? view.clock_rounds)}
+                  round={mode === 'battle' && round !== null ? round : undefined}
                 />
               </span>
             </Tooltip>

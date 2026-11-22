@@ -14,7 +14,7 @@
  */
 import { useEffect, useMemo, useRef } from 'react';
 import { create } from 'zustand';
-import { CommandPalette, Dialog, Kbd, type CommandAction, type IconName } from '@/ui';
+import { CommandPalette, Dialog, Kbd, SectionLabel, type CommandAction, type IconName } from '@/ui';
 import styles from './shortcuts.module.css';
 import { useTableUi } from './ui';
 
@@ -298,7 +298,7 @@ function ShortcutHelpDialog() {
       <div className={styles.groups}>
         {groups.map(([group, items]) => (
           <section key={group} className={styles.group}>
-            <h3 className={styles.groupTitle}>{group}</h3>
+            <SectionLabel>{group}</SectionLabel>
             <dl className={styles.list}>
               {items.map((item) => (
                 <div key={item.id} className={styles.row}>

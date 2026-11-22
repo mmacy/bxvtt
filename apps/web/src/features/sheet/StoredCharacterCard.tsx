@@ -47,8 +47,14 @@ export function StoredCharacterCard({ characterId, summary, owner, actions }: St
           <span className="visually-hidden">, open the character sheet</span>
         </button>
         <p className={styles.meta}>
-          Level {summary.level} {classLabel(summary.class_id).toLowerCase()}
-          {owner ? <span className={styles.owner}> · {owner.name}</span> : null}
+          <span>
+            Level {summary.level} {classLabel(summary.class_id).toLowerCase()}
+          </span>
+          {owner ? (
+            <span className={styles.owner}>
+              <span className="visually-hidden">, played by</span> {owner.name}
+            </span>
+          ) : null}
         </p>
       </div>
       <div className={styles.actions}>

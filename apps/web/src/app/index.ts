@@ -37,6 +37,8 @@ export type {
 } from './table/store';
 export {
   COMMANDS_PER_SECOND,
+  MAX_QUEUED_COMMANDS,
+  QUEUED_COMMAND_MAX_WAIT_MS,
   useApiAction,
   useSendCommand,
   useSendDeclaration,
@@ -84,5 +86,16 @@ export { STORAGE_KEYS, readStored, scopedStorage, writeStored } from './storage'
 export type { ScopedStorage, StorageArea } from './storage';
 export { toParamMap } from './params';
 export { useCombatStage } from './combatStage';
+export { battleRound, useBattleRound } from './battle';
+export { useDecideRejoin, useRejoinRequests } from './rejoin';
+export {
+  DARKNESS_TEXT,
+  NO_LIGHT_TEXT,
+  lightLine,
+  lightTimeLeft,
+  partyLightFrom,
+  usePartyLight,
+} from './light';
+export type { MemberLight, PartyLight } from './light';
 export { END_GRACE_MS, END_MAX_HOLD_MS, ShownModeProvider, useHeldMode, useShownMode } from './shownMode';
-export type { CombatStageState } from './combatStage';
+export type { CombatStageState, PlaybackMemberState, PlaybackMoment } from './combatStage';

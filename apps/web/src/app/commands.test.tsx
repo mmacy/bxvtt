@@ -1,10 +1,10 @@
 import { BxvttProblemError } from '@bxvtt/shared/client';
 import type { CommandResult, GameState } from '@bxvtt/shared/protocol';
 import { describeRejection } from '@bxvtt/shared/text';
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { useState } from 'react';
-import { describe, expect, it } from 'vitest';
-import { useSendCommand, type SendResult } from './commands';
+import { describe, expect, it, vi } from 'vitest';
+import { QUEUED_COMMAND_MAX_WAIT_MS, useSendCommand, type GameCommand, type SendResult } from './commands';
 import { fixtureSnapshot } from './testing/fixtures';
 import { renderWithTable } from './testing/renderWithTable';
 
@@ -110,12 +110,181 @@ describe('useSendCommand', () => {
     expect(store.getState().pendingCommand).toBeNull();
   });
 
-  it('paces rapid commands to four a second', async () => {
-    const { api, store, user } = renderWithTable(<SearchButton />, {
+  it('paces a held key to four commands a second and drops the rest without a word', async () => {
+    const { api, store, user } = renderWithTable(<Controls />, {
       snapshot: fixtureSnapshot('exploring', 'player'),
     });
     api.sendCommand.mockImplementation(async () => outcome(store.getState().game as GameState, true));
-    for (let i = 0; i < 6; i += 1) await user.click(screen.getByRole('button', { name: 'Search' }));
+    for (let i = 0; i < 6; i += 1) await user.click(screen.getByRole('button', { name: 'Hold east' }));
     expect(api.sendCommand).toHaveBeenCalledTimes(4);
+    expect(notifications()).toBe('');
+  });
+});
+
+/** Buttons for each kind of send, and the outcome of each, in order. */
+function Controls() {
+  const { send, pendingType } = useSendCommand();
+  const [log, setLog] = useState<string[]>([]);
+  const record = (label: string) => (result: SendResult) =>
+    setLog((lines) => [
+      ...lines,
+      `${label}: ${result.status}${result.status === 'skipped' ? ` ${result.reason}` : ''}`,
+    ]);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() =>
+          void send({ command_type: 'move_party', direction: 'east' }, { repeatable: true }).then(
+            record('hold'),
+          )
+        }
+      >
+        Hold east
+      </button>
+      <button
+        type="button"
+        onClick={() => void send({ command_type: 'rest', kind: 'turn' }).then(record('rest'))}
+      >
+        Rest
+      </button>
+      <button
+        type="button"
+        onClick={() => void send({ command_type: 'open_door', direction: 'east' }).then(record('door'))}
+      >
+        Open the east door
+      </button>
+      <output aria-label="pending">{pendingType ?? 'none'}</output>
+      <ol aria-label="log">
+        {log.map((line, index) => (
+          <li key={index}>{line}</li>
+        ))}
+      </ol>
+    </>
+  );
+}
+
+function notifications(): string {
+  return screen.queryByRole('region', { name: 'Notifications' })?.textContent ?? '';
+}
+
+function sentTypes(api: { sendCommand: { mock: { calls: unknown[][] } } }): string[] {
+  return api.sendCommand.mock.calls.map((call) => (call[1] as GameCommand).command_type);
+}
+
+/** A game state after the party stepped east, with a new revision. */
+function stepped(game: GameState, mode = game.mode): GameState {
+  const position = game.view.location.position ?? [0, 0];
+  return {
+    ...game,
+    mode,
+    revision: game.revision + 1,
+    view: { ...game.view, location: { ...game.view.location, position: [position[0] + 1, position[1]] } },
+  };
+}
+
+describe('useSendCommand while a command is on its way', () => {
+  it('sends a click after the move in flight lands, with the new revision', async () => {
+    const { api, store, user } = renderWithTable(<Controls />);
+    const game = store.getState().game as GameState;
+    const move = deferred<CommandResult>();
+    api.sendCommand.mockReturnValueOnce(move.promise);
+    api.sendCommand.mockImplementation(async () => outcome(store.getState().game as GameState, true));
+    await user.click(screen.getByRole('button', { name: 'Hold east' }));
+    await user.click(screen.getByRole('button', { name: 'Rest' }));
+    expect(sentTypes(api)).toEqual(['move_party']);
+    expect(screen.getByLabelText('pending')).toHaveTextContent('rest');
+    const after = stepped(game);
+    await act(async () => move.resolve({ ...outcome(game, true), game: after, revision: after.revision }));
+    await waitFor(() => expect(sentTypes(api)).toEqual(['move_party', 'rest']));
+    expect(api.sendCommand).toHaveBeenLastCalledWith(
+      store.getState().tableId,
+      { command_type: 'rest', kind: 'turn' },
+      after.revision,
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('list', { name: 'log' })).toHaveTextContent('rest: accepted'),
+    );
+  });
+
+  it('drops a held key while a command is in flight, without a word', async () => {
+    const { api, store, user } = renderWithTable(<Controls />);
+    const rest = deferred<CommandResult>();
+    api.sendCommand.mockReturnValueOnce(rest.promise);
+    await user.click(screen.getByRole('button', { name: 'Rest' }));
+    await user.click(screen.getByRole('button', { name: 'Hold east' }));
+    expect(screen.getByRole('list', { name: 'log' })).toHaveTextContent('hold: skipped busy');
+    await act(async () => rest.resolve(outcome(store.getState().game as GameState, true)));
+    expect(sentTypes(api)).toEqual(['rest']);
+    expect(notifications()).toBe('');
+  });
+
+  it('queues a double click once', async () => {
+    const { api, store, user } = renderWithTable(<Controls />);
+    const game = store.getState().game as GameState;
+    const move = deferred<CommandResult>();
+    api.sendCommand.mockReturnValueOnce(move.promise);
+    api.sendCommand.mockImplementation(async () => outcome(store.getState().game as GameState, true));
+    await user.click(screen.getByRole('button', { name: 'Hold east' }));
+    await user.dblClick(screen.getByRole('button', { name: 'Rest' }));
+    await act(async () => move.resolve(outcome(game, true)));
+    await waitFor(() => expect(sentTypes(api)).toEqual(['move_party', 'rest']));
+    await waitFor(() => expect(screen.getAllByText('rest: accepted')).toHaveLength(2));
+  });
+
+  it('drops a waiting action with one calm line when the mode changes', async () => {
+    const { api, store, user } = renderWithTable(<Controls />);
+    const game = store.getState().game as GameState;
+    const move = deferred<CommandResult>();
+    api.sendCommand.mockReturnValueOnce(move.promise);
+    await user.click(screen.getByRole('button', { name: 'Hold east' }));
+    await user.click(screen.getByRole('button', { name: 'Rest' }));
+    const after = stepped(game, 'encounter');
+    await act(async () => move.resolve({ ...outcome(game, true), game: after, revision: after.revision }));
+    await waitFor(() =>
+      expect(screen.getByRole('list', { name: 'log' })).toHaveTextContent('rest: skipped stale'),
+    );
+    expect(sentTypes(api)).toEqual(['move_party']);
+    expect(notifications()).toMatch(/wasn't sent, because monsters appeared/);
+  });
+
+  it('drops a waiting action that names a direction once the party has moved', async () => {
+    const { api, store, user } = renderWithTable(<Controls />);
+    const game = store.getState().game as GameState;
+    const move = deferred<CommandResult>();
+    api.sendCommand.mockReturnValueOnce(move.promise);
+    await user.click(screen.getByRole('button', { name: 'Hold east' }));
+    await user.click(screen.getByRole('button', { name: 'Open the east door' }));
+    const after = stepped(game);
+    await act(async () => move.resolve({ ...outcome(game, true), game: after, revision: after.revision }));
+    await waitFor(() =>
+      expect(screen.getByRole('list', { name: 'log' })).toHaveTextContent('door: skipped stale'),
+    );
+    expect(notifications()).toMatch(/the party moved first/);
+  });
+
+  it('sends a click that arrives while commands are paced as soon as the pacing allows', async () => {
+    const { api, store, user } = renderWithTable(<Controls />);
+    api.sendCommand.mockImplementation(async () => outcome(store.getState().game as GameState, true));
+    for (let i = 0; i < 4; i += 1) await user.click(screen.getByRole('button', { name: 'Hold east' }));
+    await user.click(screen.getByRole('button', { name: 'Rest' }));
+    expect(sentTypes(api)).toEqual(['move_party', 'move_party', 'move_party', 'move_party']);
+    await waitFor(() => expect(sentTypes(api)).toContain('rest'), { timeout: 2000 });
+  });
+
+  it('drops a waiting action that waited too long, and says so', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+    try {
+      const { api } = renderWithTable(<Controls />);
+      api.sendCommand.mockReturnValueOnce(new Promise<CommandResult>(() => {}));
+      fireEvent.click(screen.getByRole('button', { name: 'Hold east' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Rest' }));
+      await act(async () => vi.advanceTimersByTime(QUEUED_COMMAND_MAX_WAIT_MS));
+      expect(screen.getByRole('list', { name: 'log' })).toHaveTextContent('rest: skipped expired');
+      expect(notifications()).toMatch(/took too long/);
+      expect(sentTypes(api)).toEqual(['move_party']);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

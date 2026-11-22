@@ -20,6 +20,7 @@ import {
   useSendPing,
   useSendRefereeCommand,
   useShortcut,
+  usePartyLight,
   useShownMode,
   useTableUser,
   type FocusRequest,
@@ -41,14 +42,7 @@ import { Button, Icon, IconButton, Tooltip, cx, useMediaQuery, type MenuEntry } 
 import { lightEntries } from './actions';
 import { mapMenuEntries } from './contextMenu';
 import { messageDuration, useMapFeedback } from './feedback';
-import {
-  levelLabel,
-  useActionContext,
-  useDungeonNames,
-  useLoreTracker,
-  useSessionDoors,
-  useSessionLights,
-} from './hooks';
+import { levelLabel, useActionContext, useDungeonNames, useLoreTracker, useSessionDoors } from './hooks';
 import {
   buildPlayerLevel,
   buildRefereeLevel,
@@ -65,7 +59,7 @@ import {
   MinimapCard,
   ThemeSwitcher,
 } from './MapChrome';
-import { NO_LIGHT_TEXT, lightLine, lightSourceNoun, partyLight, shortTimeLeft } from './party';
+import { partyLight, shortTimeLeft } from './party';
 import { NewPinDialog, PinDetailDialog } from './PinDialogs';
 import { PinsPanel } from './PinsPanel';
 import { PointMenu } from './PointMenu';
@@ -123,7 +117,6 @@ export function MapStage() {
   const members = useMembers();
   const permissions = usePermissionContext();
   const doors = useSessionDoors();
-  const lights = useSessionLights();
   const names = useDungeonNames();
   const actions = useActionContext();
   const { send } = useExploreSend();
@@ -476,20 +469,14 @@ export function MapStage() {
   const themeData = resolveTheme(theme);
   const levelName = (option: LevelOption) => levelLabel(option, levels, names);
   const lightMenu = actions ? lightEntries(actions) : [];
+  // The words come from the app layer, so the map's chip and the party panel say the same thing.
+  const partyLightNow = usePartyLight();
   const lightText = useMemo(() => {
-    const lines = light.lights.map((entry) => {
-      const member = view?.party.find((m) => m.id === entry.memberId);
-      return lightLine(
-        member?.name ?? 'Someone',
-        lightSourceNoun(member, lights[entry.memberId]),
-        entry.remainingRounds,
-      );
-    });
-    if (light.darkness) return { text: 'Magical darkness covers the party.', short: 'Darkness', lit: false };
-    if (lines.length === 0) return { text: NO_LIGHT_TEXT, short: 'No light', lit: false };
-    const longest = Math.max(...light.lights.map((entry) => entry.remainingRounds ?? Infinity));
-    return { text: lines.join('. '), short: shortTimeLeft(longest), lit: true };
-  }, [light, lights, view]);
+    if (partyLightNow.darkness) return { text: partyLightNow.text, short: 'Darkness', lit: false };
+    if (!partyLightNow.lit) return { text: partyLightNow.text, short: 'No light', lit: false };
+    const longest = Math.max(...partyLightNow.lights.map((entry) => entry.remainingRounds ?? Infinity));
+    return { text: partyLightNow.text, short: shortTimeLeft(longest), lit: true };
+  }, [partyLightNow]);
   const wandering = useMemo(() => {
     if (map?.layer !== 'referee' || !map.wandering) return null;
     const { chanceInSix, intervalTurns } = map.wandering;

@@ -1,7 +1,11 @@
-import { useState } from 'react';
+import { Suspense, lazy, useState } from 'react';
 import { NoTableProvider, formatShortcut, useAction, useShortcut, useTableUi } from '@/app';
 import { Button, Tooltip } from '@/ui';
-import { Compendium } from '@/features/compendium';
+
+// The compendium is large, so it loads the first time someone opens it.
+const Compendium = lazy(() =>
+  import('@/features/compendium').then((module) => ({ default: module.Compendium })),
+);
 
 export interface RulesReferenceProps {
   /** Set it on a screen outside any table, such as the home page, so the compendium has a table to read. */
@@ -32,7 +36,11 @@ export function RulesReference({ away = false }: RulesReferenceProps) {
     run: () => openCompendium(),
   });
 
-  const book = used ? <Compendium open={open} onOpenChange={setOpen} entry={entry} /> : null;
+  const book = used ? (
+    <Suspense fallback={null}>
+      <Compendium open={open} onOpenChange={setOpen} entry={entry} />
+    </Suspense>
+  ) : null;
   return (
     <>
       <Tooltip content="Rules reference" shortcut={formatShortcut('b')} side="bottom">

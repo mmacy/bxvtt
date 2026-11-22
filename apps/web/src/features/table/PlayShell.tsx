@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { Suspense, lazy, useMemo, useState, type ReactNode } from 'react';
 import {
   getApi,
   useAction,
@@ -17,17 +17,26 @@ import {
   type DockTabId,
 } from '@/app';
 import { Dock, ErrorBoundary, TableLayout, type DockTab } from '@/ui';
-import { Compendium } from '@/features/compendium';
 import { FeedPanel } from '@/features/feed';
 import { JournalPanel } from '@/features/journal';
-import { RefereePanel, SavesDialog } from '@/features/referee';
+import { SavesDialog } from '@/features/referee';
 import { CharacterSheet, PartyPanel } from '@/features/sheet';
+import { LoadingScreen } from './LoadingScreen';
 import { MapToolRail } from './MapToolRail';
 import { SeatsDialog } from './SeatsDialog';
 import { ShellActionBar } from './ShellActionBar';
 import { Stage } from './Stage';
 import { TableSettingsDialog } from './TableSettingsDialog';
 import { ShellTopBar } from './TopBar';
+
+// The compendium loads in the background once the play screen shows, apart from the play screen's own code.
+const Compendium = lazy(() =>
+  import('@/features/compendium').then((module) => ({ default: module.Compendium })),
+);
+// The referee tools load only for a referee with the lens on.
+const RefereePanel = lazy(() =>
+  import('@/features/referee/RefereePanel').then((module) => ({ default: module.RefereePanel })),
+);
 
 /** How many feed entries arrived from others since the user last looked at the feed tab. */
 function useUnreadFeed(active: boolean): number {
@@ -148,7 +157,9 @@ function ShellOverlays() {
   return (
     <>
       <CharacterSheet memberId={sheetMemberId} tab={sheetTab ?? undefined} onClose={closeSheet} />
-      <Compendium open={compendiumOpen} onOpenChange={setCompendiumOpen} entry={compendiumEntry} />
+      <Suspense fallback={null}>
+        <Compendium open={compendiumOpen} onOpenChange={setCompendiumOpen} entry={compendiumEntry} />
+      </Suspense>
       <SavesDialog open={savesOpen} onOpenChange={setSavesOpen} />
       <TableSettingsDialog />
       <SeatsDialog />
@@ -205,7 +216,12 @@ export function PlayShell() {
             value: 'referee',
             label: 'Referee',
             icon: 'referee' as const,
-            content: panel('The referee tools', <RefereePanel />),
+            content: panel(
+              'The referee tools',
+              <Suspense fallback={<LoadingScreen label="Opening the referee tools" compact />}>
+                <RefereePanel />
+              </Suspense>,
+            ),
           },
         ]
       : []),

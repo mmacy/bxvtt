@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   tokenClass,
   useCombatStage,
+  type PlaybackMemberState,
   useCanDeclare,
   useCanResolveRound,
   useDeclarations,
@@ -192,12 +193,30 @@ export function BattleBoard() {
     if (playback.playing && momentClock !== null) setMoment({ round: momentRound, clockRounds: momentClock });
     else setMoment(null);
   }, [playback.playing, momentRound, momentClock, setMoment]);
+  // The party panel shows each member as the beat on the board shows them.
+  const setMemberStates = useCombatStage((s) => s.setMemberStates);
+  const beatMembers = playback.playing ? (playback.track?.members ?? null) : null;
+  useEffect(() => {
+    if (beatMembers === null) {
+      setMemberStates(null);
+      return;
+    }
+    const states: Record<string, PlaybackMemberState> = {};
+    for (const member of party) {
+      const shown = beatMembers[member.id];
+      if (!shown) continue;
+      const dead = shown.down && shown.conditions.includes('dead');
+      states[member.id] = { hp: shown.hp, maxHp: member.max_hp, conditions: shown.conditions, dead };
+    }
+    setMemberStates(states);
+  }, [beatMembers, party, setMemberStates]);
   useEffect(
     () => () => {
       setStagePlaying(false);
       setMoment(null);
+      setMemberStates(null);
     },
-    [setStagePlaying, setMoment],
+    [setStagePlaying, setMoment, setMemberStates],
   );
 
   // When the fight ends, the shell unmounts this board. The aftermath plays the last round and sums up the fight

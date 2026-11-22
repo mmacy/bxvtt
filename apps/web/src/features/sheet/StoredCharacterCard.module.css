@@ -16,6 +16,9 @@
 }
 
 .meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-3);
   margin: 0;
   font-size: var(--text-sm);
   color: var(--color-text-muted);

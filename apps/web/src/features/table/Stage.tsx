@@ -1,12 +1,19 @@
-import { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { useCombatStage, useMapBus, usePartyLocation, useShortcut, useShownMode } from '@/app';
 import { Button } from '@/ui';
 import { BattleBoard, EncounterPanel } from '@/features/combat';
-import { MapStage, ScenePanel } from '@/features/explore';
+import { ScenePanel } from '@/features/explore';
 import { TownStage } from '@/features/town';
 import { ConnectionBanner } from './ConnectionBanner';
 import { EndScreen } from './EndScreen';
+import { LoadingScreen } from './LoadingScreen';
+import { RejoinPrompt } from './RejoinPrompt';
 import styles from './table.module.css';
+
+// The map and its renderer load as a part of their own, when the party first enters a dungeon.
+const MapStage = lazy(() =>
+  import('@/features/explore/MapStage').then((module) => ({ default: module.MapStage })),
+);
 
 /** The prompt of an open map pick, with a cancel button. Escape cancels it too. */
 function PickPrompt() {
@@ -67,16 +74,28 @@ export function Stage() {
     return (
       <div className={styles.stageRoot}>
         <EndScreen />
+        <div className={styles.endRejoin}>
+          <RejoinPrompt />
+        </div>
       </div>
     );
   }
   const inTown = location?.kind !== 'dungeon';
   return (
     <div className={styles.stageRoot}>
-      <div className={styles.stageBase}>{inTown ? <TownStage /> : <MapStage />}</div>
+      <div className={styles.stageBase}>
+        {inTown ? (
+          <TownStage />
+        ) : (
+          <Suspense fallback={<LoadingScreen label="Drawing the map" compact />}>
+            <MapStage />
+          </Suspense>
+        )}
+      </div>
       <div className={styles.overlays}>
         <div className={styles.overlayTop}>
           <ConnectionBanner floating />
+          <RejoinPrompt />
           <PickPrompt />
         </div>
         {!inTown && mode === 'exploring' && (
