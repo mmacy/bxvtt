@@ -24,10 +24,10 @@ describe('PlayShell', () => {
 
   it('shows the encounter and battle overlays in their modes', () => {
     const { unmount } = renderWithTable(<PlayShell />, { snapshot: fixtureSnapshot('encounter', 'player') });
-    expect(screen.getByText('Encounter', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Encounter' })).toBeInTheDocument();
     unmount();
     renderWithTable(<PlayShell />, { snapshot: fixtureSnapshot('battle', 'player') });
-    expect(screen.getByText('Battle', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: /^Battle, round/ })).toBeInTheDocument();
   });
 
   it('hides referee tools when the referee turns the lens off', async () => {
