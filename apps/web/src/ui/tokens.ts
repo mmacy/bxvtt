@@ -31,17 +31,17 @@ export interface PlayerColor {
 }
 
 const playerHex: Record<PlayerColorId, string> = {
-  vermilion: '#e4572e',
+  vermilion: '#e76742',
   saffron: '#f29e2e',
   orpiment: '#e3c444',
   weld: '#a4c639',
   malachite: '#3fae6a',
   verdigris: '#2bb3a3',
   cerulean: '#3fa7d6',
-  azurite: '#4f84e3',
-  ultramarine: '#8676f2',
-  tyrian: '#b664da',
-  madder: '#e0569a',
+  azurite: '#5c8de5',
+  ultramarine: '#8e7ff3',
+  tyrian: '#bc70dd',
+  madder: '#e261a0',
   slate: '#8d9cab',
 };
 

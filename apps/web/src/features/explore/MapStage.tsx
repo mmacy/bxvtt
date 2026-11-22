@@ -79,7 +79,7 @@ const KEY_DIRECTIONS: Record<string, Direction> = {
 /** The shortest time between two pings from this browser. The server allows 5 pings in 2 seconds. */
 const PING_INTERVAL_MS = 450;
 
-const FALLBACK_COLOR = '#e69f00';
+const FALLBACK_COLOR = '#e76742';
 
 /** This browser's choices for the map's chrome. */
 const chromePrefs = scopedStorage('explore');

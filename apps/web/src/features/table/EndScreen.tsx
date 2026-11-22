@@ -30,21 +30,29 @@ function saveTitle(save: SaveEntry): string {
   return save.label ?? (save.autosave ? 'Autosave' : 'Saved game');
 }
 
-/** The quests the party completed, from the `quest_completed` events the feed holds, in order. */
-function useCompletedQuests(): string[] {
+/**
+ * What the game that ended achieved, from its own feed entries: the quests the party completed, in order, and the
+ * adventure's closing words from the `adventure_completed` event. Entries of the table's earlier games don't count.
+ */
+function useGameOutcome(sessionId: string | null): { quests: string[]; closing: string | null } {
   const feed = useFeed();
   return useMemo(() => {
-    const names: string[] = [];
+    const quests: string[] = [];
+    let closing: string | null = null;
     for (const entry of feed) {
-      if (entry.kind !== 'game') continue;
+      if (entry.kind !== 'game' || entry.session_id !== sessionId) continue;
       for (const event of entry.events) {
-        if (event.event_type !== 'quest_completed') continue;
-        const name = (event as { name?: unknown }).name;
-        if (typeof name === 'string' && !names.includes(name)) names.push(name);
+        if (event.event_type === 'quest_completed') {
+          const name = (event as { name?: unknown }).name;
+          if (typeof name === 'string' && !quests.includes(name)) quests.push(name);
+        } else if (event.event_type === 'adventure_completed') {
+          const narrative = (event as { narrative?: unknown }).narrative;
+          if (typeof narrative === 'string' && narrative.trim() !== '') closing = narrative;
+        }
       }
     }
-    return names;
-  }, [feed]);
+    return { quests, closing };
+  }, [feed, sessionId]);
 }
 
 /** The referee's way back: restore one of the newest saves, see every save, or return the table to its lobby. */
@@ -95,13 +103,18 @@ function RefereeChoices() {
               <div className={styles.grow}>
                 <p className={styles.saveTitle}>{saveTitle(save)}</p>
                 <p className={styles.endMeta}>
-                  <span>{formatGameClock(save.clock.rounds)}</span>
-                  <span className="visually-hidden">, saved </span>
-                  <span>{new Date(save.created_at).toLocaleString()}</span>
+                  <span>
+                    {formatGameClock(save.clock.rounds)}
+                    <span className="visually-hidden">,</span>
+                  </span>
+                  <span>
+                    <span className="visually-hidden">saved </span>
+                    {new Date(save.created_at).toLocaleString()}
+                  </span>
                 </p>
               </div>
               <Button size="sm" variant="secondary" icon="undo" onClick={() => setRestoring(save)}>
-                Restore
+                Restore<span className="visually-hidden"> {saveTitle(save)}</span>
               </Button>
             </li>
           ))}
@@ -120,7 +133,7 @@ function RefereeChoices() {
       <ConfirmDialog
         open={restoring !== null}
         onOpenChange={(open) => !open && setRestoring(null)}
-        title={`Restore ${restoring ? saveTitle(restoring).toLowerCase() : 'this save'}?`}
+        title={`Restore ${restoring ? saveTitle(restoring) : 'this save'}?`}
         description="The table moves to the saved game, and everyone keeps their seats."
         confirmLabel="Restore save"
         onConfirm={async () => {
@@ -134,7 +147,7 @@ function RefereeChoices() {
         open={ending}
         onOpenChange={setEnding}
         title="Return the table to its lobby?"
-        description="The game ends and the saves stay. In the lobby, you can change the party and start again, or continue from a save."
+        description="The game ends for everyone, and its saves stay. Characters start each new game as they were created, so what happened to them in this game, such as experience, treasure, and deaths, stays in its saves. To keep playing the characters as they are now, continue from a save instead."
         confirmLabel="Return to the lobby"
         onConfirm={async () => {
           await run(() => getApi().endGame(tableId), { errorTitle: "Couldn't end the game" });
@@ -152,7 +165,7 @@ export function EndScreen() {
   const game = useGame();
   const party = useParty();
   const referee = useIsReferee();
-  const quests = useCompletedQuests();
+  const { quests, closing } = useGameOutcome(game?.session_id ?? null);
   if (game === null) return null;
   const victory = game.mode === 'victory';
   const fallen = party.filter((member) => member.conditions.includes('dead')).map((member) => member.name);
@@ -162,6 +175,7 @@ export function EndScreen() {
         <p className={styles.endKicker}>{game.adventure_name}</p>
         <h2 className={styles.endTitle}>{victory ? 'Victory' : 'The party has fallen'}</h2>
         <p className={styles.endLead}>{sessionModeDescription(game.mode)}</p>
+        {victory && closing !== null && <p className={styles.endClosing}>{closing}</p>}
 
         <dl className={styles.endFacts}>
           <div className={styles.endFact}>
@@ -198,8 +212,8 @@ export function EndScreen() {
                   <p className={styles.endMeta}>
                     <span>
                       Level {member.level} {classLabel(member.class_id).toLowerCase()}
+                      <span className="visually-hidden">,</span>
                     </span>
-                    <span className="visually-hidden">, </span>
                     <span>{member.xp} XP</span>
                   </p>
                 </div>

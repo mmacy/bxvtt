@@ -109,6 +109,19 @@
   z-index: var(--z-raised);
 }
 
+/*
+ * On a map, the prompts sit clear of the map's chrome: below its toolbar and the referee's badge under it (76 px
+ * together), and to the right of the scene panel (at most 380 px wide), so the level switcher and the scene stay
+ * usable during a pick.
+ */
+.overlayBelowChrome {
+  top: calc(var(--space-3) + 76px);
+  left: min(calc(380px + 2 * var(--space-3)), 40%);
+  right: var(--space-3);
+  width: auto;
+  transform: none;
+}
+
 .overlayCorner {
   position: absolute;
   top: var(--space-3);
@@ -202,6 +215,16 @@
   margin: 0;
   font-size: var(--text-lg);
   color: var(--color-text-muted);
+}
+
+.endClosing {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+  font-style: italic;
+  line-height: var(--leading-relaxed);
 }
 
 .endFacts {

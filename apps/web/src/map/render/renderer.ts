@@ -171,7 +171,7 @@ const DEFAULT_OPTIONS: RendererOptions = {
   strokes: [],
   pins: [],
   pointers: [],
-  strokeColor: '#e4572e',
+  strokeColor: '#e76742',
   strokeWidth: 0.09,
   rulerMetric: 'grid',
   followParty: false,

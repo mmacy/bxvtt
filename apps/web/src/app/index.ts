@@ -105,3 +105,4 @@ export {
 export type { MemberLight, PartyLight } from './light';
 export { END_GRACE_MS, END_MAX_HOLD_MS, ShownModeProvider, useHeldMode, useShownMode } from './shownMode';
 export type { CombatStageState, PlaybackMemberState, PlaybackMoment } from './combatStage';
+export { lazyPart, type LazyPart } from './lazyPart';

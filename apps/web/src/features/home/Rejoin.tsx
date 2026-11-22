@@ -281,8 +281,8 @@ export function Rejoin({ inviteCode, members, onActiveChange }: RejoinProps) {
           I've played at this table before
         </h2>
         <p className={styles.cardLead}>
-          If this browser doesn't remember you, pick your name, and a referee at the table lets you back in.
-          Your characters and your place at the table come with you.
+          Played here before, but this browser doesn't remember you? Pick who you were, and a referee at the
+          table lets you back in. Your characters and your place at the table come with you.
         </p>
         {step.kind === 'ended' && (
           <Banner tone="warning" title={step.title}>

@@ -45,8 +45,10 @@ export function LobbySaves() {
   if (!referee) {
     return (
       <p className={styles.note}>
-        This table has {saveCount(saves.length)} from earlier games. The referee can continue from one instead
-        of starting a new game.
+        This table has {saveCount(saves.length)} from earlier games. A new game starts every character as they
+        were created, so the experience, treasure, and deaths of an earlier game stay in its saves. To play on
+        with the characters as they were saved, the referee can continue from a save instead of starting a new
+        game.
       </p>
     );
   }
@@ -54,8 +56,9 @@ export function LobbySaves() {
     <div className={styles.continue}>
       <p className={styles.note}>
         This table has {saveCount(saves.length)} from earlier games
-        {newest ? `, the newest at ${formatGameClock(newest.clock.rounds)}` : ''}. Continue from a save, and
-        the party plays on as it was saved.
+        {newest ? `, the newest at ${formatGameClock(newest.clock.rounds)}` : ''}. A new game starts every
+        character as they were created, so the experience, treasure, and deaths of an earlier game stay in its
+        saves. To play on with the characters as they were saved, continue from a save.
       </p>
       <Button variant="secondary" icon="undo" onClick={() => setOpen(true)}>
         Continue from a save

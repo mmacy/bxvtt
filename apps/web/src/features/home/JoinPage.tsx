@@ -65,11 +65,7 @@ export function JoinPage() {
           <Card padding="lg">
             <NameForm
               title={returning ? "I'm new here" : "You're invited to a table"}
-              description={
-                returning
-                  ? `Pick a name, and you'll go straight to ${lookup.table_name}.`
-                  : "Pick a name, and you'll go straight to the table."
-              }
+              description={"Pick a name, and you'll go straight to the table."}
               submitLabel="Join the table"
               onInvitePage
             />

@@ -10,7 +10,7 @@ import { KitProvider } from '@/ui';
 import { JoinPage } from './JoinPage';
 import { REJOIN_MAX_BACKOFF_MS, REJOIN_POLL_MS } from './Rejoin';
 
-const sam: User = { id: 'usr_sam', name: 'Sam', color: '#cc79a7', created_at: '2026-11-22T05:00:00Z' };
+const sam: User = { id: 'usr_sam', name: 'Sam', color: '#3fa7d6', created_at: '2026-11-22T05:00:00Z' };
 
 function TableStub() {
   const { tableId } = useParams();
@@ -40,7 +40,7 @@ const ticket = {
 };
 const lookup = {
   table_name: 'Thursday',
-  members: [{ user_id: 'usr_sam', name: 'Sam', color: '#cc79a7' as const }],
+  members: [{ user_id: 'usr_sam', name: 'Sam', color: '#3fa7d6' as const }],
 };
 const pending = {
   status: 'pending' as const,
@@ -63,7 +63,7 @@ describe('coming back in as an existing member', () => {
     const api = createFakeApi();
     api.lookupRejoin.mockResolvedValue({
       table_name: 'Thursday',
-      members: [{ user_id: 'usr_sam', name: 'Sam', color: '#cc79a7' }],
+      members: [{ user_id: 'usr_sam', name: 'Sam', color: '#3fa7d6' }],
     });
     api.requestRejoin.mockResolvedValue(ticket);
     api.rejoinStatus.mockResolvedValueOnce(pending);
@@ -89,7 +89,7 @@ describe('coming back in as an existing member', () => {
     const api = createFakeApi();
     api.lookupRejoin.mockResolvedValue({
       table_name: 'Thursday',
-      members: [{ user_id: 'usr_sam', name: 'Sam', color: '#cc79a7' }],
+      members: [{ user_id: 'usr_sam', name: 'Sam', color: '#3fa7d6' }],
     });
     api.requestRejoin.mockResolvedValue({ ...ticket, approvers_online: 0 });
     api.rejoinStatus.mockResolvedValue({ ...pending, status: 'declined' });
@@ -105,7 +105,7 @@ describe('coming back in as an existing member', () => {
     const api = createFakeApi();
     api.lookupRejoin.mockResolvedValue({
       table_name: 'Thursday',
-      members: [{ user_id: 'usr_sam', name: 'Sam', color: '#cc79a7' }],
+      members: [{ user_id: 'usr_sam', name: 'Sam', color: '#3fa7d6' }],
     });
     api.requestRejoin.mockRejectedValue(
       new BxvttProblemError({

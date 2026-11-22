@@ -4,13 +4,12 @@ import { AppKitProvider, ShortcutLayer, useIdentity } from '@/app';
 import { HomePage, JoinPage, NotFoundPage } from '@/features/home';
 // A direct import, because the shell's barrel also exports the play screen, which loads on demand.
 import { LoadingScreen } from '@/features/table/LoadingScreen';
+import { TablePagePart } from '@/features/table/parts';
 import { ErrorBoundary } from '@/ui';
 
-// A table page loads on demand with the table's session, and it loads its lobby or play screen in turn. The
-// design system gallery is a development page, so it loads only when someone opens it.
-const TablePage = lazy(() =>
-  import('@/features/table/TablePage').then((module) => ({ default: module.TablePage })),
-);
+// A table page loads on demand, and its lobby, play screen, and map load alongside it (`features/table/parts`).
+// The design system gallery is a development page, so it loads only when someone opens it.
+const TablePage = TablePagePart;
 const KitGallery = lazy(() => import('@/ui/gallery').then((module) => ({ default: module.KitGallery })));
 const KitTableMock = lazy(() => import('@/ui/gallery').then((module) => ({ default: module.KitTableMock })));
 

@@ -177,6 +177,19 @@ table {
 }
 
 /* Hide content visually but keep it available to assistive technology. */
+/*
+ * Inline text for assistive technology only, such as the comma in "Ruth, your profile". Unlike
+ * `.visually-hidden`, it stays an inline box, so Chrome doesn't put a space before it when it builds a button's
+ * or link's name from its content.
+ */
+.visually-hidden-inline {
+  color: transparent;
+  font-size: 1px;
+  letter-spacing: -1px;
+  clip-path: inset(50%);
+  user-select: none;
+}
+
 .visually-hidden {
   position: absolute !important;
   width: 1px;

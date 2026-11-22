@@ -85,7 +85,7 @@ function readIdentity(): StoredIdentity | null {
  * ```tsx
  * const user = useIdentity((s) => s.user);
  * const update = useIdentity((s) => s.update);
- * await update({ color: '#56b4e9' });
+ * await update({ color: '#f29e2e' });
  * ```
  */
 export const useIdentity = create<IdentityState>()((set, get) => ({

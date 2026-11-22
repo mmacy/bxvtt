@@ -126,7 +126,7 @@ A `LevelMap` contains:
 | `strokes` | `MapStroke[]` | `[]` | Committed freehand strokes, in cells. |
 | `pins` | `MapPin[]` | `[]` | Numbered pins. A pin's `note` shows on hover, and `refereeOnly` draws a dashed referee style. Filter referee pins out of a player's props. |
 | `pointers` | `MapPointer[]` | `[]` | Other users' pointers. The map eases each one toward its new position, so 10 updates a second look smooth. |
-| `strokeColor` | `string` | `'#e4572e'` | The color of a new stroke. |
+| `strokeColor` | `string` | `'#e76742'` | The color of a new stroke. |
 | `strokeWidth` | `number` | `0.09` | The width of a new stroke, in cells. |
 | `rulerMetric` | `'grid' \| 'diagonal' \| 'straight'` | `'grid'` | How the ruler counts squares. `grid` counts the orthogonal steps the party walks. |
 | `followParty` | `boolean` | `false` | Keeps the camera on the party. A pan turns it off and calls `onFollowPartyChange(false)`. |

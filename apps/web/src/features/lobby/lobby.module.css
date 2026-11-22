@@ -25,6 +25,7 @@
 
 .navLink {
   color: var(--color-text-muted);
+  white-space: nowrap;
   text-decoration: none;
 }
 

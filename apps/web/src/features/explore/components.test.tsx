@@ -171,7 +171,7 @@ describe('MapStage for keyboard and screen reader users', () => {
           x: 14.5,
           y: 21.5,
           text: 'Painted monks',
-          color: '#e69f00',
+          color: '#e76742',
           visibility: 'everyone',
         },
       ],
