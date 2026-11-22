@@ -1,0 +1,9 @@
+{
+  "label": "Referee guide",
+  "position": 4,
+  "link": {
+    "type": "generated-index",
+    "slug": "/refereeing",
+    "description": "Set up a lobby, choose an adventure and optional rules, adjudicate encounters behind the screen, and manage saves."
+  }
+}

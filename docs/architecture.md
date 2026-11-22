@@ -1,118 +1,107 @@
+---
+title: Architecture
+description: How the browser client, bxvtt server, and bxapi divide state, permissions, projections, and real-time sync.
+sidebar_position: 7
+---
+
 # Architecture
 
-bxvtt runs as three processes. The browser client talks only to the bxvtt server. The bxvtt server talks to bxapi.
+bxvtt runs across three components. Browsers communicate exclusively with the bxvtt server over HTTP and WebSocket, and the bxvtt server communicates with `bxapi` over loopback HTTP.
 
 ```text
 browser (apps/web)  <--HTTP /api, WebSocket /ws-->  bxvtt server (apps/server)  <--HTTP /v1-->  bxapi
      React + canvas                                   Fastify + SQLite                          osrlib rules + SQLite
 ```
 
-- **bxapi** applies the B/X rules. It stores characters, adventures, sessions (games in progress), and saves. It has no user accounts, no WebSocket, and one key per client application.
-- **The bxvtt server** stores everything about the people at a table and nothing about the rules: users, tables, memberships, seats, chat, map annotations, and pending battle declarations. It calls bxapi with a `referee` key (or with no key when bxapi runs in anonymous mode on the same machine), checks whether a user may send a command, and decides which parts of a response each user sees.
-- **The browser client** renders the table and sends the user's intent. It never computes a rule.
+- **`bxapi`** enforces the 1981 B/X rules, rolls dice, and stores characters, adventures, sessions (active games), and saves. It has no user accounts, no WebSocket interface, and scopes data per API client rather than per person.
+- **The bxvtt server** stores everything about the people at a table and nothing about game mechanics: users, tables, memberships, seats, chat feed entries, notes, map annotations, monster target handles, and pending battle declarations. It calls `bxapi` as a `referee` (via `BXAPI_KEY` or loopback anonymous mode), verifies whether the requesting user has permission to send a command, and filters every response for each recipient's role.
+- **The browser client** renders the table, map, sheets, and compendium, and submits user intent. It never evaluates a B/X rule and never contacts `bxapi`.
 
-In production the bxvtt server also serves the built client, so a deployment is one bxvtt process and one bxapi process.
+In production, the bxvtt server also serves the pre-compressed client bundle (`apps/web/dist`), reducing deployment to one bxvtt process and one `bxapi` process on the same host.
 
-## Playing over the internet
+## Network topology and trust boundary
 
-The bxvtt server runs on the same machine as bxapi, because bxapi is a Python process with a local SQLite database. To let players on other networks join, the host publishes the bxvtt server through a [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/), which is free and needs no open port on the host's router. `npm run share` starts a quick tunnel and prints the public HTTPS address. bxapi stays on `127.0.0.1` and is never published.
+Because `bxapi` runs locally against a SQLite database, the bxvtt server runs alongside it on `127.0.0.1`. To invite remote players without opening router ports, the host publishes bxvtt through a [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) (`npm run share` launches a quick tunnel automatically), while `bxapi` remains private on `127.0.0.1`.
 
-Because a tunnel makes the bxvtt server reachable by anyone who learns its address, the server treats every request as untrusted:
+The bxvtt server treats every incoming request as untrusted:
 
-- Every route except the health check, user creation, and the static client needs a user token. A table's data goes only to its members.
-- An invite code is long enough to resist guessing, and the server limits how fast one address can try codes and create users.
-- When `BXVTT_HOST_KEY` is set, a user needs that key to create a table. Joining a table with an invite code needs no key. `npm run share` sets a host key, so a stranger who finds the address can't create tables.
-- The server checks the `Origin` of a WebSocket handshake, limits body and message sizes, and sends a Content Security Policy with the client.
+- Every API route except `GET /api/health`, `POST /api/users`, and the unauthenticated rejoin endpoints requires a bearer token, and non-members receive HTTP 404 on table routes.
+- Invite codes contain 100 bits of entropy, and IP-based token buckets rate-limit user creation, invite attempts, rejoin requests, and host-key checks.
+- Setting `BXVTT_HOST_KEY` restricts `POST /api/tables` to callers who supply that key (`npm run share` sets one automatically), while players join existing tables with an invite code alone.
+- WebSocket handshakes validate `Origin`, enforce a 10-second authentication window, cap frame sizes, and pair with a strict Content Security Policy on client pages.
 
-## Ports and settings
+See [Security and trust model](hosting/security.md) for the complete guarantee matrix and [Environment variables and limits](reference/environment-variables.md) for server settings.
 
-| Setting | Default | Meaning |
+## Domain terms
+
+- **User:** A person at one or more tables, represented by a display name, color, and 256-bit bearer token stored in browser `localStorage` (hashed with SHA-256 on the server).
+- **Table:** One group's shared space, with a name, invite code, member list, lobby roster, saved games, and at most one active `bxapi` session.
+- **Referee and player:** A member's role at a table. Creating a table makes you its referee; referees can promote other members and can also control characters, enabling solo play.
+- **Roster:** In the lobby before a game starts, the ordered list of stored `bxapi` characters (`chr_` IDs) and their owners that will form the party.
+- **Seat:** During an active game, the assignment linking a session party member (`character-0001`) to the user who controls them. Referees can reassign seats at any time and control every character in an empty seat.
+- **Caller:** The player designated to speak for the party, issuing party-wide movement, door, search, rest, and encounter commands.
+- **Feed:** A table's single ordered stream of chat messages, whispers, dice rolls, narrated game events, and system notices, filtered per recipient.
+
+## Command authorization
+
+Before forwarding a command to `bxapi`, the server classifies it from `bxapi`'s JSON command schemas (`/v1/rules/commands/{command_type}`) and checks the sender's role and seat:
+
+| Command class | Examples | Authorized senders |
 | --- | --- | --- |
-| `BXVTT_PORT` | `8660` | Port the bxvtt server listens on. |
-| `BXVTT_HOST` | `127.0.0.1` | Address the bxvtt server listens on. |
-| `BXVTT_DATA_DIR` | `.data` | Directory for the bxvtt SQLite database. |
-| `BXAPI_URL` | `http://127.0.0.1:8640` | Base URL of bxapi. Development scripts set it to `http://127.0.0.1:8651`. |
-| `BXAPI_KEY` | none | A bxapi key with the `referee` role. Leave it unset when bxapi runs in anonymous mode. |
-| `BXVTT_HOST_KEY` | none | When set, a user must present this key to create a table. |
-| `BXVTT_PUBLIC_ORIGINS` | none | Extra origins, separated by commas, that may open the WebSocket, such as a tunnel's public address. |
-| `BXVTT_WEB_PORT` | `5180` | Port of the Vite development server, which proxies `/api` and `/ws` to the bxvtt server. |
+| Member command | `equip_item`, `cast_spell`, `give_items`, `use_item`, `purchase_equipment`, `force_door`, `pick_lock` | The user holding the acting character's seat, or a referee. |
+| Party command | `move_party`, `turn_party`, `open_door`, `search`, `rest`, `enter_dungeon`, `engage_battle`, `evade`, `parley`, `wait`, `take_treasure`, `reorder_party` | A referee, the caller, or any seated player when `party_control` is `anyone`. |
+| Referee command | All 23 commands with `kind: "referee"` | A referee. |
+| Battle resolution | `resolve_battle_round` | Never accepted directly (`409 use_declarations`); assembled by the server from saved battle declarations. |
 
-## Terms
+Because the server identifies member commands by inspecting required string fields (`character_id`, `member_id`, or `actor_id`) in `bxapi`'s command schema (with `search` and `parley` overridden as party commands), newly added `bxapi` commands classify automatically without server code changes.
 
-- **User**: a person. A user has a display name, a color, and a secret token that the browser stores. bxvtt has no passwords. It is built for a group of people who trust each other.
-- **Table**: one group's game. A table has a name, an invite code, members, a lobby roster, and at most one active bxapi session.
-- **Referee** and **player**: a member's role at a table. The user who creates a table is its referee. A referee can promote another member to referee. A referee can also control characters, so one person can play alone.
-- **Roster**: before play starts, the list of stored bxapi characters (`chr_` IDs) that will form the party, in marching order, each with the user who owns it.
-- **Seat**: after play starts, the link between a party member in the session (`character-0001`) and the user who controls that member. A referee can reassign a seat. A referee controls every member whose seat is empty.
-- **Caller**: the player who speaks for the party, as in B/X. The caller sends the commands that move the whole party.
-- **Feed**: the table's one chronological log. It contains chat messages, dice rolls, game events from bxapi, and system notices. Each entry has a visibility: everyone, referees only, or a whisper to named users.
+Rules refusals from `bxapi` return HTTP 200 with `accepted: false` and structured `rejections` to the sender alone, without advancing the session revision or broadcasting to other members.
 
-## Who may send what
+## Battle round coordination
 
-The server classifies each bxapi command and checks the sender before it calls bxapi.
+`bxapi` resolves an entire B/X battle round in one atomic `resolve_battle_round` command containing one declaration per eligible member in `view.encounter.declarers`. bxvtt coordinates multi-player input around that single call:
 
-| Class | Examples | Who may send it |
-| --- | --- | --- |
-| Member command | `equip_item`, `cast_spell`, `give_items`, `use_item`, `purchase_equipment`, `force_door`, `pick_lock` | The user in the acting member's seat, or a referee. |
-| Party command | `move_party`, `turn_party`, `open_door`, `search`, `rest`, `enter_dungeon`, `engage_battle`, `evade`, `parley`, `wait`, `take_treasure`, `reorder_party` | A referee, or the caller. When the table setting `party_control` is `anyone`, any member with a seat. |
-| Referee command | every command whose `kind` is `referee` | A referee. |
-| `resolve_battle_round` | | Nobody sends it directly. See "Battle rounds". |
+1. Each player submits declarations for their seated characters (`PUT /api/tables/{t}/game/declarations/{member_id}`). The server stores them and broadcasts updated `declarations` to the table so party members can plan together.
+2. Once every declarer has submitted, the server calls `resolve_battle_round` automatically when `auto_resolve` is enabled; otherwise the caller or a referee triggers resolution (`POST /api/tables/{t}/game/declarations/resolve`), and referees can resolve early with `fill_with_hold: true`.
+3. If `bxapi` refuses the round, declarations remain intact while the server attributes each rejection to its offending `member_id` (matching rejection parameters first, eliminating plain `hold` declarations second, and probing non-moving declarations with an intentionally invalid `hold` + `back_stab: true` sentinel that can never resolve the round).
+4. Once `bxapi` accepts the round, the server clears stored declarations and broadcasts the updated game state and round events.
 
-The server finds the acting member of a member command from the command's schema, so a command that bxapi adds later is classified without a code change wherever possible. A command that names no member is a party command.
+## Role-based projections, the scene, and target handles
 
-A refused command isn't an error. bxapi returns `accepted: false` with rejections, and the server returns them to the sender alone. The other members see nothing.
+After every accepted command, bxvtt fetches the full outcome from `bxapi` and constructs separate projections:
 
-## Battle rounds
+- **Players** receive `bxapi`'s `PlayerView`, player-visibility events, a server-derived `scene`, and opaque monster target handles (`tgt_` IDs).
+- **Referees** also receive dynamic `RefereeState`, referee-visibility events, pending `rejoin_requests`, and HTTP access to the cached full adventure document and full event log.
 
-bxapi resolves a battle round from one declaration for each member in `view.encounter.declarers`. At a shared table, each player declares for the members in their seats:
+Because `bxapi`'s `PlayerView` provides explored cell geometry without room names, descriptions, visible treasure caches, stairs, or discovered traps, bxvtt derives `game.scene` from `osrlib`'s recorded party knowledge (`explored` cells, `found_traps`, `sprung_traps`, `removed_traps`, `found_tricks`, and `resolved_encounters`). Anything not confirmed as perceived by the party stays omitted. Similarly, because `PlayerView` hides individual monster IDs while single-target spells need them, bxvtt mints stable 96-bit `tgt_` handles (labeled `Goblin 1`, `Goblin 2`, and so on) for visible monsters and translates handles to monster IDs inside commands and declarations.
 
-1. A player saves a declaration for one member. The server stores it and tells every member who has declared, without revealing a player's choice to anyone who shouldn't see it. Party members see each other's declarations, because the party plans together.
-2. When every declarer has a declaration and the table setting `auto_resolve` is on, the server sends `resolve_battle_round`. Otherwise the caller or a referee asks the server to resolve the round, or any member with a seat when `party_control` is `anyone`. A referee can resolve a round early, and the server then fills each missing declaration with `hold`.
-3. If bxapi refuses the round, the server keeps the declarations and tells the table which member's declaration bxapi refused and why, and the player fixes it. Some of bxapi's rejections don't name a member. For those, the server works out the member by sending the round again with one declaration replaced by a hold that bxapi always refuses, so the check can never resolve the round. When the server still can't tell, the refusal lists the members whose declarations could have caused it.
-4. If bxapi accepts the round, the server clears the declarations and broadcasts the result.
+On a referee's browser, the **Referee lens** (`Shift+L`) switches rendering to the player projection locally so a referee who also plays a character can avoid spoilers.
 
-## What each role receives
+## Browser-to-server protocol
 
-After every accepted command the server holds the command outcome with every event, and it builds two projections:
+`packages/shared/src/protocol` defines every HTTP payload and WebSocket message as a zod schema, and `@bxvtt/shared/client` wraps them in `BxvttClient` and `TableConnection`.
 
-- **Players** receive the bxapi player view, the scene, the events whose `visibility` is `player`, and the matching messages.
-- **Players** also receive target handles: one opaque handle for each monster the party can see, with a label such as "Goblin 2". A player aims a spell or an item at one monster by handle, and the server translates the handle to bxapi's monster ID.
-- **Referees** receive everything a player receives, and also the referee view, the referee-only events, and the adventure's full map and key. The WebSocket carries only the dynamic part of the referee view. A referee's client reads the adventure from a cached HTTP route and the event log from the events route, because both grow too large to push after every command.
+- **HTTP (`/api`)** handles request-response mutations and queries, returning RFC 9457 `application/problem+json` documents with stable `code` strings on errors. Commands include `expected_revision` and an `Idempotency-Key` so concurrent clicks cannot apply against stale state; the losing request receives `409 revision_conflict` and a `table_changed` notice.
+- **WebSocket (`/ws`)** delivers live state pushes and lightweight signals. After opening a socket, the client authenticates with an `auth` frame (`token`, `table_id`, and optional `feed_after`) and receives a complete role-filtered `snapshot`. Subsequent state frames (`presence`, `table`, `game`, `declarations`, `annotations`, `notes`, and `rejoin_requests`) replace their respective slice wholesale, `feed` frames append one new `FeedEntry` by `seq`, and signal frames (`ping`, `notice`, `heartbeat`, `error`, and `removed`) report ephemeral events, allowing automatic recovery on reconnect or `resync`.
 
-The player view draws the map but names no areas and shows no treasure caches, stairs, or found traps. So the server acts as the referee who describes what the party sees: it derives a *scene* from the referee view and sends it to every member with the player view. The scene lists the areas the party has entered with their names and descriptions, the caches, features, and transitions the party can perceive with the IDs that commands need, the traps the party has found, and display names for item IDs. It follows osrlib's record of what the party knows, and when that record doesn't settle a question, it hides the thing and leaves it to the referee. `apps/server/README.md` lists the rules.
+See [HTTP API, WebSocket, and SDK](reference/http-and-websocket.md) for the complete endpoint and message tables.
 
-A referee's client has a "referee lens" switch. With the lens off, the client shows only what players see, so a referee who also plays can avoid spoilers. The switch is a display preference. The server still sends referee data to a referee.
+## Game lifecycle
 
-## Protocol between the browser and the server
+1. **Home (`/` and `/join/:code`):** Users create a browser identity, create or join tables, or request to rejoin an existing table seat after a tunnel URL or browser change.
+2. **Lobby:** Players roll or attach stored characters; the referee picks or uploads an adventure, adjusts optional B/X rules, orders the roster, and starts a new `bxapi` session (or restores an existing save).
+3. **Active session:** The play shell adapts to `game.mode`: `town`, `exploring`, `encounter`, `battle`, `game_over`, and `victory`.
+4. **Saves and lobby return:** Manual saves and automatic milestone saves (`autosave`) persist in `bxapi`. Restoring a save creates a fresh `bxapi` session from that snapshot and remaps table seats by member ID; ending a game returns the table to its lobby while retaining all saves.
 
-`packages/shared/src/protocol` defines every request, response, and WebSocket message as a zod schema with an inferred TypeScript type. The server validates with the schemas and the client imports the types.
-
-- **HTTP under `/api`** is for anything that has a result the caller waits for: creating a user or a table, joining, changing the roster, starting a session, sending a command, saving a declaration, posting to the feed, changing an annotation, and every referee tool. Errors are JSON problem documents with a stable `code`, as in bxapi.
-- **The WebSocket at `/ws`** is for what the server pushes and for short-lived signals. The client authenticates with its first message, `auth`, so the token never appears in a URL. The server then sends a `snapshot` with the full table state for that user's role, and then a message for each change: `presence`, `table`, `game`, `feed`, `declarations`, `annotations`, `notes`, and `ping`, plus a `notice` for an event a user should hear about, such as a restored save. The client sends short-lived signals: a map `ping`, a `heartbeat`, and a `resync` request for a new snapshot. Each state message has enough data to replace the client's copy of that part of the state, so a client that misses a message recovers from the next one or from a new snapshot after it reconnects.
-
-The server sends a command to bxapi with `expected_revision` and an `Idempotency-Key`, so two members who act at the same moment can't both apply a stale move. The member whose command loses the race receives the new state and a notice that the table changed.
-
-## Game flow
-
-1. **Home.** A user picks a display name, then creates a table or joins one with an invite link.
-2. **Lobby.** Members create characters with the character wizard, or pick characters they made before. The referee chooses the adventure (one that comes with bxapi, a sample from `adventures/`, or an uploaded adventure document), orders the roster, and starts the game. The server creates the bxapi session and turns the roster into seats.
-3. **Play.** The interface follows the session's `mode`:
-   - `town`: buy equipment, buy healing at the temple, sell treasure, rest, prepare spells, and leave for a dungeon.
-   - `exploring`: the map is the main surface. The party token moves cell by cell. Doors, searches, stairs, treasure, light, and spells are actions in context.
-   - `encounter`: the table sees the monsters, their distance, and their bearing, and chooses to talk, flee, wait, or fight.
-   - `battle`: each player declares, the round resolves, and the client plays the result back event by event.
-   - `game_over` and `victory`: a summary, with the option to restore a save.
-4. **Saves.** Any member can save, and the server saves by itself at moments such as entering a dungeon when the table setting `autosave` is on. Restoring a save creates a new bxapi session, and the server moves the table to it and remaps the seats by member ID. A referee can also end a game, which returns the table to its lobby and keeps its saves.
-
-## Client structure
+## Web client layout
 
 ```text
 apps/web/src/
-  ui/         design system: tokens, fonts, icons, component kit
-  map/        canvas dungeon renderer: pan, zoom, fog, tokens, pings, drawings, ruler
-  app/        routing, API client, WebSocket sync, stores
-  features/   one directory per feature: home, lobby, wizard, sheet, town, explore,
-              encounter, battle, feed, compendium, referee, journal
+  ui/         design system: CSS tokens, typography, icons, accessible component kit, /kit gallery
+  map/        HTML canvas dungeon renderer: tile cache, themes, lighting, annotations, ruler, keyboard cursor
+  app/        router, API client, WebSocket store sync, permission hooks, command queue, shortcuts
+  features/   screen modules: home, lobby, table, wizard, sheet, town, explore,
+              combat, feed, journal, compendium, referee
 ```
 
-A feature reads state from the stores in `app/` and renders with the kit in `ui/`. A feature never opens its own WebSocket or calls `fetch` directly.
+Feature modules read state through hooks in `@/app` and build interfaces from `@/ui`; they never instantiate WebSockets, call `fetch` directly, or compute B/X rules.

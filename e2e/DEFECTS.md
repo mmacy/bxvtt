@@ -1,31 +1,31 @@
 # Defects found by the end-to-end suite
 
-This report lists the product defects that are open after the last run of the end-to-end suite, with a full entry for each. Every defect fixed across the passes is listed by title in "Fixed" at the end. Each open entry gives the steps, or the spec that shows it, what happens, what should happen, and a screenshot under `.data/screens/e2e/` when one helps (that folder is ignored by Git, so run the spec to regenerate it).
+Product defects uncovered by the Playwright end-to-end suite are tracked below, with full reproduction details for open entries and a summary list of resolved entries at the bottom. Open entries record reproduction steps (or the spec file), actual behavior, expected behavior, and optional screenshot paths under `.data/screens/e2e/` (git-ignored; rerun the spec to regenerate).
 
-A test that fails because of an open defect is marked `test.fixme` with the entry's ID in a comment, so the suite passes. After you fix a defect, remove the `fixme` from the tests that name its ID and run them.
+Mark any test blocked by an open product defect with `test.fixme` referencing the defect ID in a comment, then remove `fixme` and rerun the spec once fixed.
 
-Severity:
+Severity levels:
 
-- **Blocker**: The table can't play past this point.
-- **Major**: A feature is broken or misleading, or a player sees referee data, but the table can work around it.
-- **Minor**: Something works incorrectly or confusingly in a way players notice.
-- **Polish**: Wording, layout, or consistency.
+- **Blocker**: Play cannot continue past this point.
+- **Major**: A feature is broken or misleading, or a player receives referee data, though a workaround exists.
+- **Minor**: Behavior is wrong or confusing in a way players notice.
+- **Polish**: Wording, layout, or screen-reader presentation issue.
 
-IDs that start with `D-` come from the first pass, `R-` from the second, `F-` from the third, and `L-` from the last run.
+ID prefixes denote the test pass that logged the issue (`D-` first pass, `R-` second, `F-` third, `L-` latest).
 
 ## Status
 
-On 2026-11-22, at commit `2923b75`, 3 defects are open: 0 blockers, 0 majors, 0 minors, and 3 polish. Two of them (R-205 and F-101) may already be fixed but haven't been confirmed in a browser. The suite passes in development mode and against the production build, and no test is marked `fixme`.
+As of 2026-11-22 (commit `2923b75`), 3 defects remain open: 0 blockers, 0 majors, 0 minors, and 3 polish items. Two of them (`R-205` and `F-101`) might already be resolved by recent layout fixes, pending manual visual verification. All specs pass in both development and production modes with zero `test.fixme` annotations.
 
 ## Open defects by owner
 
 ### combat
 
-- F-101 (Polish): Range track labels collide when a monster group carries a condition line
+- F-101 (Polish): Range track labels collide when a monster group displays a condition line
 
 ### map
 
-- R-205 (Polish): Map labels run into the party token and into doors on The Toll at Crookback Bridge
+- R-205 (Polish): Map labels overlap the party token and doors on *The Toll at Crookback Bridge*
 
 ### sheet
 
@@ -33,37 +33,37 @@ On 2026-11-22, at commit `2923b75`, 3 defects are open: 0 blockers, 0 majors, 0 
 
 ## Open defect entries
 
-### R-205: Map labels run into the party token and into doors on The Toll at Crookback Bridge
+### R-205: Map labels overlap the party token and doors on *The Toll at Crookback Bridge*
 
 - **Severity**: Polish
-- **Status**: Possibly fixed. On the final tree the referee's map draws the toll gate's number clear of the door, but nobody checked the player's map in the toll gate with a torch lit.
+- **Status**: Possibly fixed. On the latest tree, the referee map renders the toll gate's area number clear of the door, but the player map in the toll gate with a lit torch has not been visually rechecked.
 - **Owner**: map
-- **Steps**: Start The Toll at Crookback Bridge, enter the bridge, light a torch, and press the right arrow twice so the party stands in the toll gate.
-- **What happens**: On the player's map, "The Kingsway" and "Toll gate" are drawn on one line through the party's square, and the party token covers the "T" of "Toll gate". On the referee's map at the same moment, the toll gate's area number "2" is drawn on top of a door.
-- **What should happen**: Labels and area numbers should move clear of the party token and of doors, as the map README says they do for stairs and features.
+- **Steps**: Start *The Toll at Crookback Bridge*, enter the bridge, light a torch, and press the right arrow twice so the party stands in the toll gate.
+- **What happens**: On the player map, "The Kingsway" and "Toll gate" render on one line through the party's square so the party token covers the "T" of "Toll gate". On the referee map at the same moment, area number "2" renders on top of a door.
+- **What should happen**: Area labels and numbers should shift clear of the party token and doors, matching how they avoid stairs and features.
 - **Screenshot**: `.data/screens/e2e/tour-b-toll-walk.png`, `.data/screens/e2e/tour-b-toll-walk-referee.png`
 
-### F-101: Range track labels collide when a monster group carries a condition line
+### F-101: Range track labels collide when a monster group displays a condition line
 
 - **Severity**: Polish
-- **Status**: Possibly fixed. The last batch gives stacked groups room for their labels, and the smoke spec's captain's loft now shows Mag Corrie and her bodyguard stacked with both labels clear. The run never put a group to sleep, so the case with a condition line is unconfirmed.
+- **Status**: Possibly fixed. Stacked groups now reserve vertical room for multi-line labels, and the captain's loft fight in `e2e/smoke.spec.ts` renders Mag Corrie and her bodyguard without overlap when awake; the asleep condition-line case remains unverified.
 - **Owner**: combat
-- **Steps**: `e2e/smoke.spec.ts`, the captain's loft. Wren puts Mag Corrie to sleep, and the party beats her and her bodyguard. Look at the aftermath card's range track, and at the battle board while Mag sleeps and her bodyguard still stands.
-- **What happens**: Mag Corrie's label grows a third line, "1 asleep". In the aftermath card, whose track is narrow, that line is drawn on top of the "Party line" caption, and the party's tokens crowd against Mag's token. On the battle board, in a run where both groups stood at the same distance, the bodyguard's token, stacked below Mag's by the R-304 fix, covered Mag's "In melee" and "1 asleep" lines.
-- **What should happen**: Stack groups at the same distance with room for every line of each label, and keep the condition line clear of the "Party line" caption.
-- **Screenshot**: `.data/screens/e2e/smoke-captains-loft-won.png` (aftermath card, bottom centre)
+- **Steps**: In `e2e/smoke.spec.ts` (captain's loft), have Wren put Mag Corrie to sleep while her bodyguard remains standing, then inspect both the active battle board and the aftermath card's range track.
+- **What happens**: Adding the third label line ("1 asleep") causes the narrow aftermath range track to overlap the "Party line" caption and crowd party tokens against Mag's token; on the battle board, the stacked bodyguard token previously overlapped Mag's "In melee" and "1 asleep" lines.
+- **What should happen**: Stacked monster groups at the same distance should allocate space for every label line and stay clear of the "Party line" caption.
+- **Screenshot**: `.data/screens/e2e/smoke-captains-loft-won.png` (aftermath card, bottom center)
 
 ### L-001: Each marching order row's details are read twice by a screen reader
 
 - **Severity**: Polish
 - **Owner**: sheet
-- **Steps**: Open the Party tab and read the marching order with a screen reader in browse mode, or look at the list's accessibility tree.
-- **What happens**: The F-001 fix names each row's button by the member's name and points its description at a hidden text element inside the same list item. That element is still in the accessibility tree as the list item's content, so browse mode reads "You, level 1 fighter, 10 of 10 hit points, armour class 4. Opens the character sheet." and then, on the button, "Brenna" followed by the same sentence as its description.
-- **What should happen**: Each detail should be read once, for example by hiding the description element from the tree (`aria-hidden="true"` still lets `aria-describedby` use it).
+- **Steps**: Open the **Party** tab and read the marching order in screen-reader browse mode, or inspect the list's accessibility tree.
+- **What happens**: Each row names its button after the character and points `aria-describedby` at a visually hidden element inside the same list item. Because that element remains exposed in the accessibility tree, browse mode reads "You, level 1 fighter, 10 of 10 hit points, armour class 4. Opens the character sheet." on the list item and then repeats the same description on the "Brenna" button.
+- **What should happen**: Screen readers should announce the description once (for example, by adding `aria-hidden="true"` to the description element, which `aria-describedby` still reads).
 
 ## Fixed
 
-These defects were fixed and confirmed by a passing test or, where the entry had no test, by exploratory play or the source. A defect fixed in part names the open entry that carried the rest.
+These defects were fixed and confirmed by a passing test or, where the entry had no test, by exploratory play or the source. A defect fixed in part names the open entry that tracks the remainder.
 
 - D-001: The Party panel warns about darkness while the party is in town.
 - D-002: The profile button's accessible name doesn't match its visible text.
@@ -175,7 +175,7 @@ These defects were fixed and confirmed by a passing test or, where the entry had
 - R-521: Slain monsters "wake up" in the feed.
 - R-522: The temple names a dead member's button "Osric Dead Dead".
 - R-523: A single monster is written as plural and as "×1".
-- R-524: A long aftermath title pushes the Close button onto its own line, and a room label sits outside its room.
+- R-524: A long aftermath title pushes the Close button onto a separate line, and a room label sits outside its room.
 - R-525: The bridge deck is called "A corridor". Fixed in part; the rest is F-203.
 - R-526: The action bar keeps offering "Attack" while the composer has Cast selected.
 - R-527: Placing the party in a keyed area skips its encounter and triggers without saying so.
@@ -202,5 +202,5 @@ These defects were fixed and confirmed by a passing test or, where the entry had
 ## Notes that aren't defects
 
 - bxapi has no command that grants a gem or a piece of jewellery, so the referee's grant tool can only give items and coins. The town spec gets treasure by having the referee place the party in The Drowned Bell's chapel and take the altar's candlesticks. If the referee should be able to hand out treasure, bxapi needs a `grant_valuable` command first.
-- First-level parties die easily in both sample adventures, as B/X intends. Talking at the toll gate can turn the bandits hostile, depending on the dice. Since F-207 was fixed, the battle board's highlighted choice keeps back-rank members out of melee, so a newcomer who follows it no longer walks the casters into a fight.
+- First-level parties die quickly in both sample adventures, as B/X intends. Talking at the toll gate can turn the bandits hostile, depending on the dice. Since F-207 was fixed, the battle board's highlighted choice keeps back-rank members out of melee, so a newcomer who follows it no longer walks the casters into a fight.
 - On 2026-11-22 the shared development bxapi filled its 1 GiB storage limit after three passes of test runs, and every request that stored something failed until it was restarted on a fresh database. `scripts/dev-bxapi.sh` now turns the limit off. F-003 covers the message bxvtt showed.

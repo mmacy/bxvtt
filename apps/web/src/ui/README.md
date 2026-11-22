@@ -1,24 +1,28 @@
-# bxvtt design system
+# bxvtt design system (`apps/web/src/ui`)
 
-`src/ui` holds every token, font, icon, and component that bxvtt screens use. Build each screen from these parts. If the kit lacks something, add it here (when your instructions give you `src/ui`) or build it in your feature directory from the tokens and report it.
+`src/ui` defines the design tokens, fonts, icons, and accessible React components used across bxvtt screens. Build every interface from these exports rather than introducing parallel button, dialog, or input primitives.
 
-To see every token and component in its states, run the web client and open the root page, which shows the kit gallery until the app router lands. The gallery component is `KitGallery` from `@/ui/gallery`, and `KitTableMock` shows the table layout filled with placeholder content.
+To inspect every token, surface, and interactive state live, start the Vite dev server and open `/kit` (component gallery) or `/kit/table` (full-screen play layout mock):
 
 ```sh
-BXVTT_WEB_PORT=5181 npm run dev -w @bxvtt/web   # then open http://localhost:5181/
+npm run dev -w @bxvtt/web
+# Component gallery: http://localhost:5180/kit
+# Table layout mock: http://localhost:5180/kit/table
 ```
 
-## Set up
+Both `/kit` and `/kit/table` are lazy routes (`KitGallery` and `KitTableMock` from `@/ui/gallery`), so gallery code stays out of the main application bundle.
 
-`main.tsx` already does both steps. Keep them when you replace `App.tsx`.
+## Application setup
 
-1. Import the global styles once, before anything renders. The module loads the fonts, `tokens.css`, and `base.css`.
+`src/main.tsx` and `src/App.tsx` wire the global styles and root provider once:
+
+1. Import `./ui/styles` before rendering so variable fonts, `tokens.css`, and `base.css` load first:
 
    ```ts
    import './ui/styles';
    ```
 
-2. Wrap the app in `KitProvider`. It shares tooltip timing, renders the toast stack, and passes the app's motion choice to kit components. The app renders `AppKitProvider` from `@/app`, which passes the user's motion preference as `reducedMotion`.
+2. Wrap the application tree in `KitProvider` (or `AppKitProvider` from `@/app`, which forwards the user's motion preference as `reducedMotion` and provides tooltip timing and the toast stack):
 
    ```tsx
    import { KitProvider } from '@/ui';
@@ -30,15 +34,11 @@ BXVTT_WEB_PORT=5181 npm run dev -w @bxvtt/web   # then open http://localhost:518
    );
    ```
 
-   Leave `reducedMotion` out to follow the system's `prefers-reduced-motion` setting.
-
-Import components, hooks, and token values from `@/ui`:
+Import components, hooks, and JavaScript token constants from `@/ui`, and style feature CSS Modules with custom properties from `tokens.css`:
 
 ```tsx
-import { Button, Dialog, Field, TextInput, toast } from '@/ui';
+import { Button, Dialog, Field, TextInput, chromeColors, fonts, playerColorHex, toast } from '@/ui';
 ```
-
-Style your own markup with CSS Modules and the custom properties in `tokens.css`. JavaScript that needs a token value, such as the canvas map renderer, imports it from `tokens.ts`.
 
 ```css
 .roster {
@@ -51,255 +51,92 @@ Style your own markup with CSS Modules and the custom properties in `tokens.css`
 }
 ```
 
-```ts
-import { chromeColors, eventColors, fonts, playerColorHex } from '@/ui';
-```
+## Visual direction and principles
 
-## The look
+The aesthetic evokes a candlelit table at night with an adventure module open beside the map:
 
-The interface is a candlelit table late at night with a module open on it. The chrome is lampblack and umber with brass accents, and it steps back so the map stays the brightest thing on screen. Vellum and iron-gall ink appear only on things that are paper at a real table: character sheets, handouts, and the journal.
+- **Fraunces** sets display headings (`--font-display-plain`) and the wordmark (`--font-display-soft`).
+- **Atkinson Hyperlegible Next** sets body copy, controls, and stat blocks so `Il1`, `O0`, and `rn`/`m` stay distinct at small sizes.
+- **Rokkitt** (`--font-numeric`) sets numbers read at a glance: dice, ability scores, hit points, armour class, coin counts, and the game clock.
 
-Three typefaces divide the work:
+Follow seven rules when composing screens:
 
-- **Fraunces** sets headings and the wordmark. Its soft and wonky axes recall the Windsor and Souvenir faces on 1980s modules. Headings use `--font-display-plain`, and the wordmark uses `--font-display-soft`.
-- **Atkinson Hyperlegible Next** sets all interface text and stat blocks. Its letterforms keep `Il1`, `O0`, and `rn`/`m` apart in dense text.
-- **Rokkitt** sets numbers that a player reads at a glance: dice, ability scores, hit points, armour class, coin counts, and the clock.
+1. **Keep the map brightest.** Chrome uses low-chroma lampblack and umber (`--color-surface-*`). Avoid large saturated fills adjacent to the map stage.
+2. **Reserve brass for primary focus and selection.** `--color-accent` marks the primary button, selected state, and focus ring; render at most one primary button per view.
+3. **Reserve `Parchment` for paper artifacts.** Apply `Parchment` (`data-surface="paper"`) only to character sheets, handouts, and journal pages, never to chrome panels, menus, or top bars.
+4. **Set game numbers in `--font-numeric`** with tabular numerals whenever values align in columns.
+5. **Keep type readable.** Interface copy runs at `14px` (`--text-md`) and stat blocks go no smaller than `13px` (`--text-sm`).
+6. **Tie motion to user actions** and honor reduced motion everywhere.
+7. **Display server values directly.** `HpBar`, `StatBox`, and `DiceRoll` render values supplied by `bxapi` without computing rules locally.
 
-## Design principles
+## Token tiers, stacking, motion, and themes
 
-1. **The map is the hero.** Chrome uses low-chroma warm darks. Don't put a large saturated fill next to the stage.
-2. **Brass marks what you can press.** The accent is for the primary action, the selected item, and focus. Use at most one primary button per view.
-3. **Paper is for paper.** Use `Parchment` for sheets, handouts, and the journal, and nowhere else.
-4. **Numbers are first-class.** Put game numbers in `--font-numeric`, and use tabular figures where numbers line up in columns.
-5. **Dense, but readable.** Interface text is 14 px (`--text-md`), and stat blocks go no smaller than 13 px (`--text-sm`). Use the spacing scale to separate groups instead of borders.
-6. **Motion answers an action.** Opening, closing, rolling, and taking damage animate. Nothing moves on its own. Every animation respects `prefers-reduced-motion`.
-7. **Display, never decide.** Game components show what bxapi reports. `HpBar` takes hit points, `StatBox` takes the modifier, and `DiceRoll` takes the results the server rolled.
+Components and features consume **Roles** and **Scales** only; never reference raw `--palette-*` variables outside `tokens.css`.
 
-## Token naming
-
-Tokens come in three layers. Components and features use the second and third layers only.
-
-| Layer | Pattern | Examples | Use |
+| Tier | Pattern | Examples | Scope |
 | --- | --- | --- | --- |
-| Palette | `--palette-{pigment}-{step}` | `--palette-ink-900`, `--palette-brass-500`, `--palette-vellum-100` | Raw values. Only `tokens.css` reads these. |
-| Roles | `--color-{role}[-{variant}]` | `--color-surface-2`, `--color-text-muted`, `--color-accent`, `--color-danger-subtle`, `--color-damage`, `--color-paper-ink` | What a color is for. Themes redefine roles only. |
-| Scales | `--{scale}-{step}` | `--space-3`, `--text-sm`, `--radius-md`, `--shadow-2`, `--duration-base`, `--ease-out`, `--z-modal` | Fixed steps for size, depth, motion, and stacking. |
+| Palette | `--palette-{pigment}-{step}` | `--palette-ink-900`, `--palette-brass-500`, `--palette-vellum-100` | Internal to `tokens.css` only. |
+| Roles | `--color-{role}[-{variant}]` | `--color-surface-2`, `--color-text-muted`, `--color-accent`, `--color-danger-subtle`, `--color-paper-ink` | Semantic colors consumed by components and features. |
+| Scales | `--{scale}-{step}` | `--space-3`, `--text-sm`, `--radius-md`, `--shadow-2`, `--duration-base`, `--ease-out`, `--z-layer` | Spacing, type size, elevation, motion, and z-index steps. |
 
-Other groups:
+Additional token groups cover player colors (`--player-{pigment}` and `playerColors` in `tokens.ts`), coins (`--coin-pp` through `--coin-cp`), dice (`--color-die-*`), and layout dimensions (`--control-sm|md|lg`, `--topbar-height`, `--rail-width`, `--actionbar-height`, `--dock-min|default|max`).
 
-- **Player colors** are `--player-{pigment}`: vermilion, saffron, orpiment, weld, malachite, verdigris, cerulean, azurite, ultramarine, tyrian, madder, and slate. `playerColors` in `tokens.ts` lists them with labels and hex values. Components that take a `color` prop accept a player color id or any CSS color.
-- **Coins** are `--coin-pp`, `--coin-gp`, `--coin-ep`, `--coin-sp`, and `--coin-cp`.
-- **Dice** are `--color-die-*`.
-- **Layout measures** are `--control-sm|md|lg` (28, 32, and 40 px), `--topbar-height`, `--rail-width`, `--actionbar-height`, and `--dock-min|default|max`.
-- **Layers** are `--z-base`, `--z-raised`, `--z-rail`, `--z-dock`, `--z-topbar`, `--z-layer`, `--z-toast`, and `--z-tooltip`. See [Layers](#layers).
+- **Portal z-index (`--z-layer`, `1200`):** Every portaled overlay (dialogs, drawers, menus, context menus, selects, comboboxes, and popovers) shares `--z-layer` and stacks in DOM open order so menus inside dialogs or nested dialogs layer properly without custom `z-index` values. Toasts (`--z-toast`, `1400`) and tooltips (`--z-tooltip`, `1500`) sit above all portals.
+- **Reduced motion:** `KitProvider` sets `data-motion="reduce"` or `data-motion="full"` on `:root` and exposes `useKitReducedMotion()`. Pair `@media (prefers-reduced-motion: reduce)` (`:root:not([data-motion='full'])`) with `:root[data-motion='reduce']` in CSS animations.
+- **Themes and paper scope:** Default chrome uses dark candlelight; `data-theme="daylight"` switches semantic roles to daylight (experimental), and `data-surface="paper"` (applied automatically by `Parchment`) switches controls and tables inside it to ink on vellum.
 
-### Layers
+## Accessibility and key hints
 
-Everything that opens over the page in a portal shares one level, `--z-layer` (1200): dialogs, drawers, their overlays, menus, context menus, selects, comboboxes, and popovers. Layers on one level stack in the order they open, so a menu opened inside a dialog appears above that dialog, and a nested dialog dims the dialog beneath it. Toasts (`--z-toast`, 1400) and tooltips (`--z-tooltip`, 1500) stay above every layer.
+- Wrap form inputs in `Field` so labels, hints, validation errors, and ARIA attributes connect automatically.
+- Provide an accessible `label` on every `IconButton` and standalone `Icon`.
+- Never strip `:focus-visible` outlines (`base.css` renders a `2px` `--color-focus` ring).
+- Keep shortcut keycaps out of accessible control names so controls satisfy WCAG 2.5.3 (Label in Name): pass `shortcut="G"` on `Button` (or `ActionBarMenu`, `ToolRailButton`, menu items, and palette actions), which renders visual keys via `KbdControlScope` while setting `aria-keyshortcuts`.
+- Pass `animate={false}` to `DiceRoll` for historical feed entries so only newly rolled dice animate.
 
-`--z-dropdown`, `--z-overlay`, `--z-modal`, and `--z-popover` remain as names for `--z-layer`. Use them for a custom popup, and render it in a portal, as Radix does, so it stacks in open order.
+## Export catalog (`@/ui`)
 
-### Motion
-
-Kit components that animate read `useKitReducedMotion()`: the `reducedMotion` value that `KitProvider` received, or the system setting when it received none. `KitProvider` also sets `data-motion="reduce"` or `data-motion="full"` on the root element, and the kit's CSS honors it as well as the media query:
-
-```css
-@media (prefers-reduced-motion: reduce) {
-  :root:not([data-motion='full']) .shimmer {
-    animation: none;
-  }
-}
-
-:root[data-motion='reduce'] .shimmer {
-  animation: none;
-}
-```
-
-Use the same pair of rules in a feature's CSS when the feature should follow the app's choice instead of the system setting alone.
-
-### Themes and the paper scope
-
-- The default theme is candlelight (dark). Set `data-theme="daylight"` on the root element, or on any element, to switch its roles to the light theme. The daylight values are a starting point and haven't had a full design review.
-- `data-surface="paper"` switches roles to ink on vellum. `Parchment` sets it, so a `Field`, `DataTable`, or `StatBox` inside a character sheet needs no paper variant.
-
-## Do and don't
-
-Do:
-
-- Use a kit component when one exists. There is one button (`Button` and `IconButton`), one dialog (`Dialog`, `ConfirmDialog`, and `Drawer`), and one toast system.
-- Put every form control in a `Field`. The field supplies the label, the hint, the error, and the ARIA wiring.
-- Give every `IconButton` a `label`, and give a standalone `Icon` a `label`. An icon next to visible text needs no label.
-- Write UI text in sentence case and in the game's vocabulary: referee, party, caller, turn, round, hit points, armour class.
-- Tell the player what happened and what to do next. Put a refused command's reason in a `Banner` or an error toast, in the game's terms.
-- Pass `animate={false}` to `DiceRoll` for rolls loaded from history, so only new rolls tumble. A list that announces rolls itself, such as the feed, passes `announce={false}`, `hideHeader`, and `hideSkip`.
-- Use `toast` for short confirmations and `Banner` for anything the player must read before acting.
-
-Don't:
-
-- Don't add a color, font size, spacing value, radius, shadow, duration, or z-index that isn't a token. Kit components may use fixed pixel sizes for their own internal parts.
-- Don't raise a popup's z-index to get it above a dialog. Every portaled layer shares `--z-layer` and stacks in open order.
-- Don't use a palette token (`--palette-*`) in a component or feature.
-- Don't put parchment on chrome, such as panels, the top bar, or menus.
-- Don't use more than one primary button in a view.
-- Don't compute a game rule to decide what a component shows. Pass bxapi's values in.
-- Don't show raw codes, IDs such as `character-0003`, or stack traces. `ErrorBoundary` keeps error details off the screen.
-- Don't hide referee data with CSS. The server never sends it to a player.
-- Don't remove focus outlines. `base.css` draws a 2 px outline in `--color-focus` on `:focus-visible`.
-
-## Components
-
-Every component below is exported from `@/ui`. The path column names the source file under `src/ui`.
-
-### Foundations
+### Foundations and actions
 
 | Export | Description | Source |
 | --- | --- | --- |
-| `tokens.css`, `base.css`, `styles` | Design tokens, the reset and global styles, and the module that loads both with the fonts. | `tokens.css`, `base.css`, `styles.ts`, `fonts.ts` |
-| Token values | Typed values for JavaScript: `playerColors`, `eventColors`, `coinColors`, `chromeColors`, `fonts`, `durations`, `zIndex`, `breakpoints`, `layout`. | `tokens.ts` |
-| `Icon`, `iconNames`, `classIconNames` | One icon component with a typed name, covering interface icons from lucide and original game icons. | `icons/Icon.tsx`, `icons/gameIcons.tsx` |
-| `cx`, `useMediaQuery`, `useReducedMotion`, `useControllableState` | Class name joining and shared hooks. `useReducedMotion` reads the system setting only. | `lib/` |
-| `useKitReducedMotion`, `MotionProvider` | Whether to reduce motion: the app's choice from `KitProvider`, or the system setting. `KitProvider` renders `MotionProvider` for you. | `lib/motion.tsx` |
-| `colorIdForName`, `initialsForName`, `hashString` | Stable color and initials from a name. | `lib/identity.ts` |
-| `KitProvider` | Motion, tooltip timing, and the toast stack. Render it once at the root. `reducedMotion` passes the app's motion choice to kit components. | `components/KitProvider.tsx` |
-
-### Actions
-
-| Export | Description | Source |
-| --- | --- | --- |
-| `Button` | The kit's button, in primary, secondary, ghost, and danger variants, three sizes, with icons and a loading state. `asChild` styles a link as a button. `shortcut` shows a key hint after the label and sets `aria-keyshortcuts`. See [Key hints](#key-hints). | `components/Button.tsx` |
-| `IconButton` | A square button with an icon and a required accessible label. `pressed` marks an active tool. | `components/Button.tsx` |
-| `Link` | A text link, inline or quiet, with an external variant. | `components/Link.tsx` |
-| `LinkButton` | A button styled as a text link, for an in-app cross-link that opens something instead of going to a URL, such as a spell name that opens the rules reference. It takes `tone` (`inline` or `quiet`) and every button attribute. | `components/Link.tsx` |
-| `Kbd`, `ariaKeyShortcuts`, `KbdControlScope` | A keyboard key or chord hint. Inside a kit control it paints its keys without adding them to the control's name or text. `ariaKeyShortcuts` turns displayed keys into an `aria-keyshortcuts` value. See [Key hints](#key-hints). | `components/Kbd.tsx` |
+| `tokens.css`, `base.css`, `styles` | CSS tokens, reset/focus rules, and font + stylesheet loader. | `tokens.css`, `base.css`, `styles.ts`, `fonts.ts` |
+| Token objects | `playerColors`, `eventColors`, `coinColors`, `chromeColors`, `fonts`, `durations`, `zIndex`, `breakpoints`, `layout`. | `tokens.ts` |
+| `Icon`, `iconNames`, `classIconNames` | Typed icon component combining Lucide UI icons and custom B/X game icons. | `icons/Icon.tsx`, `icons/gameIcons.tsx` |
+| `cx`, `useMediaQuery`, `useReducedMotion`, `useControllableState`, `useKitReducedMotion` | Class joiner and state/media/motion hooks. | `lib/` |
+| `colorIdForName`, `initialsForName`, `hashString` | Deterministic color ID and avatar initials from a display name. | `lib/identity.ts` |
+| `KitProvider` | Root provider for motion preference, tooltip timing, and `Toaster`. | `components/KitProvider.tsx` |
+| `Button`, `IconButton` | Primary, secondary, ghost, and danger buttons in `sm`/`md`/`lg` with `loading`, `asChild`, and `shortcut`. | `components/Button.tsx` |
+| `Link`, `LinkButton` | Anchor link and button-styled-as-link (`inline` or `quiet` tone) for opening drawers such as compendium entries. | `components/Link.tsx` |
+| `Kbd`, `ariaKeyShortcuts`, `KbdControlScope` | Keycap badge and `aria-keyshortcuts` formatter. | `components/Kbd.tsx` |
 
 ### Form controls
 
 | Export | Description | Source |
 | --- | --- | --- |
-| `Field` | Label, hint, and error for one control, wired to the control automatically. | `components/Field.tsx` |
-| `TextInput` | A single-line text input with optional leading icon and trailing content. | `components/TextInput.tsx` |
-| `SearchInput` | A search field with a clear button. Escape clears it. The browser's own clear button is hidden. | `components/TextInput.tsx` |
-| `Textarea` | A multi-line text input, at least 72 px tall by default. `minRows` (or the native `rows`) sets its height in lines instead, and `autoGrow` grows it with its text up to `maxRows` lines (8 by default) before it scrolls. A chat composer uses `minRows={1} autoGrow`. | `components/TextInput.tsx` |
-| `NumberInput` | A number field with step buttons, arrow-key stepping, and clamping. The step buttons take their names from the field: "Increase Strength" and "Decrease Strength" in a Field labelled "Strength", or from `aria-label` outside a Field. `incrementLabel` and `decrementLabel` replace them. | `components/NumberInput.tsx` |
-| `Select` | Picks one value from a short list, with optional groups. A `value` that starts undefined and later becomes a string doesn't switch it from uncontrolled to controlled. | `components/Select.tsx` |
-| `Combobox` | A text input that filters a long list, such as monsters or spells. The list opens in a portal, so a scrolling dialog or drawer body doesn't clip it. | `components/Combobox.tsx` |
-| `Checkbox` | A checkbox with a label, a description, and an indeterminate state. | `components/Choice.tsx` |
-| `Switch` | An on and off setting that applies at once. | `components/Choice.tsx` |
-| `RadioGroup` | Picks one of a few visible options. | `components/Choice.tsx` |
-| `SegmentedControl` | Switches between a few views or modes. One segment is always on. | `components/Choice.tsx` |
-| `Slider` | Picks a number from a range, with a formatted value. | `components/Choice.tsx` |
+| `Field` | Label, hint, and error wrapper wired to its child control. | `components/Field.tsx` |
+| `TextInput`, `SearchInput`, `Textarea` | Single-line input, clearable search field (`Esc` clears), and multi-line input (`minRows`, `autoGrow`, `maxRows`). | `components/TextInput.tsx` |
+| `NumberInput` | Stepper input with arrow-key stepping, clamping, and accessible step button names. | `components/NumberInput.tsx` |
+| `Select`, `Combobox` | Short-list picker and searchable portal combobox for long catalogs. | `components/Select.tsx`, `components/Combobox.tsx` |
+| `Checkbox`, `Switch`, `RadioGroup`, `SegmentedControl`, `Slider` | Selection and range controls. | `components/Choice.tsx` |
 
-### Navigation and overlays
+### Navigation, overlays, surfaces, feedback, game pieces, dice, and layout
 
 | Export | Description | Source |
 | --- | --- | --- |
-| `Tabs`, `TabsList`, `TabsTrigger`, `TabsContent` | Tabbed panels in line or enclosed style, with icons and unread counts. `TabsContent keepMounted` keeps a panel mounted while another tab is active, hidden from view and from assistive technology, with its scroll position and state intact. A tab shows its focus ring for keyboard focus only. | `components/Tabs.tsx` |
-| `Dialog`, `DialogClose` | A modal window with a title, description, body, and footer. When it closes, focus returns to the element that opened it: for a dialog opened from a menu item, the menu's button, and for one opened from the command palette, the element that had focus before the palette. | `components/Dialog.tsx` |
-| `ConfirmDialog` | Asks the user to confirm an action, with a spinner while an async action runs. `children` render below the description and can hold block content, such as a checkbox. | `components/Dialog.tsx` |
-| `Drawer` | A side or bottom sheet over the page. `dimmed={false}` keeps the page in view behind it (the overlay still catches the click that closes it). `initialFocus` takes a ref to the element that gets focus on open, or `'content'` for the drawer itself. `Dialog` takes `initialFocus` too. | `components/Dialog.tsx` |
-| `Popover` | Non-modal content anchored to a trigger. Its `title` names it for assistive technology. A popover without a title takes `label` instead. | `components/Popover.tsx` |
-| `Tooltip`, `TooltipProvider` | A short hint on hover and focus, with an optional shortcut. | `components/Popover.tsx` |
-| `DropdownMenu` | A menu of actions from a button, with checkbox items, labels, separators, and submenus. | `components/Menu.tsx` |
-| `ContextMenu` | The same menu on right-click, long press, or Shift+F10. | `components/Menu.tsx` |
-| `toast`, `ToastProvider`, `Toaster` | Imperative notices: `toast.success`, `toast.error`, `toast.info`, `toast.warning`, and `toast.dismiss`. On the play screen, toasts sit above the action bar. Use a toast for something the user didn't see happen, not to repeat what the screen already shows. The stack announces each toast once through two live regions: errors and warnings assertively, the rest politely. Each toast is a plain item of the notifications list. | `components/toastStore.ts`, `components/Toast.tsx` |
-| `CommandPalette`, `useCommandPaletteShortcut` | A searchable list of actions that opens with Ctrl+K or Cmd+K. | `components/CommandPalette.tsx` |
-| `Accordion` | Stacked sections that expand in place. | `components/Accordion.tsx` |
-| `Stepper` | Progress through a wizard. Completed steps can be buttons. | `components/Stepper.tsx` |
-
-### Display and surfaces
-
-| Export | Description | Source |
-| --- | --- | --- |
-| `Badge` | A short status label in nine tones. | `components/Badge.tsx` |
-| `Tag` | A removable label for filters and chosen options. | `components/Badge.tsx` |
-| `Avatar`, `AvatarStack`, `resolveColor` | A user as initials on their color, with presence and a referee mark, and a row of them for the top bar. | `components/Avatar.tsx` |
-| `Card` | A raised container for one item, with interactive and selected states. | `components/Surfaces.tsx` |
-| `Panel` | A titled section of the chrome with actions and an optional collapse. | `components/Surfaces.tsx` |
-| `Parchment` | A paper surface for sheets, handouts, and the journal. | `components/Surfaces.tsx` |
-| `ScrollArea` | A scrolling region with slim scrollbars. | `components/Surfaces.tsx` |
-| `DataTable` | A dense, sortable table. | `components/DataTable.tsx` |
-| `List`, `ListItem` | A vertical list of rows that becomes a keyboard-operable listbox with `onValueChange`. | `components/List.tsx` |
-| `Divider` | A hairline rule, horizontal or vertical, with an optional label. | `components/Divider.tsx` |
-| `SectionLabel` | A small sentence-case heading for a group inside a panel, dock tab, or sheet, with an optional count and actions. Use it instead of an uppercase, letter-spaced label. `tone="paper"` sets it in rubric red. | `components/SectionLabel.tsx` |
-| `ResizablePanels`, `Splitter` | Two panes with a drag splitter, and the splitter on its own. | `components/ResizablePanels.tsx` |
-
-### Feedback
-
-| Export | Description | Source |
-| --- | --- | --- |
-| `Spinner` | An indeterminate progress ring. | `components/Spinner.tsx` |
-| `Skeleton` | A placeholder for loading content: text lines, blocks, or circles. | `components/Feedback.tsx` |
-| `ProgressBar` | A determinate or indeterminate bar. | `components/Feedback.tsx` |
-| `Banner` | A callout in the page flow, including a referee-only tone. | `components/Feedback.tsx` |
-| `EmptyState` | Fills an empty list or panel with what to do next. | `components/Feedback.tsx` |
-| `ErrorBoundary`, `ErrorFallback` | Catches a render error and shows a recovery message with no stack trace. | `components/ErrorBoundary.tsx` |
-
-### Game pieces
-
-| Export | Description | Source |
-| --- | --- | --- |
-| `TokenPortrait`, `tokenIdentity` | A character (round) or monster (square) token from a name, class icon, and color, from 24 to 96 px, with selected, unconscious, and dead states. | `game/TokenPortrait.tsx` |
-| `StatBox`, `formatModifier` | An ability score with its modifier, with a prime requisite mark. | `game/StatBlock.tsx` |
-| `HpBar` | Hit points as a bar that changes color as they fall and trails the last hit. | `game/StatBlock.tsx` |
-| `AcShield` | Armour class on a shield. | `game/StatBlock.tsx` |
-| `CoinPurse` | Coins by metal, platinum to copper. Each amount reads and copies as "70 gp", because the coin disc paints its letter instead of adding it to the text. | `game/StatBlock.tsx` |
-| `ConditionChip` | A condition with a tone, an icon, and the duration bxapi reports. | `game/StatBlock.tsx` |
-
-### Dice
-
-| Export | Description | Source |
-| --- | --- | --- |
-| `Die` | A d4, d6, d8, d10, d12, d20, or d100 face drawn in SVG, with crayon-colored numerals. | `dice/Die.tsx`, `dice/geometry.ts` |
-| `DiceRoll`, `formatDiceFormula`, `DICE_ROLL_MAX_MS` | Plays a roll of server-supplied results in under 1.2 s. Clicking skips it, and reduced motion shows the result at once. `announce={false}` turns off its live-region announcement, `hideHeader` hides the label and formula, and `hideSkip` hides the Skip button. `reducedMotion` overrides the value from `KitProvider`. | `dice/DiceRoll.tsx` |
-
-### Layout
-
-| Export | Description | Source |
-| --- | --- | --- |
-| `TableLayout` | The play screen: top bar, tool rail, stage, resizable and collapsible dock, and action bar. Below 1100 px the dock moves into a drawer. | `layout/TableLayout.tsx` |
-| `TableTopBar`, `ModeBadge`, `GameClock` | The top bar contents: table name, session mode, and game time in turns and rounds. | `layout/TableLayout.tsx` |
-| `ToolRail`, `ToolRailButton`, `ToolRailDivider` | The vertical tool strip, with arrow-key navigation and tooltips. | `layout/TableLayout.tsx` |
-| `ActionBar`, `ActionBarItem`, `ActionBarDivider`, `ActionBarMenu` | Contextual actions under the stage, with a status slot. See [The action bar](#the-action-bar). | `layout/ActionBar.tsx` |
-| `Dock` | Tabbed panels for the right side of the table screen. A tab with `keepMounted: true` stays mounted while hidden, so it keeps its scroll position. | `layout/TableLayout.tsx` |
-| `PageLayout` | The frame for home, lobby, and settings pages. | `layout/PageLayout.tsx` |
-| `Wordmark`, `WordmarkMark` | The bxvtt wordmark and its d20 mark. | `layout/Wordmark.tsx` |
-
-### The action bar
-
-Wrap each button in `ActionBarItem`, so it joins the bar's arrow-key navigation. Use `ActionBarMenu` for a button that opens a menu:
-
-```tsx
-<ActionBar aria-label="Party actions" status={<CallerStatus />}>
-  <ActionBarItem>
-    <Button size="sm" icon="search" onClick={search}>
-      Search
-    </Button>
-  </ActionBarItem>
-  <ActionBarMenu label="Light" icon="torch" shortcut={['T']} items={lightEntries} open={open} onOpenChange={setOpen} />
-</ActionBar>
-```
-
-`ActionBarMenu` takes `label`, `icon`, `items` (the `MenuEntry` list that `DropdownMenu` takes), `tooltip` (the label by default, `null` for none), `shortcut`, `disabled`, `loading`, `variant`, `side` (`top` by default), `align`, and `open` with `onOpenChange` for a shortcut that opens the menu.
-
-When the actions don't fit, the bar degrades in steps:
-
-1. A long status truncates at 45% of the bar.
-2. Buttons with an icon show only the icon. Each keeps its label as its accessible name.
-3. Actions move from the end into a "More actions" menu. Picking an action there presses its button, and an `ActionBarMenu` appears there as a submenu with its own entries.
-
-## Key hints
-
-A key hint inside a control must not change the control's accessible name. Otherwise the visible text ("Outfitter O") and the name ("Outfitter") disagree, which fails WCAG 2.5.3, label in name.
-
-- Give a `Button` its shortcut with `shortcut`: `<Button shortcut="G">Set out</Button>`. The button shows the key after its label, keeps it out of its name and text, and sets `aria-keyshortcuts="G"`.
-- A `Kbd` that you put inside a `Button`, `LinkButton`, tab, menu item, or command palette entry paints its keys the same way. Set `aria-keyshortcuts` on the control yourself, or use `shortcut`.
-- `ActionBarMenu`, `ToolRailButton`, menu entries, and command palette actions set `aria-keyshortcuts` from their `shortcut`.
-- For your own control, wrap its content in `KbdControlScope`, or pass `decorative` to `Kbd`. A `Kbd` in running text, such as "Press Esc to close", stays text.
+| `Tabs`, `TabsList`, `TabsTrigger`, `TabsContent` | Line or enclosed tabs with icons, unread badges, and `keepMounted` state preservation. | `components/Tabs.tsx` |
+| `Dialog`, `DialogClose`, `ConfirmDialog`, `Drawer` | Modal dialogs, async confirmation dialog, and side/bottom sheet (`dimmed={false}` optional) with focus restoration. | `components/Dialog.tsx` |
+| `Popover`, `Tooltip`, `TooltipProvider` | Anchored non-modal popover (requires `title` or `label`) and hover/focus tooltip. | `components/Popover.tsx` |
+| `DropdownMenu`, `ContextMenu` | Button menu and right-click / long-press / `Shift+F10` menu. | `components/Menu.tsx` |
+| `toast`, `ToastProvider`, `Toaster` | Polite and assertive live-region toast notifications. | `components/toastStore.ts`, `components/Toast.tsx` |
+| `CommandPalette`, `useCommandPaletteShortcut` | Searchable action launcher (`Ctrl+K` / `Cmd+K`). | `components/CommandPalette.tsx` |
+| `Accordion`, `Stepper` | Collapsible sections and multi-step wizard progress bar. | `components/Accordion.tsx`, `components/Stepper.tsx` |
+| `Badge`, `Tag`, `Avatar`, `AvatarStack`, `resolveColor` | Status badges, removable filter tags, and user presence avatars. | `components/Badge.tsx`, `components/Avatar.tsx` |
+| `Card`, `Panel`, `Parchment`, `ScrollArea`, `DataTable`, `List`, `ListItem`, `Divider`, `SectionLabel`, `ResizablePanels`, `Splitter` | Structural containers, paper surface, sortable table, listbox rows, and drag-resizable panes. | `components/Surfaces.tsx`, `DataTable.tsx`, `List.tsx`, `Divider.tsx`, `SectionLabel.tsx`, `ResizablePanels.tsx` |
+| `Spinner`, `Skeleton`, `ProgressBar`, `Banner`, `EmptyState`, `ErrorBoundary`, `ErrorFallback` | Loading states, callouts (including referee tone), empty placeholders, and stack-trace-free crash boundary. | `components/Spinner.tsx`, `Feedback.tsx`, `ErrorBoundary.tsx` |
+| `TokenPortrait`, `tokenIdentity`, `StatBox`, `formatModifier`, `HpBar`, `AcShield`, `CoinPurse`, `ConditionChip` | Round character / square monster tokens, ability boxes, trailing-damage HP bar, AC shield, copy-clean coin display, and condition chips. | `game/` |
+| `Die`, `DiceRoll`, `formatDiceFormula`, `DICE_ROLL_MAX_MS` | SVG polyhedral faces (`d4`-`d100`) and `<1.2s` server-result roll playback. | `dice/` |
+| `TableLayout`, `TableTopBar`, `ModeBadge`, `GameClock`, `ToolRail`, `ToolRailButton`, `ToolRailDivider`, `ActionBar`, `ActionBarItem`, `ActionBarDivider`, `ActionBarMenu`, `Dock`, `PageLayout`, `Wordmark`, `WordmarkMark` | Play screen frame (collapsing dock to drawer below `1100px`, progressive overflow on `ActionBar`), page frame, and wordmark. | `layout/` |
 
 ## Tests
 
-Component tests live in `src/ui/__tests__` and run with `npx vitest run --project web`. Each test file imports `./cleanup`, because the web project runs Vitest without globals and Testing Library can't register its own cleanup.
-
-`src/test-setup.ts` adds stand-ins for the browser APIs that jsdom lacks and Radix calls when a component opens: `ResizeObserver`, `hasPointerCapture`, `setPointerCapture`, `releasePointerCapture`, `scrollIntoView`, and `matchMedia`. Any kit component, including `Select`, `Combobox`, `Popover`, and menus, opens in a test without extra setup.
-
-The gallery's "Popups inside overlays" specimen opens every popup kind inside a dialog, a nested dialog, a drawer that keeps the page in view, and a confirmation with a checkbox.
+Component tests live in `src/ui/__tests__` and run with `npx vitest run --project web`. Import `./cleanup` in each test file (Vitest runs without globals in `@bxvtt/web`), and rely on `src/test-setup.ts` for Radix jsdom polyfills (`ResizeObserver`, pointer capture, `scrollIntoView`, and `matchMedia`).
