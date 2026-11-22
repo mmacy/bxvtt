@@ -13,6 +13,7 @@ import {
   repeatProblem,
   usableItems,
 } from './model';
+import { withTargetLabels } from './text';
 
 function battle() {
   const snapshot = fixtureSnapshot('battle', 'player');
@@ -253,5 +254,27 @@ describe('describeDeclaration for monsters a player can’t tell apart', () => {
         ctx,
       ),
     ).toBe('Cast magic missile at 2 goblins');
+  });
+});
+
+describe('monster targets by handle', () => {
+  it('names a declared target by its label', () => {
+    const { view } = battle();
+    const ctx = withTargetLabels(contextFromPlayerView(view), [
+      {
+        handle: 'tgt_aaaaaaaaaaaaaaaa',
+        group_id: 'group-0001',
+        label: 'Goblin 2',
+        number: 2,
+        defeated: false,
+        fled: false,
+      },
+    ]);
+    expect(
+      describeDeclaration(
+        { action: 'cast', spell_id: 'magic_missile', targets: ['tgt_aaaaaaaaaaaaaaaa'] },
+        ctx,
+      ),
+    ).toBe('Cast magic missile at Goblin 2');
   });
 });

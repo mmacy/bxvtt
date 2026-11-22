@@ -30,6 +30,8 @@ export interface FightSummary {
   awards: Array<{ memberId: string; name: string; xp: number; levelAfter: number | null }>;
   /** What the slain left on the floor, as phrases. */
   loot: string[];
+  /** Whether the slain dropped anything, even coins worth less than 1 gp, which the event counts as 0 gp. */
+  lootDropped: boolean;
   fallen: string[];
 }
 
@@ -82,6 +84,7 @@ export function summarizeFight(events: readonly AnyEvent[], ctx: TextContext): F
   const loot: string[] = [];
   const fallen: string[] = [];
   let lootCoins = 0;
+  let lootDropped = false;
   const lootItems: string[] = [];
   for (const event of events) {
     switch (event.event_type) {
@@ -125,6 +128,7 @@ export function summarizeFight(events: readonly AnyEvent[], ctx: TextContext): F
         break;
       }
       case 'loot_dropped': {
+        lootDropped = true;
         lootCoins += num(event, 'coins_gp_value') ?? 0;
         const ids = Array.isArray(event.item_ids)
           ? event.item_ids.filter((i): i is string => typeof i === 'string')
@@ -191,6 +195,7 @@ export function summarizeFight(events: readonly AnyEvent[], ctx: TextContext): F
     xpTotal,
     awards,
     loot,
+    lootDropped,
     fallen: fallen.map((id) => memberName(id, learned)),
   };
 }

@@ -848,17 +848,8 @@
 }
 
 /* The aftermath. */
-.aftermathSlot {
-  position: absolute;
-  bottom: var(--space-3);
-  left: 50%;
-  display: grid;
-  justify-items: center;
-  width: min(540px, calc(100% - 2 * var(--space-3)));
-  transform: translateX(-50%);
-}
-
 .aftermath {
+  width: min(540px, 100%);
   animation: beat-in var(--duration-slow) var(--ease-out) both;
 }
 

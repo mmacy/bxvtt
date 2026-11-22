@@ -9,7 +9,7 @@ import {
   stanceLabel,
   type TextContext,
 } from '@bxvtt/shared/text';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   useEncounter,
   useParty,
@@ -18,7 +18,6 @@ import {
   useSendCommand,
   useTableId,
   useTableStoreApi,
-  useTextContext,
 } from '@/app';
 import {
   Badge,
@@ -35,7 +34,7 @@ import {
   TokenPortrait,
   type IconName,
 } from '@/ui';
-import { mountAftermath } from './Aftermath';
+import { showAftermath } from './Aftermath';
 import { recordSnapshot } from './memory';
 import { memberGear, type CarriedItem } from './model';
 import { PlaybackStrip } from './PlaybackStrip';
@@ -49,6 +48,7 @@ import {
 } from './useEncounterCommands';
 import { ACCEPT_ALL, usePlayback } from './usePlayback';
 import styles from './combat.module.css';
+import { useCombatText, useSceneTargets } from './text';
 
 /** What each bearing means for the party's choices, from the `wait` and `parley` command documentation. */
 const STANCE_IMPLICATIONS: Record<string, string> = {
@@ -84,25 +84,24 @@ export function EncounterPanel() {
   const party = useParty();
   const revision = useRevision();
   const tableId = useTableId();
-  const ctx = useTextContext();
+  const ctx = useCombatText();
   const lens = useRefereeLens();
   const store = useTableStoreApi();
   const opening = useEncounterOpening();
   const commands = useEncounterCommands();
-  const rootRef = useRef<HTMLDivElement>(null);
   const playback = usePlayback({ accept: ACCEPT_ALL });
 
   useEffect(() => {
     if (revision !== null) recordSnapshot({ tableId, revision, encounter, party });
   }, [tableId, revision, encounter, party]);
 
-  useEffect(() => {
-    const overlays = rootRef.current?.parentElement?.parentElement ?? null;
-    return () => {
+  useEffect(
+    () => () => {
       const mode = store.getState().game?.mode;
-      if (overlays !== null && overlays.isConnected && mode === 'exploring') mountAftermath(store, overlays);
-    };
-  }, [store]);
+      if (mode === 'exploring' || mode === 'town') showAftermath(store);
+    },
+    [store],
+  );
 
   if (encounter === null) return null;
   const present = encounter.groups.filter((g) => !g.fled && g.count > 0);
@@ -113,7 +112,7 @@ export function EncounterPanel() {
     : `The party meets ${joinList(present.map((g) => `${g.count} ${groupNoun(g)}`))}`;
 
   return (
-    <div ref={rootRef} className={styles.board} role="region" aria-label="Encounter">
+    <div className={styles.board} role="region" aria-label="Encounter">
       <header className={styles.boardHead}>
         <div className={styles.boardTitle}>
           <Icon name={commands.pursuit ? 'footprints' : 'eye'} size={18} />
@@ -524,6 +523,7 @@ function UseItemPopover({
   encounter: EncounterView;
   ctx: TextContext;
 }) {
+  const sceneTargets = useSceneTargets();
   const { send, pending } = useSendCommand();
   const [open, setOpen] = useState(false);
   const [memberId, setMemberId] = useState(members[0]?.id ?? '');
@@ -544,6 +544,9 @@ function UseItemPopover({
           ...encounter.groups
             .filter((g) => !g.fled && g.count > 0)
             .map((g) => ({ value: g.id, label: `At the ${g.label_plural}` })),
+          ...sceneTargets
+            .filter((t) => !t.defeated && !t.fled)
+            .map((t) => ({ value: t.handle, label: `At ${t.label}` })),
           ...encounter.declarers.map((id) => ({ value: id, label: `On ${memberName(id, ctx)}` })),
         ];
   const use = async () => {

@@ -5,15 +5,7 @@
 import type { GameEntry } from '@bxvtt/shared/protocol';
 import { idKind } from '@bxvtt/shared/text';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  useEncounter,
-  useFeed,
-  useReduceMotion,
-  useRefereeLens,
-  useRefereeState,
-  useTableId,
-  useTextContext,
-} from '@/app';
+import { useEncounter, useFeed, useReduceMotion, useRefereeLens, useRefereeState, useTableId } from '@/app';
 import { learnMonsterGroups, snapshotBefore, useCombatMemory } from './memory';
 import {
   buildBeats,
@@ -28,6 +20,7 @@ import {
   type TrackState,
   withMonsterLabels,
 } from './playback';
+import { useCombatText } from './text';
 
 /**
  * Finds the group of a monster: from the referee state for a referee with the lens on, and otherwise from what
@@ -38,7 +31,7 @@ export function useMonsterLookup(): MonsterGroupLookup {
   const referee = useRefereeState();
   const encounter = useEncounter();
   const learned = useCombatMemory((s) => s.monsterGroups);
-  const ctx = useTextContext();
+  const ctx = useCombatText();
   return useMemo(() => {
     const exact = new Map<string, string>();
     for (const group of referee?.encounter?.groups ?? []) {
@@ -124,7 +117,7 @@ export function usePlayback(options: PlaybackOptions): PlaybackView {
   const tableId = useTableId();
   const reduce = useReduceMotion();
   const lens = useRefereeLens();
-  const ctx = useTextContext();
+  const ctx = useCombatText();
   const lookup = useMonsterLookup();
   // Entries already in the feed when the overlay opens are history, not news.
   const [startSeq] = useState(() => options.afterSeq ?? feed.at(-1)?.seq ?? 0);

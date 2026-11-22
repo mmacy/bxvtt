@@ -11,18 +11,18 @@ import type { BattleDeclaration, EncounterGroupView, EncounterView, MemberView }
 import type { DeclarationBody, DeclarationRefusal, Member, Seat } from '@bxvtt/shared/protocol';
 import {
   describeRejection,
-  equipmentNoun,
   formatFeet,
   groupName,
-  itemName,
+  itemPhrase,
   joinList,
   memberName,
   monsterName,
+  resolveItemNoun,
   spellName,
-  type ParamMap,
-  type ParamValue,
+  withArticle,
   type TextContext,
 } from '@bxvtt/shared/text';
+import { toParamMap } from '@/app';
 
 // Inventory ----------------------------------------------------------------------------------------------------
 
@@ -96,11 +96,6 @@ export function magicItemKind(templateId: string | null, display: string): ItemK
   return 'magic';
 }
 
-function lowerName(name: string): string {
-  // Catalog names such as "Oil (1 flask)" read better without the lot size in a sentence.
-  return name.replace(/\s*\([^)]*\)\s*$/, '');
-}
-
 /**
  * Reads the member's wielded weapons and carried items from the inventory that the player view reports.
  *
@@ -137,7 +132,7 @@ export function memberGear(member: MemberView, ctx: TextContext): MemberGear {
     if (qualities.length === 0) continue;
     wielded.push({
       id,
-      name: withIndefinite(equipmentNoun(id)?.one ?? itemName(id, ctx).toLowerCase()),
+      name: itemPhrase(resolveItemNoun(id, ctx, { name: asString(template.name) ?? undefined })),
       melee: qualities.includes('melee'),
       missile: qualities.includes('missile') && !qualities.includes('splash'),
       reload: qualities.includes('reload'),
@@ -169,7 +164,7 @@ export function memberGear(member: MemberView, ctx: TextContext): MemberGear {
     const splash = qualitiesOf(asRecord(template.combat)).includes('splash');
     items.push({
       id,
-      name: equipmentNoun(id)?.one ?? lowerName(asString(template.name) ?? itemName(id, ctx)).toLowerCase(),
+      name: resolveItemNoun(id, ctx, { name: asString(template.name) ?? undefined }).one,
       kind: splash ? 'splash' : 'gear',
       quantity,
       magic: false,
@@ -363,7 +358,7 @@ function targetPhrase(ids: readonly string[], ctx: TextContext): string {
   for (const id of ids.filter((i) => !i.startsWith('character-'))) {
     const name = monsterName(id, ctx);
     const known = ctx.monsters[id];
-    const sole = Object.values(ctx.groups).find((g) => withIndefinite(g.label) === name);
+    const sole = Object.values(ctx.groups).find((g) => withArticle(g.label) === name);
     const plural = known?.labelPlural ?? sole?.labelPlural ?? 'monsters';
     const entry = counts.get(name) ?? { n: 0, plural };
     entry.n += 1;
@@ -373,16 +368,11 @@ function targetPhrase(ids: readonly string[], ctx: TextContext): string {
   return joinList([...members, ...monsters]);
 }
 
-function itemPhrase(itemId: string | null | undefined, gear: MemberGear | null, ctx: TextContext): string {
+function declaredItem(itemId: string | null | undefined, gear: MemberGear | null, ctx: TextContext): string {
   if (!itemId) return 'an item';
   const carried = gear?.items.find((item) => item.id === itemId);
-  if (carried) return carried.magic ? carried.name : withIndefinite(carried.name);
-  return itemName(itemId, ctx);
-}
-
-function withIndefinite(name: string): string {
-  if (/^(a|an|the|some)\s/i.test(name)) return name;
-  return /^[aeiou]/i.test(name) ? `an ${name}` : `a ${name}`;
+  if (carried?.magic) return carried.name;
+  return itemPhrase(resolveItemNoun(itemId, ctx, carried ? { name: carried.name } : {}));
 }
 
 /**
@@ -424,7 +414,7 @@ export function describeDeclaration(
       break;
     case 'use_item': {
       const carried = d.item_id ? gear?.items.find((item) => item.id === d.item_id) : undefined;
-      const item = itemPhrase(d.item_id, gear, ctx);
+      const item = declaredItem(d.item_id, gear, ctx);
       if (carried?.kind === 'potion') {
         text = targets[0] ? `Give ${memberName(targets[0], ctx)} ${item} to drink` : `Drink ${item}`;
       } else if (carried?.kind === 'splash') {
@@ -441,7 +431,7 @@ export function describeDeclaration(
       break;
     }
     case 'give_item':
-      text = `Give ${itemPhrase(d.item_id, gear, ctx)} to ${targets[0] ? memberName(targets[0], ctx) : 'a party member'}`;
+      text = `Give ${declaredItem(d.item_id, gear, ctx)} to ${targets[0] ? memberName(targets[0], ctx) : 'a party member'}`;
       break;
     case 'turn_undead':
       text = 'Turn undead';
@@ -516,18 +506,6 @@ export function seatOwner(
 
 // Refusals -----------------------------------------------------------------------------------------------------
 
-function isParamValue(value: unknown): value is ParamValue {
-  if (typeof value === 'string' || typeof value === 'number') return true;
-  return Array.isArray(value) && value.every((item) => typeof item === 'string' || typeof item === 'number');
-}
-
-/** Keeps the params of a refusal that the text layer reads: strings, numbers, and lists of them. */
-export function paramMap(params: Record<string, unknown>): ParamMap {
-  const map: Record<string, ParamValue> = {};
-  for (const [key, value] of Object.entries(params)) if (isParamValue(value)) map[key] = value;
-  return map;
-}
-
 /**
  * The text of the last attempt's refusals, by member, and the refusals that name no member under `null`.
  */
@@ -539,7 +517,7 @@ export function refusalTexts(
   const byMember: Record<string, string[]> = {};
   const general: string[] = [];
   for (const refusal of refusals) {
-    const text = describeRejection({ code: refusal.code, params: paramMap(refusal.params) }, ctx);
+    const text = describeRejection({ code: refusal.code, params: toParamMap(refusal.params) }, ctx);
     const memberId = refusal.member_id ?? soleSuspect(refusal.code, declarations);
     if (memberId === null) {
       if (!general.includes(text)) general.push(text);

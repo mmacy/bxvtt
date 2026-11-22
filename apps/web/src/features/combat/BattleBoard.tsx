@@ -1,9 +1,10 @@
 import type { EncounterView, MemberView } from '@bxvtt/shared/bxapi';
 import type { DeclarationBody, DeclarationsState, GameEntry } from '@bxvtt/shared/protocol';
 import { conditionLabel, joinList, memberName, type TextContext } from '@bxvtt/shared/text';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   tokenClass,
+  useCombatStage,
   useCanDeclare,
   useCanResolveRound,
   useDeclarations,
@@ -17,7 +18,6 @@ import {
   useTableId,
   useTableSettings,
   useTableStoreApi,
-  useTextContext,
 } from '@/app';
 import {
   Avatar,
@@ -31,7 +31,7 @@ import {
   IconButton,
   TokenPortrait,
 } from '@/ui';
-import { mountAftermath } from './Aftermath';
+import { showAftermath } from './Aftermath';
 import { Composer } from './Composer';
 import { previousDeclaration, recordSnapshot, rememberDeclarations, useCombatMemory } from './memory';
 import {
@@ -51,6 +51,7 @@ import { MonsterRoster, RefereeActions } from './RefereeTools';
 import { useCombatUi } from './state';
 import { usePlayback } from './usePlayback';
 import styles from './combat.module.css';
+import { useCombatText } from './text';
 
 const BATTLE_EVENTS = new Set([
   'battle_round',
@@ -107,7 +108,7 @@ export function useRepeatLastRound(): {
   const party = useParty();
   const declarations = useDeclarations();
   const memory = useCombatMemory((s) => s.declarations);
-  const ctx = useTextContext();
+  const ctx = useCombatText();
   const { declare } = useSendDeclaration();
   const round = declarations?.round ?? 0;
   const candidates = (memberIds: readonly string[]) =>
@@ -129,12 +130,20 @@ export function useRepeatLastRound(): {
  * resolve control, and the playback of each resolved round.
  */
 export function BattleBoard() {
-  const encounter = useEncounter();
+  const liveEncounter = useEncounter();
+  const tableId = useTableId();
+  // When the round that ends the game resolves, the view has no encounter any more, but the shell keeps the board
+  // on screen while that round plays back. The board then shows the encounter as it last stood.
+  const lastEncounter = useCombatMemory(
+    (s) =>
+      s.snapshots.filter((snap) => snap.tableId === tableId && snap.encounter !== null).at(-1)?.encounter ??
+      null,
+  );
+  const encounter = liveEncounter ?? lastEncounter;
   const party = useParty();
   const declarations = useDeclarations();
   const revision = useRevision();
-  const tableId = useTableId();
-  const ctx = useTextContext();
+  const ctx = useCombatText();
   const people = useCombatPeople();
   const reduce = useReduceMotion();
   const lens = useRefereeLens();
@@ -146,11 +155,10 @@ export function BattleBoard() {
   const setPlayback = useCombatUi((s) => s.setPlayback);
   const refereeOpen = useCombatUi((s) => s.refereeOpen);
   const setRefereeOpen = useCombatUi((s) => s.setRefereeOpen);
-  const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (revision !== null) recordSnapshot({ tableId, revision, encounter, party });
-  }, [tableId, revision, encounter, party]);
+    if (revision !== null) recordSnapshot({ tableId, revision, encounter: liveEncounter, party });
+  }, [tableId, revision, liveEncounter, party]);
 
   useEffect(() => {
     if (!declarations?.active) return;
@@ -173,16 +181,21 @@ export function BattleBoard() {
     setPlayback(playback.playing, playback.playing ? playback.skip : null);
   }, [playback.playing, playback.skip, setPlayback]);
   useEffect(() => () => setPlayback(false, null), [setPlayback]);
+  // The shell holds its end screen while the round that ended the game plays back.
+  const setStagePlaying = useCombatStage((s) => s.setPlaying);
+  useEffect(() => setStagePlaying(playback.playing), [playback.playing, setStagePlaying]);
+  useEffect(() => () => setStagePlaying(false), [setStagePlaying]);
 
   // When the fight ends, the shell unmounts this board. The aftermath plays the last round and sums up the fight
   // in the same place over the map.
-  useEffect(() => {
-    const overlays = rootRef.current?.parentElement?.parentElement ?? null;
-    return () => {
+  useEffect(
+    () => () => {
+      useCombatUi.getState().setComposing(null);
       const mode = store.getState().game?.mode;
-      if (overlays !== null && overlays.isConnected && mode === 'exploring') mountAftermath(store, overlays);
-    };
-  }, [store]);
+      if (mode === 'exploring' || mode === 'town') showAftermath(store);
+    },
+    [store],
+  );
 
   const liveTrack = useMemo(() => trackFromView(encounter, party), [encounter, party]);
   const gears = useMemo(() => {
@@ -196,7 +209,11 @@ export function BattleBoard() {
   );
 
   if (encounter === null) return null;
-  const round = (encounter.battle_round ?? 0) + 1;
+  // The game ended in this round, and the shell keeps the board up while the round plays back.
+  const holding = liveEncounter === null;
+  const round = holding
+    ? (playback.current?.digest.round ?? playback.last?.digest.round ?? encounter.battle_round ?? 0)
+    : (encounter.battle_round ?? 0) + 1;
   const declarers = declarations?.declarers ?? encounter.declarers;
   const declared = declarations?.declared ?? [];
   const mine = declarers.filter((id) => people.isMine(id));
@@ -208,12 +225,13 @@ export function BattleBoard() {
   };
 
   return (
-    <div ref={rootRef} className={styles.board} aria-label={`Battle, round ${round}`} role="region">
+    <div className={styles.board} aria-label={`Battle, round ${round}`} role="region">
       <header className={styles.boardHead}>
         <div className={styles.boardTitle}>
           <Icon name="battle" size={18} />
           <h2 className={styles.heading}>Round {round}</h2>
-          {encounter.party_free_round && (
+          {holding && <Badge tone="neutral">The fight is over</Badge>}
+          {!holding && encounter.party_free_round && (
             <Badge tone="success" icon="flag">
               Free round: the monsters can't act
             </Badge>
@@ -269,7 +287,7 @@ export function BattleBoard() {
         />
       )}
 
-      {!collapsed && (
+      {!collapsed && !holding && (
         <>
           <ul className={styles.memberList} aria-label="Declarations this round">
             {party.map((member) => (
@@ -297,14 +315,16 @@ export function BattleBoard() {
         </>
       )}
 
-      <RoundFooter
-        declarers={declarers}
-        declared={declared}
-        mine={mine}
-        general={refusals.general}
-        ctx={ctx}
-        waiting={<WaitingSummary waiting={waiting} people={people} ctx={ctx} />}
-      />
+      {!holding && (
+        <RoundFooter
+          declarers={declarers}
+          declared={declared}
+          mine={mine}
+          general={refusals.general}
+          ctx={ctx}
+          waiting={<WaitingSummary waiting={waiting} people={people} ctx={ctx} />}
+        />
+      )}
     </div>
   );
 }

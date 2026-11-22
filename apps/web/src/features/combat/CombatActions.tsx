@@ -10,7 +10,6 @@ import {
   useSendDeclaration,
   useShortcut,
   useTableSettings,
-  useTextContext,
 } from '@/app';
 import { ActionBarDivider, ActionBarItem, Button, Kbd } from '@/ui';
 import { quickAction, useRepeatLastRound } from './BattleBoard';
@@ -19,6 +18,7 @@ import { useCombatPeople } from './people';
 import { useCombatUi } from './state';
 import { useEncounterCommands } from './useEncounterCommands';
 import styles from './combat.module.css';
+import { useCombatText } from './text';
 
 /** The action bar in `encounter` and `battle` modes: the few primary actions, each with a shortcut. */
 export function CombatActions() {
@@ -178,7 +178,7 @@ function BattleActions() {
   const encounter = useEncounter();
   const party = useParty();
   const declarations = useDeclarations();
-  const ctx = useTextContext();
+  const ctx = useCombatText();
   const people = useCombatPeople();
   const settings = useTableSettings();
   const canResolve = useCanResolveRound();

@@ -30,14 +30,6 @@ function accepted(game: GameState): CommandResult {
   };
 }
 
-// Radix popovers measure their trigger, and jsdom has no ResizeObserver.
-class NoResizeObserver {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-}
-globalThis.ResizeObserver ??= NoResizeObserver;
-
 beforeEach(() => {
   resetCombatMemory();
   resetCombatUi();

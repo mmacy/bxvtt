@@ -98,8 +98,8 @@ export function RangeTrack({
   }
   const columns = Math.max(1, ...[...stacks.values()].map((stack) => Math.ceil(stack.length / rows)));
   // Margins in pixels that leave room for the stacked party, the group labels, and the set-aside trays.
-  const leftPx = 8 + columns * (TOKEN + 4) + (fallen.length > 0 ? 44 : 0);
-  const rightPx = 104 + (gone.length > 0 ? 48 : 0);
+  const leftPx = 8 + columns * (TOKEN + 4) + (fallen.length > 0 ? 64 : 0);
+  const rightPx = 104 + (gone.length > 0 ? 64 : 0);
   const fraction = (feet: number) => (feet - min) / (max - min);
   const at = (feet: number, offsetPx = 0) =>
     `calc(${leftPx + offsetPx}px + (100% - ${leftPx + rightPx}px) * ${fraction(feet)})`;

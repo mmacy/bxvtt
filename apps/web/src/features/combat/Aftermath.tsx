@@ -1,23 +1,23 @@
 import type { GameEntry } from '@bxvtt/shared/protocol';
 import { joinList } from '@bxvtt/shared/text';
 import { useCallback, useEffect, useMemo } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
 import {
-  TableProvider,
+  useCombatStage,
   useFeed,
   useGameMode,
   useReduceMotion,
   useRevision,
-  useTextContext,
+  useScene,
   type TableStore,
 } from '@/app';
-import { Badge, Button, cx, Icon, TooltipProvider } from '@/ui';
+import { Badge, Button, cx, Icon } from '@/ui';
 import { fightEvents, summarizeFight, xpSentence } from './fight';
 import { PlaybackStrip } from './PlaybackStrip';
 import { RangeTrack } from './RangeTrack';
 import { useCombatPeople } from './people';
 import { usePlayback } from './usePlayback';
 import styles from './combat.module.css';
+import { useCombatText } from './text';
 
 export interface AftermathProps {
   /** The revision the fight ended at. The entry with this revision is the fight's last. */
@@ -33,11 +33,12 @@ export interface AftermathProps {
  */
 export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
   const feed = useFeed();
-  const ctx = useTextContext();
+  const ctx = useCombatText();
   const people = useCombatPeople();
   const reduce = useReduceMotion();
   const mode = useGameMode();
   const revision = useRevision();
+  const pile = useScene()?.here?.pile === true;
   const accept = useCallback((entry: GameEntry) => entry.revision === endRevision, [endRevision]);
   const playback = usePlayback({ afterSeq, accept });
   const end = feed.find((e) => e.kind === 'game' && e.revision === endRevision && e.seq > afterSeq);
@@ -48,7 +49,7 @@ export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
 
   // A new encounter, or the party moving on a few steps, retires the summary.
   useEffect(() => {
-    if (mode !== 'exploring') onClose();
+    if (mode !== 'exploring' && mode !== 'town') onClose();
     else if (revision !== null && revision >= endRevision + 4) onClose();
   }, [mode, revision, endRevision, onClose]);
 
@@ -114,6 +115,12 @@ export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
                 <dd>{capitalize(joinList(summary.loot))}, in a pile where the party stands.</dd>
               </div>
             )}
+            {summary.loot.length === 0 && summary.lootDropped && pile && (
+              <div className={styles.fact}>
+                <dt>Left behind</dt>
+                <dd>A few coins, worth less than 1 gp, in a pile where the party stands.</dd>
+              </div>
+            )}
             {summary.fallen.length > 0 && (
               <div className={cx(styles.fact, styles.factBad)}>
                 <dt>Fallen</dt>
@@ -136,46 +143,25 @@ function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-let active: { root: Root; host: HTMLElement } | null = null;
-
-/** Closes the aftermath, if one is open. */
+/** Empties the after-fight slot. */
 export function closeAftermath(): void {
-  if (active === null) return;
-  const { root, host } = active;
-  active = null;
-  // Unmount after the current render, because a component of the root may be the caller.
-  queueMicrotask(() => {
-    root.unmount();
-    host.remove();
-  });
+  useCombatStage.getState().closeAftermath();
 }
 
 /**
- * Shows the aftermath over the map after the battle board or the encounter panel unmounts at the end of a fight.
+ * Shows the aftermath in the shell's after-fight slot, when the battle board or the encounter panel unmounts at
+ * the end of a fight.
  *
- * The shell renders the combat overlays only in `encounter` and `battle` modes, so the summary of a finished fight
- * has no slot of its own in `exploring` mode. This mounts it into the shell's overlay layer, which stays on screen,
- * in a root of its own that shares the table store.
- *
- * @param store - The table store.
- * @param overlays - The shell's overlay layer.
+ * @param store - The table store, to read the revision the fight ended at and the feed so far.
  */
-export function mountAftermath(store: TableStore, overlays: HTMLElement): void {
-  closeAftermath();
+export function showAftermath(store: TableStore): void {
   const state = store.getState();
   const endRevision = state.game?.revision;
   if (endRevision === undefined) return;
   const afterSeq = state.feed.filter((e) => e.kind === 'game' && e.revision < endRevision).at(-1)?.seq ?? 0;
-  const host = document.createElement('div');
-  host.className = styles.aftermathSlot ?? '';
-  overlays.appendChild(host);
-  const root = createRoot(host);
-  active = { root, host };
-  root.render(
-    <TableProvider store={store}>
-      <TooltipProvider>
-        <Aftermath endRevision={endRevision} afterSeq={afterSeq} onClose={closeAftermath} />
-      </TooltipProvider>
-    </TableProvider>,
-  );
+  useCombatStage
+    .getState()
+    .showAftermath(
+      <Aftermath key={endRevision} endRevision={endRevision} afterSeq={afterSeq} onClose={closeAftermath} />,
+    );
 }

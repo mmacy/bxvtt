@@ -5,10 +5,8 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   getApi,
   loadCatalog,
-  useRefereeState,
   useRulesEntry,
   useSendDeclaration,
-  useTextContext,
   type ClassDetail,
   type SpellDetail,
 } from '@/app';
@@ -29,6 +27,7 @@ import {
   type MemberGear,
 } from './model';
 import styles from './combat.module.css';
+import { useCombatText, useSceneTargets } from './text';
 
 export type ComposerTab = 'attack' | 'cast' | 'move' | 'item' | 'give' | 'turn' | 'hold';
 
@@ -113,7 +112,7 @@ export interface ComposerProps {
  * Builds one member's declaration for the round from the choices the view supports, and saves it.
  */
 export function Composer({ member, encounter, gear, current, refusals, onDeclared, onClose }: ComposerProps) {
-  const ctx = useTextContext();
+  const ctx = useCombatText();
   const { declare, pending } = useSendDeclaration();
   const abilities = useClassAbilities(member.class_id);
   const gazers = useGazeGroups(encounter);
@@ -477,7 +476,7 @@ function SpellTargets({
   onSubmit,
 }: ChoiceProps & { spellId: string; memorizedReversed: boolean; ctx: TextContext }) {
   const entry = useRulesEntry<SpellDetail>(`spells/${spellId}`);
-  const referee = useRefereeState();
+  const sceneTargets = useSceneTargets();
   const spell = entry.data;
   const modes = spell?.modes ?? [];
   const [modeKey, setModeKey] = useState<string | null>(null);
@@ -511,14 +510,13 @@ function SpellTargets({
     setTargets((list) => (list.includes(id) ? list.filter((t) => t !== id) : single ? [id] : [...list, id]));
 
   const living = encounter.declarers;
-  const monsters = referee
-    ? liveGroups(encounter).flatMap((group) => {
-        const ids = referee.encounter?.groups.find((g) => g.id === group.id)?.monster_ids ?? [];
-        return ids
-          .map((id, index) => ({ id, index, group, monster: referee.monsters.find((m) => m.id === id) }))
-          .filter((m) => m.monster !== undefined && m.monster.current_hp > 0);
-      })
-    : [];
+  const groupsById = new Map(liveGroups(encounter).map((g) => [g.id, g]));
+  // Every monster the party can single out, by the handle the scene gives it. The server swaps the handle for
+  // the monster when the round resolves.
+  const monsters = sceneTargets.flatMap((target) => {
+    const group = groupsById.get(target.group_id);
+    return group && !target.defeated && !target.fled ? [{ target, group }] : [];
+  });
 
   return (
     <div className={styles.choiceStack}>
@@ -584,7 +582,7 @@ function SpellTargets({
             loading={pending}
             onClick={() => void onSubmit(base)}
           >
-            Cast {name}
+            Cast {name.toLowerCase()}
           </Button>
         </div>
       )}
@@ -617,34 +615,28 @@ function SpellTargets({
               })}
             </div>
           )}
-          {!atMonsters ? null : referee ? (
-            monsters.length > 0 && (
-              <div className={styles.chipGroup} role="group" aria-label="Monsters">
-                <span className={cx(styles.chipLabel, styles.refereeText)}>Monsters</span>
-                {monsters.map(({ id, index, group, monster }) => {
-                  const distance = memberDistance(group, member.id);
-                  const tooFar = range !== null && distance > range;
-                  return (
-                    <Button
-                      key={id}
-                      size="sm"
-                      variant={targets.includes(id) ? 'primary' : 'ghost'}
-                      aria-pressed={targets.includes(id)}
-                      disabled={tooFar}
-                      title={tooFar ? `Out of range: ${formatFeet(distance)} away.` : undefined}
-                      onClick={() => toggle(id)}
-                    >
-                      {capitalize(group.label)} {index + 1} ({monster?.current_hp} hp)
-                    </Button>
-                  );
-                })}
-              </div>
-            )
-          ) : (
-            <p className={styles.choiceHint}>
-              The board names single monsters only for the referee. To aim {name.toLowerCase()} at one
-              monster, ask the referee to declare it for {member.name}.
-            </p>
+          {atMonsters && monsters.length > 0 && (
+            <div className={styles.chipGroup} role="group" aria-label="Monsters">
+              <span className={styles.chipLabel}>Monsters</span>
+              {monsters.map(({ target, group }) => {
+                const distance = memberDistance(group, member.id);
+                const tooFar = range !== null && distance > range;
+                const chosen = targets.includes(target.handle);
+                return (
+                  <Button
+                    key={target.handle}
+                    size="sm"
+                    variant={chosen ? 'primary' : 'ghost'}
+                    aria-pressed={chosen}
+                    disabled={tooFar}
+                    title={tooFar ? `Out of range: ${formatFeet(distance)} away.` : undefined}
+                    onClick={() => toggle(target.handle)}
+                  >
+                    {target.label}
+                  </Button>
+                );
+              })}
+            </div>
           )}
           <div className={styles.choiceRow}>
             <Button
@@ -656,9 +648,9 @@ function SpellTargets({
               title={targets.length === 0 ? 'Choose a target first.' : undefined}
               onClick={() => void onSubmit({ ...base, targets })}
             >
-              Cast {name}
+              Cast {name.toLowerCase()}
               {targets.length > 0
-                ? ` at ${targets.length === 1 ? targetName(targets[0] ?? '', ctx, monsters) : `${targets.length} targets`}`
+                ? ` at ${targets.length === 1 ? targetName(targets[0] ?? '', ctx) : `${targets.length} targets`}`
                 : ''}
             </Button>
           </div>
@@ -668,13 +660,8 @@ function SpellTargets({
   );
 }
 
-function targetName(
-  id: string,
-  ctx: TextContext,
-  monsters: Array<{ id: string; index: number; group: EncounterGroupView }>,
-): string {
-  const monster = monsters.find((m) => m.id === id);
-  return monster ? `${monster.group.label} ${monster.index + 1}` : memberName(id, ctx);
+function targetName(id: string, ctx: TextContext): string {
+  return ctx.monsters[id]?.name ?? memberName(id, ctx);
 }
 
 function firstSentence(text: string): string {
