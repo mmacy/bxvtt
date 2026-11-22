@@ -4,7 +4,7 @@ import { Card, Icon } from '@/ui';
 import { classIcon, formatRequirements } from '../entries/ClassEntry';
 import { useNavigation } from '../navigation';
 import styles from '../sections.module.css';
-import { titleFromId } from '../model';
+import { raceLabel } from '../model';
 import { CatalogGate, SectionShell } from './common';
 
 /** The classes as cards, each with the facts a player compares when choosing one. */
@@ -29,7 +29,7 @@ export function ClassesSection() {
                     </span>
                     <span className={styles.classText}>
                       <span className={styles.className}>{item.name}</span>
-                      <span className={styles.classRace}>{titleFromId(item.race)}</span>
+                      <span className={styles.classRace}>{raceLabel(item.race)}</span>
                     </span>
                     <span className={styles.classFacts}>
                       <span>

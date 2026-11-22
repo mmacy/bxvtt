@@ -114,6 +114,11 @@ export type Route =
 
 export const HOME: Route = { page: 'home' };
 
+/** The race line of a class, as B/X and the character wizard say it: `Human` or `Demihuman`. */
+export function raceLabel(race: string): string {
+  return race === 'human' ? 'Human' : 'Demihuman';
+}
+
 /** Sentence-case words from an ID or any unknown token: `magic_user` becomes `Magic user`. */
 export function titleFromId(value: string): string {
   const words = value.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();

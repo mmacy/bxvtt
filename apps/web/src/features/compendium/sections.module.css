@@ -173,9 +173,7 @@
 .factLabel {
   display: block;
   color: var(--color-text-subtle);
-  font-size: var(--text-2xs);
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
+  font-size: var(--text-xs);
 }
 
 .tableSets {
