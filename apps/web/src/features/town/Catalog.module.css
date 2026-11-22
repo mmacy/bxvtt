@@ -1,0 +1,94 @@
+.catalog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.search {
+  flex: 1 1 220px;
+  min-width: 180px;
+}
+
+.nameButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-1) 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.nameButton:hover .name {
+  color: var(--color-accent-text);
+}
+
+.typeIcon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: var(--control-sm);
+  height: var(--control-sm);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-3);
+  color: var(--color-text-muted);
+}
+
+.nameText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.name {
+  color: var(--color-text-strong);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-md);
+}
+
+.sub {
+  overflow: hidden;
+  color: var(--color-text-subtle);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.none {
+  color: var(--color-text-disabled);
+}
+
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.count {
+  min-width: 2ch;
+  color: var(--color-accent-text);
+  font-family: var(--font-numeric);
+  font-size: var(--text-lg);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.footnote {
+  margin: 0;
+  color: var(--color-text-subtle);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}

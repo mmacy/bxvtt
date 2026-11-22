@@ -1,0 +1,97 @@
+.road {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: var(--border-hair) solid var(--color-border-accent);
+  border-radius: var(--radius-md);
+  background:
+    radial-gradient(ellipse 80% 140% at 100% 0%, var(--color-accent-subtle), transparent 70%),
+    var(--color-surface-1);
+  box-shadow: var(--edge-highlight), var(--shadow-1);
+}
+
+.roadHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.roadIcon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-text);
+}
+
+.roadTitle {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-plain);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+}
+
+.destinations {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.destination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-bg-stage) 55%, transparent);
+}
+
+.destinationName {
+  color: var(--color-text-strong);
+  font-size: var(--text-lg);
+}
+
+.explain {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.dialogBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.gaps {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--border-hair) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-1);
+}
+
+.gapsTitle,
+.ready {
+  margin: 0;
+  color: var(--color-text);
+}
+
+.gapList {
+  margin: 0;
+  padding-inline-start: var(--space-5);
+  list-style: disc;
+  color: var(--color-text-muted);
+}

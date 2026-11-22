@@ -1,0 +1,167 @@
+.cart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.purse {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+}
+
+.purseLabel {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.empty,
+.hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.hint {
+  color: var(--color-warning);
+}
+
+.lines {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: var(--border-hair) solid var(--color-border);
+}
+
+.lineText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: var(--leading-snug);
+}
+
+.lineName {
+  color: var(--color-text-strong);
+  font-weight: var(--weight-semibold);
+}
+
+.lineLot {
+  color: var(--color-text-subtle);
+  font-size: var(--text-sm);
+}
+
+.linePrice,
+.totalValue {
+  font-family: var(--font-numeric);
+  font-size: var(--text-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+.total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  color: var(--color-text-muted);
+}
+
+.totalValue {
+  color: var(--color-gold);
+  font-size: var(--text-2xl);
+}
+
+.actions,
+.party {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.report {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--border-hair) solid var(--color-success-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-success-subtle);
+}
+
+.reportHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.reportTitle {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+
+.reportLines {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+}
+
+.purseChange {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.purseWas {
+  font-family: var(--font-numeric);
+  text-decoration: line-through;
+  text-decoration-color: var(--color-text-subtle);
+}
+
+.equipTitle {
+  margin: 0 0 var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.equipList {
+  display: grid;
+  gap: var(--space-1-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.equipRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.equipError {
+  flex-basis: 100%;
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+}
