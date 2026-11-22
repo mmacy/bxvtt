@@ -39,6 +39,11 @@ beforeEach(() => {
 });
 
 describe('the town square', () => {
+  it('leaves the game clock to the top bar', () => {
+    setup();
+    expect(screen.queryByText(/^Day \d+, \d\d:\d\d$/)).not.toBeInTheDocument();
+  });
+
   it('shows the town, what it offers, and the party', async () => {
     setup();
     expect(screen.getByRole('heading', { level: 2, name: 'Hollin Ferry' })).toBeInTheDocument();
@@ -265,6 +270,7 @@ describe('the outfitter', () => {
     const { user } = setup();
     await user.click(screen.getByRole('tab', { name: 'Outfitter' }));
     await screen.findByRole('button', { name: 'Add Sword to the cart' });
+    expect(screen.getByRole('button', { name: /^Sword 1d8, melee, show details$/ })).toBeInTheDocument();
     await user.type(screen.getByRole('searchbox', { name: 'Search equipment' }), 'rope');
     expect(screen.queryByRole('button', { name: 'Add Sword to the cart' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add Rope (50’) to the cart' })).toBeInTheDocument();
@@ -293,7 +299,7 @@ describe('the temple', () => {
         .map((button) => button.textContent?.slice(0, 5)),
     ).toEqual(['Osric', 'Wren1', 'Brenn', 'Tamsi']);
     expect(screen.getByText('20 gp')).toBeInTheDocument();
-    expect(screen.getByText('1000 gp')).toBeInTheDocument();
+    expect(screen.getByText('1,000 gp')).toBeInTheDocument();
   });
 
   it('sends the service for the chosen patient and explains who pays', async () => {
@@ -358,7 +364,7 @@ describe('the treasure buyers', () => {
     expect(await screen.findByText('Widow Marl, moneychanger')).toBeInTheDocument();
     await user.click(screen.getByRole('checkbox', { name: "The abbot's seal ring" }));
     expect(screen.getByText('1 for 900 gp')).toBeInTheDocument();
-    expect(screen.getByText('2 for 1000 gp')).toBeInTheDocument();
+    expect(screen.getByText('2 for 1,000 gp')).toBeInTheDocument();
     api.sendCommand.mockResolvedValue(
       accepted(game, [
         event({
@@ -409,6 +415,14 @@ describe('rest and preparation', () => {
       ),
     );
     expect(await screen.findByText('The party rests for a night.')).toBeInTheDocument();
+  });
+
+  it('states each length once and gives no dungeon rule', async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole('tab', { name: 'Rest and prepare' }));
+    const lengths = await screen.findAllByText(/of game time$/);
+    expect(lengths).toHaveLength(3);
+    expect(screen.queryByText(/six turns|10 minutes\./)).not.toBeInTheDocument();
   });
 
   it('opens the character sheet from the party list', async () => {

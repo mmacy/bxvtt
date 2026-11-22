@@ -28,6 +28,12 @@ import { useTownUi } from './townUi';
 import styles from './RestAndPrepare.module.css';
 
 const REST_ICONS: Record<string, IconName> = { turn: 'hourglass', night: 'moon', day: 'sun' };
+/** What each rest is for, in town. The length shows once, on its own line. */
+const REST_PURPOSE: Record<string, string> = {
+  turn: 'A short breather.',
+  night: 'Counts as sleep, so casters can prepare spells afterward.',
+  day: 'Counts as sleep, and heals everyone who is alive.',
+};
 const REST_LENGTH: Record<string, string> = {
   turn: formatDuration(1, 'turn'),
   night: formatDuration(48, 'turn'),
@@ -115,9 +121,6 @@ function RestPanel() {
   }, [schema.data]);
   return (
     <Panel title="Rest">
-      <p className={styles.lead}>
-        A night of sleep lets casters prepare spells. A full day of rest also heals everyone who is alive.
-      </p>
       <div className={styles.restOptions}>
         {kinds.map((kind) => (
           <div key={kind} className={styles.restOption}>
@@ -126,7 +129,7 @@ function RestPanel() {
             </span>
             <div className={styles.restText}>
               <h3 className={styles.restName}>{restKindLabel(kind)}</h3>
-              <p className={styles.restDetail}>{restKindDescription(kind)}</p>
+              <p className={styles.restDetail}>{REST_PURPOSE[kind] ?? restKindDescription(kind)}</p>
               {REST_LENGTH[kind] && <p className={styles.restLength}>{REST_LENGTH[kind]} of game time</p>}
             </div>
             <Button
@@ -172,12 +175,13 @@ function SheetPanel() {
   return (
     <Panel title="Prepare and manage gear" meta="On the character sheet">
       <p className={styles.lead}>
-        Open a sheet and choose its Spells tab to prepare, learn, or cast spells. The Inventory tab wields and
-        wears gear and moves items between packs.
+        A caster's button opens the Spells tab, where you prepare, learn, and cast spells. Anyone else's opens
+        the character sheet, where you wield and wear gear and move items between packs.
       </p>
       <ul className={styles.members}>
         {party.map((member) => {
           const counts = spellCounts(member);
+          const caster = counts.book + counts.prepared > 0;
           return (
             <li key={member.id} className={styles.member}>
               <MemberToken member={member} size={32} />
@@ -193,9 +197,9 @@ function SheetPanel() {
                 size="sm"
                 variant="secondary"
                 icon="book"
-                onClick={() => openSheet(member.id, 'spells')}
+                onClick={() => (caster ? openSheet(member.id, 'spells') : openSheet(member.id))}
               >
-                {`Open ${member.name}'s sheet`}
+                {caster ? `Open ${member.name}'s spells` : `Open ${member.name}'s sheet`}
               </Button>
             </li>
           );

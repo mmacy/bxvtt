@@ -1,5 +1,5 @@
 /** The outfitter's catalog: search, a type filter, sortable columns, and a way to put lots in the cart. */
-import { itemTypeLabel } from '@bxvtt/shared/text';
+import { formatGold, itemTypeLabel } from '@bxvtt/shared/text';
 import { useTextContext } from '@/app';
 import { useMemo, useState } from 'react';
 import {
@@ -80,7 +80,6 @@ export function Catalog({
         <button
           type="button"
           className={styles.nameButton}
-          aria-label={`Details for ${item.summary.name}`}
           aria-current={selectedId === item.summary.id ? 'true' : undefined}
           onClick={() => onSelect(item.summary.id)}
         >
@@ -88,10 +87,11 @@ export function Catalog({
             <Icon name={itemIcon(item.summary)} size={16} />
           </span>
           <span className={styles.nameText}>
-            <span className={styles.name}>{item.summary.name}</span>
+            <span className={styles.name}>{item.summary.name}</span>{' '}
             <span className={styles.sub}>
               {rowSummary(item, ctx) || itemTypeLabel(item.summary.item_type)}
             </span>
+            <span className="visually-hidden">, show details</span>
           </span>
         </button>
       ),
@@ -101,7 +101,7 @@ export function Catalog({
       header: 'Price',
       numeric: true,
       sortValue: (item) => item.summary.cost_gp,
-      cell: (item) => `${item.summary.cost_gp} gp`,
+      cell: (item) => formatGold(item.summary.cost_gp),
       width: '84px',
     },
     {

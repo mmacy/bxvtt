@@ -2,6 +2,7 @@
 import {
   describeEvents,
   formatCoins,
+  formatGold,
   healingServiceDescription,
   healingServiceLabel,
 } from '@bxvtt/shared/text';
@@ -151,11 +152,11 @@ export function Temple() {
                     <p className={styles.serviceDetail}>{healingServiceDescription(service)}</p>
                     {short && (
                       <p className={styles.short}>
-                        The party carries {partyGold} gp in all, which is less than this costs.
+                        The party carries {formatGold(partyGold)} in all, which is less than this costs.
                       </p>
                     )}
                   </div>
-                  <span className={styles.price}>{price === 0 ? 'Free' : `${price} gp`}</span>
+                  <span className={styles.price}>{price === 0 ? 'Free' : formatGold(price)}</span>
                   <Button
                     variant="secondary"
                     icon="heart"

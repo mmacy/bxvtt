@@ -38,7 +38,6 @@ export function TownStage() {
         townName={view.town_name}
         townDescription={view.town_description}
         adventureName={view.adventure_name}
-        clockRounds={view.clock_rounds}
         compact={section !== 'square'}
       />
       <Tabs

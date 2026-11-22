@@ -1,6 +1,6 @@
 /** The outfitter's cart for the chosen buyer, and the cards that show what each purchase changed. */
 import type { MemberView } from '@bxvtt/shared/bxapi';
-import { formatCoins, joinList } from '@bxvtt/shared/text';
+import { formatCoins, formatGold, joinList } from '@bxvtt/shared/text';
 import { useState } from 'react';
 import { usePartyMember, useSendCommand, useTextContext } from '@/app';
 import { Badge, Banner, Button, CoinPurse, IconButton } from '@/ui';
@@ -60,12 +60,12 @@ export function CartPanel({
       {lines.length > 0 && (
         <div className={styles.total}>
           <span>Total</span>
-          <span className={styles.totalValue}>{`${total} gp`}</span>
+          <span className={styles.totalValue}>{formatGold(total)}</span>
         </div>
       )}
       {short && lines.length > 0 && buyer && (
         <p className={styles.hint} role="status">
-          {`That is more than the ${gold} gp ${buyer.name} carries in gold. The shop decides if other coins cover it.`}
+          {`That is more than the ${formatGold(gold)} ${buyer.name} carries in gold. The shop decides if other coins cover it.`}
         </p>
       )}
       {problem !== null && (
@@ -111,7 +111,7 @@ export function CartPanel({
                   </span>
                   {lot && <span className={styles.lineLot}>{lot}</span>}
                 </div>
-                <span className={styles.linePrice}>{`${line.costGp} gp`}</span>
+                <span className={styles.linePrice}>{formatGold(line.costGp)}</span>
                 <IconButton
                   icon="close"
                   size="sm"

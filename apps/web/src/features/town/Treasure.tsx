@@ -1,5 +1,5 @@
 /** The treasure buyers: every gem and piece of jewellery in the party, with its value, to sell in one go. */
-import { describeEvents, formatCoins } from '@bxvtt/shared/text';
+import { describeEvents, formatCoins, formatGold } from '@bxvtt/shared/text';
 import { useMemo, useState } from 'react';
 import { useParty, usePlayerView, useSendCommand, useTextContext } from '@/app';
 import { Badge, Banner, Button, Checkbox, CoinPurse, EmptyState, Panel } from '@/ui';
@@ -147,7 +147,7 @@ export function Treasure() {
                         <Badge tone={valuable.kind === 'gem' ? 'info' : 'magic'}>
                           {valuable.kind === 'gem' ? 'Gem' : 'Jewellery'}
                         </Badge>
-                        <span className={styles.value}>{`${valuable.valueGp} gp`}</span>
+                        <span className={styles.value}>{formatGold(valuable.valueGp)}</span>
                       </li>
                     ))}
                   </ul>
@@ -162,12 +162,14 @@ export function Treasure() {
                 <div className={styles.total}>
                   <span>Selected</span>
                   <span className={styles.big}>
-                    {chosen.length === 0 ? 'Nothing yet' : `${chosen.length} for ${totalValue(chosen)} gp`}
+                    {chosen.length === 0
+                      ? 'Nothing yet'
+                      : `${chosen.length} for ${formatGold(totalValue(chosen))}`}
                   </span>
                 </div>
                 <div className={styles.total}>
                   <span>Everything</span>
-                  <span className={styles.big}>{`${all.length} for ${totalValue(all)} gp`}</span>
+                  <span className={styles.big}>{`${all.length} for ${formatGold(totalValue(all))}`}</span>
                 </div>
               </div>
               <div className={styles.buttons}>
