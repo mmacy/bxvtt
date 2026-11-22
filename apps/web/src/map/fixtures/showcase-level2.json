@@ -1,0 +1,6287 @@
+{
+  "note": "Showcase vault after dropping through the trapdoor to level 2.",
+  "view": {
+    "adventure_name": "The Showcase Vault",
+    "adventure_description": "A test dungeon with every kind of door, transition, and feature.",
+    "town_name": "Testwell",
+    "town_description": "A town for tests.",
+    "town_services": [],
+    "town_healing_prices": {
+      "cure_light_wounds": 25,
+      "cure_serious_wounds": 100,
+      "cure_disease": 150,
+      "neutralize_poison": 150,
+      "remove_curse": 200,
+      "raise_dead": 1500
+    },
+    "party": [
+      {
+        "id": "character-0001",
+        "name": "Brenna",
+        "class_id": "fighter",
+        "level": 1,
+        "current_hp": 1,
+        "max_hp": 5,
+        "conditions": [],
+        "inventory": {
+          "items": [
+            {
+              "instance_type": "item",
+              "template": {
+                "item_type": "gear",
+                "id": "torch",
+                "name": "Torches (6)",
+                "cost_gp": 1,
+                "lot_size": 6,
+                "capacity_coins": null,
+                "combat": {
+                  "damage": "1d4",
+                  "qualities": ["melee"],
+                  "missile_ranges": null
+                },
+                "params": {
+                  "brightness": "flame",
+                  "burn_turns": 6,
+                  "light_radius_feet": 30
+                },
+                "overrides_applied": []
+              },
+              "quantity": 9
+            },
+            {
+              "instance_type": "item",
+              "template": {
+                "item_type": "gear",
+                "id": "tinder_box",
+                "name": "Tinder box (flint & steel)",
+                "cost_gp": 3,
+                "lot_size": 1,
+                "capacity_coins": null,
+                "combat": null,
+                "params": {
+                  "light_chance_in_six": 2
+                },
+                "overrides_applied": []
+              },
+              "quantity": 1
+            },
+            {
+              "instance_type": "item",
+              "template": {
+                "item_type": "weapon",
+                "id": "sword",
+                "name": "Sword",
+                "cost_gp": 10,
+                "weight_coins": 60,
+                "damage": "1d8",
+                "qualities": ["melee"],
+                "missile_ranges": null,
+                "material": "standard",
+                "overrides_applied": []
+              },
+              "quantity": 1
+            },
+            {
+              "instance_type": "item",
+              "template": {
+                "item_type": "gear",
+                "id": "iron_spikes",
+                "name": "Iron spikes (12)",
+                "cost_gp": 1,
+                "lot_size": 12,
+                "capacity_coins": null,
+                "combat": null,
+                "params": {
+                  "wedges_doors": true
+                },
+                "overrides_applied": []
+              },
+              "quantity": 11
+            }
+          ],
+          "purse": {
+            "pp": 0,
+            "gp": 114,
+            "ep": 0,
+            "sp": 8,
+            "cp": 0
+          },
+          "valuables": [],
+          "worn_armour": null,
+          "shield": null,
+          "wielded": [],
+          "rings": []
+        },
+        "memorized_spells": [],
+        "encounter_rate_feet": 40,
+        "race": "human",
+        "alignment": "lawful",
+        "title": "Veteran",
+        "xp": 0,
+        "xp_next_level": 2000,
+        "scores": {
+          "str": 16,
+          "int": 13,
+          "wis": 8,
+          "dex": 7,
+          "con": 11,
+          "cha": 8
+        },
+        "effective_strength": 16,
+        "melee_modifier": 2,
+        "missile_modifier": -1,
+        "initiative_modifier": -1,
+        "hit_point_modifier": 0,
+        "magic_save_modifier": -1,
+        "npc_reaction_modifier": -1,
+        "open_doors_chance": 4,
+        "thac0": 19,
+        "attack_bonus": 0,
+        "armour_class": 10,
+        "armour_class_ascending": 9,
+        "saves": {
+          "death": 12,
+          "wands": 13,
+          "paralysis": 14,
+          "breath": 15,
+          "spells": 16
+        },
+        "movement_rate_feet": 120,
+        "languages": ["alignment_lawful", "common"],
+        "spell_book": [],
+        "thief_skills": {}
+      },
+      {
+        "id": "character-0002",
+        "name": "Durin",
+        "class_id": "dwarf",
+        "level": 1,
+        "current_hp": 5,
+        "max_hp": 5,
+        "conditions": [],
+        "inventory": {
+          "items": [],
+          "purse": {
+            "pp": 0,
+            "gp": 133,
+            "ep": 0,
+            "sp": 8,
+            "cp": 0
+          },
+          "valuables": [],
+          "worn_armour": null,
+          "shield": null,
+          "wielded": [],
+          "rings": []
+        },
+        "memorized_spells": [],
+        "encounter_rate_feet": 40,
+        "race": "dwarf",
+        "alignment": "lawful",
+        "title": "Dwarven Veteran",
+        "xp": 0,
+        "xp_next_level": 2200,
+        "scores": {
+          "str": 16,
+          "int": 13,
+          "wis": 8,
+          "dex": 7,
+          "con": 11,
+          "cha": 8
+        },
+        "effective_strength": 16,
+        "melee_modifier": 2,
+        "missile_modifier": -1,
+        "initiative_modifier": -1,
+        "hit_point_modifier": 0,
+        "magic_save_modifier": -1,
+        "npc_reaction_modifier": -1,
+        "open_doors_chance": 4,
+        "thac0": 19,
+        "attack_bonus": 0,
+        "armour_class": 10,
+        "armour_class_ascending": 9,
+        "saves": {
+          "death": 8,
+          "wands": 9,
+          "paralysis": 10,
+          "breath": 13,
+          "spells": 12
+        },
+        "movement_rate_feet": 120,
+        "languages": ["alignment_lawful", "common", "dwarvish", "gnomish", "goblin", "kobold"],
+        "spell_book": [],
+        "thief_skills": {}
+      },
+      {
+        "id": "character-0003",
+        "name": "Elowen",
+        "class_id": "elf",
+        "level": 1,
+        "current_hp": 5,
+        "max_hp": 5,
+        "conditions": [],
+        "inventory": {
+          "items": [
+            {
+              "instance_type": "item",
+              "template": {
+                "item_type": "weapon",
+                "id": "sword",
+                "name": "Sword",
+                "cost_gp": 10,
+                "weight_coins": 60,
+                "damage": "1d8",
+                "qualities": ["melee"],
+                "missile_ranges": null,
+                "material": "standard",
+                "overrides_applied": []
+              },
+              "quantity": 1
+            }
+          ],
+          "purse": {
+            "pp": 0,
+            "gp": 123,
+            "ep": 0,
+            "sp": 7,
+            "cp": 0
+          },
+          "valuables": [],
+          "worn_armour": null,
+          "shield": null,
+          "wielded": [],
+          "rings": []
+        },
+        "memorized_spells": [],
+        "encounter_rate_feet": 40,
+        "race": "elf",
+        "alignment": "neutral",
+        "title": "Medium/Veteran",
+        "xp": 0,
+        "xp_next_level": 4000,
+        "scores": {
+          "str": 16,
+          "int": 13,
+          "wis": 8,
+          "dex": 7,
+          "con": 11,
+          "cha": 8
+        },
+        "effective_strength": 16,
+        "melee_modifier": 2,
+        "missile_modifier": -1,
+        "initiative_modifier": -1,
+        "hit_point_modifier": 0,
+        "magic_save_modifier": -1,
+        "npc_reaction_modifier": -1,
+        "open_doors_chance": 4,
+        "thac0": 19,
+        "attack_bonus": 0,
+        "armour_class": 10,
+        "armour_class_ascending": 9,
+        "saves": {
+          "death": 12,
+          "wands": 13,
+          "paralysis": 13,
+          "breath": 15,
+          "spells": 15
+        },
+        "movement_rate_feet": 120,
+        "languages": ["alignment_neutral", "common", "elvish", "gnoll", "hobgoblin", "orcish"],
+        "spell_book": ["sleep"],
+        "thief_skills": {}
+      },
+      {
+        "id": "character-0004",
+        "name": "Wren",
+        "class_id": "thief",
+        "level": 1,
+        "current_hp": 3,
+        "max_hp": 3,
+        "conditions": [],
+        "inventory": {
+          "items": [
+            {
+              "instance_type": "item",
+              "template": {
+                "item_type": "weapon",
+                "id": "dagger",
+                "name": "Dagger",
+                "cost_gp": 3,
+                "weight_coins": 10,
+                "damage": "1d4",
+                "qualities": ["melee", "missile"],
+                "missile_ranges": {
+                  "short": {
+                    "min_feet": 5,
+                    "max_feet": 10
+                  },
+                  "medium": {
+                    "min_feet": 11,
+                    "max_feet": 20
+                  },
+                  "long": {
+                    "min_feet": 21,
+                    "max_feet": 30
+                  }
+                },
+                "material": "standard",
+                "overrides_applied": []
+              },
+              "quantity": 1
+            },
+            {
+              "instance_type": "item",
+              "template": {
+                "item_type": "gear",
+                "id": "thieves_tools",
+                "name": "Thieves’ tools",
+                "cost_gp": 25,
+                "lot_size": 1,
+                "capacity_coins": null,
+                "combat": null,
+                "params": {
+                  "required_for": "open_locks"
+                },
+                "overrides_applied": []
+              },
+              "quantity": 1
+            }
+          ],
+          "purse": {
+            "pp": 0,
+            "gp": 105,
+            "ep": 0,
+            "sp": 7,
+            "cp": 0
+          },
+          "valuables": [],
+          "worn_armour": null,
+          "shield": null,
+          "wielded": [],
+          "rings": []
+        },
+        "memorized_spells": [],
+        "encounter_rate_feet": 40,
+        "race": "human",
+        "alignment": "neutral",
+        "title": "Apprentice",
+        "xp": 0,
+        "xp_next_level": 1200,
+        "scores": {
+          "str": 16,
+          "int": 13,
+          "wis": 8,
+          "dex": 7,
+          "con": 11,
+          "cha": 8
+        },
+        "effective_strength": 16,
+        "melee_modifier": 2,
+        "missile_modifier": -1,
+        "initiative_modifier": -1,
+        "hit_point_modifier": 0,
+        "magic_save_modifier": -1,
+        "npc_reaction_modifier": -1,
+        "open_doors_chance": 4,
+        "thac0": 19,
+        "attack_bonus": 0,
+        "armour_class": 10,
+        "armour_class_ascending": 9,
+        "saves": {
+          "death": 13,
+          "wands": 14,
+          "paralysis": 13,
+          "breath": 16,
+          "spells": 15
+        },
+        "movement_rate_feet": 120,
+        "languages": ["alignment_neutral", "common"],
+        "spell_book": [],
+        "thief_skills": {
+          "climb_sheer_surfaces": 87,
+          "find_remove_treasure_traps": 10,
+          "hear_noise": 2,
+          "hide_in_shadows": 10,
+          "move_silently": 20,
+          "open_locks": 15,
+          "pick_pockets": 20
+        }
+      }
+    ],
+    "location": {
+      "kind": "dungeon",
+      "dungeon_id": "vault",
+      "level_number": 2,
+      "position": [11, 8],
+      "facing": "east"
+    },
+    "clock_rounds": 1080,
+    "mode": "exploring",
+    "explored": [
+      {
+        "dungeon_id": "vault",
+        "level_number": 1,
+        "cells": [
+          [6, 10],
+          [6, 9],
+          [6, 8],
+          [6, 7],
+          [6, 6],
+          [6, 5],
+          [6, 4],
+          [6, 3],
+          [9, 4],
+          [10, 4],
+          [11, 4],
+          [12, 4],
+          [13, 4],
+          [16, 4],
+          [17, 5],
+          [15, 3],
+          [16, 5],
+          [18, 5],
+          [17, 4],
+          [16, 3],
+          [18, 4],
+          [15, 4],
+          [19, 4],
+          [16, 8],
+          [16, 9],
+          [16, 10],
+          [16, 11],
+          [15, 11],
+          [27, 3],
+          [26, 10],
+          [26, 11],
+          [26, 12],
+          [25, 12],
+          [24, 12],
+          [26, 13],
+          [26, 14],
+          [26, 16],
+          [14, 11],
+          [16, 13],
+          [16, 14],
+          [16, 15],
+          [16, 16],
+          [16, 17],
+          [16, 18],
+          [7, 9],
+          [8, 9],
+          [9, 9],
+          [4, 6],
+          [5, 6],
+          [7, 6],
+          [8, 6],
+          [9, 6],
+          [4, 5],
+          [5, 5],
+          [7, 5],
+          [8, 5],
+          [9, 5],
+          [4, 4],
+          [5, 4],
+          [7, 4],
+          [8, 4],
+          [4, 2],
+          [4, 3],
+          [5, 2],
+          [5, 3],
+          [6, 2],
+          [7, 2],
+          [7, 3],
+          [8, 2],
+          [8, 3],
+          [9, 2],
+          [9, 3],
+          [14, 2],
+          [14, 3],
+          [14, 4],
+          [14, 5],
+          [14, 6],
+          [15, 2],
+          [15, 5],
+          [15, 6],
+          [16, 2],
+          [16, 6],
+          [16, 7],
+          [17, 2],
+          [17, 3],
+          [17, 6],
+          [18, 2],
+          [18, 3],
+          [18, 6],
+          [19, 2],
+          [19, 3],
+          [19, 5],
+          [19, 6],
+          [13, 9],
+          [13, 10],
+          [13, 11],
+          [14, 9],
+          [14, 10],
+          [15, 9],
+          [15, 10],
+          [17, 9],
+          [17, 10],
+          [17, 11],
+          [18, 9],
+          [18, 10],
+          [18, 11],
+          [19, 9],
+          [19, 10],
+          [19, 11],
+          [13, 12],
+          [13, 13],
+          [13, 14],
+          [14, 12],
+          [14, 13],
+          [14, 14],
+          [15, 12],
+          [15, 13],
+          [15, 14],
+          [16, 12],
+          [17, 12],
+          [17, 13],
+          [17, 14],
+          [18, 12],
+          [18, 13],
+          [18, 14],
+          [19, 12],
+          [19, 13],
+          [19, 14],
+          [20, 9],
+          [20, 10],
+          [20, 11],
+          [20, 12],
+          [20, 13],
+          [20, 14],
+          [12, 9],
+          [24, 2],
+          [24, 3],
+          [24, 4],
+          [24, 5],
+          [24, 6],
+          [24, 7],
+          [25, 2],
+          [25, 3],
+          [25, 4],
+          [25, 5],
+          [25, 6],
+          [25, 7],
+          [26, 2],
+          [26, 3],
+          [26, 4],
+          [26, 5],
+          [26, 6],
+          [26, 7],
+          [27, 2],
+          [27, 4],
+          [27, 5],
+          [27, 6],
+          [27, 7],
+          [28, 2],
+          [28, 3],
+          [28, 4],
+          [28, 5],
+          [28, 6],
+          [28, 7],
+          [29, 2],
+          [29, 3],
+          [29, 4],
+          [29, 5],
+          [29, 6],
+          [29, 7],
+          [23, 12],
+          [26, 8],
+          [26, 9],
+          [24, 15],
+          [25, 15],
+          [26, 15],
+          [27, 15],
+          [28, 15],
+          [22, 12],
+          [21, 12],
+          [24, 16],
+          [25, 16],
+          [27, 16],
+          [28, 16],
+          [24, 17],
+          [25, 17],
+          [26, 17],
+          [27, 17],
+          [28, 17],
+          [24, 18],
+          [24, 19],
+          [25, 18],
+          [25, 19],
+          [26, 18],
+          [26, 19],
+          [27, 18],
+          [27, 19],
+          [28, 18],
+          [28, 19],
+          [11, 9],
+          [16, 19],
+          [16, 20]
+        ],
+        "edges": {
+          "6,10:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "7,10:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "6,11:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "6,10:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "6,9:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "7,9:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "6,9:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "6,8:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "7,8:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "6,8:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "6,7:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "7,7:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "6,7:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "6,6:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "7,6:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "6,6:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "6,5:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "7,5:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "6,5:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "6,4:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "7,4:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "6,4:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "6,3:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "7,3:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "6,3:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "9,4:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "10,4:west": {
+            "kind": "door",
+            "door_open": false,
+            "door_wedged": false
+          },
+          "9,5:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "9,4:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "10,4:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "11,4:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "10,5:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "11,4:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "12,4:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "11,5:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "12,4:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "13,4:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "12,5:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "13,4:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "14,4:west": {
+            "kind": "door",
+            "door_open": true,
+            "door_wedged": false
+          },
+          "13,5:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,4:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,4:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,5:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,4:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,5:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "18,5:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,6:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,5:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "15,3:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,3:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "15,4:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "15,3:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,6:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,5:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "18,5:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "19,5:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "18,6:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,4:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "18,4:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,3:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,3:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "18,4:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "19,4:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "15,5:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "15,4:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "19,4:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "20,4:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "19,5:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,8:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,8:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,9:north": {
+            "kind": "door",
+            "door_open": true,
+            "door_wedged": true
+          },
+          "16,8:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,9:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,10:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,9:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,10:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,11:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,10:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,11:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,12:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,11:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "15,11:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "15,12:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "15,11:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,3:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "28,3:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,4:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,3:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,10:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,10:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,11:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,10:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,11:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,12:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,11:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,12:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,13:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,12:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "25,12:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "25,13:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "25,12:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "24,12:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "24,13:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "24,12:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,13:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,14:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,13:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,14:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,15:north": {
+            "kind": "door",
+            "door_open": true,
+            "door_wedged": false
+          },
+          "26,14:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,16:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,16:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,17:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,16:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "14,11:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "14,12:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "14,11:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,13:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,13:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,14:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,13:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,14:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,15:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,14:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,15:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,16:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,15:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,16:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,17:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,16:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,17:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,18:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,17:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,18:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,19:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,18:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "7,9:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "8,9:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "7,10:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "8,9:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "9,9:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "8,10:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "9,9:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "10,9:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "9,10:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "4,6:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "5,6:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "4,7:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "4,6:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "5,6:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "5,7:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "7,6:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "8,6:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "7,7:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "8,6:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "9,6:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "8,7:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "9,6:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "10,6:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "9,7:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "4,5:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "5,5:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "4,5:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "5,5:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "7,5:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "8,5:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "8,5:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "9,5:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "10,5:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "4,4:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "5,4:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "4,4:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "5,4:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "7,4:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "8,4:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "8,4:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "4,2:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "5,2:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "4,3:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "4,2:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "5,3:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "4,3:west": {
+            "kind": "door",
+            "door_open": false,
+            "door_wedged": false
+          },
+          "5,2:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "6,2:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "5,3:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "6,2:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "7,2:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "7,2:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "8,2:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "7,3:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "8,3:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "8,2:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "9,2:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "8,3:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "9,3:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "9,2:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "10,2:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "9,3:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "10,3:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "14,2:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "15,2:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "14,3:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "14,2:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "14,4:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "14,3:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "14,5:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "15,5:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "14,6:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "14,5:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "15,6:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "14,7:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "14,6:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "15,2:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,2:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "15,6:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,6:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "15,7:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,2:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,2:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,6:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,7:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,7:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,7:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,2:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "18,2:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,3:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "18,3:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "18,6:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,7:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "18,2:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "19,2:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "18,3:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "19,3:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "19,6:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "18,7:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "19,2:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "20,2:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "19,3:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "20,3:west": {
+            "kind": "door",
+            "door_open": false,
+            "door_wedged": false
+          },
+          "20,5:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "19,6:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "20,6:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "19,7:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "13,9:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "14,9:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "13,10:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "13,9:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "14,10:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "13,11:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "13,10:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "13,12:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "13,11:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "14,9:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "15,9:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "14,10:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "15,10:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "15,9:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "15,10:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,9:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "18,9:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,10:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "18,10:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,11:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "18,11:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,12:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "18,9:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "19,9:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "18,10:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "19,10:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "18,11:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "19,11:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "18,12:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "19,9:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "20,9:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "19,10:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "20,10:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "19,11:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "20,11:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "19,12:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "14,12:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "13,13:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "13,12:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "14,13:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "13,14:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "13,13:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "14,14:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "13,15:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "13,14:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "15,12:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "14,13:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "15,13:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "14,14:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "15,14:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "14,15:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,12:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "15,13:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "15,14:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "15,15:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,12:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "18,12:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,13:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "18,13:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,14:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "18,14:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,15:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "19,12:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "18,13:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "19,13:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "18,14:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "19,14:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "18,15:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "20,12:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "19,13:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "20,13:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "19,14:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "20,14:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "19,15:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "20,9:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "21,9:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "20,10:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "21,10:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "20,11:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "21,11:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "20,12:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "21,12:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "20,13:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "21,13:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "20,14:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "21,14:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "20,15:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "12,9:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "12,10:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "12,9:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "24,2:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "25,2:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "24,3:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "24,2:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "25,3:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "24,4:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "24,3:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "25,4:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "24,5:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "24,4:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "25,5:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "24,6:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "24,5:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "25,6:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "24,7:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "24,6:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "25,7:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "24,8:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "24,7:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "25,2:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,2:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "25,3:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,3:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "25,4:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,4:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "25,5:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,5:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "25,6:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,6:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "25,7:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,7:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "25,8:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,2:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,2:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,3:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,4:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,4:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,5:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,5:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,6:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,6:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,7:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,7:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,8:north": {
+            "kind": "door",
+            "door_open": false,
+            "door_wedged": false
+          },
+          "27,2:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "28,2:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "28,4:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,5:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "28,5:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,6:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "28,6:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,7:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "28,7:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,8:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "28,2:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "29,2:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "28,3:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "29,3:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "28,4:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "29,4:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "28,5:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "29,5:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "28,6:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "29,6:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "28,7:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "29,7:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "28,8:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "29,2:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "30,2:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "29,3:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "30,3:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "29,4:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "30,4:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "29,5:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "30,5:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "29,6:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "30,6:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "29,7:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "30,7:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "29,8:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "23,12:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "23,13:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "23,12:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,8:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,9:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,8:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,9:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,9:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "24,15:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "25,15:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "24,16:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "24,15:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "25,15:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,15:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "25,16:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,15:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,15:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "28,15:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,16:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "28,15:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "29,15:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "28,16:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "22,12:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "22,13:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "22,12:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "21,12:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "21,13:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "25,16:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "24,17:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "24,16:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "25,17:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "28,16:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,17:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "29,16:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "28,17:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "25,17:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "24,18:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "24,17:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,17:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "25,18:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,17:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,18:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "28,17:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,18:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "29,17:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "28,18:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "25,18:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "24,19:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "24,18:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "25,19:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "24,20:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "24,19:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,18:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "25,19:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,19:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "25,20:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,18:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,19:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,19:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "26,20:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "28,18:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,19:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "28,19:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "27,20:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "29,18:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "28,19:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "29,19:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "28,20:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "11,9:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "11,10:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "11,9:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,19:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,20:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,19:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "17,20:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,21:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "16,20:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          }
+        }
+      },
+      {
+        "dungeon_id": "vault",
+        "level_number": 2,
+        "cells": [
+          [10, 8],
+          [11, 8],
+          [8, 7],
+          [8, 8],
+          [8, 9],
+          [8, 10],
+          [9, 7],
+          [9, 8],
+          [9, 9],
+          [9, 10],
+          [10, 7],
+          [10, 9],
+          [10, 10],
+          [11, 7],
+          [11, 9],
+          [11, 10],
+          [12, 7],
+          [12, 8],
+          [12, 9],
+          [12, 10]
+        ],
+        "edges": {
+          "10,8:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "11,8:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "10,9:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "10,8:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "11,8:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "12,8:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "11,9:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "8,7:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "9,7:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "8,8:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "8,7:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "9,8:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "8,9:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "8,8:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "9,9:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "8,10:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "8,9:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "9,10:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "8,11:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "8,10:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "9,7:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "10,7:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "9,8:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "9,9:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "10,9:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "9,10:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "10,10:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "9,11:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "10,7:north": {
+            "kind": "door",
+            "door_open": false,
+            "door_wedged": false
+          },
+          "11,7:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "11,9:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "10,10:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "11,10:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "10,11:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "11,7:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "12,7:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "12,9:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "11,10:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "12,10:west": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "11,11:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "12,7:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "13,7:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "12,8:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "13,8:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "12,9:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "13,9:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "12,10:north": {
+            "kind": "open",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "13,10:west": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          },
+          "12,11:north": {
+            "kind": "wall",
+            "door_open": null,
+            "door_wedged": null
+          }
+        }
+      }
+    ],
+    "piles": {
+      "cell:vault:1:6,9": {
+        "items": ["dagger×1"],
+        "coins_gp_value": 0
+      }
+    },
+    "emptied_caches": ["vault:1:offering_bowl"],
+    "effects": [
+      {
+        "character_id": "character-0001",
+        "kind": "fatigue",
+        "remaining_rounds": null
+      },
+      {
+        "character_id": "character-0002",
+        "kind": "fatigue",
+        "remaining_rounds": null
+      },
+      {
+        "character_id": "character-0003",
+        "kind": "fatigue",
+        "remaining_rounds": null
+      },
+      {
+        "character_id": "character-0004",
+        "kind": "fatigue",
+        "remaining_rounds": null
+      },
+      {
+        "character_id": "character-0001",
+        "kind": "light",
+        "remaining_rounds": 240
+      }
+    ],
+    "fatigued": true,
+    "exhausted": false,
+    "deprivation": {},
+    "journal": [],
+    "quests": [],
+    "encounter": null
+  },
+  "referee": {
+    "mode": "exploring",
+    "adventure": {
+      "name": "The Showcase Vault",
+      "dungeons": [
+        {
+          "id": "vault",
+          "name": "The Showcase Vault",
+          "levels": [
+            {
+              "number": 1,
+              "width": 32,
+              "height": 24,
+              "edges": {
+                "5,2:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "4,3:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "6,2:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "5,3:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "7,2:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "6,3:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "8,2:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "7,3:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "9,2:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "8,3:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "9,3:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "5,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "4,4:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "6,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "5,4:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "7,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "6,4:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "8,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "7,4:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "9,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "8,4:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "9,4:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "5,4:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "4,5:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "6,4:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "5,5:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "7,4:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "6,5:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "8,4:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "7,5:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "9,4:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "8,5:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "9,5:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "5,5:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "4,6:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "6,5:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "5,6:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "7,5:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "6,6:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "8,5:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "7,6:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "9,5:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "8,6:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "9,6:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "5,6:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "6,6:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "7,6:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "8,6:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "9,6:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "3,2:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "2,3:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "3,3:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "3,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "15,2:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "14,3:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,2:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "15,3:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "17,2:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,3:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "18,2:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "17,3:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "19,2:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "18,3:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "19,3:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "15,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "14,4:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "15,4:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "17,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,4:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "18,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "17,4:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "19,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "18,4:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "19,4:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "15,4:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "14,5:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,4:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "15,5:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "17,4:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,5:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "18,4:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "17,5:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "19,4:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "18,5:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "19,5:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "15,5:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "14,6:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,5:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "15,6:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "17,5:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,6:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "18,5:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "17,6:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "19,5:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "18,6:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "19,6:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "15,6:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,6:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "17,6:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "18,6:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "19,6:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "25,2:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "24,3:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,2:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "25,3:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "27,2:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,3:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "28,2:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "27,3:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "29,2:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "28,3:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "29,3:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "25,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "24,4:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "25,4:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "27,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,4:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "28,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "27,4:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "29,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "28,4:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "29,4:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "25,4:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "24,5:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,4:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "25,5:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "27,4:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,5:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "28,4:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "27,5:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "29,4:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "28,5:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "29,5:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "25,5:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "24,6:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,5:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "25,6:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "27,5:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,6:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "28,5:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "27,6:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "29,5:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "28,6:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "29,6:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "25,6:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "24,7:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,6:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "25,7:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "27,6:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,7:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "28,6:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "27,7:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "29,6:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "28,7:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "29,7:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "25,7:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,7:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "27,7:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "28,7:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "29,7:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "14,9:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "13,10:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "15,9:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "14,10:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,9:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "15,10:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "17,9:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,10:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "18,9:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "17,10:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "19,9:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "18,10:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "20,9:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "19,10:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "20,10:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "14,10:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "13,11:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "15,10:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "14,11:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,10:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "15,11:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "17,10:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,11:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "18,10:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "17,11:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "19,10:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "18,11:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "20,10:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "19,11:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "20,11:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "14,11:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "13,12:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "15,11:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "14,12:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,11:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "15,12:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "17,11:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,12:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "18,11:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "17,12:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "19,11:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "18,12:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "20,11:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "19,12:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "20,12:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "14,12:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "13,13:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "15,12:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "14,13:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,12:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "15,13:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "17,12:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,13:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "18,12:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "17,13:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "19,12:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "18,13:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "20,12:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "19,13:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "20,13:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "14,13:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "13,14:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "15,13:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "14,14:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,13:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "15,14:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "17,13:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,14:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "18,13:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "17,14:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "19,13:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "18,14:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "20,13:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "19,14:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "20,14:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "14,14:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "15,14:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,14:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "17,14:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "18,14:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "19,14:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "20,14:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "25,15:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "24,16:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,15:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "25,16:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "27,15:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,16:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "28,15:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "27,16:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "28,16:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "25,16:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "24,17:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,16:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "25,17:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "27,16:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,17:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "28,16:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "27,17:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "28,17:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "25,17:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "24,18:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,17:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "25,18:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "27,17:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,18:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "28,17:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "27,18:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "28,18:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "25,18:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "24,19:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,18:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "25,19:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "27,18:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,19:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "28,18:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "27,19:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "28,19:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "25,19:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,19:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "27,19:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "28,19:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "3,17:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "2,18:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "4,17:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "3,18:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "5,17:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "4,18:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "6,17:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "5,18:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "6,18:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "3,18:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "2,19:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "4,18:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "3,19:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "5,18:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "4,19:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "6,18:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "5,19:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "6,19:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "3,19:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "2,20:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "4,19:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "3,20:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "5,19:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "4,20:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "6,19:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "5,20:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "6,20:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "3,20:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "2,21:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "4,20:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "3,21:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "5,20:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "4,21:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "6,20:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "5,21:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "6,21:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "3,21:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "4,21:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "5,21:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "6,21:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "6,10:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "6,9:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "6,8:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "7,9:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "8,9:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "9,9:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "10,9:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "11,9:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "12,9:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "11,4:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "12,4:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "13,4:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "21,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "22,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "23,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,8:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,9:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,10:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,11:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,12:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,13:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,14:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,12:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "25,12:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "24,12:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "23,12:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "22,12:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,16:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,17:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,18:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,19:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,20:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "23,17:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "22,17:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "6,7:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "4,3:west": {
+                  "kind": "door",
+                  "door": {
+                    "kind": "secret",
+                    "stuck": false,
+                    "locked": false,
+                    "starts_open": false,
+                    "requires": null
+                  }
+                },
+                "10,4:west": {
+                  "kind": "door",
+                  "door": {
+                    "kind": "normal",
+                    "stuck": false,
+                    "locked": false,
+                    "starts_open": false,
+                    "requires": null
+                  }
+                },
+                "14,4:west": {
+                  "kind": "door",
+                  "door": {
+                    "kind": "normal",
+                    "stuck": true,
+                    "locked": false,
+                    "starts_open": false,
+                    "requires": null
+                  }
+                },
+                "20,3:west": {
+                  "kind": "door",
+                  "door": {
+                    "kind": "normal",
+                    "stuck": false,
+                    "locked": true,
+                    "starts_open": false,
+                    "requires": null
+                  }
+                },
+                "24,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,7:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "16,9:north": {
+                  "kind": "door",
+                  "door": {
+                    "kind": "normal",
+                    "stuck": false,
+                    "locked": false,
+                    "starts_open": false,
+                    "requires": null
+                  }
+                },
+                "13,9:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,8:north": {
+                  "kind": "door",
+                  "door": {
+                    "kind": "normal",
+                    "stuck": true,
+                    "locked": true,
+                    "starts_open": false,
+                    "requires": null
+                  }
+                },
+                "21,12:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "26,15:north": {
+                  "kind": "door",
+                  "door": {
+                    "kind": "normal",
+                    "stuck": false,
+                    "locked": false,
+                    "starts_open": true,
+                    "requires": null
+                  }
+                },
+                "16,15:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "24,17:west": {
+                  "kind": "door",
+                  "door": {
+                    "kind": "secret",
+                    "stuck": false,
+                    "locked": false,
+                    "starts_open": false,
+                    "requires": null
+                  }
+                }
+              },
+              "areas": [
+                {
+                  "id": "entry",
+                  "name": "Entry hall",
+                  "description": "Dust lies thick on a floor of cracked flagstones. An offering bowl rests on a plinth.",
+                  "cells": [
+                    [4, 2],
+                    [5, 2],
+                    [6, 2],
+                    [7, 2],
+                    [8, 2],
+                    [9, 2],
+                    [4, 3],
+                    [5, 3],
+                    [6, 3],
+                    [7, 3],
+                    [8, 3],
+                    [9, 3],
+                    [4, 4],
+                    [5, 4],
+                    [6, 4],
+                    [7, 4],
+                    [8, 4],
+                    [9, 4],
+                    [4, 5],
+                    [5, 5],
+                    [6, 5],
+                    [7, 5],
+                    [8, 5],
+                    [9, 5],
+                    [4, 6],
+                    [5, 6],
+                    [6, 6],
+                    [7, 6],
+                    [8, 6],
+                    [9, 6]
+                  ],
+                  "encounter": null,
+                  "features": [
+                    {
+                      "id": "offering_bowl",
+                      "kind": "treasure_cache",
+                      "description": "A bronze bowl of old coins.",
+                      "cell": [6, 3],
+                      "item_ids": [],
+                      "magic_item_ids": [],
+                      "coins": {
+                        "pp": 0,
+                        "gp": 12,
+                        "ep": 0,
+                        "sp": 30,
+                        "cp": 0
+                      },
+                      "valuables": [],
+                      "trap": null
+                    }
+                  ],
+                  "trap": null,
+                  "treasure": null
+                },
+                {
+                  "id": "closet",
+                  "name": "Secret closet",
+                  "description": "A narrow space behind the wall, stacked with forgotten crates.",
+                  "cells": [
+                    [2, 2],
+                    [3, 2],
+                    [2, 3],
+                    [3, 3]
+                  ],
+                  "encounter": null,
+                  "features": [
+                    {
+                      "id": "crate_stash",
+                      "kind": "treasure_cache",
+                      "description": "",
+                      "cell": [2, 2],
+                      "item_ids": [],
+                      "magic_item_ids": [],
+                      "coins": {
+                        "pp": 0,
+                        "gp": 40,
+                        "ep": 0,
+                        "sp": 0,
+                        "cp": 0
+                      },
+                      "valuables": [],
+                      "trap": null
+                    }
+                  ],
+                  "trap": null,
+                  "treasure": null
+                },
+                {
+                  "id": "guard_post",
+                  "name": "Guard post",
+                  "description": "Bunks of rotten timber line the walls. A loose stone sits in the floor.",
+                  "cells": [
+                    [14, 2],
+                    [15, 2],
+                    [16, 2],
+                    [17, 2],
+                    [18, 2],
+                    [19, 2],
+                    [14, 3],
+                    [15, 3],
+                    [16, 3],
+                    [17, 3],
+                    [18, 3],
+                    [19, 3],
+                    [14, 4],
+                    [15, 4],
+                    [16, 4],
+                    [17, 4],
+                    [18, 4],
+                    [19, 4],
+                    [14, 5],
+                    [15, 5],
+                    [16, 5],
+                    [17, 5],
+                    [18, 5],
+                    [19, 5],
+                    [14, 6],
+                    [15, 6],
+                    [16, 6],
+                    [17, 6],
+                    [18, 6],
+                    [19, 6]
+                  ],
+                  "encounter": {
+                    "monsters": [
+                      {
+                        "template_id": "goblin",
+                        "count_dice": null,
+                        "count_fixed": 4
+                      }
+                    ],
+                    "alignment": null,
+                    "aware": false,
+                    "stance": null,
+                    "hoard": false
+                  },
+                  "features": [
+                    {
+                      "id": "loose_stone",
+                      "kind": "construction_trick",
+                      "description": "A stone that slides.",
+                      "cell": [17, 5],
+                      "item_ids": [],
+                      "magic_item_ids": [],
+                      "coins": {
+                        "pp": 0,
+                        "gp": 0,
+                        "ep": 0,
+                        "sp": 0,
+                        "cp": 0
+                      },
+                      "valuables": [],
+                      "trap": null
+                    }
+                  ],
+                  "trap": {
+                    "kind": "room",
+                    "trigger": "enter",
+                    "effect": {
+                      "damage_dice": "1d6",
+                      "volley_dice": null,
+                      "save": null,
+                      "kills": false,
+                      "condition": null,
+                      "condition_duration_dice": null,
+                      "condition_duration_amount": null,
+                      "condition_duration_unit": null,
+                      "fall_feet": null,
+                      "transition": null,
+                      "manual": null
+                    },
+                    "affects": "triggerer"
+                  },
+                  "treasure": null
+                },
+                {
+                  "id": "shrine",
+                  "name": "Shrine of the hollow god",
+                  "description": "A black altar stands under a vaulted ceiling. Its basin holds a hoard.",
+                  "cells": [
+                    [24, 2],
+                    [25, 2],
+                    [26, 2],
+                    [27, 2],
+                    [28, 2],
+                    [29, 2],
+                    [24, 3],
+                    [25, 3],
+                    [26, 3],
+                    [27, 3],
+                    [28, 3],
+                    [29, 3],
+                    [24, 4],
+                    [25, 4],
+                    [26, 4],
+                    [27, 4],
+                    [28, 4],
+                    [29, 4],
+                    [24, 5],
+                    [25, 5],
+                    [26, 5],
+                    [27, 5],
+                    [28, 5],
+                    [29, 5],
+                    [24, 6],
+                    [25, 6],
+                    [26, 6],
+                    [27, 6],
+                    [28, 6],
+                    [29, 6],
+                    [24, 7],
+                    [25, 7],
+                    [26, 7],
+                    [27, 7],
+                    [28, 7],
+                    [29, 7]
+                  ],
+                  "encounter": null,
+                  "features": [
+                    {
+                      "id": "altar_hoard",
+                      "kind": "treasure_cache",
+                      "description": "",
+                      "cell": [27, 3],
+                      "item_ids": [],
+                      "magic_item_ids": [],
+                      "coins": {
+                        "pp": 5,
+                        "gp": 120,
+                        "ep": 0,
+                        "sp": 0,
+                        "cp": 0
+                      },
+                      "valuables": [],
+                      "trap": {
+                        "kind": "treasure",
+                        "trigger": "open",
+                        "effect": {
+                          "damage_dice": "1d4",
+                          "volley_dice": null,
+                          "save": null,
+                          "kills": false,
+                          "condition": null,
+                          "condition_duration_dice": null,
+                          "condition_duration_amount": null,
+                          "condition_duration_unit": null,
+                          "fall_feet": null,
+                          "transition": null,
+                          "manual": null
+                        },
+                        "affects": "triggerer"
+                      }
+                    }
+                  ],
+                  "trap": null,
+                  "treasure": null
+                },
+                {
+                  "id": "pillared_hall",
+                  "name": "Pillared hall",
+                  "description": "Rows of fluted pillars hold up a sagging roof. Some flagstones are hollow.",
+                  "cells": [
+                    [13, 9],
+                    [14, 9],
+                    [15, 9],
+                    [16, 9],
+                    [17, 9],
+                    [18, 9],
+                    [19, 9],
+                    [20, 9],
+                    [13, 10],
+                    [14, 10],
+                    [15, 10],
+                    [16, 10],
+                    [17, 10],
+                    [18, 10],
+                    [19, 10],
+                    [20, 10],
+                    [13, 11],
+                    [14, 11],
+                    [15, 11],
+                    [16, 11],
+                    [17, 11],
+                    [18, 11],
+                    [19, 11],
+                    [20, 11],
+                    [13, 12],
+                    [14, 12],
+                    [15, 12],
+                    [16, 12],
+                    [17, 12],
+                    [18, 12],
+                    [19, 12],
+                    [20, 12],
+                    [13, 13],
+                    [14, 13],
+                    [15, 13],
+                    [16, 13],
+                    [17, 13],
+                    [18, 13],
+                    [19, 13],
+                    [20, 13],
+                    [13, 14],
+                    [14, 14],
+                    [15, 14],
+                    [16, 14],
+                    [17, 14],
+                    [18, 14],
+                    [19, 14],
+                    [20, 14]
+                  ],
+                  "encounter": null,
+                  "features": [],
+                  "trap": {
+                    "kind": "room",
+                    "trigger": "enter",
+                    "effect": {
+                      "damage_dice": null,
+                      "volley_dice": null,
+                      "save": null,
+                      "kills": false,
+                      "condition": null,
+                      "condition_duration_dice": null,
+                      "condition_duration_amount": null,
+                      "condition_duration_unit": null,
+                      "fall_feet": 10,
+                      "transition": null,
+                      "manual": null
+                    },
+                    "affects": "triggerer"
+                  },
+                  "treasure": {
+                    "letters": [],
+                    "unguarded": true
+                  }
+                },
+                {
+                  "id": "stair_room",
+                  "name": "Stair chamber",
+                  "description": "Worn steps spiral down into the dark.",
+                  "cells": [
+                    [24, 15],
+                    [25, 15],
+                    [26, 15],
+                    [27, 15],
+                    [28, 15],
+                    [24, 16],
+                    [25, 16],
+                    [26, 16],
+                    [27, 16],
+                    [28, 16],
+                    [24, 17],
+                    [25, 17],
+                    [26, 17],
+                    [27, 17],
+                    [28, 17],
+                    [24, 18],
+                    [25, 18],
+                    [26, 18],
+                    [27, 18],
+                    [28, 18],
+                    [24, 19],
+                    [25, 19],
+                    [26, 19],
+                    [27, 19],
+                    [28, 19]
+                  ],
+                  "encounter": {
+                    "monsters": [
+                      {
+                        "template_id": "skeleton",
+                        "count_dice": null,
+                        "count_fixed": 3
+                      }
+                    ],
+                    "alignment": null,
+                    "aware": false,
+                    "stance": null,
+                    "hoard": true
+                  },
+                  "features": [],
+                  "trap": null,
+                  "treasure": null
+                },
+                {
+                  "id": "grotto",
+                  "name": "Hidden grotto",
+                  "description": "Water drips into a still pool.",
+                  "cells": [
+                    [2, 17],
+                    [3, 17],
+                    [4, 17],
+                    [5, 17],
+                    [6, 17],
+                    [2, 18],
+                    [3, 18],
+                    [4, 18],
+                    [5, 18],
+                    [6, 18],
+                    [2, 19],
+                    [3, 19],
+                    [4, 19],
+                    [5, 19],
+                    [6, 19],
+                    [2, 20],
+                    [3, 20],
+                    [4, 20],
+                    [5, 20],
+                    [6, 20],
+                    [2, 21],
+                    [3, 21],
+                    [4, 21],
+                    [5, 21],
+                    [6, 21]
+                  ],
+                  "encounter": null,
+                  "features": [
+                    {
+                      "id": "pool",
+                      "kind": "custom",
+                      "description": "A still, clear pool.",
+                      "cell": [4, 19],
+                      "item_ids": [],
+                      "magic_item_ids": [],
+                      "coins": {
+                        "pp": 0,
+                        "gp": 0,
+                        "ep": 0,
+                        "sp": 0,
+                        "cp": 0
+                      },
+                      "valuables": [],
+                      "trap": null
+                    }
+                  ],
+                  "trap": null,
+                  "treasure": null
+                }
+              ],
+              "features": [
+                {
+                  "id": "carved_face",
+                  "kind": "custom",
+                  "description": "A face carved in the wall.",
+                  "cell": [6, 8],
+                  "item_ids": [],
+                  "magic_item_ids": [],
+                  "coins": {
+                    "pp": 0,
+                    "gp": 0,
+                    "ep": 0,
+                    "sp": 0,
+                    "cp": 0
+                  },
+                  "valuables": [],
+                  "trap": null
+                }
+              ],
+              "transitions": [
+                {
+                  "kind": "stairs_down",
+                  "position": [26, 17],
+                  "side": null,
+                  "to_dungeon_id": "vault",
+                  "to_level_number": 2,
+                  "to_position": [3, 3],
+                  "to_facing": "east",
+                  "requires": null
+                },
+                {
+                  "kind": "trapdoor",
+                  "position": [16, 18],
+                  "side": null,
+                  "to_dungeon_id": "vault",
+                  "to_level_number": 2,
+                  "to_position": [10, 8],
+                  "to_facing": "south",
+                  "requires": null
+                },
+                {
+                  "kind": "passage",
+                  "position": [16, 20],
+                  "side": "west",
+                  "to_dungeon_id": "vault",
+                  "to_level_number": 1,
+                  "to_position": [6, 19],
+                  "to_facing": "west",
+                  "requires": null
+                }
+              ],
+              "wandering": {
+                "chance_in_six": 0,
+                "interval_turns": 2,
+                "table": null
+              },
+              "entrance": [6, 10],
+              "guidance": ""
+            },
+            {
+              "number": 2,
+              "width": 20,
+              "height": 14,
+              "edges": {
+                "2,1:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "1,2:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "3,1:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "2,2:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "4,1:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "3,2:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "5,1:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "4,2:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "5,2:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "2,2:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "1,3:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "3,2:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "2,3:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "4,2:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "3,3:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "5,2:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "4,3:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "5,3:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "2,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "1,4:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "3,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "2,4:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "4,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "3,4:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "5,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "4,4:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "5,4:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "2,4:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "1,5:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "3,4:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "2,5:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "4,4:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "3,5:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "5,4:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "4,5:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "5,5:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "2,5:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "3,5:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "4,5:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "5,5:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "9,7:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "8,8:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "10,7:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "9,8:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "11,7:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "10,8:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "12,7:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "11,8:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "12,8:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "9,8:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "8,9:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "10,8:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "9,9:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "11,8:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "10,9:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "12,8:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "11,9:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "12,9:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "9,9:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "8,10:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "10,9:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "9,10:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "11,9:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "10,10:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "12,9:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "11,10:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "12,10:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "9,10:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "10,10:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "11,10:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "12,10:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "7,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "8,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "9,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "10,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "10,4:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "10,5:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "10,6:north": {
+                  "kind": "open",
+                  "door": null
+                },
+                "6,3:west": {
+                  "kind": "open",
+                  "door": null
+                },
+                "10,7:north": {
+                  "kind": "door",
+                  "door": {
+                    "kind": "normal",
+                    "stuck": false,
+                    "locked": false,
+                    "starts_open": false,
+                    "requires": null
+                  }
+                }
+              },
+              "areas": [
+                {
+                  "id": "landing",
+                  "name": "Landing",
+                  "description": "The stairs end in a round chamber.",
+                  "cells": [
+                    [1, 1],
+                    [2, 1],
+                    [3, 1],
+                    [4, 1],
+                    [5, 1],
+                    [1, 2],
+                    [2, 2],
+                    [3, 2],
+                    [4, 2],
+                    [5, 2],
+                    [1, 3],
+                    [2, 3],
+                    [3, 3],
+                    [4, 3],
+                    [5, 3],
+                    [1, 4],
+                    [2, 4],
+                    [3, 4],
+                    [4, 4],
+                    [5, 4],
+                    [1, 5],
+                    [2, 5],
+                    [3, 5],
+                    [4, 5],
+                    [5, 5]
+                  ],
+                  "encounter": null,
+                  "features": [],
+                  "trap": null,
+                  "treasure": null
+                },
+                {
+                  "id": "pit_cell",
+                  "name": "Pit cell",
+                  "description": "A cell with no door handle on the inside.",
+                  "cells": [
+                    [8, 7],
+                    [9, 7],
+                    [10, 7],
+                    [11, 7],
+                    [12, 7],
+                    [8, 8],
+                    [9, 8],
+                    [10, 8],
+                    [11, 8],
+                    [12, 8],
+                    [8, 9],
+                    [9, 9],
+                    [10, 9],
+                    [11, 9],
+                    [12, 9],
+                    [8, 10],
+                    [9, 10],
+                    [10, 10],
+                    [11, 10],
+                    [12, 10]
+                  ],
+                  "encounter": null,
+                  "features": [],
+                  "trap": null,
+                  "treasure": null
+                }
+              ],
+              "features": [],
+              "transitions": [
+                {
+                  "kind": "stairs_up",
+                  "position": [3, 3],
+                  "side": null,
+                  "to_dungeon_id": "vault",
+                  "to_level_number": 1,
+                  "to_position": [26, 17],
+                  "to_facing": "west",
+                  "requires": null
+                },
+                {
+                  "kind": "chute",
+                  "position": [12, 10],
+                  "side": null,
+                  "to_dungeon_id": "vault",
+                  "to_level_number": 1,
+                  "to_position": [17, 11],
+                  "to_facing": "north",
+                  "requires": null
+                }
+              ],
+              "wandering": {
+                "chance_in_six": 0,
+                "interval_turns": 2,
+                "table": null
+              },
+              "entrance": null,
+              "guidance": ""
+            }
+          ]
+        }
+      ]
+    },
+    "dungeon_state": {
+      "location": {
+        "kind": "dungeon",
+        "dungeon_id": "vault",
+        "level_number": 2,
+        "position": [11, 8],
+        "facing": "east"
+      },
+      "explored": {
+        "vault:1": [
+          [6, 10],
+          [6, 9],
+          [6, 8],
+          [6, 7],
+          [6, 6],
+          [6, 5],
+          [6, 4],
+          [6, 3],
+          [9, 4],
+          [10, 4],
+          [11, 4],
+          [12, 4],
+          [13, 4],
+          [16, 4],
+          [17, 5],
+          [15, 3],
+          [16, 5],
+          [18, 5],
+          [17, 4],
+          [16, 3],
+          [18, 4],
+          [15, 4],
+          [19, 4],
+          [16, 8],
+          [16, 9],
+          [16, 10],
+          [16, 11],
+          [15, 11],
+          [27, 3],
+          [26, 10],
+          [26, 11],
+          [26, 12],
+          [25, 12],
+          [24, 12],
+          [26, 13],
+          [26, 14],
+          [26, 16],
+          [14, 11],
+          [16, 13],
+          [16, 14],
+          [16, 15],
+          [16, 16],
+          [16, 17],
+          [16, 18]
+        ],
+        "vault:2": [
+          [10, 8],
+          [11, 8]
+        ]
+      },
+      "seen": {
+        "vault:1": [
+          [6, 7],
+          [6, 8],
+          [6, 9],
+          [6, 10],
+          [7, 9],
+          [8, 9],
+          [9, 9],
+          [4, 6],
+          [5, 6],
+          [6, 6],
+          [7, 6],
+          [8, 6],
+          [9, 6],
+          [4, 5],
+          [5, 5],
+          [6, 5],
+          [7, 5],
+          [8, 5],
+          [9, 5],
+          [4, 4],
+          [5, 4],
+          [6, 4],
+          [7, 4],
+          [8, 4],
+          [9, 4],
+          [4, 2],
+          [4, 3],
+          [5, 2],
+          [5, 3],
+          [6, 2],
+          [6, 3],
+          [7, 2],
+          [7, 3],
+          [8, 2],
+          [8, 3],
+          [9, 2],
+          [9, 3],
+          [10, 4],
+          [11, 4],
+          [12, 4],
+          [13, 4],
+          [14, 2],
+          [14, 3],
+          [14, 4],
+          [14, 5],
+          [14, 6],
+          [15, 2],
+          [15, 3],
+          [15, 4],
+          [15, 5],
+          [15, 6],
+          [16, 2],
+          [16, 3],
+          [16, 4],
+          [16, 5],
+          [16, 6],
+          [16, 7],
+          [17, 2],
+          [17, 3],
+          [17, 4],
+          [17, 5],
+          [17, 6],
+          [18, 2],
+          [18, 3],
+          [18, 4],
+          [18, 5],
+          [18, 6],
+          [19, 2],
+          [19, 3],
+          [19, 4],
+          [19, 5],
+          [19, 6],
+          [16, 8],
+          [13, 9],
+          [13, 10],
+          [13, 11],
+          [14, 9],
+          [14, 10],
+          [14, 11],
+          [15, 9],
+          [15, 10],
+          [15, 11],
+          [16, 9],
+          [16, 10],
+          [16, 11],
+          [17, 9],
+          [17, 10],
+          [17, 11],
+          [18, 9],
+          [18, 10],
+          [18, 11],
+          [19, 9],
+          [19, 10],
+          [19, 11],
+          [13, 12],
+          [13, 13],
+          [13, 14],
+          [14, 12],
+          [14, 13],
+          [14, 14],
+          [15, 12],
+          [15, 13],
+          [15, 14],
+          [16, 12],
+          [16, 13],
+          [16, 14],
+          [17, 12],
+          [17, 13],
+          [17, 14],
+          [18, 12],
+          [18, 13],
+          [18, 14],
+          [19, 12],
+          [19, 13],
+          [19, 14],
+          [20, 9],
+          [20, 10],
+          [20, 11],
+          [20, 12],
+          [20, 13],
+          [20, 14],
+          [12, 9],
+          [24, 2],
+          [24, 3],
+          [24, 4],
+          [24, 5],
+          [24, 6],
+          [24, 7],
+          [25, 2],
+          [25, 3],
+          [25, 4],
+          [25, 5],
+          [25, 6],
+          [25, 7],
+          [26, 2],
+          [26, 3],
+          [26, 4],
+          [26, 5],
+          [26, 6],
+          [26, 7],
+          [27, 2],
+          [27, 3],
+          [27, 4],
+          [27, 5],
+          [27, 6],
+          [27, 7],
+          [28, 2],
+          [28, 3],
+          [28, 4],
+          [28, 5],
+          [28, 6],
+          [28, 7],
+          [29, 2],
+          [29, 3],
+          [29, 4],
+          [29, 5],
+          [29, 6],
+          [29, 7],
+          [23, 12],
+          [24, 12],
+          [25, 12],
+          [26, 8],
+          [26, 9],
+          [26, 10],
+          [26, 11],
+          [26, 12],
+          [26, 13],
+          [26, 14],
+          [24, 15],
+          [25, 15],
+          [26, 15],
+          [27, 15],
+          [28, 15],
+          [22, 12],
+          [21, 12],
+          [24, 16],
+          [25, 16],
+          [26, 16],
+          [27, 16],
+          [28, 16],
+          [24, 17],
+          [25, 17],
+          [26, 17],
+          [27, 17],
+          [28, 17],
+          [24, 18],
+          [24, 19],
+          [25, 18],
+          [25, 19],
+          [26, 18],
+          [26, 19],
+          [27, 18],
+          [27, 19],
+          [28, 18],
+          [28, 19],
+          [11, 9],
+          [16, 15],
+          [16, 16],
+          [16, 17],
+          [16, 18],
+          [16, 19],
+          [16, 20]
+        ],
+        "vault:2": [
+          [8, 7],
+          [8, 8],
+          [8, 9],
+          [8, 10],
+          [9, 7],
+          [9, 8],
+          [9, 9],
+          [9, 10],
+          [10, 7],
+          [10, 8],
+          [10, 9],
+          [10, 10],
+          [11, 7],
+          [11, 8],
+          [11, 9],
+          [11, 10],
+          [12, 7],
+          [12, 8],
+          [12, 9],
+          [12, 10]
+        ]
+      },
+      "doors": {
+        "vault:1:4,3:west": {
+          "open": false,
+          "wedged": false,
+          "discovered": true,
+          "unlocked": false,
+          "opened_by_party": false
+        },
+        "vault:1:10,4:west": {
+          "open": false,
+          "wedged": false,
+          "discovered": false,
+          "unlocked": false,
+          "opened_by_party": true
+        },
+        "vault:1:14,4:west": {
+          "open": true,
+          "wedged": false,
+          "discovered": false,
+          "unlocked": false,
+          "opened_by_party": false
+        },
+        "vault:1:16,9:north": {
+          "open": true,
+          "wedged": true,
+          "discovered": false,
+          "unlocked": false,
+          "opened_by_party": true
+        },
+        "vault:1:20,3:west": {
+          "open": false,
+          "wedged": false,
+          "discovered": false,
+          "unlocked": true,
+          "opened_by_party": false
+        }
+      },
+      "sprung_traps": ["vault:1:pillared_hall"],
+      "removed_traps": [],
+      "found_traps": ["vault:1:guard_post"],
+      "found_tricks": [],
+      "emptied_caches": ["vault:1:offering_bowl"],
+      "piles": {
+        "cell:vault:1:6,9": {
+          "items": [
+            {
+              "item_id": "dagger",
+              "quantity": 1
+            }
+          ],
+          "coins": {
+            "pp": 0,
+            "gp": 0,
+            "ep": 0,
+            "sp": 0,
+            "cp": 0
+          },
+          "valuables": [],
+          "magic_items": []
+        }
+      },
+      "generated_caches": {
+        "cache-0001": {
+          "cell_ref": "cell:vault:1:16,9",
+          "treasure_types": ["unguarded"],
+          "coins": {
+            "pp": 0,
+            "gp": 60,
+            "ep": 0,
+            "sp": 100,
+            "cp": 0
+          },
+          "valuables": [],
+          "magic_items": []
+        }
+      },
+      "generated_treasure_areas": ["vault:1:pillared_hall"],
+      "generated_lair_hoards": [],
+      "resolved_encounters": [],
+      "listen_attempts": {},
+      "search_attempts": {
+        "cell:vault:1:16,4:room_traps": [
+          "character-0002",
+          "character-0001",
+          "character-0003",
+          "character-0004"
+        ],
+        "cell:vault:1:17,5:room_traps": ["character-0002", "character-0003"],
+        "cell:vault:1:15,3:room_traps": ["character-0002"],
+        "cell:vault:1:17,5:construction": ["character-0002"],
+        "cell:vault:1:16,5:construction": ["character-0002"],
+        "cell:vault:1:18,5:construction": ["character-0002"],
+        "cell:vault:1:17,4:construction": ["character-0002"],
+        "cell:vault:1:16,3:construction": ["character-0002"],
+        "cell:vault:1:18,4:construction": ["character-0002"],
+        "cell:vault:1:15,4:construction": ["character-0002"],
+        "cell:vault:1:19,4:construction": ["character-0002"]
+      },
+      "inspect_attempts": {
+        "vault:1:altar_hoard": ["character-0004"]
+      },
+      "removal_attempts": {},
+      "lock_failures": {}
+    }
+  }
+}
