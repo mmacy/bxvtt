@@ -26,14 +26,6 @@
   min-width: 0;
 }
 
-.textareaWrap .textarea {
-  min-height: var(--control-md);
-  max-height: 168px;
-  padding: 5px var(--space-2-5);
-  resize: none;
-  overflow-y: auto;
-}
-
 .tools {
   display: flex;
   flex: none;

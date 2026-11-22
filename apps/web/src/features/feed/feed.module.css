@@ -31,10 +31,6 @@
   border-bottom: var(--border-hair) solid var(--color-border);
 }
 
-.search input::-webkit-search-cancel-button {
-  appearance: none;
-}
-
 .searchCount {
   margin: 0;
   font-size: var(--text-xs);
@@ -467,16 +463,6 @@
   min-width: 0;
 }
 
-/* The tumble is inert in the feed, so its skip button can't be pressed. */
-.rollDice button {
-  display: none;
-}
-
-/* The roll header already names the dice, so the kit's formula line is redundant here. */
-.rollDice > [role='group'] > [aria-hidden='true']:first-child {
-  display: none;
-}
-
 .breakdown {
   display: inline-flex;
   flex-wrap: wrap;
@@ -662,7 +648,20 @@
   color: var(--color-referee);
 }
 
+.detail p {
+  margin: 0;
+}
+
+.refereeDetail {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-referee);
+}
+
 .detail {
+  display: grid;
+  gap: 2px;
   margin: 2px 0 var(--space-1) calc(16px + var(--space-2) + var(--space-1-5));
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-sm);

@@ -1,5 +1,5 @@
 import type { ChatEntry, FeedEntry, GameEntry, RollEntry } from '@bxvtt/shared/protocol';
-import { screen, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { renderWithTable } from '@/app/testing/renderWithTable';
@@ -119,7 +119,7 @@ describe('FeedPanel', () => {
 
   it('shows referee events only to a referee with the lens on', () => {
     const referee = fixtureSnapshot('exploring', 'referee');
-    const hidden = /The adventure trigger/;
+    const hidden = /trigger fires/;
     const lensOn = renderWithTable(<FeedPanel />, { snapshot: referee });
     expect(screen.getByText(hidden)).toBeInTheDocument();
     lensOn.unmount();
@@ -175,5 +175,24 @@ describe('FeedPanel', () => {
     await user.click(screen.getByRole('radio', { name: 'Chat' }));
     expect(screen.getByText('Roll for initiative, please.')).toBeInTheDocument();
     expect(screen.queryByText(/The party enters the gatehouse stair/)).not.toBeInTheDocument();
+  });
+
+  it('marks entries that arrive behind another tab as unread, and stays quiet', () => {
+    const { store, container } = renderWithTable(<FeedPanel />, { preferences: { dockTab: 'party' } });
+    act(() => {
+      store.getState().receive({ type: 'feed', entry: chat(80, RUTH, 'The bell tolls again.') });
+    });
+    expect(screen.getByRole('separator', { name: 'New since you last looked' })).toBeInTheDocument();
+    const live = container.querySelector('[aria-live="polite"][aria-atomic="true"]');
+    expect(live?.textContent).toBe('');
+  });
+
+  it('announces entries from others while the feed is shown', () => {
+    const { store, container } = renderWithTable(<FeedPanel />, { preferences: { dockTab: 'feed' } });
+    act(() => {
+      store.getState().receive({ type: 'feed', entry: chat(81, RUTH, 'Roll for surprise.') });
+    });
+    const live = container.querySelector('[aria-live="polite"][aria-atomic="true"]');
+    expect(live?.textContent).toBe('Ruth: Roll for surprise.');
   });
 });

@@ -62,7 +62,7 @@ export function isEntryVisible(entry: FeedEntry, selfId: string | null, lens: bo
     return entry.user_id === selfId;
   if (entry.kind === 'game') {
     if (entry.visibility === 'referees') return false;
-    return visibleEvents(entry, false).events.length > 0;
+    return visibleEvents(entry, false).length > 0;
   }
   return entry.visibility !== 'referees' || entry.user_id === selfId;
 }

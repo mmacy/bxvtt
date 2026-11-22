@@ -6,6 +6,7 @@ import { addDie, EMPTY_TRAY, parseDiceExpression, rollSentence, rollView, trayEx
 import { markupText, parseMarkup } from './markup';
 import { movementRunText, movementSteps, narrateEntry } from './narrate';
 import { buildRows, isEntryVisible, type FeedRow, type RowOptions } from './rows';
+import { soundFor } from '../sounds';
 
 const RUTH = 'usr_ruthruthruthruthruthr';
 const SAM = 'usr_samsamsamsamsamsamsam';
@@ -278,6 +279,14 @@ describe('game entries', () => {
         { turned: true, facing: 'west' },
       ]),
     ).toBe('The party moves 2 steps and turns once, facing west.');
+    expect(movementRunText([{ turned: false, facing: 'north' }])).toBe('The party moves north.');
+    expect(
+      movementRunText([
+        { turned: false, facing: 'north' },
+        { turned: false, facing: 'north' },
+      ]),
+    ).toBe('The party moves 2 steps north.');
+    expect(movementRunText([{ turned: true, facing: 'west' }])).toBe('The party turns to face west.');
   });
 });
 
@@ -393,8 +402,8 @@ describe('feed rows', () => {
   });
 });
 
-describe('coordinates', () => {
-  it('leaves map coordinates out of the narration', () => {
+describe('referee detail', () => {
+  it('shows the cell of a step only through the lens', () => {
     const entry = game(SAM, 'move_party', [
       step('north'),
       {
@@ -406,10 +415,21 @@ describe('coordinates', () => {
         y: 1,
       },
     ]);
-    const narration = narrateEntry(entry, ctx, { lens: true });
-    expect(narration.text).toContain('The party moves one step, facing north.');
-    expect(narration.text).not.toMatch(/\(\d+, \d+\)/);
-    const door = narration.items.find((item) => item.kind === 'line' && item.line.eventType === 'door');
-    expect(door?.kind === 'line' && door.line.detail).toBeFalsy();
+    const open = narrateEntry(entry, ctx, { lens: true });
+    const closed = narrateEntry(entry, ctx, { lens: false });
+    expect(closed.text).toContain('The party moves north.');
+    const lines = (narration: typeof open) =>
+      narration.items.flatMap((item) => (item.kind === 'line' ? [item.line] : []));
+    expect(lines(open).some((line) => line.refereeDetail !== undefined)).toBe(true);
+    expect(lines(closed).every((line) => line.refereeDetail === undefined)).toBe(true);
+  });
+});
+
+describe('sounds', () => {
+  it('chimes for a whisper to you and clatters for a roll', () => {
+    expect(soundFor([chat(RUTH, 'psst', { visibility: 'users', to: [SAM] })], SAM)).toBe('whisper');
+    expect(soundFor([chat(SAM, 'psst', { visibility: 'users', to: [RUTH] })], SAM)).toBeNull();
+    expect(soundFor([roll(SAM, '1d20', [12])], SAM)).toBe('roll');
+    expect(soundFor([chat(RUTH, 'hello')], SAM)).toBeNull();
   });
 });

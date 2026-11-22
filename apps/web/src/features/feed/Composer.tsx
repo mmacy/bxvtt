@@ -21,7 +21,6 @@ import styles from './composer.module.css';
 const trays = new Map<string, { tray: TrayState; label: string; secret: boolean; open: boolean }>();
 
 const COUNT_FROM = LIMITS.feedText - 400;
-const MAX_HEIGHT = 168;
 
 export interface ComposerProps {
   /** Called with the entry the server stored, so the feed can show it at once. */
@@ -75,14 +74,6 @@ export function Composer({ onPosted, insert }: ComposerProps) {
   useEffect(() => {
     trays.set(tableId, { tray, label: trayLabel, secret, open: trayOpen });
   }, [tableId, tray, trayLabel, secret, trayOpen]);
-
-  // Grow the box with its text, up to a few lines.
-  useEffect(() => {
-    const element = input.current;
-    if (!element) return;
-    element.style.height = 'auto';
-    element.style.height = `${Math.min(MAX_HEIGHT, element.scrollHeight)}px`;
-  }, [text]);
 
   const [insertNonce, setInsertNonce] = useState<number | null>(null);
   if (insert && insert.nonce !== insertNonce) {
@@ -332,7 +323,9 @@ export function Composer({ onPosted, insert }: ComposerProps) {
       <div className={styles.inputRow}>
         <Textarea
           ref={input}
-          rows={1}
+          minRows={1}
+          autoGrow
+          maxRows={6}
           value={text}
           aria-label={whispering ? `Whisper to ${joinList(targetNames)}` : 'Message the table'}
           aria-describedby={describedBy}
@@ -341,7 +334,6 @@ export function Composer({ onPosted, insert }: ComposerProps) {
           aria-activedescendant={suggestions.length > 0 ? `${listId}-${activeIndex}` : undefined}
           aria-autocomplete="list"
           placeholder={whispering ? `Whisper to ${joinList(targetNames)}` : 'Message the table'}
-          className={styles.textarea}
           wrapperClassName={styles.textareaWrap}
           onChange={(event) => {
             setText(event.target.value);
