@@ -382,9 +382,8 @@ function countMatches(rows: readonly FeedRow[]): number {
   return rows.reduce((sum, row) => {
     switch (row.type) {
       case 'messages':
-      case 'moves':
+      case 'command':
         return sum + row.entries.length;
-      case 'game':
       case 'system':
         return sum + 1;
       default:

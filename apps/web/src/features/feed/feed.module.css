@@ -332,16 +332,6 @@
   margin-left: auto;
 }
 
-.author,
-.actor {
-  --author: var(--color-text-strong);
-}
-
-.author[style],
-.actor[style] {
-  color: color-mix(in oklab, var(--author) 70%, var(--color-text-strong));
-}
-
 .author {
   min-width: 0;
   overflow: hidden;
@@ -503,26 +493,7 @@
   padding: var(--space-2) var(--space-3) var(--space-1);
 }
 
-.gameCompact {
-  padding-top: 0;
-}
-
 .gameHeader,
-.gameHeaderCompact {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 22px;
-  margin-bottom: 2px;
-  font-size: var(--text-sm);
-}
-
-.gameHeaderCompact {
-  min-height: 18px;
-  padding-left: calc(20px + var(--space-2));
-  font-size: var(--text-xs);
-}
-
 .gameTitle {
   display: flex;
   flex: 1;
@@ -770,6 +741,27 @@
   background: var(--color-success-subtle);
 }
 
+.weight-milestone > .lineRow {
+  margin-block: var(--space-1);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--color-gold-subtle);
+  box-shadow:
+    inset 3px 0 0 var(--color-gold),
+    0 0 0 var(--border-hair) var(--color-gold);
+}
+
+.weight-milestone .lineText {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-strong);
+}
+
+.weight-milestone .lineIcon {
+  height: 22px;
+  color: var(--color-gold);
+}
+
 .weight-critical > .lineRow {
   margin-block: var(--space-1);
   padding: var(--space-2) var(--space-2);
@@ -798,8 +790,14 @@
   padding: var(--space-2) var(--space-3);
 }
 
+.handoutKind {
+  margin-right: var(--space-1);
+  font-weight: var(--weight-semibold);
+}
+
 .handoutLabel {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-1);
   margin: 0;
@@ -833,55 +831,12 @@
 }
 
 /* Entry weight */
-.entry-critical {
-  padding-block: var(--space-2);
-}
 
 /* Party movement */
 
-.moves {
-  padding: 1px var(--space-3);
-}
-
-.movesButton {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  width: 100%;
-  min-height: 26px;
-  padding: 2px var(--space-1-5);
-  border-radius: var(--radius-sm);
-  color: var(--color-text-subtle);
+.pathNote {
+  margin: 0;
   font-size: var(--text-sm);
-  text-align: left;
-}
-
-.movesButton:hover:not(:disabled) {
-  background: var(--color-surface-hover);
-}
-
-.movesButton[aria-expanded='true'] {
-  background: var(--color-surface-active);
-}
-
-.movesIcon {
-  flex: none;
-  opacity: 0.8;
-}
-
-.movesText {
-  flex: 1;
-  min-width: 0;
-}
-
-.movesAvatar {
-  flex: none;
-  opacity: 0.8;
-}
-
-.movesText .actor {
-  font-weight: var(--weight-medium);
-  color: var(--color-text-muted);
 }
 
 .path {

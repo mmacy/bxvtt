@@ -13,20 +13,26 @@ export type FeedFilter = 'all' | 'chat' | 'game' | 'rolls' | 'hidden';
 /** A message entry: chat, a whisper, or a dice roll. */
 export type MessageEntry = ChatEntry | RollEntry;
 
+/**
+ * One part of a command group: a run of plain party movement folded into one line, or one entry's events.
+ */
+export type CommandPart =
+  | { kind: 'steps'; key: string; entries: GameEntry[]; steps: PartyStep[]; checks: number }
+  | { kind: 'entry'; key: string; entry: GameEntry };
+
 /** One row of the feed list. */
 export type FeedRow =
   | { type: 'day'; key: string; label: string }
   | { type: 'session'; key: string; entry: SystemEntry | null; sessionId: string | null }
   | { type: 'unread'; key: string }
   | { type: 'messages'; key: string; userId: string | null; entries: MessageEntry[] }
-  | { type: 'game'; key: string; entry: GameEntry; compact: boolean }
   | {
-      type: 'moves';
+      type: 'command';
       key: string;
       userId: string | null;
+      group: string;
       entries: GameEntry[];
-      steps: PartyStep[];
-      checks: number;
+      parts: CommandPart[];
     }
   | { type: 'system'; key: string; entry: SystemEntry };
 
@@ -49,7 +55,15 @@ export interface RowOptions {
 }
 
 const GROUP_WINDOW_MS = 5 * 60 * 1000;
-const COMPACT_WINDOW_MS = 3 * 60 * 1000;
+const COMMAND_WINDOW_MS = 3 * 60 * 1000;
+const MOVEMENT_COMMANDS = new Set(['move_party', 'turn_party']);
+
+/** Which commands share a heading: party movement together, each battle round alone, and otherwise one command type. */
+function commandGroup(entry: GameEntry): string {
+  if (entry.command_type === 'resolve_battle_round') return 'round';
+  if (entry.command_type !== null && MOVEMENT_COMMANDS.has(entry.command_type)) return 'movement';
+  return entry.command_type ?? 'referee';
+}
 const SESSION_CODES = new Set(['game_started', 'save_restored', 'game_ended']);
 
 /**
@@ -218,34 +232,39 @@ export function buildRows(entries: readonly FeedEntry[], options: RowOptions): F
       lastSession = entry.session_id;
       const movement =
         query === '' && options.filter !== 'hidden' ? movementSteps(entry, options.lens) : null;
+      const group = commandGroup(entry);
       const before = rows.at(-1);
-      if (movement !== null) {
-        if (
-          before?.type === 'moves' &&
-          before.userId === entry.user_id &&
-          before.entries[0]?.session_id === entry.session_id
-        ) {
-          before.entries.push(entry);
-          before.steps.push(...movement.steps);
-          before.checks += movement.checks;
-        } else {
-          rows.push({
-            type: 'moves',
-            key: `v${entry.seq}`,
-            userId: entry.user_id,
-            entries: [entry],
-            steps: [...movement.steps],
-            checks: movement.checks,
-          });
-        }
-        continue;
+      const last = before?.type === 'command' ? before.entries.at(-1) : undefined;
+      // One sender's commands of one kind, close together, share one heading. Each battle round has its own.
+      const joins =
+        before?.type === 'command' &&
+        last !== undefined &&
+        group !== 'round' &&
+        before.group === group &&
+        before.userId === entry.user_id &&
+        last.session_id === entry.session_id &&
+        time(entry) - time(last) < COMMAND_WINDOW_MS;
+      const row: Extract<FeedRow, { type: 'command' }> = joins
+        ? before
+        : { type: 'command', key: `g${entry.seq}`, userId: entry.user_id, group, entries: [], parts: [] };
+      if (!joins) rows.push(row);
+      row.entries.push(entry);
+      const tail = row.parts.at(-1);
+      if (movement !== null && tail?.kind === 'steps') {
+        tail.entries.push(entry);
+        tail.steps.push(...movement.steps);
+        tail.checks += movement.checks;
+      } else if (movement !== null) {
+        row.parts.push({
+          kind: 'steps',
+          key: `v${entry.seq}`,
+          entries: [entry],
+          steps: [...movement.steps],
+          checks: movement.checks,
+        });
+      } else {
+        row.parts.push({ kind: 'entry', key: `e${entry.seq}`, entry });
       }
-      const compact =
-        (before?.type === 'game' || before?.type === 'moves') &&
-        (before.type === 'game' ? before.entry.user_id : before.userId) === entry.user_id &&
-        time(entry) - time(before.type === 'game' ? before.entry : (before.entries.at(-1) ?? entry)) <
-          COMPACT_WINDOW_MS;
-      rows.push({ type: 'game', key: `g${entry.seq}`, entry, compact });
       continue;
     }
 
@@ -277,12 +296,17 @@ export function estimateRowHeight(row: FeedRow): number {
       return 32;
     case 'system':
       return 30;
-    case 'moves':
-      return 36;
     case 'messages':
       return 34 + row.entries.reduce((sum, entry) => sum + (entry.kind === 'roll' ? 76 : 22), 0);
-    case 'game':
-      return (row.compact ? 12 : 34) + Math.max(1, Math.ceil(row.entry.events.length * 0.7)) * 24;
+    case 'command':
+      return (
+        34 +
+        row.parts.reduce(
+          (sum, part) =>
+            sum + (part.kind === 'steps' ? 26 : Math.max(1, Math.ceil(part.entry.events.length * 0.7)) * 24),
+          0,
+        )
+      );
   }
 }
 
@@ -290,6 +314,7 @@ export function estimateRowHeight(row: FeedRow): number {
 export function commandLabel(entry: GameEntry): string | null {
   if (entry.command_type === null) return null;
   if (entry.command_type === 'resolve_battle_round') return 'Battle round';
+  if (MOVEMENT_COMMANDS.has(entry.command_type)) return commandInfo('move_party').label;
   return commandInfo(entry.command_type).label;
 }
 
@@ -302,9 +327,8 @@ export function isRefereeCommand(entry: GameEntry): boolean {
 export function lastSeqOf(row: FeedRow): number | null {
   switch (row.type) {
     case 'messages':
-    case 'moves':
+    case 'command':
       return row.entries.at(-1)?.seq ?? null;
-    case 'game':
     case 'system':
       return row.entry.seq;
     case 'session':
@@ -329,15 +353,13 @@ function sameRow(a: FeedRow, b: FeedRow): boolean {
       return b.type === 'session' && a.entry === b.entry && a.sessionId === b.sessionId;
     case 'system':
       return b.type === 'system' && a.entry === b.entry;
-    case 'game':
-      return b.type === 'game' && a.entry === b.entry && a.compact === b.compact;
     case 'messages':
       return b.type === 'messages' && a.userId === b.userId && sameEntries(a.entries, b.entries);
-    case 'moves':
+    case 'command':
       return (
-        b.type === 'moves' &&
+        b.type === 'command' &&
         a.userId === b.userId &&
-        a.checks === b.checks &&
+        a.parts.length === b.parts.length &&
         sameEntries(a.entries, b.entries)
       );
   }

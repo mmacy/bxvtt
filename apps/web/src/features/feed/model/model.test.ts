@@ -312,7 +312,7 @@ describe('feed rows', () => {
     expect(types(list)).toEqual(['day', 'messages', 'messages']);
   });
 
-  it('folds a run of steps into one row', () => {
+  it('folds a run of steps into one line under one heading, and gives the next move the same heading', () => {
     const list = rows([
       game(SAM, 'move_party', [step('north')]),
       game(SAM, 'move_party', [step('north')]),
@@ -328,9 +328,23 @@ describe('feed rows', () => {
         },
       ]),
     ]);
-    expect(types(list)).toEqual(['day', 'moves', 'game']);
+    expect(types(list)).toEqual(['day', 'command', 'command']);
     const moves = list[1];
-    expect(moves?.type === 'moves' && moves.steps).toHaveLength(3);
+    expect(moves?.type === 'command' && moves.parts.map((part) => part.kind)).toEqual(['steps']);
+    expect(
+      moves?.type === 'command' && moves.parts[0]?.kind === 'steps' && moves.parts[0].steps,
+    ).toHaveLength(3);
+
+    const walk = rows([
+      game(SAM, 'move_party', [step('east')]),
+      game(SAM, 'move_party', [
+        step('east'),
+        { event_type: 'location_entered', code: 'x', visibility: 'player' },
+      ]),
+    ]);
+    expect(types(walk)).toEqual(['day', 'command']);
+    const group = walk[1];
+    expect(group?.type === 'command' && group.parts.map((part) => part.kind)).toEqual(['steps', 'entry']);
   });
 
   it('hides referee-only entries without the lens', () => {
@@ -348,7 +362,7 @@ describe('feed rows', () => {
     expect(types(rows([secret, note], { selfId: RUTH, lens: true, filter: 'hidden' }))).toEqual([
       'day',
       'messages',
-      'game',
+      'command',
     ]);
   });
 
@@ -399,7 +413,7 @@ describe('feed rows', () => {
         { session_id: 'ses_two' },
       ),
     ]);
-    expect(types(list)).toEqual(['day', 'session', 'game', 'session', 'game']);
+    expect(types(list)).toEqual(['day', 'session', 'command', 'session', 'command']);
   });
 });
 
@@ -497,5 +511,22 @@ describe('talking', () => {
     talk.actor_id = 'character-0001';
     expect(isEntryVisible(talk, SAM, false)).toBe(true);
     expect(narrateEntry(talk, ctx, { lens: false }).text).toContain('Brenna talks to');
+  });
+});
+
+describe('milestones', () => {
+  it('gives a level gained the weight of a milestone', () => {
+    const entry = game(RUTH, 'award_xp', [
+      {
+        event_type: 'leveled_up',
+        code: 'session.level.gained',
+        visibility: 'player',
+        character_id: 'character-0001',
+        new_level: 2,
+        hit_points_gained: 3,
+        title: 'Warrior',
+      },
+    ]);
+    expect(narrateEntry(entry, ctx, { lens: false }).weight).toBe('milestone');
   });
 });

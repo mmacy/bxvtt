@@ -12,10 +12,13 @@ import {
   type TextContext,
 } from '@bxvtt/shared/text';
 
-/** How much a line matters: a step down a corridor is `minor`, and a party member's death is `critical`. */
-export type LineWeight = 'minor' | 'normal' | 'major' | 'critical';
+/**
+ * How much a line matters: a step down a corridor is `minor`, a level gained or a quest completed is a `milestone`,
+ * and a party member's death is `critical`.
+ */
+export type LineWeight = 'minor' | 'normal' | 'major' | 'milestone' | 'critical';
 
-const WEIGHT_ORDER: Record<LineWeight, number> = { minor: 0, normal: 1, major: 2, critical: 3 };
+const WEIGHT_ORDER: Record<LineWeight, number> = { minor: 0, normal: 1, major: 2, milestone: 3, critical: 4 };
 
 /** One line of a game entry. */
 export interface NarratedLine extends EventLine {
@@ -53,9 +56,7 @@ const MINOR_EVENTS = new Set([
 ]);
 
 const MAJOR_EVENTS = new Set([
-  'leveled_up',
   'quest_activated',
-  'quest_completed',
   'objective_completed',
   'objective_revealed',
   'journal_entry_added',
@@ -66,7 +67,8 @@ const MAJOR_EVENTS = new Set([
   'level_drained',
 ]);
 
-const CRITICAL_CODES = new Set(['session.game_over', 'battle.ended.defeat', 'session.adventure.completed']);
+const CRITICAL_CODES = new Set(['session.game_over', 'battle.ended.defeat']);
+const MILESTONE_EVENTS = new Set(['leveled_up', 'quest_completed', 'adventure_completed']);
 
 /**
  * How much a line matters to the story.
@@ -76,6 +78,7 @@ const CRITICAL_CODES = new Set(['session.game_over', 'battle.ended.defeat', 'ses
  */
 export function lineWeight(line: EventLine, ctx: TextContext): LineWeight {
   if (CRITICAL_CODES.has(line.code)) return 'critical';
+  if (MILESTONE_EVENTS.has(line.eventType)) return 'milestone';
   if (line.eventType === 'death' || (line.eventType === 'condition_gained' && line.code.includes('dead'))) {
     const target = line.actorIds.find((id) => id in ctx.members);
     return target !== undefined ? 'critical' : 'normal';
