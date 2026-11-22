@@ -1,4 +1,5 @@
 /** Leaving town: the dungeons the party can set out for, and the dialog that confirms the trip. */
+import { nameInSentence } from '@bxvtt/shared/text';
 import { useState } from 'react';
 import { useParty, useSendCommand } from '@/app';
 import { Banner, Button, Dialog, EmptyState, Icon, RadioGroup, Skeleton } from '@/ui';
@@ -107,7 +108,9 @@ export function LeaveDialog() {
     <Dialog
       open={open}
       onOpenChange={close}
-      title={chosen ? `Set out for ${chosen.name || 'the dungeon'}?` : 'Set out?'}
+      title={
+        chosen ? `Set out for ${chosen.name ? nameInSentence(chosen.name) : 'the dungeon'}?` : 'Set out?'
+      }
       description="The party leaves town together and arrives at the entrance."
       footer={
         <>

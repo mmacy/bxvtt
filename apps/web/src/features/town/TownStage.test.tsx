@@ -101,7 +101,7 @@ describe('leaving town', () => {
     if (!game) throw new Error('No game.');
     api.sendCommand.mockResolvedValue(accepted(game));
     await user.click(await screen.findByRole('button', { name: 'Set out' }));
-    const dialog = await screen.findByRole('dialog', { name: "Set out for The priory on Corvane's Holm?" });
+    const dialog = await screen.findByRole('dialog', { name: "Set out for the priory on Corvane's Holm?" });
     expect(within(dialog).getByText('A tinder box to light it')).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Set out' }));
     await waitFor(() =>
@@ -186,7 +186,9 @@ describe('the outfitter', () => {
         game.revision + 1,
       ),
     );
-    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Clerics can use only certain weapons/, { selector: 'span' }),
+    ).toBeInTheDocument();
     expect(screen.getByText(/^Brenna buys /)).toBeInTheDocument();
     expect(useTownUi.getState().carts['character-0001']).toEqual({});
   });
