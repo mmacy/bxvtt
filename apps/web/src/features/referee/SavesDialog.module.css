@@ -98,10 +98,10 @@
   place-items: center;
   width: var(--control-sm);
   height: var(--control-sm);
-  border: var(--border-hair) solid var(--color-border-accent);
+  border: var(--border-hair) solid var(--color-border-strong);
   border-radius: var(--radius-pill);
   background: var(--color-surface-2);
-  color: var(--color-accent);
+  color: var(--color-text-strong);
 }
 
 .entry[data-autosave] .marker {

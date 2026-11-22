@@ -356,34 +356,41 @@ export function SavesDialog({ open, onOpenChange }: SavesDialogProps) {
       <Dialog
         open={open}
         onOpenChange={onOpenChange}
-        title="Saves"
-        description="Every save of this table's games, newest first."
+        title={game ? 'Saves' : 'Continue from a save'}
+        description={
+          game
+            ? "Every save of this table's games, newest first."
+            : "Every save of this table's games, newest first. Restore one to play on from that moment."
+        }
         size="lg"
       >
         <div className={styles.dialog}>
-          <form className={styles.create} onSubmit={create}>
-            <Field
-              label="Save the game now"
-              hint="A name helps you find it later."
-              error={labelError ?? undefined}
-            >
-              <TextInput
-                value={label}
-                maxLength={LIMITS.saveLabel}
-                placeholder="Before the bell pit"
-                onChange={(e) => setLabel(e.target.value)}
-              />
-            </Field>
-            <Button
-              type="submit"
-              variant="primary"
-              icon="save"
-              loading={pending && restoring === null && deleting === null}
-              disabled={!game}
-            >
-              Save
-            </Button>
-          </form>
+          {/* In the lobby no game is running, so there is nothing to save. */}
+          {game && (
+            <form className={styles.create} onSubmit={create}>
+              <Field
+                label="Save the game now"
+                hint="A name helps you find it later."
+                error={labelError ?? undefined}
+              >
+                <TextInput
+                  value={label}
+                  maxLength={LIMITS.saveLabel}
+                  placeholder="Before the bell pit"
+                  onChange={(e) => setLabel(e.target.value)}
+                />
+              </Field>
+              <Button
+                type="submit"
+                variant="primary"
+                icon="save"
+                loading={pending && restoring === null && deleting === null}
+                disabled={!game}
+              >
+                Save
+              </Button>
+            </form>
+          )}
 
           <div className={styles.autosave}>
             <Icon name="clock" size={14} className={styles.autosaveIcon} />
@@ -419,7 +426,11 @@ export function SavesDialog({ open, onOpenChange }: SavesDialogProps) {
               icon="save"
               size="compact"
               title="No saves yet"
-              description="Save the game above, or play on and let autosave make one."
+              description={
+                game
+                  ? 'Save the game above, or play on and let autosave make one.'
+                  : "This table's games have no saves yet. Start a game, and save it or let autosave make one."
+              }
             />
           ) : (
             saves && (
@@ -461,9 +472,15 @@ export function SavesDialog({ open, onOpenChange }: SavesDialogProps) {
         open={restoring !== null}
         onOpenChange={(next) => !next && setRestoring(null)}
         title={restoring ? `Restore “${saveTitle(restoring)}”?` : 'Restore the save?'}
-        description={`The table moves to a new game that continues from this save${
-          restoring ? `, at ${formatGameClock(restoring.clock.rounds)}` : ''
-        }. Everyone at the table goes with it, and each seat keeps its character. The game you're playing now isn't deleted: you can return to it through its own saves.`}
+        description={
+          game
+            ? `The table moves to a new game that continues from this save${
+                restoring ? `, at ${formatGameClock(restoring.clock.rounds)}` : ''
+              }. Everyone at the table goes with it, and each seat keeps its character. The game you're playing now isn't deleted: you can return to it through its own saves.`
+            : `The table leaves the lobby for a game that continues from this save${
+                restoring ? `, at ${formatGameClock(restoring.clock.rounds)}` : ''
+              }. The party plays on as it was saved, whatever the lobby's party is. Each character goes to the player who had it, and the referee plays any character whose player has left.`
+        }
         confirmLabel="Restore"
         onConfirm={restore}
       >

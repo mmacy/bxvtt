@@ -5,7 +5,7 @@
 import type { TextContext } from '@bxvtt/shared/text';
 import { useMemo, useState } from 'react';
 import { useParty } from '@/app';
-import { Accordion, Badge, Button, EmptyState, Icon, IconButton, Select, Skeleton } from '@/ui';
+import { Accordion, Badge, Button, EmptyState, Icon, IconButton, SectionLabel, Select, Skeleton } from '@/ui';
 import {
   type Adventure,
   type CharacterSheet,
@@ -281,7 +281,7 @@ function QuestBody({
   );
 }
 
-const STATUS_TONE = { inactive: 'neutral', active: 'accent', completed: 'success' } as const;
+const STATUS_TONE = { inactive: 'neutral', active: 'info', completed: 'success' } as const;
 
 function Quests({ data, adventure }: { data: RefereeData; adventure: Adventure }) {
   const states = data.state?.quests ?? {};
@@ -521,15 +521,15 @@ export function StoryState({ data }: { data: RefereeData }) {
   return (
     <div className={styles.section}>
       <section aria-label="Quests">
-        <h3 className={styles.subhead}>Quests</h3>
+        <SectionLabel level={3}>Quests</SectionLabel>
         <Quests data={data} adventure={adventure} />
       </section>
       <section aria-label="Flags">
-        <h3 className={styles.subhead}>Flags</h3>
+        <SectionLabel level={3}>Flags</SectionLabel>
         <Flags data={data} />
       </section>
       <section aria-label="Triggers">
-        <h3 className={styles.subhead}>Triggers</h3>
+        <SectionLabel level={3}>Triggers</SectionLabel>
         <Triggers data={data} adventure={adventure} />
       </section>
     </div>

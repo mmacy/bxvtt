@@ -12,7 +12,7 @@ import {
 } from '@bxvtt/shared/text';
 import { useState } from 'react';
 import { useLegalCommand } from '@/app';
-import { Badge, Button, ConditionChip, HpBar, Icon, RadioGroup, toast } from '@/ui';
+import { Badge, Button, ConditionChip, HpBar, Icon, RadioGroup, SectionLabel, toast } from '@/ui';
 import type { Adventure, MonsterInstance } from '../model/adventure';
 import { templateLabel } from '../model/describe';
 import { CommandOutcome, useRefereeCommand } from '../RefereeCommand';
@@ -224,7 +224,7 @@ export function EncounterNow({
           </section>
         );
       })}
-      <h4 className={styles.subhead}>End it</h4>
+      <SectionLabel level={4}>End it</SectionLabel>
       <EndEncounterForm />
     </div>
   );

@@ -10,15 +10,16 @@ import {
   Button,
   Combobox,
   DiceRoll,
+  type DieSides,
   Field,
   Icon,
+  type IconName,
   NumberInput,
   RadioGroup,
+  SectionLabel,
   SegmentedControl,
   Select,
   TextInput,
-  type DieSides,
-  type IconName,
 } from '@/ui';
 import { areaAt, areaCenter, findArea, findLevel } from '../model/adventure';
 import {
@@ -718,7 +719,7 @@ export function QuickActions({ data }: { data: RefereeData }) {
     <div className={styles.section}>
       {groups.map((group) => (
         <section key={group.title} aria-label={group.title}>
-          <h3 className={styles.subhead}>{group.title}</h3>
+          <SectionLabel level={3}>{group.title}</SectionLabel>
           <Accordion
             type="single"
             value={open}
@@ -732,7 +733,7 @@ export function QuickActions({ data }: { data: RefereeData }) {
                     <Icon
                       name={action.icon}
                       size={16}
-                      className={available ? styles.actionIcon : styles.rowIcon}
+                      className={available ? styles.actionIcon : styles.actionIconOff}
                     />
                     {action.label}
                   </span>

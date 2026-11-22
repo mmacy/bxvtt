@@ -3,7 +3,7 @@
  * centers the map on it, and a button that places the party there.
  */
 import { useDeferredValue, useMemo, useState } from 'react';
-import { Accordion, Badge, Button, EmptyState, SearchInput, Skeleton } from '@/ui';
+import { Accordion, Badge, Button, EmptyState, SearchInput, SectionLabel, Skeleton } from '@/ui';
 import {
   allLevels,
   areaCenter,
@@ -118,10 +118,10 @@ export function AreaKey({ data }: { data: RefereeData }) {
             key={`${dungeon.id}:${level.number}`}
             aria-label={`${dungeon.name}, level ${level.number}`}
           >
-            <h3 className={styles.subhead}>
+            <SectionLabel level={3}>
               {dungeon.name}, level {level.number}
               {partyHere ? ' · the party is here' : ''}
-            </h3>
+            </SectionLabel>
             {deferred === '' && level.guidance && (
               <details className={styles.details}>
                 <summary>Level guidance and wandering monsters</summary>
@@ -148,7 +148,7 @@ export function AreaKey({ data }: { data: RefereeData }) {
                   title: area.name,
                   meta: (
                     <span className={styles.metaRow}>
-                      {isHere && <Badge tone="accent">Party</Badge>}
+                      {isHere && <Badge tone="info">Party</Badge>}
                       {hasMonsters && (
                         <Badge tone={resolved ? 'neutral' : 'danger'}>
                           {resolved ? 'Cleared' : 'Monsters'}

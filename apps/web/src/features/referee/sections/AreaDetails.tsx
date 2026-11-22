@@ -5,7 +5,7 @@
  */
 import { directionLabel, formatCoins, itemList, type TextContext } from '@bxvtt/shared/text';
 import { useMapBus } from '@/app';
-import { Badge, Button, Icon, type BadgeTone } from '@/ui';
+import { Badge, type BadgeTone, Button, Icon, SectionLabel } from '@/ui';
 import {
   areaAt,
   areaCenter,
@@ -372,7 +372,7 @@ export function AreaDetails({
 
       {doors.length > 0 && (
         <section aria-label="Doors">
-          <h4 className={styles.subhead}>Doors</h4>
+          <SectionLabel level={4}>Doors</SectionLabel>
           <ul className={styles.doorList}>
             {doors.map((door) => (
               <DoorRow
