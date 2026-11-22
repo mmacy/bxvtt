@@ -1,7 +1,7 @@
 import type { ChatEntry, GameEntry, SystemEntry } from '@bxvtt/shared/protocol';
 import { formatGameClock, joinList } from '@bxvtt/shared/text';
 import { memo, useId, useMemo, useState, type CSSProperties } from 'react';
-import { Avatar, Badge, Icon, cx } from '@/ui';
+import { Avatar, Badge, Icon, Parchment, cx } from '@/ui';
 import { parseMarkup } from './model/markup';
 import {
   movementRunText,
@@ -203,8 +203,23 @@ function LineView({ line }: { line: NarratedLine }) {
     styles[`cat-${line.category}`],
     styles[`tone-${line.tone}`],
     hidden && styles.hiddenLine,
-    journal && styles.journalLine,
   );
+  if (journal) {
+    // A journal entry is a handout the party reads, so it sits on a scrap of paper.
+    return (
+      <li className={styles.line}>
+        <Parchment variant="plain" className={styles.handout}>
+          <p className={styles.handoutLabel}>
+            <Icon name="journal" size={12} />
+            <span>Journal{line.detail !== undefined ? ` · ${line.detail.replace(/\.$/, '')}` : ''}</span>
+          </p>
+          <p className={styles.handoutText}>
+            <Highlight text={text} query={view.query} />
+          </p>
+        </Parchment>
+      </li>
+    );
+  }
   const hasDetail = line.detail !== undefined || line.refereeDetail !== undefined;
   const body = (
     <>
@@ -213,7 +228,6 @@ function LineView({ line }: { line: NarratedLine }) {
       </span>
       <span className={styles.lineText}>
         {hidden && <span className="visually-hidden">Hidden from players. </span>}
-        {journal && <span className={styles.journalLabel}>Journal</span>}
         <Highlight text={text} query={view.query} />
       </span>
       {hidden && (
