@@ -11,11 +11,11 @@ import {
   stanceLabel,
 } from '@bxvtt/shared/text';
 import { useState } from 'react';
-import { useLegalCommand } from '@/app';
 import { Badge, Button, ConditionChip, HpBar, Icon, RadioGroup, SectionLabel, toast } from '@/ui';
 import type { Adventure, MonsterInstance } from '../model/adventure';
 import { templateLabel } from '../model/describe';
 import { CommandOutcome, useRefereeCommand } from '../RefereeCommand';
+import { useCommandReason } from '../useCommandReason';
 import styles from './sections.module.css';
 
 type EncounterState = NonNullable<RefereeState['encounter']>;
@@ -98,7 +98,7 @@ const ENDINGS = [
 
 /** A short form for `end_encounter` with the three endings a referee means. */
 export function EndEncounterForm() {
-  const legal = useLegalCommand('end_encounter');
+  const { available, reason } = useCommandReason('end_encounter');
   const [ending, setEnding] = useState<string>('terms');
   const { run, busy, outcome, clear } = useRefereeCommand();
   const chosen = ENDINGS.find((e) => e.value === ending) ?? ENDINGS[0];
@@ -115,7 +115,8 @@ export function EndEncounterForm() {
           size="sm"
           variant="primary"
           loading={busy}
-          disabled={legal === null}
+          disabled={!available}
+          disabledReason={reason}
           onClick={async () => {
             // The encounter view closes with the encounter, so the confirmation goes to a toast as well.
             if (await run({ command_type: 'end_encounter', ...chosen.command })) {
@@ -125,7 +126,7 @@ export function EndEncounterForm() {
         >
           End encounter
         </Button>
-        {legal === null && <span className={styles.secondary}>No encounter is open.</span>}
+        {reason !== null && <span className={styles.secondary}>{reason}</span>}
       </div>
       <CommandOutcome outcome={outcome} onDismiss={clear} />
     </div>

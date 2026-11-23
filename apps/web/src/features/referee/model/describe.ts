@@ -415,3 +415,15 @@ export function flagUses(adventure: Adventure, ctx: TextContext): Map<string, st
   }
   return uses;
 }
+
+/**
+ * What the adventure does with a flag, in a phrase for a tooltip: the first use `flagUses` found, without its
+ * final period. It is `undefined` when no trigger, quest, or gate uses the flag.
+ */
+export function flagUseTooltip(
+  uses: ReadonlyMap<string, readonly string[]>,
+  key: string,
+): string | undefined {
+  const first = uses.get(key)?.[0];
+  return first === undefined ? undefined : first.replace(/\.$/, '');
+}

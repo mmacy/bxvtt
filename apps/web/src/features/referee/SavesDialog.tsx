@@ -52,14 +52,16 @@ export function saveTitle(save: SaveEntry): string {
   return `Saved ${new Date(save.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}`;
 }
 
+/** When a save was made: how long ago, with the time of day for a recent save, or the date for an older one. */
 function whenText(iso: string): string {
   const then = new Date(iso);
   const seconds = Math.round((Date.now() - then.getTime()) / 1000);
   if (seconds < 60) return 'just now';
+  const timeOfDay = then.toLocaleTimeString(undefined, { timeStyle: 'short' });
   const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return minutes === 1 ? '1 minute ago' : `${minutes} minutes ago`;
+  if (minutes < 60) return `${minutes === 1 ? '1 minute' : `${minutes} minutes`} ago, ${timeOfDay}`;
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return hours === 1 ? '1 hour ago' : `${hours} hours ago`;
+  if (hours < 24) return `${hours === 1 ? '1 hour' : `${hours} hours`} ago, ${timeOfDay}`;
   return then.toLocaleDateString(undefined, { dateStyle: 'medium' });
 }
 
@@ -191,7 +193,6 @@ function SaveRow({
     );
   }
 
-  const created = new Date(save.created_at);
   return (
     <li className={styles.entry} data-autosave={save.autosave || undefined}>
       <span className={styles.marker} aria-hidden="true">
@@ -239,9 +240,7 @@ function SaveRow({
           <span className={styles.sep} aria-hidden="true">
             ·
           </span>
-          <time dateTime={save.created_at} title={created.toLocaleString()}>
-            {whenText(save.created_at)}
-          </time>
+          <time dateTime={save.created_at}>{whenText(save.created_at)}</time>
           {author && <span>by {author}</span>}
         </div>
       </div>
@@ -390,7 +389,6 @@ export function SavesDialog({ open, onOpenChange }: SavesDialogProps) {
                 variant="primary"
                 icon="save"
                 loading={pending && restoring === null && deleting === null}
-                disabled={!game}
               >
                 Save game
               </Button>
@@ -407,8 +405,17 @@ export function SavesDialog({ open, onOpenChange }: SavesDialogProps) {
             </p>
             {/* The table settings dialog belongs to the play screen. In the lobby, the table settings card has the switch. */}
             {referee && game && (
-              <Button size="sm" variant="ghost" onClick={() => setSettingsOpen(true)}>
-                {autosaveOn ? 'Settings' : 'Turn on'}
+              <Button
+                size="sm"
+                variant="ghost"
+                tooltip={
+                  autosaveOn
+                    ? 'Open table settings to change autosave'
+                    : 'Open table settings to turn on autosave'
+                }
+                onClick={() => setSettingsOpen(true)}
+              >
+                {autosaveOn ? 'Settings' : 'Autosave settings'}
               </Button>
             )}
           </div>

@@ -228,7 +228,12 @@ function LogLine({ line }: { line: EventLine }) {
           (open ? (
             <p className={styles.logDetail}>{line.detail}</p>
           ) : (
-            <LinkButton tone="quiet" onClick={() => setOpen(true)} aria-label={`Show the dice: ${line.text}`}>
+            <LinkButton
+              tone="quiet"
+              tooltip="Show the dice rolled for this event"
+              onClick={() => setOpen(true)}
+              aria-label={`Show the dice: ${line.text}`}
+            >
               Dice
             </LinkButton>
           ))}

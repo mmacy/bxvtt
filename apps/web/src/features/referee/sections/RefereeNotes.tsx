@@ -5,8 +5,16 @@
 import { LIMITS, type Notes } from '@bxvtt/shared/protocol';
 import { isProblem } from '@bxvtt/shared/client';
 import { useEffect, useRef, useState } from 'react';
-import { describeProblem, getApi, useMember, useRefereeNotes, useTableId, useTableUser } from '@/app';
-import { Banner, Button, Skeleton, Textarea } from '@/ui';
+import {
+  describeProblem,
+  formatShortcut,
+  getApi,
+  useMember,
+  useRefereeNotes,
+  useTableId,
+  useTableUser,
+} from '@/app';
+import { Banner, Button, Kbd, Skeleton, Textarea } from '@/ui';
 import styles from './sections.module.css';
 
 /** How long after the last keystroke the notes save. */
@@ -114,7 +122,8 @@ export function RefereeNotes() {
   return (
     <div className={styles.section}>
       <p className={styles.secondaryLine}>
-        Only referees can see these notes. Changes save automatically and persist between games.
+        Only referees can see these notes. Changes save automatically and persist between games. Press{' '}
+        <Kbd keys={formatShortcut('mod+enter')} /> to save now.
       </p>
       {conflict && (
         <Banner

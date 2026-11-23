@@ -286,6 +286,28 @@ test.describe('referee tools', () => {
     await expect(sam.page.getByRole('region', { name: 'Feed entries' })).not.toContainText('three eels');
   });
 
+  test('hover help says what a control does and why a command is unavailable in this mode', async ({
+    crew,
+  }) => {
+    const { ruth } = await bellTable(crew);
+    // The party is exploring, so no encounter is open. The button says why, in a tooltip and in the text beside it.
+    const actions = await openRefereeSection(ruth.page, 'actions');
+    await actions.getByRole('button', { name: /^End encounter/ }).click();
+    const region = actions.getByRole('region', { name: /^End encounter/ });
+    const end = region.getByRole('button', { name: 'End encounter' });
+    await expect(end).toHaveAttribute('aria-disabled', 'true');
+    const reason = /^You can end the encounter only (during|while) /;
+    await end.hover();
+    await expect(ruth.page.getByRole('tooltip')).toHaveText(reason);
+    await expect(region.getByText(reason)).toBeVisible();
+    await screenshot(ruth.page, 'referee-hover-help-reason');
+    // A control the label doesn't explain gets a tooltip.
+    const tables = await openRefereeSection(ruth.page, 'tables');
+    const room = tables.getByRole('button', { name: 'Room', exact: true });
+    // The tooltip's text is the button's description, which is what a screen reader reads after the name.
+    await expect(room).toHaveAccessibleDescription("Roll a room's contents for a dungeon level");
+  });
+
   test('the referee creates, renames, exports, and restores a save', async ({ crew }, testInfo) => {
     const { ruth, sam, tableId } = await bellTable(crew);
     const saves = await openFromTableMenu(ruth.page, 'Saves');

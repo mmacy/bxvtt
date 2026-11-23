@@ -30,15 +30,64 @@ import { useRefereeData, type RefereeData } from './useReferee';
 /** The sections of the referee panel. */
 export type RefereeSection = 'now' | 'actions' | 'story' | 'key' | 'tables' | 'commands' | 'log' | 'notes';
 
-const SECTIONS: ReadonlyArray<{ value: RefereeSection; label: string; title: string; icon: IconName }> = [
-  { value: 'now', label: 'Now', title: 'Current location', icon: 'eye' },
-  { value: 'actions', label: 'Act', title: 'Quick actions', icon: 'hand' },
-  { value: 'story', label: 'Story', title: 'Quests, flags, and triggers', icon: 'flag' },
-  { value: 'key', label: 'Key', title: 'Adventure key', icon: 'book' },
-  { value: 'tables', label: 'Roll', title: 'Generators', icon: 'dice' },
-  { value: 'log', label: 'Log', title: 'Referee log', icon: 'feed' },
-  { value: 'notes', label: 'Notes', title: 'Private notes', icon: 'edit' },
-  { value: 'commands', label: 'All', title: 'All commands', icon: 'command' },
+const SECTIONS: ReadonlyArray<{
+  value: RefereeSection;
+  label: string;
+  title: string;
+  icon: IconName;
+  /** What the tab shows, for the tooltip of the short label. The icon-only tab shows `title` instead. */
+  tooltip: string;
+}> = [
+  {
+    value: 'now',
+    label: 'Now',
+    title: 'Current location',
+    icon: 'eye',
+    tooltip: 'Show the key for where the party is now',
+  },
+  {
+    value: 'actions',
+    label: 'Act',
+    title: 'Quick actions',
+    icon: 'hand',
+    tooltip: 'Show quick actions for monsters, the party, places, and dice',
+  },
+  {
+    value: 'story',
+    label: 'Story',
+    title: 'Quests, flags, and triggers',
+    icon: 'flag',
+    tooltip: 'Show quests, flags, and triggers',
+  },
+  {
+    value: 'key',
+    label: 'Key',
+    title: 'Adventure key',
+    icon: 'book',
+    tooltip: 'Show the whole adventure key',
+  },
+  {
+    value: 'tables',
+    label: 'Roll',
+    title: 'Generators',
+    icon: 'dice',
+    tooltip: 'Show the treasure, monster, room, and NPC generators',
+  },
+  { value: 'log', label: 'Log', title: 'Referee log', icon: 'feed', tooltip: 'Show the referee log' },
+  {
+    value: 'notes',
+    label: 'Notes',
+    title: 'Private notes',
+    icon: 'edit',
+    tooltip: 'Show your private notes',
+  },
+  {
+    value: 'commands',
+    label: 'All',
+    title: 'All commands',
+    icon: 'command',
+    tooltip: 'Show a form for every referee command',
+  },
 ];
 
 /** Below this width the section tabs show icons only, with the section's name under them. */
@@ -107,7 +156,8 @@ function StatusStrip({ data }: { data: RefereeData }) {
         <Badge tone={state.battle ? 'danger' : encounter ? 'warning' : 'neutral'}>
           {sessionModeLabel(state.mode)}
         </Badge>
-        <span className={styles.clock} title="Game clock">
+        <span className={styles.clock}>
+          <span className="visually-hidden">Game clock: </span>
           {formatGameClock(state.clock_rounds)}
         </span>
         {encounter && (
@@ -258,6 +308,7 @@ export function RefereePanel() {
                     value={s.value}
                     icon={s.icon}
                     iconOnly={!showLabels}
+                    tooltip={showLabels ? s.tooltip : undefined}
                     className={showLabels ? undefined : styles.iconTab}
                   >
                     {showLabels ? s.label : s.title}

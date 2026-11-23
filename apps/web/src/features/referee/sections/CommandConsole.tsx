@@ -2,7 +2,7 @@
  * Every referee command bxapi offers, each with a complete form built from its JSON schema. The list comes
  * from the command catalog, so a command that bxapi adds later appears here without a change to this client.
  */
-import { COMMAND_TYPES, commandInfo, sessionModeLabel } from '@bxvtt/shared/text';
+import { COMMAND_TYPES, commandInfo } from '@bxvtt/shared/text';
 import { useMemo, useState } from 'react';
 import { useCommandCatalog, useLegalCommands } from '@/app';
 import { Accordion, Banner, Button, SearchInput, Skeleton } from '@/ui';
@@ -34,7 +34,6 @@ export function CommandConsole() {
           type: c.command_type,
           label: info.label,
           description: known.has(c.command_type) ? info.description : plainSummary(c.summary),
-          modes: c.allowed_modes,
         };
       })
       .filter((c) => {
@@ -100,11 +99,6 @@ export function CommandConsole() {
             content:
               open === c.type ? (
                 <div className={styles.form}>
-                  {!now && (
-                    <p className={styles.secondaryLine}>
-                      Allowed in: {c.modes.map((m) => sessionModeLabel(m).toLowerCase()).join(', ')}.
-                    </p>
-                  )}
                   <CommandForm commandType={c.type} />
                 </div>
               ) : null,

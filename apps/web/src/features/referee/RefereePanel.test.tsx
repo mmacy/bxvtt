@@ -172,4 +172,32 @@ describe('RefereePanel', () => {
       ),
     );
   });
+
+  it('says why a command is unavailable in the current mode, from the command catalog', async () => {
+    const api = refereeApi();
+    const snapshot = fixtureSnapshot('town', 'referee');
+    const { user } = renderWithTable(<RefereePanel />, { snapshot, api });
+    await user.click(screen.getByRole('tab', { name: 'Quick actions' }));
+    await user.click(screen.getByRole('button', { name: /Spawn an NPC party/ }));
+    const spawn = await screen.findByRole('button', { name: 'Spawn party' });
+    const sentence = 'You can spawn an NPC party only while exploring. The party is in town now.';
+    await waitFor(() => expect(spawn).toHaveAttribute('aria-disabled', 'true'));
+    await waitFor(() => expect(spawn).toHaveAccessibleDescription(sentence));
+    expect(screen.getAllByText(sentence).length).toBeGreaterThan(0);
+    await user.click(spawn);
+    expect(api.sendCommand).not.toHaveBeenCalled();
+  });
+
+  it('keeps a command form usable and says nothing about modes while the command is legal', async () => {
+    const api = refereeApi();
+    const { user } = renderWithTable(<RefereePanel />, {
+      snapshot: fixtureSnapshot('exploring', 'referee'),
+      api,
+    });
+    await user.click(screen.getByRole('tab', { name: 'Quick actions' }));
+    await user.click(screen.getByRole('button', { name: /Spawn an NPC party/ }));
+    const spawn = await screen.findByRole('button', { name: 'Spawn party' });
+    expect(spawn).not.toHaveAttribute('aria-disabled', 'true');
+    expect(spawn).not.toHaveAccessibleDescription(/only while exploring/);
+  });
 });

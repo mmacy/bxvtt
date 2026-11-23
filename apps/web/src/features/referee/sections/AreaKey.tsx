@@ -13,6 +13,7 @@ import {
   type LevelSpec,
 } from '../model/adventure';
 import { CommandOutcome, useRefereeCommand } from '../RefereeCommand';
+import { useCommandReason } from '../useCommandReason';
 import type { RefereeData } from '../useReferee';
 import { AreaDetails, ShowOnMapButton } from './AreaDetails';
 import { ArrivalFollowUps } from './FollowUps';
@@ -49,6 +50,7 @@ function PlaceHereButton({
   data: RefereeData;
 }) {
   const { run, busy, outcome, clear } = useRefereeCommand();
+  const { available, reason } = useCommandReason('place_party');
   const [placed, setPlaced] = useState(false);
   const [x, y] = areaCenter(area);
   return (
@@ -59,7 +61,9 @@ function PlaceHereButton({
           size="sm"
           variant="ghost"
           icon="footprints"
-          disabled={busy}
+          disabled={busy || !available}
+          disabledReason={reason}
+          tooltip="Move the party to the middle of this area, facing north"
           onClick={async () => {
             setPlaced(false);
             const ok = await run({

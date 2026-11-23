@@ -4,7 +4,7 @@
  * places the party gets these as one-click follow-ups. Each one sends the commands the adventure wrote.
  */
 import type { TextContext } from '@bxvtt/shared/text';
-import { useParty, useLegalCommand, type GameCommand } from '@/app';
+import { useParty, type GameCommand } from '@/app';
 import { Button } from '@/ui';
 import {
   findLevel,
@@ -19,6 +19,7 @@ import {
 import { areaInSentence, encounterText, patternText } from '../model/describe';
 import { carriedItems } from '../pickers';
 import { CommandOutcome, useRefereeCommand } from '../RefereeCommand';
+import { useCommandReason } from '../useCommandReason';
 import type { RefereeData } from '../useReferee';
 import styles from './sections.module.css';
 
@@ -96,7 +97,7 @@ export function SpawnKeyedButton({
   encounter: KeyedEncounter;
   adventure: Adventure;
 }) {
-  const legal = useLegalCommand('spawn_monsters');
+  const { available, reason } = useCommandReason('spawn_monsters');
   const { runAll, busy, outcome, clear } = useRefereeCommand();
   return (
     <div className={styles.followUp}>
@@ -104,15 +105,14 @@ export function SpawnKeyedButton({
         size="sm"
         variant="secondary"
         icon="skull"
-        disabled={busy || legal === null}
+        disabled={busy || !available}
+        disabledReason={reason}
         onClick={() => void runAll(keyedSpawns(encounter))}
       >
         Spawn {encounterText(encounter, adventure)}
       </Button>
       <span className={styles.secondary}>
-        {legal === null
-          ? 'You can spawn monsters only in a dungeon outside battle.'
-          : `${SPAWN_FEET} feet away. Ending their encounter won't mark the area resolved.`}
+        {available ? `${SPAWN_FEET} feet away. Ending their encounter won't mark the area resolved.` : reason}
       </span>
       <CommandOutcome outcome={outcome} onDismiss={clear} />
     </div>

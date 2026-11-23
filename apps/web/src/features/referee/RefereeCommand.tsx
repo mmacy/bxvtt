@@ -178,7 +178,7 @@ export function CommandOutcome({
           )}
         </div>
         {onDismiss && (
-          <IconButton icon="close" label="Dismiss" size="sm" variant="ghost" onClick={onDismiss} />
+          <IconButton icon="close" label="Dismiss the result" size="sm" variant="ghost" onClick={onDismiss} />
         )}
       </div>
     );
