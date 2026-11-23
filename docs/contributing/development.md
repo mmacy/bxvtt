@@ -89,6 +89,20 @@ Every test using the `crew` fixture (`e2e/support/fixtures.ts`) automatically fa
 | Verify sample adventures against `bxapi` | `node adventures/tools/check.mjs --no-maps` |
 | Regenerate WebP screenshots in `docs/images/` | `npm run build && BXAPI_URL=http://127.0.0.1:8651 node docs/images/capture.mjs` |
 
+## Preview and publish the documentation site
+
+The documentation site is a Docusaurus project in `website/` that builds the pages in `docs/`. It has its own `package.json` and isn't an npm workspace, so you install its dependencies separately:
+
+```sh
+cd website
+npm install
+npm start
+```
+
+The development server reloads as you edit and serves the site at <http://localhost:3010/bxvtt/>. Run `npm run build` in `website/` to check the production build, which fails on a broken link or anchor.
+
+The `Docs` workflow (`.github/workflows/docs.yml`) builds the site and publishes it to GitHub Pages at <https://mmacy.github.io/bxvtt/> whenever changes to `docs/`, `website/`, or the workflow land on `main`, and whenever you publish a GitHub release (draft releases do not trigger it). To republish manually at any time, open the **Docs** workflow on the repository's **Actions** tab and select **Run workflow**.
+
 ## Code and design rules
 
 - **Never implement a B/X game rule in bxvtt.** Derive valid choices from `game.commands`, `PlayerView`, `game.scene`, rules catalogs, and JSON command schemas, and let `bxapi` validate and roll dice.
