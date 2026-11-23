@@ -1,36 +1,52 @@
 /**
  * Plays back the game entries that arrive in the feed while a combat overlay is open: one beat at a time, at a
- * pace the table can follow, skippable, and instant with reduced motion.
+ * pace each viewer can read and set, with pause, step, skip, and replay. Each viewer's playback is their own and
+ * never holds up the table. With reduced motion, nothing plays by itself.
  */
 import type { GameEntry } from '@bxvtt/shared/protocol';
 import { describeGameEntry, extendContextWithEntryNames, idKind, type EventLine } from '@bxvtt/shared/text';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MemberView } from '@bxvtt/shared/bxapi';
 import {
   useCombatStage,
   useEncounter,
   useFeed,
+  usePreferences,
   useReduceMotion,
   useRefereeLens,
   useRefereeState,
   useTableId,
   type PlaybackMemberState,
+  type PlaybackSpeed,
 } from '@/app';
 import { learnMonsterGroups, snapshotBefore, useCombatMemory } from './memory';
 import {
+  beatDuration,
   buildBeats,
   digestRound,
   monsterGroupsFromRound,
   trackFromView,
   trackStates,
   type AnyEvent,
-  BEAT_MS,
   type Beat,
   type MonsterGroupLookup,
   type RoundDigest,
   type TrackState,
 } from './playback';
 import { useCombatText } from './text';
+import {
+  beatLength,
+  replay as replayTape,
+  skip as skipTape,
+  startTransport,
+  stepBack as stepBackTape,
+  stepForward as stepForwardTape,
+  syncTransport,
+  tick,
+  togglePause as togglePauseTape,
+  type TapeEntry,
+  type TransportState,
+} from './transport';
 
 /**
  * Finds the group of a monster: from the referee state for a referee with the lens on, and otherwise from what
@@ -68,7 +84,7 @@ function linesToBeats(lines: readonly EventLine[]): Beat[] {
     index,
     events: [],
     lines: [line],
-    durationMs: BEAT_MS.base,
+    durationMs: beatDuration([line], []),
     pops: [],
     focus: [],
     roll: null,
@@ -114,7 +130,18 @@ export interface PlaybackView {
   track: TrackState | null;
   /** The last entry that finished playing, for the summary. */
   last: PlaybackItem | null;
+  /** Whether a beat is on screen, playing or paused. */
   playing: boolean;
+  /** Whether the beat on screen stays until the viewer moves on. */
+  paused: boolean;
+  /** Whether a beat comes before the one on screen, or before rest, for stepping back. */
+  canStepBack: boolean;
+  /** The viewer's playback speed. */
+  speed: PlaybackSpeed;
+  setSpeed: (speed: PlaybackSpeed) => void;
+  togglePause: () => void;
+  stepForward: () => void;
+  stepBack: () => void;
   skip: () => void;
   replay: () => void;
 }
@@ -147,10 +174,9 @@ export function usePlayback(options: PlaybackOptions): PlaybackView {
   const lookup = useMonsterLookup();
   // Entries already in the feed when the overlay opens are history, not news.
   const [startSeq] = useState(() => options.afterSeq ?? feed.at(-1)?.seq ?? 0);
-  const [done, setDone] = useState(startSeq);
-  // Entries at or below the floor never play by themselves. A replay lowers it, so the history entry can replay.
-  const [floor, setFloor] = useState(startSeq);
-  const [cursor, setCursor] = useState<{ seq: number; index: number } | null>(null);
+  const [transport, setTransport] = useState<TransportState>(() => startTransport(startSeq));
+  const speed = usePreferences((s) => s.playbackSpeed);
+  const setPreference = usePreferences((s) => s.set);
   const accept = options.accept;
 
   const entries = useMemo(() => {
@@ -216,49 +242,74 @@ export function usePlayback(options: PlaybackOptions): PlaybackView {
     [entries, ctx, lens, lookup, tableId, feed],
   );
 
-  const current = reduce
-    ? null
-    : (items.find((item) => item.seq > done && item.seq > floor && item.beats.length > 0) ?? null);
-  const beatIndex = current !== null && cursor?.seq === current.seq ? cursor.index : 0;
+  // The tape: the entries that have something to play, oldest first.
+  const tape = useMemo<TapeEntry[]>(
+    () =>
+      items
+        .filter((item) => item.beats.length > 0)
+        .map((item) => ({ seq: item.seq, beats: item.beats.length })),
+    [items],
+  );
+  const tapeRef = useRef(tape);
+  useEffect(() => {
+    tapeRef.current = tape;
+  }, [tape]);
+  // New entries start, and a paused playback moves on to the newest, in the same render that brings them.
+  const state = syncTransport(transport, tape, !reduce);
+  if (state !== transport) setTransport(state);
+
+  const current = state.at === null ? null : (items.find((item) => item.seq === state.at?.seq) ?? null);
+  const beatIndex = current !== null ? (state.at?.index ?? 0) : 0;
   const beat = current?.beats[beatIndex] ?? null;
   const last =
     [...items].reverse().find((item) => item !== current && (current === null || item.seq < current.seq)) ??
     null;
-  const currentSeq = current?.seq ?? null;
-  const beatCount = current?.beats.length ?? 0;
-  const duration = beat?.durationMs ?? 0;
+  const length = beat === null ? 0 : beatLength(beat.durationMs, speed);
+  const running = current !== null && !state.paused;
+  const at = state.at;
 
   useEffect(() => {
-    if (currentSeq === null) return;
-    const timer = setTimeout(() => {
-      if (beatIndex + 1 < beatCount) setCursor({ seq: currentSeq, index: beatIndex + 1 });
-      else {
-        setCursor(null);
-        setDone(currentSeq);
-      }
-    }, duration);
+    if (!running) return;
+    const timer = setTimeout(() => setTransport((s) => tick(s, tapeRef.current)), length);
     return () => clearTimeout(timer);
-  }, [currentSeq, beatIndex, beatCount, duration]);
+    // The position is in the dependencies so each beat gets its own timer.
+  }, [running, length, at?.seq, at?.index]);
 
-  const newest = items.at(-1)?.seq ?? null;
-  const skip = useCallback(() => {
-    if (newest !== null) setDone((d) => Math.max(d, newest));
-    setCursor(null);
-  }, [newest]);
+  const move = useCallback((step: (s: TransportState, tape: readonly TapeEntry[]) => TransportState) => {
+    setTransport((s) => step(s, tapeRef.current));
+  }, []);
+  const skip = useCallback(() => move(skipTape), [move]);
+  const replay = useCallback(() => move((s, t) => replayTape(s, t, reduce)), [move, reduce]);
+  const togglePause = useCallback(() => move((s) => togglePauseTape(s)), [move]);
+  const stepForward = useCallback(() => move(stepForwardTape), [move]);
+  const stepBack = useCallback(() => move(stepBackTape), [move]);
+  const setSpeed = useCallback(
+    (next: PlaybackSpeed) => setPreference('playbackSpeed', next),
+    [setPreference],
+  );
 
-  const lastSeq = last?.seq ?? null;
-  const replayFrom =
-    lastSeq === null ? null : (items.filter((item) => item.seq < lastSeq).at(-1)?.seq ?? lastSeq - 1);
-  const replay = useCallback(() => {
-    if (replayFrom === null || reduce) return;
-    setCursor(null);
-    setDone(replayFrom);
-    setFloor((f) => Math.min(f, replayFrom));
-  }, [replayFrom, reduce]);
-
+  const first = tape[0];
+  const canStepBack =
+    tape.length > 0 && !(at !== null && first !== undefined && at.seq === first.seq && at.index === 0);
   const track =
     current !== null && current.start !== null ? (current.states[beatIndex] ?? current.start) : null;
-  return { current, beat, beatIndex, track, last, playing: current !== null, skip, replay };
+  return {
+    current,
+    beat,
+    beatIndex,
+    track,
+    last,
+    playing: current !== null,
+    paused: current !== null && state.paused,
+    canStepBack,
+    speed,
+    setSpeed,
+    togglePause,
+    stepForward,
+    stepBack,
+    skip,
+    replay,
+  };
 }
 
 /**
@@ -273,7 +324,11 @@ export function usePublishPlayback(playback: PlaybackView, party: readonly Membe
   const setPlaying = useCombatStage((s) => s.setPlaying);
   const setMoment = useCombatStage((s) => s.setMoment);
   const setMemberStates = useCombatStage((s) => s.setMemberStates);
+  const setProgress = useCombatStage((s) => s.setProgress);
   useEffect(() => setPlaying(playback.playing), [playback.playing, setPlaying]);
+  // Each beat and each pause, so the shell holds the end screen while this viewer is still watching.
+  const beatKey = playback.current ? `${playback.current.seq}-${playback.beatIndex}` : null;
+  useEffect(() => setProgress(beatKey, playback.paused), [beatKey, playback.paused, setProgress]);
   const round = playback.current?.digest.round ?? null;
   const clock = playback.current?.clockBefore ?? null;
   useEffect(() => {

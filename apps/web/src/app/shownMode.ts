@@ -15,8 +15,12 @@ import { useGameMode } from './table/hooks';
 
 /** How long the shell waits for playback to start after the game ends, in milliseconds. */
 export const END_GRACE_MS = 1500;
-/** The longest the shell holds the end screen back, in milliseconds, even while playback runs. */
-export const END_MAX_HOLD_MS = 20_000;
+/**
+ * The longest the shell holds the end screen back while playback runs without moving on to another beat, in
+ * milliseconds. The longest beat lasts about 6.3 seconds (3.5 seconds of reading and a 1.2-second hold, at the
+ * slow speed), so a playback that goes this long without a new beat has stopped reporting.
+ */
+export const END_STALL_MS = 15_000;
 
 function isEnded(mode: string | null): boolean {
   return mode === 'game_over' || mode === 'victory';
@@ -28,12 +32,15 @@ function isFight(mode: string | null): boolean {
 
 /**
  * The mode to show: the game's mode, or the fight's mode while the round that ended the game plays back. The
- * hold ends when playback stops, when playback hasn't started within {@link END_GRACE_MS}, or after
- * {@link END_MAX_HOLD_MS} at the most.
+ * hold ends when playback stops (it finished, or the viewer skipped it), when playback hasn't started within
+ * {@link END_GRACE_MS}, or when a running playback goes {@link END_STALL_MS} without a new beat. While the
+ * viewer has paused, the hold lasts until they resume or skip.
  */
 export function useHeldMode(): string | null {
   const mode = useGameMode();
   const playing = useCombatStage((s) => s.playing);
+  const paused = useCombatStage((s) => s.paused);
+  const beat = useCombatStage((s) => s.beat);
   const [previous, setPrevious] = useState(mode);
   const [held, setHeld] = useState<string | null>(null);
   const started = useRef(0);
@@ -53,14 +60,13 @@ export function useHeldMode(): string | null {
     }
     const elapsed = performance.now() - started.current;
     if (playing) sawPlayback.current = true;
-    const wait = playing
-      ? END_MAX_HOLD_MS - elapsed
-      : sawPlayback.current
-        ? 0
-        : Math.min(END_GRACE_MS, END_MAX_HOLD_MS) - elapsed;
+    // A viewer who paused on the last round reads it at their own pace.
+    if (playing && paused) return;
+    // Each new beat restarts the wait, so the hold lasts as long as the playback keeps moving.
+    const wait = playing ? END_STALL_MS : sawPlayback.current ? 0 : END_GRACE_MS - elapsed;
     const timer = setTimeout(() => setHeld(null), Math.max(0, wait));
     return () => clearTimeout(timer);
-  }, [held, playing]);
+  }, [held, playing, paused, beat]);
 
   useEffect(() => {
     if (held === null) started.current = 0;

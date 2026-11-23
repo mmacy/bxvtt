@@ -1,3 +1,4 @@
+import { joinList, memberName } from '@bxvtt/shared/text';
 import { useMemo } from 'react';
 import {
   formatShortcut,
@@ -211,6 +212,7 @@ function BattleActions() {
   );
   const repeatable = repeat.candidates(mine.filter((id) => !declared.includes(id)));
   const everyone = declarers.length > 0 && declarers.every((id) => declared.includes(id));
+  const waiting = declarers.filter((id) => !declared.includes(id));
   const auto = settings?.auto_resolve ?? true;
   const showResolve = canResolve.allowed && !auto;
 
@@ -230,7 +232,7 @@ function BattleActions() {
   useShortcut({
     id: 'combat.quick',
     keys: 'a',
-    label: "Take the next character's suggested action",
+    label: 'Declare the suggested action for your next character',
     group,
     enabled: composing === null,
     run: attack,
@@ -238,7 +240,7 @@ function BattleActions() {
   useShortcut({
     id: 'combat.repeat',
     keys: 'shift+a',
-    label: 'Repeat last round for all your characters',
+    label: 'Declare the same as last round for all your characters',
     group,
     run: again,
   });
@@ -277,25 +279,34 @@ function BattleActions() {
       ))}
       {composing === null && nextMember && quick && (
         <ActionButton
-          label={`${nextMember.name}: ${quick.label}`}
+          label={
+            quick.body
+              ? `Declare for ${nextMember.name}: ${quick.label}`
+              : `${nextMember.name}: ${quick.label}`
+          }
           keys="a"
           icon={QUICK_ICONS[quick.kind]}
           onClick={attack}
           disabled={pending}
-          detail={quick.reason ?? undefined}
+          detail={
+            quick.body
+              ? `${quick.reason ? `${quick.reason} ` : ''}You can change it until the round resolves.`
+              : undefined
+          }
         />
       )}
       {repeatable.length > 0 && (
         <ActionButton
-          label={repeatable.length > 1 ? 'Repeat last round for all' : 'Repeat last round'}
+          label={repeatable.length > 1 ? 'Declare same as last round for all' : 'Declare same as last round'}
           keys="shift+a"
           icon="rotate"
           onClick={again}
           disabled={pending}
+          detail={`Declares last round's actions again for ${joinList(repeatable.map((r) => memberName(r.memberId, ctx)))}.`}
         />
       )}
       {playing && skip && (
-        <ActionButton label="Skip playback" keys="escape" icon="chevron-right" onClick={skip} />
+        <ActionButton label="Skip playback" keys="escape" icon="skip-forward" onClick={skip} />
       )}
       {showResolve && (
         <>
@@ -311,7 +322,15 @@ function BattleActions() {
           />
         </>
       )}
-      {!showResolve && mine.length === 0 && <span className={styles.barNote}>Waiting for declarations.</span>}
+      {!showResolve && next === null && declarers.length > 0 && (
+        <span className={styles.barNote}>
+          {waiting.length > 0
+            ? `Waiting for ${joinList(waiting.map((id) => memberName(id, ctx)))} to declare.`
+            : auto
+              ? 'Everyone has declared. The round resolves now.'
+              : 'Everyone has declared. The caller or the referee resolves the round.'}
+        </span>
+      )}
     </>
   );
 }

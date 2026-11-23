@@ -262,26 +262,55 @@ const RUNS = new Set([
   'member_withdrew',
 ]);
 
-/** Milliseconds for a beat, by what it shows. Within the 400 to 700 ms a table can follow. */
-export const BEAT_MS = {
-  quick: 420,
-  base: 520,
-  movement: 560,
-  attack: 680,
-  initiative: 640,
-  death: 700,
-  end: 700,
+/**
+ * How long a beat stays on screen at normal speed. A beat lasts long enough to read what it says: a moment to
+ * find the strip and take in the die, then reading time in proportion to the text, within a floor and a ceiling.
+ * A beat that changes the fight holds a little longer, so a death or a spell lands before the next attack.
+ */
+export const PACE = {
+  /** Time to look at the strip and take in the die or the icon, before reading. */
+  settleMs: 500,
+  /** Reading time for each character of text on the strip: about 40 characters a second. */
+  perCharMs: 24,
+  /** The shortest and the longest a beat lasts, before any hold. */
+  minMs: 1000,
+  maxMs: 3500,
+  /** The extra time a beat holds after it is read, by what it shows. */
+  holdMs: { death: 900, spell: 600, end: 1200 },
 } as const;
 
-function durationFor(events: AnyEvent[]): number {
+/** The text that the strip shows for a beat: the first line and its numbers, two more lines, and a count. */
+export function beatText(lines: readonly EventLine[]): string {
+  const [first, ...rest] = lines;
+  if (first === undefined) return '';
+  const parts = [first.text, first.detail ?? '', ...rest.slice(0, 2).map((line) => line.text)];
+  if (rest.length > 2) parts.push(`And ${rest.length - 2} more.`);
+  return parts.filter((part) => part !== '').join(' ');
+}
+
+/** The hold a beat earns, from the most important thing in it. */
+function holdFor(events: readonly AnyEvent[]): number {
   const types = new Set(events.map((e) => e.event_type));
-  if (types.has('battle_ended') || types.has('encounter_ended') || types.has('game_over')) return BEAT_MS.end;
-  if (types.has('death')) return BEAT_MS.death;
-  if (types.has('attack_rolled')) return BEAT_MS.attack;
-  if (types.has('initiative_rolled')) return BEAT_MS.initiative;
-  if (types.has('member_moved') || types.has('group_moved')) return BEAT_MS.movement;
-  if (types.has('battle_round') || types.has('spell_declared')) return BEAT_MS.quick;
-  return BEAT_MS.base;
+  if (types.has('battle_ended') || types.has('encounter_ended') || types.has('game_over'))
+    return PACE.holdMs.end;
+  const fell = events.some(
+    (e) => e.event_type === 'condition_gained' && (e.condition === 'petrified' || e.condition === 'dead'),
+  );
+  if (types.has('death') || fell) return PACE.holdMs.death;
+  if (types.has('spell_cast') || types.has('undead_turned') || types.has('magic_dispelled'))
+    return PACE.holdMs.spell;
+  return 0;
+}
+
+/**
+ * How long a beat lasts at normal speed, in milliseconds.
+ *
+ * @param lines - The lines the beat shows.
+ * @param events - The events behind them, for the hold.
+ */
+export function beatDuration(lines: readonly EventLine[], events: readonly AnyEvent[]): number {
+  const reading = PACE.settleMs + beatText(lines).length * PACE.perCharMs;
+  return Math.min(PACE.maxMs, Math.max(PACE.minMs, reading)) + holdFor(events);
 }
 
 function popsFor(events: AnyEvent[], lookup: MonsterGroupLookup): Pop[] {
@@ -422,11 +451,25 @@ export function buildBeats(events: readonly AnyEvent[], ctx: TextContext, option
     const messages = slice.map((e) => messageOf.get(e) ?? '');
     const lines = describeEvents(slice, learned, { messages, collapseChecks: false });
     if (lines.length === 0) continue;
+    // Two slices can say the same thing, such as a member gaining the dead condition and then dying. They play
+    // as one beat, so the strip never shows the same sentence twice.
+    const previous = beats.at(-1);
+    if (previous && sameText(previous.lines, lines)) {
+      const events = [...previous.events, ...slice];
+      beats[beats.length - 1] = {
+        ...previous,
+        events,
+        durationMs: beatDuration(previous.lines, events),
+        pops: popsFor(events, options.lookup),
+        referee: previous.referee && slice.every((e) => e.visibility === 'referee'),
+      };
+      continue;
+    }
     beats.push({
       index: beats.length,
       events: slice,
       lines,
-      durationMs: durationFor(slice),
+      durationMs: beatDuration(lines, slice),
       pops: popsFor(slice, options.lookup),
       focus: focusFor(lines, options.lookup),
       roll: rollFor(slice),
@@ -434,6 +477,10 @@ export function buildBeats(events: readonly AnyEvent[], ctx: TextContext, option
     });
   }
   return beats;
+}
+
+function sameText(a: readonly EventLine[], b: readonly EventLine[]): boolean {
+  return a.length === b.length && a.every((line, i) => line.text === b[i]?.text);
 }
 
 /** The battlefield after each beat: entry `i` is the state once beat `i` has played. */

@@ -79,7 +79,7 @@ Moving the party with **Place the party** (in **Act** or via **Place the party h
 
 ### Cover for an absent player
 
-Select **Seats and caller** in the **Table menu** and set each absent player's character to **Empty seat (the referee plays)** or assign them temporarily to another player. If the absent player was the caller, pick a new **Caller** in the same dialog. During a battle round, you can also declare for any character directly or select **Resolve now** to fill undeclared characters with **Hold**.
+Select **Seats and caller** in the **Table menu** and set each absent player's character to **Empty seat (the referee plays)** or assign them temporarily to another player. If the absent player was the caller, pick a new **Caller** in the same dialog. During a battle round, you can also declare for any character directly. The footer of the battle board lists who still has to declare, by player and character. Select **Resolve now** to resolve the round before everyone has declared: each character without a declaration holds that round, and bxvtt asks you to confirm first.
 
 ### Fix a mistake
 

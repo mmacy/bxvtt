@@ -23,6 +23,11 @@ export interface PersonOptions {
   reducedMotion?: 'reduce' | 'no-preference';
   /** Create the user through the SDK and store the identity in the browser. Defaults to `true`. */
   signedIn?: boolean;
+  /**
+   * The combat playback speed stored in the browser. Defaults to `fastest`, so a spec that isn't about playback
+   * spends as little time on it as a player who chose the fastest speed. A spec about playback passes `normal`.
+   */
+  playbackSpeed?: 'slow' | 'normal' | 'fast' | 'fastest';
 }
 
 /** One person at the table: a user, an SDK client, and a browser. */
@@ -174,15 +179,20 @@ async function newActor(browser: Browser, name: string, options: PersonOptions):
     reducedMotion: options.reducedMotion ?? 'no-preference',
     storageState: {
       cookies: [],
-      origins:
-        user !== null && token !== null
-          ? [
-              {
-                origin: BASE_URL,
-                localStorage: [{ name: 'bxvtt.identity', value: JSON.stringify({ token, user }) }],
-              },
-            ]
-          : [],
+      origins: [
+        {
+          origin: BASE_URL,
+          localStorage: [
+            {
+              name: 'bxvtt.preferences',
+              value: JSON.stringify({ playbackSpeed: options.playbackSpeed ?? 'fastest' }),
+            },
+            ...(user !== null && token !== null
+              ? [{ name: 'bxvtt.identity', value: JSON.stringify({ token, user }) }]
+              : []),
+          ],
+        },
+      ],
     },
   });
   const state = { issues: [] as string[], received: [] as string[], record: options.record ?? false };

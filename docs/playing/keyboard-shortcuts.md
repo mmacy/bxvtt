@@ -49,10 +49,12 @@ Press `?` on any screen to inspect the shortcuts active right now, or press `Ctr
 | Keys | Action |
 | --- | --- |
 | `T`, `W`, `Shift+F`, `F` | In an encounter: **Talk**, **Wait**, **Flee**, or **Fight**. |
-| `A` | In battle: apply the suggested action for your next undeclared character. |
-| `Shift+A` | In battle: repeat last round's declarations for all of your characters. |
+| `A` | In battle: declare the suggested action for your next undeclared character. |
+| `Shift+A` | In battle: declare the same actions as last round for all of your characters. |
 | `1` to `9` | In battle: open the action composer for your first through ninth character. |
 | `Ctrl+Enter` | In battle: resolve the round (when automatic resolution is off). |
+| `K` | During combat playback: pause on the beat on screen, or resume. |
+| `,`, `.` | During combat playback: step back or forward one beat and pause there. At a round's summary, `,` steps back into the round's last beat. |
 | `Esc` | Skip combat playback, or dismiss the aftermath card. |
 
 ## Feed and compendium

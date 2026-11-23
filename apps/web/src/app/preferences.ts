@@ -15,6 +15,10 @@ export type DockTabId = 'party' | 'feed' | 'journal' | 'referee';
 /** `system` follows the operating system's reduced motion setting. */
 export type MotionPreference = 'system' | 'reduce' | 'full';
 
+/** How fast combat playback runs, from the slowest to the fastest. */
+export const PLAYBACK_SPEEDS = ['slow', 'normal', 'fast', 'fastest'] as const;
+export type PlaybackSpeed = (typeof PLAYBACK_SPEEDS)[number];
+
 export interface Preferences {
   mapTheme: MapThemeName;
   /** The dock's width in pixels. */
@@ -29,6 +33,8 @@ export interface Preferences {
   /** Whether the table plays sounds, such as dice and a ping. Off until the user turns it on. */
   sound: boolean;
   motion: MotionPreference;
+  /** How fast resolved battle rounds play back. */
+  playbackSpeed: PlaybackSpeed;
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
@@ -39,6 +45,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   refereeLens: true,
   sound: false,
   motion: 'system',
+  playbackSpeed: 'normal',
 };
 
 const VALIDATORS: { [K in keyof Preferences]: (value: unknown) => value is Preferences[K] } = {
@@ -49,6 +56,7 @@ const VALIDATORS: { [K in keyof Preferences]: (value: unknown) => value is Prefe
   refereeLens: (v): v is boolean => typeof v === 'boolean',
   sound: (v): v is boolean => typeof v === 'boolean',
   motion: (v): v is MotionPreference => v === 'system' || v === 'reduce' || v === 'full',
+  playbackSpeed: (v): v is PlaybackSpeed => PLAYBACK_SPEEDS.some((speed) => speed === v),
 };
 
 function readPreferences(): Preferences {

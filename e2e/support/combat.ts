@@ -5,7 +5,7 @@
 import type { BxvttClient } from '@bxvtt/shared/client';
 import type { GameState } from '@bxvtt/shared/protocol';
 import { expect, type Locator, type Page } from '@playwright/test';
-import type { Actor, Crew } from './fixtures';
+import type { Actor, Crew, PersonOptions } from './fixtures';
 import { enterDungeon, placeParty, send, setupTable, waitForGame, type MemberSpec } from './table';
 
 /** A table with a referee (Ruth) and two players (Sam and Ann) in a game of The Drowned Bell. */
@@ -31,6 +31,8 @@ export interface CombatTableOptions {
   autoResolve?: boolean;
   /** Takes the party into the priory. Defaults to `true`. */
   enter?: boolean;
+  /** Everyone's combat playback speed. Defaults to the fixture's `fastest`; a spec about playback passes `normal`. */
+  playbackSpeed?: PersonOptions['playbackSpeed'];
 }
 
 /**
@@ -38,9 +40,10 @@ export interface CombatTableOptions {
  * the strong party, the party rests a night in town and Mazpar memorizes *magic missile* before it sets out.
  */
 export async function combatTable(crew: Crew, options: CombatTableOptions = {}): Promise<CombatTable> {
-  const ruth = await crew.person('Ruth');
-  const sam = await crew.person('Sam');
-  const ann = await crew.person('Ann');
+  const browser: PersonOptions = options.playbackSpeed ? { playbackSpeed: options.playbackSpeed } : {};
+  const ruth = await crew.person('Ruth', browser);
+  const sam = await crew.person('Sam', browser);
+  const ann = await crew.person('Ann', browser);
   const strong = (options.party ?? 'strong') === 'strong';
   const party: MemberSpec[] = strong
     ? [

@@ -7,6 +7,7 @@ import {
   tokenClass,
   useCanDeclare,
   useCanResolveRound,
+  useCaller,
   useDeclarations,
   useEncounter,
   useFeed,
@@ -30,6 +31,7 @@ import {
   Icon,
   IconButton,
   TokenPortrait,
+  Tooltip,
   type IconName,
 } from '@/ui';
 import { showAftermath } from './Aftermath';
@@ -297,7 +299,7 @@ export function BattleBoard() {
             composing !== null
               ? null
               : mine.length > 0
-                ? 'Declare actions for your characters. Resolved rounds play back here.'
+                ? 'Choose an action for each of your characters. Each choice is saved as you make it. Resolved rounds play back here.'
                 : 'Waiting for the party to declare. Resolved rounds play back here.'
           }
         />
@@ -334,6 +336,7 @@ export function BattleBoard() {
 
       {!holding && (
         <RoundFooter
+          round={battleRound(encounter) ?? 1}
           declarers={declarers}
           declared={declared}
           mine={mine}
@@ -459,15 +462,18 @@ function MemberRow({
     status = (
       <span className={styles.statusDeclared}>
         <Icon name="check" size={14} />
-        {describeDeclaration(declaration, ctx, gear)}
+        <span>
+          <span className={styles.declaredLabel}>Declared: </span>
+          {describeDeclaration(declaration, ctx, gear)}
+        </span>
       </span>
     );
   } else if (mine || composing) {
     status = composing ? (
       <span className={styles.statusChoosing}>Choosing…</span>
     ) : quick?.reason ? (
-      <span className={styles.statusMuted}>{quick.reason}</span>
-    ) : quick ? null : (
+      <span className={styles.statusMuted}>Not declared yet. {quick.reason}</span>
+    ) : (
       <span className={styles.statusChoosing}>Not declared yet</span>
     );
   } else {
@@ -529,24 +535,36 @@ function MemberRow({
         </div>
         <div className={styles.memberActions}>
           {canAct && !declaration && !composing && quick && (
-            <Button
-              size="sm"
-              variant="secondary"
-              icon={QUICK_ICONS[quick.kind]}
-              loading={pending}
-              onClick={() => (quick.body ? void send(quick.body) : onCompose(true))}
+            <Tooltip
+              content={
+                quick.body
+                  ? `Declares this for ${member.name} this round. You can change it until the round resolves.`
+                  : `Opens ${member.name}'s spells, where choosing one declares it.`
+              }
             >
-              {quick.label}
-            </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                icon={QUICK_ICONS[quick.kind]}
+                loading={pending}
+                onClick={() => (quick.body ? void send(quick.body) : onCompose(true))}
+              >
+                {quick.label}
+              </Button>
+            </Tooltip>
           )}
           {again && !composing && (
-            <IconButton
-              icon="rotate"
-              size="sm"
-              variant="ghost"
-              label={`Repeat last round: ${describeDeclaration(again.body, ctx, gear)}`}
-              onClick={() => void send(again.body)}
-            />
+            <Tooltip
+              content={`Declare the same as last round: ${describeDeclaration(again.body, ctx, gear)}`}
+            >
+              <IconButton
+                icon="rotate"
+                size="sm"
+                variant="ghost"
+                label={`Declare the same as last round: ${describeDeclaration(again.body, ctx, gear)}`}
+                onClick={() => void send(again.body)}
+              />
+            </Tooltip>
           )}
           {canAct && (
             <Button
@@ -589,7 +607,43 @@ function MemberRow({
   );
 }
 
+/**
+ * What starts the round, for the board's footer: everyone declaring with automatic resolution, and otherwise the
+ * caller or a referee. A referee also learns what "Resolve now" does.
+ */
+export function roundStartNote(facts: {
+  auto: boolean;
+  everyone: boolean;
+  /** Whether bxapi refused the last attempt, so the round waits for a change. */
+  refused: boolean;
+  /** Whether this user may resolve the round once everyone has declared. */
+  canResolve: boolean;
+  /** Whether this user may resolve the round now, before everyone has declared. */
+  early: boolean;
+  /** The caller's name, or `null` when the user is the caller or the table has none. */
+  caller: string | null;
+}): string {
+  const { auto, everyone, refused, canResolve, early, caller } = facts;
+  const resolver = caller ? `${caller} (the caller) or the referee` : 'the caller or the referee';
+  let note: string;
+  if (everyone && refused) note = 'Everyone has declared, but the round waits for a changed declaration.';
+  else if (auto)
+    note = everyone
+      ? 'Everyone has declared, so the round resolves now.'
+      : 'The round resolves by itself as soon as everyone has declared.';
+  else if (everyone)
+    note = canResolve
+      ? "Everyone has declared. Resolve the round when you're ready."
+      : `Everyone has declared. Waiting for ${resolver} to resolve the round.`;
+  else
+    note = canResolve
+      ? 'When everyone has declared, you resolve the round.'
+      : `When everyone has declared, ${resolver} resolves the round.`;
+  return early ? `${note} Resolve now starts it at once, and anyone who hasn't declared holds.` : note;
+}
+
 function RoundFooter({
+  round,
   declarers,
   declared,
   mine,
@@ -597,6 +651,8 @@ function RoundFooter({
   ctx,
   waiting,
 }: {
+  /** The round being declared. */
+  round: number;
   declarers: string[];
   declared: string[];
   mine: string[];
@@ -610,10 +666,12 @@ function RoundFooter({
   const { resolve, pending } = useSendDeclaration();
   const repeat = useRepeatLastRound();
   const [confirming, setConfirming] = useState(false);
+  const caller = useCaller();
   const missing = declarers.filter((id) => !declared.includes(id));
   const everyone = missing.length === 0 && declarers.length > 0;
   const auto = settings?.auto_resolve ?? true;
   const repeatable = repeat.candidates(mine.filter((id) => !declared.includes(id)));
+  const early = !everyone && canResolveEarly.allowed && declarers.length > 0;
 
   return (
     <footer className={styles.boardFoot}>
@@ -629,28 +687,37 @@ function RoundFooter({
               <span className={styles.progressCount}>
                 {declared.length} of {declarers.length}
               </span>{' '}
-              declared
+              declared for round {round}
             </span>
             {waiting}
           </div>
           <span className={styles.progressNote}>
-            {auto
-              ? 'The round resolves when everyone has declared.'
-              : canResolve.allowed
-                ? 'Resolve the round once everyone has declared.'
-                : 'The caller or the referee resolves the round.'}
+            {roundStartNote({
+              auto,
+              everyone,
+              refused: general.length > 0,
+              canResolve: canResolve.allowed,
+              early,
+              caller: caller.isMe ? null : (caller.member?.name ?? null),
+            })}
           </span>
         </div>
         <div className={styles.footActions}>
           {repeatable.length > 1 && (
-            <Button size="sm" variant="ghost" icon="rotate" onClick={() => void repeat.run(mine)}>
-              Repeat last round
-            </Button>
+            <Tooltip
+              content={`Declares last round's actions again for ${joinList(repeatable.map((r) => memberName(r.memberId, ctx)))}.`}
+            >
+              <Button size="sm" variant="ghost" icon="rotate" onClick={() => void repeat.run(mine)}>
+                Declare same as last round
+              </Button>
+            </Tooltip>
           )}
-          {!everyone && canResolveEarly.allowed && declarers.length > 0 && (
-            <Button size="sm" variant="ghost" icon="flag" onClick={() => setConfirming(true)}>
-              Resolve now
-            </Button>
+          {early && (
+            <Tooltip content="Resolves the round at once. Anyone who hasn't declared holds.">
+              <Button size="sm" variant="ghost" icon="flag" onClick={() => setConfirming(true)}>
+                Resolve now
+              </Button>
+            </Tooltip>
           )}
           {everyone && (canResolve.allowed || canResolveEarly.allowed) && (!auto || general.length > 0) && (
             <Button size="sm" variant="primary" icon="play" loading={pending} onClick={() => void resolve()}>

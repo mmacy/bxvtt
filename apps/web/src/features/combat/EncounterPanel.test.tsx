@@ -120,11 +120,33 @@ describe('CombatActions', () => {
       </ActionBar>,
       { snapshot, api },
     );
-    await user.click(screen.getByRole('button', { name: /^Wren:/ }));
+    await user.click(screen.getByRole('button', { name: /^Declare for Wren:/ }));
     expect(api.declare).toHaveBeenCalledWith(
       expect.any(String),
       'character-0002',
       expect.objectContaining({ target_group_id: 'group-0001' }),
     );
+  });
+
+  it('names the characters still to declare once the player has declared for their own', () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('battle', 'player');
+    const declarations = snapshot.declarations;
+    if (declarations) {
+      declarations.declared = ['character-0001', 'character-0002'];
+      declarations.declarations['character-0002'] = {
+        action: 'hold',
+        character_id: 'character-0002',
+      } as never;
+    }
+    renderWithTable(
+      <ActionBar aria-label="Party actions">
+        <CombatActions />
+      </ActionBar>,
+      { snapshot, api },
+    );
+    expect(screen.getByText('Waiting for Osric and Tamsin to declare.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Declare for/ })).not.toBeInTheDocument();
   });
 });

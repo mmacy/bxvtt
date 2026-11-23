@@ -180,7 +180,7 @@ async function modeOf(page) {
 /** Presses the quick declaration button for every character who has not declared, on a player's page. */
 async function declareAll(page) {
   for (let guard = 0; guard < 6; guard += 1) {
-    const same = page.getByRole('button', { name: /^Same as last round for all/ }).first();
+    const same = page.getByRole('button', { name: /^Declare same as last round/ }).first();
     if ((await same.count()) > 0) {
       await same.click().catch(() => {});
       await sleep(500);
@@ -339,10 +339,10 @@ async function main() {
     .getByRole('button', { name: /^Fight/ })
     .last()
     .click();
-  await samPage.getByRole('button', { name: 'More choices' }).first().waitFor();
+  await samPage.getByRole('button', { name: 'Actions', exact: true }).first().waitFor();
   const theoPlay = theoPage;
   await theoPlay.goto(`${base}/tables/${tableId}`);
-  await theoPlay.getByRole('button', { name: 'More choices' }).first().waitFor();
+  await theoPlay.getByRole('button', { name: 'Actions', exact: true }).first().waitFor();
   await declareAll(priyaPage);
   await declareAll(theoPlay);
   await declareAll(samPage);
