@@ -10,7 +10,7 @@ import {
 } from '@bxvtt/shared/text';
 import type { StartingRolls } from '@bxvtt/shared/protocol';
 import type { ClassDetail } from '@/app';
-import { Badge, Banner, CoinPurse, Parchment, StatBox, formatModifier } from '@/ui';
+import { Badge, Banner, CoinPurse, Parchment, StatBox, Tooltip, formatModifier } from '@/ui';
 import type { WizardDraft } from './draft';
 import { cartLabel, cartPhrase, type CartLine } from './kits';
 import { ABILITIES, casterNextStep, headlineModifier, xpModifierFor, type Scores } from './tables';
@@ -77,10 +77,12 @@ export function ReviewStep({
     ...(wielding.length > 0 ? [`wielding ${joinList(wielding)}`] : []),
   ];
   const unworn = gear.filter((item) => !item.equipped && (item.kind === 'armour' || item.kind === 'weapon'));
-  const edit = (step: WizardDraft['step'], label: string) => (
-    <button type="button" className={styles.editLink} onClick={() => onEdit(step)}>
-      Change<span className="visually-hidden"> {label}</span>
-    </button>
+  const edit = (step: WizardDraft['step'], label: string, stepName: string) => (
+    <Tooltip content={`Go back to the ${stepName} step`}>
+      <button type="button" className={styles.editLink} onClick={() => onEdit(step)}>
+        Change<span className="visually-hidden"> {label}</span>
+      </button>
+    </Tooltip>
   );
 
   return (
@@ -99,13 +101,13 @@ export function ReviewStep({
             {draft.alignment ? alignmentLabel(draft.alignment) : 'No alignment'}
           </p>
         </div>
-        {edit('identity', 'name and alignment')}
+        {edit('identity', 'name and alignment', 'identity')}
       </header>
 
       <section className={styles.reviewSection} aria-label="Ability scores">
         <div className={styles.rowBetween}>
           <h4 className={styles.reviewHeading}>Ability scores</h4>
-          {edit('adjust', 'ability scores')}
+          {edit('adjust', 'ability scores', 'adjust scores')}
         </div>
         <div className={styles.reviewAbilities}>
           {ABILITIES.map((ability) => (
@@ -206,7 +208,7 @@ export function ReviewStep({
       <section className={styles.reviewSection} aria-label="Equipment">
         <div className={styles.rowBetween}>
           <h4 className={styles.reviewHeading}>Equipment</h4>
-          {edit('outfit', 'equipment')}
+          {edit('outfit', 'equipment', 'outfit')}
         </div>
         {gear.length === 0 ? (
           <p className={styles.reviewText}>None yet. You keep all your gold to spend in town.</p>

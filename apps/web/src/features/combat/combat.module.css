@@ -968,10 +968,6 @@
 }
 
 /* The action bar. */
-.barKey {
-  margin-left: var(--space-1);
-}
-
 .barNote {
   font-size: var(--text-sm);
   color: var(--color-text-subtle);

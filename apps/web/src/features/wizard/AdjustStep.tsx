@@ -121,11 +121,7 @@ export function AdjustStep({
                   size="sm"
                   variant="secondary"
                   disabled={change <= 0 && cannotLower(ability)}
-                  title={
-                    change <= 0 && cannotLower(ability)
-                      ? `A ${name} can't lower ${abilityLabel(ability)}.`
-                      : undefined
-                  }
+                  disabledReason={`A ${name} can't lower ${abilityLabel(ability)}.`}
                   onClick={() => onChange(withChange(adjustment, ability, change - 1))}
                 />
                 <span className={styles.adjustChange} aria-live="polite">

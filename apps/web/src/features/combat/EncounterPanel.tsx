@@ -12,7 +12,6 @@ import {
 } from '@bxvtt/shared/text';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
-  useCaller,
   useEncounter,
   useParty,
   useRefereeLens,
@@ -289,7 +288,7 @@ function Option({
       icon={icon}
       iconEnd={popover ? 'chevron-down' : undefined}
       disabled={disabledReason !== null}
-      title={disabledReason ?? undefined}
+      disabledReason={disabledReason}
       loading={loading}
       onClick={popover ? undefined : onClick}
     >
@@ -336,13 +335,9 @@ function PartyOptions({
   commands: EncounterCommands;
   ctx: TextContext;
 }) {
-  const caller = useCaller();
-  // One sentence above the choices says who chooses for the party, instead of the same refusal on every choice.
-  const partyReason = commands.partyPermission.allowed
-    ? null
-    : caller.member
-      ? `${caller.member.name} is the caller, so ${caller.member.name} or the referee chooses for the party.`
-      : 'The referee chooses for the party.';
+  // One sentence above the choices says who chooses for the party, instead of the same refusal beside every
+  // choice. Each button still gives its own reason on hover and focus.
+  const partyReason = commands.partyPermission.reason;
   const able = party.filter((m) => encounter.declarers.includes(m.id));
   const turnerClasses = useTurnerClasses(able.map((m) => m.class_id));
   const turners = able.filter((m) => turnerClasses.includes(m.class_id));
@@ -472,6 +467,7 @@ function PartyOptions({
                       value={member.id}
                       title={member.name}
                       disabled={!commands.can('turn_undead', member.id).allowed}
+                      disabledReason={commands.can('turn_undead', member.id).reason}
                     />
                   ))}
                 </List>
@@ -745,6 +741,7 @@ function GivePopover({ members, all, ctx }: { members: MemberView[]; all: Member
           variant="primary"
           loading={pending}
           disabled={!itemId && !gold}
+          disabledReason="Choose an item or some gold to give."
           onClick={() => void give()}
         >
           Give
@@ -836,6 +833,7 @@ function DropPopover({
           variant="primary"
           loading={pending}
           disabled={chosen.length === 0 && !gold}
+          disabledReason="Choose an item or some gold to drop."
           onClick={() => void drop()}
         >
           Drop

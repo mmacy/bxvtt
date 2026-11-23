@@ -64,11 +64,14 @@ test.describe('encounters', () => {
       await expect(bar.getByRole('button', { name: new RegExp(`^${label}\\b`) })).toBeVisible();
     }
     // Only the caller and the referee act for the party. Ann sees why her buttons are off, in one sentence above
-    // the choices, and each choice keeps its own explanation (R-306).
+    // the choices, and each choice keeps its own explanation (R-306). Each button says why on hover and focus.
     const annPanel = encounterPanel(ann.page);
     const annChoices = annPanel.getByRole('list', { name: 'Encounter actions' });
     await expect(annChoices.getByRole('button', { name: 'Fight' })).toBeDisabled();
-    const reason = 'Sam is the caller, so Sam or the referee chooses for the party.';
+    await expect(annChoices.getByRole('button', { name: 'Fight' })).toHaveAccessibleDescription(
+      'Only the caller can start a battle. Sam is the caller.',
+    );
+    const reason = 'Only the caller can act for the party. Sam is the caller.';
     await expect(annPanel.getByText(reason, { exact: true })).toHaveCount(1);
     await expect(annChoices).not.toContainText('Only the caller');
     await expect(annChoices).toContainText(

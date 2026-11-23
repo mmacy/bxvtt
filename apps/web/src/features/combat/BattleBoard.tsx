@@ -31,7 +31,6 @@ import {
   Icon,
   IconButton,
   TokenPortrait,
-  Tooltip,
   type IconName,
 } from '@/ui';
 import { showAftermath } from './Aftermath';
@@ -120,6 +119,18 @@ export const QUICK_ICONS: Record<QuickAction['kind'], IconName> = {
   close: 'footprints',
   hold: 'pause',
 };
+
+/** What the quick action's button does, for its tooltip: declare the choice, or open the member's spells. */
+export function quickTooltip(quick: QuickAction, name: string): string {
+  return quick.body
+    ? `Declare this for ${name}, and change it any time before the round resolves`
+    : `Open ${name}'s spells to choose one to declare`;
+}
+
+/** The tooltip of a control that repeats last round's declarations, naming the members it declares for. */
+export function repeatTooltip(repeatable: ReadonlyArray<{ memberId: string }>, ctx: TextContext): string {
+  return `Repeat last round's actions for ${joinList(repeatable.map((r) => memberName(r.memberId, ctx)))}`;
+}
 
 /** Repeats last round's declaration for each of the given members that has one and still fits. */
 export function useRepeatLastRound(): {
@@ -266,6 +277,11 @@ export function BattleBoard() {
             variant={refereeOpen ? 'secondary' : 'ghost'}
             icon="referee"
             aria-expanded={refereeOpen}
+            tooltip={
+              refereeOpen
+                ? "Hide the monsters' hit points and the referee tools"
+                : "Show the monsters' hit points and the referee tools"
+            }
             onClick={() => setRefereeOpen(!refereeOpen)}
           >
             Monsters
@@ -388,7 +404,7 @@ function WaitingSummary({
     <span className={styles.waiting}>
       <span className={styles.waitingLabel}>Waiting for</span>
       {[...byOwner.entries()].map(([key, owner]) => (
-        <span key={key} className={styles.waitingOwner} title={`${owner.name}: ${joinList(owner.members)}`}>
+        <span key={key} className={styles.waitingOwner}>
           <Avatar name={owner.name} color={owner.color} size="xs" decorative />
           <span>
             {key === people.userId ? 'you' : owner.name}
@@ -535,36 +551,25 @@ function MemberRow({
         </div>
         <div className={styles.memberActions}>
           {canAct && !declaration && !composing && quick && (
-            <Tooltip
-              content={
-                quick.body
-                  ? `Declares this for ${member.name} this round. You can change it until the round resolves.`
-                  : `Opens ${member.name}'s spells, where choosing one declares it.`
-              }
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={QUICK_ICONS[quick.kind]}
+              loading={pending}
+              tooltip={quickTooltip(quick, member.name)}
+              onClick={() => (quick.body ? void send(quick.body) : onCompose(true))}
             >
-              <Button
-                size="sm"
-                variant="secondary"
-                icon={QUICK_ICONS[quick.kind]}
-                loading={pending}
-                onClick={() => (quick.body ? void send(quick.body) : onCompose(true))}
-              >
-                {quick.label}
-              </Button>
-            </Tooltip>
+              {quick.label}
+            </Button>
           )}
           {again && !composing && (
-            <Tooltip
-              content={`Declare the same as last round: ${describeDeclaration(again.body, ctx, gear)}`}
-            >
-              <IconButton
-                icon="rotate"
-                size="sm"
-                variant="ghost"
-                label={`Declare the same as last round: ${describeDeclaration(again.body, ctx, gear)}`}
-                onClick={() => void send(again.body)}
-              />
-            </Tooltip>
+            <IconButton
+              icon="rotate"
+              size="sm"
+              variant="ghost"
+              label={`Declare the same as last round: ${describeDeclaration(again.body, ctx, gear)}`}
+              onClick={() => void send(again.body)}
+            />
           )}
           {canAct && (
             <Button
@@ -572,6 +577,15 @@ function MemberRow({
               variant={composing ? 'secondary' : 'ghost'}
               iconEnd={composing ? 'chevron-up' : 'chevron-down'}
               aria-expanded={composing}
+              tooltip={
+                composing
+                  ? `Hide ${member.name}'s choices`
+                  : declaration
+                    ? `Choose another action for ${member.name}`
+                    : mine
+                      ? `Choose ${member.name}'s action for this round`
+                      : undefined
+              }
               onClick={() => onCompose(!composing)}
             >
               {declaration ? 'Change' : mine ? 'Actions' : `Declare for ${member.name}`}
@@ -704,20 +718,26 @@ function RoundFooter({
         </div>
         <div className={styles.footActions}>
           {repeatable.length > 1 && (
-            <Tooltip
-              content={`Declares last round's actions again for ${joinList(repeatable.map((r) => memberName(r.memberId, ctx)))}.`}
+            <Button
+              size="sm"
+              variant="ghost"
+              icon="rotate"
+              tooltip={repeatTooltip(repeatable, ctx)}
+              onClick={() => void repeat.run(mine)}
             >
-              <Button size="sm" variant="ghost" icon="rotate" onClick={() => void repeat.run(mine)}>
-                Declare same as last round
-              </Button>
-            </Tooltip>
+              Declare same as last round
+            </Button>
           )}
           {early && (
-            <Tooltip content="Resolves the round at once. Anyone who hasn't declared holds.">
-              <Button size="sm" variant="ghost" icon="flag" onClick={() => setConfirming(true)}>
-                Resolve now
-              </Button>
-            </Tooltip>
+            <Button
+              size="sm"
+              variant="ghost"
+              icon="flag"
+              tooltip="Resolve the round at once, and anyone who hasn't declared holds"
+              onClick={() => setConfirming(true)}
+            >
+              Resolve now
+            </Button>
           )}
           {everyone && (canResolve.allowed || canResolveEarly.allowed) && (!auto || general.length > 0) && (
             <Button size="sm" variant="primary" icon="play" loading={pending} onClick={() => void resolve()}>

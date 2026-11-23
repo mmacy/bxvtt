@@ -107,6 +107,7 @@ Hover help is the tooltip that appears when someone hovers over a control or mov
 | Unavailable control | `disabled` and `disabledReason` | `<Button disabled={!permission.allowed} disabledReason={permission.reason}>Start game</Button>` |
 | Keyboard shortcut | `shortcut` | `<ToolRailButton icon="ping" label="Ping" shortcut="P" />` |
 | Unavailable menu item | `disabled` and `disabledReason` on the `MenuEntry` | `{ label: 'Make player', disabled: true, disabledReason: 'Make another member a referee first.' }` |
+| Unavailable list item | `disabled` and `disabledReason` on the `ListItem` | `<ListItem value={id} title="Osric" disabled disabledReason={permission.reason} />` |
 | Tooltip on another side | `tooltipSide` | `<IconButton icon="dock-close" label="Hide table panels" tooltipSide="bottom" />` |
 
 These controls take the props:
@@ -115,6 +116,7 @@ These controls take the props:
 - `ToolRailButton` and `ActionBarMenu`: `tooltip`, `disabledReason`, and `shortcut`.
 - `TabsTrigger` and `SegmentedControl` options: `tooltip`. With `iconOnly`, the tooltip shows the label.
 - `MenuEntry` items and submenus: `disabledReason`, which the menu shows as text under the label instead of in a tooltip.
+- `ListItem`: `disabledReason`, which the list shows as text under the label instead of in a tooltip. In a selectable list the item stays reachable with the arrow keys, and choosing it does nothing.
 - `CommandPalette` actions (and `useAction` definitions in `@/app`): `disabledReason`, which the palette shows under the label.
 
 Form controls (`TextInput`, `NumberInput`, `Select`, `Combobox`, `Switch`, `Checkbox`, `RadioGroup`, and `Slider`) take their help as visible text: the `hint` of their `Field`, or their own `description`. A `NumberInput` also takes `minReason` and `maxReason`, which say why the value can't go further, such as `maxReason="All 2 first-level slots are full."`. While the value sits at that limit, the reason joins the field's description, and the step button shows it on hover.

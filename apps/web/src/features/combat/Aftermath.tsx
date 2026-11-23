@@ -82,7 +82,7 @@ export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
             </Badge>
           )}
         </div>
-        <Button size="sm" variant="ghost" icon="close" onClick={onClose}>
+        <Button size="sm" variant="ghost" icon="close" shortcut="Esc" onClick={onClose}>
           Close
         </Button>
       </header>
@@ -130,7 +130,17 @@ export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
           </dl>
           <PickUp />
           {playback.last && playback.last.beats.length > 0 && (
-            <Button size="sm" variant="ghost" icon="rotate" onClick={playback.replay}>
+            <Button
+              size="sm"
+              variant="ghost"
+              icon="rotate"
+              tooltip={
+                summary.rounds > 0
+                  ? 'Play the last round again, then return to this summary'
+                  : 'Play how the encounter ended again, then return to this summary'
+              }
+              onClick={playback.replay}
+            >
               {summary.rounds > 0 ? 'Replay last round' : 'Replay encounter'}
             </Button>
           )}
@@ -179,7 +189,7 @@ function PickUp() {
             variant="secondary"
             loading={busy}
             disabled={!canTake.allowed}
-            title={canTake.reason ?? undefined}
+            disabledReason={canTake.reason}
             onClick={() => void take('pile')}
           >
             Pick up dropped goods
@@ -200,7 +210,7 @@ function PickUp() {
               variant="secondary"
               loading={busy}
               disabled={!canTake.allowed}
-              title={canTake.reason ?? undefined}
+              disabledReason={canTake.reason}
               onClick={() => void take(cache.id)}
             >
               Take treasure

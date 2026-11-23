@@ -136,7 +136,8 @@ export function RefereeActions() {
         size="sm"
         variant="ghost"
         disabled={!canEnd.allowed}
-        title={canEnd.reason ?? undefined}
+        disabledReason={canEnd.reason}
+        tooltip="End the encounter peacefully, such as after a bargain or a toll"
         onClick={() => setEnding('parley')}
       >
         End in parley
@@ -145,7 +146,8 @@ export function RefereeActions() {
         size="sm"
         variant="ghost"
         disabled={!canEnd.allowed}
-        title={canEnd.reason ?? undefined}
+        disabledReason={canEnd.reason}
+        tooltip="End the encounter because one side walked away or broke off the chase"
         onClick={() => setEnding('departed')}
       >
         End as departed
@@ -179,6 +181,18 @@ export function RefereeActions() {
   );
 }
 
+/** What the "Add monsters" form still needs before it can send, as a reason for its button, or `null`. */
+export function spawnMissing(
+  templateId: string | null,
+  count: number | null,
+  distance: number | null,
+): string | null {
+  if (templateId === null) return 'Choose a monster to add.';
+  if (count === null) return 'Enter how many monsters to add.';
+  if (distance === null) return 'Enter how far away the monsters appear.';
+  return null;
+}
+
 function SpawnMonsters({ disabled, reason }: { disabled: boolean; reason: string | null }) {
   const catalog = useMonsterCatalog();
   const { send, pending } = useSendRefereeCommand();
@@ -190,6 +204,7 @@ function SpawnMonsters({ disabled, reason }: { disabled: boolean; reason: string
     () => (catalog.data ?? []).map((m) => ({ value: m.id, label: m.name, keywords: [m.id] })),
     [catalog.data],
   );
+  const missing = spawnMissing(templateId, count, distance);
   const spawn = async () => {
     if (templateId === null || count === null || distance === null) return;
     const result = await send({
@@ -207,7 +222,14 @@ function SpawnMonsters({ disabled, reason }: { disabled: boolean; reason: string
       title="Add monsters"
       width="300px"
       trigger={
-        <Button size="sm" variant="ghost" icon="plus" disabled={disabled} title={reason ?? undefined}>
+        <Button
+          size="sm"
+          variant="ghost"
+          icon="plus"
+          disabled={disabled}
+          disabledReason={reason}
+          tooltip="Bring another group of monsters into the fight"
+        >
           Add monsters
         </Button>
       }
@@ -236,7 +258,8 @@ function SpawnMonsters({ disabled, reason }: { disabled: boolean; reason: string
           variant="primary"
           size="sm"
           loading={pending}
-          disabled={templateId === null || count === null || distance === null}
+          disabled={missing !== null}
+          disabledReason={missing}
           onClick={() => void spawn()}
         >
           Add monsters

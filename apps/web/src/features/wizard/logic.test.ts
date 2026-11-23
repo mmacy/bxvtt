@@ -6,6 +6,7 @@ import type { ClassDetail, EquipmentDetail } from '@/app';
 import { createFakeApi } from '@/app/testing/renderWithTable';
 import catalog from './__fixtures__/catalog.json';
 import { facesForScore } from './dice';
+import { continueBlock, type ContinueFacts } from './CharacterWizard';
 import { autoEquip } from './OutfitStep';
 import {
   emptyDraft,
@@ -313,5 +314,46 @@ describe('oneReasonPerAbility', () => {
       'creation.adjustment.not_lowerable',
       'creation.adjustment.points_mismatch',
     ]);
+  });
+});
+
+describe('continueBlock', () => {
+  const facts: ContinueFacts = {
+    step: 'roll',
+    rolled: true,
+    eligible: ['fighter'],
+    revealing: false,
+    classId: 'fighter',
+    adjust: 'idle',
+    goldRolled: true,
+    gold: { status: 'known', gp: 110 },
+    cart: 'ok',
+  };
+
+  it('says why each step blocks, and waits without a reason for the server or the dice', () => {
+    expect(continueBlock({ ...facts, eligible: [] })).toEqual({
+      reason: "These ability scores don't qualify for any class. Roll again.",
+    });
+    expect(continueBlock({ ...facts, eligible: [], revealing: true })).toEqual({ reason: null });
+    expect(continueBlock({ ...facts, step: 'class', classId: null })).toEqual({
+      reason: 'Choose a class first.',
+    });
+    expect(continueBlock({ ...facts, step: 'adjust', adjust: 'invalid' })).toEqual({
+      reason: "This ability trade isn't allowed. Change it, or reset to your rolled scores.",
+    });
+    expect(continueBlock({ ...facts, step: 'adjust', adjust: 'checking' })).toEqual({ reason: null });
+    const unknown = { status: 'unknown', message: 'Roll your starting gold first.' } as const;
+    expect(continueBlock({ ...facts, step: 'outfit', gold: unknown })).toEqual({ reason: unknown.message });
+    expect(continueBlock({ ...facts, step: 'outfit', cart: 'invalid' })).toEqual({
+      reason: 'Your cart breaks a rule. Change it as the note under the cart says.',
+    });
+    expect(continueBlock({ ...facts, step: 'outfit', cart: 'checking' })).toEqual({ reason: null });
+  });
+
+  it('lets the player continue from a finished step, and from a trade in progress so the step can say why not', () => {
+    expect(continueBlock(facts)).toBeNull();
+    expect(continueBlock({ ...facts, step: 'adjust', adjust: 'in_progress' })).toBeNull();
+    expect(continueBlock({ ...facts, step: 'outfit' })).toBeNull();
+    expect(continueBlock({ ...facts, step: 'identity' })).toBeNull();
   });
 });
