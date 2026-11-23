@@ -453,6 +453,21 @@
   min-width: 300px;
 }
 
+/* The note that says to finish or reset the trade. Focus lands here when the player tries to continue. */
+.adjustBlocked {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-strong);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.adjustBlocked:focus {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
 /* Identity ---------------------------------------------------------------------------------------------------- */
 
 .identityGrid {

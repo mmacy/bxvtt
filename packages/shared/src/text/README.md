@@ -24,6 +24,7 @@ for (const line of describeEvents(outcome.events, ctx, { messages: outcome.messa
 }
 ```
 
+- `isTradeInProgress(code)` and `describeTradeGuidance(rejection)` cover the two ability trade refusals (`reduction_not_even`, `points_mismatch`) that describe a trade the player hasn't finished. `describeTradeGuidance` words them as the next step, using only the refusal's params. Any other code, including one bxapi adds later, is a wrong choice and keeps its `describeRejection` wording and a warning.
 - `describeEvent` formats a single event; `describeEvents` joins attack rolls with immediate damage, collapses empty wandering-monster check runs, and drops redundant `dead` or duplicate HP lines (pass `{ dropRedundant: false }` to retain all lines, or `{ only: 'player' }` to filter out referee events).
 - Display `line.refereeDetail` only when the user is a referee with the referee lens enabled.
 
