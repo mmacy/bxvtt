@@ -3,22 +3,6 @@ import globals from 'globals';
 import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 
-/**
- * Directories whose controls haven't moved to the kit's hover help yet (issue #16). The hover help rules below
- * skip them. When you convert a directory, delete its line here so the rules cover it, and run `npm run lint`.
- */
-const hoverHelpPending = [
-  'apps/web/src/features/combat/**',
-  'apps/web/src/features/compendium/**',
-  'apps/web/src/features/explore/**',
-  'apps/web/src/features/feed/**',
-  'apps/web/src/features/journal/**',
-  'apps/web/src/features/referee/**',
-  'apps/web/src/features/sheet/**',
-  'apps/web/src/features/town/**',
-  'apps/web/src/features/wizard/**',
-];
-
 const TITLE_MESSAGE =
   'A native title shows only to a mouse user, after a delay, and never on keyboard focus. Pass `tooltip` to the ' +
   'kit control, or `disabledReason` with `disabled`. See "Hover help" in apps/web/src/ui/README.md.';
@@ -83,7 +67,6 @@ export default tseslint.config(
     // Hover help comes from the kit, which shows it on hover and on keyboard focus and keeps a disabled control's
     // reason reachable. See "Hover help" in apps/web/src/ui/README.md.
     files: ['apps/web/src/**/*.tsx'],
-    ignores: hoverHelpPending,
     rules: { 'no-restricted-syntax': ['error', ...hoverHelpRules] },
   },
 );

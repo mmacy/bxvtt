@@ -134,7 +134,7 @@ The kit handles the rest:
 - **Cut-off labels:** A `Button` shows its label as a tooltip when the label doesn't fit, such as when a crowded action bar hides labels and keeps only icons, or when the label ends in an ellipsis.
 - **Shortcuts:** Pass the keys once, in `shortcut`. A `Button` shows them after its label and in its tooltip. An `IconButton`, a `ToolRailButton`, and an `ActionBarMenu` show them in the tooltip. Each sets `aria-keyshortcuts`.
 - **Unavailable controls:** With `disabled` and a `disabledReason`, a control stays in the tab order and sets `aria-disabled="true"` instead of the native `disabled` attribute. It ignores clicks, Enter, and Space, so a submit button doesn't submit its form, and a menu, popover, or dialog trigger stays shut. Its tooltip shows the reason, and an icon-only control shows its name above the reason. Pressing it opens the tooltip too. With `disabled` and no reason, the control is natively disabled: it leaves the tab order and shows no tooltip.
-- **One tooltip per control:** A kit control inside a `Tooltip` shows only the outer tooltip. A control that still has a native `title` gets no label tooltip from the kit, so it never shows two. Both cases exist only until a directory moves to the props.
+- **One tooltip per control:** A kit control inside a `Tooltip` shows only the outer tooltip. A control that has a native `title` gets no label tooltip from the kit, so it never shows two. The lint guard rejects that `title` in feature code, so neither case should appear in a new control.
 
 Use `Tooltip` directly only for a focusable element that isn't a kit control, such as the color swatches in the profile form. Pass `describe={false}` when its text repeats the element's accessible name.
 
@@ -174,8 +174,6 @@ Put help in visible text instead of a tooltip when any of these is true:
 ### The lint guard
 
 `npm run lint` fails when a `.tsx` file under `apps/web/src` puts a native `title` on an interactive element: a kit control, a native `button`, `a`, or `input`, a Radix part, or any element with a click handler, a key handler, `tabIndex`, or an interactive `role`. A `title` that is a heading, such as on `Banner`, `Dialog`, `Card`, or `Panel`, passes. The rules live in `eslint.config.js`.
-
-Directories that haven't moved to the props yet are in the `hoverHelpPending` list in `eslint.config.js`, and the rules skip them. When you convert a directory, delete its line from that list and run `npm run lint`.
 
 ## Export catalog (`@/ui`)
 
