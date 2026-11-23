@@ -61,6 +61,7 @@ export function MembersPanel() {
               label: 'Make player',
               icon: 'user',
               disabled: refereeCount <= 1,
+              disabledReason: 'Every table needs a referee. Make another member a referee first.',
               onSelect: () => void setRole(member, 'player'),
             });
           }

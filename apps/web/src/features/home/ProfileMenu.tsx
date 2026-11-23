@@ -1,7 +1,7 @@
 import { LIMITS, USER_COLORS, type UserColor } from '@bxvtt/shared/protocol';
 import { useState, type FormEvent } from 'react';
 import { describeProblem, displayStringProblem, useIdentity } from '@/app';
-import { Avatar, Button, Field, Popover, TextInput, toast } from '@/ui';
+import { Avatar, Button, Field, Popover, TextInput, Tooltip, toast } from '@/ui';
 import { DeleteProfileDialog, SignOutDialog } from './ProfileDialogs';
 import styles from './home.module.css';
 import profileStyles from './profile.module.css';
@@ -78,17 +78,18 @@ export function ProfileForm({ onDone }: { onDone?: () => void }) {
         <legend className={styles.colorsLegend}>Color</legend>
         <div className={styles.swatches} role="radiogroup" aria-label="Color">
           {USER_COLORS.map((value) => (
-            <button
-              key={value}
-              type="button"
-              role="radio"
-              aria-checked={color === value}
-              aria-label={COLOR_NAMES[value]}
-              title={COLOR_NAMES[value]}
-              className={styles.swatch}
-              style={{ background: value }}
-              onClick={() => setColor(value)}
-            />
+            // The swatch shows only its color, so the tooltip shows its name, which is also its accessible name.
+            <Tooltip key={value} content={COLOR_NAMES[value]} describe={false}>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={color === value}
+                aria-label={COLOR_NAMES[value]}
+                className={styles.swatch}
+                style={{ background: value }}
+                onClick={() => setColor(value)}
+              />
+            </Tooltip>
           ))}
         </div>
       </fieldset>
@@ -148,14 +149,16 @@ function ProfilePopover({
       trigger={
         // The button takes its name from its text, "Ruth, your profile", which starts with the name a speech-input
         // user sees. The avatar's initial is hidden from assistive technology.
-        <button type="button" className={styles.profileTrigger}>
-          <Avatar name={user.name} color={user.color} size="sm" decorative />
-          {/* The comma shares the name's element, so the name reads "Ruth, your profile" with no space before it. */}
-          <span className={`${styles.profileName} ${styles.narrowHidden}`}>
-            {user.name}
-            <span className="visually-hidden-inline">, your profile</span>
-          </span>
-        </button>
+        <Tooltip content="Change your name and color, or sign out" side="bottom">
+          <button type="button" className={styles.profileTrigger}>
+            <Avatar name={user.name} color={user.color} size="sm" decorative />
+            {/* The comma shares the name's element, so the name reads "Ruth, your profile" with no space before it. */}
+            <span className={`${styles.profileName} ${styles.narrowHidden}`}>
+              {user.name}
+              <span className="visually-hidden-inline">, your profile</span>
+            </span>
+          </button>
+        </Tooltip>
       }
     >
       <ProfileForm onDone={() => onOpenChange(false)} />

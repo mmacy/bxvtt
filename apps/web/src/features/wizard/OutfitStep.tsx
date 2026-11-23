@@ -23,6 +23,7 @@ import {
   SegmentedControl,
   Skeleton,
   Spinner,
+  Tooltip,
   cx,
   type DataColumn,
 } from '@/ui';
@@ -92,21 +93,24 @@ function DetailsButton({ item, detail }: { item: EquipmentSummary; detail: Equip
       title={item.name}
       width="280px"
       trigger={
-        <button
-          type="button"
-          className={styles.shopNameButton}
-          aria-label={`${item.name}, ${rowSummary(item.id, item.name, detail) || itemTypeLabel(item.item_type)}, show details`}
-        >
-          <span className={styles.shopIcon}>
-            <Icon name={itemIcon(item.id, item.item_type)} size={16} />
-          </span>
-          <span className={styles.shopNameText}>
-            <span className={styles.shopName}>{item.name}</span>
-            <span className={styles.shopSub}>
-              {rowSummary(item.id, item.name, detail) || itemTypeLabel(item.item_type)}
+        // The button's name already ends "show details", so the tooltip isn't its description too.
+        <Tooltip content="Show this item's details" describe={false}>
+          <button
+            type="button"
+            className={styles.shopNameButton}
+            aria-label={`${item.name}, ${rowSummary(item.id, item.name, detail) || itemTypeLabel(item.item_type)}, show details`}
+          >
+            <span className={styles.shopIcon}>
+              <Icon name={itemIcon(item.id, item.item_type)} size={16} />
             </span>
-          </span>
-        </button>
+            <span className={styles.shopNameText}>
+              <span className={styles.shopName}>{item.name}</span>
+              <span className={styles.shopSub}>
+                {rowSummary(item.id, item.name, detail) || itemTypeLabel(item.item_type)}
+              </span>
+            </span>
+          </button>
+        </Tooltip>
       }
     >
       {entry ? <ItemDetailBody entry={entry} /> : <Skeleton lines={3} />}
@@ -219,8 +223,9 @@ export function OutfitStep({
       cell: (item) => {
         const weight = weightCoins(full.byId.get(item.id));
         return weight === null || weight === 0 ? (
-          <span className={styles.none} title="No listed weight">
-            -
+          <span className={styles.none}>
+            <span aria-hidden="true">-</span>
+            <span className="visually-hidden">No listed weight</span>
           </span>
         ) : (
           `${weight}`
@@ -268,7 +273,14 @@ export function OutfitStep({
             Equipment
           </h3>
           {kit && (
-            <Button size="sm" variant="secondary" icon="chest" onClick={onKit} disabled={equipment === null}>
+            <Button
+              size="sm"
+              variant="secondary"
+              icon="chest"
+              tooltip="Replace your cart with the items in this kit that your gold covers"
+              onClick={onKit}
+              disabled={equipment === null}
+            >
               Fill with the {kit.toLowerCase()} kit
             </Button>
           )}

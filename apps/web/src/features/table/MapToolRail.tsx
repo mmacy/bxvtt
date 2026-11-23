@@ -3,15 +3,39 @@ import { formatShortcut, SiteInfo, useMapBus, useShortcut, useTableUi, type MapT
 import { ToolRail, ToolRailButton, ToolRailDivider, type IconName } from '@/ui';
 import styles from './table.module.css';
 
-/** The map tools of the rail, with their shortcut keys. */
-export const MAP_TOOLS: ReadonlyArray<{ id: MapToolId; icon: IconName; label: string; keys: string }> = [
-  { id: 'select', icon: 'pointer', label: 'Select and move', keys: 'v' },
-  { id: 'pan', icon: 'hand', label: 'Pan the map', keys: 'h' },
-  { id: 'ruler', icon: 'ruler', label: 'Measure', keys: 'r' },
-  { id: 'ping', icon: 'ping', label: 'Ping', keys: 'p' },
-  { id: 'draw', icon: 'draw', label: 'Draw', keys: 'd' },
-  { id: 'pin', icon: 'flag', label: 'Pin a note', keys: 'n' },
-  { id: 'erase', icon: 'eraser', label: 'Erase', keys: 'e' },
+/** The map tools of the rail, with their hover help and shortcut keys. */
+export const MAP_TOOLS: ReadonlyArray<{
+  id: MapToolId;
+  icon: IconName;
+  label: string;
+  tooltip: string;
+  keys: string;
+}> = [
+  {
+    id: 'select',
+    icon: 'pointer',
+    label: 'Select and move',
+    tooltip: 'Select and move: step the party, open doors, and use features',
+    keys: 'v',
+  },
+  {
+    id: 'pan',
+    icon: 'hand',
+    label: 'Pan the map',
+    tooltip: 'Pan the map without moving the party',
+    keys: 'h',
+  },
+  {
+    id: 'ruler',
+    icon: 'ruler',
+    label: 'Measure',
+    tooltip: 'Measure distance in squares and feet, on your screen only',
+    keys: 'r',
+  },
+  { id: 'ping', icon: 'ping', label: 'Ping', tooltip: 'Ping a spot for everyone at the table', keys: 'p' },
+  { id: 'draw', icon: 'draw', label: 'Draw', tooltip: 'Draw on the map for everyone to see', keys: 'd' },
+  { id: 'pin', icon: 'flag', label: 'Pin a note', tooltip: 'Pin a note that everyone can read', keys: 'n' },
+  { id: 'erase', icon: 'eraser', label: 'Erase', tooltip: 'Erase drawings from the map', keys: 'e' },
 ];
 
 function ToolShortcut({ id, label, keys }: { id: MapToolId; label: string; keys: string }) {
@@ -34,7 +58,13 @@ export function MapToolRail({ mapTools = true }: { mapTools?: boolean }) {
       <ToolRail
         aria-label={mapTools ? 'Map tools' : 'Table tools'}
         footer={
-          <ToolRailButton icon="book" label="Rules reference" shortcut="B" onClick={() => openCompendium()} />
+          <ToolRailButton
+            icon="book"
+            label="Rules reference"
+            tooltip="Rules reference: classes, spells, monsters, equipment, and tables"
+            shortcut="B"
+            onClick={() => openCompendium()}
+          />
         }
       >
         {mapTools &&
@@ -45,6 +75,7 @@ export function MapToolRail({ mapTools = true }: { mapTools?: boolean }) {
               <ToolRailButton
                 icon={t.icon}
                 label={t.label}
+                tooltip={t.tooltip}
                 shortcut={formatShortcut(t.keys)[0]}
                 active={tool === t.id}
                 onClick={() => setTool(t.id)}

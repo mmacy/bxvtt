@@ -53,6 +53,7 @@ import {
 } from '../pickers';
 import styles from '../referee.module.css';
 import type { RefereeData } from '../useReferee';
+import { flagUses, flagUseTooltip } from '../model/describe';
 import {
   emptyValue,
   errorsUnder,
@@ -527,7 +528,7 @@ function NullableEditor(props: FieldEditorProps & { node: Extract<FieldNode, { k
           value={current}
           onValueChange={(next) => onChange(next === 'yes' ? true : next === 'no' ? false : undefined)}
           options={[
-            { value: 'unset', label: 'As is' },
+            { value: 'unset', label: 'As is', tooltip: 'Leave this unchanged' },
             { value: 'yes', label: 'Yes' },
             { value: 'no', label: 'No' },
           ]}
@@ -608,6 +609,7 @@ function AddOptional({ props, node }: { props: FieldEditorProps; node: FieldNode
         variant="ghost"
         size="sm"
         icon="plus"
+        tooltip={`Add ${text.label.toLowerCase()} to this command`}
         onClick={() => props.onChange(emptyValue(node))}
       >
         {text.label}
@@ -720,6 +722,11 @@ function ArrayEditor(props: FieldEditorProps & { node: Extract<FieldNode, { kind
         size="sm"
         icon="plus"
         disabled={node.maxItems !== undefined && items.length >= node.maxItems}
+        disabledReason={
+          node.maxItems === undefined
+            ? null
+            : `This command takes at most ${node.maxItems} ${node.maxItems === 1 ? singular : text.label.toLowerCase()}.`
+        }
         onClick={() => props.onChange([...items, emptyValue(node.items)])}
       >
         Add {singular}
@@ -978,6 +985,11 @@ function LocationEditor(props: FieldEditorProps) {
 function FlagKeyEditor(props: FieldEditorProps) {
   const env = useEnv();
   const known = useMemo(() => knownFlagKeys(env.data), [env.data]);
+  const uses = useMemo(
+    () =>
+      env.data.adventure ? flagUses(env.data.adventure, env.data.ctx) : new Map<string, readonly string[]>(),
+    [env.data.adventure, env.data.ctx],
+  );
   const value = typeof props.value === 'string' ? props.value : '';
   return (
     <Labelled props={props}>
@@ -991,6 +1003,7 @@ function FlagKeyEditor(props: FieldEditorProps) {
               size="sm"
               variant="ghost"
               aria-pressed={key === value}
+              tooltip={flagUseTooltip(uses, key)}
               onClick={() => props.onChange(key)}
             >
               {key}

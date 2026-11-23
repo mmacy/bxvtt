@@ -6,17 +6,7 @@ import { directionLabel } from '@bxvtt/shared/text';
 import type { RefObject } from 'react';
 import type { MapThemeName } from '@/app';
 import { Minimap, type Direction, type DungeonMapHandle, type LevelMap } from '@/map';
-import {
-  Badge,
-  Button,
-  DropdownMenu,
-  Icon,
-  IconButton,
-  SegmentedControl,
-  Tooltip,
-  cx,
-  type MenuEntry,
-} from '@/ui';
+import { Badge, Button, DropdownMenu, Icon, IconButton, SegmentedControl, cx, type MenuEntry } from '@/ui';
 import type { LevelOption } from './levels';
 import styles from './explore.module.css';
 
@@ -61,7 +51,7 @@ export function LevelSwitcher({ levels, viewedKey, levelName, onSelect }: LevelS
           variant="ghost"
           icon="stairs"
           iconEnd="chevron-down"
-          aria-label={`Level shown: ${levelName(current)}. Choose another level.`}
+          tooltip="Choose which dungeon level the map shows"
         >
           {levelName(current)}
         </Button>
@@ -97,49 +87,70 @@ export interface CameraControlsProps {
   onFollowChange: (follow: boolean) => void;
   /** Whether the party stands on the level shown. */
   partyShown: boolean;
+  /** Why the party buttons are unavailable while the party is off the level shown. */
+  partyReason: string;
 }
 
 /** Zoom, fit, center on the party, and follow. */
-export function CameraControls({ map, follow, onFollowChange, partyShown }: CameraControlsProps) {
+export function CameraControls({
+  map,
+  follow,
+  onFollowChange,
+  partyShown,
+  partyReason,
+}: CameraControlsProps) {
   return (
     <div className={styles.cameraControls} role="group" aria-label="Map view">
-      <Tooltip content="Zoom in" shortcut="+" side="left">
-        <IconButton icon="zoom-in" label="Zoom in" size="sm" onClick={() => map.current?.zoomIn()} />
-      </Tooltip>
-      <Tooltip content="Zoom out" shortcut="−" side="left">
-        <IconButton icon="zoom-out" label="Zoom out" size="sm" onClick={() => map.current?.zoomOut()} />
-      </Tooltip>
-      <Tooltip content="Fit map" shortcut="0" side="left">
-        <IconButton
-          icon="maximize"
-          label="Fit map"
-          size="sm"
-          onClick={() => {
-            onFollowChange(false);
-            map.current?.fitToExplored();
-          }}
-        />
-      </Tooltip>
+      <IconButton
+        icon="zoom-in"
+        label="Zoom in"
+        size="sm"
+        shortcut="+"
+        tooltipSide="left"
+        onClick={() => map.current?.zoomIn()}
+      />
+      <IconButton
+        icon="zoom-out"
+        label="Zoom out"
+        size="sm"
+        shortcut="−"
+        tooltipSide="left"
+        onClick={() => map.current?.zoomOut()}
+      />
+      <IconButton
+        icon="maximize"
+        label="Fit map"
+        tooltip="Fit map to the explored area"
+        size="sm"
+        shortcut="0"
+        tooltipSide="left"
+        onClick={() => {
+          onFollowChange(false);
+          map.current?.fitToExplored();
+        }}
+      />
       <span className={styles.controlDivider} aria-hidden="true" />
-      <Tooltip content="Center on the party" shortcut="C" side="left">
-        <IconButton
-          icon="target"
-          label="Center on the party"
-          size="sm"
-          disabled={!partyShown}
-          onClick={() => map.current?.centerOnParty()}
-        />
-      </Tooltip>
-      <Tooltip content={follow ? 'Stop following the party' : 'Follow the party'} shortcut="F" side="left">
-        <IconButton
-          icon="footprints"
-          label="Follow the party"
-          size="sm"
-          pressed={follow}
-          disabled={!partyShown}
-          onClick={() => onFollowChange(!follow)}
-        />
-      </Tooltip>
+      <IconButton
+        icon="target"
+        label="Center on the party"
+        size="sm"
+        shortcut="C"
+        tooltipSide="left"
+        disabled={!partyShown}
+        disabledReason={partyReason}
+        onClick={() => map.current?.centerOnParty()}
+      />
+      <IconButton
+        icon="footprints"
+        label="Follow the party"
+        size="sm"
+        shortcut="F"
+        tooltipSide="left"
+        pressed={follow}
+        disabled={!partyShown}
+        disabledReason={partyReason}
+        onClick={() => onFollowChange(!follow)}
+      />
     </div>
   );
 }
@@ -231,13 +242,14 @@ export function LightIndicator({ text, short, lit, menu }: LightIndicatorProps) 
       {menu.length > 0 ? (
         <DropdownMenu
           align="end"
-          items={menu}
+          items={[{ type: 'label', label: text }, { type: 'separator' }, ...menu]}
           trigger={
             <Button
               size="sm"
               variant="ghost"
               icon={lit ? 'torch' : 'moon'}
               className={look}
+              tooltip="Light or put out a torch or lantern"
               aria-label={`Light: ${text}`}
             >
               {short}

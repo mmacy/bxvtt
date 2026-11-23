@@ -115,21 +115,25 @@ export function VitalsRow({ model, hideHp = false }: { model: SheetModel; hideHp
           Ascending <span className={styles.num}>{model.armourClassAscending}</span>
         </span>
       </div>
-      <Vital label="THAC0" value={String(model.thac0)} hint="The d20 roll needed to hit armour class 0." />
+      <Vital
+        label="THAC0"
+        value={String(model.thac0)}
+        hint="Roll this number or higher on a d20 to hit armour class 0"
+      />
       <Vital
         label="Attack bonus"
         value={formatModifier(model.attackBonus)}
-        hint="The bonus to an attack roll against ascending armour class."
+        hint="Add this bonus to an attack roll against ascending armour class"
       />
       {model.movementFeet !== null && (
         <Vital
           label="Movement"
           value={`${model.movementFeet}′`}
-          hint={`${formatFeet(model.movementFeet)} a turn while exploring${
+          hint={`Move ${formatFeet(model.movementFeet)} a turn while exploring${
             model.encounterFeet !== null
               ? `, and ${formatFeet(model.encounterFeet)} a round in an encounter`
               : ''
-          }.`}
+          }`}
           note={model.encounterFeet !== null ? `${model.encounterFeet}′ a round` : undefined}
         />
       )}
@@ -139,8 +143,8 @@ export function VitalsRow({ model, hideHp = false }: { model: SheetModel; hideHp
 
 function Vital({ label, value, hint, note }: { label: string; value: string; hint: string; note?: string }) {
   return (
-    <Tooltip content={hint}>
-      <div className={styles.vital} tabIndex={0} role="group" aria-label={`${label} ${value}. ${hint}`}>
+    <Tooltip content={hint} describe={false}>
+      <div className={styles.vital} tabIndex={0} role="group" aria-label={`${label} ${value}. ${hint}.`}>
         <span className={styles.vitalValue} aria-hidden="true">
           {value}
         </span>

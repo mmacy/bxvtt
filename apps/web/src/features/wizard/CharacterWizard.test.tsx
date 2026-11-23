@@ -253,7 +253,9 @@ describe('the hit points and gold step', () => {
     expect(roll).toHaveAccessibleDescription(
       'Rolling hit points fixes your class as a fighter and keeps the reroll option off for these ability scores. You can still change your ability trade, identity, and equipment. To play another class after you roll, start over with new ability scores.',
     );
-    expect(screen.getByRole('button', { name: 'Roll starting gold' })).toBeDisabled();
+    const gold = screen.getByRole('button', { name: 'Roll starting gold' });
+    expect(gold).toHaveAttribute('aria-disabled', 'true');
+    expect(gold).toHaveAccessibleDescription('Roll your hit points before your starting gold.');
     expect(screen.getByText('d8')).toBeInTheDocument();
     expect(continueButton()).toBeNull();
   });
@@ -343,7 +345,7 @@ describe('the class step after the hit points are rolled', () => {
     // The server's record wins over the draft in this browser.
     const dwarf = await screen.findByRole('button', { name: 'Dwarf' });
     expect(dwarf).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: 'Fighter' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Fighter' })).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByRole('button', { name: 'Fighter' })).toHaveAccessibleDescription(
       /^You rolled hit points for these ability scores/,
     );
@@ -368,7 +370,13 @@ describe('AdjustStep', () => {
       />,
     );
     // The class entry lists Intelligence as the prime requisite, which the trade can't lower.
-    expect(screen.getByRole('button', { name: 'Lower Intelligence' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Lower Intelligence' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Lower Intelligence' })).toHaveAccessibleDescription(
+      "A magic-user can't lower Intelligence.",
+    );
     // Nothing bxapi serves rules out lowering Dexterity, so the player may try and the engine answers.
     expect(screen.getByRole('button', { name: 'Lower Dexterity' })).toBeEnabled();
     rerender(

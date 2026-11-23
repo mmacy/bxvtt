@@ -84,6 +84,11 @@ export function CartPanel({
           icon="coins"
           loading={pending}
           disabled={lines.length === 0 || buyer === null}
+          disabledReason={
+            buyer !== null && lines.length === 0
+              ? `${buyer.name}'s cart is empty. Add gear from the catalog first.`
+              : undefined
+          }
           onClick={onBuy}
         >
           {buyer ? `Buy for ${buyer.name}` : 'Buy'}
@@ -126,7 +131,13 @@ export function CartPanel({
       {(copyTargets > 0 && lines.length > 0) || othersWithCarts > 0 ? (
         <div className={styles.party}>
           {copyTargets > 0 && lines.length > 0 && (
-            <Button variant="ghost" size="sm" icon="copy" onClick={onCopy}>
+            <Button
+              variant="ghost"
+              size="sm"
+              icon="copy"
+              tooltip="Put the same items in each of your other characters' carts"
+              onClick={onCopy}
+            >
               Copy to your other characters
             </Button>
           )}
@@ -136,7 +147,14 @@ export function CartPanel({
             >{`Skips ${joinList(skipped)}, who ${skipped.length === 1 ? 'is' : 'are'} dead.`}</p>
           )}
           {othersWithCarts > 0 && (
-            <Button variant="secondary" size="sm" icon="users" loading={pending} onClick={onBuyEveryone}>
+            <Button
+              variant="secondary"
+              size="sm"
+              icon="users"
+              loading={pending}
+              tooltip="Buy what is in every character's cart, one purchase for each character"
+              onClick={onBuyEveryone}
+            >
               {`Buy all carts (${othersWithCarts + (lines.length > 0 ? 1 : 0)})`}
             </Button>
           )}

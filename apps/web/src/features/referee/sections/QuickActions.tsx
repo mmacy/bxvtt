@@ -2,7 +2,7 @@
  * Quick actions: the referee commands a referee reaches for during play, each as a small form with pickers.
  * Where a purpose-built form adds nothing, the action reuses the schema-driven `CommandForm`.
  */
-import { directionLabel, formatFeet } from '@bxvtt/shared/text';
+import { directionLabel, formatDuration, formatFeet, type TimeUnitName } from '@bxvtt/shared/text';
 import { useMemo, useState, type ReactNode } from 'react';
 import { UNKEYED_PLACE_PHRASE, useLegalCommands, useParty, type GameCommand } from '@/app';
 import {
@@ -31,6 +31,7 @@ import {
 } from '../pickers';
 import { IdMark } from '../details';
 import { CommandOutcome, useRefereeCommand } from '../RefereeCommand';
+import { useCommandReason } from '../useCommandReason';
 import { CommandForm } from '../schema/CommandForm';
 import type { RefereeData } from '../useReferee';
 import { EndEncounterForm } from './EncounterNow';
@@ -254,6 +255,7 @@ export function SpawnMonstersForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const full = useFullMonsters();
   const { run, busy, outcome, clear } = useRefereeCommand();
+  const { available, reason } = useCommandReason('spawn_monsters');
   // A newly chosen monster rolls its dungeon number appearing by default, as its entry prints it.
   const chooseMonster = (id: string | null) => {
     setMonster(id);
@@ -302,10 +304,19 @@ export function SpawnMonstersForm({
       />
       <DistanceField value={distance} onChange={setDistance} error={errors.distance} />
       <div className={styles.rowActions}>
-        <Button size="sm" variant="primary" loading={busy} onClick={submit}>
+        <Button
+          size="sm"
+          variant="primary"
+          loading={busy}
+          disabled={!available}
+          disabledReason={reason}
+          onClick={submit}
+        >
           Spawn
         </Button>
-        <span className={styles.secondary}>Joins the active encounter, or starts a new one.</span>
+        <span className={styles.secondary}>
+          {available ? 'Joins the active encounter, or starts a new one.' : reason}
+        </span>
       </div>
       <CommandOutcome outcome={outcome} onDismiss={clear} />
     </div>
@@ -319,6 +330,7 @@ function SpawnNpcPartyForm() {
   const [dice, setDice] = useState('1d4+3');
   const [distance, setDistance] = useState<number | null>(60);
   const { run, busy, outcome, clear } = useRefereeCommand();
+  const { available, reason } = useCommandReason('spawn_npc_party');
   const submit = () => {
     if (distance === null) return;
     const command: GameCommand = {
@@ -353,10 +365,17 @@ function SpawnNpcPartyForm() {
       />
       <DistanceField value={distance} onChange={setDistance} />
       <div className={styles.rowActions}>
-        <Button size="sm" variant="primary" loading={busy} onClick={submit}>
+        <Button
+          size="sm"
+          variant="primary"
+          loading={busy}
+          disabled={!available}
+          disabledReason={reason}
+          onClick={submit}
+        >
           Spawn party
         </Button>
-        <span className={styles.secondary}>Available while exploring.</span>
+        {reason !== null && <span className={styles.secondary}>{reason}</span>}
       </div>
       <CommandOutcome outcome={outcome} onDismiss={clear} />
     </div>
@@ -491,7 +510,7 @@ function PlacePartyForm({ data }: { data: RefereeData }) {
   );
 }
 
-const TIME_STEPS: ReadonlyArray<{ label: string; n: number; unit: string }> = [
+const TIME_STEPS: ReadonlyArray<{ label: string; n: number; unit: TimeUnitName }> = [
   { label: '1 round', n: 1, unit: 'round' },
   { label: '1 turn', n: 1, unit: 'turn' },
   { label: '1 hour', n: 6, unit: 'turn' },
@@ -510,6 +529,7 @@ function AdvanceTimeForm() {
             size="sm"
             variant="secondary"
             disabled={busy}
+            tooltip={`Advance the clock by ${formatDuration(step.n, step.unit)}`}
             onClick={() => run({ command_type: 'advance_time', n: step.n, unit: step.unit })}
           >
             {step.label}
@@ -555,7 +575,14 @@ function RollDiceForm() {
     <div className={styles.form}>
       <div className={styles.rowActions} role="group" aria-label="Roll one die">
         {DIE_SIDES.map((sides) => (
-          <Button key={sides} size="sm" variant="ghost" disabled={busy} onClick={() => roll1(`1d${sides}`)}>
+          <Button
+            key={sides}
+            size="sm"
+            variant="ghost"
+            disabled={busy}
+            tooltip={`Roll one ${sides}-sided die`}
+            onClick={() => roll1(`1d${sides}`)}
+          >
             d{sides}
           </Button>
         ))}
@@ -604,7 +631,18 @@ interface ActionDef {
   icon: IconName;
   /** The commands the action sends. It is available when any of them is legal now. */
   commands: readonly string[];
+  /**
+   * Whether the action's form has no button of its own that says why the action is unavailable, so the opened
+   * action says it in a line above the form.
+   */
+  bare?: boolean;
   render: () => ReactNode;
+}
+
+/** Says why an action isn't available now, from the first of its commands. */
+function UnavailableNote({ commands }: { commands: readonly string[] }) {
+  const { reason } = useCommandReason(commands[0] ?? '');
+  return reason === null ? null : <p className={styles.secondaryLine}>{reason}</p>;
 }
 
 /** The quick actions, grouped, with the encounter's ending first while one is open. */
@@ -664,6 +702,7 @@ export function QuickActions({ data }: { data: RefereeData }) {
           label: 'Award experience',
           icon: 'plus',
           commands: ['award_xp'],
+          bare: true,
           render: () => <AwardXpAction />,
         },
         {
@@ -690,6 +729,7 @@ export function QuickActions({ data }: { data: RefereeData }) {
           label: 'Place the party',
           icon: 'map',
           commands: ['place_party'],
+          bare: true,
           render: () => <PlacePartyForm data={data} />,
         },
         {
@@ -704,6 +744,7 @@ export function QuickActions({ data }: { data: RefereeData }) {
           label: 'Advance time',
           icon: 'hourglass',
           commands: ['advance_time'],
+          bare: true,
           render: () => <AdvanceTimeForm />,
         },
       ],
@@ -716,6 +757,7 @@ export function QuickActions({ data }: { data: RefereeData }) {
           label: 'Roll dice',
           icon: 'dice',
           commands: ['roll_dice'],
+          bare: true,
           render: () => <RollDiceForm />,
         },
         {
@@ -771,7 +813,13 @@ export function QuickActions({ data }: { data: RefereeData }) {
                 ) : ended && action.commands.every(changesEndedStory) ? (
                   <UnavailableMark>Game over</UnavailableMark>
                 ) : undefined,
-                content: open === action.value ? action.render() : null,
+                content:
+                  open === action.value ? (
+                    <>
+                      {action.bare && !available && <UnavailableNote commands={action.commands} />}
+                      {action.render()}
+                    </>
+                  ) : null,
               };
             })}
           />

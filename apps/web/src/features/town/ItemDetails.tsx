@@ -9,11 +9,10 @@ export interface ItemDetailsProps {
   lots: number;
   onAdd: () => void;
   buyerName: string | null;
-  disabled: boolean;
 }
 
 /** What a buyer needs to know about one item, with a button that puts a lot in the cart. */
-export function ItemDetails({ item, lots, onAdd, buyerName, disabled }: ItemDetailsProps) {
+export function ItemDetails({ item, lots, onAdd, buyerName }: ItemDetailsProps) {
   const ctx = useTextContext();
   if (item === null) {
     return (
@@ -67,7 +66,7 @@ export function ItemDetails({ item, lots, onAdd, buyerName, disabled }: ItemDeta
           {note}
         </p>
       ))}
-      <Button variant="secondary" icon="plus" disabled={disabled} onClick={onAdd}>
+      <Button variant="secondary" icon="plus" onClick={onAdd}>
         {lots > 0
           ? `Add another to ${buyerName ? `${buyerName}'s` : 'the'} cart`
           : `Add to ${buyerName ? `${buyerName}'s` : 'the'} cart`}

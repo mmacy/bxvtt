@@ -2,8 +2,7 @@ import { Toolbar } from 'radix-ui';
 import { useId, useState, type ReactNode } from 'react';
 import { IconButton } from '../components/Button';
 import { Drawer } from '../components/Dialog';
-import { ariaKeyShortcuts } from '../components/Kbd';
-import { Tooltip } from '../components/Popover';
+import type { ControlHelpProps } from '../components/ControlHelp';
 import { Splitter } from '../components/ResizablePanels';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/Tabs';
 import { Badge } from '../components/Badge';
@@ -70,31 +69,20 @@ export function TableLayout({
   const hasDock = dock !== undefined;
   const dockVisible = hasDock && !compact && !collapsed;
 
+  const toggleLabel = compact
+    ? `Open ${dockLabel.toLowerCase()}`
+    : collapsed
+      ? `Show ${dockLabel.toLowerCase()}`
+      : `Hide ${dockLabel.toLowerCase()}`;
   const toggle = (
-    <Tooltip
-      content={
-        compact
-          ? `Open ${dockLabel.toLowerCase()}`
-          : collapsed
-            ? `Show ${dockLabel.toLowerCase()}`
-            : `Hide ${dockLabel.toLowerCase()}`
-      }
-      side="bottom"
-    >
-      <IconButton
-        icon={compact || collapsed ? 'dock-open' : 'dock-close'}
-        label={
-          compact
-            ? `Open ${dockLabel.toLowerCase()}`
-            : collapsed
-              ? `Show ${dockLabel.toLowerCase()}`
-              : `Hide ${dockLabel.toLowerCase()}`
-        }
-        aria-expanded={compact ? drawerOpen : !collapsed}
-        aria-controls={compact ? undefined : dockId}
-        onClick={() => (compact ? setDrawerOpen(true) : setCollapsed(!collapsed))}
-      />
-    </Tooltip>
+    <IconButton
+      icon={compact || collapsed ? 'dock-open' : 'dock-close'}
+      label={toggleLabel}
+      tooltipSide="bottom"
+      aria-expanded={compact ? drawerOpen : !collapsed}
+      aria-controls={compact ? undefined : dockId}
+      onClick={() => (compact ? setDrawerOpen(true) : setCollapsed(!collapsed))}
+    />
   );
 
   return (
@@ -252,8 +240,9 @@ export function ToolRail({ children, footer, 'aria-label': ariaLabel }: ToolRail
   );
 }
 
-export interface ToolRailButtonProps {
+export interface ToolRailButtonProps extends Pick<ControlHelpProps, 'tooltip' | 'disabledReason'> {
   icon: IconName;
+  /** The tool's name. The tooltip shows it with the shortcut, unless you pass a `tooltip` that says more. */
   label: string;
   shortcut?: string;
   /** Marks the active tool. */
@@ -267,24 +256,27 @@ export function ToolRailButton({
   icon,
   label,
   shortcut,
+  tooltip,
+  disabledReason,
   active = false,
   disabled,
   onClick,
 }: ToolRailButtonProps) {
   return (
-    <Tooltip content={label} shortcut={shortcut} side="right">
-      <Toolbar.Button asChild>
-        <IconButton
-          icon={icon}
-          label={label}
-          pressed={active}
-          disabled={disabled}
-          onClick={onClick}
-          size="lg"
-          aria-keyshortcuts={shortcut ? ariaKeyShortcuts(shortcut) : undefined}
-        />
-      </Toolbar.Button>
-    </Tooltip>
+    <Toolbar.Button asChild>
+      <IconButton
+        icon={icon}
+        label={label}
+        tooltip={tooltip}
+        shortcut={shortcut}
+        tooltipSide="right"
+        pressed={active}
+        disabled={disabled}
+        disabledReason={disabledReason}
+        onClick={onClick}
+        size="lg"
+      />
+    </Toolbar.Button>
   );
 }
 

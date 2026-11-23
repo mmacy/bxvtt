@@ -5,10 +5,11 @@
  */
 import { commandInfo } from '@bxvtt/shared/text';
 import { useCallback, useMemo, useState, type FormEvent, type ReactNode } from 'react';
-import { useCommandSchema, useLegalCommand } from '@/app';
+import { useCommandSchema } from '@/app';
 import { Banner, Button, Skeleton } from '@/ui';
 import { CommandOutcome, useRefereeCommand } from '../RefereeCommand';
 import styles from '../referee.module.css';
+import { useCommandReason } from '../useCommandReason';
 import { useRefereeData } from '../useReferee';
 import { FieldList, FormEnvContext, type FormEnv } from './fields';
 import {
@@ -97,7 +98,7 @@ export function SchemaForm({
   onAccepted,
 }: CommandFormProps & { schema: JsonSchema }) {
   const data = useRefereeData();
-  const legal = useLegalCommand(commandType);
+  const { available, reason } = useCommandReason(commandType);
   const fields = useMemo(() => commandFields(schema), [schema]);
   const [values, setValues] = useState(() => startValues(fields, initial));
   const [showErrors, setShowErrors] = useState(false);
@@ -173,10 +174,17 @@ export function SchemaForm({
           </p>
         )}
         <div className={styles.actions}>
-          <Button type="submit" variant="primary" size="sm" loading={busy} disabled={legal === null}>
+          <Button
+            type="submit"
+            variant="primary"
+            size="sm"
+            loading={busy}
+            disabled={!available}
+            disabledReason={reason}
+          >
             {submitLabel ?? info.button}
           </Button>
-          {legal === null && <span className={styles.muted}>Not available in this mode.</span>}
+          {reason !== null && <span className={styles.muted}>{reason}</span>}
         </div>
         <CommandOutcome outcome={outcome} onDismiss={clear} />
       </form>

@@ -104,7 +104,6 @@ export function Outfitter() {
           onLots={(itemId, lots) => setLots(buyer.id, itemId, lots)}
           selectedId={selectedId}
           onSelect={setSelectedId}
-          disabled={false}
         />
         <aside ref={asideRef} className={styles.aside} aria-label="Cart and item details">
           {reports.map((report) => (
@@ -156,7 +155,6 @@ export function Outfitter() {
               item={selected}
               lots={selected ? (cart[selected.summary.id] ?? 0) : 0}
               buyerName={buyer.name}
-              disabled={false}
               onAdd={() =>
                 selected && setLots(buyer.id, selected.summary.id, (cart[selected.summary.id] ?? 0) + 1)
               }

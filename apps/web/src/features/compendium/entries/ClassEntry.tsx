@@ -315,6 +315,7 @@ export function ClassEntry({ id }: { id: string }) {
                               size="sm"
                               variant="secondary"
                               icon="spell"
+                              tooltip={`Show every ${spellListLabel(list)} spell in the spells index`}
                               onClick={() => {
                                 setIndex({ spells: { list, level: 'all', query: '' } });
                                 go({ page: 'section', section: 'spells' });

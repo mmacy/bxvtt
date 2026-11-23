@@ -32,6 +32,7 @@ import {
 import type { GeneratorKind } from '@bxvtt/shared/protocol';
 import { MemberPicker, MonsterPicker } from '../pickers';
 import { CommandOutcome, useRefereeCommand } from '../RefereeCommand';
+import { useCommandReason } from '../useCommandReason';
 import { monsterCount, templateLabel } from '../model/describe';
 import type { RefereeData } from '../useReferee';
 import { SpawnMonstersForm } from './QuickActions';
@@ -73,10 +74,24 @@ function ResultHeader({
       <span className={styles.rowTitle}>{title}</span>
       <span className={styles.secondary}>Seed {seed}</span>
       <span className={styles.resultActions}>
-        <Button size="sm" variant="secondary" icon="dice" disabled={pending} onClick={onAgain}>
+        <Button
+          size="sm"
+          variant="secondary"
+          icon="dice"
+          disabled={pending}
+          tooltip="Roll again with a new seed"
+          onClick={onAgain}
+        >
           Roll again
         </Button>
-        <Button size="sm" variant="ghost" icon="redo" disabled={pending} onClick={onRepeat}>
+        <Button
+          size="sm"
+          variant="ghost"
+          icon="redo"
+          disabled={pending}
+          tooltip={`Repeat this roll with seed ${seed} for the same result`}
+          onClick={onRepeat}
+        >
           Same roll
         </Button>
       </span>
@@ -97,6 +112,7 @@ function GiveCoins({ coins }: { coins: Treasure['coins'] }) {
           size="sm"
           variant="secondary"
           disabled={!member || busy}
+          disabledReason={member ? null : 'Choose a party member to give the coins to.'}
           onClick={() => member && run({ command_type: 'grant_coins', character_id: member, coins })}
         >
           Give coins
@@ -120,6 +136,7 @@ function GiveItem({ itemId, name }: { itemId: string; name: string }) {
           size="sm"
           variant="ghost"
           disabled={!member || busy}
+          disabledReason={member ? null : `Choose a party member to give the ${name} to.`}
           onClick={() => member && run({ command_type: 'grant_item', character_id: member, item_id: itemId })}
         >
           Give
@@ -274,6 +291,7 @@ function MonstersGenerator({ data }: { data: RefereeData }) {
           icon="dice"
           loading={pending}
           disabled={!monster}
+          disabledReason="Choose a monster to roll hit points for."
           onClick={() => monster && roll({ monster_id: monster, count: count ?? 1 })}
         >
           Roll hit points
@@ -359,6 +377,7 @@ function RoomGenerator({ data }: { data: RefereeData }) {
           variant="primary"
           icon="dice"
           loading={pending}
+          tooltip="Roll a room's contents and treasure for this dungeon level"
           onClick={() => roll({ level_number: level ?? 1 })}
         >
           Stock a room
@@ -432,6 +451,7 @@ function NpcPartyGenerator() {
   const [count, setCount] = useState<number | null>(4);
   const { generate, pending, result, error } = useGenerator<NpcPartyResponse>('npc-party');
   const { run, busy, outcome, clear } = useRefereeCommand();
+  const { available, reason } = useCommandReason('spawn_npc_party');
   const party = result?.value.party;
   return (
     <div className={styles.form}>
@@ -496,7 +516,8 @@ function NpcPartyGenerator() {
               size="sm"
               variant="secondary"
               icon="users"
-              disabled={busy}
+              disabled={busy || !available}
+              disabledReason={reason}
               onClick={() =>
                 run({
                   command_type: 'spawn_npc_party',
@@ -510,7 +531,7 @@ function NpcPartyGenerator() {
             </Button>
           </div>
           <p className={styles.secondaryLine}>
-            Spawns a new party of this type and size 60 feet away while exploring.
+            {available ? 'Spawns a new party of this type and size 60 feet away.' : reason}
           </p>
           <CommandOutcome outcome={outcome} onDismiss={clear} />
         </div>
@@ -521,11 +542,11 @@ function NpcPartyGenerator() {
 
 type Kind = 'treasure' | 'monsters' | 'room' | 'npcs';
 
-const GENERATORS: ReadonlyArray<{ value: Kind; label: string; icon: IconName }> = [
-  { value: 'treasure', label: 'Treasure', icon: 'coins' },
-  { value: 'monsters', label: 'Monsters', icon: 'skull' },
-  { value: 'room', label: 'Room', icon: 'door' },
-  { value: 'npcs', label: 'NPCs', icon: 'users' },
+const GENERATORS: ReadonlyArray<{ value: Kind; label: string; icon: IconName; tooltip: string }> = [
+  { value: 'treasure', label: 'Treasure', icon: 'coins', tooltip: 'Roll treasure by treasure type' },
+  { value: 'monsters', label: 'Monsters', icon: 'skull', tooltip: 'Roll hit points for a group of monsters' },
+  { value: 'room', label: 'Room', icon: 'door', tooltip: "Roll a room's contents for a dungeon level" },
+  { value: 'npcs', label: 'NPCs', icon: 'users', tooltip: 'Roll a party of non-player adventurers' },
 ];
 
 /** The four generators behind one switch. */
@@ -541,6 +562,7 @@ export function Generators({ data }: { data: RefereeData }) {
             variant={kind === g.value ? 'secondary' : 'ghost'}
             icon={g.icon}
             aria-pressed={kind === g.value}
+            tooltip={g.tooltip}
             onClick={() => setKind(g.value)}
           >
             {g.label}

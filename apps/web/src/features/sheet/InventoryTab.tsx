@@ -1,7 +1,8 @@
 import type { MemberView } from '@bxvtt/shared/bxapi';
-import { capitalizeFirst, groupName } from '@bxvtt/shared/text';
+import { capitalizeFirst, count, groupName } from '@bxvtt/shared/text';
 import { useMemo, useState, type ReactNode } from 'react';
 import {
+  useCanControlMember,
   useEncounter,
   useParty,
   usePlayerView,
@@ -124,10 +125,7 @@ export function InventoryTab({ member, model }: TabProps) {
 
   const lights = (view?.effects ?? []).filter((e) => e.character_id === member.id && e.kind === 'light');
   const anyAction = [equip, unequip, give, drop, use, light, extinguish].some((c) => c.legal !== null);
-  const blocked = [equip, unequip, give, drop, use, light, extinguish].find(
-    (c) => c.legal !== null && !c.permission.allowed,
-  );
-  const reason = blocked && !blocked.permission.allowed ? blocked.permission.reason : null;
+  const reason = useCanControlMember(member.id).reason;
 
   const menuFor = (entry: InventoryEntry): MenuEntry[] => {
     const items: MenuEntry[] = [];
@@ -136,6 +134,7 @@ export function InventoryTab({ member, model }: TabProps) {
         label: 'Equip',
         icon: 'shield',
         disabled: !equip.permission.allowed || pending,
+        disabledReason: equip.permission.reason,
         onSelect: () =>
           void send({ command_type: 'equip_item', character_id: member.id, item_id: entry.commandId }),
       });
@@ -144,6 +143,7 @@ export function InventoryTab({ member, model }: TabProps) {
         label: 'Use',
         icon: 'spell',
         disabled: !use.permission.allowed,
+        disabledReason: use.permission.reason,
         onSelect: () => setUsing(entry),
       });
     if (light.legal && entry.kind === 'item' && LIGHT_SOURCES.has(entry.commandId))
@@ -151,6 +151,7 @@ export function InventoryTab({ member, model }: TabProps) {
         label: entry.commandId === 'torch' ? 'Light a torch' : 'Light the lantern',
         icon: entry.commandId === 'torch' ? 'torch' : 'lantern',
         disabled: !light.permission.allowed || pending,
+        disabledReason: light.permission.reason,
         onSelect: () =>
           void send({ command_type: 'light_source', character_id: member.id, item_id: entry.commandId }),
       });
@@ -159,6 +160,7 @@ export function InventoryTab({ member, model }: TabProps) {
         label: 'Give to…',
         icon: 'hand',
         disabled: !give.permission.allowed,
+        disabledReason: give.permission.reason,
         onSelect: () => setTransfer({ mode: 'give', entryKey: entry.key }),
       });
     if (drop.legal)
@@ -166,6 +168,7 @@ export function InventoryTab({ member, model }: TabProps) {
         label: 'Drop…',
         icon: 'arrow-down',
         disabled: !drop.permission.allowed,
+        disabledReason: drop.permission.reason,
         onSelect: () => setTransfer({ mode: 'drop', entryKey: entry.key }),
       });
     return items;
@@ -204,7 +207,7 @@ export function InventoryTab({ member, model }: TabProps) {
         size="sm"
         variant="ghost"
         disabled={!unequip.permission.allowed || pending}
-        title={unequip.permission.reason ?? undefined}
+        disabledReason={unequip.permission.reason}
         onClick={() =>
           void send({ command_type: 'unequip_item', character_id: member.id, item_id: entry.commandId })
         }
@@ -273,7 +276,7 @@ export function InventoryTab({ member, model }: TabProps) {
                     variant="secondary"
                     icon={entry.commandId === 'torch' ? 'torch' : 'lantern'}
                     disabled={!light.permission.allowed || pending}
-                    title={light.permission.reason ?? undefined}
+                    disabledReason={light.permission.reason}
                     onClick={() =>
                       void send({
                         command_type: 'light_source',
@@ -291,7 +294,7 @@ export function InventoryTab({ member, model }: TabProps) {
                 variant="ghost"
                 icon="close"
                 disabled={!extinguish.permission.allowed || pending}
-                title={extinguish.permission.reason ?? undefined}
+                disabledReason={extinguish.permission.reason}
                 onClick={() => void send({ command_type: 'extinguish_source', character_id: member.id })}
               >
                 Put out light
@@ -303,7 +306,8 @@ export function InventoryTab({ member, model }: TabProps) {
                 variant="ghost"
                 icon="torch"
                 disabled={!light.permission.allowed || pending}
-                title={light.permission.reason ?? undefined}
+                disabledReason={light.permission.reason}
+                tooltip="Set fire to the flask of oil dropped on this square"
                 onClick={() =>
                   void send({ command_type: 'light_source', character_id: member.id, item_id: 'oil_flask' })
                 }
@@ -327,7 +331,8 @@ export function InventoryTab({ member, model }: TabProps) {
                 variant="secondary"
                 icon="hand"
                 disabled={!give.permission.allowed}
-                title={give.permission.reason ?? undefined}
+                disabledReason={give.permission.reason}
+                tooltip="Hand items or coins to another party member"
                 onClick={() => setTransfer({ mode: 'give', entryKey: null })}
               >
                 Give
@@ -339,7 +344,8 @@ export function InventoryTab({ member, model }: TabProps) {
                 variant="ghost"
                 icon="arrow-down"
                 disabled={!drop.permission.allowed}
-                title={drop.permission.reason ?? undefined}
+                disabledReason={drop.permission.reason}
+                tooltip="Leave items or coins in a pile on this square"
                 onClick={() => setTransfer({ mode: 'drop', entryKey: null })}
               >
                 Drop
@@ -418,6 +424,7 @@ function TransferDialog({ mode, member, model, initialKey, onClose }: TransferPr
   );
   const coinTotal = COINS.reduce((sum, c) => sum + coins[c], 0);
   const nothing = itemIds.length === 0 && coinTotal === 0;
+  const noRecipient = mode === 'give' && recipient === '';
   const title = mode === 'give' ? `Give from ${member.name}'s pack` : `Drop from ${member.name}'s pack`;
 
   const submit = async () => {
@@ -460,7 +467,12 @@ function TransferDialog({ mode, member, model, initialKey, onClose }: TransferPr
           <Button
             variant="primary"
             loading={pending}
-            disabled={nothing || (mode === 'give' && recipient === '')}
+            disabled={noRecipient || nothing}
+            disabledReason={
+              noRecipient
+                ? `${member.name} has no one to give items to. The party has no other members.`
+                : `Choose at least one item or some coins to ${mode}.`
+            }
             onClick={() => void submit()}
           >
             {mode === 'give' ? 'Give' : 'Drop'}
@@ -501,6 +513,7 @@ function TransferDialog({ mode, member, model, initialKey, onClose }: TransferPr
                       value={counts[entry.key] ?? 0}
                       min={0}
                       max={entry.quantity}
+                      maxReason={`${member.name} carries only ${entry.quantity} ${entry.units}.`}
                       onChange={(value) => setCounts((c) => ({ ...c, [entry.key]: value ?? 0 }))}
                     />
                   ) : (
@@ -528,6 +541,7 @@ function TransferDialog({ mode, member, model, initialKey, onClose }: TransferPr
                   value={coins[c]}
                   min={0}
                   max={model.inventory.purse[c]}
+                  maxReason={`${member.name} carries only ${count(model.inventory.purse[c], `${COIN_NAMES[c].toLowerCase()} piece`)}.`}
                   width={5}
                   onChange={(value) => setCoins((all) => ({ ...all, [c]: value ?? 0 }))}
                 />

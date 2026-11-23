@@ -1,5 +1,5 @@
 import { ContextMenu as ContextPrimitive, DropdownMenu as DropdownPrimitive } from 'radix-ui';
-import type { ComponentType, ReactElement, ReactNode } from 'react';
+import { isValidElement, useId, type ComponentType, type ReactElement, type ReactNode } from 'react';
 import { Icon, type IconName } from '../icons/Icon';
 import { cx } from '../lib/cx';
 import { Kbd, ariaKeyShortcuts } from './Kbd';
@@ -15,6 +15,12 @@ export type MenuEntry =
       /** Marks a destructive item, such as "Remove from table". */
       danger?: boolean;
       disabled?: boolean;
+      /**
+       * Why the item is unavailable, shown under its label while `disabled` is true, such as "Make another member a
+       * referee first." The item stays reachable with the arrow keys, announces itself as disabled, and does
+       * nothing when chosen.
+       */
+      disabledReason?: string | null;
     }
   | {
       type: 'checkbox';
@@ -25,7 +31,15 @@ export type MenuEntry =
     }
   | { type: 'separator' }
   | { type: 'label'; label: string }
-  | { type: 'submenu'; label: string; icon?: IconName; items: MenuEntry[]; disabled?: boolean };
+  | {
+      type: 'submenu';
+      label: string;
+      icon?: IconName;
+      items: MenuEntry[];
+      disabled?: boolean;
+      /** Why the submenu is unavailable, shown under its label while `disabled` is true. */
+      disabledReason?: string | null;
+    };
 
 interface ChildProps {
   className?: string;
@@ -34,7 +48,14 @@ interface ChildProps {
 
 interface MenuParts {
   Item: ComponentType<
-    ChildProps & { disabled?: boolean; onSelect?: (event: Event) => void; 'aria-keyshortcuts'?: string }
+    ChildProps & {
+      disabled?: boolean;
+      onSelect?: (event: Event) => void;
+      'aria-keyshortcuts'?: string;
+      'aria-disabled'?: boolean;
+      'aria-describedby'?: string;
+      'data-disabled'?: string;
+    }
   >;
   CheckboxItem: ComponentType<
     ChildProps & { checked?: boolean; onCheckedChange?: (checked: boolean) => void; disabled?: boolean }
@@ -48,9 +69,63 @@ interface MenuParts {
   Portal: ComponentType<{ children?: ReactNode }>;
 }
 
+/**
+ * An item that can't be chosen, with the reason under its label. It stays focusable, unlike a Radix disabled
+ * item, so a keyboard or screen reader user reaches the reason too.
+ */
+function UnavailableItem({
+  parts,
+  label,
+  icon,
+  reason,
+  danger,
+}: {
+  parts: MenuParts;
+  label: string;
+  icon?: IconName;
+  reason: string;
+  danger?: boolean;
+}) {
+  const reasonId = useId();
+  return (
+    <parts.Item
+      className={cx(styles.item, styles.unavailable, danger && styles.danger)}
+      aria-disabled={true}
+      data-disabled=""
+      aria-describedby={reasonId}
+      // Choosing it keeps the menu open, so the reason stays in view.
+      onSelect={(event) => event.preventDefault()}
+    >
+      <span className={styles.iconSlot}>{icon && <Icon name={icon} size={16} />}</span>
+      <span className={styles.itemText}>
+        <span className={styles.itemLabel}>{label}</span>
+        <span id={reasonId} className={styles.itemReason} aria-hidden="true">
+          {reason}
+        </span>
+      </span>
+    </parts.Item>
+  );
+}
+
 function renderEntries(entries: MenuEntry[], parts: MenuParts): ReactNode {
   return entries.map((entry, index) => {
     const key = `${entry.type ?? 'item'}-${'label' in entry ? entry.label : index}-${index}`;
+    if (
+      (entry.type === undefined || entry.type === 'item' || entry.type === 'submenu') &&
+      entry.disabled &&
+      entry.disabledReason
+    ) {
+      return (
+        <UnavailableItem
+          key={key}
+          parts={parts}
+          label={entry.label}
+          icon={entry.icon}
+          reason={entry.disabledReason}
+          danger={entry.type !== 'submenu' && entry.danger}
+        />
+      );
+    }
     switch (entry.type) {
       case 'separator':
         return <parts.Separator key={key} className={styles.separator} />;
@@ -155,6 +230,15 @@ export interface DropdownMenuProps {
   onOpenChange?: (open: boolean) => void;
 }
 
+/**
+ * Whether a trigger element is disabled. The menu passes it on to Radix, which then ignores the arrow key and
+ * pointer down that would open it, so an unavailable trigger that stays focusable keeps its menu shut.
+ */
+function triggerDisabled(trigger: ReactElement): boolean {
+  if (!isValidElement<{ disabled?: unknown }>(trigger)) return false;
+  return trigger.props.disabled === true;
+}
+
 /** A menu of actions that opens from a button. Arrow keys move, type-ahead jumps, Escape closes. */
 export function DropdownMenu({
   trigger,
@@ -166,7 +250,9 @@ export function DropdownMenu({
 }: DropdownMenuProps) {
   return (
     <DropdownPrimitive.Root open={open} onOpenChange={onOpenChange}>
-      <DropdownPrimitive.Trigger asChild>{trigger}</DropdownPrimitive.Trigger>
+      <DropdownPrimitive.Trigger asChild disabled={triggerDisabled(trigger)}>
+        {trigger}
+      </DropdownPrimitive.Trigger>
       <DropdownPrimitive.Portal>
         <DropdownPrimitive.Content
           className={styles.content}

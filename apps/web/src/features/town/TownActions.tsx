@@ -1,14 +1,6 @@
 import { useState } from 'react';
 import { formatShortcut, useAction, useShortcut } from '@/app';
-import {
-  ActionBarDivider,
-  ActionBarItem,
-  ActionBarMenu,
-  Button,
-  Kbd,
-  type IconName,
-  type MenuEntry,
-} from '@/ui';
+import { ActionBarDivider, ActionBarItem, ActionBarMenu, Button, type IconName, type MenuEntry } from '@/ui';
 import { useLeaveAccess, usePartyAccess, useTownServices } from './hooks';
 import { useRest } from './RestAndPrepare';
 import { useTownUi, type TownSection } from './townUi';
@@ -21,6 +13,10 @@ interface Destination {
   label: string;
   icon: IconName;
   enabled: boolean;
+  /** What the button's tooltip says it does. */
+  tooltip: string;
+  /** Why the button is unavailable, or `null` while it is available. */
+  reason: string | null;
 }
 
 /** Registers the shortcut that opens one part of town. */
@@ -58,6 +54,8 @@ export function TownActions() {
     label: 'Outfitter',
     icon: 'chest',
     enabled: services.outfitter,
+    tooltip: 'Go to the outfitter to buy weapons, armour, and gear',
+    reason: services.reasons.outfitter,
   };
   const temple: Destination = {
     id: 'temple',
@@ -66,6 +64,8 @@ export function TownActions() {
     label: 'Temple',
     icon: 'heart',
     enabled: services.temple,
+    tooltip: 'Go to the temple to buy healing and cures',
+    reason: services.reasons.temple,
   };
   const treasure: Destination = {
     id: 'treasure',
@@ -74,6 +74,8 @@ export function TownActions() {
     label: 'Treasure buyers',
     icon: 'gem',
     enabled: services.treasure,
+    tooltip: 'Go to the treasure buyers to sell gems and jewellery',
+    reason: services.reasons.treasure,
   };
 
   const shortcutsOn = !leaveOpen;
@@ -105,6 +107,7 @@ export function TownActions() {
     icon: 'door',
     shortcut: 'g',
     disabled: !canLeave,
+    disabledReason: canLeave ? null : access.explanation,
     run: () => setLeaveOpen(true),
   });
   useAction({
@@ -112,7 +115,8 @@ export function TownActions() {
     label: 'Rest for a night',
     group: 'Town',
     icon: 'moon',
-    disabled: !services.rest || pending,
+    disabled: !restAccess.allowed || !services.rest || pending,
+    disabledReason: restAccess.allowed ? null : restAccess.explanation,
     keywords: ['sleep', 'camp'],
     run: () => {
       setSection('rest');
@@ -124,7 +128,8 @@ export function TownActions() {
     label: 'Rest for a full day',
     group: 'Town',
     icon: 'sun',
-    disabled: !services.rest || pending,
+    disabled: !restAccess.allowed || !services.rest || pending,
+    disabledReason: restAccess.allowed ? null : restAccess.explanation,
     keywords: ['heal', 'camp'],
     run: () => {
       setSection('rest');
@@ -141,39 +146,40 @@ export function TownActions() {
       label: 'Rest one turn',
       icon: 'hourglass',
       disabled: !restAccess.allowed || pending,
+      disabledReason: restAccess.allowed ? null : restAccess.explanation,
       onSelect: () => restNow('turn'),
     },
     {
       label: 'Rest a night',
       icon: 'moon',
       disabled: !restAccess.allowed || pending,
+      disabledReason: restAccess.allowed ? null : restAccess.explanation,
       onSelect: () => restNow('night'),
     },
     {
       label: 'Rest a full day',
       icon: 'sun',
       disabled: !restAccess.allowed || pending,
+      disabledReason: restAccess.allowed ? null : restAccess.explanation,
       onSelect: () => restNow('day'),
     },
     { type: 'separator' },
     { label: 'Open rest and prepare', icon: 'rest', onSelect: () => setSection('rest') },
   ];
 
-  const reason = (enabled: boolean) => (enabled ? undefined : 'Unavailable right now.');
   const button = (place: Destination) => (
     <ActionBarItem key={place.id}>
       <Button
         variant="secondary"
         icon={place.icon}
         disabled={!place.enabled}
-        title={reason(place.enabled)}
-        aria-label={place.label}
-        aria-keyshortcuts={place.keys}
+        disabledReason={place.reason}
+        tooltip={place.tooltip}
+        shortcut={formatShortcut(place.keys)}
         onClick={() => setSection(place.section)}
         className={section === place.section ? styles.here : undefined}
       >
         {place.label}
-        <Kbd keys={formatShortcut(place.keys)} className={styles.kbd} />
       </Button>
     </ActionBarItem>
   );
@@ -189,7 +195,9 @@ export function TownActions() {
         icon="rest"
         shortcut={['Shift', 'R']}
         items={restItems}
+        tooltip="Rest the party for a turn, a night, or a full day"
         disabled={!services.rest}
+        disabledReason={services.reasons.rest}
         open={restOpen}
         onOpenChange={setRestOpen}
       />
@@ -199,13 +207,12 @@ export function TownActions() {
           variant="primary"
           icon="door"
           disabled={!canLeave}
-          title={canLeave ? undefined : access.explanation || "The party can't set out right now."}
-          aria-label="Set out"
-          aria-keyshortcuts="g"
+          disabledReason={canLeave ? null : access.explanation}
+          tooltip="Lead the party out of town to a dungeon"
+          shortcut="G"
           onClick={() => setLeaveOpen(true)}
         >
           Set out
-          <Kbd keys="G" className={styles.kbd} />
         </Button>
       </ActionBarItem>
     </>

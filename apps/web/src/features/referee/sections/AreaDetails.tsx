@@ -205,7 +205,17 @@ export function DoorRow({
             </Button>
           )}
           {now.secret && (
-            <Button size="sm" variant="ghost" disabled={busy} onClick={() => set({ discovered: !now.found })}>
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={busy}
+              tooltip={
+                now.found
+                  ? 'Mark this secret door as not found'
+                  : 'Mark this secret door as found by the party'
+              }
+              onClick={() => set({ discovered: !now.found })}
+            >
               {now.found ? 'Hide' : 'Reveal'}
             </Button>
           )}

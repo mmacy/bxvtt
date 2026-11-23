@@ -8,6 +8,7 @@ import {
 import { useId, type ReactNode } from 'react';
 import { Icon, type IconName } from '../icons/Icon';
 import { cx } from '../lib/cx';
+import { hasContent, useControlHelp } from './ControlHelp';
 import styles from './Choice.module.css';
 
 export interface CheckboxProps {
@@ -201,9 +202,32 @@ export interface SegmentedOption {
   value: string;
   label: string;
   icon?: IconName;
-  /** Hides the text label and uses it as the accessible name. Requires `icon`. */
+  /** Hides the text label and uses it as the accessible name. Requires `icon`. The tooltip then shows the label. */
   iconOnly?: boolean;
+  /** What choosing the segment does, when its label doesn't say. */
+  tooltip?: ReactNode;
   disabled?: boolean;
+}
+
+function Segment({ option, size }: { option: SegmentedOption; size: 'sm' | 'md' }) {
+  const explicit = hasContent(option.tooltip);
+  const help = useControlHelp({
+    tooltip: explicit ? option.tooltip : option.iconOnly ? option.label : null,
+    tooltipIsName: !explicit,
+    reason: null,
+  });
+  return help.render(
+    <ToggleGroup.Item
+      value={option.value}
+      disabled={option.disabled}
+      aria-label={option.iconOnly ? option.label : undefined}
+      aria-describedby={help.describedBy}
+      className={styles.segment}
+    >
+      {option.icon && <Icon name={option.icon} size={size === 'sm' ? 14 : 16} />}
+      {!option.iconOnly && <span>{option.label}</span>}
+    </ToggleGroup.Item>,
+  );
 }
 
 export interface SegmentedControlProps {
@@ -235,17 +259,7 @@ export function SegmentedControl({
       className={cx(styles.segmented, styles[`seg-${size}`], className)}
     >
       {options.map((option) => (
-        <ToggleGroup.Item
-          key={option.value}
-          value={option.value}
-          disabled={option.disabled}
-          aria-label={option.iconOnly ? option.label : undefined}
-          title={option.iconOnly ? option.label : undefined}
-          className={styles.segment}
-        >
-          {option.icon && <Icon name={option.icon} size={size === 'sm' ? 14 : 16} />}
-          {!option.iconOnly && <span>{option.label}</span>}
-        </ToggleGroup.Item>
+        <Segment key={option.value} option={option} size={size} />
       ))}
     </ToggleGroup.Root>
   );

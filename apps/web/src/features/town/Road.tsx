@@ -56,6 +56,7 @@ export function RoadPanel() {
                 variant="secondary"
                 icon="door"
                 disabled={!access.allowed || !services.leave}
+                disabledReason={access.explanation}
                 onClick={() => setLeaveOpen(true)}
               >
                 Set out
@@ -124,6 +125,7 @@ export function LeaveDialog() {
             icon="door"
             loading={pending}
             disabled={chosen === null || !access.allowed}
+            disabledReason={chosen === null ? 'This adventure has no dungeons to enter.' : access.explanation}
             onClick={go}
           >
             Set out

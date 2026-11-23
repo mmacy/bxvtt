@@ -38,7 +38,7 @@ import {
   type MapTool,
   type Point,
 } from '@/map';
-import { Button, Icon, IconButton, Tooltip, cx, useMediaQuery, type MenuEntry } from '@/ui';
+import { Button, Icon, IconButton, cx, useMediaQuery, type MenuEntry } from '@/ui';
 import { lightEntries } from './actions';
 import { mapMenuEntries } from './contextMenu';
 import { messageDuration, useMapFeedback } from './feedback';
@@ -47,6 +47,7 @@ import {
   buildPlayerLevel,
   buildRefereeLevel,
   levelOptions,
+  partyOffLevelReason,
   refereeSource,
   wanderingTableName,
   type LevelOption,
@@ -646,6 +647,11 @@ export function MapStage() {
             pins={annotations.pins}
             records={annotations.pinRecords}
             partyHere={partyShown}
+            partyReason={partyOffLevelReason(offLevel && partyLevel !== null, 'this level')}
+            mayRemove={(pin) => {
+              const record = annotations.pinRecords.get(pin.id);
+              return record !== undefined && annotations.mayErase(record.author_id);
+            }}
             onShow={(pin) => {
               setFollow(false);
               mapRef.current?.panTo({ x: pin.x, y: pin.y });
@@ -700,7 +706,13 @@ export function MapStage() {
           </div>
         )}
         <div className={styles.clusterRow}>
-          <CameraControls map={mapRef} follow={follow} onFollowChange={setFollow} partyShown={partyShown} />
+          <CameraControls
+            map={mapRef}
+            follow={follow}
+            onFollowChange={setFollow}
+            partyShown={partyShown}
+            partyReason={partyOffLevelReason(offLevel && partyLevel !== null)}
+          />
           {bottomFree &&
             (minimapOpen ? (
               <MinimapCard
@@ -711,15 +723,14 @@ export function MapStage() {
                 onHide={() => setMinimapOpen(false)}
               />
             ) : (
-              <Tooltip content="Show minimap" side="left">
-                <IconButton
-                  icon="map"
-                  label="Show minimap"
-                  variant="secondary"
-                  className={styles.minimapShow}
-                  onClick={() => setMinimapOpen(true)}
-                />
-              </Tooltip>
+              <IconButton
+                icon="map"
+                label="Show minimap"
+                variant="secondary"
+                tooltipSide="left"
+                className={styles.minimapShow}
+                onClick={() => setMinimapOpen(true)}
+              />
             ))}
         </div>
       </div>

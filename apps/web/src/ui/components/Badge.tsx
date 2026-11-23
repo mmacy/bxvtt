@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Icon, type IconName } from '../icons/Icon';
 import { cx } from '../lib/cx';
+import { Tooltip } from './Popover';
 import styles from './Badge.module.css';
 
 export type BadgeTone =
@@ -42,14 +43,16 @@ export function Tag({ children, removeLabel, onRemove, color, className }: TagPr
       {color && <span className={styles.swatch} style={{ background: color }} aria-hidden="true" />}
       <span>{children}</span>
       {onRemove && (
-        <button
-          type="button"
-          className={styles.remove}
-          aria-label={removeLabel ?? 'Remove'}
-          onClick={onRemove}
-        >
-          <Icon name="close" size={12} />
-        </button>
+        <Tooltip content={removeLabel ?? 'Remove'} describe={false}>
+          <button
+            type="button"
+            className={styles.remove}
+            aria-label={removeLabel ?? 'Remove'}
+            onClick={onRemove}
+          >
+            <Icon name="close" size={12} />
+          </button>
+        </Tooltip>
       )}
     </span>
   );

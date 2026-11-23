@@ -12,8 +12,8 @@ import {
   useShortcut,
   useTableSettings,
 } from '@/app';
-import { ActionBarDivider, ActionBarItem, Button, Kbd } from '@/ui';
-import { QUICK_ICONS, quickAction, useRepeatLastRound } from './BattleBoard';
+import { ActionBarDivider, ActionBarItem, Button } from '@/ui';
+import { QUICK_ICONS, quickAction, quickTooltip, repeatTooltip, useRepeatLastRound } from './BattleBoard';
 import { useMemberCasts } from './casting';
 import { memberGear } from './model';
 import { useCombatPeople } from './people';
@@ -21,6 +21,9 @@ import { useCombatUi } from './state';
 import { useEncounterCommands } from './useEncounterCommands';
 import styles from './combat.module.css';
 import { useCombatText } from './text';
+
+/** Why Talk is unavailable when nobody in the party can act, so nobody can speak. */
+const NO_SPEAKER = 'No one in the party can act, so no one can talk to the monsters.';
 
 /** The action bar in `encounter` and `battle` modes: the few primary actions, each with a shortcut. */
 export function CombatActions() {
@@ -37,14 +40,15 @@ function ActionButton({
   icon,
   primary,
   loading,
-  detail,
+  tooltip,
 }: {
   label: string;
-  /** More about the action for the tooltip, such as who speaks. */
-  detail?: string;
+  /** What the action does, for the tooltip, when the label doesn't say it all. */
+  tooltip?: string;
   keys: string;
   onClick: () => void;
   disabled?: boolean;
+  /** Why the action is unavailable while `disabled`, or `null` while a request is on its way. */
   reason?: string | null;
   icon: Parameters<typeof Button>[0]['icon'];
   primary?: boolean;
@@ -57,26 +61,49 @@ function ActionButton({
         variant={primary ? 'secondary' : 'ghost'}
         icon={icon}
         disabled={disabled}
+        disabledReason={reason}
         loading={loading}
-        title={
-          disabled ? (reason ?? undefined) : `${detail ? `${detail} ` : ''}${label} (${formatShortcut(keys)})`
-        }
+        tooltip={tooltip}
+        shortcut={formatShortcut(keys)}
         aria-keyshortcuts={keys}
         onClick={onClick}
       >
         {label}
-        <Kbd className={styles.barKey} keys={formatShortcut(keys)} />
       </Button>
     </ActionBarItem>
   );
+}
+
+/**
+ * Why the battle's "Resolve round" is unavailable, or `null` when it is available or waits for a request.
+ *
+ * @param facts.canResolve - Whether the user may resolve the round once everyone has declared.
+ * @param facts.canResolveEarly - Whether the user may resolve it sooner, which only a referee may.
+ * @param facts.auto - Whether the table resolves each round by itself once everyone has declared.
+ * @param facts.waiting - The characters who haven't declared yet.
+ */
+export function resolveRoundReason(facts: {
+  canResolve: { allowed: boolean; reason: string | null };
+  canResolveEarly: { allowed: boolean; reason: string | null };
+  auto: boolean;
+  waiting: readonly string[];
+}): string | null {
+  const { canResolve, canResolveEarly, auto, waiting } = facts;
+  if (!canResolve.allowed) return canResolve.reason;
+  if (auto) return 'The round resolves by itself once everyone has declared.';
+  if (waiting.length === 0) return null;
+  if (!canResolveEarly.allowed) return canResolveEarly.reason;
+  return 'Not everyone has declared yet. Choose Resolve now on the battle board to go ahead.';
 }
 
 function EncounterActions() {
   const commands = useEncounterCommands();
   const speaker = commands.speaker;
   const allowed = (type: string) => commands.legal(type) && commands.can(type).allowed && !commands.pending;
-  const reason = (type: string) =>
-    commands.legal(type) ? commands.can(type).reason : "The party can't do that now.";
+  // `canSendCommand` explains a command that isn't legal now too, from the command catalog. While a command is on
+  // its way, the buttons wait without a reason.
+  const reason = (type: string) => commands.can(type).reason;
+  const talkReason = reason('parley') ?? (speaker === null ? NO_SPEAKER : null);
   const talk = () => {
     if (speaker && allowed('parley')) commands.talk(speaker.id);
   };
@@ -122,6 +149,7 @@ function EncounterActions() {
     shortcut: 'f',
     run: fight,
     disabled: !allowed('engage_battle'),
+    disabledReason: reason('engage_battle'),
   });
   useAction({
     id: 'combat.wait',
@@ -131,6 +159,7 @@ function EncounterActions() {
     shortcut: 'w',
     run: wait,
     disabled: !allowed('wait'),
+    disabledReason: reason('wait'),
   });
 
   return (
@@ -138,17 +167,20 @@ function EncounterActions() {
       {!commands.pursuit && (
         <ActionButton
           label="Talk"
-          detail={speaker ? `${speaker.name} speaks for the party.` : undefined}
+          tooltip={speaker ? `Have ${speaker.name} talk to the monsters` : undefined}
           keys="t"
           icon="message"
           onClick={talk}
           disabled={!allowed('parley') || speaker === null}
-          reason={reason('parley')}
+          reason={talkReason}
           loading={commands.pendingType === 'parley'}
         />
       )}
       <ActionButton
         label={commands.pursuit ? 'Keep running' : 'Wait'}
+        tooltip={
+          commands.pursuit ? 'Run one more round of the chase' : 'Spend a round and see what the monsters do'
+        }
         keys="w"
         icon={commands.pursuit ? 'footprints' : 'hourglass'}
         onClick={wait}
@@ -159,6 +191,7 @@ function EncounterActions() {
       {!commands.pursuit && (
         <ActionButton
           label="Flee"
+          tooltip="Run from the monsters without dropping anything"
           keys="shift+f"
           icon="footprints"
           onClick={flee}
@@ -170,6 +203,11 @@ function EncounterActions() {
       <ActionBarDivider />
       <ActionButton
         label={commands.pursuit ? 'Turn and fight' : 'Fight'}
+        tooltip={
+          commands.pursuit
+            ? 'Stop running and fight at the current distance'
+            : 'Start a battle with the monsters'
+        }
         keys="f"
         icon="battle"
         primary
@@ -190,6 +228,7 @@ function BattleActions() {
   const people = useCombatPeople();
   const settings = useTableSettings();
   const canResolve = useCanResolveRound();
+  const canResolveEarly = useCanResolveRound({ early: true });
   const { declare, resolve, pending } = useSendDeclaration();
   const repeat = useRepeatLastRound();
   const playing = useCombatUi((s) => s.playing);
@@ -215,6 +254,12 @@ function BattleActions() {
   const waiting = declarers.filter((id) => !declared.includes(id));
   const auto = settings?.auto_resolve ?? true;
   const showResolve = canResolve.allowed && !auto;
+  const resolveReason = resolveRoundReason({
+    canResolve,
+    canResolveEarly,
+    auto,
+    waiting,
+  });
 
   // The bar offers the same highlighted choice as the member's row: it declares it, or opens the Cast tab.
   const attack = () => {
@@ -264,6 +309,7 @@ function BattleActions() {
     shortcut: 'mod+enter',
     run: resolveRound,
     disabled: !(showResolve && everyone),
+    disabledReason: resolveReason,
   });
 
   return (
@@ -288,11 +334,7 @@ function BattleActions() {
           icon={QUICK_ICONS[quick.kind]}
           onClick={attack}
           disabled={pending}
-          detail={
-            quick.body
-              ? `${quick.reason ? `${quick.reason} ` : ''}You can change it until the round resolves.`
-              : undefined
-          }
+          tooltip={quickTooltip(quick, nextMember.name)}
         />
       )}
       {repeatable.length > 0 && (
@@ -302,11 +344,17 @@ function BattleActions() {
           icon="rotate"
           onClick={again}
           disabled={pending}
-          detail={`Declares last round's actions again for ${joinList(repeatable.map((r) => memberName(r.memberId, ctx)))}.`}
+          tooltip={repeatTooltip(repeatable, ctx)}
         />
       )}
       {playing && skip && (
-        <ActionButton label="Skip playback" keys="escape" icon="skip-forward" onClick={skip} />
+        <ActionButton
+          label="Skip playback"
+          tooltip="Skip to the end of the round"
+          keys="escape"
+          icon="skip-forward"
+          onClick={skip}
+        />
       )}
       {showResolve && (
         <>
@@ -318,7 +366,7 @@ function BattleActions() {
             primary
             onClick={resolveRound}
             disabled={!everyone || pending}
-            reason="Everyone must declare first."
+            reason={resolveReason}
           />
         </>
       )}

@@ -5,8 +5,9 @@ import { ShortcutLayer } from '@/app';
 import { ActionBar } from '@/ui';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { createFakeApi, renderWithTable, type FakeApi } from '@/app/testing/renderWithTable';
-import { CombatActions } from './CombatActions';
+import { CombatActions, resolveRoundReason } from './CombatActions';
 import { EncounterPanel } from './EncounterPanel';
+import { spawnMissing } from './RefereeTools';
 import { resetCombatMemory } from './memory';
 import { resetCombatUi } from './state';
 
@@ -75,11 +76,29 @@ describe('EncounterPanel', () => {
     );
   });
 
+  it('names the caller once above the choices, and gives each choice its own reason, for a player who is not the caller', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('encounter', 'player');
+    const ruth = snapshot.table?.members.find((m) => m.role === 'referee')?.user_id ?? null;
+    if (snapshot.table) snapshot.table.settings.caller_user_id = ruth;
+    renderWithTable(<EncounterPanel />, { snapshot, api });
+    expect(
+      screen.getByText('Only the caller can act for the party. Ruth is the caller.'),
+    ).toBeInTheDocument();
+    const fight = screen.getByRole('button', { name: 'Fight' });
+    expect(fight).toHaveAttribute('aria-disabled', 'true');
+    expect(fight).toHaveAccessibleDescription('Only the caller can start a battle. Ruth is the caller.');
+  });
+
   it('offers turn undead only when a cleric can act, and explains it when no monster is undead', async () => {
     const api = createFakeApi();
     stubRules(api);
     renderWithTable(<EncounterPanel />, { snapshot: fixtureSnapshot('encounter', 'player'), api });
-    expect(await screen.findByRole('button', { name: 'Turn undead' })).toBeDisabled();
+    expect(await screen.findByRole('button', { name: 'Turn undead' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
     expect(screen.getAllByText('None of these monsters are undead.').length).toBeGreaterThan(0);
   });
 });
@@ -148,5 +167,52 @@ describe('CombatActions', () => {
     );
     expect(screen.getByText('Waiting for Osric and Tamsin to declare.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Declare for/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('resolveRoundReason', () => {
+  const allowed = { allowed: true, reason: null };
+  const early = { allowed: false, reason: 'Only a referee can resolve the round sooner.' };
+
+  it('passes on the permission reason when the user may not resolve the round', () => {
+    const denied = { allowed: false, reason: 'Only the caller can resolve the round. Sam is the caller.' };
+    expect(resolveRoundReason({ canResolve: denied, canResolveEarly: early, auto: false, waiting: [] })).toBe(
+      denied.reason,
+    );
+  });
+
+  it('says the round resolves by itself with automatic resolution on', () => {
+    expect(
+      resolveRoundReason({ canResolve: allowed, canResolveEarly: early, auto: true, waiting: ['Wren'] }),
+    ).toBe('The round resolves by itself once everyone has declared.');
+  });
+
+  it('tells a caller to wait, and a referee to resolve now, while someone has not declared', () => {
+    expect(
+      resolveRoundReason({ canResolve: allowed, canResolveEarly: early, auto: false, waiting: ['Wren'] }),
+    ).toBe(early.reason);
+    expect(
+      resolveRoundReason({
+        canResolve: allowed,
+        canResolveEarly: allowed,
+        auto: false,
+        waiting: ['character-0003', 'character-0004'],
+      }),
+    ).toBe('Not everyone has declared yet. Choose Resolve now on the battle board to go ahead.');
+  });
+
+  it('gives no reason once everyone has declared', () => {
+    expect(
+      resolveRoundReason({ canResolve: allowed, canResolveEarly: early, auto: false, waiting: [] }),
+    ).toBeNull();
+  });
+});
+
+describe('spawnMissing', () => {
+  it('names the first value the form lacks', () => {
+    expect(spawnMissing(null, null, null)).toBe('Choose a monster to add.');
+    expect(spawnMissing('goblin', null, null)).toBe('Enter how many monsters to add.');
+    expect(spawnMissing('goblin', 2, null)).toBe('Enter how far away the monsters appear.');
+    expect(spawnMissing('goblin', 2, 40)).toBeNull();
   });
 });

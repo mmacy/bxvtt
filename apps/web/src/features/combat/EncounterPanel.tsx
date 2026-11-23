@@ -12,7 +12,6 @@ import {
 } from '@bxvtt/shared/text';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
-  useCaller,
   useEncounter,
   useParty,
   useRefereeLens,
@@ -264,6 +263,8 @@ interface OptionProps {
   onClick?: () => void;
   /** Whether `disabledReason` is the one the panel states above every choice, so the explanation stays. */
   sharedReason?: boolean;
+  /** A party command, which only the caller or a referee may send, so the panel's sentence covers its refusal. */
+  party?: boolean;
   /** A popover with more choices, instead of `onClick`. */
   popover?: { title: string; content: (close: () => void) => ReactNode };
 }
@@ -287,7 +288,7 @@ function Option({
       icon={icon}
       iconEnd={popover ? 'chevron-down' : undefined}
       disabled={disabledReason !== null}
-      title={disabledReason ?? undefined}
+      disabledReason={disabledReason}
       loading={loading}
       onClick={popover ? undefined : onClick}
     >
@@ -334,13 +335,9 @@ function PartyOptions({
   commands: EncounterCommands;
   ctx: TextContext;
 }) {
-  const caller = useCaller();
-  // One sentence above the choices says who chooses for the party, instead of the same refusal on every choice.
-  const partyReason = commands.partyPermission.allowed
-    ? null
-    : caller.member
-      ? `${caller.member.name} is the caller, so ${caller.member.name} or the referee chooses for the party.`
-      : 'The referee chooses for the party.';
+  // One sentence above the choices says who chooses for the party, instead of the same refusal beside every
+  // choice. Each button still gives its own reason on hover and focus.
+  const partyReason = commands.partyPermission.reason;
   const able = party.filter((m) => encounter.declarers.includes(m.id));
   const turnerClasses = useTurnerClasses(able.map((m) => m.class_id));
   const turners = able.filter((m) => turnerClasses.includes(m.class_id));
@@ -355,6 +352,7 @@ function PartyOptions({
       label: 'Talk',
       description: `Roll the monsters' reaction again. ${commands.speaker ? `${commands.speaker.name} has the best reaction bonus.` : ''}`,
       disabledReason: reasonFor(commands, 'parley'),
+      party: true,
       loading: busy('parley'),
       popover: {
         title: 'Choose a speaker',
@@ -389,6 +387,7 @@ function PartyOptions({
         ? 'Run one more round of the chase.'
         : 'Spend a round and see what the monsters do.',
       disabledReason: reasonFor(commands, 'wait'),
+      party: true,
       loading: busy('wait'),
       onClick: commands.wait,
     });
@@ -399,6 +398,7 @@ function PartyOptions({
       label: 'Flee',
       description: 'Flee before battle begins. Hostile monsters pursue if they can.',
       disabledReason: reasonFor(commands, 'evade'),
+      party: true,
       loading: busy('evade'),
       popover: {
         title: 'Flee',
@@ -432,6 +432,7 @@ function PartyOptions({
         ? 'Stop running and fight at the current distance.'
         : 'Engage in battle. Everyone declares an action before each round resolves.',
       disabledReason: reasonFor(commands, 'engage_battle'),
+      party: true,
       loading: busy('engage_battle'),
       primary: true,
       onClick: commands.fight,
@@ -466,6 +467,7 @@ function PartyOptions({
                       value={member.id}
                       title={member.name}
                       disabled={!commands.can('turn_undead', member.id).allowed}
+                      disabledReason={commands.can('turn_undead', member.id).reason}
                     />
                   ))}
                 </List>
@@ -485,7 +487,7 @@ function PartyOptions({
             key={option.label}
             {...option}
             sharedReason={
-              option.disabledReason !== null && option.disabledReason === commands.partyPermission.reason
+              option.party === true && option.disabledReason !== null && !commands.partyPermission.allowed
             }
           />
         ))}
@@ -739,6 +741,7 @@ function GivePopover({ members, all, ctx }: { members: MemberView[]; all: Member
           variant="primary"
           loading={pending}
           disabled={!itemId && !gold}
+          disabledReason="Choose an item or some gold to give."
           onClick={() => void give()}
         >
           Give
@@ -830,6 +833,7 @@ function DropPopover({
           variant="primary"
           loading={pending}
           disabled={chosen.length === 0 && !gold}
+          disabledReason="Choose an item or some gold to drop."
           onClick={() => void drop()}
         >
           Drop

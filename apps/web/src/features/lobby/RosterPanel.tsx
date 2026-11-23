@@ -162,6 +162,9 @@ export function RosterPanel() {
                               variant="ghost"
                               size="sm"
                               disabled={index === 0 || pendingOrder !== null}
+                              disabledReason={
+                                index === 0 ? `${entry.name} already leads the marching order.` : undefined
+                              }
                               onClick={() => move(index, index - 1)}
                             />
                             <IconButton
@@ -170,6 +173,11 @@ export function RosterPanel() {
                               variant="ghost"
                               size="sm"
                               disabled={index === roster.length - 1 || pendingOrder !== null}
+                              disabledReason={
+                                index === roster.length - 1
+                                  ? `${entry.name} is already last in the marching order.`
+                                  : undefined
+                              }
                               onClick={() => move(index, index + 1)}
                             />
                           </>

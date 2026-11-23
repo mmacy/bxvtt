@@ -135,7 +135,10 @@ export function ShellTopBar() {
         }
         actions={
           referee ? (
-            <Tooltip content="Show referee details, including the full map, hidden monsters, and referee tools. Turn off to see the player view.">
+            <Tooltip
+              content="Show the full map, hidden monsters, and referee tools instead of the player view"
+              shortcut={formatShortcut('shift+l')}
+            >
               <span className={styles.lens}>
                 <Switch
                   label="Referee lens"

@@ -136,6 +136,7 @@ function RestPanel() {
               variant="secondary"
               loading={pending}
               disabled={!access.allowed}
+              disabledReason={access.explanation}
               onClick={() => void rest(kind)}
             >
               {`Rest ${restKindLabel(kind).toLowerCase()}`}

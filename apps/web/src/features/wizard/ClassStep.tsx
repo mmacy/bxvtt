@@ -82,17 +82,21 @@ function ClassCard({ summary, scores, eligible, selected, locked, onSelect, equi
   const reqs = Object.entries(summary.requirements);
   const reasonId = `class-reason-${summary.id}`;
   const facts = `class-facts-${summary.id}`;
+  // An unavailable card stays in the tab order, so a keyboard or screen reader user reaches it and hears why.
+  const unavailable = !eligible || (locked && !selected);
   return (
     <button
       type="button"
       className={cx(styles.classCard, selected && styles.classCardSelected)}
       aria-pressed={selected}
-      disabled={!eligible || (locked && !selected)}
+      aria-disabled={unavailable || undefined}
       aria-labelledby={`class-name-${summary.id}`}
       aria-describedby={
         !eligible ? `${reasonId} ${facts}` : locked && !selected ? `${LOCK_NOTE_ID} ${facts}` : facts
       }
-      onClick={onSelect}
+      onClick={() => {
+        if (!unavailable) onSelect();
+      }}
     >
       <span className={styles.classHead}>
         <TokenPortrait name={summary.name} characterClass={tokenClass(summary.id)} size={40} decorative />

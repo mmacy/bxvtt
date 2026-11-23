@@ -1,10 +1,12 @@
 import { commandInfo, directionLabel } from '@bxvtt/shared/text';
 import { useMemo, useState } from 'react';
 import {
+  canSendCommand,
   formatShortcut,
   useAction,
   useCanSend,
   useLegalCommands,
+  usePermissionContext,
   useShortcut,
   useTableUi,
   type ActionDefinition,
@@ -15,6 +17,7 @@ import {
   entryLabel,
   doorsHere,
   lightEntries,
+  lightUnavailableReason,
   restEntries,
   searchEntries,
   stairsEntries,
@@ -74,15 +77,30 @@ interface MenuActionProps {
   icon: IconName;
   keys: string;
   items: MenuEntry[];
-  /** Why the action is off, for its tooltip. */
+  /** What the action does, for its tooltip. */
+  tooltip: string;
+  /** Why the action is off, such as a permission's reason. `null` while nothing blocks it. */
   reason: string | null;
+  /** Why the menu is empty when nothing else blocks the action. */
+  emptyReason?: string;
   loading?: boolean;
 }
 
 /** An action bar button that opens a menu, with a shortcut that opens it too. */
-function MenuAction({ id, label, icon, keys, items, reason, loading }: MenuActionProps) {
+function MenuAction({
+  id,
+  label,
+  icon,
+  keys,
+  items,
+  tooltip,
+  reason,
+  emptyReason,
+  loading,
+}: MenuActionProps) {
   const [open, setOpen] = useState(false);
   const disabled = reason !== null || items.length === 0;
+  const disabledReason = reason ?? (items.length === 0 ? (emptyReason ?? null) : null);
   useShortcut({ id, keys, label, group: 'Party', enabled: !disabled, run: () => setOpen(true) });
   useAction({ id, label, group: 'Party', icon, shortcut: keys, disabled, run: () => setOpen(true) });
   return (
@@ -90,7 +108,8 @@ function MenuAction({ id, label, icon, keys, items, reason, loading }: MenuActio
       label={label}
       icon={icon}
       items={items}
-      tooltip={reason ?? label}
+      tooltip={tooltip}
+      disabledReason={disabledReason}
       shortcut={formatShortcut(keys)}
       disabled={disabled}
       loading={loading}
@@ -121,7 +140,7 @@ function DirectAction({ id, label, icon, keys, run, loading }: DirectActionProps
         variant="secondary"
         icon={icon}
         loading={loading}
-        title={keys ? `${label} (${formatShortcut(keys).join(' ')})` : undefined}
+        shortcut={keys ? formatShortcut(keys) : undefined}
         onClick={run}
       >
         {label}
@@ -144,6 +163,7 @@ export function ExploreActions() {
   const [form, setForm] = useState<string | null>(null);
   const searchPermission = useCanSend('search');
   const restPermission = useCanSend('rest');
+  const permissions = usePermissionContext();
 
   const here = ctx?.scene?.here ?? null;
   const location = ctx?.view.location;
@@ -216,7 +236,9 @@ export function ExploreActions() {
         icon="search"
         keys="s"
         items={search}
+        tooltip="Search the room for secret doors, room traps, or construction tricks"
         reason={searchPermission.allowed ? null : searchPermission.reason}
+        emptyReason="No one in the party is able to search."
         loading={pendingType === 'search'}
       />
       <MenuAction
@@ -225,6 +247,7 @@ export function ExploreActions() {
         icon="ear"
         keys="l"
         items={listen}
+        tooltip="Listen at a closed door for noises beyond it"
         reason={
           hasDoor
             ? listen.length === 0
@@ -240,7 +263,12 @@ export function ExploreActions() {
         icon="torch"
         keys="t"
         items={light}
-        reason={light.length === 0 ? 'None of your characters carry a torch or lantern.' : null}
+        tooltip="Light or put out a torch or lantern"
+        reason={
+          light.length === 0
+            ? lightUnavailableReason(ctx, (memberId) => canSendCommand(permissions, 'light_source', memberId))
+            : null
+        }
         loading={pendingType === 'light_source' || pendingType === 'extinguish_source'}
       />
       <MenuAction
@@ -249,6 +277,7 @@ export function ExploreActions() {
         icon="rest"
         keys="z"
         items={rest}
+        tooltip="Rest the party for a turn, a night, or a day"
         reason={restPermission.allowed ? null : restPermission.reason}
         loading={pendingType === 'rest'}
       />
@@ -260,6 +289,7 @@ export function ExploreActions() {
           icon="chest"
           keys="g"
           items={treasure}
+          tooltip="Take or inspect what lies here"
           reason={null}
           loading={
             pendingType === 'take_treasure' ||
@@ -288,7 +318,16 @@ export function ExploreActions() {
         />
       )}
       <ActionBarDivider />
-      <MenuAction id="explore.other" label="More" icon="more" keys="m" items={more} reason={null} />
+      <MenuAction
+        id="explore.other"
+        label="More"
+        icon="more"
+        keys="m"
+        items={more}
+        tooltip="Change facing, open a character sheet, or choose another action"
+        reason={null}
+        emptyReason="The party has no other actions here."
+      />
       <CommandFormDialog commandType={form} onClose={() => setForm(null)} />
     </>
   );

@@ -7,14 +7,12 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   getApi,
   useCanSend,
-  useCaller,
   useControllableMembers,
   useGame,
   useLegalCommands,
   useParty,
   usePlayerView,
   useTableId,
-  useTableSettings,
 } from '@/app';
 import { townListsService } from './services';
 
@@ -85,38 +83,20 @@ export function useDungeons(): { dungeons: Dungeon[] | null; failed: boolean; re
 }
 
 /**
- * Whether the viewer may send a party command, and a calm sentence for everyone who may not. The caller sends
- * party commands, and so does the referee.
+ * Whether the viewer may send a party command, and the reason to show when they may not. The reason comes from
+ * `useCanSend`, so it names the action and the caller, or says when the command works.
  *
  * @param commandType - A party command such as `enter_dungeon` or `sell_treasure`.
  * @returns `allowed`, and `explanation` (empty when allowed).
  */
 export function usePartyAccess(commandType: string): { allowed: boolean; explanation: string } {
   const permission = useCanSend(commandType);
-  const { member, isMe } = useCaller();
-  const settings = useTableSettings();
-  if (permission.allowed) return { allowed: true, explanation: '' };
-  if (settings?.party_control !== 'anyone' && member !== null && !isMe) {
-    return {
-      allowed: false,
-      explanation: `${member.name} is the caller and speaks for the party here. Ask ${member.name} or the referee.`,
-    };
-  }
-  return { allowed: false, explanation: permission.reason };
+  return { allowed: permission.allowed, explanation: permission.reason ?? '' };
 }
 
 /** Whether the viewer may lead the party out of town. See {@link usePartyAccess}. */
 export function useLeaveAccess(): { allowed: boolean; explanation: string } {
-  const access = usePartyAccess('enter_dungeon');
-  const { member, isMe } = useCaller();
-  const settings = useTableSettings();
-  if (!access.allowed && settings?.party_control !== 'anyone' && member !== null && !isMe) {
-    return {
-      allowed: false,
-      explanation: `${member.name} is the caller and leads the party out. Ask ${member.name} or the referee.`,
-    };
-  }
-  return access;
+  return usePartyAccess('enter_dungeon');
 }
 
 /**
@@ -135,6 +115,28 @@ export interface TownServices {
   treasure: boolean;
   rest: boolean;
   leave: boolean;
+  /** Why each service is unavailable, or `null` while it is available. */
+  reasons: Record<'outfitter' | 'temple' | 'treasure' | 'rest' | 'leave', string | null>;
+}
+
+/**
+ * Picks the reason a service is unavailable. A command that isn't legal gets the permission reason, which says
+ * when the command works. A legal command that the town doesn't offer gets the sentence about the town.
+ *
+ * @param legal - Whether the command is in the viewer's legal commands.
+ * @param offered - Whether the town offers the service.
+ * @param permissionReason - The reason from `useCanSend` for the command.
+ * @param townSentence - What to say when the town doesn't offer the service.
+ * @returns The reason, or `null` when the service is available.
+ */
+export function serviceReason(
+  legal: boolean,
+  offered: boolean,
+  permissionReason: string | null,
+  townSentence: string,
+): string | null {
+  if (!legal) return permissionReason ?? townSentence;
+  return offered ? null : townSentence;
 }
 
 /**
@@ -144,14 +146,45 @@ export interface TownServices {
 export function useTownServices(): TownServices {
   const commands = useLegalCommands();
   const view = usePlayerView();
+  const equipment = useCanSend('purchase_equipment');
+  const healing = useCanSend('purchase_healing');
+  const treasure = useCanSend('sell_treasure');
+  const rest = useCanSend('rest');
+  const leave = useCanSend('enter_dungeon');
   const prices = view?.town_healing_prices ?? {};
   const lines = view?.town_services ?? [];
+  const town = view?.town_name || 'town';
   const has = (type: string) => commands.some((command) => command.command_type === type);
+  const offersOutfitter = townListsService('outfitter', lines);
+  const offersTemple = Object.keys(prices).length > 0 && townListsService('temple', lines);
+  const offersTreasure = townListsService('treasure', lines);
   return {
-    outfitter: has('purchase_equipment') && townListsService('outfitter', lines),
-    temple: has('purchase_healing') && Object.keys(prices).length > 0 && townListsService('temple', lines),
-    treasure: has('sell_treasure') && townListsService('treasure', lines),
+    outfitter: has('purchase_equipment') && offersOutfitter,
+    temple: has('purchase_healing') && offersTemple,
+    treasure: has('sell_treasure') && offersTreasure,
     rest: has('rest'),
     leave: has('enter_dungeon'),
+    reasons: {
+      outfitter: serviceReason(
+        has('purchase_equipment'),
+        offersOutfitter,
+        equipment.reason,
+        `Nobody in ${town} sells equipment.`,
+      ),
+      temple: serviceReason(
+        has('purchase_healing'),
+        offersTemple,
+        healing.reason,
+        `${town} has no temple that offers healing.`,
+      ),
+      treasure: serviceReason(
+        has('sell_treasure'),
+        offersTreasure,
+        treasure.reason,
+        `Nobody in ${town} buys treasure.`,
+      ),
+      rest: has('rest') ? null : rest.reason,
+      leave: has('enter_dungeon') ? null : leave.reason,
+    },
   };
 }

@@ -8,7 +8,7 @@ import {
   spellName,
   type TextContext,
 } from '@bxvtt/shared/text';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import {
   getApi,
   loadCatalog,
@@ -370,6 +370,9 @@ interface TileProps {
 /** One choice, such as a target group. A disabled tile says why. */
 function Tile({ title, meta, note, disabledReason, icon, label, onClick, pending, selected }: TileProps) {
   const disabled = Boolean(disabledReason) || pending;
+  // The label names the tile, so the note or the reason it shows is its description.
+  const detail = useId();
+  const described = disabledReason || note ? detail : undefined;
   return (
     <Card
       padding="none"
@@ -381,6 +384,7 @@ function Tile({ title, meta, note, disabledReason, icon, label, onClick, pending
         type="button"
         className={styles.tileButton}
         aria-label={label}
+        aria-describedby={described}
         aria-disabled={disabled || undefined}
         aria-pressed={selected}
         onClick={() => {
@@ -393,9 +397,15 @@ function Tile({ title, meta, note, disabledReason, icon, label, onClick, pending
           {meta && <span className={styles.tileMeta}>{meta}</span>}
         </span>
         {disabledReason ? (
-          <span className={styles.tileReason}>{disabledReason}</span>
+          <span id={detail} className={styles.tileReason}>
+            {disabledReason}
+          </span>
         ) : (
-          note && <span className={styles.tileNote}>{note}</span>
+          note && (
+            <span id={detail} className={styles.tileNote}>
+              {note}
+            </span>
+          )
         )}
       </button>
     </Card>
@@ -687,10 +697,10 @@ function SpellTargets({
                     variant={targets.includes(id) ? 'primary' : 'ghost'}
                     aria-pressed={targets.includes(id)}
                     disabled={tooFar}
-                    title={
-                      tooFar
-                        ? `Out of range: ${memberName(id, ctx)} stands ${formatFeet(gap)} away.`
-                        : undefined
+                    disabledReason={
+                      tooFar && range !== null
+                        ? `Out of range: ${memberName(id, ctx)} stands ${formatFeet(gap)} away, but ${name} only reaches ${formatFeet(range)}.`
+                        : null
                     }
                     onClick={() => toggle(id)}
                   >
@@ -714,7 +724,11 @@ function SpellTargets({
                     variant={chosen ? 'primary' : 'ghost'}
                     aria-pressed={chosen}
                     disabled={tooFar}
-                    title={tooFar ? `Out of range: ${formatFeet(distance)} away.` : undefined}
+                    disabledReason={
+                      tooFar && range !== null
+                        ? `Out of range: ${formatFeet(distance)} away, but ${name} only reaches ${formatFeet(range)}.`
+                        : null
+                    }
                     onClick={() => toggle(target.handle)}
                   >
                     {targetLabel(target, sceneTargets, group.label)}
@@ -730,7 +744,7 @@ function SpellTargets({
               icon="spell"
               loading={pending}
               disabled={targets.length === 0}
-              title={targets.length === 0 ? 'Choose a target first.' : undefined}
+              disabledReason="Choose a target first."
               onClick={() => void onSubmit({ ...base, targets })}
             >
               Cast {name}

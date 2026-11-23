@@ -69,6 +69,15 @@
   cursor: not-allowed;
 }
 
+/* An unavailable item with a reason keeps full contrast, so its reason under the label stays readable. */
+.unavailable {
+  cursor: not-allowed;
+}
+
+.unavailable .title {
+  color: var(--color-text-muted);
+}
+
 .leading,
 .trailing {
   display: inline-flex;
@@ -94,6 +103,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.reason {
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-text-muted);
+  white-space: normal;
 }
 
 .description {

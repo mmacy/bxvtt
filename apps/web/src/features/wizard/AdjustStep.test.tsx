@@ -326,7 +326,11 @@ describe('the ability trade step in the wizard', () => {
     await user.click(screen.getByRole('button', { name: 'Lower Intelligence' }));
     await screen.findByRole('alert', {}, SLOW);
     expect(screen.getByRole('alert')).toHaveTextContent("This ability trade isn't allowed");
-    expect(within(FOOTER()).getByRole('button', { name: 'Continue' })).toBeDisabled();
+    const next = within(FOOTER()).getByRole('button', { name: 'Continue' });
+    expect(next).toHaveAttribute('aria-disabled', 'true');
+    expect(next).toHaveAccessibleDescription(
+      "This ability trade isn't allowed. Change it, or reset to your rolled scores.",
+    );
   });
 
   it("ignores a slow answer to an earlier click once a later click's answer is in", async () => {

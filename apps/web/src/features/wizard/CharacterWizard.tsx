@@ -111,6 +111,59 @@ function stepIndex(step: StepId): number {
   return STEP_IDS.indexOf(step);
 }
 
+/** What the footer's Continue button reads to decide whether the player can go on. */
+export interface ContinueFacts {
+  step: StepId;
+  /** Whether the player has rolled ability scores. */
+  rolled: boolean;
+  /** The classes the roll qualifies for, from the server's roll. */
+  eligible: readonly string[];
+  /** Whether the dice of a fresh roll are still landing. */
+  revealing: boolean;
+  classId: string | null;
+  adjust: AdjustCheckState['status'];
+  /** Whether the starting gold is rolled. */
+  goldRolled: boolean;
+  gold: GoldState;
+  cart: CheckState['status'];
+}
+
+/**
+ * Why the player can't continue from the step, or `null` when they can. The reason is `null` while the wizard
+ * waits for the server or for the dice, so the button waits without one.
+ */
+export function continueBlock(facts: ContinueFacts): { reason: string | null } | null {
+  const wait = { reason: null };
+  switch (facts.step) {
+    case 'roll':
+      if (!facts.rolled) return wait;
+      if (facts.revealing) return wait;
+      if (facts.eligible.length === 0)
+        return { reason: "These ability scores don't qualify for any class. Roll again." };
+      return null;
+    case 'class':
+      if (facts.classId === null || !facts.eligible.includes(facts.classId))
+        return { reason: 'Choose a class first.' };
+      return null;
+    case 'adjust':
+      if (facts.adjust === 'checking') return wait;
+      if (facts.adjust === 'invalid')
+        return { reason: "This ability trade isn't allowed. Change it, or reset to your rolled scores." };
+      return null;
+    case 'hp_gold':
+      return facts.goldRolled ? null : wait;
+    case 'outfit':
+      if (facts.gold.status === 'loading') return wait;
+      if (facts.gold.status === 'unknown') return { reason: facts.gold.message };
+      if (facts.cart === 'checking') return wait;
+      if (facts.cart === 'invalid')
+        return { reason: 'Your cart breaks a rule. Change it as the note under the cart says.' };
+      return null;
+    default:
+      return null;
+  }
+}
+
 /** The character wizard: rolls abilities, picks a class and gear, and stores a character for the user. */
 export function CharacterWizard({ open, onClose, onCreated }: CharacterWizardProps) {
   return open ? <WizardDialog onClose={onClose} onCreated={onCreated} /> : null;
@@ -561,26 +614,18 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
   };
 
   const eligible = draft.roll?.eligible_class_ids ?? [];
-  const canContinue = (() => {
-    switch (draft.step) {
-      case 'roll':
-        return (
-          draft.roll !== null &&
-          eligible.length > 0 &&
-          (draft.roll.id !== freshRollId || revealedRollId === draft.roll.id)
-        );
-      case 'class':
-        return draft.classId !== null && eligible.includes(draft.classId);
-      case 'adjust':
-        return adjustCheck.status !== 'invalid' && adjustCheck.status !== 'checking';
-      case 'hp_gold':
-        return rolls?.gold_roll != null;
-      case 'outfit':
-        return gold.status === 'known' && cartCheck.status !== 'invalid' && cartCheck.status !== 'checking';
-      default:
-        return true;
-    }
-  })();
+  const block = continueBlock({
+    step: draft.step,
+    rolled: draft.roll !== null,
+    eligible,
+    revealing: draft.roll !== null && draft.roll.id === freshRollId && revealedRollId !== draft.roll.id,
+    classId: draft.classId,
+    adjust: adjustCheck.status,
+    goldRolled: rolls?.gold_roll != null,
+    gold,
+    cart: cartCheck.status,
+  });
+  const canContinue = block === null;
 
   const past = (id: StepId) => stepIndex(draft.step) > stepIndex(id);
   const steps: StepperStep[] = STEP_IDS.map((id) => ({
@@ -824,6 +869,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
             iconEnd="arrow-right"
             loading={busy}
             disabled={!canContinue}
+            disabledReason={block?.reason}
             aria-describedby={
               draft.step === 'adjust' && adjustCheck.status === 'in_progress' ? ADJUST_GUIDANCE_ID : undefined
             }

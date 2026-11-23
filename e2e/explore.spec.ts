@@ -232,9 +232,12 @@ test.describe('exploration', () => {
     await expect
       .poll(async () => (await sam.client.getGame(setup.table.id)).view.location)
       .toMatchObject({ level_number: 2 });
-    const levelButton = sam.page.getByRole('button', { name: /^Level shown: .*Choose another level\.$/ });
+    // The button's name is the level it shows. Its hover help says what it does.
+    const levelButton = mapOptions(sam.page).getByRole('button', { name: /level 2$/i });
     await expect(levelButton).toBeVisible();
-    await expect(levelButton).toHaveAccessibleName(/2/);
+    await levelButton.hover();
+    await expect(sam.page.getByRole('tooltip')).toHaveText('Choose which dungeon level the map shows');
+    await sam.page.mouse.move(0, 0);
 
     // Looking at level 1 leaves the party where it is and offers a way back.
     await levelButton.click();
@@ -244,7 +247,7 @@ test.describe('exploration', () => {
     await expect(sam.page.getByRole('status').filter({ hasText: /The party is on/ })).toHaveCount(0);
 
     // The referee's map follows the party to the new level too.
-    await expect(ruth.page.getByRole('button', { name: /^Level shown: .*2/ })).toBeVisible();
+    await expect(mapOptions(ruth.page).getByRole('button', { name: /level 2$/i })).toBeVisible();
     await sam.page.screenshot({ path: `${SCREENS_DIR}/explore-level-2.png` });
   });
 

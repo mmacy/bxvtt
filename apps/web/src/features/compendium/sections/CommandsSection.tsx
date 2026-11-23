@@ -1,6 +1,6 @@
 import { useCommandCatalog, useGameMode, useIsReferee, useLegalCommands } from '@/app';
 import type { CommandSummary } from '@bxvtt/shared/bxapi';
-import { commandInfo, sessionModeLabel } from '@bxvtt/shared/text';
+import { commandInfo, sessionModeLabel, sessionModeWhen } from '@bxvtt/shared/text';
 import { Badge, DataTable, SearchInput, SegmentedControl, type DataColumn } from '@/ui';
 import { useMemo } from 'react';
 import { EntryLink } from '../Parts';
@@ -98,8 +98,16 @@ export function CommandsSection() {
         onValueChange={(when) => set({ when })}
         options={[
           { value: 'all', label: 'All' },
-          { value: 'now', label: 'Available now' },
-          ...MODES.map((m) => ({ value: m, label: sessionModeLabel(m) })),
+          {
+            value: 'now',
+            label: 'Available now',
+            tooltip: 'Show only the actions the game allows right now',
+          },
+          ...MODES.map((m) => ({
+            value: m,
+            label: sessionModeLabel(m),
+            tooltip: `Show the actions available ${sessionModeWhen(m)}`,
+          })),
         ]}
       />
       <SearchInput

@@ -12,6 +12,7 @@ import {
   SearchInput,
   SegmentedControl,
   Skeleton,
+  Tooltip,
   type DataColumn,
 } from '@/ui';
 import { itemIcon, lotSize, rowSummary, weightCoins, type ShopItem } from './equipment';
@@ -37,7 +38,6 @@ export interface CatalogProps {
   onLots: (itemId: string, lots: number) => void;
   selectedId: string | null;
   onSelect: (itemId: string) => void;
-  disabled: boolean;
 }
 
 /** Whether every word of the query appears in the item's name or type. */
@@ -61,7 +61,6 @@ export function Catalog({
   onLots,
   selectedId,
   onSelect,
-  disabled,
 }: CatalogProps) {
   const ctx = useTextContext();
   const [type, setType] = useState('all');
@@ -77,23 +76,25 @@ export function Catalog({
       header: 'Item',
       sortValue: (item) => item.summary.name,
       cell: (item) => (
-        <button
-          type="button"
-          className={styles.nameButton}
-          aria-label={`${item.summary.name}, ${rowSummary(item, ctx) || itemTypeLabel(item.summary.item_type)}, show details`}
-          aria-current={selectedId === item.summary.id ? 'true' : undefined}
-          onClick={() => onSelect(item.summary.id)}
-        >
-          <span className={styles.typeIcon}>
-            <Icon name={itemIcon(item.summary)} size={16} />
-          </span>
-          <span className={styles.nameText}>
-            <span className={styles.name}>{item.summary.name}</span>{' '}
-            <span className={styles.sub}>
-              {rowSummary(item, ctx) || itemTypeLabel(item.summary.item_type)}
+        <Tooltip content="Show this item's stats in the details panel">
+          <button
+            type="button"
+            className={styles.nameButton}
+            aria-label={`${item.summary.name}, ${rowSummary(item, ctx) || itemTypeLabel(item.summary.item_type)}, show details`}
+            aria-current={selectedId === item.summary.id ? 'true' : undefined}
+            onClick={() => onSelect(item.summary.id)}
+          >
+            <span className={styles.typeIcon}>
+              <Icon name={itemIcon(item.summary)} size={16} />
             </span>
-          </span>
-        </button>
+            <span className={styles.nameText}>
+              <span className={styles.name}>{item.summary.name}</span>{' '}
+              <span className={styles.sub}>
+                {rowSummary(item, ctx) || itemTypeLabel(item.summary.item_type)}
+              </span>
+            </span>
+          </button>
+        </Tooltip>
       ),
     },
     {
@@ -112,8 +113,9 @@ export function Catalog({
       cell: (item) => {
         const weight = weightCoins(item);
         return weight === null ? (
-          <span className={styles.none} title="No listed weight">
-            -
+          <span className={styles.none}>
+            <span aria-hidden="true">-</span>
+            <span className="visually-hidden">No listed weight</span>
           </span>
         ) : (
           `${weight}`
@@ -136,7 +138,6 @@ export function Catalog({
               size="sm"
               variant="ghost"
               icon="plus"
-              disabled={disabled}
               aria-label={`Add ${name} to the cart`}
               onClick={() => onLots(item.summary.id, 1)}
             >

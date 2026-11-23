@@ -75,6 +75,9 @@ export function TableSettingsForm({ showName = false }: { showName?: boolean }) 
               type="submit"
               variant="secondary"
               disabled={name.trim() === '' || name.trim() === table.name}
+              disabledReason={
+                name.trim() === '' ? 'Enter a table name.' : 'Type a new name for the table first.'
+              }
             >
               Rename
             </Button>

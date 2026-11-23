@@ -213,8 +213,10 @@ export function StartingRollsStep({
                 variant={hp === null ? 'secondary' : 'primary'}
                 icon="dice"
                 disabled={hp === null}
+                disabledReason="Roll your hit points before your starting gold."
                 loading={rolling === 'gold'}
-                aria-describedby={GOLD_WAIT_NOTE_ID}
+                // While the button waits for the hit points, its reason says what the note says.
+                aria-describedby={hp === null ? undefined : GOLD_WAIT_NOTE_ID}
                 onClick={onRollGold}
               >
                 Roll starting gold

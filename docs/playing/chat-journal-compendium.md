@@ -17,7 +17,7 @@ Open the **Feed** tab (`Alt+2`) to read and post to the table's chronological lo
 ### Send messages and whispers
 
 - Type in **Message the table** and press `Enter` to send, or `Shift+Enter` to insert a line break. Chat supports `**bold**`, `*italic*`, `` `code` ``, and `~~strikethrough~~`.
-- Select **Whisper to someone** (the lock/whisper icon) to choose one or more recipients, or select **Every referee** to message the referee screen privately. Active whisper recipients appear as removable tags above the text box; select **Send to everyone** to return to public chat.
+- Select **Whisper** (the whisper icon) to choose one or more recipients, or select **Every referee** to message the referee screen privately. Active whisper recipients appear as removable tags above the text box; select **Send to everyone** to return to public chat.
 
 ### Use slash commands and the dice tray
 
@@ -38,7 +38,7 @@ To build rolls with buttons instead of typing formulas, select **Dice tray**:
 
 ### Filter and search the feed
 
-Use the segmented bar at the top of the feed to view **All**, **Chat**, **Rolls**, or **Game** entries (referees with the referee lens on also have a **Hidden** filter for secret rolls and referee events). Select **Search the feed** to filter loaded messages by text, or **Load older entries** at the top of the scroll area to page backward through earlier history.
+Use the segmented bar at the top of the feed to view **All**, **Chat**, **Rolls**, or **Game** entries (referees with the referee lens on also have a **Hidden from players** filter, shown as an eye icon, for secret rolls and referee events). Select **Search the feed** to filter loaded messages by text, or **Load older entries** at the top of the scroll area to page backward through earlier history.
 
 ## Track quests, chronicle entries, and shared notes
 

@@ -14,9 +14,12 @@ import {
   healingServiceLabel,
   restKindLabel,
   searchKindLabel,
+  SESSION_MODE_ORDER,
+  sessionModeNow,
+  sessionModeWhen,
   timeUnitLabel,
 } from './labels';
-import { capitalizeFirst, prettifyId } from './format';
+import { capitalizeFirst, joinList, prettifyId } from './format';
 
 export interface CommandInfo {
   /** A name for menus and headings: `Open a door`. */
@@ -144,7 +147,7 @@ export const COMMAND_INFO: Record<string, CommandInfo> = {
     'take off an item',
     'Unequip a worn or wielded item and return it to the pack.',
   ),
-  rest: play('Rest', 'Rest', 'rest', 'Rest the party for one turn, a night, or a full day.'),
+  rest: play('Rest', 'Rest', 'rest the party', 'Rest the party for one turn, a night, or a full day.'),
   prepare_spells: play(
     'Prepare spells',
     'Prepare',
@@ -378,6 +381,38 @@ function fallbackInfo(type: string): CommandInfo {
 /** Label, button text, description, and sentence phrase for a command type such as `open_door`. */
 export function commandInfo(type: string): CommandInfo {
   return Object.hasOwn(COMMAND_INFO, type) ? (COMMAND_INFO[type] ?? fallbackInfo(type)) : fallbackInfo(type);
+}
+
+/**
+ * When a command works, as a sentence for a disabled control or a note beside it. The modes come from bxapi's
+ * command catalog (`allowed_modes` on a `CommandSummary`), which is the only source for them.
+ *
+ * ```ts
+ * commandModesSentence('search', ['exploring'], 'town');
+ * // "You can search only while exploring. The party is in town now."
+ * ```
+ *
+ * @param commandType - The command, such as `search`.
+ * @param allowedModes - The command's `allowed_modes` from the catalog.
+ * @param mode - The session's mode now. When it is one of the allowed modes, or missing, the sentence leaves out
+ *   what the party is doing now.
+ */
+export function commandModesSentence(
+  commandType: string,
+  allowedModes: readonly string[],
+  mode?: string | null,
+): string {
+  const phrase = commandInfo(commandType).phrase;
+  if (allowedModes.length === 0) return `You can't ${phrase} at any point in the game.`;
+  const ordered = [...allowedModes].sort((a, b) => modeRank(a) - modeRank(b));
+  const when = `You can ${phrase} only ${joinList(ordered.map(sessionModeWhen), 'or')}.`;
+  if (mode === undefined || mode === null || allowedModes.includes(mode)) return when;
+  return `${when} The party ${sessionModeNow(mode)} now.`;
+}
+
+function modeRank(mode: string): number {
+  const index = SESSION_MODE_ORDER.indexOf(mode);
+  return index === -1 ? SESSION_MODE_ORDER.length : index;
 }
 
 // Field text ------------------------------------------------------------------------------------------------

@@ -21,6 +21,7 @@ import {
   consequenceText,
   encounterText,
   flagUses,
+  flagUseTooltip,
   patternText,
   trapText,
 } from './describe';
@@ -154,6 +155,16 @@ describe('flagUses', () => {
       'Checked by the objective Report to Reeve Tamsin Hale.',
     ]);
     expect(uses.get('quest.bell')).toEqual(['Set to “silenced” as a reward for Silence the drowned bell.']);
+  });
+});
+
+describe('flagUseTooltip', () => {
+  it('gives the first use of a flag without its period, and nothing for a flag no trigger, quest, or gate uses', () => {
+    const uses = flagUses(adventure, ctx);
+    expect(flagUseTooltip(uses, 'priory.gashnak')).toBe(
+      'Set to “dead” when Gashnak One-Ear is slain or routed',
+    );
+    expect(flagUseTooltip(uses, 'made.up.during.play')).toBeUndefined();
   });
 });
 

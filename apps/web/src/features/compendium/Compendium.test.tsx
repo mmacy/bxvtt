@@ -185,6 +185,30 @@ describe('Compendium pages', () => {
     expect(await screen.findByRole('heading', { name: 'Treasure' })).toBeInTheDocument();
   });
 
+  it('keeps Back and Forward focusable at the ends of the history and explains why they are unavailable', async () => {
+    const { user } = setup({ entry: { kind: 'monsters', id: 'goblin' } });
+    await screen.findByRole('heading', { name: 'Goblin' });
+    const back = screen.getByRole('button', { name: 'Back' });
+    const forward = screen.getByRole('button', { name: 'Forward' });
+    expect(back).toHaveAttribute('aria-disabled', 'true');
+    expect(back).toHaveAccessibleDescription(/first page you opened/);
+    expect(forward).toHaveAttribute('aria-disabled', 'true');
+    expect(forward).toHaveAccessibleDescription(/haven't gone back/);
+
+    await user.click(screen.getAllByRole('button', { name: 'R' })[0]!);
+    await screen.findByRole('heading', { name: 'Treasure' });
+    expect(screen.getByRole('button', { name: 'Back' })).not.toHaveAttribute('aria-disabled');
+    expect(screen.getByRole('button', { name: 'Forward' })).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('describes a treasure type letter link by what it opens', async () => {
+    setup({ entry: { kind: 'monsters', id: 'goblin' } });
+    await screen.findByRole('heading', { name: 'Goblin' });
+    expect(screen.getAllByRole('button', { name: 'R' })[0]).toHaveAccessibleDescription(
+      'Show treasure type R in the treasure tables',
+    );
+  });
+
   it('typesets a class with its progression table and the turning table for a cleric', async () => {
     setup({ entry: { kind: 'classes', id: 'cleric' } });
     const table = await screen.findByRole('table', { name: 'Cleric level progression' });

@@ -5,7 +5,7 @@ import { Combobox, type ComboboxOption } from '../components/Combobox';
 import { ConfirmDialog, Dialog, DialogClose, Drawer } from '../components/Dialog';
 import { Field } from '../components/Field';
 import { ContextMenu, DropdownMenu, type MenuEntry } from '../components/Menu';
-import { Popover, Tooltip } from '../components/Popover';
+import { Popover } from '../components/Popover';
 import { Select } from '../components/Select';
 import { toast } from '../components/toastStore';
 import { Row, Specimen, Stack } from './parts';
@@ -51,9 +51,7 @@ function Popups() {
         <Popover trigger={<Button variant="secondary">Morale</Button>} title="Morale 8">
           <p className={styles.muted}>Roll 2d6 when the first monster falls.</p>
         </Popover>
-        <Tooltip content="Roll for surprise" shortcut={['S']}>
-          <IconButton icon="dice" label="Roll for surprise" />
-        </Tooltip>
+        <IconButton icon="dice" label="Roll for surprise" shortcut="S" />
       </Row>
       <ContextMenu items={menuItems}>
         <div className={styles.contextTarget} tabIndex={0}>

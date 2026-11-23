@@ -16,7 +16,8 @@
   text-align: inherit;
 }
 
-.link.button:disabled {
+.link.button:disabled,
+.link.button[data-unavailable] {
   color: var(--color-text-disabled);
   text-decoration: none;
   cursor: not-allowed;

@@ -174,12 +174,13 @@
   color: var(--color-text-muted);
 }
 
-.step:hover:not(:disabled) {
+.step:hover:not(:disabled, [data-unavailable]) {
   background: var(--color-surface-hover);
   color: var(--color-text-strong);
 }
 
-.step:disabled {
+.step:disabled,
+.step[data-unavailable] {
   opacity: 0.35;
   cursor: not-allowed;
 }

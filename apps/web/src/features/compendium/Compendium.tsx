@@ -322,17 +322,21 @@ function Book({
             <IconButton
               icon="arrow-left"
               label="Back"
-              title="Back (Alt+Left)"
+              tooltip="Back to the previous page"
+              shortcut={['Alt', 'Left']}
               variant="ghost"
               disabled={!nav.canGoBack}
+              disabledReason="This is the first page you opened, so there's no page to go back to."
               onClick={back}
             />
             <IconButton
               icon="arrow-right"
               label="Forward"
-              title="Forward (Alt+Right)"
+              tooltip="Forward to the page you came back from"
+              shortcut={['Alt', 'Right']}
               variant="ghost"
               disabled={!nav.canGoForward}
+              disabledReason="You haven't gone back, so there's no page to go forward to."
               onClick={forward}
             />
           </div>

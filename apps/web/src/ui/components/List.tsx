@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useId,
   useLayoutEffect,
   useRef,
   type KeyboardEvent,
@@ -14,6 +15,14 @@ interface ListContextValue {
   value: string | null | undefined;
   onSelect: ((value: string) => void) | undefined;
   density: 'compact' | 'comfortable';
+}
+
+/**
+ * Whether keyboard focus can land on an option: an available one, or an unavailable one with a reason, which stays
+ * reachable so a keyboard or screen reader user hears why.
+ */
+function focusable(option: HTMLElement): boolean {
+  return option.getAttribute('aria-disabled') !== 'true' || option.hasAttribute('data-unavailable');
 }
 
 const ListContext = createContext<ListContextValue>({
@@ -57,7 +66,7 @@ export function List({
     if (!root || !selectable) return;
     const options = Array.from(root.querySelectorAll<HTMLElement>('[role="option"]'));
     if (options.length > 0 && !options.some((o) => o.tabIndex === 0)) {
-      const first = options.find((o) => o.getAttribute('aria-disabled') !== 'true');
+      const first = options.find(focusable);
       if (first) first.tabIndex = 0;
     }
   });
@@ -65,7 +74,7 @@ export function List({
   const onKeyDown = (event: KeyboardEvent<HTMLUListElement>) => {
     if (!selectable || !ref.current) return;
     const options = Array.from(ref.current.querySelectorAll<HTMLElement>('[role="option"]')).filter(
-      (o) => o.getAttribute('aria-disabled') !== 'true',
+      focusable,
     );
     const index = options.indexOf(document.activeElement as HTMLElement);
     let next: HTMLElement | undefined;
@@ -105,6 +114,12 @@ export interface ListItemProps {
   /** Content after the text, such as an HpBar or Badge. */
   trailing?: ReactNode;
   disabled?: boolean;
+  /**
+   * Why the item can't be chosen, while `disabled` is true, such as "Only Ruth, who plays Osric, can have Osric
+   * turn undead." The list shows it as text under the label and makes it the item's description, and in a
+   * selectable list the item stays reachable with the arrow keys. Without a reason, a disabled item is skipped.
+   */
+  disabledReason?: string | null;
   className?: string;
 }
 
@@ -116,9 +131,12 @@ export function ListItem({
   leading,
   trailing,
   disabled,
+  disabledReason,
   className,
 }: ListItemProps) {
   const ctx = useContext(ListContext);
+  const reasonId = useId();
+  const reason = disabled && disabledReason ? disabledReason : null;
   const selected = ctx.selectable && value !== undefined && ctx.value === value;
   const select = () => {
     if (!disabled && value !== undefined) ctx.onSelect?.(value);
@@ -128,13 +146,15 @@ export function ListItem({
       role={ctx.selectable ? 'option' : 'listitem'}
       aria-selected={ctx.selectable ? selected : undefined}
       aria-disabled={disabled || undefined}
+      aria-describedby={reason !== null ? reasonId : undefined}
+      data-unavailable={reason !== null || undefined}
       tabIndex={ctx.selectable ? (selected ? 0 : -1) : undefined}
       className={cx(
         styles.item,
         styles[ctx.density],
         ctx.selectable && styles.selectable,
         selected && styles.selected,
-        disabled && styles.disabled,
+        disabled && (reason !== null ? styles.unavailable : styles.disabled),
         className,
       )}
       onClick={ctx.selectable ? select : undefined}
@@ -153,6 +173,12 @@ export function ListItem({
       <span className={styles.text}>
         <span className={styles.title}>{title}</span>
         {description && <span className={styles.description}>{description}</span>}
+        {reason !== null && (
+          // The reason is the item's description, so it stays out of the item's name.
+          <span id={reasonId} className={styles.reason} aria-hidden="true">
+            {reason}
+          </span>
+        )}
       </span>
       {trailing && <span className={styles.trailing}>{trailing}</span>}
     </li>

@@ -52,6 +52,46 @@ export function sessionModeDescription(mode: string): string {
   return lookup(SESSION_MODES, mode)?.description ?? `The game is in ${prettifyId(mode)} mode.`;
 }
 
+/** The session modes in the order a game passes through them, for listing several modes. */
+export const SESSION_MODE_ORDER: readonly string[] = [
+  'town',
+  'exploring',
+  'encounter',
+  'battle',
+  'game_over',
+  'victory',
+];
+
+interface ModePhrases {
+  /** When something happens in the mode, as an adverbial phrase: `while exploring`. */
+  when: string;
+  /** What the party is doing in the mode, as a verb phrase: `is exploring a dungeon`. */
+  now: string;
+}
+
+const MODE_PHRASES: Record<string, ModePhrases> = {
+  town: { when: 'in town', now: 'is in town' },
+  exploring: { when: 'while exploring', now: 'is exploring a dungeon' },
+  encounter: { when: 'during an encounter', now: 'is in an encounter' },
+  battle: { when: 'during a battle', now: 'is in a battle' },
+  game_over: { when: 'after the party has fallen', now: 'has fallen' },
+  victory: { when: 'after the party has won the adventure', now: 'has won the adventure' },
+};
+
+/** When something happens in a session mode, as a phrase that ends a sentence: `while exploring`. */
+export function sessionModeWhen(mode: string): string {
+  return Object.hasOwn(MODE_PHRASES, mode)
+    ? (MODE_PHRASES[mode]?.when ?? `in ${prettifyId(mode)} mode`)
+    : `in ${prettifyId(mode)} mode`;
+}
+
+/** What the party is doing in a session mode, as a verb phrase after "The party": `is exploring a dungeon`. */
+export function sessionModeNow(mode: string): string {
+  return Object.hasOwn(MODE_PHRASES, mode)
+    ? (MODE_PHRASES[mode]?.now ?? `is in ${prettifyId(mode)} mode`)
+    : `is in ${prettifyId(mode)} mode`;
+}
+
 // Conditions ------------------------------------------------------------------------------------------------
 
 export interface ConditionInfo {

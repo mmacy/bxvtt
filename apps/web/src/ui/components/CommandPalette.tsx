@@ -15,6 +15,8 @@ export interface CommandAction {
   shortcut?: string | string[];
   keywords?: string[];
   disabled?: boolean;
+  /** Why the action is unavailable, shown under its label while `disabled` is true. */
+  disabledReason?: string | null;
   onRun: () => void;
 }
 
@@ -150,6 +152,9 @@ export function CommandPalette({
                     role="option"
                     aria-selected={index === activeIndex}
                     aria-disabled={action.disabled || undefined}
+                    aria-describedby={
+                      action.disabled && action.disabledReason ? `${optionId(index)}-reason` : undefined
+                    }
                     aria-keyshortcuts={action.shortcut ? ariaKeyShortcuts(action.shortcut) : undefined}
                     className={cx(styles.option, index === activeIndex && styles.active)}
                     onMouseMove={() => setActive(index)}
@@ -158,7 +163,18 @@ export function CommandPalette({
                     <span className={styles.optionIcon}>
                       {action.icon && <Icon name={action.icon} size={16} />}
                     </span>
-                    <span className={styles.optionLabel}>{action.label}</span>
+                    <span className={styles.optionLabel}>
+                      {action.label}
+                      {action.disabled && action.disabledReason && (
+                        <span
+                          id={`${optionId(index)}-reason`}
+                          className={styles.optionReason}
+                          aria-hidden="true"
+                        >
+                          {action.disabledReason}
+                        </span>
+                      )}
+                    </span>
                     {action.shortcut && <Kbd keys={action.shortcut} decorative />}
                   </div>
                 </li>

@@ -7,21 +7,9 @@ import {
   memberName,
   type TextContext,
 } from '@bxvtt/shared/text';
-import { forwardRef, useCallback, useLayoutEffect, useRef, type ComponentPropsWithoutRef } from 'react';
+import { useCallback, useLayoutEffect, useRef } from 'react';
 import { formatShortcut, PLAYBACK_SPEEDS, useShortcut } from '@/app';
-import {
-  ariaKeyShortcuts,
-  Badge,
-  Button,
-  cx,
-  Die,
-  DropdownMenu,
-  Icon,
-  IconButton,
-  Kbd,
-  SectionLabel,
-  Tooltip,
-} from '@/ui';
+import { ariaKeyShortcuts, Badge, Button, cx, Die, DropdownMenu, Icon, IconButton, SectionLabel } from '@/ui';
 import { lineIcon, type RoundDigest } from './playback';
 import { SPEEDS } from './transport';
 import type { PlaybackItem, PlaybackView } from './usePlayback';
@@ -274,11 +262,16 @@ function ReplayControl({ replay, focus }: { replay: () => void; focus: FocusHand
   }, [leave, claim]);
   return (
     <div className={styles.stripControls} ref={container}>
-      <Tooltip content="Play the last round again from its first beat">
-        <Button ref={button} size="sm" variant="ghost" icon="rotate" onClick={replay}>
-          Replay
-        </Button>
-      </Tooltip>
+      <Button
+        ref={button}
+        size="sm"
+        variant="ghost"
+        icon="rotate"
+        tooltip="Play the last round again from its first beat"
+        onClick={replay}
+      >
+        Replay
+      </Button>
     </div>
   );
 }
@@ -304,74 +297,54 @@ function PlaybackControls({ playback, focus }: { playback: PlaybackView; focus: 
       <span className={styles.stripCount} aria-hidden="true">
         {beatIndex + 1}/{total}
       </span>
-      <Tooltip content="Step back one beat" shortcut={formatShortcut(PLAYBACK_KEYS.back)}>
-        <IconButton
-          icon="step-back"
-          label="Step back"
-          size="sm"
-          variant="ghost"
-          aria-keyshortcuts={ariaKeyShortcuts(PLAYBACK_KEYS.back)}
-          disabled={!playback.canStepBack}
-          onClick={playback.stepBack}
-        />
-      </Tooltip>
-      <Tooltip
-        content={paused ? 'Resume the playback' : 'Pause on this beat'}
+      <IconButton
+        icon="step-back"
+        label="Step back"
+        tooltip="Step back one beat"
+        shortcut={formatShortcut(PLAYBACK_KEYS.back)}
+        size="sm"
+        variant="ghost"
+        aria-keyshortcuts={ariaKeyShortcuts(PLAYBACK_KEYS.back)}
+        disabled={!playback.canStepBack}
+        disabledReason="This is the first beat, so there's nothing to step back to."
+        onClick={playback.stepBack}
+      />
+      <IconButton
+        ref={pause}
+        icon={paused ? 'play' : 'pause'}
+        label={paused ? 'Resume playback' : 'Pause playback'}
+        tooltip={paused ? undefined : 'Pause playback on this beat'}
         shortcut={formatShortcut(PLAYBACK_KEYS.pause)}
-      >
-        <IconButton
-          ref={pause}
-          icon={paused ? 'play' : 'pause'}
-          label={paused ? 'Resume playback' : 'Pause playback'}
-          size="sm"
-          variant={paused ? 'secondary' : 'ghost'}
-          aria-keyshortcuts={ariaKeyShortcuts(PLAYBACK_KEYS.pause)}
-          onClick={playback.togglePause}
-        />
-      </Tooltip>
-      <Tooltip content="Step forward one beat" shortcut={formatShortcut(PLAYBACK_KEYS.forward)}>
-        <IconButton
-          icon="step-forward"
-          label="Step forward"
-          size="sm"
-          variant="ghost"
-          aria-keyshortcuts={ariaKeyShortcuts(PLAYBACK_KEYS.forward)}
-          onClick={playback.stepForward}
-        />
-      </Tooltip>
+        size="sm"
+        variant={paused ? 'secondary' : 'ghost'}
+        aria-keyshortcuts={ariaKeyShortcuts(PLAYBACK_KEYS.pause)}
+        onClick={playback.togglePause}
+      />
+      <IconButton
+        icon="step-forward"
+        label="Step forward"
+        tooltip="Step forward one beat"
+        shortcut={formatShortcut(PLAYBACK_KEYS.forward)}
+        size="sm"
+        variant="ghost"
+        aria-keyshortcuts={ariaKeyShortcuts(PLAYBACK_KEYS.forward)}
+        onClick={playback.stepForward}
+      />
       <SpeedMenu playback={playback} />
-      <Tooltip content="Skip to the end of the round" shortcut="Esc">
-        <Button size="sm" variant="ghost" icon="skip-forward" aria-keyshortcuts="Escape" onClick={skip}>
-          Skip <Kbd keys="Esc" />
-        </Button>
-      </Tooltip>
+      <Button
+        size="sm"
+        variant="ghost"
+        icon="skip-forward"
+        tooltip="Skip to the end of the round"
+        shortcut="Esc"
+        aria-keyshortcuts="Escape"
+        onClick={skip}
+      >
+        Skip
+      </Button>
     </div>
   );
 }
-
-/**
- * The speed control's button, with its tooltip. The menu's trigger needs a component that takes a ref and the
- * trigger's props, and passes both to the button.
- */
-const SpeedButton = forwardRef<
-  HTMLButtonElement,
-  ComponentPropsWithoutRef<typeof Button> & { speedLabel: string }
->(function SpeedButton({ speedLabel, ...props }, ref) {
-  return (
-    <Tooltip content="How fast rounds play back for you. Nobody else's playback changes.">
-      <Button
-        ref={ref}
-        size="sm"
-        variant="ghost"
-        iconEnd="chevron-down"
-        aria-label={`Playback speed: ${speedLabel}`}
-        {...props}
-      >
-        {speedLabel}
-      </Button>
-    </Tooltip>
-  );
-});
 
 /** Chooses the playback speed, which this browser remembers. */
 function SpeedMenu({ playback }: { playback: PlaybackView }) {
@@ -379,7 +352,17 @@ function SpeedMenu({ playback }: { playback: PlaybackView }) {
   return (
     <DropdownMenu
       align="end"
-      trigger={<SpeedButton speedLabel={SPEEDS[speed].label} />}
+      trigger={
+        <Button
+          size="sm"
+          variant="ghost"
+          iconEnd="chevron-down"
+          aria-label={`Playback speed: ${SPEEDS[speed].label}`}
+          tooltip="Choose how fast rounds play back on your screen"
+        >
+          {SPEEDS[speed].label}
+        </Button>
+      }
       items={[
         { type: 'label', label: 'Playback speed' },
         ...PLAYBACK_SPEEDS.map((value) => ({

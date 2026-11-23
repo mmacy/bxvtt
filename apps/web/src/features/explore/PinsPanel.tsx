@@ -15,12 +15,25 @@ export interface PinsPanelProps {
   records: ReadonlyMap<string, PinAnnotation>;
   /** Whether the party stands on the level shown, so a pin can go on its square. */
   partyHere: boolean;
+  /** Why the party's square isn't available while the party is off this level. */
+  partyReason: string;
+  /** Whether the viewer may remove the pin, which decides what "Open" tells them. */
+  mayRemove: (pin: MapPin) => boolean;
   onShow: (pin: MapPin) => void;
   onOpen: (pin: MapPin) => void;
   onAddAtParty: () => void;
 }
 
-export function PinsPanel({ pins, records, partyHere, onShow, onOpen, onAddAtParty }: PinsPanelProps) {
+export function PinsPanel({
+  pins,
+  records,
+  partyHere,
+  partyReason,
+  mayRemove,
+  onShow,
+  onOpen,
+  onAddAtParty,
+}: PinsPanelProps) {
   const [open, setOpen] = useState(false);
   const members = useMembers();
   const panelId = useId();
@@ -46,6 +59,7 @@ export function PinsPanel({ pins, records, partyHere, onShow, onOpen, onAddAtPar
         aria-expanded={open}
         aria-controls={panelId}
         aria-label={pins.length === 1 ? 'Pins: 1 on this level' : `Pins: ${pins.length} on this level`}
+        tooltip="List the pins on this level"
         onClick={() => setOpen(!open)}
       >
         {pins.length > 0 ? `Pins ${pins.length}` : 'Pins'}
@@ -89,6 +103,7 @@ export function PinsPanel({ pins, records, partyHere, onShow, onOpen, onAddAtPar
                       size="sm"
                       variant="ghost"
                       aria-label={`Show pin ${pin.label} on the map`}
+                      tooltip="Move the map to this pin"
                       onClick={() => act(() => onShow(pin))}
                     >
                       Show
@@ -97,6 +112,11 @@ export function PinsPanel({ pins, records, partyHere, onShow, onOpen, onAddAtPar
                       size="sm"
                       variant="ghost"
                       aria-label={`Open pin ${pin.label}`}
+                      tooltip={
+                        mayRemove(pin)
+                          ? 'Open this pin to read its note or remove it'
+                          : 'Open this pin to read its note'
+                      }
                       onClick={() => act(() => onOpen(pin))}
                     >
                       Open
@@ -111,7 +131,7 @@ export function PinsPanel({ pins, records, partyHere, onShow, onOpen, onAddAtPar
             variant="secondary"
             icon="plus"
             disabled={!partyHere}
-            title={partyHere ? undefined : "The party isn't on this level."}
+            disabledReason={partyHere ? null : partyReason}
             onClick={() => act(onAddAtParty)}
           >
             Add pin at party

@@ -25,6 +25,17 @@ import {
 import type { DoorLore } from './lore';
 import { packItems } from './party';
 
+/**
+ * Why a control that needs the party on the level shown is unavailable.
+ *
+ * @param canShowParty - Whether the off-level banner offers its "Show party" button, which takes the viewer back.
+ * @param place - How the control's screen names the level: "the level shown" on the map, "this level" in the pins list.
+ */
+export function partyOffLevelReason(canShowParty: boolean, place = 'the level shown'): string {
+  const cause = `The party isn't on ${place}.`;
+  return canShowParty ? `${cause} Choose Show party to go back to it.` : cause;
+}
+
 /** A level the switcher offers. */
 export interface LevelOption {
   key: string;

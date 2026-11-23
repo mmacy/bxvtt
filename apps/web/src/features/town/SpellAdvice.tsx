@@ -177,7 +177,7 @@ export function SpellActions({ advice }: { advice: SpellAdvice }) {
           icon="moon"
           loading={pending}
           disabled={!access.allowed || !services.rest}
-          title={access.allowed ? undefined : access.explanation}
+          disabledReason={access.explanation}
           onClick={() => void rest('night')}
         >
           Rest for a night

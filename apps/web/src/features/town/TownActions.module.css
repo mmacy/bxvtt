@@ -1,8 +1,3 @@
-.kbd {
-  margin-inline-start: var(--space-1);
-  opacity: 0.75;
-}
-
 .here {
   border-color: var(--color-border-accent);
   color: var(--color-accent-text);

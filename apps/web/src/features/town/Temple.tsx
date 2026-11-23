@@ -171,7 +171,7 @@ export function Temple() {
                     icon="heart"
                     loading={pending}
                     disabled={!permission.allowed}
-                    title={permission.reason ?? undefined}
+                    disabledReason={permission.reason}
                     aria-label={`Buy ${healingServiceLabel(service).toLowerCase()} for ${patient.name}`}
                     onClick={() => void buy(service)}
                   >

@@ -10,6 +10,7 @@ import {
   doorLoreText,
   entryLabel,
   lightEntries,
+  lightUnavailableReason,
   searchEntries,
   transitionAction,
   transitionDescription,
@@ -214,6 +215,28 @@ describe('lightEntries', () => {
       { command_type: 'light_source', character_id: 'character-0001', item_id: 'torch' },
       expect.anything(),
     );
+  });
+});
+
+describe('lightUnavailableReason', () => {
+  it('says no one has a light when no living member carries or burns one', () => {
+    const { ctx } = context('player');
+    const empty = { ...ctx, view: { ...ctx.view, party: [], effects: [] } };
+    expect(lightUnavailableReason(empty, () => ({ allowed: true, reason: null }))).toBe(
+      'No one in the party carries a torch or lantern.',
+    );
+  });
+
+  it('gives the permission’s reason when a member holds a light the viewer may not use', () => {
+    const { ctx } = context('player');
+    const reason = 'Only Ruth, who plays Brenna, can have Brenna light a torch or lantern.';
+    const seen: string[] = [];
+    const text = lightUnavailableReason(ctx, (memberId) => {
+      seen.push(memberId);
+      return { allowed: false, reason };
+    });
+    expect(text).toBe(reason);
+    expect(seen).toContain('character-0001');
   });
 });
 

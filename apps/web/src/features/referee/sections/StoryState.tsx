@@ -83,7 +83,13 @@ function ObjectiveRow({
       {questActive && !complete && (
         <div className={styles.rowActions}>
           {!revealed && (
-            <Button size="sm" variant="secondary" disabled={busy} onClick={() => send('reveal_objective')}>
+            <Button
+              size="sm"
+              variant="secondary"
+              disabled={busy}
+              tooltip="Show this objective to the players"
+              onClick={() => send('reveal_objective')}
+            >
               Reveal
             </Button>
           )}
@@ -162,6 +168,7 @@ function RewardRow({
           size="sm"
           variant="secondary"
           disabled={busy || (selector !== null && !target)}
+          disabledReason={selector !== null && !target ? 'Choose who receives this reward.' : null}
           onClick={give}
         >
           Give
@@ -453,6 +460,9 @@ function TriggerRow({
           size="sm"
           variant="secondary"
           disabled={busy || (fired && !trigger.repeatable)}
+          disabledReason={
+            fired && !trigger.repeatable ? 'This trigger fires only once, and it has already fired.' : null
+          }
           onClick={() => run({ command_type: 'mark_trigger_fired', trigger_id: trigger.id })}
         >
           {fired && !trigger.repeatable ? 'Already fired' : 'Mark fired'}
