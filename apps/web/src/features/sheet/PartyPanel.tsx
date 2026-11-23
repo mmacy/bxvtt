@@ -32,6 +32,7 @@ import {
   Icon,
   IconButton,
   TokenPortrait,
+  Tooltip,
   cx,
 } from '@/ui';
 import { effectLabel, effectRemaining } from './actions';
@@ -220,7 +221,7 @@ export function PartyPanel() {
               variant={editing ? 'secondary' : 'ghost'}
               icon={editing ? 'check' : 'sort'}
               disabled={!reorderPermission.allowed}
-              title={reorderPermission.reason ?? undefined}
+              disabledReason={reorderPermission.reason}
               onClick={() => setEditing((e) => !e)}
             >
               {editing ? 'Done' : 'Change order'}
@@ -265,20 +266,28 @@ export function PartyPanel() {
             >
               {editing && (
                 <div className={styles.reorder}>
-                  <button
-                    type="button"
-                    className={styles.handle}
-                    aria-label={`${member.name}, place ${index + 1} of ${ordered.length}. Press the up or down arrow to move.`}
-                    onKeyDown={(event) => onHandleKey(event, index)}
+                  <Tooltip
+                    content={`Drag ${member.name} to a new place in the marching order`}
+                    describe={false}
                   >
-                    <Icon name="grip" size={16} />
-                  </button>
+                    <button
+                      type="button"
+                      className={styles.handle}
+                      aria-label={`${member.name}, place ${index + 1} of ${ordered.length}. Press the up or down arrow to move.`}
+                      onKeyDown={(event) => onHandleKey(event, index)}
+                    >
+                      <Icon name="grip" size={16} />
+                    </button>
+                  </Tooltip>
                   <IconButton
                     icon="arrow-up"
                     label={`Move ${member.name} forward`}
                     size="sm"
                     variant="ghost"
                     disabled={index === 0 || pending}
+                    disabledReason={
+                      index === 0 ? `${member.name} is already first in the marching order.` : undefined
+                    }
                     onClick={() => move(index, index - 1)}
                   />
                   <IconButton
@@ -287,6 +296,11 @@ export function PartyPanel() {
                     size="sm"
                     variant="ghost"
                     disabled={index === ordered.length - 1 || pending}
+                    disabledReason={
+                      index === ordered.length - 1
+                        ? `${member.name} is already last in the marching order.`
+                        : undefined
+                    }
                     onClick={() => move(index, index + 1)}
                   />
                 </div>
@@ -309,8 +323,9 @@ export function PartyPanel() {
                   <LinkButton
                     tone="quiet"
                     className={styles.spellMarker}
+                    tooltip="Open the Spells tab to prepare spells"
                     onClick={() => openSheet(member.id, 'spells')}
-                    aria-label={`No spells memorized for ${member.name}. Open the Spells tab.`}
+                    aria-label={`No spells memorized for ${member.name}`}
                   >
                     <Icon name="spell" size={12} />
                     No spells memorized
@@ -382,14 +397,16 @@ function MemberRow({ member, rank, color, controller, light, effects, onOpen }: 
         />
         <span className={styles.body}>
           <span className={styles.topLine}>
-            <button
-              type="button"
-              className={cx(styles.name, styles.nameButton)}
-              onClick={onOpen}
-              aria-describedby={detailId}
-            >
-              {member.name}
-            </button>
+            <Tooltip content="Open the character sheet" describe={false}>
+              <button
+                type="button"
+                className={cx(styles.name, styles.nameButton)}
+                onClick={onOpen}
+                aria-describedby={detailId}
+              >
+                {member.name}
+              </button>
+            </Tooltip>
             {controller ? (
               <span className={styles.controller} aria-hidden="true">
                 <Avatar name={controller.name} color={color} size="xs" decorative />

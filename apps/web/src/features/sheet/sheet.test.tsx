@@ -139,6 +139,24 @@ describe('PartyPanel', () => {
   });
 });
 
+describe('marching order reasons', () => {
+  it('says why the first member cannot move forward and the last cannot move back', async () => {
+    const snapshot = fixtureSnapshot('exploring', 'player');
+    const party = snapshot.game?.view.party ?? [];
+    const first = party[0];
+    const last = party[party.length - 1];
+    const { user } = renderWithTable(<PartyPanel />, { snapshot });
+    await user.click(screen.getByRole('button', { name: 'Change order' }));
+    const forward = screen.getByRole('button', { name: `Move ${first?.name} forward` });
+    expect(forward).toHaveAttribute('aria-disabled', 'true');
+    expect(forward).toHaveAccessibleDescription(`${first?.name} is already first in the marching order.`);
+    const back = screen.getByRole('button', { name: `Move ${last?.name} back` });
+    expect(back).toHaveAttribute('aria-disabled', 'true');
+    expect(back).toHaveAccessibleDescription(`${last?.name} is already last in the marching order.`);
+    expect(screen.getByRole('button', { name: `Move ${party[1]?.name} forward` })).toBeEnabled();
+  });
+});
+
 describe('CharacterSheet', () => {
   it("shows the member's numbers from the view", async () => {
     const snapshot = fixtureSnapshot('exploring', 'player');
@@ -178,8 +196,31 @@ describe('CharacterSheet', () => {
       snapshot,
     });
     await user.click(await screen.findByRole('tab', { name: 'Inventory' }));
-    expect(screen.getByText(/Only Ruth, who plays Osric, can have Osric /)).toBeInTheDocument();
-    for (const button of screen.getAllByRole('button', { name: 'Unequip' })) expect(button).toBeDisabled();
+    expect(screen.getByText(/^Only Ruth, who plays Osric, can act for Osric\./)).toBeInTheDocument();
+    const buttons = screen.getAllByRole('button', { name: 'Unequip' });
+    expect(buttons.length).toBeGreaterThan(0);
+    for (const button of buttons) {
+      expect(button).toHaveAttribute('aria-disabled', 'true');
+      expect(button).toHaveAccessibleDescription(
+        /^Only Ruth, who plays Osric, can have Osric take off an item\./,
+      );
+    }
+  });
+
+  it('says what to choose while nothing is chosen to give or drop', async () => {
+    const snapshot = fixtureSnapshot('exploring', 'player');
+    const brenna = snapshot.game?.view.party[0];
+    const { user } = renderWithTable(<CharacterSheet memberId={brenna?.id ?? null} onClose={() => {}} />, {
+      snapshot,
+    });
+    await user.click(await screen.findByRole('tab', { name: 'Inventory' }));
+    await user.click(screen.getByRole('button', { name: 'Drop' }));
+    const dialog = await screen.findByRole('dialog', { name: /Drop from/ });
+    const submit = within(dialog).getByRole('button', { name: 'Drop' });
+    expect(submit).toHaveAttribute('aria-disabled', 'true');
+    expect(submit).toHaveAccessibleDescription('Choose at least one item or some coins to drop.');
+    await user.click(within(dialog).getByRole('button', { name: 'More torches' }));
+    expect(within(dialog).getByRole('button', { name: 'Drop' })).not.toHaveAttribute('aria-disabled');
   });
 
   it('gives items one unit per entry with the coins', async () => {
@@ -229,7 +270,7 @@ describe('StoredCharacterCard', () => {
       />,
       { api, snapshot: fixtureSnapshot('lobby', 'player') },
     );
-    await user.click(screen.getByRole('button', { name: `${character.name}, open the character sheet` }));
+    await user.click(screen.getByRole('button', { name: character.name }));
     expect(await screen.findByRole('group', { name: /^Strength 15/ })).toBeInTheDocument();
     await user.click(await screen.findByRole('button', { name: 'Delete character' }));
     const confirm = await screen.findByRole('alertdialog');
@@ -246,7 +287,7 @@ describe('rules links', () => {
     const { user } = renderWithTable(<CharacterSheet memberId={brenna?.id ?? null} onClose={() => {}} />, {
       snapshot,
     });
-    await user.click(await screen.findByRole('button', { name: 'Fighter in the rules reference' }));
+    await user.click(await screen.findByRole('button', { name: 'fighter' }));
     expect(useTableUi.getState().compendiumEntry).toEqual({ kind: 'classes', id: 'fighter' });
   });
 
@@ -351,7 +392,11 @@ describe('a caster with nothing memorized', () => {
     await user.click(screen.getAllByRole('button', { name: 'Prepare spells' })[0] as HTMLElement);
     const dialog = await screen.findByRole('dialog', { name: /Prepare/ });
     // One copy of Sleep fills the one first-level slot, so the count can't go higher.
-    expect(within(dialog).getByRole('button', { name: 'More copies of Sleep' })).toBeDisabled();
+    const more = within(dialog).getByRole('button', { name: 'More copies of Sleep' });
+    expect(more).toHaveAttribute('aria-disabled', 'true');
+    expect(within(dialog).getByRole('spinbutton', { name: 'Copies of Sleep' })).toHaveAccessibleDescription(
+      'The slot for 1st-level spells is full.',
+    );
     await user.click(within(dialog).getByRole('button', { name: 'Prepare spells' }));
     // The refusal stays in the dialog, where the player can change the choice.
     expect(await within(dialog).findByText(/rest/i)).toBeInTheDocument();

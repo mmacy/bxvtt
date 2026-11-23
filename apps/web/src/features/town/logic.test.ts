@@ -5,6 +5,7 @@ import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { cartCount, cartLines, cartTotal, purchaseItemIds } from './cartLines';
 import { gaps, readinessChecklist } from './checklist';
 import { describeItem, lotSentence, type ShopItem } from './equipment';
+import { serviceReason } from './hooks';
 import { describeChanges } from './RestAndPrepare';
 import { summarizeEntry } from './Glance';
 import { hasSleptSincePreparing, spellAdvice, spellAdviceText } from './SpellAdvice';
@@ -382,5 +383,23 @@ describe('summarizing a town action', () => {
       headline: 'One.',
       rest: ['Two.'],
     });
+  });
+});
+
+describe('why a town service is unavailable', () => {
+  const town = 'Nobody in Hollin Ferry sells equipment.';
+
+  it('gives the permission reason when the command is not legal, even if the town offers the service', () => {
+    expect(serviceReason(false, true, 'You can buy equipment only in town.', town)).toBe(
+      'You can buy equipment only in town.',
+    );
+  });
+
+  it("names the town when the command is legal but the town doesn't offer the service", () => {
+    expect(serviceReason(true, false, null, town)).toBe(town);
+  });
+
+  it('gives no reason when the service is available', () => {
+    expect(serviceReason(true, true, null, town)).toBeNull();
   });
 });

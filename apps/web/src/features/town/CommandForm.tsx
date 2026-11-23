@@ -3,7 +3,13 @@
  * with the text layer's field labels, so a command that bxapi adds to town is still reachable. Choices that name
  * people, items, and spells show their names, never their IDs.
  */
-import { commandFieldOptionLabel, commandFieldText, commandInfo, describeEvents } from '@bxvtt/shared/text';
+import {
+  commandFieldOptionLabel,
+  commandFieldText,
+  commandInfo,
+  describeEvents,
+  joinList,
+} from '@bxvtt/shared/text';
 import { useMemo, useState } from 'react';
 import { useCommandSchema, useParty, useSendCommand, useSpellCatalog, useTextContext } from '@/app';
 import {
@@ -152,28 +158,31 @@ export function CommandForm({ commandType }: { commandType: string }) {
       };
       return (
         <ol className={styles.order}>
-          {order.map((id, index) => (
-            <li key={id} className={styles.orderRow}>
-              <span className={styles.rank}>{index + 1}</span>
-              <span className={styles.orderName}>
-                {party.find((member) => member.id === id)?.name ?? 'A character'}
-              </span>
-              <IconButton
-                icon="arrow-up"
-                label={`Move ${party.find((m) => m.id === id)?.name ?? 'character'} forward`}
-                size="sm"
-                disabled={index === 0}
-                onClick={() => move(index, -1)}
-              />
-              <IconButton
-                icon="arrow-down"
-                label={`Move ${party.find((m) => m.id === id)?.name ?? 'character'} back`}
-                size="sm"
-                disabled={index === order.length - 1}
-                onClick={() => move(index, 1)}
-              />
-            </li>
-          ))}
+          {order.map((id, index) => {
+            const name = party.find((member) => member.id === id)?.name;
+            return (
+              <li key={id} className={styles.orderRow}>
+                <span className={styles.rank}>{index + 1}</span>
+                <span className={styles.orderName}>{name ?? 'A character'}</span>
+                <IconButton
+                  icon="arrow-up"
+                  label={`Move ${name ?? 'character'} forward`}
+                  size="sm"
+                  disabled={index === 0}
+                  disabledReason={`${name ?? 'This character'} is already first in the marching order.`}
+                  onClick={() => move(index, -1)}
+                />
+                <IconButton
+                  icon="arrow-down"
+                  label={`Move ${name ?? 'character'} back`}
+                  size="sm"
+                  disabled={index === order.length - 1}
+                  disabledReason={`${name ?? 'This character'} is already last in the marching order.`}
+                  onClick={() => move(index, 1)}
+                />
+              </li>
+            );
+          })}
         </ol>
       );
     }
@@ -237,7 +246,6 @@ export function CommandForm({ commandType }: { commandType: string }) {
             rows={4}
             value={typeof value === 'string' ? value : ''}
             onChange={(event) => set(field.name, event.target.value)}
-            placeholder='{"gp": 10}'
           />
         );
       default:
@@ -301,7 +309,17 @@ export function CommandForm({ commandType }: { commandType: string }) {
         </Banner>
       )}
       <div>
-        <Button type="submit" variant="secondary" loading={pending} disabled={missing.length > 0}>
+        <Button
+          type="submit"
+          variant="secondary"
+          loading={pending}
+          disabled={missing.length > 0}
+          disabledReason={
+            missing.length > 0
+              ? `Fill in ${joinList(missing.map((name) => commandFieldText(commandType, name).label))} first.`
+              : undefined
+          }
+        >
           {info.button}
         </Button>
       </div>

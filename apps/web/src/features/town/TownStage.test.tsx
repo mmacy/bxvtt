@@ -96,10 +96,12 @@ describe('the town square', () => {
     const settings = player.table.settings;
     player.table = { ...player.table, settings: { ...settings, caller_user_id: snapshot.user.id } };
     setup(player);
-    expect(
-      await screen.findByText('Ruth is the caller and leads the party out. Ask Ruth or the referee.'),
-    ).toBeInTheDocument();
-    for (const button of screen.getAllByRole('button', { name: 'Set out' })) expect(button).toBeDisabled();
+    const reason = /^Only the caller can enter a dungeon\. Ruth is the caller\./;
+    expect(await screen.findByText(reason)).toBeInTheDocument();
+    for (const button of screen.getAllByRole('button', { name: 'Set out' })) {
+      expect(button).toHaveAttribute('aria-disabled', 'true');
+      expect(button).toHaveAccessibleDescription(reason);
+    }
   });
 });
 
@@ -350,8 +352,11 @@ describe('the temple', () => {
     await user.click(screen.getByRole('tab', { name: 'Temple' }));
     await user.click(await screen.findByRole('button', { name: /^Osric/ }));
     const button = screen.getByRole('button', { name: 'Buy raise dead for Osric' });
-    expect(button).toBeDisabled();
-    expect(screen.getByText(/Only Ruth, who plays Osric, can have Osric buy healing/)).toBeInTheDocument();
+    expect(button).toHaveAttribute('aria-disabled', 'true');
+    expect(button).toHaveAccessibleDescription(/Only Ruth, who plays Osric, can have Osric buy healing/);
+    expect(
+      screen.getAllByText(/Only Ruth, who plays Osric, can have Osric buy healing/).length,
+    ).toBeGreaterThan(0);
   });
 });
 
@@ -457,12 +462,37 @@ describe('the action bar', () => {
       </>,
       { snapshot, api },
     );
-    expect(screen.getByRole('button', { name: /^Temple/ })).toBeDisabled();
+    const temple = screen.getByRole('button', { name: /^Temple/ });
+    expect(temple).toHaveAttribute('aria-disabled', 'true');
+    expect(temple).toHaveAccessibleDescription(/buy healing/);
     expect(screen.getByRole('button', { name: /^Set out/ })).toBeEnabled();
     await user.click(screen.getByRole('button', { name: /^Treasure buyers/ }));
     expect(screen.getByRole('tab', { name: 'Treasure buyers', selected: true })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /^Outfitter/ }));
     expect(screen.getByRole('tab', { name: 'Outfitter', selected: true })).toBeInTheDocument();
+  });
+});
+
+describe('the action bar reasons', () => {
+  it("names the town when it doesn't list a service its commands allow", () => {
+    const snapshot = fixtureSnapshot('town', 'player');
+    if (!snapshot.game) throw new Error('No game.');
+    snapshot.game.view.town_services = ["Hob Tanner's smithy and store: weapons, armour, and gear"];
+    const api = createFakeApi();
+    stubCatalog(api, ADVENTURES);
+    renderWithTable(
+      <ActionBar aria-label="Party actions">
+        <TownActions />
+      </ActionBar>,
+      { snapshot, api },
+    );
+    expect(screen.getByRole('button', { name: /^Temple/ })).toHaveAccessibleDescription(
+      'Hollin Ferry has no temple that offers healing.',
+    );
+    expect(screen.getByRole('button', { name: /^Treasure buyers/ })).toHaveAccessibleDescription(
+      'Nobody in Hollin Ferry buys treasure.',
+    );
+    expect(screen.getByRole('button', { name: /^Outfitter/ })).toBeEnabled();
   });
 });
 

@@ -178,6 +178,11 @@ export function Treasure() {
                   icon="coins"
                   loading={pending}
                   disabled={chosen.length === 0 || !access.allowed}
+                  disabledReason={
+                    access.allowed
+                      ? 'Select at least one gem or piece of jewellery to sell.'
+                      : access.explanation
+                  }
                   onClick={() => void sell(chosen)}
                 >
                   Sell selected
@@ -186,6 +191,7 @@ export function Treasure() {
                   variant="secondary"
                   loading={pending}
                   disabled={all.length === 0 || !access.allowed}
+                  disabledReason={access.explanation}
                   onClick={() => void sell(all)}
                 >
                   Sell everything

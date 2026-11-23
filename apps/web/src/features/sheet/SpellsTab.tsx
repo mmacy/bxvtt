@@ -130,7 +130,7 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
                 variant="secondary"
                 icon="book"
                 disabled={!prepare.permission.allowed}
-                title={prepare.permission.reason ?? undefined}
+                disabledReason={prepare.permission.reason}
                 onClick={() => setPreparing('notice')}
               >
                 Prepare spells
@@ -157,7 +157,7 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
               variant="secondary"
               icon="book"
               disabled={!prepare.permission.allowed}
-              title={prepare.permission.reason ?? undefined}
+              disabledReason={prepare.permission.reason}
               onClick={() => setPreparing('header')}
             >
               Prepare spells
@@ -215,7 +215,7 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
                         variant="secondary"
                         icon="spell"
                         disabled={!cast.permission.allowed}
-                        title={cast.permission.reason ?? undefined}
+                        disabledReason={cast.permission.reason}
                         onClick={() => setCasting({ spellId: copy.spellId, reversed: copy.reversed })}
                       >
                         Cast
@@ -242,7 +242,7 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
                 variant="ghost"
                 icon="plus"
                 disabled={!learn.permission.allowed}
-                title={learn.permission.reason ?? undefined}
+                disabledReason={learn.permission.reason}
                 onClick={() => setLearning(true)}
               >
                 Learn a spell
@@ -324,11 +324,19 @@ interface PrepareProps {
   onClose: () => void;
 }
 
+/** Why a spell's count can't rise: every slot the class table gives at its level is taken. */
+function slotsFullSentence(level: number, slots: number): string {
+  return slots === 1
+    ? `The slot for ${ordinal(level)}-level spells is full.`
+    : `All ${slots} slots for ${ordinal(level)}-level spells are full.`;
+}
+
 function PrepareRow({
   spell,
   arcane,
   counts,
   free,
+  levelSlots,
   setCount,
 }: {
   spell: SpellSummary;
@@ -336,10 +344,13 @@ function PrepareRow({
   counts: Record<string, number>;
   /** Slots still open at this spell's level, so a count can't go past the slots. */
   free: number;
+  /** All the slots the class table gives at this spell's level. */
+  levelSlots: number;
   setCount: (key: string, value: number) => void;
 }) {
   const detail = useSpellDetail(arcane ? spell.id : null);
   const reversible = arcane && detail.data?.reversed_form;
+  const full = slotsFullSentence(spell.level, levelSlots);
   return (
     <li className={styles.pickRow}>
       <span className={styles.pickName}>
@@ -353,6 +364,7 @@ function PrepareRow({
         value={counts[`${spell.id}:false`] ?? 0}
         min={0}
         max={(counts[`${spell.id}:false`] ?? 0) + free}
+        maxReason={full}
         onChange={(v) => setCount(`${spell.id}:false`, v ?? 0)}
       />
       {reversible && (
@@ -363,6 +375,7 @@ function PrepareRow({
           value={counts[`${spell.id}:true`] ?? 0}
           min={0}
           max={(counts[`${spell.id}:true`] ?? 0) + free}
+          maxReason={full}
           onChange={(v) => setCount(`${spell.id}:true`, v ?? 0)}
         />
       )}
@@ -486,6 +499,7 @@ function PrepareDialog({ member, model, spellList, arcane, slots, onClose }: Pre
                       arcane={arcane}
                       counts={counts}
                       free={Math.max(0, n - chosenAt(level))}
+                      levelSlots={n}
                       setCount={(key, value) => setCounts((c) => ({ ...c, [key]: value }))}
                     />
                   ))}
@@ -592,6 +606,11 @@ function CastDialog({
             icon="spell"
             loading={pending}
             disabled={!mode}
+            disabledReason={
+              !mode && !entry.loading && spell === null
+                ? `The details of ${name} didn't load. Close this dialog and try again.`
+                : undefined
+            }
             onClick={() => void submit()}
           >
             Cast
@@ -715,6 +734,7 @@ function LearnDialog({
             icon="book"
             loading={pending}
             disabled={!spellId}
+            disabledReason={`Choose a spell to add to ${member.name}'s spell book.`}
             onClick={() => void submit()}
           >
             Add to spell book

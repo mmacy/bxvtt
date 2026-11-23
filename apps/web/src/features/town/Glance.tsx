@@ -7,7 +7,7 @@ import type { FeedEntry } from '@bxvtt/shared/protocol';
 import { useMemo, useState } from 'react';
 import { useFeed, useMember, useParty, usePlayerView, useTextContext } from '@/app';
 import { Badge, Button, EmptyState, Icon, Panel, type IconName } from '@/ui';
-import { gaps, readinessChecklist } from './checklist';
+import { gaps, readinessChecklist, type Suggestion } from './checklist';
 import { MemberToken, PurseOf, SeatOwner } from './parts';
 import { memberStatus } from './members';
 import { useTownServices } from './hooks';
@@ -37,6 +37,14 @@ const SECTION_VERB: Record<TownSection, string> = {
   temple: 'Visit temple',
   treasure: 'Sell treasure',
   rest: 'Rest and prepare',
+};
+
+/** What each "Shop" button on the checklist does, since the label is the same on every line. */
+const SHOP_HELP: Record<Exclude<Suggestion['key'], 'spells'>, string> = {
+  light: 'Find a light source at the outfitter',
+  tinder: 'Find a tinder box at the outfitter',
+  rations: 'Find rations at the outfitter',
+  rope: 'Find rope at the outfitter',
 };
 
 /** The services the town lists, each linked to the part of the town that does the job. */
@@ -152,7 +160,12 @@ export function ChecklistPanel({ onShop }: { onShop?: (search: string) => void }
               </div>
             )}
             {!line.covered && line.key !== 'spells' && services.outfitter && (
-              <Button size="sm" variant="ghost" onClick={() => shop(line.search)}>
+              <Button
+                size="sm"
+                variant="ghost"
+                tooltip={SHOP_HELP[line.key]}
+                onClick={() => shop(line.search)}
+              >
                 Shop
               </Button>
             )}

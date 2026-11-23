@@ -1,7 +1,7 @@
 import { classLabel } from '@bxvtt/shared/text';
 import { useState, type ReactNode } from 'react';
 import { getApi, tokenClass, useApiAction, useMyCharacters, useStoredCharacter } from '@/app';
-import { Banner, Button, Card, ConfirmDialog, Drawer, Skeleton, TokenPortrait, toast } from '@/ui';
+import { Banner, Button, Card, ConfirmDialog, Drawer, Skeleton, TokenPortrait, Tooltip, toast } from '@/ui';
 import { RuleLinksContext } from './RuleLink';
 import { StoredSheet } from './StoredSheet';
 import sheetStyles from './sheet.module.css';
@@ -31,14 +31,11 @@ export function StoredCharacterCard({ characterId, summary, owner, actions }: St
         decorative
       />
       <div className={styles.text}>
-        <button
-          type="button"
-          className={styles.nameButton}
-          aria-label={`${summary.name}, open the character sheet`}
-          onClick={() => setOpen(true)}
-        >
-          <span className={styles.name}>{summary.name}</span>
-        </button>
+        <Tooltip content="Open the character sheet">
+          <button type="button" className={styles.nameButton} onClick={() => setOpen(true)}>
+            <span className={styles.name}>{summary.name}</span>
+          </button>
+        </Tooltip>
         <p className={styles.meta}>
           <span>
             Level {summary.level} {classLabel(summary.class_id).toLowerCase()}
