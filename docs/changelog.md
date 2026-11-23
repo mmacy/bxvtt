@@ -12,6 +12,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-22
+
+### Added
+
+- **Article-free item labels (`@bxvtt/shared/text`):** Added `itemLabel(noun, quantity)` to format inventory rows, wizard review lists, item pickers, and cache contents without leading indefinite articles (`Chainmail`, `Leather armour`, `Shield`, `Mace`, `6 torches`, `7 standard rations`, `Waterskin`, `Potion`) while keeping `itemPhrase` for mid-sentence narration.
+- **Automated GitHub Pages documentation publishing (`.github/workflows/docs.yml`):** Added the `Docs` GitHub Actions workflow and configured Docusaurus `baseUrl: '/bxvtt/'` to build and deploy `website/` to <https://mmacy.github.io/bxvtt/> on `main` documentation changes, published releases, and manual `workflow_dispatch` runs.
+
+### Changed
+
+- **UI microcopy, control labels, and accessible names (`@bxvtt/web`, `@bxvtt/server`, `@bxvtt/shared/text`):** Rewrote user-facing copy, button and menu labels, dialog prompts, empty states, error messages, command and field descriptions, rule rejection templates, and event narration across the client, server, and shared text package. Removed backend service names (`bxapi`, `the rules engine`) from normal gameplay and character creation flows, standardized rejoin and server-host terminology, updated `StoredSheet` shield and ring slot badges to `Worn`, and updated E2E screenshot and `/kit` sample parties to class-matched character names (`Flarg`, `Doke`, `Tinks`, `Elfy`, `Clarence`, `Mazpar`, and `Huge`).
+
+### Fixed
+
+- **Referee picker, map tooltip, and condition formatting:** Replaced raw `snake_case` class, spell-list, category, and dropped-pile item identifiers in referee pickers and map tooltips with formatted B/X labels, normalized `'paralyzed'` to `'paralysed'` in `conditionLabel`, and gave the referee panel's active encounter and battle card a distinct ARIA region name so it never collides with the main stage's `Encounter` region.
+
 ## [0.1.0] - 2026-11-22
 
 ### Added
@@ -29,5 +44,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **Bundled adventures, authoring builder, and automated verifier (`adventures/`):** Every server offers two original `osrlib` modules compiled from `adventures/src/*.mjs` (*The Drowned Bell*, a 3-level, 36-area campaign dungeon, and *The Toll at Crookback Bridge*, a 1-level, 13-area single-session module) alongside `bxapi`'s built-in *The Barrow of the Forgotten King*, plus per-table custom `.json` upload validation (up to 8 MiB) and live `adventures/` directory scanning. Zero-dependency scripts in `adventures/tools/` provide an ASCII grid compiler (`LevelBuilder` in `build.mjs`) and an automated static and live `bxapi` verifier (`check.mjs`) that checks schema validity, entrance reachability, level transitions, keyed encounters, triggers, and quests. See [Included and custom adventures](adventures/included-adventures.md) and [Author and validate adventures](adventures/authoring-and-checking.md).
 - **Design system, verification suites, and documentation site:** `@bxvtt/web` builds on a token-driven UI kit (`apps/web/src/ui`, with component galleries at `/kit` and `/kit/table`) using Radix UI primitives, self-hosted Fraunces, Atkinson Hyperlegible Next, and Rokkitt variable fonts, custom B/X class, equipment, and die SVGs, full keyboard navigation, code-split client bundles, and in-memory Brotli and gzip asset serving. Automated checks cover TypeScript, ESLint, Prettier, Vitest unit and live-`bxapi` server integration suites (including scans ensuring player responses never include referee data), multi-browser Playwright end-to-end game and `axe-core` accessibility suites (`e2e/`), GitHub Actions CI against production bundles, and a Docusaurus 3.10 documentation site (`website/` and `docs/`) with light and dark torch-ember themes.
 
-[Unreleased]: https://github.com/mmacy/bxvtt/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/mmacy/bxvtt/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/mmacy/bxvtt/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/mmacy/bxvtt/releases/tag/v0.1.0
