@@ -1,4 +1,4 @@
-import { commandInfo } from '@bxvtt/shared/text';
+import { commandInfo, directionLabel } from '@bxvtt/shared/text';
 import { useMemo, useState } from 'react';
 import {
   formatShortcut,
@@ -48,11 +48,14 @@ function listenEntries(
   if (usable.length === 1) {
     const [only] = usable;
     if (!only) return [];
-    return [{ type: 'label', label: `The door to the ${only.door.direction}` }, ...unwrap(only.listen)];
+    return [
+      { type: 'label', label: `Door to the ${directionLabel(only.door.direction).toLowerCase()}` },
+      ...unwrap(only.listen),
+    ];
   }
   return usable.map((group) => ({
     type: 'submenu' as const,
-    label: `The door to the ${group.door.direction}`,
+    label: `Door to the ${directionLabel(group.door.direction).toLowerCase()}`,
     icon: 'door' as const,
     items: unwrap(group.listen),
   }));
@@ -174,7 +177,7 @@ export function ExploreActions() {
       });
     }
     if (sheet.length > 0)
-      entries.push({ type: 'separator' }, { type: 'label', label: 'In the character sheet' }, ...sheet);
+      entries.push({ type: 'separator' }, { type: 'label', label: 'Character sheet' }, ...sheet);
     const others = legal.filter(
       (command) =>
         command.kind === 'play' &&
@@ -225,9 +228,9 @@ export function ExploreActions() {
         reason={
           hasDoor
             ? listen.length === 0
-              ? 'You have no one who can listen at this door.'
+              ? 'None of your characters can listen at this door.'
               : null
-            : 'There is no closed door beside the party.'
+            : 'No closed door is beside the party.'
         }
         loading={pendingType === 'listen_at_door'}
       />
@@ -237,7 +240,7 @@ export function ExploreActions() {
         icon="torch"
         keys="t"
         items={light}
-        reason={light.length === 0 ? 'Nobody you control carries a torch or a lantern.' : null}
+        reason={light.length === 0 ? 'None of your characters carry a torch or lantern.' : null}
         loading={pendingType === 'light_source' || pendingType === 'extinguish_source'}
       />
       <MenuAction
@@ -285,7 +288,7 @@ export function ExploreActions() {
         />
       )}
       <ActionBarDivider />
-      <MenuAction id="explore.other" label="Other" icon="more" keys="m" items={more} reason={null} />
+      <MenuAction id="explore.other" label="More" icon="more" keys="m" items={more} reason={null} />
       <CommandFormDialog commandType={form} onClose={() => setForm(null)} />
     </>
   );

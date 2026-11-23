@@ -3,7 +3,14 @@
  * doors, and ways out) beside what play has recorded (encounter resolved, trap found or sprung, cache emptied,
  * door opened).
  */
-import { directionLabel, formatCoins, itemList, type TextContext } from '@bxvtt/shared/text';
+import {
+  capitalizeFirst,
+  directionLabel,
+  formatCoins,
+  itemList,
+  stripArticle,
+  type TextContext,
+} from '@bxvtt/shared/text';
 import { useMapBus } from '@/app';
 import { Badge, type BadgeTone, Button, Icon, SectionLabel } from '@/ui';
 import {
@@ -66,9 +73,9 @@ function TrapBlock({ trap, status, title }: { trap: TrapSpec; status: TrapStatus
 function cacheContents(feature: FeatureSpec, ctx: TextContext): string[] {
   const lines: string[] = [];
   const coins = formatCoins(feature.coins, 'long');
-  if (coins !== 'no coins') lines.push(coins);
+  if (coins !== 'no coins') lines.push(capitalizeFirst(coins));
   const items = itemList([...feature.item_ids, ...feature.magic_item_ids], ctx);
-  lines.push(...items);
+  lines.push(...items.map((entry) => capitalizeFirst(stripArticle(entry).replace(/^suit of /i, ''))));
   for (const valuable of feature.valuables) lines.push(`${valuable.name} (${valuable.value_gp} gp)`);
   return lines;
 }
@@ -199,12 +206,12 @@ export function DoorRow({
           )}
           {now.secret && (
             <Button size="sm" variant="ghost" disabled={busy} onClick={() => set({ discovered: !now.found })}>
-              {now.found ? 'Hide again' : 'Reveal'}
+              {now.found ? 'Hide' : 'Reveal'}
             </Button>
           )}
           {now.wedged && (
             <Button size="sm" variant="ghost" disabled={busy} onClick={() => set({ wedged: false })}>
-              Free the spike
+              Remove spike
             </Button>
           )}
         </div>
@@ -328,7 +335,7 @@ export function AreaDetails({
               {record.generatedTreasureAreas.has(ref) ? 'Rolled' : 'Not rolled yet'}
             </Badge>
           </div>
-          <p className={styles.secondaryLine}>The game rolls it when the party first enters.</p>
+          <p className={styles.secondaryLine}>Rolled automatically when the party first enters.</p>
         </section>
       )}
 
@@ -404,7 +411,7 @@ export function ShowOnMapButton({
   dungeonId,
   levelNumber,
   area,
-  label = 'Show on the map',
+  label = 'Show on map',
 }: {
   dungeonId: string;
   levelNumber: number;

@@ -70,35 +70,36 @@ export function readinessChecklist(
     ...spells,
     {
       key: 'light',
-      title: 'A light source',
+      title: 'Light source',
       covered: light.length > 0,
       detail:
         light.length > 0
           ? `${carry(light)} torches or a lantern.`
-          : 'Torches or a lantern light the way underground.',
+          : 'Bring torches or a lantern to see underground.',
       search: 'torch',
     },
     {
       key: 'tinder',
-      title: 'A tinder box to light it',
+      title: 'Tinder box',
       covered: tinder.length > 0,
       detail:
-        tinder.length > 0 ? `${carry(tinder)} one.` : 'A torch or lantern needs a tinder box to light it.',
+        tinder.length > 0
+          ? `${carry(tinder)} a tinder box.`
+          : 'You need a tinder box to light torches and lanterns.',
       search: 'tinder',
     },
     {
       key: 'rations',
       title: 'Rations',
       covered: rations.length > 0,
-      detail:
-        rations.length > 0 ? `${carry(rations)} rations.` : 'A party that stays out for days needs food.',
+      detail: rations.length > 0 ? `${carry(rations)} rations.` : 'Pack food for multi-day expeditions.',
       search: 'rations',
     },
     {
       key: 'rope',
       title: 'Rope',
       covered: rope.length > 0,
-      detail: rope.length > 0 ? `${carry(rope)} rope.` : 'Rope is handy for pits, ledges, and prisoners.',
+      detail: rope.length > 0 ? `${carry(rope)} rope.` : 'Bring rope for pits, ledges, and climbing.',
       search: 'rope',
     },
   ];

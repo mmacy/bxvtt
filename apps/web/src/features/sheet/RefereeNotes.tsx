@@ -68,7 +68,7 @@ export function RefereeNotes({ memberId }: { memberId: string }) {
             <RuleLink entry={item.templateId ? { kind: 'magic-items', id: item.templateId } : null}>
               {item.name}
             </RuleLink>
-            {!item.identified && ' (the players see it unidentified)'}
+            {!item.identified && ' (unidentified to players)'}
             {item.charges !== null && `, ${item.charges} ${item.charges === 1 ? 'charge' : 'charges'} left`}
             {item.cursed && (
               <>
@@ -83,11 +83,11 @@ export function RefereeNotes({ memberId }: { memberId: string }) {
           const kind = typeof definition.kind === 'string' ? definition.kind : 'effect';
           const left =
             typeof effect.expires_round === 'number'
-              ? compactDuration(effect.expires_round - referee.clock_rounds)
-              : 'no end';
+              ? `${compactDuration(effect.expires_round - referee.clock_rounds)} left`
+              : 'permanent';
           return (
             <li key={effect.effect_id}>
-              {effectLabel(kind)}: {left} left
+              {effectLabel(kind)}: {left}
             </li>
           );
         })}
@@ -102,7 +102,10 @@ export function RefereeNotes({ memberId }: { memberId: string }) {
           );
         })}
         {character.nonregen_damage > 0 && (
-          <li>{character.nonregen_damage} damage that natural healing can't restore</li>
+          <li>
+            Natural rest cannot heal {character.nonregen_damage}{' '}
+            {character.nonregen_damage === 1 ? 'point' : 'points'} of damage
+          </li>
         )}
       </ul>
     </Banner>

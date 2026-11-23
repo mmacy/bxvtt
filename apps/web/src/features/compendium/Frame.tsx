@@ -46,7 +46,7 @@ export function CatalogProblem({
         </>
       }
     >
-      {result.error?.detail ?? 'The rules reference could not load this entry.'}
+      {result.error?.detail ?? "Couldn't load this entry. Try again in a moment."}
     </Banner>
   );
 }

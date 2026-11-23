@@ -188,7 +188,7 @@ export function PartyPanel() {
   return (
     <div className={styles.panel}>
       {(view?.fatigued || view?.exhausted || deprived.length > 0) && (
-        <section className={styles.partyState} aria-label="The party">
+        <section className={styles.partyState} aria-label="Party conditions">
           {(view?.fatigued || view?.exhausted || deprived.length > 0) && (
             <div className={styles.stateRow}>
               {view?.exhausted ? (
@@ -202,7 +202,7 @@ export function PartyPanel() {
               ) : null}
               {deprived.map(([id, d]) => (
                 <Badge key={id} tone="warning">
-                  {nameOf(id)}: {(d.food_days ?? 0) > 0 ? `${d.food_days} days unfed` : ''}
+                  {nameOf(id)}: {(d.food_days ?? 0) > 0 ? `${d.food_days} days without food` : ''}
                   {(d.food_days ?? 0) > 0 && (d.water_days ?? 0) > 0 ? ', ' : ''}
                   {(d.water_days ?? 0) > 0 ? `${d.water_days} days without water` : ''}
                 </Badge>
@@ -232,7 +232,8 @@ export function PartyPanel() {
       </SectionLabel>
       {editing && (
         <p className={styles.hint}>
-          Drag a character, or focus a handle and press the up and down arrow keys. The front rank leads.
+          Drag a character, or focus a handle and press the Up or Down arrow key. The front rank leads the
+          party.
         </p>
       )}
 

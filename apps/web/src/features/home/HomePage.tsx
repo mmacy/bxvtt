@@ -31,24 +31,24 @@ function Intro() {
     <section className={styles.intro} aria-labelledby="intro-title">
       <p className={styles.kicker}>A virtual tabletop for B/X</p>
       <h1 id="intro-title" className={styles.introTitle}>
-        Play the 1981 Basic and Expert rules together, each in your own browser.
+        Play the 1981 Basic and Expert rules together in your browser.
       </h1>
       <p className={styles.introLead}>
-        A referee runs the adventure and the players run their characters. The bxapi rules engine rolls every
-        die and applies every rule, so the table can spend its evening exploring, talking, and fighting.
+        One person runs the adventure as referee while the rest of your group plays the party. Share a map,
+        roll dice, track turns and light, and venture from town into the dungeon.
       </p>
       <ol className={styles.steps}>
         <li>
           <span className={styles.stepNumber}>1</span>
-          Pick the name the table sees.
+          Choose the display name other players see.
         </li>
         <li>
           <span className={styles.stepNumber}>2</span>
-          Create a table as its referee, or open the invite link your referee sent you.
+          Create a table as referee, or open an invite link from your referee.
         </li>
         <li>
           <span className={styles.stepNumber}>3</span>
-          Bring characters to the lobby, and the referee starts the game.
+          Roll or add characters in the lobby, then start the adventure.
         </li>
       </ol>
     </section>
@@ -98,7 +98,7 @@ function TableList({
       <EmptyState
         icon="users"
         title="No tables yet"
-        description="Create a table to run a game as its referee, or join one with the invite link your referee sent you."
+        description="Create a table to run a game as referee, or paste an invite link from your referee to join one."
       />
     );
   }
@@ -174,7 +174,7 @@ function CreateTable() {
     event.preventDefault();
     const trimmed = name.trim();
     if (trimmed === '') {
-      setError('Give the table a name, such as the night you play.');
+      setError('Enter a table name.');
       return;
     }
     const invalid = displayStringProblem(trimmed, LIMITS.tableName);
@@ -197,8 +197,8 @@ function CreateTable() {
         setNeedsKey(true);
         setKeyError(
           hadKey
-            ? "That host key isn't right. Check it with the person who runs this server."
-            : 'This server needs a host key to create a table. Enter the key that the person who runs it gave you.',
+            ? "That host key isn't right. Check it with the server host."
+            : 'Enter the host key from the server host to create a table.',
         );
       } else {
         const message = describeProblem(problem);
@@ -212,17 +212,19 @@ function CreateTable() {
     <Card padding="lg" className={styles.sideCard}>
       <form className={styles.form} onSubmit={(event) => void submit(event)}>
         <h2 className={styles.cardTitle}>Create a table</h2>
-        <p className={styles.cardLead}>You'll be its referee. Invite players with a link from the lobby.</p>
+        <p className={styles.cardLead}>
+          You become the referee and get an invite link for your players in the lobby.
+        </p>
         <Field label="Table name" error={error ?? undefined}>
           <TextInput
             value={name}
             maxLength={LIMITS.tableName}
-            placeholder="Such as Thursday at the Drowned Bell"
+            placeholder="Thursday at the Drowned Bell"
             onChange={(event) => setName(event.target.value)}
           />
         </Field>
         {needsKey && (
-          <Field label="Host key" error={keyError ?? undefined} hint="Only the host of this server has it.">
+          <Field label="Host key" error={keyError ?? undefined} hint="Ask the server host for this key.">
             <TextInput
               type="password"
               value={hostKey}
@@ -248,7 +250,7 @@ function JoinTable() {
     event.preventDefault();
     const code = parseInvite(value);
     if (code === null) {
-      setError('Paste the invite link or code your referee sent you.');
+      setError('Paste the invite link or code from your referee.');
       return;
     }
     navigate(`/join/${encodeURIComponent(code)}`);
@@ -260,7 +262,7 @@ function JoinTable() {
         <Field label="Invite link or code" error={error ?? undefined}>
           <TextInput
             value={value}
-            placeholder="Paste the link from your referee"
+            placeholder="Paste an invite link or code"
             onChange={(event) => {
               setValue(event.target.value);
               setError(null);
@@ -268,7 +270,7 @@ function JoinTable() {
           />
         </Field>
         <Button type="submit" variant="secondary" icon="arrow-right">
-          Join
+          Join table
         </Button>
       </form>
     </Card>
@@ -322,8 +324,7 @@ function SignedInHome() {
         <CreateTable />
         <JoinTable />
         <p className={styles.aboutNote}>
-          bxvtt is a virtual tabletop for the 1981 B/X rules. The referee and the players each play in their
-          own browser, and the bxapi rules engine rolls every die.
+          bxvtt is a virtual tabletop for the 1981 B/X rules. Press B at any time to open the rules reference.
         </p>
       </aside>
     </div>
@@ -350,8 +351,8 @@ export function HomePage() {
             <Intro />
             <Card padding="lg" className={styles.nameCard}>
               <NameForm
-                title="Pick your name"
-                description="No account or password. The name lives in this browser."
+                title="Choose your name"
+                description="You don't need an account or password. You stay signed in on this browser."
                 submitLabel="Continue"
               />
             </Card>

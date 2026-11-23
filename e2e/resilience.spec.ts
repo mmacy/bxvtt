@@ -35,9 +35,9 @@ async function bellParty(crew: Crew, extra: Partial<Parameters<typeof setupTable
     referee: ruth,
     players: [sam],
     party: [
-      { owner: sam, name: 'Brenna', classId: 'fighter' },
-      { owner: sam, name: 'Wren', classId: 'thief' },
-      { owner: ruth, name: 'Osric', classId: 'cleric' },
+      { owner: sam, name: 'Flarg', classId: 'fighter' },
+      { owner: sam, name: 'Tinks', classId: 'thief' },
+      { owner: ruth, name: 'Clarence', classId: 'cleric' },
     ],
     ...extra,
   });
@@ -64,10 +64,10 @@ test.describe('resilience', () => {
     await expect(sam.page.getByRole('heading', { name: 'Party', level: 2 })).toBeVisible();
 
     // Town.
-    const brenna = await createCharacter(sam.client, { name: 'Brenna', classId: 'fighter' });
-    const osric = await createCharacter(ruth.client, { name: 'Osric', classId: 'cleric' });
-    await sam.client.addToRoster(tableId, brenna.id);
-    await ruth.client.addToRoster(tableId, osric.id);
+    const flarg = await createCharacter(sam.client, { name: 'Flarg', classId: 'fighter' });
+    const clarence = await createCharacter(ruth.client, { name: 'Clarence', classId: 'cleric' });
+    await sam.client.addToRoster(tableId, flarg.id);
+    await ruth.client.addToRoster(tableId, clarence.id);
     await ruth.client.startGame(tableId, { adventure_id: 'sample:the-drowned-bell', seed: 1981 });
     await expect(sam.page.getByRole('heading', { name: 'Hollin Ferry', level: 2 })).toBeVisible({
       timeout: 20_000,
@@ -82,9 +82,7 @@ test.describe('resilience', () => {
     await expect(modeBadge(sam.page, 'Exploring')).toBeVisible();
     await reload(sam.page);
     await expect(modeBadge(sam.page, 'Exploring')).toBeVisible();
-    await expect(sam.page.getByRole('region', { name: 'Where the party stands' })).toContainText(
-      'Gatehouse stair',
-    );
+    await expect(sam.page.getByRole('region', { name: 'Current location' })).toContainText('Gatehouse stair');
 
     // An encounter, then a battle with a declaration saved.
     await placeParty(ruth.client, tableId, { dungeon: 'priory', level: 1, x: 14, y: 21 });
@@ -102,7 +100,7 @@ test.describe('resilience', () => {
     await reload(sam.page);
     await expect(board).toBeVisible();
     const declarations = sam.page.getByRole('list', { name: 'Declarations this round' });
-    await expect(declarations.getByRole('listitem').filter({ hasText: 'Brenna' })).toContainText(/hold/i);
+    await expect(declarations.getByRole('listitem').filter({ hasText: 'Flarg' })).toContainText(/hold/i);
   });
 
   test('the back button leaves the table and returns to it', async ({ crew }) => {
@@ -148,8 +146,8 @@ test.describe('resilience', () => {
       players: [sam, pat],
       settings: { party_control: 'anyone' },
       party: [
-        { owner: sam, name: 'Brenna', classId: 'fighter' },
-        { owner: pat, name: 'Wren', classId: 'thief' },
+        { owner: sam, name: 'Flarg', classId: 'fighter' },
+        { owner: pat, name: 'Tinks', classId: 'thief' },
       ],
     });
     const tableId = setup.table.id;
@@ -222,9 +220,7 @@ test.describe('resilience', () => {
     await expect(pat.page.getByRole('tab', { name: 'Referee', exact: true })).toHaveCount(0);
     await expect(pat.page.getByRole('switch', { name: 'Referee lens' })).toHaveCount(0);
     await expect(pat.page.getByText('Referee map')).toHaveCount(0);
-    await expect(pat.page.getByRole('region', { name: 'Where the party stands' })).toContainText(
-      'Gatehouse stair',
-    );
+    await expect(pat.page.getByRole('region', { name: 'Current location' })).toContainText('Gatehouse stair');
     // Nothing referee-only stays on screen from before.
     await expect(pat.page.getByText(/The Drain Folk kobolds are hungry/)).toHaveCount(0);
     await reload(pat.page);

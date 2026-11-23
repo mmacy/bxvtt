@@ -21,7 +21,7 @@ function PickPrompt() {
   useShortcut({
     id: 'table.pick.cancel',
     keys: 'escape',
-    label: 'Cancel picking on the map',
+    label: 'Cancel map selection',
     group: 'Map',
     enabled: pick !== null,
     run: cancel,

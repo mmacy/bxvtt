@@ -73,7 +73,8 @@ export class Auth {
       request.user = user;
       if (request.method !== 'GET' && request.method !== 'HEAD') {
         const retry = this.userWrites.take(user.id);
-        if (retry > 0) throw rateLimited('You are sending changes too fast. Wait a moment.', retry);
+        if (retry > 0)
+          throw rateLimited('You are making changes too quickly. Wait a moment and try again.', retry);
       }
     });
   }
@@ -94,13 +95,13 @@ export class Auth {
     if (token.length <= 200 && this.users.isRetired(token)) {
       throw new ApiError(
         'token_retired',
-        'A referee let this member back in from another browser, so this sign-in no longer works.',
+        'A referee approved a rejoin request for this member in another browser, so this sign-in is no longer active.',
         {},
         { headers: { 'WWW-Authenticate': 'Bearer' } },
       );
     }
     if (blocked > 0)
-      throw rateLimited('This address has sent too many unknown tokens. Try again later.', blocked);
+      throw rateLimited('Too many failed sign-in attempts from this IP address. Try again later.', blocked);
     this.failedAuth.take(key);
     return null;
   }
@@ -112,7 +113,8 @@ export class Auth {
    * @throws ApiError `unauthorized` on a route that skipped authentication.
    */
   user(request: FastifyRequest): User {
-    if (request.user === null) throw new ApiError('unauthorized', 'This route needs a user token.');
+    if (request.user === null)
+      throw new ApiError('unauthorized', 'Sign in with a valid user token to access this route.');
     return request.user;
   }
 }

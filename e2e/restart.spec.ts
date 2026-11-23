@@ -22,13 +22,13 @@ test('the table reconnects after the server restarts, with its state intact', as
     referee: ruth,
     players: [sam],
     party: [
-      { owner: sam, name: 'Brenna', classId: 'fighter' },
-      { owner: ruth, name: 'Osric', classId: 'cleric' },
+      { owner: sam, name: 'Flarg', classId: 'fighter' },
+      { owner: ruth, name: 'Clarence', classId: 'cleric' },
     ],
   });
   const tableId = table.id;
   await enterDungeon(sam.client, tableId, 'priory');
-  await sam.client.postFeed(tableId, { text: 'Hold the torch higher, Osric.' });
+  await sam.client.postFeed(tableId, { text: 'Hold the torch higher, Clarence.' });
   const notes = await sam.client.getNotes(tableId, 'party');
   await sam.client.updateNotes(tableId, 'party', 'The bell tolls under the floor.', notes.version);
   await openTable(ruth.page, path);
@@ -54,7 +54,7 @@ test('the table reconnects after the server restarts, with its state intact', as
   }
   await sam.page.getByRole('tablist', { name: 'Table panels' }).getByRole('tab', { name: /^Feed/ }).click();
   await expect(sam.page.getByRole('region', { name: 'Feed entries' })).toContainText(
-    'Hold the torch higher, Osric.',
+    'Hold the torch higher, Clarence.',
   );
   await sam.page.getByRole('tablist', { name: 'Table panels' }).getByRole('tab', { name: 'Journal' }).click();
   const journal = sam.page.getByRole('tabpanel', { name: 'Journal' });
@@ -81,7 +81,7 @@ test('a waiting request to come back in ends with the restart, and the player ca
   const { table, path } = await setupTable({
     referee: ruth,
     players: [sam],
-    party: [{ owner: sam, name: 'Brenna', classId: 'fighter' }],
+    party: [{ owner: sam, name: 'Flarg', classId: 'fighter' }],
   });
   await openTable(ruth.page, path);
   // Sam's browser lost its sign-in, so he opens the invite link in a new one and asks to come back in.
@@ -89,13 +89,13 @@ test('a waiting request to come back in ends with the restart, and the player ca
   const page = visitor.page;
   await page.goto(`/join/${table.invite_code}`);
   const ask = page
-    .getByRole('list', { name: 'Members who can come back in' })
-    .getByRole('button', { name: 'Come back in as Sam' });
+    .getByRole('list', { name: 'Members who can rejoin' })
+    .getByRole('button', { name: 'Rejoin as Sam' });
   await ask.click();
-  const waiting = page.getByRole('heading', { name: 'Waiting for a referee to let you in as Sam' });
+  const waiting = page.getByRole('heading', { name: 'Waiting to rejoin as Sam' });
   await expect(waiting).toBeVisible();
-  const prompt = ruth.page.getByRole('region', { name: 'Requests to come back in' });
-  await expect(prompt).toContainText('Someone is asking to come back in as Sam');
+  const prompt = ruth.page.getByRole('region', { name: 'Rejoin requests' });
+  await expect(prompt).toContainText('Someone asked to rejoin as Sam');
 
   crew.allowIssues(SERVER_DOWN);
   crew.allowIssues(/404|Not Found/);
@@ -108,7 +108,7 @@ test('a waiting request to come back in ends with the restart, and the player ca
   await screenshot(page, 'restart-rejoin-ended');
   await ask.click();
   await expect(waiting).toBeVisible();
-  await prompt.getByRole('button', { name: 'Let them in' }).click();
+  await prompt.getByRole('button', { name: 'Approve' }).click();
   await expect(page).toHaveURL(new RegExp(`${path}$`), { timeout: 15_000 });
   await expect(page.getByRole('banner').getByText('In town', { exact: true })).toBeVisible();
 });

@@ -49,23 +49,23 @@ export const RECEDE_MS = 10_000;
 const prefs = scopedStorage('explore');
 const PINNED_KEY = 'scene.pinned';
 
-/** The count on the folded bar: "1 thing here", "3 things here". */
+/** The count on the folded bar: "1 feature here", "3 features here". */
 export function thingsHere(count: number): string {
-  return count === 1 ? '1 thing here' : `${count} things here`;
+  return count === 1 ? '1 feature here' : `${count} features here`;
 }
 
 /** What a known trap means to the party, in one sentence. */
 export function trapSentence(trap: Pick<SceneTrap, 'kind' | 'trigger' | 'state'>): string {
-  const what = trap.kind === 'treasure' ? 'the treasure' : 'this room';
+  const prep = trap.kind === 'treasure' ? 'on the treasure' : 'in this room';
   switch (trap.state) {
     case 'found':
       return trap.trigger === 'enter'
-        ? `The party found a trap in ${what}. It springs on whoever walks in.`
-        : `The party found a trap on ${what}. It springs when it's opened.`;
+        ? `You found a trap ${prep}. The trap springs when someone enters.`
+        : `You found a trap ${prep}. The trap springs when opened.`;
     case 'sprung':
-      return `A trap in ${what} has already sprung.`;
+      return `A trap ${prep} has already sprung.`;
     case 'removed':
-      return `A trap on ${what} has been disarmed.`;
+      return `A trap ${prep} has been disarmed.`;
   }
 }
 
@@ -228,7 +228,7 @@ export function ScenePanel() {
         ? [
             {
               type: 'submenu' as const,
-              label: `The door to the ${directionLabel(door.direction).toLowerCase()}`,
+              label: `Door to the ${directionLabel(door.direction).toLowerCase()}`,
               icon: door.open ? ('door-open' as const) : ('door' as const),
               items,
             },
@@ -238,7 +238,7 @@ export function ScenePanel() {
   );
 
   return (
-    <section className={cx(styles.scene, fresh && styles.sceneFresh)} aria-label="Where the party stands">
+    <section className={cx(styles.scene, fresh && styles.sceneFresh)} aria-label="Current location">
       <header className={styles.sceneHeader}>
         <Icon name={area ? 'map' : 'footprints'} size={16} className={styles.sceneHeaderIcon} />
         <h2 className={styles.sceneTitle}>{title}</h2>
@@ -261,7 +261,7 @@ export function ScenePanel() {
         )}
         <IconButton
           icon={open ? 'minimize' : 'maximize'}
-          label={open ? 'Hide the description' : 'Show the description'}
+          label={open ? 'Hide description' : 'Show description'}
           size="sm"
           aria-expanded={open}
           aria-controls={bodyId}
@@ -278,11 +278,9 @@ export function ScenePanel() {
               <p className={styles.sceneDescription}>{area.description}</p>
             </Parchment>
           ) : (
-            <p className={styles.sceneCorridor}>
-              The party is between named places. Nothing here has a name.
-            </p>
+            <p className={styles.sceneCorridor}>You are in an unnamed passage between rooms.</p>
           )}
-          <ul className={styles.sceneList} aria-label="What is here">
+          <ul className={styles.sceneList} aria-label="Features here">
             {stairs.map((transition) => (
               <Row
                 key={`${transition.kind}-${transition.position.join(',')}`}
@@ -365,7 +363,7 @@ export function ScenePanel() {
                   }
                 >
                   <span>
-                    A door to the {name},{' '}
+                    A door to the {name} is{' '}
                     {door.open
                       ? door.wedged
                         ? 'wedged open'

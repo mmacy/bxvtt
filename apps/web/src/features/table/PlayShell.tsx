@@ -97,27 +97,27 @@ function ShellShortcuts() {
   useShortcut({
     id: 'table.compendium',
     keys: 'b',
-    label: 'Open or close the rules reference',
+    label: 'Open or close rules reference',
     run: () => toggleCompendium(),
   });
-  useShortcut({ id: 'table.save', keys: 'mod+s', label: 'Save the game', allowInInputs: true, run: save });
+  useShortcut({ id: 'table.save', keys: 'mod+s', label: 'Save game', allowInInputs: true, run: save });
   useShortcut({
     id: 'table.lens',
     keys: 'shift+l',
-    label: 'Turn the referee lens on or off',
+    label: 'Toggle referee lens',
     group: 'Referee',
     enabled: referee,
     run: () => setPreference('refereeLens', !lens),
   });
   useAction({
     id: 'table.compendium',
-    label: 'Open the rules reference',
+    label: 'Open rules reference',
     icon: 'book',
     shortcut: 'b',
     run: () => openCompendium(),
   });
-  useAction({ id: 'table.save', label: 'Save the game', icon: 'save', shortcut: 'mod+s', run: save });
-  useAction({ id: 'table.saves', label: 'Show the saves', icon: 'download', run: () => setSavesOpen(true) });
+  useAction({ id: 'table.save', label: 'Save game', icon: 'save', shortcut: 'mod+s', run: save });
+  useAction({ id: 'table.saves', label: 'Saves', icon: 'download', run: () => setSavesOpen(true) });
   useAction({
     id: 'table.settings',
     label: 'Table settings',
@@ -134,7 +134,7 @@ function ShellShortcuts() {
   });
   useAction({
     id: 'table.lens',
-    label: lens ? 'Turn the referee lens off' : 'Turn the referee lens on',
+    label: lens ? 'Turn off referee lens' : 'Turn on referee lens',
     group: 'Referee',
     icon: lens ? 'eye-off' : 'eye',
     shortcut: 'shift+l',

@@ -29,16 +29,16 @@ async function storedIdentity(page: Page): Promise<{ token: string; user: User }
 }
 
 /**
- * Ruth makes a table and puts Osric on its roster. Sam opens the invite link in a browser with no identity,
- * picks his name, and joins. His character Brenna goes on the roster, and Ruth starts the game, so Brenna's seat
+ * Ruth makes a table and puts Clarence on its roster. Sam opens the invite link in a browser with no identity,
+ * picks his name, and joins. His character Flarg goes on the roster, and Ruth starts the game, so Flarg's seat
  * is Sam's.
  */
 async function joinedTable(crew: Crew): Promise<RejoinTable> {
   const ruth = await crew.person('Ruth');
   const sam = await crew.person('Sam', { signedIn: false });
   const table = await ruth.client.createTable({ name: 'The bell tolls' });
-  const osric = await createCharacter(ruth.client, { name: 'Osric', classId: 'cleric' });
-  await ruth.client.addToRoster(table.id, osric.id);
+  const clarence = await createCharacter(ruth.client, { name: 'Clarence', classId: 'cleric' });
+  await ruth.client.addToRoster(table.id, clarence.id);
   const path = `/tables/${table.id}`;
   await openTable(ruth.page, path);
 
@@ -47,14 +47,14 @@ async function joinedTable(crew: Crew): Promise<RejoinTable> {
   await expect(sam.page.getByRole('heading', { name: "You're invited to a table" })).toBeVisible();
   await expect(sam.page.getByRole('heading', { name: "I've played at this table before" })).toHaveCount(0);
   await sam.page.getByRole('textbox', { name: 'Your name' }).fill('Sam');
-  await sam.page.getByRole('button', { name: 'Join the table' }).click();
+  await sam.page.getByRole('button', { name: 'Join table' }).click();
   await expect(sam.page).toHaveURL(new RegExp(`${path}$`));
   await expect(sam.page.getByRole('heading', { name: 'The bell tolls', level: 1 })).toBeVisible();
 
   const { token, user } = await storedIdentity(sam.page);
   const client = sdkClient(token);
-  const brenna = await createCharacter(client, { name: 'Brenna', classId: 'fighter' });
-  await client.addToRoster(table.id, brenna.id);
+  const flarg = await createCharacter(client, { name: 'Flarg', classId: 'fighter' });
+  await client.addToRoster(table.id, flarg.id);
   await ruth.client.startGame(table.id, { adventure_id: 'sample:the-drowned-bell', seed: 1981 });
   await expect(sam.page.getByRole('heading', { name: 'Hollin Ferry', level: 2 })).toBeVisible({
     timeout: 20_000,
@@ -72,15 +72,15 @@ async function joinedTable(crew: Crew): Promise<RejoinTable> {
   };
 }
 
-/** Expects the play screen to show Brenna as the viewer's own seat, and the viewer as the caller. */
+/** Expects the play screen to show Flarg as the viewer's own seat, and the viewer as the caller. */
 async function expectSeat(page: Page): Promise<void> {
   await expect(page.getByRole('banner').getByText('In town', { exact: true })).toBeVisible();
   await page.getByRole('tablist', { name: 'Table panels' }).getByRole('tab', { name: 'Party' }).click();
   const order = page.getByRole('list', { name: 'Marching order' });
-  await expect(order.getByRole('button', { name: 'Brenna', exact: true })).toHaveAccessibleDescription(
+  await expect(order.getByRole('button', { name: 'Flarg', exact: true })).toHaveAccessibleDescription(
     /^You, level 1 fighter/,
   );
-  await expect(order.getByRole('button', { name: 'Osric', exact: true })).toHaveAccessibleDescription(
+  await expect(order.getByRole('button', { name: 'Clarence', exact: true })).toHaveAccessibleDescription(
     /^Ruth, /,
   );
 }
@@ -102,17 +102,15 @@ async function returningVisitor(crew: Crew, table: RejoinTable): Promise<Actor> 
 
 /** The list of members a visitor can come back in as. */
 function candidates(page: Page) {
-  return page.getByRole('list', { name: 'Members who can come back in' });
+  return page.getByRole('list', { name: 'Members who can rejoin' });
 }
 
-/** Presses "Come back in as Sam" and expects the waiting screen. */
+/** Presses "Rejoin as Sam" and expects the waiting screen. */
 async function askToComeBack(page: Page): Promise<void> {
-  await candidates(page).getByRole('button', { name: 'Come back in as Sam' }).click();
-  await expect(
-    page.getByRole('heading', { name: 'Waiting for a referee to let you in as Sam' }),
-  ).toBeVisible();
+  await candidates(page).getByRole('button', { name: 'Rejoin as Sam' }).click();
+  await expect(page.getByRole('heading', { name: 'Waiting to rejoin as Sam' })).toBeVisible();
   // The heading shows while the request is on its way too, so wait for the server's ticket.
-  await expect(page.getByText(/Your request lasts until/)).toBeVisible();
+  await expect(page.getByText(/Your rejoin request expires at/)).toBeVisible();
 }
 
 /** The tables of the running test, whose waiting requests the test declines when it ends. */
@@ -137,9 +135,9 @@ function notice(page: Page, title: string) {
   return page.getByRole('alert').filter({ hasText: title });
 }
 
-/** The referee's prompt for requests to come back in. */
+/** The referee's prompt for rejoin requests. */
 function requests(page: Page) {
-  return page.getByRole('region', { name: 'Requests to come back in' });
+  return page.getByRole('region', { name: 'Rejoin requests' });
 }
 
 test.describe('rejoining a table', () => {
@@ -155,23 +153,25 @@ test.describe('rejoining a table', () => {
     // Ruth is online, so only Sam is offered.
     const offered = candidates(page).getByRole('button');
     await expect(offered).toHaveCount(1);
-    await expect(offered).toHaveAccessibleName('Come back in as Sam');
+    await expect(offered).toHaveAccessibleName('Rejoin as Sam');
     await screenshot(page, 'rejoin-choose');
     await askToComeBack(page);
-    await expect(page.getByText(/A referee is at the table now and sees your request/)).toBeVisible();
-    await expect(page.getByText(/Your request lasts until .+\. Keep this page open\./)).toBeVisible();
+    await expect(page.getByText(/A referee is online now\. Let them know it's you/)).toBeVisible();
+    await expect(page.getByText(/Your rejoin request expires at .+\. Keep this page open\./)).toBeVisible();
     // While Sam waits, the page hides the "new here" path.
     await expect(page.getByRole('heading', { name: "I'm new here" })).toHaveCount(0);
     await screenshot(page, 'rejoin-waiting');
 
     const prompt = requests(ruth.page);
-    await expect(prompt).toContainText('Someone is asking to come back in as Sam');
-    await expect(prompt).toContainText("Let them in only if you know it's Sam");
+    await expect(prompt).toContainText('Someone asked to rejoin as Sam');
+    await expect(prompt).toContainText(
+      "Approve this rejoin request only if you confirm by voice or chat that it's really Sam",
+    );
     await screenshot(ruth.page, 'rejoin-referee-prompt');
-    await prompt.getByRole('button', { name: 'Let them in' }).click();
+    await prompt.getByRole('button', { name: 'Approve' }).click();
     await expect(prompt).toHaveCount(0);
 
-    // Sam lands on the play screen as the member he was, with Brenna's seat and the caller's role.
+    // Sam lands on the play screen as the member he was, with Flarg's seat and the caller's role.
     await expect(page).toHaveURL(new RegExp(`${table.path}$`), { timeout: 15_000 });
     await expectSeat(page);
     await expect(ruth.page.getByRole('img', { name: 'Sam, online' })).toBeVisible();
@@ -183,7 +183,7 @@ test.describe('rejoining a table', () => {
     expect(token).not.toBe(table.samToken);
     await expect(sdkClient(table.samToken).me()).rejects.toThrow();
     const characters = await sdkClient(token).listCharacters();
-    expect(characters.items.map((character) => character.name)).toEqual(['Brenna']);
+    expect(characters.items.map((character) => character.name)).toEqual(['Flarg']);
 
     // The feed says who let Sam back in.
     await page.getByRole('tablist', { name: 'Table panels' }).getByRole('tab', { name: /^Feed/ }).click();
@@ -204,21 +204,21 @@ test.describe('rejoining a table', () => {
 
     await askToComeBack(page);
     const prompt = requests(ruth.page);
-    await prompt.getByRole('button', { name: 'Not now' }).click();
+    await prompt.getByRole('button', { name: 'Decline' }).click();
     await expect(prompt).toHaveCount(0);
-    const refused = notice(page, "The referee didn't let you in as Sam");
+    const refused = notice(page, 'The referee declined your request to rejoin as Sam');
     await expect(refused).toBeVisible({ timeout: 15_000 });
-    await expect(refused).toContainText('If that was a mistake, ask the referee, and then ask again');
+    await expect(refused).toContainText('Ask the referee if that was a mistake and try again');
     // The "new here" path comes back, and Sam can ask again.
     await expect(page.getByRole('heading', { name: "I'm new here" })).toBeVisible();
     await screenshot(page, 'rejoin-declined');
 
     await askToComeBack(page);
-    await expect(prompt).toContainText('Someone is asking to come back in as Sam');
+    await expect(prompt).toContainText('Someone asked to rejoin as Sam');
     await page.getByRole('button', { name: 'Stop waiting' }).click();
     await expect(page.getByRole('heading', { name: "I've played at this table before" })).toBeVisible();
     await expect(page.getByRole('heading', { name: "I'm new here" })).toBeVisible();
-    await expect(candidates(page).getByRole('button', { name: 'Come back in as Sam' })).toBeVisible();
+    await expect(candidates(page).getByRole('button', { name: 'Rejoin as Sam' })).toBeVisible();
     // Sam is still a stranger in this browser, and the old token still works.
     expect(await page.evaluate(() => localStorage.getItem('bxvtt.identity'))).toBeNull();
     expect((await sdkClient(table.samToken).me()).id).toBe(table.samUser.id);
@@ -237,11 +237,11 @@ test.describe('rejoining a table', () => {
 
     await askToComeBack(page);
     const prompt = requests(ruth.page);
-    await expect(prompt).toContainText('Someone is asking to come back in as Sam');
+    await expect(prompt).toContainText('Someone asked to rejoin as Sam');
     await page.getByRole('button', { name: 'Stop waiting' }).click();
     await expect(prompt).toHaveCount(0);
     await askToComeBack(page);
-    await expect(notice(page, 'A request to come back in is already waiting')).toHaveCount(0);
+    await expect(notice(page, 'A rejoin request is already pending')).toHaveCount(0);
   });
 
   test('two players on one network can ask to come back in at the same time', async ({ crew }) => {
@@ -254,12 +254,10 @@ test.describe('rejoining a table', () => {
     const second = await crew.person('Pat in a new browser', { signedIn: false });
     await second.page.goto(`/join/${table.inviteCode}`);
     await askToComeBack(first.page);
-    await candidates(second.page).getByRole('button', { name: 'Come back in as Pat' }).click();
-    await expect(
-      second.page.getByRole('heading', { name: 'Waiting for a referee to let you in as Pat' }),
-    ).toBeVisible();
-    await expect(second.page.getByText(/Your request lasts until/)).toBeVisible();
-    await expect(requests(ruth.page)).toContainText('One more request is waiting.');
+    await candidates(second.page).getByRole('button', { name: 'Rejoin as Pat' }).click();
+    await expect(second.page.getByRole('heading', { name: 'Waiting to rejoin as Pat' })).toBeVisible();
+    await expect(second.page.getByText(/Your rejoin request expires at/)).toBeVisible();
+    await expect(requests(ruth.page)).toContainText('1 more rejoin request is waiting.');
   });
 
   test('a poll that fails once keeps the player waiting', async ({ crew }) => {
@@ -278,10 +276,8 @@ test.describe('rejoining a table', () => {
     await askToComeBack(page);
     await expect.poll(() => failOnce, { timeout: 10_000 }).toBe(false);
     await expect(notice(page, "Can't reach the bxvtt server")).toHaveCount(0);
-    await expect(
-      page.getByRole('heading', { name: 'Waiting for a referee to let you in as Sam' }),
-    ).toBeVisible();
-    await requests(ruth.page).getByRole('button', { name: 'Let them in' }).click();
+    await expect(page.getByRole('heading', { name: 'Waiting to rejoin as Sam' })).toBeVisible();
+    await requests(ruth.page).getByRole('button', { name: 'Approve' }).click();
     await expect(page).toHaveURL(new RegExp(`${table.path}$`), { timeout: 15_000 });
   });
 
@@ -291,7 +287,7 @@ test.describe('rejoining a table', () => {
     await closeBrowser(table);
     const visitor = await returningVisitor(crew, table);
     const page = visitor.page;
-    await expect(candidates(page).getByRole('button', { name: 'Come back in as Sam' })).toBeVisible();
+    await expect(candidates(page).getByRole('button', { name: 'Rejoin as Sam' })).toBeVisible();
 
     // Sam opens the table again in his old browser while the new one still offers him.
     const old = await crew.person('Sam in the old browser', { signedIn: false });
@@ -303,10 +299,10 @@ test.describe('rejoining a table', () => {
     await expect(ruth.page.getByRole('img', { name: 'Sam, online' })).toBeVisible();
 
     crew.allowIssues(/409|Conflict/);
-    await candidates(page).getByRole('button', { name: 'Come back in as Sam' }).click();
+    await candidates(page).getByRole('button', { name: 'Rejoin as Sam' }).click();
     const online = notice(page, 'That member is at the table right now');
     await expect(online).toBeVisible();
-    await expect(online).toContainText("If that's you in another browser, keep playing there");
+    await expect(online).toContainText("If that's you in another browser, keep playing in that browser");
     await expect(requests(ruth.page)).toHaveCount(0);
     await screenshot(page, 'rejoin-member-online');
 
@@ -328,7 +324,7 @@ test.describe('rejoining a table', () => {
     await expect(
       stranger.page.getByRole('heading', { name: "I've played at this table before" }),
     ).toHaveCount(0);
-    await expect(stranger.page.getByRole('button', { name: /^Come back in as/ })).toHaveCount(0);
+    await expect(stranger.page.getByRole('button', { name: /^Rejoin as/ })).toHaveCount(0);
 
     // Once an offline player can be asked for, the section names only the player, and its text doesn't guess
     // why the browser forgot the visitor (R-109).
@@ -340,10 +336,12 @@ test.describe('rejoining a table', () => {
     ).toBeVisible();
     const offered = candidates(stranger.page).getByRole('button');
     await expect(offered).toHaveCount(1);
-    await expect(offered).toHaveAccessibleName('Come back in as Sam');
+    await expect(offered).toHaveAccessibleName('Rejoin as Sam');
     await expect(stranger.page.getByText(/address changed/)).toHaveCount(0);
     await expect(
-      stranger.page.getByText(/^Played here before, but this browser doesn't remember you\?/),
+      stranger.page.getByText(
+        /^If you played here in another browser or session, select your name to send a rejoin request\./,
+      ),
     ).toBeVisible();
   });
 
@@ -354,7 +352,7 @@ test.describe('rejoining a table', () => {
     const visitor = await returningVisitor(crew, table);
     const page = visitor.page;
     await askToComeBack(page);
-    await expect(requests(ruth.page)).toContainText('Someone is asking to come back in as Sam');
+    await expect(requests(ruth.page)).toContainText('Someone asked to rejoin as Sam');
 
     const old = await crew.person('Sam in the old browser', { signedIn: false });
     await old.context.addInitScript(
@@ -364,9 +362,11 @@ test.describe('rejoining a table', () => {
     await openTable(old.page, table.path);
     // The request ends for the referee at once, and the visitor's next poll learns why.
     await expect(requests(ruth.page)).toHaveCount(0);
-    const back = notice(page, 'Sam is back at the table, or has left it');
+    const back = notice(page, 'Sam is back at the table or has left it');
     await expect(back).toBeVisible({ timeout: 15_000 });
-    await expect(back).toContainText('If you are that member in another browser, play on there');
+    await expect(back).toContainText(
+      "If you're signed in as Sam in another browser, keep playing in that browser",
+    );
     await expectSeat(old.page);
   });
 
@@ -394,16 +394,18 @@ test.describe('rejoining a table', () => {
 
     const visitor = await returningVisitor(crew, table);
     await askToComeBack(visitor.page);
-    await requests(ruth.page).getByRole('button', { name: 'Let them in' }).click();
+    await requests(ruth.page).getByRole('button', { name: 'Approve' }).click();
     await expect(visitor.page).toHaveURL(new RegExp(`${table.path}$`), { timeout: 15_000 });
     await expectSeat(visitor.page);
 
     // The old browser's connection comes back, and the server refuses its retired token.
     cut = false;
-    await expect(sam.page.getByText("You've signed in to this table from another browser")).toBeVisible({
+    await expect(sam.page.getByText('You signed in to this table from another browser')).toBeVisible({
       timeout: 30_000,
     });
-    await expect(sam.page.getByText(/A referee let you back in somewhere else/)).toBeVisible();
+    await expect(
+      sam.page.getByText(/A referee approved your rejoin request in another browser/),
+    ).toBeVisible();
     await screenshot(sam.page, 'rejoin-old-browser');
   });
 
@@ -413,7 +415,7 @@ test.describe('rejoining a table', () => {
     await closeBrowser(table);
     const visitor = await returningVisitor(crew, table);
     await askToComeBack(visitor.page);
-    await requests(ruth.page).getByRole('button', { name: 'Let them in' }).click();
+    await requests(ruth.page).getByRole('button', { name: 'Approve' }).click();
     await expect(visitor.page).toHaveURL(new RegExp(`${table.path}$`), { timeout: 15_000 });
 
     const old = await crew.person('Sam in the old browser', { signedIn: false });
@@ -423,7 +425,7 @@ test.describe('rejoining a table', () => {
     );
     crew.allowIssues(/401|Unauthorized/);
     await old.page.goto(table.path);
-    await expect(old.page.getByText("This server doesn't know you yet")).toHaveCount(0);
+    await expect(old.page.getByText('Choose your name to continue')).toHaveCount(0);
     await expect(old.page.getByText(/signed in to this table from another browser/)).toBeVisible();
   });
 });

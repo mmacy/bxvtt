@@ -219,7 +219,7 @@ export function OutfitStep({
       cell: (item) => {
         const weight = weightCoins(full.byId.get(item.id));
         return weight === null || weight === 0 ? (
-          <span className={styles.none} title="The catalog lists no weight for it">
+          <span className={styles.none} title="No listed weight">
             -
           </span>
         ) : (
@@ -265,7 +265,7 @@ export function OutfitStep({
       <section className={styles.shop} aria-labelledby="wizard-shop">
         <div className={styles.rowBetween}>
           <h3 id="wizard-shop" className={styles.subTitle}>
-            The shelves
+            Equipment
           </h3>
           {kit && (
             <Button size="sm" variant="secondary" icon="chest" onClick={onKit} disabled={equipment === null}>
@@ -278,7 +278,7 @@ export function OutfitStep({
           <SearchInput
             value={query}
             onValueChange={setQuery}
-            placeholder="Search the shelves"
+            placeholder="Search equipment"
             aria-label="Search equipment"
           />
           <SegmentedControl
@@ -303,15 +303,15 @@ export function OutfitStep({
               <EmptyState
                 size="compact"
                 icon="search"
-                title="Nothing on the shelves matches"
-                description="Try fewer words, or choose All."
+                title="No matching equipment"
+                description="Try a shorter search or choose All."
               />
             }
           />
         )}
         <p className={styles.muted}>
-          Prices are in gold pieces and weights in coins. A lot is what one purchase delivers: weapons and
-          armour sell one at a time, while gear and ammunition often come in bundles.
+          Prices are in gold pieces and weights are in coins. You buy weapons and armour one at a time, while
+          gear and ammunition often come in bundles.
         </p>
       </section>
       <aside className={styles.cartPanel} aria-labelledby="wizard-cart">
@@ -413,14 +413,14 @@ export function OutfitStep({
           <div className={styles.cartVerdict} aria-live="polite">
             {check.status === 'checking' && (
               <span className={styles.checking}>
-                <Spinner size={14} label="" /> Checking with the shop
+                <Spinner size={14} label="" /> Checking equipment
               </span>
             )}
             {check.status === 'ok' && (
-              <span className={styles.okLine}>The shop and your class accept this outfit.</span>
+              <span className={styles.okLine}>Your character can afford and use this equipment.</span>
             )}
             {check.status === 'invalid' && (
-              <Banner tone="warning" title="The outfit needs a change">
+              <Banner tone="warning" title="Check your cart">
                 {check.sentences.join(' ')}
               </Banner>
             )}
@@ -436,7 +436,7 @@ export function OutfitStep({
               onEquip([]);
             }}
           >
-            Empty the cart
+            Empty cart
           </Button>
         )}
       </aside>

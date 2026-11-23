@@ -182,7 +182,7 @@ describe('fromRefereeView', () => {
     expect(feature('altar_hoard')?.trap?.state).toMatch(/hidden|found/);
     expect(feature('loose_stone')).toMatchObject({ kind: 'trick', found: false });
     expect(feature('carved_face')).toMatchObject({ kind: 'custom', areaId: null, x: 6, y: 8 });
-    expect(feature('pile@6,9')?.contents).toEqual(['dagger×1']);
+    expect(feature('pile@6,9')?.contents).toEqual(['dagger × 1']);
     expect(map.features.filter((f) => f.kind === 'generated_cache')).toHaveLength(1);
   });
 

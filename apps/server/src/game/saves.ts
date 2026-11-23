@@ -131,7 +131,7 @@ export class SaveService {
       if (count >= this.ctx.config.quotas.savesPerTable) {
         throw new ApiError(
           'forbidden',
-          `The table has ${count} saves, the most this server keeps. Delete an old save first.`,
+          `This table already has ${count} manual saves, which is the limit. Delete an older save first.`,
         );
       }
     }
@@ -231,7 +231,10 @@ export class SaveService {
     const role = this.ctx.tables.requireMember(tableId, user);
     const row = this.row(tableId, saveId);
     if (role !== 'referee' && strOrNull(row, 'created_by') !== user.id) {
-      throw new ApiError('forbidden', 'Only the member who made a save or a referee can change it.');
+      throw new ApiError(
+        'forbidden',
+        'Only the member who created this save or a referee can rename or delete it.',
+      );
     }
     return row;
   }

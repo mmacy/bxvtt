@@ -156,7 +156,7 @@ export function useMapAnnotations(level: LevelRef | null): MapAnnotations {
             points: prepared,
             width: Math.min(5, Math.max(0.02, width)),
           }),
-        { errorTitle: "Your drawing wasn't saved" },
+        { errorTitle: "Couldn't save your drawing" },
       ).then((result) => {
         if (result.ok) receive(result.value);
         setPending((list) => list.filter((stroke) => stroke.id !== id));
@@ -174,16 +174,16 @@ export function useMapAnnotations(level: LevelRef | null): MapAnnotations {
       });
       const kept = ids.filter((id) => !mine.includes(id));
       if (kept.some((id) => records.has(id))) {
-        toast.info('You can erase only your own drawings.', {
+        toast.info('You can only erase your own drawings.', {
           id: 'explore-erase-others',
-          description: 'The referee can erase anyone’s.',
+          description: 'Referees can erase any drawing.',
         });
       }
       if (mine.length === 0) return kept;
       setHidden((set) => new Set([...set, ...mine]));
       for (const id of mine) {
         void run(() => getApi().deleteAnnotation(store.getState().tableId, id), {
-          errorTitle: "That drawing couldn't be erased",
+          errorTitle: "Couldn't erase that drawing",
         }).then((result) => {
           if (!result.ok) {
             setHidden((set) => {
@@ -213,7 +213,7 @@ export function useMapAnnotations(level: LevelRef | null): MapAnnotations {
             text: text.trim(),
             ...(refereesOnly ? { visibility: 'referees' as const } : {}),
           }),
-        { errorTitle: "The pin wasn't placed" },
+        { errorTitle: "Couldn't place pin" },
       );
       if (result.ok) receive(result.value);
       return result.ok;
@@ -225,7 +225,7 @@ export function useMapAnnotations(level: LevelRef | null): MapAnnotations {
     async (id: string) => {
       setHidden((set) => new Set([...set, id]));
       const result = await run(() => getApi().deleteAnnotation(store.getState().tableId, id), {
-        errorTitle: "The pin couldn't be removed",
+        errorTitle: "Couldn't remove pin",
       });
       if (!result.ok) {
         setHidden((set) => {

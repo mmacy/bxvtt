@@ -21,9 +21,9 @@ import { useClassDetail } from './catalogs';
 
 const SLOT_LABELS: Record<string, string> = {
   armour: 'Worn',
-  shield: 'Shield',
+  shield: 'Worn',
   wielded: 'Wielded',
-  ring: 'Ring',
+  ring: 'Worn',
   pack: 'Pack',
 };
 

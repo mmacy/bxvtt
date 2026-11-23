@@ -18,7 +18,7 @@ function request(id: string, userId: string, name: string) {
 }
 
 describe('RejoinPrompt', () => {
-  it('asks the referee to let a returning member in, and lets them in', async () => {
+  it('asks the referee to approve a returning member, and approves the request', async () => {
     const snapshot = fixtureSnapshot('lobby', 'referee');
     const api = createFakeApi();
     api.approveRejoin.mockResolvedValue({ items: [] });
@@ -27,21 +27,21 @@ describe('RejoinPrompt', () => {
       api,
       data: { rejoinRequests: [request('rjq_1', 'usr_sam', 'Sam'), request('rjq_2', 'usr_ann', 'Ann')] },
     });
-    expect(screen.getByRole('region', { name: 'Requests to come back in' })).toHaveTextContent(
-      'Someone is asking to come back in as Sam',
+    expect(screen.getByRole('region', { name: 'Rejoin requests' })).toHaveTextContent(
+      'Someone asked to rejoin as Sam',
     );
-    expect(screen.getByText(/One more request is waiting/)).toBeInTheDocument();
-    expect(screen.getByText(/Let them in only if you know it's Sam/)).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Let them in' }));
+    expect(screen.getByText(/1 more rejoin request is waiting/)).toBeInTheDocument();
+    expect(screen.getByText(/confirm by voice or chat that it's really Sam/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Approve' }));
     expect(api.approveRejoin).toHaveBeenCalledWith(store.getState().tableId, 'rjq_1');
-    expect(screen.queryByRole('region', { name: 'Requests to come back in' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Rejoin requests' })).not.toBeInTheDocument();
   });
 
-  it("tells a referee they can't let themselves in", () => {
+  it("tells a referee they can't approve their own request", () => {
     const snapshot = fixtureSnapshot('lobby', 'referee');
     const me = snapshot.user.id;
     renderWithTable(<RejoinPrompt />, { snapshot, data: { rejoinRequests: [request('rjq_1', me, 'Ruth')] } });
-    expect(screen.getByText('Someone is asking to come back in as you')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Let them in' })).not.toBeInTheDocument();
+    expect(screen.getByText('Someone asked to rejoin as you')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Approve' })).not.toBeInTheDocument();
   });
 });

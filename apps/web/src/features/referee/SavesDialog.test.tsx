@@ -40,7 +40,8 @@ describe('saveTitle and exportFileName', () => {
     expect(saveTitle(auto)).toBe('Entered the priory');
     expect(exportFileName(named)).toBe('before-the-bell-pit.bxsave.json');
     expect(saveCountText(2, 2)).toBe('2 autosaves');
-    expect(saveCountText(5, 1)).toBe('5 saves, 1 of them an autosave');
+    expect(saveCountText(5, 1)).toBe('5 saves (1 autosave)');
+    expect(saveCountText(5, 2)).toBe('5 saves (2 autosaves)');
   });
 });
 
@@ -53,7 +54,7 @@ describe('SavesDialog', () => {
       items: saves(snapshot.game?.session_id ?? '', referee?.user_id ?? ''),
     });
     renderWithTable(<SavesDialog open onOpenChange={() => {}} />, { snapshot, api });
-    const list = await screen.findByRole('list', { name: 'Saves, newest first' });
+    const list = await screen.findByRole('list', { name: 'Saved games' });
     const rows = within(list).getAllByRole('listitem');
     expect(rows[0]).toHaveTextContent('Before the bell pit');
     expect(rows[1]).toHaveTextContent('Entered the priory');
@@ -71,8 +72,8 @@ describe('SavesDialog', () => {
     if (!named) throw new Error('missing fixture');
     api.createSave.mockResolvedValue({ ...named, label: 'At the font' });
     const { user, store } = renderWithTable(<SavesDialog open onOpenChange={() => {}} />, { snapshot, api });
-    await user.type(await screen.findByRole('textbox', { name: /Save the game now/ }), 'At the font');
-    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await user.type(await screen.findByRole('textbox', { name: /Save label/ }), 'At the font');
+    await user.click(screen.getByRole('button', { name: 'Save game' }));
     await waitFor(() => expect(api.createSave).toHaveBeenCalledWith(store.getState().tableId, 'At the font'));
     expect(await screen.findByText('At the font')).toBeInTheDocument();
   });
@@ -89,7 +90,7 @@ describe('SavesDialog', () => {
     await user.click(screen.getByRole('button', { name: 'Restore Before the bell pit' }));
     const confirm = await screen.findByRole('alertdialog', { name: /Restore “Before the bell pit”/ });
     expect(within(confirm).getByText(/continues from this save/)).toBeInTheDocument();
-    expect(within(confirm).getByRole('checkbox', { name: /Save the current game first/ })).toBeChecked();
+    expect(within(confirm).getByRole('checkbox', { name: /Save current game first/ })).toBeChecked();
     await user.click(within(confirm).getByRole('button', { name: 'Restore' }));
     const tableId = store.getState().tableId;
     await waitFor(() => expect(api.restoreSave).toHaveBeenCalledWith(tableId, 'sav_named'));
@@ -103,10 +104,10 @@ describe('SavesDialog in the lobby', () => {
     const api = createFakeApi();
     api.listSaves.mockResolvedValue({ items: saves('ses_old', snapshot.user.id) });
     renderWithTable(<SavesDialog open onOpenChange={() => {}} />, { snapshot, api });
-    await screen.findByRole('list', { name: 'Saves, newest first' });
+    await screen.findByRole('list', { name: 'Saved games' });
     expect(screen.queryByText('Earlier game')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Change' })).not.toBeInTheDocument();
-    expect(screen.getByText(/Change it with “Save automatically” in the table settings/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Settings' })).not.toBeInTheDocument();
+    expect(screen.getByText(/Change this under “Save automatically” in table settings/)).toBeInTheDocument();
   });
 });
 
@@ -153,9 +154,9 @@ describe('RefereeNotes', () => {
         updated_at: new Date().toISOString(),
       }),
     );
-    expect(await screen.findByText(/changed these notes while you were writing/)).toBeInTheDocument();
+    expect(await screen.findByText(/updated these notes while you were editing/)).toBeInTheDocument();
     expect(box).toHaveValue('Ippa wants the goblins gone');
-    await user.click(screen.getByRole('button', { name: 'Keep my version' }));
+    await user.click(screen.getByRole('button', { name: 'Keep mine' }));
     await waitFor(() =>
       expect(api.updateNotes).toHaveBeenLastCalledWith(
         expect.any(String),

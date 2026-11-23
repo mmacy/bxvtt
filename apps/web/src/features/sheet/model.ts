@@ -8,8 +8,9 @@ import type { StoredCharacter } from '@bxvtt/shared/protocol';
 import {
   capitalizeFirst,
   emptyContext,
-  itemPhrase,
+  itemLabel,
   magicItemTemplateName,
+  pluralize,
   resolveItemNoun,
   type TextContext,
 } from '@bxvtt/shared/text';
@@ -33,7 +34,7 @@ export interface InventoryEntry {
   /** The ID that `equip_item`, `give_items`, `drop_items`, and `use_item` take. */
   commandId: string;
   kind: 'item' | 'magic' | 'valuable';
-  /** The name to show. An unidentified magic item keeps its masked name, such as "A potion". */
+  /** The item label to show, without a leading article (such as `Chainmail` or `Potion`). */
   name: string;
   /** What one unit is called in the plural, for a count control: "torches". */
   units: string;
@@ -138,6 +139,10 @@ function qualitiesOf(record: Record<string, unknown>, template: Record<string, u
   return [];
 }
 
+function stripIndefinite(text: string): string {
+  return text.replace(/^(a|an|some)\s+/i, '');
+}
+
 /**
  * Reads one serialized inventory entry.
  *
@@ -159,17 +164,18 @@ export function readEntry(
     const templateId = str(value.template_id);
     const identified = value.identified !== false && str(value.display) === null;
     const masked = str(value.display);
-    const shown =
+    const shown = stripIndefinite(
       str(value.name) ??
-      (identified && templateId ? magicItemTemplateName(templateId) : undefined) ??
-      masked ??
-      'a magic item';
+        (identified && templateId ? magicItemTemplateName(templateId) : undefined) ??
+        masked ??
+        'magic item',
+    );
     return {
       key: `${slot}:${instanceId}`,
       commandId: instanceId,
       kind: 'magic',
       name: capitalizeFirst(shown),
-      units: shown,
+      units: quantity > 1 ? pluralize(shown) : shown,
       quantity,
       slot,
       itemType: null,
@@ -184,12 +190,13 @@ export function readEntry(
   if (value.instance_type === 'valuable') {
     const instanceId = str(value.instance_id) ?? `valuable-${index}`;
     const kind = str(value.kind);
+    const rawName = stripIndefinite(str(value.name) ?? (kind === 'jewellery' ? 'Jewellery' : 'Gem'));
     return {
       key: `${slot}:${instanceId}`,
       commandId: instanceId,
       kind: 'valuable',
-      name: capitalizeFirst(str(value.name) ?? (kind === 'jewellery' ? 'Jewellery' : 'Gem')),
-      units: str(value.name) ?? (kind === 'jewellery' ? 'jewellery' : 'gem'),
+      name: capitalizeFirst(rawName),
+      units: rawName.toLowerCase(),
       quantity: 1,
       slot,
       itemType: kind,
@@ -205,13 +212,12 @@ export function readEntry(
   const id = str(template?.id) ?? str(value.template_id) ?? str(value.id);
   if (id === null) return null;
   const noun = resolveItemNoun(id, ctx, { name: str(template?.name) ?? undefined });
-  const name = itemPhrase(noun, quantity);
   return {
     units: noun.many,
     key: `${slot}:${id}:${index}`,
     commandId: id,
     kind: 'item',
-    name: capitalizeFirst(name),
+    name: itemLabel(noun, quantity),
     quantity,
     slot,
     itemType: str(template?.item_type),

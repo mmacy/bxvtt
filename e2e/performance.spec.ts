@@ -77,7 +77,7 @@ test.describe('performance', () => {
     const coldStarted = Date.now();
     await page.goto(staged.path);
     await expect(page.getByRole('button', { name: 'Search' })).toBeEnabled({ timeout: 30_000 });
-    await expect(page.getByRole('region', { name: 'Where the party stands' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Current location' })).toBeVisible();
     const coldMs = Date.now() - coldStarted;
     const coldTransferKb = await page.evaluate(() =>
       Math.round(
@@ -95,7 +95,7 @@ test.describe('performance', () => {
       await page.goto(staged.path);
       await expect(page.getByRole('application', { name: /^Dungeon map/ })).toBeVisible({ timeout: 30_000 });
       await expect(page.getByRole('button', { name: 'Search' })).toBeEnabled({ timeout: 30_000 });
-      await expect(page.getByRole('region', { name: 'Where the party stands' })).toBeVisible();
+      await expect(page.getByRole('region', { name: 'Current location' })).toBeVisible();
       samples.push(Date.now() - started);
       navigation = await page.evaluate(() => {
         const entry = performance.getEntriesByType('navigation')[0] as

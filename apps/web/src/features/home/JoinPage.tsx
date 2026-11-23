@@ -65,8 +65,8 @@ export function JoinPage() {
           <Card padding="lg">
             <NameForm
               title={returning ? "I'm new here" : "You're invited to a table"}
-              description={"Pick a name, and you'll go straight to the table."}
-              submitLabel="Join the table"
+              description="Choose a display name to join the table."
+              submitLabel="Join table"
               onInvitePage
             />
           </Card>
@@ -76,14 +76,14 @@ export function JoinPage() {
         )}
         {status === 'anonymous' && (
           <p className={styles.aboutNote}>
-            bxvtt is a virtual tabletop for the 1981 B/X rules. Your referee runs the adventure, you play your
-            characters in this browser, and the bxapi rules engine rolls every die. You don't need an account.
+            bxvtt is a virtual tabletop for the 1981 B/X rules. Your referee runs the adventure while you play
+            your characters in this browser, with no account required.
           </p>
         )}
         {status !== 'anonymous' && problem === null && (
           <div className={styles.joining} role="status">
             <Spinner size={32} label="" />
-            <p>Joining the table</p>
+            <p>Joining table</p>
           </div>
         )}
         {problem !== null && (

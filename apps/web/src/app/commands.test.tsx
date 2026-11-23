@@ -245,7 +245,7 @@ describe('useSendCommand while a command is on its way', () => {
       expect(screen.getByRole('list', { name: 'log' })).toHaveTextContent('rest: skipped stale'),
     );
     expect(sentTypes(api)).toEqual(['move_party']);
-    expect(notifications()).toMatch(/wasn't sent, because monsters appeared/);
+    expect(notifications()).toMatch(/Couldn't .* because monsters appeared/);
   });
 
   it('drops a waiting action that names a direction once the party has moved', async () => {

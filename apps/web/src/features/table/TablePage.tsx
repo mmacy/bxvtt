@@ -50,11 +50,11 @@ function RetiredSignIn() {
   return (
     <EmptyState
       icon="log-out"
-      title="You've signed in to this table from another browser"
-      description={`A referee let you back in somewhere else, so this browser's sign-in no longer works. Play on in the other browser. To play in this browser instead, open the table's invite link here and choose "I've played at this table before".`}
+      title="You signed in to this table from another browser"
+      description={`A referee approved your rejoin request in another browser, which signed this browser out. Keep playing in that browser, or open the table's invite link here and choose "I've played at this table before".`}
       action={
         <Button asChild variant="secondary" icon="user">
-          <RouterLink to="/">Continue as someone new</RouterLink>
+          <RouterLink to="/">Continue as a new player</RouterLink>
         </Button>
       }
     />
@@ -62,14 +62,17 @@ function RetiredSignIn() {
 }
 
 const REMOVED_TEXT: Record<RemovedReason, { title: string; description: string }> = {
-  left: { title: 'You left this table', description: 'To come back, ask the referee for a new invite link.' },
+  left: {
+    title: 'You left this table',
+    description: 'Ask the referee for a new invite link if you want to rejoin.',
+  },
   kicked: {
     title: 'The referee removed you from this table',
-    description: 'To come back, ask the referee for a new invite link.',
+    description: 'Ask the referee for a new invite link if you want to rejoin.',
   },
   table_deleted: {
     title: 'This table was deleted',
-    description: 'The referee deleted the table and its games.',
+    description: 'The referee deleted this table and its saved games.',
   },
 };
 
@@ -110,7 +113,7 @@ function AuthFailed({ wasOpen }: { wasOpen: boolean }) {
     <EmptyState
       icon="lock"
       title="You aren't at this table"
-      description="The table doesn't exist, or you aren't one of its members. To join it, open the invite link from its referee."
+      description="This table doesn't exist, or you aren't a member. Open an invite link from the referee to join."
       action={<HomeButton />}
     />
   );
@@ -151,13 +154,13 @@ function TableScreen() {
         <div className={styles.loading} role="status">
           <Spinner size={32} label="" />
           <p>
-            {status === 'reconnecting' ? "Can't reach the table yet. Trying again." : 'Opening the table'}
+            {status === 'reconnecting' ? 'Reconnecting to the table. Trying again.' : 'Opening the table'}
           </p>
           {status === 'reconnecting' && (
             <p className={styles.loadingHint}>
               {connectionError?.code === 'rate_limited'
-                ? `${connectionError.detail} The page tries again by itself.`
-                : 'If this goes on, the bxvtt server or bxapi may be down. Your place at the table is safe.'}
+                ? `${connectionError.detail} Reconnecting automatically.`
+                : 'If this continues, the server or the game service might be offline. Your seat at the table is safe.'}
             </p>
           )}
         </div>
@@ -246,8 +249,8 @@ export function TablePage() {
       <Centered>
         <Card padding="lg">
           <NameForm
-            title="Pick your name first"
-            description="To join this table, pick a name and then open the invite link from its referee."
+            title="Choose your name first"
+            description="Choose a display name, then open the invite link from your referee to join this table."
             submitLabel="Continue"
           />
         </Card>

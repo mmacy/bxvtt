@@ -24,9 +24,9 @@ test('a player receives no referee data through a whole game of The Drowned Bell
     referee: ruth,
     players: [sam],
     party: [
-      { owner: sam, name: 'Brenna', classId: 'fighter' },
-      { owner: sam, name: 'Wren', classId: 'thief' },
-      { owner: ruth, name: 'Osric', classId: 'cleric' },
+      { owner: sam, name: 'Flarg', classId: 'fighter' },
+      { owner: sam, name: 'Tinks', classId: 'thief' },
+      { owner: ruth, name: 'Clarence', classId: 'cleric' },
     ],
   });
   const tableId = table.id;
@@ -56,19 +56,17 @@ test('a player receives no referee data through a whole game of The Drowned Bell
     const setOut = sam.page.getByRole('dialog', { name: /^Set out for/ });
     await setOut.getByRole('button', { name: 'Set out' }).click();
     await expect(sam.page.getByRole('banner').getByText('Exploring', { exact: true })).toBeVisible();
-    await expect(sam.page.getByRole('region', { name: 'Where the party stands' })).toContainText(
-      'Gatehouse stair',
-    );
+    await expect(sam.page.getByRole('region', { name: 'Current location' })).toContainText('Gatehouse stair');
 
     await ruth.page
       .getByRole('toolbar', { name: 'Map tools' })
       .getByRole('button', { name: 'Pin a note' })
       .click();
     await clickMapOffset(ruth.page, 1, -1);
-    const pin = ruth.page.getByRole('dialog', { name: 'Add a pin' });
+    const pin = ruth.page.getByRole('dialog', { name: 'Add pin' });
     await pin.getByRole('textbox', { name: 'Note' }).fill(PIN_MARKER);
-    await pin.getByRole('checkbox', { name: 'Only referees see this pin' }).check();
-    await pin.getByRole('button', { name: 'Add the pin' }).click();
+    await pin.getByRole('checkbox', { name: 'Visible only to referees' }).check();
+    await pin.getByRole('button', { name: 'Add pin' }).click();
     await expect(pin).toHaveCount(0);
     await expect
       .poll(async () =>
@@ -79,7 +77,7 @@ test('a player receives no referee data through a whole game of The Drowned Bell
 
   await test.step('the party searches the chapel and meets the guardroom goblins', async () => {
     await placeParty(ruth.client, tableId, { dungeon: 'priory', level: 1, x: 17, y: 12 });
-    await expect(sam.page.getByRole('region', { name: 'Where the party stands' })).toContainText('Chapel');
+    await expect(sam.page.getByRole('region', { name: 'Current location' })).toContainText('Chapel');
     await searchFor(sam.page);
 
     // Placing the party starts no encounter, so it walks the last step into the guardroom.
@@ -175,9 +173,9 @@ test('rejoin requests reach referees alone, and a visitor learns only what the j
     referee: ruth,
     players: [sam, pat],
     party: [
-      { owner: sam, name: 'Brenna', classId: 'fighter' },
-      { owner: pat, name: 'Wren', classId: 'thief' },
-      { owner: ruth, name: 'Osric', classId: 'cleric' },
+      { owner: sam, name: 'Flarg', classId: 'fighter' },
+      { owner: pat, name: 'Tinks', classId: 'thief' },
+      { owner: ruth, name: 'Clarence', classId: 'cleric' },
     ],
   });
   const oldToken = sam.token ?? '';
@@ -190,26 +188,26 @@ test('rejoin requests reach referees alone, and a visitor learns only what the j
   // Sam's browser lost its sign-in. He opens the invite link in a new one and asks to come back in, twice.
   const visitor = await crew.person('Sam in a new browser', { signedIn: false, record: true });
   await visitor.page.goto(`/join/${table.invite_code}`);
-  const members = visitor.page.getByRole('list', { name: 'Members who can come back in' });
+  const members = visitor.page.getByRole('list', { name: 'Members who can rejoin' });
   await expect(members.getByRole('button')).toHaveCount(1);
-  await members.getByRole('button', { name: 'Come back in as Sam' }).click();
-  const prompt = ruth.page.getByRole('region', { name: 'Requests to come back in' });
-  await prompt.getByRole('button', { name: 'Not now' }).click();
+  await members.getByRole('button', { name: 'Rejoin as Sam' }).click();
+  const prompt = ruth.page.getByRole('region', { name: 'Rejoin requests' });
+  await prompt.getByRole('button', { name: 'Decline' }).click();
   await expect(
-    visitor.page.getByRole('alert').filter({ hasText: "The referee didn't let you in" }),
+    visitor.page.getByRole('alert').filter({ hasText: 'The referee declined your request to rejoin' }),
   ).toBeVisible({
     timeout: 15_000,
   });
   const visitorBefore = [...visitor.received];
-  await members.getByRole('button', { name: 'Come back in as Sam' }).click();
-  await prompt.getByRole('button', { name: 'Let them in' }).click();
+  await members.getByRole('button', { name: 'Rejoin as Sam' }).click();
+  await prompt.getByRole('button', { name: 'Approve' }).click();
   await expect(visitor.page).toHaveURL(new RegExp(`${path}$`), { timeout: 15_000 });
   await expect(visitor.page.getByRole('banner').getByText('In town', { exact: true })).toBeVisible();
   const raw = await visitor.page.evaluate(() => localStorage.getItem('bxvtt.identity'));
   const newToken = (JSON.parse(raw ?? '{}') as { token?: string }).token ?? '';
   expect(newToken).not.toBe('');
   expect((await sdkClient(newToken).me()).id).toBe(sam.id);
-  await expect(pat.page.getByRole('region', { name: 'Requests to come back in' })).toHaveCount(0);
+  await expect(pat.page.getByRole('region', { name: 'Rejoin requests' })).toHaveCount(0);
 
   // The other player received no request, no request ID or secret, and neither of Sam's tokens.
   const rejoinMarkers = ['"rejoin_requests"', 'rjn_', 'rjs_', oldToken, newToken];
@@ -240,8 +238,8 @@ test('rejoin requests reach referees alone, and a visitor learns only what the j
     oldToken,
     table.invite_code,
     '"role"',
-    'Osric',
-    'Brenna',
+    'Clarence',
+    'Flarg',
   ]);
   expect(visitorLeaks.map((leak) => `${leak.marker} … ${leak.context}`)).toEqual([]);
 

@@ -63,12 +63,12 @@ function whenText(iso: string): string {
   return then.toLocaleDateString(undefined, { dateStyle: 'medium' });
 }
 
-/** How many saves there are, and how many of them are autosaves: `5 saves, 2 of them autosaves`. */
+/** How many saves there are, and how many are autosaves: `5 saves (2 autosaves)`. */
 export function saveCountText(total: number, autosaves: number): string {
   if (autosaves === total) return total === 1 ? '1 autosave' : `${total} autosaves`;
   const all = total === 1 ? '1 save' : `${total} saves`;
   if (autosaves === 0) return all;
-  return `${all}, ${autosaves === 1 ? '1 of them an autosave' : `${autosaves} of them autosaves`}`;
+  return `${all} (${autosaves === 1 ? '1 autosave' : `${autosaves} autosaves`})`;
 }
 
 /** A file name for an exported save document. */
@@ -119,7 +119,7 @@ function useSaves(open: boolean) {
         setError(null);
       })
       .catch(() => {
-        if (!cancelled) setError("The saves didn't load. Check your connection and try again.");
+        if (!cancelled) setError("Couldn't load saves. Check your connection and try again.");
       });
     return () => {
       cancelled = true;
@@ -183,7 +183,7 @@ function SaveRow({
 
   const menu: MenuEntry[] = [];
   if (canManage) menu.push({ label: 'Rename', icon: 'edit', onSelect: () => setRenaming(true) });
-  if (referee) menu.push({ label: 'Export as a file', icon: 'download', onSelect: () => void exportSave() });
+  if (referee) menu.push({ label: 'Export save', icon: 'download', onSelect: () => void exportSave() });
   if (canManage) {
     menu.push(
       { type: 'separator' },
@@ -262,7 +262,12 @@ function SaveRow({
             align="end"
             items={menu}
             trigger={
-              <IconButton icon="more" label={`More for ${saveTitle(save)}`} size="sm" variant="ghost" />
+              <IconButton
+                icon="more"
+                label={`More actions for ${saveTitle(save)}`}
+                size="sm"
+                variant="ghost"
+              />
             }
           />
         )}
@@ -359,8 +364,8 @@ export function SavesDialog({ open, onOpenChange }: SavesDialogProps) {
         title={game ? 'Saves' : 'Continue from a save'}
         description={
           game
-            ? "Every save of this table's games, newest first."
-            : "Every save of this table's games, newest first. Restore one to play on from that moment."
+            ? 'Saved snapshots for this table, newest first.'
+            : 'Saved snapshots for this table, newest first. Restore a save to continue from that moment.'
         }
         size="lg"
       >
@@ -369,8 +374,8 @@ export function SavesDialog({ open, onOpenChange }: SavesDialogProps) {
           {game && (
             <form className={styles.create} onSubmit={create}>
               <Field
-                label="Save the game now"
-                hint="A name helps you find it later."
+                label="Save label"
+                hint="Optional. Add a label to find this save later."
                 error={labelError ?? undefined}
               >
                 <TextInput
@@ -387,7 +392,7 @@ export function SavesDialog({ open, onOpenChange }: SavesDialogProps) {
                 loading={pending && restoring === null && deleting === null}
                 disabled={!game}
               >
-                Save
+                Save game
               </Button>
             </form>
           )}
@@ -396,14 +401,14 @@ export function SavesDialog({ open, onOpenChange }: SavesDialogProps) {
             <Icon name="clock" size={14} className={styles.autosaveIcon} />
             <p className={styles.autosaveText}>
               {autosaveOn
-                ? 'Autosave is on. The table saves when the party enters a dungeon, reaches another level, meets monsters while exploring, or returns to town, and keeps the newest 10.'
-                : 'Autosave is off, so only the saves you make are kept.'}
-              {referee && !game && ' Change it with “Save automatically” in the table settings.'}
+                ? 'Autosave is on and keeps the 10 newest milestones: entering a dungeon, changing levels, meeting monsters while exploring, or returning to town.'
+                : 'Autosave is off. Only manual saves are kept.'}
+              {referee && !game && ' Change this under “Save automatically” in table settings.'}
             </p>
             {/* The table settings dialog belongs to the play screen. In the lobby, the table settings card has the switch. */}
             {referee && game && (
               <Button size="sm" variant="ghost" onClick={() => setSettingsOpen(true)}>
-                {autosaveOn ? 'Change' : 'Turn it on'}
+                {autosaveOn ? 'Settings' : 'Turn on'}
               </Button>
             )}
           </div>
@@ -430,8 +435,8 @@ export function SavesDialog({ open, onOpenChange }: SavesDialogProps) {
               title="No saves yet"
               description={
                 game
-                  ? 'Save the game above, or play on and let autosave make one.'
-                  : "This table's games have no saves yet. Start a game, and save it or let autosave make one."
+                  ? 'Create a save above, or keep playing if autosave is on.'
+                  : 'Start a game to create manual or automatic saves.'
               }
             />
           ) : (
@@ -447,7 +452,7 @@ export function SavesDialog({ open, onOpenChange }: SavesDialogProps) {
                     />
                   )}
                 </div>
-                <ol className={styles.timeline} aria-label="Saves, newest first">
+                <ol className={styles.timeline} aria-label="Saved games">
                   {shown.map((save) => (
                     <SaveRow
                       key={save.id}
@@ -476,20 +481,20 @@ export function SavesDialog({ open, onOpenChange }: SavesDialogProps) {
         title={restoring ? `Restore “${saveTitle(restoring)}”?` : 'Restore the save?'}
         description={
           game
-            ? `The table moves to a new game that continues from this save${
-                restoring ? `, at ${formatGameClock(restoring.clock.rounds)}` : ''
-              }. Everyone at the table goes with it, and each seat keeps its character. The game you're playing now isn't deleted: you can return to it through its own saves.`
-            : `The table leaves the lobby for a game that continues from this save${
-                restoring ? `, at ${formatGameClock(restoring.clock.rounds)}` : ''
-              }. The party plays on as it was saved, whatever the lobby's party is. Each character goes to the player who had it, and the referee plays any character whose player has left.`
+            ? `Play continues from this save${
+                restoring ? ` (${formatGameClock(restoring.clock.rounds)})` : ''
+              }. Everyone stays in their current character seats, and you can still return to any earlier save.`
+            : `Play continues from this save${
+                restoring ? ` (${formatGameClock(restoring.clock.rounds)})` : ''
+              } with the saved party rather than the lobby roster. Players keep their saved characters, while the referee controls any character whose player has left.`
         }
         confirmLabel="Restore"
         onConfirm={restore}
       >
         {game && !game.ended && (
           <Checkbox
-            label="Save the current game first"
-            description="So you can come back to this exact moment."
+            label="Save current game first"
+            description="Creates a save of this moment before restoring."
             checked={saveFirst}
             onCheckedChange={setSaveFirst}
           />
@@ -500,7 +505,7 @@ export function SavesDialog({ open, onOpenChange }: SavesDialogProps) {
         open={deleting !== null}
         onOpenChange={(next) => !next && setDeleting(null)}
         title={deleting ? `Delete “${saveTitle(deleting)}”?` : 'Delete the save?'}
-        description="The save is gone for good. The game in play doesn't change."
+        description="This permanently deletes the save without affecting your current game."
         confirmLabel="Delete"
         tone="danger"
         onConfirm={remove}

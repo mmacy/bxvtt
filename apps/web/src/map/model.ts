@@ -592,7 +592,7 @@ export function fromRefereeView(level: LevelSpec, state: DungeonState, options: 
       y: cell[1],
       areaWide: false,
       areaId: areaOf.get(cellKey(cell[0], cell[1])) ?? null,
-      description: 'Treasure the session rolled.',
+      description: 'Rolled treasure.',
       emptied: false,
       found: null,
       trap: null,
@@ -603,7 +603,7 @@ export function fromRefereeView(level: LevelSpec, state: DungeonState, options: 
   for (const [cellReference, pile] of Object.entries(state.piles)) {
     const cell = cellOfRef(cellReference, dungeonId, levelNumber);
     if (!cell) continue;
-    const contents = pile.items.map((item) => `${item.item_id}×${item.quantity}`);
+    const contents = pile.items.map((item) => `${item.item_id.replaceAll('_', ' ')} × ${item.quantity}`);
     for (const item of pile.magic_items) contents.push(magicItemName(item));
     for (const valuable of pile.valuables) contents.push(valuable.name || valuable.kind);
     contents.push(...coinLines(pile.coins));

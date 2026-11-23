@@ -178,8 +178,8 @@ export function TreasureView({ treasure, actions = true }: { treasure: Treasure;
           </ul>
           {actions && (
             <p className={styles.secondaryLine}>
-              A given magic item is a new copy that rolls its own charges. Gems and jewellery can't be given
-              by a command, so describe them and let the party take them.
+              Giving a magic item creates a fresh copy with newly rolled charges. Gems and jewellery have no
+              grant command, so describe them in the room instead.
             </p>
           )}
         </div>
@@ -322,7 +322,7 @@ function MonstersGenerator({ data }: { data: RefereeData }) {
               <Button size="sm" variant="secondary" icon="skull" onClick={() => setSpawning(true)}>
                 Spawn these
               </Button>
-              <span className={styles.secondary}>Spawned monsters roll their own hit points.</span>
+              <span className={styles.secondary}>Spawning rolls fresh hit points for each monster.</span>
             </div>
           )}
         </div>
@@ -332,10 +332,10 @@ function MonstersGenerator({ data }: { data: RefereeData }) {
 }
 
 const ROOM_CONTENTS: Record<string, string> = {
-  empty: 'An empty room',
+  empty: 'Empty room',
   monster: 'Monsters',
-  special: 'Something special',
-  trap: 'A trap',
+  special: 'Special feature',
+  trap: 'Trap',
 };
 
 function RoomGenerator({ data }: { data: RefereeData }) {
@@ -390,12 +390,12 @@ function RoomGenerator({ data }: { data: RefereeData }) {
           )}
           {room.contents === 'special' && (
             <p className={styles.secondaryLine}>
-              Invent a feature: a statue, a pool, a strange sound, a riddle.
+              Describe a special feature, such as a statue, pool, eerie sound, or riddle.
             </p>
           )}
           {room.contents === 'trap' && (
             <p className={styles.secondaryLine}>
-              Invent a trap and decide what finds it and what sets it off.
+              Describe a trap, how the party can spot it, and what triggers it.
             </p>
           )}
           {room.treasure_present && !room.encounter && (
@@ -510,7 +510,7 @@ function NpcPartyGenerator() {
             </Button>
           </div>
           <p className={styles.secondaryLine}>
-            The game rolls a new party of the same kind and size, 60 feet away. Only while exploring.
+            Spawns a new party of this type and size 60 feet away while exploring.
           </p>
           <CommandOutcome outcome={outcome} onDismiss={clear} />
         </div>
@@ -560,8 +560,8 @@ export function Generators({ data }: { data: RefereeData }) {
         <NpcPartyGenerator />
       </div>
       <p className={styles.secondaryLine}>
-        These rolls stay out of the game and its log until you act on one. The game can repeat any roll from
-        its seed.
+        Generator rolls don't affect the game or appear in the feed until you spawn or grant them. Use the
+        seed to repeat a roll.
       </p>
     </div>
   );

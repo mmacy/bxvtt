@@ -48,8 +48,8 @@ export function Outfitter() {
     return (
       <EmptyState
         icon="user"
-        title="You have no character to shop for"
-        description="Ask the referee to give you a seat, and then you can buy for that character."
+        title="No character assigned"
+        description="Ask the referee to assign you a character seat before shopping."
       />
     );
   }
@@ -59,8 +59,8 @@ export function Outfitter() {
       <PlaceHeader
         icon="chest"
         dense
-        title={placeName('outfitter', view?.town_services ?? []) ?? 'The outfitter'}
-        lead="Weapons, armour, and gear. Each item waits in a cart until you buy, and each member has their own."
+        title={placeName('outfitter', view?.town_services ?? []) ?? 'Outfitter'}
+        lead="Buy weapons, armour, and adventuring gear for each character."
       />
       <div className={styles.buyers}>
         <span className={styles.buyersLabel}>Shopping for</span>
@@ -89,7 +89,7 @@ export function Outfitter() {
           icon="chest"
           onClick={() => asideRef.current?.scrollIntoView({ block: 'start' })}
         >
-          {`Go to the cart (${cartCount(cart)})`}
+          {`View cart (${cartCount(cart)})`}
         </Button>
       </div>
       <div className={styles.grid}>
@@ -106,7 +106,7 @@ export function Outfitter() {
           onSelect={setSelectedId}
           disabled={false}
         />
-        <aside ref={asideRef} className={styles.aside} aria-label="Item, cart, and results">
+        <aside ref={asideRef} className={styles.aside} aria-label="Cart and item details">
           {reports.map((report) => (
             <PurchaseCard key={report.id} report={report} onDismiss={() => dismiss(report.memberId)} />
           ))}
@@ -120,7 +120,7 @@ export function Outfitter() {
                 onDismiss={() => clearProblem(problem.memberId)}
                 dismissLabel="Dismiss"
               >
-                {`${problem.message} Their cart is still waiting.`}
+                {`${problem.message} Items remain in ${problem.memberName}'s cart.`}
               </Banner>
             ))}
           <Panel title="Cart" meta={`For ${buyer.name}`}>
@@ -164,13 +164,13 @@ export function Outfitter() {
           </Panel>
           <ChecklistPanel onShop={setSearch} />
           <Panel
-            title={`${buyer.name} carries`}
-            meta={count(carrying.length, 'kind')}
+            title={`${buyer.name}'s pack`}
+            meta={count(carrying.length, 'item')}
             collapsible
             defaultOpen={false}
           >
             {carrying.length === 0 ? (
-              <p className={styles.nothing}>Nothing yet.</p>
+              <p className={styles.nothing}>No gear carried.</p>
             ) : (
               <ul className={styles.carrying}>
                 {carrying.map((item) => (
@@ -178,7 +178,7 @@ export function Outfitter() {
                     <span>{item.quantity > 1 ? `${item.quantity} × ${item.name}` : item.name}</span>
                     {item.equipped && (
                       <Badge tone="success" icon="check">
-                        In use
+                        Equipped
                       </Badge>
                     )}
                   </li>
@@ -187,7 +187,7 @@ export function Outfitter() {
             )}
           </Panel>
           <p className={styles.tip}>
-            <Icon name="info" size={14} /> Press <kbd>O</kbd> any time in town to come back to the outfitter.
+            <Icon name="info" size={14} /> Press <kbd>O</kbd> anywhere in town to open the outfitter.
           </p>
         </aside>
       </div>

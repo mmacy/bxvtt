@@ -44,7 +44,7 @@ export const COMMAND_INFO: Record<string, CommandInfo> = {
     'Move the party',
     'Move',
     'move the party',
-    'Step the party one cell in a direction. The party turns to face that way.',
+    'Move the party one square in the chosen direction and face that way.',
   ),
   turn_party: play(
     'Turn the party',
@@ -56,110 +56,100 @@ export const COMMAND_INFO: Record<string, CommandInfo> = {
     'Set the marching order',
     'Reorder',
     'change the marching order',
-    'Choose the order the party walks in, front rank first.',
+    "Set the party's marching order, front rank first.",
   ),
-  open_door: play(
-    'Open a door',
-    'Open',
-    'open a door',
-    "Open an unstuck, unlocked door on one side of the party's cell.",
-  ),
-  close_door: play(
-    'Close a door',
-    'Close',
-    'close a door',
-    "Close an open door on one side of the party's cell.",
-  ),
+  open_door: play('Open a door', 'Open', 'open a door', 'Open an unlocked, unstuck door beside the party.'),
+  close_door: play('Close a door', 'Close', 'close a door', 'Close an open door beside the party.'),
   force_door: play(
     'Force a door',
     'Force',
     'force a door',
-    'Have one member try to force a stuck door open with a Strength roll.',
+    'Have a party member try to force open a stuck door.',
   ),
   wedge_door: play(
     'Wedge a door',
     'Wedge',
     'wedge a door',
-    "Drive an iron spike under a door so that it can't swing shut or be closed.",
+    'Drive an iron spike under a door to hold it open or shut.',
   ),
   listen_at_door: play(
     'Listen at a door',
     'Listen',
     'listen at a door',
-    'Have one member listen at a door for noise from the area beyond it.',
+    'Have a party member listen at a door for sounds beyond it.',
   ),
   pick_lock: play(
     'Pick a lock',
     'Pick lock',
     'pick a lock',
-    'Have a thief pick the lock of a locked door. This takes one turn.',
+    'Have a thief try to pick a locked door. This takes one turn.',
   ),
   search: play(
     'Search',
     'Search',
     'search',
-    "Search the party's cell for secret doors, room traps, or construction tricks. This takes one turn.",
+    'Search the current area for secret doors, room traps, or construction tricks. This takes one turn.',
   ),
   inspect_treasure: play(
     'Check treasure for traps',
     'Inspect',
     'check a treasure cache for traps',
-    'Have a thief check a treasure cache for a trap. This takes one turn.',
+    'Have a thief check a treasure cache for traps. This takes one turn.',
   ),
   remove_treasure_trap: play(
     'Disarm a treasure trap',
     'Disarm',
     'disarm a treasure trap',
-    'Have a thief disarm a trap that the party has already found on a cache. This takes one turn.',
+    'Have a thief disarm a known trap on a treasure cache. This takes one turn.',
   ),
   take_treasure: play(
     'Take treasure',
     'Take',
     'take treasure',
-    "Empty a treasure cache or a pile of dropped goods into the party's packs. This takes one turn.",
+    'Collect coins and items from a treasure cache or dropped pile. This takes one turn.',
   ),
   drop_items: play(
     'Drop items',
     'Drop',
     'drop items',
-    "Drop items and coins from one member onto the party's cell, or behind a fleeing party.",
+    'Drop items or coins on the floor, or scatter them behind a fleeing party.',
   ),
   give_items: play(
     'Give items',
     'Give',
     'give items',
-    'Hand items and coins from one party member to another.',
+    'Pass items or coins from one party member to another.',
   ),
   light_source: play(
     'Light a torch or lantern',
     'Light',
     'light a torch or lantern',
-    'Light a torch or a lantern, or set fire to a flask of oil. This takes one round.',
+    'Light a torch, lantern, or flask of oil. This takes one round.',
   ),
   extinguish_source: play(
     'Put out a light',
     'Put out',
     'put out a light',
-    'Put out every torch and lantern that one member has burning.',
+    "Extinguish a party member's burning torches and lanterns.",
   ),
   equip_item: play(
     'Equip an item',
     'Equip',
     'equip an item',
-    "Wear armour or a ring, or wield a weapon, from a member's pack.",
+    "Equip armour, a shield, a weapon, or a ring from a party member's pack.",
   ),
   unequip_item: play(
     'Unequip an item',
     'Unequip',
     'take off an item',
-    "Take off or put away an equipped item, returning it to the member's pack.",
+    'Unequip a worn or wielded item and return it to the pack.',
   ),
   rest: play('Rest', 'Rest', 'rest', 'Rest the party for one turn, a night, or a full day.'),
   prepare_spells: play(
     'Prepare spells',
     'Prepare',
     'prepare spells',
-    'Choose the spells that a caster memorizes, replacing the ones they had. This takes six turns.',
+    'Choose which spells a caster memorizes, replacing their current memorized spells. This takes six turns.',
   ),
   learn_spell: play(
     'Learn a spell',
@@ -183,7 +173,7 @@ export const COMMAND_INFO: Record<string, CommandInfo> = {
     'Use the stairs',
     'Take stairs',
     'use the stairs',
-    "Take the stairs, trapdoor, chute, or other way between levels on the party's cell.",
+    'Take the stairs, trapdoor, chute, or passage here to another level.',
   ),
   enter_dungeon: play(
     'Enter the dungeon',
@@ -197,7 +187,12 @@ export const COMMAND_INFO: Record<string, CommandInfo> = {
     'return to town',
     "Travel from the dungeon's entrance back to town.",
   ),
-  purchase_equipment: play('Buy equipment', 'Buy', 'buy equipment', 'Buy equipment in town for one member.'),
+  purchase_equipment: play(
+    'Buy equipment',
+    'Buy',
+    'buy equipment',
+    'Buy weapons, armour, and gear in town for a party member.',
+  ),
   sell_treasure: play(
     'Sell treasure',
     'Sell',
@@ -208,22 +203,22 @@ export const COMMAND_INFO: Record<string, CommandInfo> = {
     'Buy temple healing',
     'Buy healing',
     'buy healing',
-    'Pay the temple to cast a healing service on one member.',
+    'Pay the temple to heal or cure a party member.',
   ),
   parley: play(
     'Talk to the monsters',
     'Parley',
     'talk to the monsters',
-    "Talk to the monsters and roll their reaction again, using the speaker's Charisma.",
+    "Speak with the monsters to test their reaction using the speaker's Charisma.",
   ),
   evade: play('Run away', 'Run', 'run from the monsters', 'Run from the encounter before a battle starts.'),
   engage_battle: play(
     'Start a battle',
     'Fight',
     'start a battle',
-    'Attack the monsters that the party has met.',
+    'Enter combat against the monsters in the encounter.',
   ),
-  wait: play('Wait', 'Wait', 'wait', 'Hold for one round and let the monsters act on their bearing.'),
+  wait: play('Wait', 'Wait', 'wait', 'Wait one round and see how the monsters act.'),
   turn_undead: play(
     'Turn undead',
     'Turn undead',
@@ -234,43 +229,43 @@ export const COMMAND_INFO: Record<string, CommandInfo> = {
     'Resolve the round',
     'Resolve',
     'resolve a battle round',
-    'Resolve one battle round, with a declaration for each member who can act.',
+    "Resolve the current battle round using each party member's declared action.",
   ),
   grant_item: referee(
     'Grant an item',
     'Grant item',
     'grant an item',
-    "Put an item straight into a member's pack.",
+    "Add an item directly to a party member's pack.",
   ),
   grant_coins: referee(
     'Grant coins',
     'Grant coins',
     'grant coins',
-    "Put coins straight into a member's purse.",
+    "Add coins directly to a party member's purse.",
   ),
   award_xp: referee(
     'Award experience',
     'Award XP',
     'award experience',
-    'Give one character experience points, apart from what the game awards.',
+    'Award bonus experience points to a party member.',
   ),
   set_flag: referee(
     'Set a flag',
     'Set flag',
     'set a flag',
-    'Set a game flag, such as one that records a lever pulled to open a portcullis.',
+    'Set an adventure flag, such as recording that a lever was pulled.',
   ),
   spawn_monsters: referee(
     'Spawn monsters',
     'Spawn',
     'spawn monsters',
-    'Create monsters at a distance from the party, in a new encounter or in the one under way.',
+    'Spawn monsters at a chosen distance to start or join an encounter.',
   ),
   spawn_npc_party: referee(
     'Spawn an NPC party',
     'Spawn party',
     'spawn an NPC party',
-    'Generate a party of NPC adventurers and open an encounter with them.',
+    'Generate a party of NPC adventurers and start an encounter with them.',
   ),
   set_door_state: referee(
     'Change a door',
@@ -282,21 +277,16 @@ export const COMMAND_INFO: Record<string, CommandInfo> = {
     'Place the party',
     'Place party',
     'place the party',
-    'Move the party straight to a dungeon cell or to town.',
+    'Move the party directly to a dungeon square or to town.',
   ),
   advance_time: referee('Advance time', 'Advance', 'advance time', 'Move the game clock forward.'),
   identify_item: referee(
     'Identify an item',
     'Identify',
     'identify an item',
-    'Identify a magic item without the party having to use it.',
+    "Reveal a magic item's true name and properties.",
   ),
-  roll_dice: referee(
-    'Roll dice',
-    'Roll',
-    'roll dice',
-    'Roll dice through the game, so that the roll is logged and can be replayed.',
-  ),
+  roll_dice: referee('Roll dice', 'Roll', 'roll dice', 'Roll dice in the session log.'),
   mark_trigger_fired: referee(
     'Mark a trigger fired',
     'Mark fired',
@@ -313,13 +303,13 @@ export const COMMAND_INFO: Record<string, CommandInfo> = {
     'Record a note',
     'Record',
     'record a note',
-    'Write a note in the log. It has no effect on the game.',
+    'Record a private referee note in the session log.',
   ),
   activate_quest: referee(
     'Activate a quest',
     'Activate',
     'activate a quest',
-    "Put one of the adventure's quests into play.",
+    "Start one of the adventure's quests.",
   ),
   reveal_objective: referee(
     'Reveal an objective',
@@ -331,26 +321,31 @@ export const COMMAND_INFO: Record<string, CommandInfo> = {
     'Complete an objective',
     'Complete',
     'complete an objective',
-    'Mark one objective of an active quest as done.',
+    'Mark an objective of an active quest complete.',
   ),
   complete_quest: referee(
     'Complete a quest',
     'Complete quest',
     'complete a quest',
-    'Complete an active quest, and the adventure when that quest concludes it.',
+    'Mark an active quest complete. If it concludes the adventure, the party wins.',
   ),
   end_encounter: referee(
     'End the encounter',
     'End',
     'end the encounter',
-    'Close the encounter when the party talks its way past the monsters or walks away.',
+    'End the encounter peacefully after parley or when the party departs.',
   ),
-  remove_item: referee('Remove an item', 'Remove item', 'remove an item', 'Take an item away from a member.'),
+  remove_item: referee(
+    'Remove an item',
+    'Remove item',
+    'remove an item',
+    "Remove an item from a party member's inventory.",
+  ),
   remove_coins: referee(
     'Remove coins',
     'Remove coins',
     'remove coins',
-    "Take coins out of a member's purse.",
+    "Remove coins from a party member's purse.",
   ),
   add_member: referee(
     'Add a party member',
@@ -362,7 +357,7 @@ export const COMMAND_INFO: Record<string, CommandInfo> = {
     'Remove a party member',
     'Remove member',
     'remove a party member',
-    'Take a member out of the party for good.',
+    'Remove a character from the party permanently.',
   ),
 };
 
@@ -402,11 +397,14 @@ function field(label: string, help: string): FieldText {
 export const DEFAULT_FIELD_TEXT: Record<string, FieldText> = {
   direction: field('Direction', "Which side of the party's cell to use."),
   facing: field('Facing', 'The direction the party ends up facing.'),
-  order: field('Marching order', 'Every party member exactly once, front rank first. Include the dead.'),
-  character_id: field('Character', 'The party member who does this.'),
+  order: field(
+    'Marching order',
+    'List every party member once from front rank to back, including fallen members.',
+  ),
+  character_id: field('Character', 'The party member who performs this action.'),
   recipient_id: field('Recipient', 'The party member who receives the goods.'),
-  feature_id: field('Treasure', 'Which cache to use, or `pile` for goods that were dropped here.'),
-  item_id: field('Item', 'The item to use. Magic items are named by the ID the party sees in a pack.'),
+  feature_id: field('Treasure', 'Which treasure cache to use, or dropped goods on this square.'),
+  item_id: field('Item', 'Choose which item to use.'),
   item_ids: field('Items', 'The items to use. Repeat an item once for each unit.'),
   coins: field('Coins', 'How many coins of each kind.'),
   kind: field('Kind', 'Which kind to use.'),
@@ -416,10 +414,7 @@ export const DEFAULT_FIELD_TEXT: Record<string, FieldText> = {
   ),
   selections: field('Spells', 'The spells to memorize. They replace what the caster had memorized.'),
   spell_id: field('Spell', 'Which spell to use.'),
-  mode: field(
-    'Spell mode',
-    "Which of the spell's uses to cast. A spell with several uses, such as harm or heal, has one mode for each.",
-  ),
+  mode: field('Spell mode', 'Choose how to cast a spell that has multiple effects.'),
   reversed: field(
     'Reversed form',
     'Cast the reversed form of the spell, such as cause light wounds for cure light wounds.',
@@ -454,43 +449,34 @@ export const DEFAULT_FIELD_TEXT: Record<string, FieldText> = {
   narrative: field('Text for the log', 'What the referee wants to record about this. Players do not see it.'),
   trigger_id: field('Trigger', 'Which adventure trigger fired.'),
   location: field('Location', 'Where the party ends up.'),
-  character: field('Character', 'The character who joins the party. It needs no ID yet.'),
+  character: field('Character', 'The character joining the party.'),
   give_to: field(
     'Give belongings to',
-    'The member who takes everything the leaving member carries. Leave it empty to let it all leave the game.',
+    'Choose a party member to receive their gear and coins, or leave blank to discard them.',
   ),
   source: field('Source', 'A note about who or what issued the command.'),
-  open: field('Open', 'Whether the door stands open. Leave it unchanged to keep the current state.'),
+  open: field('Open', 'Whether the door is open. Leave unchanged to keep the current state.'),
   wedged: field(
     'Wedged',
-    'Whether an iron spike holds the door. Leave it unchanged to keep the current state.',
+    'Whether the door is wedged with an iron spike. Leave unchanged to keep the current state.',
   ),
   discovered: field(
     'Found',
-    'Whether the party has found the door. Leave it unchanged to keep the current state.',
+    'Whether the party has discovered a secret door. Leave unchanged to keep the current state.',
   ),
-  unlocked: field(
-    'Unlocked',
-    'Whether the lock has been undone. Leave it unchanged to keep the current state.',
-  ),
+  unlocked: field('Unlocked', 'Whether the door is unlocked. Leave unchanged to keep the current state.'),
   outcome: field('Outcome', 'How the encounter ended.'),
   resolve_area: field(
     'Mark the area resolved',
     "Mark the encounter's area as resolved, so its monsters don't appear when the party walks in again.",
   ),
-  drop: field(
-    'Drop behind the party',
-    'What to scatter behind the party as it runs, to tempt the monsters to stop.',
-  ),
+  drop: field('Drop behind the party', 'Drop food or treasure while fleeing to distract pursuing monsters.'),
   service: field('Service', 'Which temple service to buy.'),
   caster_level: field(
     'Temple cleric level',
-    'The level of the cleric who casts the service. Leave it empty for the lowest level that can cast it.',
+    'Cleric level for the temple spell. Leave blank to use the minimum level required.',
   ),
-  declarations: field(
-    'Declarations',
-    'One declaration for each member who can act this round, and none for anyone else.',
-  ),
+  declarations: field('Declarations', 'One action declaration for each party member who can act this round.'),
 };
 
 /** Field text that differs from the default for one command. */
@@ -555,20 +541,23 @@ export const COMMAND_FIELD_TEXT: Record<string, Record<string, FieldText>> = {
     feature_id: field('Cache', 'The trapped cache to disarm. The party has to find the trap first.'),
   },
   take_treasure: {
-    feature_id: field('Cache or pile', 'The cache to empty, or `pile` for goods dropped on this cell.'),
+    feature_id: field(
+      'Cache or pile',
+      'The treasure cache to empty, or the pile of goods dropped on this square.',
+    ),
     recipient_id: field(
       'Who takes it',
       'One member to take everything, up to what they can carry. Leave it empty to share it among the living members.',
     ),
   },
   drop_items: {
-    character_id: field('Who drops it', 'The member whose pack and purse the goods leave.'),
+    character_id: field('Who drops it', 'The party member dropping the items or coins.'),
     item_ids: field('Items', 'What to drop, one unit per entry. Repeat an item to drop more than one.'),
     coins: field('Coins', 'Coins to drop with the items.'),
   },
   give_items: {
     character_id: field('From', 'The member handing the goods over.'),
-    recipient_id: field('To', 'The member taking them. Both have to be alive and able to act.'),
+    recipient_id: field('To', 'The party member receiving the items. Both members must be able to act.'),
     item_ids: field('Items', 'What changes hands, one unit per entry.'),
     coins: field('Coins', 'Coins to hand over.'),
   },
@@ -581,34 +570,28 @@ export const COMMAND_FIELD_TEXT: Record<string, Record<string, FieldText>> = {
   },
   extinguish_source: { character_id: field('Whose light', 'The member whose torches and lanterns go out.') },
   equip_item: {
-    character_id: field(
-      'Who equips it',
-      'The member doing the equipping. Their class limits what they can wear and wield.',
-    ),
-    item_id: field('Item', "What to equip. It has to be in this member's pack."),
+    character_id: field('Who equips it', 'The party member equipping the item. Class restrictions apply.'),
+    item_id: field('Item', "What to equip. It must be in this member's pack."),
   },
   unequip_item: {
-    character_id: field('Who takes it off', 'The member doing the unequipping.'),
-    item_id: field('Item', 'What to take off or put away. It has to be equipped now.'),
+    character_id: field('Who takes it off', 'The party member unequipping the item.'),
+    item_id: field('Item', 'Choose which equipped item to return to the pack.'),
   },
   rest: {
     kind: field(
       'How long',
-      'One turn, a night, or a full day. A night is what casters need before they prepare spells.',
+      'One turn, a night, or a full day. Casters need a night of rest before preparing spells.',
     ),
   },
   prepare_spells: {
-    character_id: field(
-      'Caster',
-      'The caster who prepares spells. The party has to have slept since the caster last prepared.',
-    ),
+    character_id: field('Caster', "The caster preparing spells after a night's rest."),
     selections: field(
       'Spells to memorize',
       'The spells to memorize. They replace what the caster had memorized.',
     ),
   },
   learn_spell: {
-    character_id: field('Caster', 'The arcane caster whose spell book gets the spell.'),
+    character_id: field('Caster', 'The arcane caster adding the spell to their spell book.'),
     spell_id: field('Spell', 'The spell to write into the book.'),
   },
   cast_spell: {
@@ -646,7 +629,7 @@ export const COMMAND_FIELD_TEXT: Record<string, Record<string, FieldText>> = {
   purchase_healing: {
     character_id: field(
       'Who is treated',
-      'The member to treat. Their purse pays first and the party covers the rest. They can be dead.',
+      'The party member receiving treatment, including a fallen member. Their gold pays first, and the party covers the rest.',
     ),
     service: field('Service', 'Which temple service to buy.'),
   },
@@ -659,14 +642,14 @@ export const COMMAND_FIELD_TEXT: Record<string, Record<string, FieldText>> = {
   evade: {
     drop: field(
       'Drop behind the party',
-      'Treasure tempts intelligent monsters and food tempts animals. Dropped coins are lost.',
+      'Treasure tempts intelligent monsters, while food tempts animals. Dropped coins are lost.',
     ),
   },
   turn_undead: { character_id: field('Who presents the symbol', 'Usually a cleric.') },
   resolve_battle_round: {
     declarations: field(
       'Declarations',
-      'One declaration for each member who can act this round, and none for anyone else.',
+      'One action declaration for each party member who can act this round.',
     ),
   },
   grant_item: {
@@ -683,7 +666,7 @@ export const COMMAND_FIELD_TEXT: Record<string, Record<string, FieldText>> = {
     amount: field('Experience points', "The award before the class's adjustment for its prime requisite."),
   },
   set_flag: {
-    key: field('Flag name', 'Any name you choose. Adventure triggers and gates read it.'),
+    key: field('Flag name', 'Any name you choose. Adventure triggers and gates can depend on this flag.'),
     value: field('Value', 'A word, a number, or true or false.'),
   },
   spawn_monsters: {
@@ -701,7 +684,7 @@ export const COMMAND_FIELD_TEXT: Record<string, Record<string, FieldText>> = {
   spawn_npc_party: {
     party_kind: field(
       'Party kind',
-      'Basic parties are low-level adventurers and expert parties are higher-level.',
+      'Basic parties are low-level adventurers, while expert parties are higher-level.',
     ),
     count_dice: field(
       'Number (dice)',
@@ -734,7 +717,7 @@ export const COMMAND_FIELD_TEXT: Record<string, Record<string, FieldText>> = {
   },
   roll_dice: { expression: field('Dice', 'The roll in dice notation, such as 1d20, 3d6+2, or 2d6+1x10.') },
   mark_trigger_fired: {
-    trigger_id: field('Trigger', 'The ID of the trigger that fired.'),
+    trigger_id: field('Trigger', 'Which adventure trigger fired.'),
     narrative: field('Note', 'What to record about this firing. Players do not see it.'),
   },
   add_journal_entry: { text: field('Entry', 'The line to add, as the players will read it.') },
@@ -774,7 +757,7 @@ export const COMMAND_FIELD_TEXT: Record<string, Record<string, FieldText>> = {
   add_member: {
     character: field(
       'Character',
-      'The character who joins. It needs no ID yet, no conditions, and no identified magic items.',
+      'The character joining the party, with no active conditions or session items.',
     ),
   },
   remove_member: {
@@ -784,7 +767,7 @@ export const COMMAND_FIELD_TEXT: Record<string, Record<string, FieldText>> = {
     ),
     give_to: field(
       'Give belongings to',
-      'The member who takes everything the leaving member carries. Leave it empty to let it all leave the game.',
+      'Choose a party member to receive their gear and coins, or leave blank to discard them.',
     ),
   },
 };
@@ -794,7 +777,7 @@ export const DECLARATION_FIELD_TEXT: Record<string, FieldText> = {
   character_id: field('Member', 'Whose declaration this is.'),
   action: field('Action', 'What this member does this round.'),
   target_group_id: field('Target group', 'Which monster group the action is aimed at.'),
-  weapon_id: field('Weapon', 'Which wielded weapon to attack with. Leave it empty to let the game choose.'),
+  weapon_id: field('Weapon', 'Choose which wielded weapon to use, or leave blank for your primary weapon.'),
   spell_id: field('Spell', 'Which spell to cast.'),
   spell_mode: field('Spell mode', "Which of the spell's uses to cast."),
   reversed: field('Reversed form', 'Cast the reversed form of the spell.'),
@@ -810,7 +793,7 @@ export const DECLARATION_FIELD_TEXT: Record<string, FieldText> = {
   item_id: field('Item', 'The magic item to use, or the splash weapon to throw.'),
   gaze_defense: field(
     'Guard against a gaze',
-    'Avert eyes or fight by a mirror. Either one costs a penalty to attack.',
+    "Avert your eyes or use a mirror to avoid a monster's gaze, with an attack penalty.",
   ),
   back_stab: field(
     'Back-stab',
@@ -870,7 +853,7 @@ export function hasCommandFieldText(command: string, fieldName: string): boolean
 
 const PARTY_KINDS: Record<string, string> = { basic: 'Basic (low level)', expert: 'Expert (higher level)' };
 const DROP_OPTIONS: Record<string, string> = { none: 'Nothing', treasure: 'Treasure', food: 'Food' };
-const GAZE_OPTIONS: Record<string, string> = { avert_eyes: 'Avert eyes', mirror: 'Fight by a mirror' };
+const GAZE_OPTIONS: Record<string, string> = { avert_eyes: 'Avert eyes', mirror: 'Use a mirror' };
 const ON_SAVE: Record<string, string> = { negates: 'Negates the effect', half: 'Halves the effect' };
 
 /** Label for one allowed value of an enumerated field, such as `night` for the `kind` of `rest`. */

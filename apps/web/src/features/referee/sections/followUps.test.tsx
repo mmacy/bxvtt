@@ -61,16 +61,12 @@ describe('after the game ends', () => {
     const { user } = renderWithTable(<RefereePanel />, { snapshot, api });
     expect(await screen.findByText('The party has fallen, so the game is over.')).toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: 'Quests, flags, and triggers' }));
-    await user.click(
-      (await screen.findAllByRole('button', { name: 'Complete the quest' }))[0] as HTMLElement,
-    );
+    await user.click((await screen.findAllByRole('button', { name: 'Complete quest' }))[0] as HTMLElement);
     expect(await screen.findByRole('alertdialog', { name: 'The game is over' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
     expect(api.sendCommand).not.toHaveBeenCalled();
-    await user.click(
-      (await screen.findAllByRole('button', { name: 'Complete the quest' }))[0] as HTMLElement,
-    );
-    await user.click(await screen.findByRole('button', { name: 'Send it anyway' }));
+    await user.click((await screen.findAllByRole('button', { name: 'Complete quest' }))[0] as HTMLElement);
+    await user.click(await screen.findByRole('button', { name: 'Run anyway' }));
     await waitFor(() => expect(api.sendCommand).toHaveBeenCalledTimes(1));
   });
 });

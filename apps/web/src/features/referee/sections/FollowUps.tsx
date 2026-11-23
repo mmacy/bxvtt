@@ -111,7 +111,7 @@ export function SpawnKeyedButton({
       </Button>
       <span className={styles.secondary}>
         {legal === null
-          ? 'Monsters can be spawned only in the dungeon, outside a battle.'
+          ? 'You can spawn monsters only in a dungeon outside battle.'
           : `${SPAWN_FEET} feet away. Ending their encounter won't mark the area resolved.`}
       </span>
       <CommandOutcome outcome={outcome} onDismiss={clear} />
@@ -136,9 +136,9 @@ export function RunTriggerButton({ trigger, data }: { trigger: TriggerSpec; data
           void runAll(triggerCommands(trigger, party, data.state?.party.members ?? [], data.ctx))
         }
       >
-        Run the trigger
+        Fire trigger
       </Button>
-      <span className={styles.secondary}>Sends what it does and records that it fired.</span>
+      <span className={styles.secondary}>Applies the trigger consequences and marks it fired.</span>
       <CommandOutcome outcome={outcome} onDismiss={clear} />
     </div>
   );
@@ -233,12 +233,12 @@ export function ArrivalFollowUps({
   const hasMonsters = encounter !== null && encounter !== undefined && !resolved;
   const nothing = !hasMonsters && triggers.length === 0 && steps.length === 0;
   return (
-    <div className={styles.arrival} role="group" aria-label="What walking in would do">
+    <div className={styles.arrival} role="group" aria-label="Arrival actions">
       <p className={styles.prose}>
         The party is in {areaInSentence(area.name)}.{' '}
         {nothing
-          ? 'Walking in would start nothing more here.'
-          : 'Placing the party skips what walking in does, so start any of it yourself:'}
+          ? 'Entering normally triggers nothing else here.'
+          : 'Placing the party skips room-entry effects. Run any you want now:'}
       </p>
       {hasMonsters && encounter && <SpawnKeyedButton encounter={encounter} adventure={adventure} />}
       {triggers.map((t) => (

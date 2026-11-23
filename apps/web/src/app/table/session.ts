@@ -49,22 +49,22 @@ function subscribeSessions(listener: () => void): () => void {
 const NOTICE_TEXT: Record<string, { title: string; description: string; tone: 'info' | 'success' }> = {
   table_changed: {
     title: 'The table changed',
-    description: 'Someone acted before you did. Look at the new state and choose again.',
+    description: 'Someone acted just before you. Check the updated table and try again.',
     tone: 'info',
   },
   game_restored: {
-    title: 'A save was restored',
-    description: 'The referee loaded a saved game. The table shows it now.',
+    title: 'Saved game restored',
+    description: 'The referee restored a saved game.',
     tone: 'info',
   },
   game_started: {
-    title: 'The game has started',
-    description: 'The referee started the game. Everyone is at the table now.',
+    title: 'Game started',
+    description: 'The referee started the game.',
     tone: 'success',
   },
   game_ended: {
-    title: 'The game has ended',
-    description: 'The table is back in its lobby. The saves are kept.',
+    title: 'Returned to lobby',
+    description: 'The referee ended the game. All saves are still available.',
     tone: 'info',
   },
 };

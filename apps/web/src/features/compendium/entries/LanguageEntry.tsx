@@ -39,9 +39,9 @@ export function LanguageEntry({ id }: { id: string }) {
         <dl className={styles.statGrid}>
           <Stat label="Spoken by classes" span="full">
             {classes.data === null ? (
-              'Loading'
+              'Loading…'
             ) : speakers.length === 0 ? (
-              'No class speaks it from the start'
+              'None at 1st level'
             ) : (
               <Inline
                 items={speakers.map((definition) => (

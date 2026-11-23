@@ -52,12 +52,12 @@ export async function stagedTable(
   await sam.client.updateMe({ color: USER_COLORS[1] });
   const party: MemberSpec[] =
     stage === 'game_over'
-      ? [{ owner: sam, name: 'Brenna', classId: 'fighter', seed: 106 }]
+      ? [{ owner: sam, name: 'Flarg', classId: 'fighter', seed: 106 }]
       : [
-          { owner: sam, name: 'Brenna', classId: 'fighter' },
-          { owner: sam, name: 'Wren', classId: 'thief' },
-          { owner: ruth, name: 'Osric', classId: 'cleric' },
-          { owner: ruth, name: 'Tamsin', classId: 'magic_user' },
+          { owner: sam, name: 'Flarg', classId: 'fighter' },
+          { owner: sam, name: 'Tinks', classId: 'thief' },
+          { owner: ruth, name: 'Clarence', classId: 'cleric' },
+          { owner: ruth, name: 'Mazpar', classId: 'magic_user' },
         ];
   const setup = await setupTable({
     name: 'The bell tolls',

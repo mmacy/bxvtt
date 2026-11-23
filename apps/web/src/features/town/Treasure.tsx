@@ -63,7 +63,7 @@ export function Treasure() {
         only: 'player',
       }).map((line) => line.text);
       setPicked(new Set());
-      setOutcome({ tone: 'success', lines: lines.length > 0 ? lines : ['The treasure is sold.'] });
+      setOutcome({ tone: 'success', lines: lines.length > 0 ? lines : ['Treasure sold.'] });
     } else if (result.status === 'refused' || result.status === 'error' || result.status === 'skipped') {
       setOutcome({ tone: 'warning', lines: [result.message] });
     }
@@ -73,8 +73,8 @@ export function Treasure() {
     <div className={styles.treasure}>
       <PlaceHeader
         icon="gem"
-        title={who ?? 'The treasure buyers'}
-        lead="Gems and jewellery sell for their full value, and each piece pays the member who carries it."
+        title={who ?? 'Treasure buyers'}
+        lead="Sell gems and jewellery for their full gold value. Each character receives the gold for the items they carry."
       />
 
       {!access.allowed && <Banner tone="info">{access.explanation}</Banner>}
@@ -82,7 +82,7 @@ export function Treasure() {
       {outcome !== null && (
         <Banner
           tone={outcome.tone}
-          title={outcome.tone === 'success' ? 'Sold' : "The buyers can't take that"}
+          title={outcome.tone === 'success' ? 'Treasure sold' : "Couldn't sell treasure"}
           onDismiss={() => setOutcome(null)}
           dismissLabel="Dismiss"
         >
@@ -97,8 +97,8 @@ export function Treasure() {
       {holders.length === 0 ? (
         <EmptyState
           icon="gem"
-          title="Nobody carries gems or jewellery"
-          description="Treasure the party brings back from the dungeon shows here, ready to sell."
+          title="No gems or jewellery to sell"
+          description="Valuables you bring back from the dungeon appear here."
         />
       ) : (
         <div className={styles.layout}>
@@ -157,13 +157,13 @@ export function Treasure() {
           </div>
 
           <aside className={styles.summary} aria-label="Sale">
-            <Panel title="The sale">
+            <Panel title="Sale summary">
               <div className={styles.totals}>
                 <div className={styles.total}>
                   <span>Selected</span>
                   <span className={styles.big}>
                     {chosen.length === 0
-                      ? 'Nothing yet'
+                      ? 'None selected'
                       : `${chosen.length} for ${formatGold(totalValue(chosen))}`}
                   </span>
                 </div>
@@ -192,7 +192,7 @@ export function Treasure() {
                 </Button>
               </div>
             </Panel>
-            <Panel title="Purses now">
+            <Panel title="Party purses">
               <ul className={styles.purses}>
                 {party.map((member) => (
                   <li key={member.id} className={styles.purseLine}>

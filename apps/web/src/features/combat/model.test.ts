@@ -70,7 +70,7 @@ describe('planAttack', () => {
     if (!group) throw new Error('No group.');
     const plan = planAttack(brenna, encounter, group, memberGear(brenna, emptyContext()));
     expect(plan.kind).toBe('out_of_reach');
-    expect(plan.reason).toBe('Out of reach: 40 feet away, and Brenna moves 20 feet a round.');
+    expect(plan.reason).toBe('Out of reach: 40 feet away, while Brenna moves 20 feet per round.');
   });
 
   it('attacks where the member stands when they are in the group’s front rank', () => {

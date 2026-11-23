@@ -82,7 +82,7 @@ export function MemberPicker({
       invalid={invalid}
       options={options}
       value={value ?? (noneLabel ? NONE : undefined)}
-      placeholder="Choose a member"
+      placeholder="Choose a party member"
       onValueChange={(next) => onChange(next === NONE ? null : next)}
     />
   );
@@ -109,7 +109,7 @@ export function useItemOptions(adventure: Adventure | null): { options: Combobox
       out.push({
         value: item.id,
         label: capital(item.name),
-        description: `Magic item, ${prettifyId(String(item.category))}`,
+        description: itemTypeLabel(String(item.category)),
         icon: 'spell',
         keywords: ['magic', String(item.category)],
       });
@@ -141,8 +141,8 @@ export function CatalogItemPicker({
       options={options}
       value={value ?? null}
       onChange={onChange}
-      placeholder={loading ? 'Loading the catalogs' : 'Search items'}
-      emptyText="No item has that name"
+      placeholder={loading ? 'Loading items…' : 'Search items'}
+      emptyText="No matching items"
     />
   );
 }
@@ -258,7 +258,7 @@ export function CarriedItemPicker({
       options={options}
       value={value ?? null}
       onChange={onChange}
-      placeholder={items.length === 0 ? emptyText : 'Search what they carry'}
+      placeholder={items.length === 0 ? emptyText : 'Search carried items'}
       emptyText={emptyText}
     />
   );
@@ -371,8 +371,8 @@ export function MonsterPicker({
       options={options}
       value={value ?? null}
       onChange={onChange}
-      placeholder={catalog.loading && !full ? 'Loading the monsters' : 'Search monsters'}
-      emptyText="No monster has that name"
+      placeholder={catalog.loading && !full ? 'Loading monsters…' : 'Search monsters'}
+      emptyText="No matching monsters"
     />
   );
 }
@@ -395,7 +395,7 @@ export function SpellPicker({
       (catalog.data ?? []).map((spell) => ({
         value: spell.id,
         label: spell.name,
-        description: `${capital(spell.spell_list)} level ${spell.level}`,
+        description: `${classLabel(spell.spell_list)} level ${spell.level}`,
       })),
     [catalog.data],
   );
@@ -474,7 +474,7 @@ export function ObjectivePicker({
     return {
       value: objective.id,
       label: objective.name,
-      description: state?.complete ? 'Complete' : state?.revealed ? 'Shown to the players' : 'Hidden',
+      description: state?.complete ? 'Complete' : state?.revealed ? 'Revealed' : 'Hidden',
     };
   });
   return (

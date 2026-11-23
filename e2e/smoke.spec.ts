@@ -7,7 +7,7 @@
  * gate and let the referee settle the toll, light a torch, fight the clerk and his bandit in the counting room and
  * pick up what they drop, climb the stairs from the counting room's door to the captain's loft, sleep the captain,
  * take her chest, then walk into the east gatehouse to raise the portcullis. The torch gives the party away in the
- * loft, and Mag Corrie kills Tamsin before anyone can act, on every run.
+ * loft, and Mag Corrie kills Mazpar before anyone can act, on every run.
  */
 import type { Locator, Page } from '@playwright/test';
 import { expect, test, type Actor } from './support/fixtures';
@@ -22,7 +22,7 @@ import {
 import { SCREENS_DIR } from './support/env';
 
 /** The seed for each character's ability roll, chosen so each class qualifies with useful scores. */
-const ROLLS = { Brenna: 56, Osric: 34, Tamsin: 27, Wren: 9 } as const;
+const ROLLS = { Flarg: 56, Clarence: 34, Mazpar: 27, Elfy: 9 } as const;
 const SESSION_SEED = 1981;
 
 interface WizardChoices {
@@ -47,7 +47,7 @@ async function createWithWizard(actor: Actor, choices: WizardChoices): Promise<v
   if (choices.spell) await wizard.getByRole('button', { name: choices.spell }).click();
   await wizard.getByRole('button', { name: 'Continue' }).click();
   await wizard.getByRole('button', { name: /^Fill with the .* kit$/ }).click();
-  await expect(wizard.getByText('The shop and your class accept this outfit.')).toBeVisible({
+  await expect(wizard.getByText('Your character can afford and use this equipment.')).toBeVisible({
     timeout: 20_000,
   });
   await wizard.getByRole('button', { name: 'Continue' }).click();
@@ -69,11 +69,11 @@ async function createWithWizard(actor: Actor, choices: WizardChoices): Promise<v
  * bar after the first read and on each step within an area, unless the player pinned it.
  */
 async function pinScene(page: Page): Promise<void> {
-  const scene = page.getByRole('region', { name: 'Where the party stands' });
-  const hide = scene.getByRole('button', { name: 'Hide the description' });
+  const scene = page.getByRole('region', { name: 'Current location' });
+  const hide = scene.getByRole('button', { name: 'Hide description' });
   // An open card that the player didn't open by hand folds by itself, so fold it first and open it again.
   if (await hide.isVisible()) await hide.click();
-  await scene.getByRole('button', { name: 'Show the description' }).click();
+  await scene.getByRole('button', { name: 'Show description' }).click();
   await expect(hide).toBeVisible();
 }
 
@@ -83,12 +83,12 @@ async function pinScene(page: Page): Promise<void> {
  */
 async function openDoor(page: Page, side: 'east' | 'south' | 'north' | 'west') {
   const row = page
-    .getByRole('region', { name: 'Where the party stands' })
+    .getByRole('region', { name: 'Current location' })
     .getByRole('listitem')
     .filter({ hasText: `A door to the ${side}` });
   await row.getByRole('button', { name: 'Door' }).click();
-  await page.getByRole('menuitem', { name: 'Open it' }).click();
-  await expect(row).toContainText(/, open\./);
+  await page.getByRole('menuitem', { name: 'Open door' }).click();
+  await expect(row).toContainText(/is open\./);
   await expect(page.getByRole('banner').getByText('Exploring', { exact: true })).toBeVisible();
 }
 
@@ -99,7 +99,7 @@ async function choicesFor(page: Page, name: string): Promise<Locator> {
   await composer.waitFor({ timeout: 1500 }).catch(() => undefined);
   if ((await composer.count()) === 0) {
     await declarationRow(page, name)
-      .getByRole('button', { name: /^(More choices|Change|Declare for)/ })
+      .getByRole('button', { name: /^(Actions|Change|Declare for)/ })
       .click();
   }
   await expect(composer).toBeVisible();
@@ -181,20 +181,20 @@ test('a referee and two players play The Toll at Crookback Bridge from table cre
     ] as const) {
       await actor.page.goto(link);
       await actor.page.getByRole('textbox', { name: 'Your name' }).fill(name);
-      await actor.page.getByRole('button', { name: 'Join the table' }).click();
+      await actor.page.getByRole('button', { name: 'Join table' }).click();
       await expect(actor.page.getByRole('heading', { name: 'Crookback night', level: 1 })).toBeVisible();
     }
     await expect(ruth.page.getByText('3 of 3 online')).toBeVisible();
   });
 
   await test.step('each player creates two characters with the wizard', async () => {
-    await createWithWizard(sam, { name: 'Brenna', className: /^Fighter/ });
-    await createWithWizard(sam, { name: 'Osric', className: /^Cleric/ });
-    await createWithWizard(ann, { name: 'Tamsin', className: /^Magic-User/, spell: /^Sleep Range/ });
-    await createWithWizard(ann, { name: 'Wren', className: /^Elf/, spell: /^Sleep Range/ });
+    await createWithWizard(sam, { name: 'Flarg', className: /^Fighter/ });
+    await createWithWizard(sam, { name: 'Clarence', className: /^Cleric/ });
+    await createWithWizard(ann, { name: 'Mazpar', className: /^Magic-User/, spell: /^Sleep Range/ });
+    await createWithWizard(ann, { name: 'Elfy', className: /^Elf/, spell: /^Sleep Range/ });
     const order = ruth.page.getByRole('list', { name: 'Party in marching order' }).getByRole('listitem');
     await expect(order).toHaveCount(4);
-    for (const [index, name] of ['Brenna', 'Osric', 'Tamsin', 'Wren'].entries()) {
+    for (const [index, name] of ['Flarg', 'Clarence', 'Mazpar', 'Elfy'].entries()) {
       await expect(order.nth(index)).toContainText(name);
     }
   });
@@ -205,7 +205,7 @@ test('a referee and two players play The Toll at Crookback Bridge from table cre
       .getByRole('radiogroup', { name: 'Adventure' })
       .getByRole('radio', { name: /^The Toll at Crookback Bridge/ })
       .click();
-    await ruth.page.getByRole('button', { name: 'Start the game' }).click();
+    await ruth.page.getByRole('button', { name: 'Start game' }).click();
     for (const page of everyone) {
       await expect(page.getByRole('heading', { name: 'Wethercote', level: 2 })).toBeVisible({
         timeout: 30_000,
@@ -219,7 +219,7 @@ test('a referee and two players play The Toll at Crookback Bridge from table cre
     await sam.page.getByRole('button', { name: 'Rest a night' }).click();
     await expect(ann.page.getByRole('banner').getByText(/Day 1, 0[89]:/)).toBeVisible();
     await ann.page.getByRole('tab', { name: 'Rest and prepare' }).click();
-    for (const name of ['Tamsin', 'Wren']) {
+    for (const name of ['Mazpar', 'Elfy']) {
       // A caster's button opens the sheet at its Spells tab.
       await ann.page.getByRole('button', { name: `Open ${name}'s spells` }).click();
       const sheet = ann.page.getByRole('dialog', { name });
@@ -242,17 +242,15 @@ test('a referee and two players play The Toll at Crookback Bridge from table cre
   await test.step('the party sets out for Crookback Bridge', async () => {
     await sam.page.getByRole('tab', { name: 'Town square' }).click();
     await sam.page
-      .getByRole('region', { name: 'The road out of town' })
+      .getByRole('region', { name: 'Leave town' })
       .getByRole('button', { name: 'Set out' })
       .click();
     const confirm = sam.page.getByRole('dialog', { name: 'Set out for Crookback Bridge?' });
-    await expect(confirm).toContainText('The party carries a light, a tinder box, rations, and rope.');
+    await expect(confirm).toContainText('Your party carries light, a tinder box, rations, and rope.');
     await confirm.getByRole('button', { name: 'Set out' }).click();
     for (const page of everyone) {
       await expect(
-        page
-          .getByRole('region', { name: 'Where the party stands' })
-          .getByRole('heading', { name: 'The Kingsway' }),
+        page.getByRole('region', { name: 'Current location' }).getByRole('heading', { name: 'The Kingsway' }),
       ).toBeVisible({ timeout: 30_000 });
     }
   });
@@ -269,40 +267,38 @@ test('a referee and two players play The Toll at Crookback Bridge from table cre
     await shot(ann.page, 'toll-gate');
     await encounterPanel(sam.page).getByRole('button', { name: 'Talk' }).click();
     // The member with the best reaction bonus is first in the list.
-    await sam.page
-      .getByRole('dialog', { name: 'Who speaks for the party?' })
-      .getByRole('option')
-      .first()
-      .click();
+    await sam.page.getByRole('dialog', { name: 'Choose a speaker' }).getByRole('option').first().click();
     await expect(await openFeed(sam.page)).toContainText(/talks to the bandits\./);
 
     const tools = encounterPanel(ruth.page);
     await tools.getByText('Monsters and referee tools').click();
-    await tools.getByRole('button', { name: 'They came to terms' }).click();
-    const settle = ruth.page.getByRole('alertdialog', { name: 'The party came to terms with the bandits' });
-    await settle.getByRole('checkbox', { name: "Keep this area's monsters peaceful" }).click();
-    await settle.getByRole('button', { name: 'End the encounter' }).click();
+    await tools.getByRole('button', { name: 'End in parley' }).click();
+    const settle = ruth.page.getByRole('alertdialog', {
+      name: 'End encounter in parley with the bandits?',
+    });
+    await settle.getByRole('checkbox', { name: 'Mark area encounter resolved' }).click();
+    await settle.getByRole('button', { name: 'End encounter' }).click();
     for (const page of everyone) await expect(encounterPanel(page)).toHaveCount(0);
     await shot(sam.page, 'toll-gate-settled');
   });
 
-  await test.step('the caller has Brenna light a torch, and the map and the party panel say so', async () => {
+  await test.step('the caller has Flarg light a torch, and the map and the party panel say so', async () => {
     await expect(sam.page.getByRole('button', { name: 'Light: The party has no light.' })).toBeVisible();
     await sam.page
       .getByRole('toolbar', { name: 'Party actions' })
       .getByRole('button', { name: 'Light' })
       .click();
-    await sam.page.getByRole('menuitem', { name: 'Brenna lights a torch' }).click();
+    await sam.page.getByRole('menuitem', { name: 'Flarg lights a torch' }).click();
     for (const page of everyone) {
       await expect(
-        page.getByRole('button', { name: /^Light: Brenna's torch, about \d+ turns left/ }),
+        page.getByRole('button', { name: /^Light: Flarg's torch, about \d+ turns left/ }),
       ).toBeVisible();
     }
     await expect(
       ann.page
         .getByRole('list', { name: 'Marching order' })
         .getByRole('listitem')
-        .filter({ hasText: 'Brenna' }),
+        .filter({ hasText: 'Flarg' }),
     ).toContainText(/Torch, about \d+ turns left/);
     await shot(ann.page, 'torch-lit');
   });
@@ -326,20 +322,20 @@ test('a referee and two players play The Toll at Crookback Bridge from table cre
     await shot(sam.page, 'counting-room');
   });
 
-  await test.step('the party fights in the counting room, and Tamsin puts the clerk to sleep', async () => {
+  await test.step('the party fights in the counting room, and Mazpar puts the clerk to sleep', async () => {
     await encounterPanel(sam.page).getByRole('button', { name: 'Fight' }).click();
     await newRound(players);
-    await closeIn(sam.page, 'Brenna', 'the bandit');
-    await closeIn(sam.page, 'Osric', 'the bandit');
-    await closeIn(ann.page, 'Wren', 'the bandit');
-    await castSleep(ann.page, 'Tamsin', 'the ink-stained clerk');
+    await closeIn(sam.page, 'Flarg', 'the bandit');
+    await closeIn(sam.page, 'Clarence', 'the bandit');
+    await closeIn(ann.page, 'Elfy', 'the bandit');
+    await castSleep(ann.page, 'Mazpar', 'the ink-stained clerk');
     await newRound(players);
     await shot(sam.page, 'counting-room-round-2');
     for (const [page, name] of [
-      [sam.page, 'Brenna'],
-      [sam.page, 'Osric'],
-      [ann.page, 'Tamsin'],
-      [ann.page, 'Wren'],
+      [sam.page, 'Flarg'],
+      [sam.page, 'Clarence'],
+      [ann.page, 'Mazpar'],
+      [ann.page, 'Elfy'],
     ] as const) {
       await attack(page, name, 'the ink-stained clerk');
     }
@@ -347,10 +343,10 @@ test('a referee and two players play The Toll at Crookback Bridge from table cre
     // One slain clerk reads in the singular (R-523).
     await expect(battleBoard(sam.page)).toContainText('The ink-stained clerk, slain');
     for (const [page, name] of [
-      [sam.page, 'Brenna'],
-      [sam.page, 'Osric'],
-      [ann.page, 'Tamsin'],
-      [ann.page, 'Wren'],
+      [sam.page, 'Flarg'],
+      [sam.page, 'Clarence'],
+      [ann.page, 'Mazpar'],
+      [ann.page, 'Elfy'],
     ] as const) {
       await attack(page, name, 'the bandit');
     }
@@ -362,9 +358,9 @@ test('a referee and two players play The Toll at Crookback Bridge from table cre
   });
 
   await test.step('the party picks up what the clerk and the bandit dropped, and leaves the trapped strongbox', async () => {
-    const scene = sam.page.getByRole('region', { name: 'Where the party stands' });
-    await scene.getByRole('button', { name: 'Pick up the dropped goods' }).click();
-    await expect(scene.getByRole('button', { name: 'Pick up the dropped goods' })).toHaveCount(0);
+    const scene = sam.page.getByRole('region', { name: 'Current location' });
+    await scene.getByRole('button', { name: 'Pick up dropped goods' }).click();
+    await expect(scene.getByRole('button', { name: 'Pick up dropped goods' })).toHaveCount(0);
     await shot(sam.page, 'counting-room-pickup');
   });
 
@@ -376,8 +372,8 @@ test('a referee and two players play The Toll at Crookback Bridge from table cre
     for (const page of everyone) {
       await expect(battleBoard(page)).toBeVisible({ timeout: 30_000 });
     }
-    // The torch gives the party away, so Mag Corrie isn't surprised, and her first blow kills Tamsin.
-    await expect(declarationRow(ann.page, 'Tamsin')).toContainText('Dead');
+    // The torch gives the party away, so Mag Corrie isn't surprised, and her first blow kills Mazpar.
+    await expect(declarationRow(ann.page, 'Mazpar')).toContainText('Dead');
     // The board names Mag Corrie and her bodyguard by their own labels (D-312).
     for (const label of ['Mag Corrie', "Mag's bodyguard"]) {
       await expect(battleBoard(sam.page)).toContainText(label);
@@ -386,11 +382,11 @@ test('a referee and two players play The Toll at Crookback Bridge from table cre
     await shot(ann.page, 'captains-loft');
   });
 
-  await test.step('Wren puts Mag Corrie to sleep, and the party beats her and her bodyguard', async () => {
+  await test.step('Elfy puts Mag Corrie to sleep, and the party beats her and her bodyguard', async () => {
     await newRound(players);
-    await castSleep(ann.page, 'Wren', 'Mag Corrie');
-    await attack(sam.page, 'Brenna', "Mag's bodyguard");
-    await attack(sam.page, 'Osric', "Mag's bodyguard");
+    await castSleep(ann.page, 'Elfy', 'Mag Corrie');
+    await attack(sam.page, 'Flarg', "Mag's bodyguard");
+    await attack(sam.page, 'Clarence', "Mag's bodyguard");
     await shot(sam.page, 'captains-loft-round-2');
     for (let round = 3; round <= 10; round += 1) {
       const fresh = battleBoard(sam.page).getByText(/(?<!\d)0 of \d declared/);
@@ -403,9 +399,9 @@ test('a referee and two players play The Toll at Crookback Bridge from table cre
       await newRound(players);
       if (round === 3) await shot(ann.page, 'captains-loft-round-3');
       // The bodyguard is awake, so the party fights him first, then the sleeping captain.
-      await attack(sam.page, 'Brenna', "Mag's bodyguard", 'Mag Corrie');
-      await attack(sam.page, 'Osric', "Mag's bodyguard", 'Mag Corrie');
-      await attack(ann.page, 'Wren', "Mag's bodyguard", 'Mag Corrie');
+      await attack(sam.page, 'Flarg', "Mag's bodyguard", 'Mag Corrie');
+      await attack(sam.page, 'Clarence', "Mag's bodyguard", 'Mag Corrie');
+      await attack(ann.page, 'Elfy', "Mag's bodyguard", 'Mag Corrie');
     }
     for (const page of everyone) await expect(battleBoard(page)).toHaveCount(0, { timeout: 30_000 });
     await shot(sam.page, 'captains-loft-won');
@@ -417,11 +413,11 @@ test('a referee and two players play The Toll at Crookback Bridge from table cre
   });
 
   await test.step('the party takes the captain’s chest and finds the miller’s strongbox', async () => {
-    const scene = sam.page.getByRole('region', { name: 'Where the party stands' });
+    const scene = sam.page.getByRole('region', { name: 'Current location' });
     await scene.getByRole('button', { name: 'Treasure', exact: true }).click();
-    await sam.page.getByRole('menuitem', { name: 'Take the treasure' }).click();
+    await sam.page.getByRole('menuitem', { name: 'Take treasure' }).click();
     await expect(await openFeed(ann.page)).toContainText("Miller Aske's strongbox", { timeout: 20_000 });
-    const pickUp = scene.getByRole('button', { name: 'Pick up the dropped goods' });
+    const pickUp = scene.getByRole('button', { name: 'Pick up dropped goods' });
     if ((await pickUp.count()) > 0) await pickUp.click();
     await shot(sam.page, 'captains-loft-treasure');
   });
@@ -453,7 +449,7 @@ test('a referee and two players play The Toll at Crookback Bridge from table cre
       );
       await expect(page.getByRole('main')).toContainText(/Quests completed\s*.*Open the Kingsway/);
       await expect(page.getByRole('main')).toContainText("Miller Aske's strongbox");
-      await expect(page.getByRole('main')).toContainText(/Fallen\s*Tamsin/);
+      await expect(page.getByRole('main')).toContainText(/Fallen\s*Mazpar/);
     }
     await expect(ann.page.getByText('The referee decides what comes next')).toBeVisible();
     await expect(ruth.page.getByRole('button', { name: /lobby/i }).first()).toBeVisible();

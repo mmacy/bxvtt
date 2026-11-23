@@ -115,10 +115,10 @@ describe('MapStage', () => {
     const { user } = renderWithTable(<MapStage />, { snapshot });
     expect(screen.getByRole('group', { name: 'Map view' })).toBeInTheDocument();
     // A narrow screen, as jsdom reports, starts with the minimap folded, and the choice sticks.
-    await user.click(screen.getByRole('button', { name: 'Show the minimap' }));
+    await user.click(screen.getByRole('button', { name: 'Show minimap' }));
     expect(screen.getByText('1 square is 10 feet')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Hide the minimap' }));
-    expect(screen.getByRole('button', { name: 'Show the minimap' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Hide minimap' }));
+    expect(screen.getByRole('button', { name: 'Show minimap' })).toBeInTheDocument();
     await user.click(screen.getByRole('radio', { name: 'Parchment map' }));
     expect(screen.getByRole('radio', { name: 'Parchment map' })).toHaveAttribute('aria-checked', 'true');
   });
@@ -135,7 +135,7 @@ describe('MapStage', () => {
   it('tells a referee which map they see', () => {
     const { snapshot } = exploring('referee');
     renderWithTable(<MapStage />, { snapshot, preferences: { refereeLens: false } });
-    expect(screen.getByText('Players’ view'.replace('’', "'"))).toBeInTheDocument();
+    expect(screen.getByText('Player view')).toBeInTheDocument();
   });
 
   it('answers a cell pick from another feature', async () => {
@@ -181,8 +181,8 @@ describe('MapStage for keyboard and screen reader users', () => {
     const list = await screen.findByRole('list', { name: 'Pins on this level' });
     expect(within(list).getByText('Painted monks')).toBeInTheDocument();
     expect(within(list).getByRole('button', { name: 'Show pin 1 on the map' })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Add a pin where the party stands' }));
-    expect(await screen.findByRole('dialog', { name: 'Add a pin' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Add pin at party' }));
+    expect(await screen.findByRole('dialog', { name: 'Add pin' })).toBeInTheDocument();
   });
 
   it('announces another member’s ping politely, with their name', async () => {
@@ -208,11 +208,11 @@ describe('MapStage for keyboard and screen reader users', () => {
     const { snapshot } = exploring('referee');
     const { user } = renderWithTable(<MapStage />, { snapshot });
     await user.click(screen.getByRole('button', { name: /^Pins/ }));
-    await user.click(await screen.findByRole('button', { name: 'Add a pin where the party stands' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Add a pin' });
-    expect(within(dialog).getByText(/Everyone at the table sees/)).toBeInTheDocument();
-    await user.click(within(dialog).getByRole('checkbox', { name: 'Only referees see this pin' }));
-    expect(within(dialog).getByText(/Only referees see this pin and its note/)).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: 'Add pin at party' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Add pin' });
+    expect(within(dialog).getByText(/Everyone at the table can see/)).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Visible only to referees' }));
+    expect(within(dialog).getByText(/Only referees can see this pin and its note/)).toBeInTheDocument();
   });
 
   it('names the light and its time in the same words as the party panel', () => {
@@ -277,9 +277,9 @@ describe('ScenePanel', () => {
       });
       expect(screen.queryByText(/A flight of worn steps/)).toBeNull();
       expect(screen.getByRole('heading', { name: 'Gatehouse stair' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: '2 things here' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '2 features here' })).toBeInTheDocument();
       // Opening it by hand keeps it open, and this browser remembers.
-      fireEvent.click(screen.getByRole('button', { name: 'Show the description' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Show description' }));
       act(() => {
         vi.advanceTimersByTime(RECEDE_MS * 2);
       });
@@ -293,7 +293,7 @@ describe('ScenePanel', () => {
   it('collapses without losing its title', async () => {
     const { snapshot } = exploring();
     const { user } = renderWithTable(<ScenePanel />, { snapshot });
-    await user.click(screen.getByRole('button', { name: 'Hide the description' }));
+    await user.click(screen.getByRole('button', { name: 'Hide description' }));
     expect(screen.queryByText(/A flight of worn steps/)).toBeNull();
     expect(screen.getByRole('heading', { name: 'Gatehouse stair' })).toBeInTheDocument();
   });
@@ -332,10 +332,10 @@ describe('ExploreActions', () => {
     expect((await screen.findAllByText('Nothing seems to happen.')).length).toBeGreaterThan(0);
   });
 
-  it('offers every other legal command under Other, and the character sheet for items', async () => {
+  it('offers every other legal command under More, and the character sheet for items', async () => {
     const { snapshot } = exploring();
     const { user } = renderWithTable(<Bar />, { snapshot });
-    await user.click(screen.getByRole('button', { name: 'Other' }));
+    await user.click(screen.getByRole('button', { name: 'More' }));
     const menu = await screen.findByRole('menu');
     expect(within(menu).getByRole('menuitem', { name: 'Cast a spell…' })).toBeInTheDocument();
     expect(within(menu).getByRole('menuitem', { name: 'Drop items' })).toBeInTheDocument();

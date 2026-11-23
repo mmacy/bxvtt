@@ -44,7 +44,7 @@ export function registerNotesRoutes(app: FastifyInstance, ctx: Context): void {
     const user = ctx.auth.user(request);
     const role = ctx.tables.requireMember(tableId, user);
     if (parsedKind.data === 'referee' && role !== 'referee') {
-      throw new ApiError('referee_required', 'Only referees can read the referee notes.');
+      throw new ApiError('referee_required', 'Only a referee can view or edit referee notes.');
     }
     return { tableId, kind: parsedKind.data, user };
   };
@@ -62,7 +62,7 @@ export function registerNotesRoutes(app: FastifyInstance, ctx: Context): void {
       if (current.version !== body.version) {
         throw new ApiError(
           'stale_version',
-          'Someone saved these notes after you started editing. Merge and save again.',
+          'Someone else saved these notes while you were editing. Review their changes and save again.',
           {
             notes: current,
           },

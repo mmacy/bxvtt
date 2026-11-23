@@ -311,7 +311,7 @@ function checkNode(
       } else if (node.maxLength !== undefined && value.length > node.maxLength) {
         errors[path] = `Use at most ${node.maxLength} characters.`;
       } else if (node.pattern !== undefined && value !== '' && !safeTest(node.pattern, value)) {
-        errors[path] = "This isn't in the form the rules engine expects.";
+        errors[path] = 'Enter a value in the expected format.';
       }
       return;
     case 'integer':

@@ -56,7 +56,7 @@ export async function buildSnapshot(
 ): Promise<ServerMessage> {
   return ctx.game.locked(tableId, async () => {
     const role = ctx.tables.roleOf(tableId, user.id);
-    if (role === null) throw new ApiError('not_found', 'The user is not a member of the table.');
+    if (role === null) throw new ApiError('not_found', 'You are not a member of this table.');
     const live = await ctx.game.current(tableId);
     const game = live === null ? null : await ctx.game.project(live, role);
     const location = live?.view.location;
@@ -120,7 +120,7 @@ export function registerWebSocket(app: FastifyInstance, ctx: Context): void {
   const checkOrigin = async (request: FastifyRequest) => {
     if (!originAllowed(request.headers.origin, request.headers.host, ctx.config)) {
       request.log.warn({ origin: request.headers.origin }, 'WebSocket origin refused');
-      throw new ApiError('forbidden', 'This origin may not open the bxvtt WebSocket.');
+      throw new ApiError('forbidden', 'WebSocket connections from this origin are not allowed.');
     }
   };
 
@@ -177,12 +177,12 @@ export function registerWebSocket(app: FastifyInstance, ctx: Context): void {
         return;
       }
       if (found === null || ctx.tables.roleOf(tableId, found.id) === null) {
-        fail('unauthorized', 'The token is unknown, or the user is not a member of the table.');
+        fail('unauthorized', 'Invalid sign-in token, or you are not a member of this table.');
         socket.close(WS_CLOSE_CODES.auth_failed, 'auth failed');
         return;
       }
       if (ctx.hub.connectionsOf(tableId, found.id) >= ctx.config.quotas.connectionsPerUser) {
-        fail('rate_limited', 'You have too many connections to this table. Close a tab and try again.');
+        fail('rate_limited', 'You have too many open tabs connected to this table. Close one and try again.');
         socket.close(WS_CLOSE_CODES.rate_limited, 'too many connections');
         return;
       }
@@ -198,7 +198,7 @@ export function registerWebSocket(app: FastifyInstance, ctx: Context): void {
         ctx.hub.activate(target, await buildSnapshot(ctx, target.tableId, owner, feedAfter));
       } catch (error) {
         request.log.warn({ err: error, table: target.tableId }, 'could not build a snapshot');
-        fail('bxapi_unavailable', "The server can't read the game now. It will try again.");
+        fail('bxapi_unavailable', "Couldn't load the game state right now. Reconnecting shortly.");
         socket.close(WS_CLOSE_CODES.try_again_later, 'snapshot failed');
       }
     };
@@ -217,12 +217,12 @@ export function registerWebSocket(app: FastifyInstance, ctx: Context): void {
       try {
         parsed = JSON.parse(Buffer.isBuffer(data) ? data.toString('utf8') : String(data));
       } catch {
-        fail('bad_request', 'A message must be one JSON object.');
+        fail('bad_request', 'Each WebSocket message must be a JSON object.');
         return;
       }
       const result = ClientMessage.safeParse(parsed);
       if (!result.success) {
-        fail('validation_error', "The message doesn't match any client message schema.");
+        fail('validation_error', 'Invalid WebSocket message format.');
         return;
       }
       const message = result.data;
@@ -251,14 +251,14 @@ export function registerWebSocket(app: FastifyInstance, ctx: Context): void {
         case 'resync':
           // Each snapshot reads the game under the table's lock, so a client may ask only now and then.
           if (resyncs.take('socket') > 0) {
-            fail('rate_limited', 'Ask for a new snapshot less often.');
+            fail('rate_limited', 'You are refreshing the table state too often. Wait a moment.');
             return;
           }
           void deliverSnapshot(current, user, message.feed_after);
           return;
         case 'ping': {
           if (pings.take('socket') > 0) {
-            fail('rate_limited', 'Ping less often.');
+            fail('rate_limited', 'You are pinging the map too often. Wait a moment.');
             return;
           }
           const { type: _type, ...ping } = message;

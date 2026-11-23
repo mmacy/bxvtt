@@ -33,10 +33,10 @@ export function startChecks(table: TableDetail, adventure: AdventureListing | nu
     const max = party.max_size ?? null;
     const name = adventure?.info.name ?? 'The adventure';
     if (min !== null && roster.length < min) {
-      warnings.push(`${name} is written for at least ${min} characters, and the party has ${roster.length}.`);
+      warnings.push(`${name} is written for at least ${min} characters, but the party has ${roster.length}.`);
     }
     if (max !== null && roster.length > max) {
-      warnings.push(`${name} is written for at most ${max} characters, and the party has ${roster.length}.`);
+      warnings.push(`${name} is written for at most ${max} characters, but the party has ${roster.length}.`);
     }
     const outside = roster.filter((entry) => entry.level < party.min_level || entry.level > party.max_level);
     if (outside.length > 0) {
@@ -45,7 +45,7 @@ export function startChecks(table: TableDetail, adventure: AdventureListing | nu
           ? `level ${party.min_level}`
           : `levels ${party.min_level} to ${party.max_level}`;
       warnings.push(
-        `${name} is written for ${levels}. ${joinList(outside.map((e) => `${e.name} is level ${e.level}`))}.`,
+        `${name} is written for ${levels}, while ${joinList(outside.map((e) => `${e.name} is level ${e.level}`))}.`,
       );
     }
   }
@@ -141,7 +141,7 @@ export function StartGamePanel({ table, adventure, ruleset }: StartGamePanelProp
         disabled={blockers.length > 0}
         onClick={() => void start()}
       >
-        Start the game
+        Start game
       </Button>
     </div>
   );

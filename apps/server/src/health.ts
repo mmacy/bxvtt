@@ -53,7 +53,10 @@ export function publicHealth(health: Health): Health {
     bxapi: {
       reachable: health.bxapi.reachable,
       meta: null,
-      error: health.bxapi.error === null ? null : "bxvtt can't use bxapi, the rules server, now.",
+      error:
+        health.bxapi.error === null
+          ? null
+          : "The server can't reach the game service right now. Ask the server host to check it.",
     },
   };
 }

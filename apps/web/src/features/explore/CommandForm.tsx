@@ -6,11 +6,10 @@
  */
 import type { MemberView, SpellSummary } from '@bxvtt/shared/bxapi';
 import {
-  capitalizeFirst,
   commandFieldOptionLabel,
   commandFieldText,
   commandInfo,
-  itemPhrase,
+  itemLabel,
   resolveItemNoun,
   spellName,
 } from '@bxvtt/shared/text';
@@ -247,7 +246,7 @@ function FieldInput({ commandType, field, value, values, onChange, can, actingFi
             options={field.required ? options : [{ value: '', label: 'No one' }, ...options]}
             value={typeof value === 'string' ? value : ''}
             onValueChange={(next) => onChange(next === '' ? undefined : next)}
-            placeholder="Choose a member"
+            placeholder="Choose a party member"
           />
         </Field>
       );
@@ -256,20 +255,17 @@ function FieldInput({ commandType, field, value, values, onChange, can, actingFi
       const here = scene?.here;
       const options: SelectOption[] = (here?.caches ?? []).map((cache, index, all) => ({
         value: cache.id,
-        label: all.length > 1 ? `Treasure ${index + 1}` : 'The treasure here',
+        label: all.length > 1 ? `Treasure ${index + 1}` : 'Treasure here',
       }));
-      if (here?.pile) options.push({ value: 'pile', label: 'The dropped goods here' });
+      if (here?.pile) options.push({ value: 'pile', label: 'Dropped goods here' });
       return (
-        <Field
-          label={text.label}
-          hint={options.length === 0 ? 'The party sees no treasure here.' : text.help}
-        >
+        <Field label={text.label} hint={options.length === 0 ? 'No treasure is visible here.' : text.help}>
           <Select
             options={options}
             value={typeof value === 'string' ? value : undefined}
             onValueChange={onChange}
             disabled={options.length === 0}
-            placeholder="Choose what to use"
+            placeholder="Choose treasure"
           />
         </Field>
       );
@@ -284,9 +280,7 @@ function FieldInput({ commandType, field, value, values, onChange, can, actingFi
           seen.add(item.id);
           options.push({
             value: item.id,
-            label: capitalizeFirst(
-              itemPhrase(resolveItemNoun(item.id, ctx, { name: item.name }), item.quantity),
-            ),
+            label: itemLabel(resolveItemNoun(item.id, ctx, { name: item.name }), item.quantity),
           });
         }
       }
@@ -313,7 +307,7 @@ function FieldInput({ commandType, field, value, values, onChange, can, actingFi
         return (
           <Field
             label={text.label}
-            hint={carrier ? text.help : 'Choose a member first.'}
+            hint={carrier ? text.help : 'Choose a party member first.'}
             required={field.required}
           >
             <TextInput
@@ -352,15 +346,13 @@ function FieldInput({ commandType, field, value, values, onChange, can, actingFi
           <legend className={styles.formLegend}>{text.label}</legend>
           {items.length === 0 ? (
             <p className={styles.formHint}>
-              {carrier ? `${carrier.name} carries nothing to choose.` : 'Choose a member first.'}
+              {carrier ? `${carrier.name} isn't carrying any items.` : 'Choose a party member first.'}
             </p>
           ) : (
             items.map((item) => (
               <Checkbox
                 key={item.id}
-                label={capitalizeFirst(
-                  itemPhrase(resolveItemNoun(item.id, ctx, { name: item.name }), item.quantity),
-                )}
+                label={itemLabel(resolveItemNoun(item.id, ctx, { name: item.name }), item.quantity)}
                 checked={chosen.includes(item.id)}
                 onCheckedChange={(checked) =>
                   onChange(checked ? [...chosen, item.id] : chosen.filter((id) => id !== item.id))
@@ -381,7 +373,7 @@ function FieldInput({ commandType, field, value, values, onChange, can, actingFi
             }))}
             value={typeof value === 'string' ? value : undefined}
             onValueChange={onChange}
-            placeholder="Choose one"
+            placeholder="Choose an option"
           />
         </Field>
       );
@@ -429,7 +421,7 @@ function FieldInput({ commandType, field, value, values, onChange, can, actingFi
       return (
         <Field
           label={text.label}
-          hint={`${text.help} Separate several with commas.`}
+          hint={`${text.help} Separate multiple values with commas.`}
           required={field.required}
         >
           <TextInput
@@ -501,8 +493,8 @@ function CommandFormBody({ commandType, onDone }: { commandType: string; onDone:
   if (schema.loading || (fields === null && !schema.error)) return <Skeleton lines={3} />;
   if (fields === null || ctx === null) {
     return (
-      <Banner tone="danger" title="The form didn't load">
-        Close this and try again in a moment.
+      <Banner tone="danger" title="Couldn't load this action">
+        Close this dialog and try again.
       </Banner>
     );
   }
@@ -527,7 +519,7 @@ function CommandFormBody({ commandType, onDone }: { commandType: string; onDone:
         void submit();
       }}
     >
-      {fields.length === 0 && <p className={styles.formHint}>This needs no choices.</p>}
+      {fields.length === 0 && <p className={styles.formHint}>No additional options needed.</p>}
       {fields.map((field) => (
         <FieldInput
           key={field.name}
@@ -575,7 +567,7 @@ function SpellListInput({ label, help, value, onChange, caster }: SpellListInput
       ? book.map((id) => ({ value: id, label: spellName(id, ctx) }))
       : groupSpells(catalog.data ?? []);
   return (
-    <Field label={label} hint={caster ? help : 'Choose a member first.'}>
+    <Field label={label} hint={caster ? help : 'Choose a party member first.'}>
       <div className={styles.spellList}>
         {chosen.length > 0 && (
           <div className={styles.spellTags}>
@@ -597,7 +589,7 @@ function SpellListInput({ label, help, value, onChange, caster }: SpellListInput
           onValueChange={(id) => {
             if (id) onChange([...chosen, id]);
           }}
-          placeholder={catalog.loading && book.length === 0 ? 'Loading spells' : 'Add a spell'}
+          placeholder={catalog.loading && book.length === 0 ? 'Loading spells…' : 'Add a spell'}
           aria-label={`Add a spell to ${label.toLowerCase()}`}
         />
       </div>

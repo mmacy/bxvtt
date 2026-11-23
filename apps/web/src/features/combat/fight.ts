@@ -218,14 +218,14 @@ export function summarizeFight(events: readonly AnyEvent[], ctx: TextContext): F
     }
     case 'defeat':
       title = 'Defeat';
-      sentence = 'Nobody in the party is left standing.';
+      sentence = 'Every party member has fallen.';
       break;
     case 'fled':
-      title = 'The party got away';
-      sentence = 'The party retreated, and nothing could follow.';
+      title = 'The party escaped';
+      sentence = 'The party retreated cleanly.';
       break;
     case null:
-      title = 'The encounter is over';
+      title = 'Encounter ended';
       sentence = 'The party can explore again.';
       break;
     default:

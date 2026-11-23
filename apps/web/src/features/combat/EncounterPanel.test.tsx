@@ -43,7 +43,7 @@ describe('EncounterPanel', () => {
     expect(screen.getByRole('heading', { name: 'The party meets 3 goblins' })).toBeInTheDocument();
     expect(screen.getByText(/40 feet away/)).toBeInTheDocument();
     expect(screen.getByText('Indifferent')).toBeInTheDocument();
-    expect(screen.getByText(/Talking can still change their mood/)).toBeInTheDocument();
+    expect(screen.getByText(/Talk if you want to test their reaction/)).toBeInTheDocument();
   });
 
   it('starts a battle', async () => {

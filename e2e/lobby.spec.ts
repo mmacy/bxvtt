@@ -14,7 +14,7 @@ test.describe('first run and lobby', () => {
     const ruth = await crew.person('Ruth', { signedIn: false });
     const { page } = ruth;
     await page.goto('/');
-    const form = page.getByRole('form', { name: 'Pick your name' });
+    const form = page.getByRole('form', { name: 'Choose your name' });
     await expect(form).toBeVisible();
 
     // An empty name can't continue.
@@ -61,7 +61,7 @@ test.describe('first run and lobby', () => {
     await sam.page.goto(link);
     await expect(sam.page.getByRole('form', { name: "You're invited to a table" })).toBeVisible();
     await sam.page.getByRole('textbox', { name: 'Your name' }).fill('Sam');
-    await sam.page.getByRole('button', { name: 'Join the table' }).click();
+    await sam.page.getByRole('button', { name: 'Join table' }).click();
     await expect(sam.page).toHaveURL(new RegExp(`/tables/${table.id}$`));
     await expect(sam.page.getByRole('heading', { name: 'Invite test', level: 1 })).toBeVisible();
 
@@ -72,7 +72,7 @@ test.describe('first run and lobby', () => {
     await expect(ruthsList.getByRole('listitem').filter({ hasText: 'Sam' })).toContainText('Player');
 
     // A player sees no invite controls and no member actions.
-    await expect(sam.page.getByRole('button', { name: 'Make a new link' })).toHaveCount(0);
+    await expect(sam.page.getByRole('button', { name: 'Replace invite link' })).toHaveCount(0);
     await expect(sam.page.getByRole('button', { name: /Actions for/ })).toHaveCount(0);
 
     // When Sam closes the tab, Ruth sees him go away.
@@ -84,9 +84,9 @@ test.describe('first run and lobby', () => {
     const ruth = await crew.person('Ruth');
     const table = await ruth.client.createTable({ name: 'New link' });
     await ruth.page.goto(`/tables/${table.id}`);
-    await ruth.page.getByRole('button', { name: 'Make a new link' }).click();
-    const confirm = ruth.page.getByRole('alertdialog', { name: 'Make a new invite link?' });
-    await confirm.getByRole('button', { name: 'Make a new link' }).click();
+    await ruth.page.getByRole('button', { name: 'Replace invite link' }).click();
+    const confirm = ruth.page.getByRole('alertdialog', { name: 'Replace invite link?' });
+    await confirm.getByRole('button', { name: 'Replace invite link' }).click();
     await expect(confirm).toHaveCount(0);
     await expect(ruth.page.getByRole('textbox', { name: 'Invite link' })).not.toHaveValue(
       new RegExp(table.invite_code),
@@ -110,21 +110,21 @@ test.describe('first run and lobby', () => {
     await sam.client.joinTable(table.invite_code);
     await ruth.page.goto(`/tables/${table.id}`);
     await sam.page.goto(`/tables/${table.id}`);
-    await expect(sam.page.getByRole('button', { name: 'Start the game' })).toHaveCount(0);
+    await expect(sam.page.getByRole('button', { name: 'Start game' })).toHaveCount(0);
 
     await ruth.page.getByRole('button', { name: 'Actions for Sam' }).click();
-    await ruth.page.getByRole('menuitem', { name: 'Make a referee' }).click();
+    await ruth.page.getByRole('menuitem', { name: 'Make referee' }).click();
     // Sam now sees the referee's controls without a reload.
-    await expect(sam.page.getByRole('button', { name: 'Make a new link' })).toBeVisible();
+    await expect(sam.page.getByRole('button', { name: 'Replace invite link' })).toBeVisible();
     await expect(sam.page.getByRole('button', { name: 'Actions for Ruth' })).toBeVisible();
 
     await ruth.page.getByRole('button', { name: 'Actions for Sam' }).click();
-    await ruth.page.getByRole('menuitem', { name: 'Make a player' }).click();
-    await expect(sam.page.getByRole('button', { name: 'Make a new link' })).toHaveCount(0);
+    await ruth.page.getByRole('menuitem', { name: 'Make player' }).click();
+    await expect(sam.page.getByRole('button', { name: 'Replace invite link' })).toHaveCount(0);
 
     // The last referee can't step down.
     await ruth.page.getByRole('button', { name: 'Actions for Ruth' }).click();
-    await expect(ruth.page.getByRole('menuitem', { name: 'Make a player' })).toBeDisabled();
+    await expect(ruth.page.getByRole('menuitem', { name: 'Make player' })).toBeDisabled();
     await ruth.page.keyboard.press('Escape');
   });
 
@@ -135,9 +135,9 @@ test.describe('first run and lobby', () => {
     const sam = await crew.person('Sam');
     const table = await ruth.client.createTable({ name: 'Marching order' });
     await sam.client.joinTable(table.invite_code);
-    await createCharacter(sam.client, { name: 'Brenna', classId: 'fighter' });
-    await createCharacter(sam.client, { name: 'Wren', classId: 'thief' });
-    await createCharacter(ruth.client, { name: 'Osric', classId: 'cleric' });
+    await createCharacter(sam.client, { name: 'Flarg', classId: 'fighter' });
+    await createCharacter(sam.client, { name: 'Tinks', classId: 'thief' });
+    await createCharacter(ruth.client, { name: 'Clarence', classId: 'cleric' });
 
     await ruth.page.goto(`/tables/${table.id}`);
     await sam.page.goto(`/tables/${table.id}`);
@@ -145,18 +145,18 @@ test.describe('first run and lobby', () => {
     const mine = sam.page.getByRole('region', { name: 'Your characters' });
     await mine
       .getByRole('listitem')
-      .filter({ hasText: 'Brenna' })
+      .filter({ hasText: 'Flarg' })
       .getByRole('button', { name: 'Add to party' })
       .click();
     await mine
       .getByRole('listitem')
-      .filter({ hasText: 'Wren' })
+      .filter({ hasText: 'Tinks' })
       .getByRole('button', { name: 'Add to party' })
       .click();
     await ruth.page
       .getByRole('region', { name: 'Your characters' })
       .getByRole('listitem')
-      .filter({ hasText: 'Osric' })
+      .filter({ hasText: 'Clarence' })
       .getByRole('button', { name: 'Add to party' })
       .click();
 
@@ -164,21 +164,21 @@ test.describe('first run and lobby', () => {
       page.getByRole('list', { name: 'Party in marching order' }).getByRole('listitem');
     await expect(order(ruth.page)).toHaveCount(3);
     await expect(order(sam.page)).toHaveCount(3);
-    await expect(order(ruth.page).nth(0)).toContainText('Brenna');
+    await expect(order(ruth.page).nth(0)).toContainText('Flarg');
     await expect(sam.page.getByText('3 in marching order')).toBeVisible();
 
-    // The referee moves Osric to the front. Sam sees the new order.
-    await ruth.page.getByRole('button', { name: 'Move Osric forward' }).click();
-    await ruth.page.getByRole('button', { name: 'Move Osric forward' }).click();
-    await expect(order(ruth.page).nth(0)).toContainText('Osric');
-    await expect(order(sam.page).nth(0)).toContainText('Osric');
-    await expect(order(sam.page).nth(2)).toContainText('Wren');
+    // The referee moves Clarence to the front. Sam sees the new order.
+    await ruth.page.getByRole('button', { name: 'Move Clarence forward' }).click();
+    await ruth.page.getByRole('button', { name: 'Move Clarence forward' }).click();
+    await expect(order(ruth.page).nth(0)).toContainText('Clarence');
+    await expect(order(sam.page).nth(0)).toContainText('Clarence');
+    await expect(order(sam.page).nth(2)).toContainText('Tinks');
 
     // A player can take their own character out, but can't reorder.
     await expect(sam.page.getByRole('button', { name: /Move .* forward/ })).toHaveCount(0);
-    await sam.page.getByRole('button', { name: 'Take Wren out of the party' }).click();
+    await sam.page.getByRole('button', { name: 'Remove Tinks from party' }).click();
     await expect(order(ruth.page)).toHaveCount(2);
-    await expect(mine.getByRole('listitem').filter({ hasText: 'Wren' })).toBeVisible();
+    await expect(mine.getByRole('listitem').filter({ hasText: 'Tinks' })).toBeVisible();
   });
 
   test('the referee chooses each adventure and changes the settings', async ({ crew }) => {
@@ -190,7 +190,7 @@ test.describe('first run and lobby', () => {
     await sam.page.goto(`/tables/${table.id}`);
 
     const adventures = ruth.page.getByRole('radiogroup', { name: 'Adventure' });
-    const start = ruth.page.getByRole('complementary').filter({ hasText: 'Start the game' });
+    const start = ruth.page.getByRole('complementary').filter({ hasText: 'Start game' });
     for (const name of [
       'The Barrow of the Forgotten King',
       'The Toll at Crookback Bridge',
@@ -230,15 +230,15 @@ test.describe('first run and lobby', () => {
     const sam = await crew.person('Sam');
     const table = await ruth.client.createTable({ name: 'Start' });
     await sam.client.joinTable(table.invite_code);
-    const brenna = await createCharacter(sam.client, { name: 'Brenna', classId: 'fighter' });
-    const osric = await createCharacter(ruth.client, { name: 'Osric', classId: 'cleric' });
-    await sam.client.addToRoster(table.id, brenna.id);
-    await ruth.client.addToRoster(table.id, osric.id);
+    const flarg = await createCharacter(sam.client, { name: 'Flarg', classId: 'fighter' });
+    const clarence = await createCharacter(ruth.client, { name: 'Clarence', classId: 'cleric' });
+    await sam.client.addToRoster(table.id, flarg.id);
+    await ruth.client.addToRoster(table.id, clarence.id);
     await ruth.seedGameStart(1981);
 
     await ruth.page.goto(`/tables/${table.id}`);
     await sam.page.goto(`/tables/${table.id}`);
-    const start = ruth.page.getByRole('button', { name: 'Start the game' });
+    const start = ruth.page.getByRole('button', { name: 'Start game' });
     await expect(start).toBeEnabled();
     await ruth.page
       .getByRole('radiogroup', { name: 'Adventure' })
@@ -251,7 +251,7 @@ test.describe('first run and lobby', () => {
         timeout: 20_000,
       });
       await expect(page.getByRole('banner').getByText('In town')).toBeVisible();
-      await expect(page.getByRole('button', { name: 'Start the game' })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'Start game' })).toHaveCount(0);
     }
     // Sam owns the first seat, so he is the caller.
     await expect.poll(async () => (await sam.client.getGame(table.id)).caller_user_id).toBe(sam.id);
@@ -312,19 +312,19 @@ test.describe('first run and lobby', () => {
     await ruth.page.getByRole('button', { name: 'Table menu' }).click();
     await ruth.page.getByRole('menuitem', { name: 'Saves', exact: true }).click();
     const saves = ruth.page.getByRole('dialog', { name: 'Saves' });
-    await saves.getByRole('textbox', { name: 'Save the game now' }).fill('In the chapel');
-    await saves.getByRole('button', { name: 'Save', exact: true }).click();
-    await expect(saves.getByRole('list', { name: 'Saves, newest first' })).toContainText('In the chapel');
+    await saves.getByRole('textbox', { name: 'Save label' }).fill('In the chapel');
+    await saves.getByRole('button', { name: 'Save game' }).click();
+    await expect(saves.getByRole('list', { name: 'Saved games' })).toContainText('In the chapel');
     await saves.getByRole('button', { name: 'Close' }).click();
 
     // The party moves on after the save, so the save and the latest state differ.
     await placeParty(ruth.client, tableId, { dungeon: 'priory', level: 1, x: 14, y: 23 });
 
     await ruth.page.getByRole('button', { name: 'Table menu' }).click();
-    await ruth.page.getByRole('menuitem', { name: 'Return to the lobby' }).click();
-    const returning = ruth.page.getByRole('alertdialog', { name: 'Return the table to its lobby?' });
+    await ruth.page.getByRole('menuitem', { name: 'Return to lobby' }).click();
+    const returning = ruth.page.getByRole('alertdialog', { name: 'Return to lobby?' });
     // The dialog says what returning does to the characters (R-530).
-    await expect(returning).toContainText('Characters start each new game as they were created');
+    await expect(returning).toContainText('Starting a new game resets characters to their initial sheets');
     await returning.getByRole('button', { name: /lobby/i }).click();
     for (const page of [ruth.page, sam.page]) {
       await expect(page.getByRole('heading', { name: 'Party', level: 2 })).toBeVisible({ timeout: 20_000 });
@@ -333,38 +333,40 @@ test.describe('first run and lobby', () => {
     // Sam learns that a new game starts the characters afresh and that the referee can continue. Only Ruth gets
     // the button.
     await expect(
-      sam.page.getByText(/from earlier games\. A new game starts every character as they were created/),
+      sam.page.getByText(
+        /from earlier games\. Starting a new game resets characters to their initial sheets/,
+      ),
     ).toBeVisible();
-    await expect(sam.page.getByText(/the referee can continue from a save/)).toBeVisible();
+    await expect(sam.page.getByText(/Ask the referee to continue from a save/)).toBeVisible();
     await expect(sam.page.getByRole('button', { name: 'Continue from a save' })).toHaveCount(0);
     await ruth.page.getByRole('button', { name: 'Continue from a save' }).click();
     const lobbySaves = ruth.page.getByRole('dialog', { name: 'Continue from a save' });
-    await expect(lobbySaves.getByRole('textbox', { name: 'Save the game now' })).toHaveCount(0);
+    await expect(lobbySaves.getByRole('textbox', { name: 'Save label' })).toHaveCount(0);
     // In the lobby, no save is badged "Earlier game" (R-111), and the autosave note has no dead "Change" button
     // (R-103).
     await expect(lobbySaves.getByText('Earlier game', { exact: true })).toHaveCount(0);
     await expect(lobbySaves.getByRole('button', { name: 'Change', exact: true })).toHaveCount(0);
-    await expect(lobbySaves).toContainText('Change it with “Save automatically” in the table settings.');
+    await expect(lobbySaves).toContainText('Change this under “Save automatically” in table settings.');
     await lobbySaves.getByRole('button', { name: 'Restore In the chapel' }).click();
     const confirm = ruth.page.getByRole('alertdialog', { name: 'Restore “In the chapel”?' });
-    await expect(confirm).toContainText('The party plays on as it was saved');
+    await expect(confirm).toContainText('with the saved party rather than the lobby roster');
     await confirm.getByRole('button', { name: 'Restore' }).click();
 
     // Both people leave the lobby for the saved moment: exploring the priory, where the party stood.
     for (const page of [ruth.page, sam.page]) {
       await expect(page.getByRole('banner').getByText('Exploring')).toBeVisible({ timeout: 20_000 });
       await expect(page.getByRole('application', { name: /^Dungeon map/ })).toBeVisible();
-      await expect(page.getByRole('button', { name: 'Start the game' })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'Start game' })).toHaveCount(0);
     }
     const game = await sam.client.getGame(tableId);
     expect(game.mode).toBe('exploring');
     expect(game.view.location).toEqual(saved.view.location);
-    expect(game.view.party.map((member) => member.name)).toEqual(['Brenna', 'Wren', 'Osric', 'Tamsin']);
+    expect(game.view.party.map((member) => member.name)).toEqual(['Flarg', 'Tinks', 'Clarence', 'Mazpar']);
     // Sam still plays his own characters.
     await expect(
       sam.page
         .getByRole('list', { name: 'Marching order' })
-        .getByRole('button', { name: 'Brenna', exact: true }),
+        .getByRole('button', { name: 'Flarg', exact: true }),
     ).toHaveAccessibleDescription(/^You, /);
   });
 });

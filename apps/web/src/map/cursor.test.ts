@@ -63,13 +63,13 @@ describe('cursor announcements', () => {
 
   it('names the area, the side, and the next step for each tool', () => {
     expect(describeCursor(referee, { x: 15, y: 3, side: 'north' }, 'pick-cell')).toBe(
-      'Guard post, 12 squares north and 1 square west of the party. Press Enter to choose this square, or Escape to stop.',
+      'Guard post, 12 squares north and 1 square west of the party. Press Enter to choose this square, or Escape to cancel.',
     );
     expect(describeCursor(referee, { x: 26, y: 8, side: 'north' }, 'pick-edge')).toMatch(
-      /^North side: a door, closed, locked, stuck\. On the way, .* Press E for the next side, Enter to choose it, or Escape to stop\.$/,
+      /^North side: a door, closed, locked, stuck\. On the way, .* Press E for the next side, Enter to choose this edge, or Escape to cancel\.$/,
     );
     expect(describeCursor(referee, { x: 24, y: 17, side: 'west' }, 'pick-edge')).toMatch(
-      /^West side: a secret door, not found\./,
+      /^West side: a secret door, undiscovered\./,
     );
     expect(describeCursor(player, { x: 30, y: 2, side: 'north' }, 'pin')).toMatch(
       /^Unexplored, .* Press Enter to place a pin here\.$/,
@@ -81,7 +81,7 @@ describe('cursor announcements', () => {
     expect(measurementText(m)).toBe('6 squares, 60 feet');
     expect(measurementText(measure({ x: 0, y: 0 }, { x: 1.5, y: 0 }))).toBe('1 square, 10 feet');
     expect(describeCursor(player, { x: 16, y: 9, side: 'north' }, 'ruler', m)).toMatch(
-      /^6 squares, 60 feet\. .* Press Enter to keep the measurement, or Escape to stop\.$/,
+      /^6 squares, 60 feet\. .* Press Enter to keep this measurement, or Escape to cancel\.$/,
     );
   });
 });

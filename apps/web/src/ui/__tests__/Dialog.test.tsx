@@ -120,9 +120,9 @@ describe('ConfirmDialog with content', () => {
       return (
         <ConfirmDialog
           open
-          title="Return the table to its lobby?"
+          title="Return to lobby?"
           description="The game ends for everyone."
-          confirmLabel="Return to the lobby"
+          confirmLabel="Return to lobby"
           onConfirm={() => onConfirm(keep)}
         >
           <Checkbox label="Keep the saves" checked={keep} onCheckedChange={setKeep} />
@@ -130,10 +130,10 @@ describe('ConfirmDialog with content', () => {
       );
     }
     render(<End />);
-    const dialog = screen.getByRole('alertdialog', { name: 'Return the table to its lobby?' });
+    const dialog = screen.getByRole('alertdialog', { name: 'Return to lobby?' });
     expect(dialog).toHaveAccessibleDescription('The game ends for everyone.');
     await user.click(screen.getByRole('checkbox', { name: 'Keep the saves' }));
-    await user.click(screen.getByRole('button', { name: 'Return to the lobby' }));
+    await user.click(screen.getByRole('button', { name: 'Return to lobby' }));
     expect(onConfirm).toHaveBeenCalledWith(false);
   });
 });

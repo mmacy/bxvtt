@@ -34,7 +34,7 @@ export function NameForm({ title, description, submitLabel, onInvitePage = false
     event.preventDefault();
     const trimmed = name.trim();
     if (trimmed === '') {
-      setError('Enter a name, such as the one your friends call you.');
+      setError('Enter your display name.');
       return;
     }
     const invalid = displayStringProblem(trimmed, LIMITS.userName);
@@ -60,23 +60,22 @@ export function NameForm({ title, description, submitLabel, onInvitePage = false
       </h2>
       {description && <p className={styles.formLead}>{description}</p>}
       {notice === 'forgotten' && (
-        <Banner tone="info" title="This server doesn't know you yet">
-          The server no longer has the name this browser saved, so pick a name again. Your tables on this
-          server stay with your old name.
+        <Banner tone="info" title="Choose your name to continue">
+          Your previous sign-in is no longer stored on this server. Enter a name to create a new sign-in.
         </Banner>
       )}
       {notice === 'retired' && (
-        <Banner tone="info" title="You've signed in from another browser">
-          A referee let {lastName ?? 'you'} back in at a table from another browser, so this browser's sign-in
-          stopped working.{' '}
+        <Banner tone="info" title="You signed in from another browser">
+          A referee approved a rejoin request for {lastName ?? 'you'} in another browser, which signed this
+          browser out.{' '}
           {onInvitePage
-            ? `To play as ${lastName ?? 'yourself'} in this browser, choose your name under "I've played at this table before" when it shows. Or pick a new name here to join as someone new.`
-            : `To play as ${lastName ?? 'yourself'} in this browser, open the table's invite link here and choose "I've played at this table before". Or pick a new name here to join as someone new.`}
+            ? `To play as ${lastName ?? 'yourself'} here, select your name under "I've played at this table before" below, or enter a new name to join as a new member.`
+            : `To play as ${lastName ?? 'yourself'} here, open the table's invite link in this browser and select "I've played at this table before", or enter a new name to start fresh.`}
         </Banner>
       )}
       <Field
         label="Your name"
-        hint="The other people at the table see this name. You can change it later."
+        hint="Other players at the table see this name. You can change it anytime."
         error={error ?? undefined}
         aside={`${name.trim().length}/${LIMITS.userName}`}
       >
@@ -85,7 +84,7 @@ export function NameForm({ title, description, submitLabel, onInvitePage = false
           autoFocus
           autoComplete="nickname"
           maxLength={LIMITS.userName}
-          placeholder="Such as Rhea"
+          placeholder="Rhea"
           onChange={(event) => setName(event.target.value)}
         />
       </Field>

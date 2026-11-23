@@ -15,15 +15,15 @@ export interface CombatTable {
   ann: Actor;
   tableId: string;
   path: string;
-  /** The party member ID of a character, such as `character-0004` for Tamsin. Throws for an unknown name. */
+  /** The party member ID of a character, such as `character-0004` for Mazpar. Throws for an unknown name. */
   memberId(name: string): string;
 }
 
 /** Options for {@link combatTable}. */
 export interface CombatTableOptions {
   /**
-   * `strong` is Brenna (fighter) and Wren (thief) for Sam, and Osric (cleric) and Tamsin (magic-user with
-   * *magic missile* memorized) for Ann. `weak` is Brenna and Tamsin with 1 hit point each, one for each player.
+   * `strong` is Flarg (fighter) and Tinks (thief) for Sam, and Clarence (cleric) and Mazpar (magic-user with
+   * *magic missile* memorized) for Ann. `weak` is Flarg and Mazpar with 1 hit point each, one for each player.
    */
   party?: 'strong' | 'weak';
   /** The session seed. */
@@ -35,7 +35,7 @@ export interface CombatTableOptions {
 
 /**
  * Sets up a Drowned Bell table for a fight through the SDK. Sam owns the first seat, so he is the caller. With
- * the strong party, the party rests a night in town and Tamsin memorizes *magic missile* before it sets out.
+ * the strong party, the party rests a night in town and Mazpar memorizes *magic missile* before it sets out.
  */
 export async function combatTable(crew: Crew, options: CombatTableOptions = {}): Promise<CombatTable> {
   const ruth = await crew.person('Ruth');
@@ -44,15 +44,15 @@ export async function combatTable(crew: Crew, options: CombatTableOptions = {}):
   const strong = (options.party ?? 'strong') === 'strong';
   const party: MemberSpec[] = strong
     ? [
-        { owner: sam, name: 'Brenna', classId: 'fighter' },
-        { owner: sam, name: 'Wren', classId: 'thief', buy: ['leather', 'sword'] },
-        { owner: ann, name: 'Osric', classId: 'cleric' },
-        { owner: ann, name: 'Tamsin', classId: 'magic_user', buy: ['dagger'], spells: ['magic_missile'] },
+        { owner: sam, name: 'Flarg', classId: 'fighter' },
+        { owner: sam, name: 'Tinks', classId: 'thief', buy: ['leather', 'sword'] },
+        { owner: ann, name: 'Clarence', classId: 'cleric' },
+        { owner: ann, name: 'Mazpar', classId: 'magic_user', buy: ['dagger'], spells: ['magic_missile'] },
       ]
     : [
         {
           owner: sam,
-          name: 'Brenna',
+          name: 'Flarg',
           classId: 'fighter',
           seed: 106,
           buy: ['leather', 'sword'],
@@ -60,7 +60,7 @@ export async function combatTable(crew: Crew, options: CombatTableOptions = {}):
         },
         {
           owner: ann,
-          name: 'Tamsin',
+          name: 'Mazpar',
           classId: 'magic_user',
           seed: 110,
           buy: ['dagger'],
@@ -86,7 +86,7 @@ export async function combatTable(crew: Crew, options: CombatTableOptions = {}):
     await send(sam.client, tableId, { command_type: 'rest', kind: 'night' });
     await send(ann.client, tableId, {
       command_type: 'prepare_spells',
-      character_id: memberId('Tamsin'),
+      character_id: memberId('Mazpar'),
       selections: [{ spell_id: 'magic_missile' }],
     });
   }
@@ -106,7 +106,7 @@ export async function walkIntoGuardroom(caller: BxvttClient, tableId: string): P
 
 /**
  * Brings the party to Gashnak One-Ear in the warden's cell: the referee places it in the dorter, north of the
- * cell's stuck door, Brenna forces the door until it gives way, and the party steps south into the cell, where
+ * cell's stuck door, Flarg forces the door until it gives way, and the party steps south into the cell, where
  * Gashnak and two goblins wait.
  */
 export async function walkIntoWardensCell(table: CombatTable): Promise<GameState> {
@@ -116,7 +116,7 @@ export async function walkIntoWardensCell(table: CombatTable): Promise<GameState
   for (let attempt = 0; attempt < 10 && game.mode === 'exploring'; attempt += 1) {
     const result = await sam.client.sendCommand(
       tableId,
-      { command_type: 'force_door', direction: 'south', character_id: memberId('Brenna') },
+      { command_type: 'force_door', direction: 'south', character_id: memberId('Flarg') },
       game.revision,
     );
     game = result.game;
@@ -202,7 +202,7 @@ export async function declaring(page: Page, action: () => Promise<void>): Promis
  */
 export async function declareSuggested(page: Page, name: string): Promise<boolean> {
   const row = declarationRow(page, name);
-  const close = page.getByRole('button', { name: `Close ${name}'s choices` });
+  const close = page.getByRole('button', { name: `Close ${name}'s actions` });
   if ((await close.count()) > 0) {
     await close.click();
     await expect(close).toHaveCount(0);
@@ -230,7 +230,7 @@ export async function declareSuggested(page: Page, name: string): Promise<boolea
 export async function declareCloseIn(page: Page, name: string, monsters: string): Promise<void> {
   const composer = page.getByRole('region', { name: `Declare for ${name}` });
   if ((await composer.count()) === 0) {
-    await declarationRow(page, name).getByRole('button', { name: 'More choices' }).click();
+    await declarationRow(page, name).getByRole('button', { name: 'Actions' }).click();
   }
   await composer
     .getByRole('radiogroup', { name: `What ${name} does this round` })
@@ -249,7 +249,7 @@ export async function declareCloseIn(page: Page, name: string, monsters: string)
 export async function declareHold(page: Page, name: string): Promise<void> {
   const composer = page.getByRole('region', { name: `Declare for ${name}` });
   if ((await composer.count()) === 0) {
-    await declarationRow(page, name).getByRole('button', { name: 'More choices' }).click();
+    await declarationRow(page, name).getByRole('button', { name: 'Actions' }).click();
   }
   await composer
     .getByRole('radiogroup', { name: `What ${name} does this round` })

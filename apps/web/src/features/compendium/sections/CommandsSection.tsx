@@ -81,7 +81,7 @@ export function CommandsSection() {
     <>
       {isReferee && (
         <SegmentedControl
-          aria-label="Whose actions"
+          aria-label="Action scope"
           size="sm"
           value={scope}
           onValueChange={(value) => set({ scope: value })}
@@ -92,7 +92,7 @@ export function CommandsSection() {
         />
       )}
       <SegmentedControl
-        aria-label="When"
+        aria-label="Game mode"
         size="sm"
         value={filter.when}
         onValueChange={(when) => set({ when })}
@@ -126,7 +126,7 @@ export function CommandsSection() {
               onClear={() => set({ query: '', when: 'all' })}
               message={
                 filter.when === 'now' && filter.query === ''
-                  ? `Nothing is open to you ${mode ? `in ${sessionModeLabel(mode).toLowerCase()}` : 'now'} right now. Pick a mode to see what its actions are.`
+                  ? `No actions are available ${mode ? `while ${sessionModeLabel(mode).toLowerCase()}` : 'right now'}. Choose a mode above to browse its actions.`
                   : undefined
               }
             />

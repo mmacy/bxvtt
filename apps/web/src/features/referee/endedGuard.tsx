@@ -70,19 +70,19 @@ export function EndedGuardProvider({ children }: { children: ReactNode }) {
           if (!open && resolver.current) settle(false);
         }}
         title="The game is over"
-        description={`${ended ? endedSentence(ended) : ''} “${asking ?? ''}” would change the story of a game that won't continue.`}
-        confirmLabel="Send it anyway"
+        description={`${ended ? endedSentence(ended) : ''} Running “${asking ?? ''}” will alter the record of a finished game.`}
+        confirmLabel="Run anyway"
         onConfirm={() => settle(true)}
       >
         <p className={styles.guardNote}>
-          To play on, restore a save instead.{' '}
+          Restore a save to continue playing.{' '}
           <LinkButton
             onClick={() => {
               settle(false);
               setSavesOpen(true);
             }}
           >
-            Open the saves
+            View saves
           </LinkButton>
         </p>
       </ConfirmDialog>

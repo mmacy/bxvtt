@@ -84,7 +84,7 @@ export function foldQuestEvents(
     if (!quest) {
       quest = {
         id,
-        name: name ?? 'A quest',
+        name: name ?? 'Quest',
         offer: null,
         completion: null,
         completed: false,
@@ -104,7 +104,7 @@ export function foldQuestEvents(
       if (objectiveId === null) continue;
       let objective = quest.objectives.find((o) => o.id === objectiveId);
       if (!objective) {
-        objective = { id: objectiveId, name: text(event.name) ?? 'An objective', complete: false };
+        objective = { id: objectiveId, name: text(event.name) ?? 'Objective', complete: false };
         quest.objectives.push(objective);
       }
       if (event.event_type === 'objective_completed') objective.complete = true;
@@ -173,7 +173,7 @@ export function buildQuestLog(options: {
         const name = spec?.objectives?.find((o) => o.id === id)?.name;
         objectives.push({
           id,
-          name: name || 'An objective the players haven’t learned of',
+          name: name || 'Unrevealed objective',
           complete: objective.complete === true,
           hidden: true,
         });
@@ -219,13 +219,13 @@ export function buildQuestLog(options: {
     if (state.status === 'completed' && !activeIds.has(id) && !completed.some((q) => q.id === id)) {
       completed.push({
         id,
-        name: spec?.name ?? 'A quest',
+        name: spec?.name ?? 'Quest',
         speaker: spec?.narrative?.speaker ?? '',
         narrative: spec?.narrative?.offer ?? '',
         completion: spec?.narrative?.completion ?? null,
         objectives: (spec?.objectives ?? []).map((o) => ({
           id: o.id,
-          name: o.name || 'An objective',
+          name: o.name || 'Objective',
           complete: state.objectives?.[o.id]?.complete === true,
           hidden: state.objectives?.[o.id]?.revealed === false,
         })),
@@ -235,13 +235,13 @@ export function buildQuestLog(options: {
     if (state.status === 'inactive') {
       notOffered.push({
         id,
-        name: spec?.name ?? 'A quest',
+        name: spec?.name ?? 'Quest',
         speaker: spec?.narrative?.speaker ?? '',
         narrative: spec?.narrative?.offer ?? '',
         completion: null,
         objectives: (spec?.objectives ?? []).map((o) => ({
           id: o.id,
-          name: o.name || 'An objective',
+          name: o.name || 'Objective',
           complete: false,
           hidden: true,
         })),

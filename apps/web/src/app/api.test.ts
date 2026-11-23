@@ -32,7 +32,7 @@ describe('describeProblem', () => {
         detail: 'The proxy answered.',
       }),
     );
-    expect(message.title).toBe("The bxvtt server isn't answering");
+    expect(message.title).toBe("The bxvtt server isn't responding");
     expect(message.detail).toMatch(/starting or restarting/);
   });
 });

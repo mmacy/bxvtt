@@ -80,8 +80,8 @@ export function CharacterSheet({ memberId, onClose, tab }: CharacterSheetProps) 
       {member === null ? (
         <EmptyState
           icon="scroll"
-          title="This character isn't in the party"
-          description="They may have left the game. Pick another member in the party panel."
+          title="Character not in party"
+          description="Select another character in the party panel."
         />
       ) : (
         <SheetContent

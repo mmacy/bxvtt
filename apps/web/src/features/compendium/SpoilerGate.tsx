@@ -16,21 +16,15 @@ export function useSpoilerLocked(): boolean {
  * notice once, then the pages. The server sends the same catalog to every role, so this notice is a courtesy
  * to the reader, not access control.
  */
-export function SpoilerGate({
-  children,
-  what = 'section',
-}: {
-  children: ReactNode;
-  what?: 'section' | 'entry';
-}) {
+export function SpoilerGate({ children }: { children: ReactNode; what?: 'section' | 'entry' }) {
   const locked = useSpoilerLocked();
   const accept = useBookStore((s) => s.acceptSpoilers);
   if (!locked) return <>{children}</>;
   return (
     <Card padding="lg" className={styles.spoilerCard}>
-      <Banner tone="warning" title={`This ${what} can spoil surprises`}>
-        Magic item pages say what each item really does, including curses that a character finds out about
-        only by using the item. Read on only if you want to know before your character does.
+      <Banner tone="warning" title="Magic item spoilers">
+        Magic item entries reveal full effects and curses that characters normally discover only through play.
+        Continue only if you don&rsquo;t mind spoilers.
       </Banner>
       <div className={styles.spoilerActions}>
         <Button variant="primary" icon="eye" onClick={accept}>

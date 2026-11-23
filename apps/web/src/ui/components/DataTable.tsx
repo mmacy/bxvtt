@@ -115,7 +115,7 @@ export function DataTable<Row>({
           {sorted.length === 0 ? (
             <tr>
               <td colSpan={columns.length} className={styles.empty}>
-                {empty ?? 'Nothing to show'}
+                {empty ?? 'No entries'}
               </td>
             </tr>
           ) : (

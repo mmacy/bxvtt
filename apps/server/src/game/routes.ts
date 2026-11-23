@@ -34,7 +34,7 @@ export function registerGameRoutes(app: FastifyInstance, ctx: Context): void {
     const { tableId } = TableParams.parse(request.params);
     const role = tables.requireMember(tableId, ctx.auth.user(request));
     const state = await game.stateFor(tableId, role);
-    if (state === null) throw new ApiError('no_game', 'The table has no game in progress.');
+    if (state === null) throw new ApiError('no_game', 'No game is in progress at this table.');
     return state;
   });
 
@@ -59,7 +59,7 @@ export function registerGameRoutes(app: FastifyInstance, ctx: Context): void {
     const role = tables.requireMember(tableId, ctx.auth.user(request));
     const query = parseQuery(EventsQuery, request);
     if (query.visibility === 'referee' && role !== 'referee') {
-      throw new ApiError('referee_required', 'Only a referee can read referee events.');
+      throw new ApiError('referee_required', 'Only a referee can view referee events.');
     }
     const live = await game.require(tableId);
     return callBxapi(() =>
@@ -98,8 +98,8 @@ export function registerGameRoutes(app: FastifyInstance, ctx: Context): void {
     tables.requireReferee(tableId, user);
     const body = parseBody(UpdateSeatRequest, request);
     if (body.user_id !== null && tables.roleOf(tableId, body.user_id) === null) {
-      throw new ApiError('validation_error', 'A seat can only go to a member of the table.', {
-        errors: [{ path: ['user_id'], message: 'not a member of the table' }],
+      throw new ApiError('validation_error', 'You can assign a seat only to a member of this table.', {
+        errors: [{ path: ['user_id'], message: 'User is not a member of this table.' }],
       });
     }
     return game.locked(tableId, async () => {

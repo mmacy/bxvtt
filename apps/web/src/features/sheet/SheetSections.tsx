@@ -213,8 +213,8 @@ export function AbilityScores({ model }: { model: SheetModel }) {
       </div>
       {model.effectiveStrength !== null && (
         <p className={styles.note}>
-          Something this character wears sets their Strength to {model.effectiveStrength}. The melee and door
-          numbers use it.
+          Equipped gear sets this character&apos;s Strength to {model.effectiveStrength} for melee attacks and
+          forcing doors.
         </p>
       )}
     </section>
@@ -367,7 +367,7 @@ export function Languages({ languages }: { languages: readonly string[] }) {
         Languages
       </h3>
       <p className={styles.prose}>
-        {languages.length === 0 ? 'None.' : languages.map((id) => languageLabel(id)).join(', ')}
+        {languages.length === 0 ? 'None' : languages.map((id) => languageLabel(id)).join(', ')}
       </p>
     </section>
   );

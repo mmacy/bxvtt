@@ -35,7 +35,7 @@ function nameOf(id: string, catalog: readonly SpellSummary[] | null): string {
 export function SpellDetailBody({ spellId }: { spellId: string }) {
   const entry = useSpellDetail(spellId);
   if (entry.loading) return <Skeleton lines={4} />;
-  if (!entry.data) return <p className={styles.detailProse}>The rules reference doesn't have this spell.</p>;
+  if (!entry.data) return <p className={styles.detailProse}>No details available for this spell.</p>;
   const spell = entry.data;
   return (
     <div className={styles.detail}>
@@ -185,11 +185,9 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
             Prepare spells after a night&apos;s rest to fill {openSlots === 1 ? 'it' : 'them'}.
           </p>
         )}
-        <p className={styles.note}>
-          Preparing takes six turns, and the caster must have slept since the last time they prepared.
-        </p>
+        <p className={styles.note}>Preparing spells takes 6 turns after a night&apos;s rest.</p>
         {memorized.length === 0 ? (
-          <p className={styles.muted}>Nothing memorized.</p>
+          <p className={styles.muted}>No spells memorized.</p>
         ) : (
           <div className={styles.spellGrid}>
             {memorized.map((copy) => {
@@ -431,7 +429,7 @@ function PrepareDialog({ member, model, spellList, arcane, slots, onClose }: Pre
         if (!open) onClose();
       }}
       title={`Prepare ${member.name}'s spells`}
-      description="The new list replaces what is memorized now. Preparing takes six turns."
+      description="The new list replaces what is memorized now. Preparing spells takes 6 turns."
       size="md"
       footer={
         <>
@@ -446,7 +444,7 @@ function PrepareDialog({ member, model, spellList, arcane, slots, onClose }: Pre
     >
       <div className={styles.form}>
         {error && (
-          <Banner tone="warning" title="The spells weren't prepared">
+          <Banner tone="warning" title="Couldn't prepare spells">
             {error}
           </Banner>
         )}
@@ -476,7 +474,7 @@ function PrepareDialog({ member, model, spellList, arcane, slots, onClose }: Pre
               {list.length === 0 ? (
                 <p className={styles.muted}>
                   {arcane
-                    ? `The spell book has no ${ordinal(level)}-level spells.`
+                    ? `No ${ordinal(level)}-level spells in the spell book.`
                     : 'No spells at this level.'}
                 </p>
               ) : (
@@ -498,7 +496,7 @@ function PrepareDialog({ member, model, spellList, arcane, slots, onClose }: Pre
         })}
         {arcane && (
           <p className={styles.note}>
-            An arcane caster chooses the reversed form of a spell now, when they memorize it.
+            Arcane casters choose between normal and reversed forms when memorizing a spell.
           </p>
         )}
       </div>
@@ -582,7 +580,7 @@ function CastDialog({
         if (!open) onClose();
       }}
       title={`Cast ${name}`}
-      description="Casting outside a battle takes a round and uses up one memorized copy."
+      description="Casting outside battle takes 1 round and expends one memorized copy."
       size="md"
       footer={
         <>
@@ -603,7 +601,7 @@ function CastDialog({
     >
       <div className={styles.form}>
         {error && (
-          <Banner tone="warning" title="The spell wasn't cast">
+          <Banner tone="warning" title="Couldn't cast spell">
             {error}
           </Banner>
         )}
@@ -613,8 +611,8 @@ function CastDialog({
             label={`Cast the reversed form, ${spell.reversed_form.name}`}
             description={
               arcane
-                ? 'An arcane caster fixes the form when memorizing, so this follows the memorized copy.'
-                : 'A divine caster chooses the form when casting.'
+                ? 'Arcane casters choose normal or reversed form when memorizing.'
+                : 'Divine casters choose normal or reversed form when casting.'
             }
             checked={reversed}
             disabled={arcane}
@@ -625,9 +623,9 @@ function CastDialog({
           />
         )}
         {modes.length > 1 && (
-          <Field label="How to cast it">
+          <Field label="Casting mode">
             <RadioGroup
-              aria-label="How to cast it"
+              aria-label="Casting mode"
               value={mode?.key}
               onValueChange={setModeKey}
               options={modes.map((m) => ({ value: m.key, label: modeLabel(m, modes) }))}
@@ -642,7 +640,7 @@ function CastDialog({
               value={targets[0] ?? ''}
               onValueChange={(value) => setTargets([value])}
               options={options}
-              placeholder="Choose the target"
+              placeholder="Choose a target"
             />
           </Field>
         )}
@@ -705,7 +703,7 @@ function LearnDialog({
         if (!open) onClose();
       }}
       title={`Teach ${member.name} a spell`}
-      description="Use it when the character gains a level or a mentor or scroll teaches them. The book holds as many spells of each level as the caster has slots."
+      description="Add a spell when leveling up or learning from a mentor or scroll. A spell book fits as many spells of each level as the caster has spell slots."
       size="md"
       footer={
         <>
@@ -719,14 +717,14 @@ function LearnDialog({
             disabled={!spellId}
             onClick={() => void submit()}
           >
-            Write it in the book
+            Add to spell book
           </Button>
         </>
       }
     >
       <div className={styles.form}>
         {error && (
-          <Banner tone="warning" title="The spell wasn't learned">
+          <Banner tone="warning" title="Couldn't learn spell">
             {error}
           </Banner>
         )}

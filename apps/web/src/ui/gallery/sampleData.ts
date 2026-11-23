@@ -15,8 +15,8 @@ export interface SampleCharacter {
 
 export const party: SampleCharacter[] = [
   {
-    id: 'kael',
-    name: 'Kael Ironside',
+    id: 'flarg',
+    name: 'Flarg',
     characterClass: 'fighter',
     level: 3,
     color: 'vermilion',
@@ -26,8 +26,8 @@ export const party: SampleCharacter[] = [
     player: 'Marta',
   },
   {
-    id: 'aldous',
-    name: 'Brother Aldous',
+    id: 'clarence',
+    name: 'Clarence',
     characterClass: 'cleric',
     level: 2,
     color: 'azurite',
@@ -37,8 +37,8 @@ export const party: SampleCharacter[] = [
     player: 'Dev',
   },
   {
-    id: 'wren',
-    name: 'Wren Underbough',
+    id: 'huge',
+    name: 'Huge',
     characterClass: 'halfling',
     level: 3,
     color: 'saffron',
@@ -48,8 +48,8 @@ export const party: SampleCharacter[] = [
     player: 'Sam',
   },
   {
-    id: 'ilsabet',
-    name: 'Ilsabet',
+    id: 'mazpar',
+    name: 'Mazpar',
     characterClass: 'magic-user',
     level: 2,
     color: 'ultramarine',
@@ -59,8 +59,8 @@ export const party: SampleCharacter[] = [
     player: 'Jo',
   },
   {
-    id: 'durgin',
-    name: 'Durgin Coalbeard',
+    id: 'doke',
+    name: 'Doke',
     characterClass: 'dwarf',
     level: 2,
     color: 'malachite',
@@ -70,8 +70,8 @@ export const party: SampleCharacter[] = [
     player: 'Marta',
   },
   {
-    id: 'sylvaine',
-    name: 'Sylvaine',
+    id: 'elfy',
+    name: 'Elfy',
     characterClass: 'elf',
     level: 1,
     color: 'verdigris',
@@ -81,8 +81,8 @@ export const party: SampleCharacter[] = [
     player: 'Dev',
   },
   {
-    id: 'nettle',
-    name: 'Nettle',
+    id: 'tinks',
+    name: 'Tinks',
     characterClass: 'thief',
     level: 3,
     color: 'madder',

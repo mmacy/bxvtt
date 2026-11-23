@@ -51,11 +51,11 @@ describe('RefereePanel', () => {
     const snapshot = fixtureSnapshot('encounter', 'referee');
     api.sendCommand.mockResolvedValue(commandResult(snapshot));
     const { user, store } = renderWithTable(<RefereePanel />, { snapshot, api });
-    const encounter = await screen.findByRole('region', { name: 'Encounter' });
+    const encounter = await screen.findByRole('region', { name: 'Active encounter' });
     expect(within(encounter).getByText('3 of 3 goblins')).toBeInTheDocument();
     expect(within(encounter).getAllByText(/^Goblin \d$/)).toHaveLength(3);
-    await user.click(within(encounter).getByRole('radio', { name: /came to terms/ }));
-    await user.click(within(encounter).getByRole('button', { name: 'End the encounter' }));
+    await user.click(within(encounter).getByRole('radio', { name: /came to terms/i }));
+    await user.click(within(encounter).getByRole('button', { name: 'End encounter' }));
     await waitFor(() =>
       expect(api.sendCommand).toHaveBeenCalledWith(
         store.getState().tableId,
@@ -133,7 +133,7 @@ describe('RefereePanel', () => {
     await user.click(await screen.findByRole('option', { name: 'North' }));
     await user.click(screen.getAllByRole('radio', { name: 'Yes' })[0] as HTMLElement);
     await user.click(screen.getByRole('button', { name: 'Set door' }));
-    expect(await screen.findByText('The rules engine refused this')).toBeInTheDocument();
+    expect(await screen.findByText('Action not allowed')).toBeInTheDocument();
     expect(api.sendCommand).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({ command_type: 'set_door_state', x: 0, y: 0, direction: 'north', open: true }),
@@ -150,7 +150,7 @@ describe('RefereePanel', () => {
     await user.click(screen.getByRole('tab', { name: 'Quick actions' }));
     await user.click(screen.getByRole('button', { name: /Add a journal entry/ }));
     await user.click(await screen.findByRole('button', { name: 'Add entry' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('One field needs a value or a fix.');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Fix 1 highlighted field before sending.');
     expect(api.sendCommand).not.toHaveBeenCalled();
   });
 

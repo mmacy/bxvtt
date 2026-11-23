@@ -124,7 +124,7 @@ describe('CharacterWizard', () => {
     expect(await screen.findByText('60')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Add Sword to the cart' }));
     await waitFor(() =>
-      expect(screen.getByText('The shop and your class accept this outfit.')).toBeInTheDocument(),
+      expect(screen.getByText('Your character can afford and use this equipment.')).toBeInTheDocument(),
     );
     await user.click(screen.getByRole('button', { name: /Continue/ }));
 
@@ -168,7 +168,7 @@ describe('CharacterWizard', () => {
       preferences: { motion: 'reduce' },
     });
     await user.click(await screen.findByRole('button', { name: 'Create character' }));
-    expect(await screen.findByText('The shopping list needs a change')).toBeInTheDocument();
+    expect(await screen.findByText('Check your starting equipment')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Outfit' })).toBeInTheDocument();
   });
 
@@ -182,7 +182,7 @@ describe('CharacterWizard', () => {
       snapshot: fixtureSnapshot('lobby', 'player'),
       preferences: { motion: 'reduce' },
     });
-    expect(await screen.findByText('Your character is where you left it')).toBeInTheDocument();
+    expect(await screen.findByText('Resumed your unfinished character')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: /Name/ })).toHaveValue('Wren');
   });
 });

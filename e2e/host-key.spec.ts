@@ -86,7 +86,7 @@ test.describe('host key', () => {
     await page.goto(`${ORIGIN}/`);
     await page.getByRole('textbox', { name: 'Your name' }).fill('Hana');
     await page
-      .getByRole('form', { name: 'Pick your name' })
+      .getByRole('form', { name: 'Choose your name' })
       .getByRole('button', { name: 'Continue' })
       .click();
     await expect(page.getByRole('heading', { name: 'Your tables', level: 1 })).toBeVisible();
@@ -95,13 +95,13 @@ test.describe('host key', () => {
     const key = page.getByLabel('Host key');
     await expect(key).toBeVisible();
     await expect(key).toHaveAttribute('type', 'password');
-    await expect(page.getByText('Only the host of this server has it.')).toBeVisible();
+    await expect(page.getByText('Ask the server host for this key.')).toBeVisible();
 
     // Without the key, the server refuses and the page says why.
     await page.getByRole('textbox', { name: 'Table name' }).fill('Hana runs the bell');
     await page.getByRole('button', { name: 'Create table' }).click();
     await expect(
-      page.getByText('This server needs a host key to create a table.', { exact: false }),
+      page.getByText('Enter the host key from the server host to create a table.', { exact: false }),
     ).toBeVisible();
     await expect(key).toHaveAttribute('aria-invalid', 'true');
     await expect(page).toHaveURL(`${ORIGIN}/`);
@@ -117,7 +117,7 @@ test.describe('host key', () => {
     await page.getByRole('button', { name: 'Create table' }).click();
     await expect(page).toHaveURL(/\/tables\/tbl_/);
     await expect(page.getByRole('heading', { name: 'Hana runs the bell', level: 1 })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Make a new link' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Replace invite link' })).toBeVisible();
   });
 });
 

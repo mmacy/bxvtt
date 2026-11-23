@@ -176,7 +176,7 @@ export class BxvttClient {
         title: 'Invalid response',
         status: response.status,
         code: 'invalid_response',
-        detail: `The server answered ${method} ${path} with a body that isn't JSON.`,
+        detail: 'The server returned an unreadable response. Reload the page or check the server address.',
       });
     }
     return parsed.value as T;
@@ -957,7 +957,7 @@ function toProblem(body: unknown, status: number): Problem {
     code,
     detail:
       code === 'server_unavailable'
-        ? `The bxvtt server didn't answer (status ${status}). It may be down or restarting.`
-        : `The server answered with status ${status}.`,
+        ? `The server isn't responding (HTTP ${status}). It may be starting or restarting.`
+        : `The server returned an unexpected error (HTTP ${status}).`,
   };
 }

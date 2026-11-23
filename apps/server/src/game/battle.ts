@@ -282,7 +282,9 @@ export class BattleService {
     if (state === null) throw new ApiError('not_in_battle', "The party isn't in a battle.");
     const missing = state.declarers.filter((memberId) => state.declarations[memberId] === undefined);
     if (missing.length > 0 && !fillWithHold) {
-      throw new ApiError('declarations_incomplete', "Some members haven't declared yet.", { missing });
+      throw new ApiError('declarations_incomplete', "Some party members haven't declared an action yet.", {
+        missing,
+      });
     }
     const declarations = state.declarers.map((memberId) => {
       const declaration = state.declarations[memberId];
@@ -339,7 +341,7 @@ export class BattleService {
   private checkMember(live: LiveGame, user: User, role: Role, memberId: string): void {
     const declarers = live.view.encounter?.declarers ?? [];
     if (!declarers.includes(memberId)) {
-      throw new ApiError('not_a_declarer', "That member doesn't declare this round.");
+      throw new ApiError('not_a_declarer', "That party member can't declare an action this round.");
     }
     if (role === 'referee') return;
     const seat = readSeats(this.ctx.db, live.tableId, live.sessionId).find((s) => s.member_id === memberId);
@@ -390,9 +392,13 @@ export function registerBattleRoutes(app: FastifyInstance, ctx: Context): void {
     const role = ctx.tables.requireMember(tableId, user);
     const body = parseBody(SaveDeclarationRequest, request);
     if (body.declaration.character_id !== undefined && body.declaration.character_id !== memberId) {
-      throw new ApiError('validation_error', 'The declaration names a different member than the route.', {
-        errors: [{ path: ['declaration', 'character_id'], message: 'must match the member in the path' }],
-      });
+      throw new ApiError(
+        'validation_error',
+        'The declaration character does not match the requested party member.',
+        {
+          errors: [{ path: ['declaration', 'character_id'], message: 'Must match the member in the path.' }],
+        },
+      );
     }
     return battle.save(tableId, user, role, memberId, body.declaration, request.id);
   });

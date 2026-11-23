@@ -43,16 +43,16 @@ export function HealthBanner() {
 
   if (state.kind === 'no-bxapi') {
     return (
-      <Banner tone="danger" title="The rules engine isn't running" actions={retry}>
-        The bxvtt server is up, but it can't reach bxapi, which applies the rules and stores every game. Ask
-        the person who runs this server to start bxapi. Tables and games open again once it answers.
+      <Banner tone="danger" title="The game service isn't running" actions={retry}>
+        The server is running, but it can&apos;t reach the game service. Ask the server host to start the game
+        service, then check again.
       </Banner>
     );
   }
   if (state.kind === 'no-server') {
     return (
       <Banner tone="danger" title="Can't reach the bxvtt server" actions={retry}>
-        Check your connection. If you run the server yourself, start it and check again.
+        Check your connection, or ask the server host whether the server is running.
       </Banner>
     );
   }

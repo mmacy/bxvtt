@@ -29,7 +29,7 @@ test.describe('the map with the keyboard', () => {
 
     // Place the party: the pick starts from the keyboard, and the map takes focus with its cursor.
     const place = await openQuickAction(ruth.page, 'Place the party');
-    await place.getByRole('radio', { name: 'A cell' }).click();
+    await place.getByRole('radio', { name: 'Cell' }).click();
     await place.getByRole('button', { name: 'Pick a cell on the map' }).press('Enter');
     await expect(ruth.page.getByText(PLACE_PROMPT)).toBeVisible();
     // The prompt sits below the map's toolbar, so the level switcher stays usable during a pick (R-201).
@@ -51,7 +51,7 @@ test.describe('the map with the keyboard', () => {
     await ruth.page.keyboard.press('Enter');
     await expect(ruth.page.getByText(PLACE_PROMPT)).toHaveCount(0);
     await expect(place.getByText(/^Level 1, Gatehouse stair/)).toBeVisible();
-    await place.getByRole('button', { name: 'Place the party' }).press('Enter');
+    await place.getByRole('button', { name: 'Place party' }).press('Enter');
     await waitForGame(
       sam.client,
       table.id,
@@ -91,7 +91,7 @@ test.describe('the map with the keyboard', () => {
       .poll(async () => JSON.stringify((await ruth.client.getRefereeState(table.id)).dungeon_state.doors))
       .toMatch(/"priory:1:(12,14:south|12,15:north)":\{"open":true/);
     await openScene(sam.page);
-    await expect(scenePanel(sam.page).getByText('A door to the north, open.')).toBeVisible();
+    await expect(scenePanel(sam.page).getByText('A door to the north is open.')).toBeVisible();
     await ruth.page.screenshot({ path: `${SCREENS_DIR}/map-keyboard-door.png` });
   });
 
@@ -147,13 +147,13 @@ test.describe('pins', () => {
     await samsPins.click();
     const samsList = sam.page.getByRole('region', { name: 'Pins on this level' });
     await expect(samsList.getByText('No pins on this level yet.')).toBeVisible();
-    await samsList.getByRole('button', { name: 'Add a pin where the party stands' }).click();
-    const addPin = sam.page.getByRole('dialog', { name: 'Add a pin' });
+    await samsList.getByRole('button', { name: 'Add pin at party' }).click();
+    const addPin = sam.page.getByRole('dialog', { name: 'Add pin' });
     await expect(addPin).toHaveAccessibleDescription(
-      'Everyone at the table sees the pin and its note on this level.',
+      'Everyone at the table can see this pin and its note on this level.',
     );
     await addPin.getByRole('textbox', { name: 'Note' }).fill('The statue hides a loose step');
-    await addPin.getByRole('button', { name: 'Add the pin' }).click();
+    await addPin.getByRole('button', { name: 'Add pin' }).click();
     await expect(addPin).toHaveCount(0);
     await expect(samsPins).toHaveAccessibleName('Pins: 1 on this level');
     const stored = (await sam.client.getAnnotations(table.id, level)).items.filter((a) => a.kind === 'pin');
@@ -193,14 +193,14 @@ test.describe('pins', () => {
 
     // A pin that only referees see: the dialog says so (D-405), and Sam's list never gets it.
     await ruthsPins.click();
-    await ruthsList.getByRole('button', { name: 'Add a pin where the party stands' }).click();
-    const refereePin = ruth.page.getByRole('dialog', { name: 'Add a pin' });
+    await ruthsList.getByRole('button', { name: 'Add pin at party' }).click();
+    const refereePin = ruth.page.getByRole('dialog', { name: 'Add pin' });
     await refereePin.getByRole('textbox', { name: 'Note' }).fill('Kobold scouts watch this stair');
-    await refereePin.getByRole('checkbox', { name: 'Only referees see this pin' }).check();
+    await refereePin.getByRole('checkbox', { name: 'Visible only to referees' }).check();
     await expect(refereePin).toHaveAccessibleDescription(
-      'Only referees see this pin and its note. Players never receive it.',
+      'Only referees can see this pin and its note. Players never receive it.',
     );
-    await refereePin.getByRole('button', { name: 'Add the pin' }).click();
+    await refereePin.getByRole('button', { name: 'Add pin' }).click();
     await expect(refereePin).toHaveCount(0);
     await expect(ruthsPins).toHaveAccessibleName('Pins: 2 on this level');
     await ruthsPins.click();
@@ -219,9 +219,9 @@ test.describe('map chrome', () => {
     const { sam, ruth } = await dungeonTable(crew, { seed: 1981 });
     const minimap = sam.page.getByRole('application', { name: MINIMAP });
     await expect(minimap).toBeVisible();
-    await sam.page.getByRole('button', { name: 'Hide the minimap' }).click();
+    await sam.page.getByRole('button', { name: 'Hide minimap' }).click();
     await expect(minimap).toHaveCount(0);
-    const show = sam.page.getByRole('button', { name: 'Show the minimap' });
+    const show = sam.page.getByRole('button', { name: 'Show minimap' });
     await expect(show).toBeVisible();
     // The browser remembers the choice.
     await sam.page.reload();
@@ -229,16 +229,16 @@ test.describe('map chrome', () => {
     await expect(show).toBeVisible();
     await show.click();
     await expect(minimap).toBeVisible();
-    await expect(sam.page.getByRole('button', { name: 'Hide the minimap' })).toBeVisible();
+    await expect(sam.page.getByRole('button', { name: 'Hide minimap' })).toBeVisible();
 
     // Below 1100 pixels the minimap starts folded, until the user unfolds it.
     await ruth.page.setViewportSize({ width: 1000, height: 800 });
     await ruth.page.reload();
     await expect(dungeonMap(ruth.page)).toBeVisible();
-    await expect(ruth.page.getByRole('button', { name: 'Show the minimap' })).toBeVisible();
+    await expect(ruth.page.getByRole('button', { name: 'Show minimap' })).toBeVisible();
     await expect(ruth.page.getByRole('application', { name: MINIMAP })).toHaveCount(0);
     await ruth.page.screenshot({ path: `${SCREENS_DIR}/map-narrow-minimap-folded.png` });
-    await ruth.page.getByRole('button', { name: 'Show the minimap' }).click();
+    await ruth.page.getByRole('button', { name: 'Show minimap' }).click();
     await expect(ruth.page.getByRole('application', { name: MINIMAP })).toBeVisible();
     await ruth.page.screenshot({ path: `${SCREENS_DIR}/map-narrow-minimap-open.png` });
   });
@@ -250,21 +250,21 @@ test.describe('map chrome', () => {
     // A new area opens the card and announces the area as a sentence (D-203).
     await placeParty(ruth.client, table.id, { dungeon: 'priory', level: 1, x: 12, y: 12, facing: 'north' });
     await expect(scene.getByRole('heading', { name: 'Chapter house' })).toBeVisible();
-    await expect(scene.getByRole('button', { name: 'Hide the description' })).toBeVisible();
+    await expect(scene.getByRole('button', { name: 'Hide description' })).toBeVisible();
     await expect(scene.getByText('The party enters the chapter house.')).toBeAttached();
 
     // A press on the map folds it: the user has turned to the map.
     await clickSquare(sam.page, 4, 4);
-    await expect(scene.getByRole('button', { name: 'Show the description' })).toBeVisible();
+    await expect(scene.getByRole('button', { name: 'Show description' })).toBeVisible();
 
     // In a corridor below the chapter house, the folded bar's menu opens the door.
     await placeParty(ruth.client, table.id, { dungeon: 'priory', level: 1, x: 12, y: 15, facing: 'north' });
     await expect(scene.getByRole('heading', { name: 'On the way' })).toBeVisible();
-    const things = scene.getByRole('button', { name: /^\d+ things? here$/ });
+    const things = scene.getByRole('button', { name: /^\d+ features? here$/ });
     await expect(things).toBeVisible();
     await sam.page.screenshot({ path: `${SCREENS_DIR}/scene-folded.png` });
-    await pickFromMenu(things, 'The door to the north', 'Open it');
+    await pickFromMenu(things, 'Door to the north', 'Open door');
     await openScene(sam.page);
-    await expect(scene.getByText('A door to the north, open.')).toBeVisible();
+    await expect(scene.getByText('A door to the north is open.')).toBeVisible();
   });
 });

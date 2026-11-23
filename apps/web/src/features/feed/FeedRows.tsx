@@ -52,24 +52,24 @@ function DayDivider({ label }: { label: string }) {
 
 function UnreadDivider() {
   return (
-    <div className={styles.unread} role="separator" aria-label="New since you last looked">
-      <span aria-hidden="true">New since you last looked</span>
+    <div className={styles.unread} role="separator" aria-label="New entries">
+      <span aria-hidden="true">New entries</span>
     </div>
   );
 }
 
 function SessionDivider({ entry }: { entry: SystemEntry | null }) {
   const view = useFeedView();
-  let title = 'A new session begins';
+  let title = 'New session';
   let icon: 'play' | 'undo' | 'flag' = 'play';
   if (entry?.code === 'game_started') {
     const name = entry.params.adventure_name;
-    title = typeof name === 'string' && name !== '' ? name : 'The game begins';
+    title = typeof name === 'string' && name !== '' ? name : 'Game started';
   } else if (entry?.code === 'save_restored') {
-    title = 'The game goes back to a save';
+    title = 'Save restored';
     icon = 'undo';
   } else if (entry?.code === 'game_ended') {
-    title = 'The game ends';
+    title = 'Game ended';
     icon = 'flag';
   }
   return (

@@ -21,7 +21,7 @@ async function shoot(page: Page, label: string): Promise<void> {
 
 /** Waits for the play screen of a stage to settle. */
 async function settle(page: Page, stage: Stage): Promise<void> {
-  if (stage === 'town') await expect(page.getByRole('tablist', { name: 'Parts of town' })).toBeVisible();
+  if (stage === 'town') await expect(page.getByRole('tablist', { name: 'Town locations' })).toBeVisible();
   if (stage === 'exploring' || stage === 'encounter' || stage === 'battle') {
     await expect(page.getByRole('application', { name: /^Dungeon map/ })).toBeVisible();
   }
@@ -34,7 +34,7 @@ test.describe('axe finds no serious or critical violations', () => {
   test('home, first run', async ({ crew }, testInfo) => {
     const visitor = await crew.person('Visitor', { signedIn: false });
     await visitor.page.goto('/');
-    await expect(visitor.page.getByRole('form', { name: 'Pick your name' })).toBeVisible();
+    await expect(visitor.page.getByRole('form', { name: 'Choose your name' })).toBeVisible();
     await shoot(visitor.page, 'home-first-run');
     expect(describeViolations(await seriousViolations(visitor.page, testInfo, 'home-first-run'))).toEqual([]);
   });
@@ -61,8 +61,8 @@ test.describe('axe finds no serious or critical violations', () => {
     await expect(
       visitor.page.getByRole('heading', { name: "I've played at this table before" }),
     ).toBeVisible();
-    await expect(visitor.page.getByRole('button', { name: 'Come back in as Sam' })).toBeVisible();
-    await expect(visitor.page.getByRole('button', { name: 'Come back in as Ruth' })).toHaveCount(0);
+    await expect(visitor.page.getByRole('button', { name: 'Rejoin as Sam' })).toBeVisible();
+    await expect(visitor.page.getByRole('button', { name: 'Rejoin as Ruth' })).toHaveCount(0);
     await shoot(visitor.page, 'join');
     expect(describeViolations(await seriousViolations(visitor.page, testInfo, 'join'))).toEqual([]);
   });
@@ -102,7 +102,7 @@ test.describe('axe finds no serious or critical violations', () => {
     await openTable(page, staged.path);
     await settle(page, 'town');
     const found: string[] = [];
-    const tabs = page.getByRole('tablist', { name: 'Parts of town' }).getByRole('tab');
+    const tabs = page.getByRole('tablist', { name: 'Town locations' }).getByRole('tab');
     const count = await tabs.count();
     for (let index = 0; index < count; index += 1) {
       const tab = tabs.nth(index);
@@ -159,7 +159,7 @@ test.describe('axe finds no serious or critical violations', () => {
     await page.getByRole('tab', { name: 'Party' }).click();
     await page
       .getByRole('list', { name: 'Marching order' })
-      .getByRole('button', { name: /^Brenna/ })
+      .getByRole('button', { name: /^Flarg/ })
       .click();
     await check('character-sheet');
     await page.keyboard.press('Escape');
@@ -208,18 +208,16 @@ test.describe('axe on the screens added in the fix round', () => {
     await openTable(staged.ruth.page, staged.path);
     const visitor = await crew.person('Visitor', { signedIn: false });
     await visitor.page.goto(`/join/${staged.table.invite_code}`);
-    await visitor.page.getByRole('button', { name: 'Come back in as Sam' }).click();
-    await expect(
-      visitor.page.getByRole('heading', { name: /Waiting for a referee to let you in as Sam/ }),
-    ).toBeVisible();
+    await visitor.page.getByRole('button', { name: 'Rejoin as Sam' }).click();
+    await expect(visitor.page.getByRole('heading', { name: /Waiting to rejoin as Sam/ })).toBeVisible();
     await shoot(visitor.page, 'rejoin-waiting');
     const found = describeViolations(await seriousViolations(visitor.page, testInfo, 'rejoin-waiting'));
 
-    const requests = staged.ruth.page.getByRole('region', { name: 'Requests to come back in' });
+    const requests = staged.ruth.page.getByRole('region', { name: 'Rejoin requests' });
     await expect(requests).toBeVisible();
     await shoot(staged.ruth.page, 'rejoin-request');
     found.push(...describeViolations(await seriousViolations(staged.ruth.page, testInfo, 'rejoin-request')));
-    await requests.getByRole('button', { name: 'Not now' }).click();
+    await requests.getByRole('button', { name: 'Decline' }).click();
     await expect(requests).toBeHidden();
     expect(found).toEqual([]);
   });

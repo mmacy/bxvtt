@@ -80,7 +80,7 @@ export function RosterPanel() {
 
   const remove = async (entry: RosterEntry) => {
     const result = await run(() => getApi().removeFromRoster(table.id, entry.id), {
-      errorTitle: `Couldn't take ${entry.name} out of the party`,
+      errorTitle: `Couldn't remove ${entry.name} from the party`,
     });
     if (result.ok) store.getState().receiveTable(result.value);
   };
@@ -117,7 +117,7 @@ export function RosterPanel() {
           icon="users"
           size="compact"
           title="The party is empty"
-          description="Add a character you made before, or create one. The order here is the marching order."
+          description="Add an existing character or create a new one. Their order here sets the marching order."
         />
       ) : (
         <ol className={styles.rosterList} aria-label="Party in marching order">
@@ -177,7 +177,7 @@ export function RosterPanel() {
                         {(mine || referee) && (
                           <IconButton
                             icon="close"
-                            label={`Take ${entry.name} out of the party`}
+                            label={`Remove ${entry.name} from party`}
                             variant="ghost"
                             size="sm"
                             onClick={() => void remove(entry)}
@@ -194,7 +194,7 @@ export function RosterPanel() {
       )}
       {referee && roster.length > 1 && (
         <p className={styles.note}>
-          Drag a character, or use the arrows, to change the marching order. The first rank leads.
+          Drag cards or use the arrows to set the marching order. Rank 1 leads the party.
         </p>
       )}
       <MyCharacters />
@@ -248,8 +248,8 @@ function MyCharacters() {
       {items !== null && available.length === 0 && (
         <p className={styles.note}>
           {items.length === 0
-            ? "You haven't made a character yet. Create one to bring to this table."
-            : 'Every character you made is in the party.'}
+            ? "You haven't created any characters yet. Create one to add them to the party."
+            : 'All of your characters are already in the party.'}
         </p>
       )}
       {available.length > 0 && (

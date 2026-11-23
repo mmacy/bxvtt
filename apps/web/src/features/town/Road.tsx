@@ -22,29 +22,29 @@ export function RoadPanel() {
           <Icon name="footprints" size={20} />
         </span>
         <h2 id="road-title" className={styles.roadTitle}>
-          The road out of town
+          Leave town
         </h2>
       </div>
       {dungeons === null && !failed && <Skeleton lines={2} />}
       {failed && (
         <Banner
           tone="warning"
-          title="The road list didn't load"
+          title="Couldn't load destinations"
           actions={
             <Button size="sm" variant="secondary" onClick={retry}>
               Try again
             </Button>
           }
         >
-          The table couldn't read where the party can go.
+          Check your connection and try again.
         </Banner>
       )}
       {dungeons !== null && dungeons.length === 0 && (
         <EmptyState
           size="compact"
           icon="map"
-          title="No road leads out"
-          description="The adventure lists no dungeon."
+          title="No destinations available"
+          description="This adventure has no dungeons to enter."
         />
       )}
       {dungeons !== null && dungeons.length > 0 && (
@@ -113,7 +113,7 @@ export function LeaveDialog() {
       title={
         chosen ? `Set out for ${chosen.name ? nameInSentence(chosen.name) : 'the dungeon'}?` : 'Set out?'
       }
-      description="The party leaves town together and arrives at the entrance."
+      description="Your party leaves town together and arrives at the dungeon entrance."
       footer={
         <>
           <Button variant="secondary" onClick={() => close(false)}>
@@ -142,7 +142,7 @@ export function LeaveDialog() {
         )}
         {missing.length > 0 ? (
           <div className={styles.gaps}>
-            <p className={styles.gapsTitle}>Before you go, the party might want:</p>
+            <p className={styles.gapsTitle}>Suggested before you go:</p>
             <ul className={styles.gapList}>
               {missing.map((line) => (
                 <li key={line.key}>{line.key === 'spells' ? line.detail : line.title}</li>
@@ -161,15 +161,15 @@ export function LeaveDialog() {
                 close(false);
               }}
             >
-              Back to the outfitter
+              Go to outfitter
             </Button>
           </div>
         ) : (
-          <p className={styles.ready}>The party carries a light, a tinder box, rations, and rope.</p>
+          <p className={styles.ready}>Your party carries light, a tinder box, rations, and rope.</p>
         )}
         {!access.allowed && <Banner tone="info">{access.explanation}</Banner>}
         {error !== null && (
-          <Banner tone="warning" title="The party can't set out">
+          <Banner tone="warning" title="Can't set out">
             {error}
           </Banner>
         )}

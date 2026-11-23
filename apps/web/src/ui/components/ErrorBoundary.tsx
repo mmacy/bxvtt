@@ -26,9 +26,7 @@ export function ErrorFallback({
     <div role="alert" className={cx(styles.fallback, styles[size], className)}>
       <Icon name="skull" size={size === 'compact' ? 24 : 32} className={styles.icon} />
       <p className={styles.title}>{area} stopped working</p>
-      <p className={styles.text}>
-        The rest of the table still works. Try again, or reload the page if it keeps happening.
-      </p>
+      <p className={styles.text}>Try again, or reload the page if the problem continues.</p>
       <div className={styles.actions}>
         {onRetry && (
           <Button variant="secondary" size="sm" icon="refresh" onClick={onRetry}>

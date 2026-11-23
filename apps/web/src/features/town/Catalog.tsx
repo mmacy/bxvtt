@@ -1,5 +1,5 @@
 /** The outfitter's catalog: search, a type filter, sortable columns, and a way to put lots in the cart. */
-import { formatGold, itemTypeLabel } from '@bxvtt/shared/text';
+import { capitalizeFirst, formatGold, itemTypeLabel, resolveItemNoun } from '@bxvtt/shared/text';
 import { useTextContext } from '@/app';
 import { useMemo, useState } from 'react';
 import {
@@ -112,7 +112,7 @@ export function Catalog({
       cell: (item) => {
         const weight = weightCoins(item);
         return weight === null ? (
-          <span className={styles.none} title="The catalog lists no weight">
+          <span className={styles.none} title="No listed weight">
             -
           </span>
         ) : (
@@ -144,12 +144,17 @@ export function Catalog({
             </Button>
           );
         }
+        const noun = resolveItemNoun(item.summary.id, ctx, { name });
         return (
-          <span className={styles.stepper} role="group" aria-label={`${name} in the cart`}>
+          <span
+            className={styles.stepper}
+            role="group"
+            aria-label={`${capitalizeFirst(noun.many)} in the cart`}
+          >
             <IconButton
               icon="minus"
               size="sm"
-              label={bundle ? `Remove one lot of ${name}` : `Remove one ${name}`}
+              label={bundle ? `Remove one lot of ${noun.many}` : `Remove one ${noun.one}`}
               onClick={() => onLots(item.summary.id, lots - 1)}
             />
             <span className={styles.count} aria-live="polite">
@@ -158,7 +163,7 @@ export function Catalog({
             <IconButton
               icon="plus"
               size="sm"
-              label={bundle ? `Add one lot of ${name}` : `Add one ${name}`}
+              label={bundle ? `Add one lot of ${noun.many}` : `Add one ${noun.one}`}
               onClick={() => onLots(item.summary.id, lots + 1)}
             />
           </span>
@@ -173,12 +178,12 @@ export function Catalog({
         <SearchInput
           value={search}
           onValueChange={onSearch}
-          placeholder="Search the shelves"
+          placeholder="Torch, rope, leather…"
           aria-label="Search equipment"
           wrapperClassName={styles.search}
         />
         <SegmentedControl
-          aria-label="Type of equipment"
+          aria-label="Equipment category"
           options={TYPE_OPTIONS}
           value={type}
           onValueChange={setType}
@@ -188,7 +193,7 @@ export function Catalog({
       {error !== null && (
         <Banner
           tone="warning"
-          title="The shelves didn't load"
+          title="Couldn't load equipment"
           actions={
             <Button size="sm" variant="secondary" onClick={retry}>
               Try again
@@ -213,15 +218,15 @@ export function Catalog({
             <EmptyState
               size="compact"
               icon="search"
-              title="Nothing on the shelves matches"
-              description="Try fewer words, or choose All."
+              title="No matching equipment"
+              description="Try a shorter search or select All."
             />
           }
         />
       )}
       <p className={styles.footnote}>
-        Prices are in gold pieces and weights in coins. A lot is what one purchase delivers: weapons and
-        armour sell one at a time, while gear and ammunition often come in bundles.
+        Prices are in gold pieces and weights are in coins. Weapons and armour are sold individually, while
+        gear and ammunition often come in bundles.
       </p>
     </section>
   );

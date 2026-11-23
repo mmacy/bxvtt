@@ -30,9 +30,9 @@ import styles from './RestAndPrepare.module.css';
 const REST_ICONS: Record<string, IconName> = { turn: 'hourglass', night: 'moon', day: 'sun' };
 /** What each rest is for, in town. The length shows once, on its own line. */
 const REST_PURPOSE: Record<string, string> = {
-  turn: 'A short breather.',
-  night: 'Counts as sleep, so casters can prepare spells afterward.',
-  day: 'Counts as sleep, and heals everyone who is alive.',
+  turn: 'Take a short break.',
+  night: 'Sleep so spellcasters can prepare spells afterward.',
+  day: 'Sleep and recover hit points for living party members.',
 };
 const REST_LENGTH: Record<string, string> = {
   turn: formatDuration(1, 'turn'),
@@ -145,15 +145,15 @@ function RestPanel() {
       </div>
       {!access.allowed && <p className={styles.explain}>{access.explanation}</p>}
       {report !== null && report.error !== null && (
-        <Banner tone="warning" title="The party can't rest">
+        <Banner tone="warning" title="Couldn't rest">
           {report.error}
         </Banner>
       )}
       {report !== null && report.error === null && (
-        <div className={styles.report} role="status" aria-label="What the rest did">
+        <div className={styles.report} role="status" aria-label="Rest summary">
           <h3 className={styles.reportTitle}>{`${restKindLabel(report.kind)} passed`}</h3>
           {report.changes.length + report.lines.length === 0 ? (
-            <p className={styles.reportLine}>Nothing else happened.</p>
+            <p className={styles.reportLine}>Nothing else changed.</p>
           ) : (
             <ul className={styles.reportLines}>
               {[...report.changes, ...report.lines].map((line, index) => (
@@ -173,10 +173,10 @@ function SheetPanel() {
   const party = useParty();
   const openSheet = useTableUi((s) => s.openCharacterSheet);
   return (
-    <Panel title="Prepare and manage gear" meta="On the character sheet">
+    <Panel title="Spells and gear" meta="Character sheets">
       <p className={styles.lead}>
-        A caster's button opens the Spells tab, where you prepare, learn, and cast spells. Anyone else's opens
-        the character sheet, where you wield and wear gear and move items between packs.
+        Open a spellcaster&apos;s sheet to prepare, learn, or cast spells. Open any character&apos;s sheet to
+        equip gear or trade items.
       </p>
       <ul className={styles.members}>
         {party.map((member) => {
@@ -190,7 +190,7 @@ function SheetPanel() {
                 <span className={styles.memberMeta}>
                   {classLine(member)}
                   {counts.book + counts.prepared > 0 &&
-                    `, ${counts.book} in the spell book, ${counts.prepared} prepared`}
+                    `, ${counts.book} in spell book, ${counts.prepared} prepared`}
                 </span>
               </div>
               <Button
@@ -213,9 +213,9 @@ function OtherPanel() {
   const commands = useLegalCommands();
   const others = commands.filter((command) => !HANDLED.has(command.command_type));
   return (
-    <Panel title="Other things the party can do" meta={count(others.length, 'action')}>
+    <Panel title="Other town actions" meta={count(others.length, 'action')}>
       {others.length === 0 ? (
-        <EmptyState size="compact" icon="check" title="Nothing else is open" />
+        <EmptyState size="compact" icon="check" title="No other actions available" />
       ) : (
         <Accordion
           type="single"
@@ -237,8 +237,8 @@ export function RestAndPrepare() {
     <div className={styles.wrap}>
       <PlaceHeader
         icon="rest"
-        title={placeName('rest', view?.town_services ?? []) ?? 'A place to rest'}
-        lead="Sleep, recover, and get ready. Spells are prepared on the character sheet."
+        title={placeName('rest', view?.town_services ?? []) ?? 'Rest and prepare'}
+        lead="Rest to recover hit points, then prepare spells on each caster's character sheet."
       />
       <div className={styles.page}>
         <div className={styles.column}>

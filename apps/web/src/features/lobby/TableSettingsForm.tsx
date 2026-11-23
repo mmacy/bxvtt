@@ -34,7 +34,7 @@ export function TableSettingsForm({ showName = false }: { showName?: boolean }) 
   const update = async (body: UpdateTableRequest, success?: string) => {
     const result = await run(() => getApi().updateTable(table.id, body), {
       success,
-      errorTitle: "Couldn't change the table settings",
+      errorTitle: "Couldn't update table settings",
     });
     if (result.ok) store.getState().receiveTable(result.value);
   };
@@ -96,12 +96,13 @@ export function TableSettingsForm({ showName = false }: { showName?: boolean }) 
               value: 'caller',
               label: 'The caller',
               description:
-                'The caller speaks for the party, as in B/X, and sends moves, searches, and doors.',
+                'One designated player speaks for the party and controls movement, doors, and searches.',
             },
             {
               value: 'anyone',
               label: 'Anyone with a character',
-              description: 'Every player with a character can move the party. Suits a small or casual table.',
+              description:
+                'Any seated player can move the party, which works well for small or casual groups.',
             },
           ]}
         />
@@ -109,7 +110,7 @@ export function TableSettingsForm({ showName = false }: { showName?: boolean }) 
 
       <Field
         label="Caller"
-        hint="The caller speaks for the party. When the game starts with no caller, the owner of the first character becomes the caller."
+        hint="If no caller is chosen before the game starts, the player with the character in rank 1 becomes the caller."
         disabled={readOnly}
       >
         <Select
@@ -124,7 +125,7 @@ export function TableSettingsForm({ showName = false }: { showName?: boolean }) 
 
       <Switch
         label="Resolve battle rounds automatically"
-        description="Each round resolves as soon as every character has declared. Turn it off to have the caller or the referee resolve each round."
+        description="Resolve each round as soon as every eligible character declares an action. When off, the caller or referee resolves each round manually."
         checked={settings.auto_resolve}
         disabled={readOnly || pending}
         labelPosition="start"
@@ -132,13 +133,13 @@ export function TableSettingsForm({ showName = false }: { showName?: boolean }) 
       />
       <Switch
         label="Save automatically"
-        description="The server saves when the party enters a dungeon, reaches another level, meets monsters, or returns to town, and keeps the newest 10 autosaves."
+        description="Save the game automatically when the party enters a dungeon, changes levels, encounters monsters, or returns to town (up to 10 recent autosaves)."
         checked={settings.autosave}
         disabled={readOnly || pending}
         labelPosition="start"
         onCheckedChange={(checked) => void update({ settings: { autosave: checked } })}
       />
-      {readOnly && <p className={styles.note}>Only the referee can change these settings.</p>}
+      {readOnly && !showName && <p className={styles.note}>Only the referee can change these settings.</p>}
     </div>
   );
 }

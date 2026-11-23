@@ -103,8 +103,8 @@ export function Home({
           Search tips
         </h2>
         <p className={styles.tip}>
-          Search finds every class, spell, monster, item, language, and table by name. You can also search by
-          facet: a spell level, hit dice, a class, an alignment, or an item type.
+          Search by name across classes, spells, monsters, equipment, languages, and tables, or filter by
+          spell level, hit dice, class, alignment, or item type.
         </p>
         <ul className={styles.examples}>
           {EXAMPLES.map((example) => (

@@ -266,7 +266,7 @@ export function RefereeLog() {
 
   if (error && !loaded)
     return (
-      <Banner tone="danger" title="The log didn't load">
+      <Banner tone="danger" title="Couldn't load referee log">
         {error}
       </Banner>
     );
@@ -277,21 +277,21 @@ export function RefereeLog() {
       <div className={styles.logFilters}>
         <SegmentedControl
           size="sm"
-          aria-label="Which events"
+          aria-label="Event visibility"
           value={scope}
           onValueChange={(next) => setScope(next as 'referee' | 'all')}
           options={[
             { value: 'referee', label: 'Referee only' },
-            { value: 'all', label: 'Everything' },
+            { value: 'all', label: 'All events' },
           ]}
         />
         <Select
           size="sm"
-          aria-label="Kind of event"
+          aria-label="Event category"
           value={category}
           onValueChange={setCategory}
           options={[
-            { value: 'all', label: 'Every kind' },
+            { value: 'all', label: 'All categories' },
             ...categories.map((c) => ({ value: c, label: CATEGORY_LABELS[c] })),
           ]}
         />
@@ -300,18 +300,18 @@ export function RefereeLog() {
         size="sm"
         value={query}
         onValueChange={setQuery}
-        placeholder="Search the log"
-        aria-label="Search the log"
+        placeholder="Search referee log"
+        aria-label="Search referee log"
       />
       {error && <Banner tone="warning">{error}</Banner>}
       {shown.length === 0 ? (
         <p className={styles.secondaryLine}>
           {scope === 'referee'
-            ? 'No referee events yet. Surprise, reactions, morale, and wandering checks show here.'
-            : 'Nothing has happened yet.'}
+            ? 'No referee-only events yet. Surprise, reaction, morale, and wandering monster rolls appear here.'
+            : 'No events recorded yet.'}
         </p>
       ) : (
-        <ol className={styles.log} aria-label="Events, newest first">
+        <ol className={styles.log} aria-label="Referee log entries">
           {shown.map((line, index) => (
             <LogLine key={`${loaded.start}-${lines.length - index}`} line={line} />
           ))}

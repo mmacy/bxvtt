@@ -9,7 +9,7 @@ export function NotFoundPage() {
       <div className={styles.joinWrap}>
         <EmptyState
           icon="compass"
-          title="This page isn't on the map"
+          title="Page not found"
           description="Check the address, or go back to your tables."
           action={
             <Button asChild variant="primary" icon="home">

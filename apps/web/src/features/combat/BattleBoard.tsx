@@ -246,7 +246,7 @@ export function BattleBoard() {
         <div className={styles.boardTitle}>
           <Icon name="battle" size={18} />
           <h2 className={styles.heading}>Round {round}</h2>
-          {holding && <Badge tone="neutral">The fight is over</Badge>}
+          {holding && <Badge tone="neutral">Fight over</Badge>}
           {!holding && encounter.party_free_round && (
             <Badge tone="success" icon="flag">
               Free round: the monsters can't act
@@ -271,7 +271,7 @@ export function BattleBoard() {
         )}
         <IconButton
           icon={collapsed ? 'chevron-up' : 'chevron-down'}
-          label={collapsed ? 'Show the declarations' : 'Hide the declarations'}
+          label={collapsed ? 'Show declarations' : 'Hide declarations'}
           size="sm"
           variant="ghost"
           onClick={() => setCollapsed(!collapsed)}
@@ -297,8 +297,8 @@ export function BattleBoard() {
             composing !== null
               ? null
               : mine.length > 0
-                ? 'Declare for your characters. When the round resolves, it plays out here.'
-                : 'The party is declaring. When the round resolves, it plays out here.'
+                ? 'Declare actions for your characters. Resolved rounds play back here.'
+                : 'Waiting for the party to declare. Resolved rounds play back here.'
           }
         />
       )}
@@ -544,7 +544,7 @@ function MemberRow({
               icon="rotate"
               size="sm"
               variant="ghost"
-              label={`Same as last round: ${describeDeclaration(again.body, ctx, gear)}`}
+              label={`Repeat last round: ${describeDeclaration(again.body, ctx, gear)}`}
               onClick={() => void send(again.body)}
             />
           )}
@@ -556,7 +556,7 @@ function MemberRow({
               aria-expanded={composing}
               onClick={() => onCompose(!composing)}
             >
-              {declaration ? 'Change' : mine ? 'More choices' : `Declare for ${member.name}`}
+              {declaration ? 'Change' : mine ? 'Actions' : `Declare for ${member.name}`}
             </Button>
           )}
           {canAct && declaration && !composing && (
@@ -618,8 +618,8 @@ function RoundFooter({
   return (
     <footer className={styles.boardFoot}>
       {general.length > 0 && (
-        <Banner tone="danger" title="The round can't resolve yet" className={styles.footBanner}>
-          {general.join(' ')} Change a declaration, and the round tries again.
+        <Banner tone="danger" title="Cannot resolve round" className={styles.footBanner}>
+          {general.join(' ')} Change a declaration to try again.
         </Banner>
       )}
       <div className={styles.footRow}>
@@ -637,14 +637,14 @@ function RoundFooter({
             {auto
               ? 'The round resolves when everyone has declared.'
               : canResolve.allowed
-                ? 'You resolve the round when everyone is ready.'
+                ? 'Resolve the round once everyone has declared.'
                 : 'The caller or the referee resolves the round.'}
           </span>
         </div>
         <div className={styles.footActions}>
           {repeatable.length > 1 && (
             <Button size="sm" variant="ghost" icon="rotate" onClick={() => void repeat.run(mine)}>
-              Same as last round for all
+              Repeat last round
             </Button>
           )}
           {!everyone && canResolveEarly.allowed && declarers.length > 0 && (
@@ -654,7 +654,7 @@ function RoundFooter({
           )}
           {everyone && (canResolve.allowed || canResolveEarly.allowed) && (!auto || general.length > 0) && (
             <Button size="sm" variant="primary" icon="play" loading={pending} onClick={() => void resolve()}>
-              Resolve the round
+              Resolve round
             </Button>
           )}
         </div>
@@ -662,8 +662,8 @@ function RoundFooter({
       <ConfirmDialog
         open={confirming}
         onOpenChange={setConfirming}
-        title="Resolve the round now?"
-        description={`${joinList(missing.map((id) => memberName(id, ctx)))} ${missing.length === 1 ? "hasn't" : "haven't"} declared, so ${missing.length === 1 ? 'that character holds' : 'they hold'} this round.`}
+        title="Resolve round now?"
+        description={`${joinList(missing.map((id) => memberName(id, ctx)))} ${missing.length === 1 ? "hasn't" : "haven't"} declared yet and will hold this round.`}
         confirmLabel="Resolve now"
         onConfirm={async () => {
           await resolve({ fillWithHold: true });

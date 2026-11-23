@@ -62,7 +62,7 @@ export function templateFacts(entry: InventoryEntry): Array<[string, string]> {
 function MagicDetail({ catalogId }: { catalogId: string }) {
   const entry = useMagicItemDetail(catalogId);
   if (entry.loading) return <Skeleton lines={3} />;
-  if (!entry.data) return <p className={styles.detailProse}>The rules reference doesn't have this item.</p>;
+  if (!entry.data) return <p className={styles.detailProse}>No details available for this item.</p>;
   const manual = entry.data.manual;
   const lines = Array.isArray(manual)
     ? manual.filter((line): line is string => typeof line === 'string')
@@ -103,12 +103,12 @@ export function ItemDetailBody({ entry }: { entry: InventoryEntry }) {
           <MagicDetail catalogId={entry.catalogId} />
         ) : (
           <p className={styles.detailProse}>
-            Nobody knows what this is yet. Using it, or a spell or sage that identifies items, reveals it.
+            This item hasn&apos;t been identified yet. Use it or consult a sage to learn what it does.
           </p>
         )}
         {entry.cursed && (
           <p className={styles.detailProse}>
-            It is cursed, and it stays with its bearer until a remove curse lifts it.
+            This item is cursed and cannot be discarded until a remove curse spell lifts the curse.
           </p>
         )}
       </div>
@@ -118,7 +118,7 @@ export function ItemDetailBody({ entry }: { entry: InventoryEntry }) {
   return (
     <div className={styles.detail}>
       {facts.length === 0 ? (
-        <p className={styles.detailProse}>No more is known about this item.</p>
+        <p className={styles.detailProse}>No additional details are available.</p>
       ) : (
         <dl className={styles.detailFacts}>
           {facts.map(([label, value]) => (

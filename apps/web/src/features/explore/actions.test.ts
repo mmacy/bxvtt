@@ -65,19 +65,19 @@ describe('doorEntries', () => {
     const entries = doorEntries(ctx, 'north', { open: false, wedged: false });
     const labels = entries.map(entryLabel);
     expect(labels).toEqual([
-      'The door to the north',
-      'Open it',
-      'Force it open',
-      'Pick the lock: Wren',
-      'Listen at it',
-      'Wedge it shut with a spike',
+      'Door to the north',
+      'Open door',
+      'Force door',
+      'Pick lock: Wren',
+      'Listen at door',
+      'Wedge shut with a spike',
     ]);
-    const force = find(entries, 'Force it open');
+    const force = find(entries, 'Force door');
     expect(force?.type === 'submenu' && force.items.map(entryLabel)).toEqual([
       'Brenna (1 in 6)',
       'Wren (2 in 6)',
     ]);
-    select(entries, 'Pick the lock: Wren');
+    select(entries, 'Pick lock: Wren');
     expect(run).toHaveBeenCalledWith(
       { command_type: 'pick_lock', direction: 'north', character_id: 'character-0002' },
       expect.objectContaining({ nothingText: expect.stringContaining('Wren') }),
@@ -87,18 +87,18 @@ describe('doorEntries', () => {
   it('offers to close an open door, and nothing to close when it is wedged', () => {
     const { ctx } = context('player');
     expect(doorEntries(ctx, 'east', { open: true, wedged: false }).map(entryLabel)).toEqual([
-      'The door to the east',
-      'Close it',
-      'Wedge it open with a spike',
+      'Door to the east',
+      'Close door',
+      'Wedge open with a spike',
     ]);
     expect(doorEntries(ctx, 'east', { open: true, wedged: true }).map(entryLabel)).toEqual([
-      'The door to the east',
+      'Door to the east',
     ]);
   });
 
   it('lists every member to a referee', () => {
     const { ctx } = context('referee');
-    const force = find(doorEntries(ctx, 'north', { open: false, wedged: false }), 'Force it open');
+    const force = find(doorEntries(ctx, 'north', { open: false, wedged: false }), 'Force door');
     expect(force?.type === 'submenu' && force.items).toHaveLength(4);
   });
 
@@ -110,7 +110,9 @@ describe('doorEntries', () => {
       { open: false, wedged: false },
       { locked: true, heard: 'silence' },
     );
-    expect(entryLabel(entries[1] ?? { type: 'separator' })).toBe('It is locked. It was quiet beyond it.');
+    expect(entryLabel(entries[1] ?? { type: 'separator' })).toBe(
+      'The door is locked. No sound came from beyond the door.',
+    );
   });
 });
 
@@ -155,13 +157,13 @@ describe('cacheEntries', () => {
 
   it('takes a reachable cache, and lets a thief check it for traps', () => {
     const { ctx, run } = context('player');
-    const entries = cacheEntries(ctx, cache, 'The treasure');
+    const entries = cacheEntries(ctx, cache, 'Treasure');
     expect(entries.map(entryLabel)).toEqual([
-      'Take the treasure',
-      'Give it all to one member',
-      'Check it for traps: Wren',
+      'Take treasure',
+      'Give all to one member',
+      'Check for traps: Wren',
     ]);
-    select(entries, 'Take the treasure');
+    select(entries, 'Take treasure');
     expect(run).toHaveBeenCalledWith({ command_type: 'take_treasure', feature_id: 'chest' });
   });
 
@@ -171,13 +173,13 @@ describe('cacheEntries', () => {
       ...cache,
       trap: { kind: 'treasure', trigger: 'open', state: 'found', area_id: 'hall', feature_id: 'chest' },
     };
-    expect(cacheEntries(ctx, trapped, 'The treasure').map(entryLabel)).toContain('Disarm the trap: Wren');
+    expect(cacheEntries(ctx, trapped, 'Treasure').map(entryLabel)).toContain('Disarm trap: Wren');
   });
 
   it('offers nothing to take from a cache out of reach', () => {
     const { ctx } = context('player');
-    expect(cacheEntries(ctx, { ...cache, reachable: false }, 'The treasure').map(entryLabel)).toEqual([
-      'Check it for traps: Wren',
+    expect(cacheEntries(ctx, { ...cache, reachable: false }, 'Treasure').map(entryLabel)).toEqual([
+      'Check for traps: Wren',
     ]);
   });
 });
@@ -193,11 +195,11 @@ describe('treasureEntries', () => {
     here.pile = true;
     const labels = treasureEntries(ctx).map(entryLabel);
     expect(labels).toEqual(
-      expect.arrayContaining(['Treasure', 'Take the treasure', 'Dropped goods', 'Pick up the dropped goods']),
+      expect.arrayContaining(['Treasure', 'Take treasure', 'Dropped goods', 'Pick up dropped goods']),
     );
     expect(treasureMenuLabel(ctx.scene)).toBe('Treasure and dropped goods');
     here.caches = [];
-    expect(treasureEntries(ctx).map(entryLabel)).toEqual(['Pick up the dropped goods']);
+    expect(treasureEntries(ctx).map(entryLabel)).toEqual(['Pick up dropped goods']);
     expect(treasureMenuLabel(ctx.scene)).toBe('Dropped goods');
   });
 });

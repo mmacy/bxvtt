@@ -800,7 +800,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
         };
       }
       const at = event.target_ids.length > 0 ? ` at ${nameList(event.target_ids, ctx)}` : '';
-      const manual = event.manual ? ' The referee decides what happens.' : '';
+      const manual = event.manual ? ' The referee adjudicates the effect.' : '';
       return {
         text: `${caster} casts ${spell}${at}.${manual}`,
         detail: `Spell mode: ${prettifyId(event.mode)}.`,
@@ -856,7 +856,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
       if (event.code === 'magic.device.fizzled') {
         const device = event.item_id ? itemName(event.item_id, ctx) : 'the device';
         return {
-          text: `${possessive(actor)} use of ${device} fizzles, and the device keeps its charge.`,
+          text: `${possessive(actor)} use of ${device} fizzles without spending a charge.`,
           detail,
           category: 'magic',
           tone: party ? 'bad' : 'good',
@@ -1002,8 +1002,8 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
         case 'exploration.door.stuck':
           return {
             text: who
-              ? `The door to the ${side} won't budge, and ${who} strains in vain.`
-              : `The door to the ${side} won't budge.`,
+              ? `${who} can't force the door to the ${side} open.`
+              : `The door to the ${side} holds fast.`,
             refereeDetail: place,
             category: 'door',
             tone: 'bad',
@@ -1012,7 +1012,9 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
           };
         case 'exploration.door.wedged':
           return {
-            text: `An iron spike wedges the door to the ${side}.`,
+            text: who
+              ? `${who} wedges the door to the ${side} with an iron spike.`
+              : `The door to the ${side} is wedged with an iron spike.`,
             refereeDetail: place,
             category: 'door',
             tone: 'neutral',
@@ -1060,9 +1062,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
       const detail = dieAgainst(event.kind, event.roll, event.chance);
       if (event.kind === 'trap_spring' || !action) {
         return {
-          text: event.passed
-            ? "The trap's chance to spring comes up, and it goes off."
-            : "The trap's chance to spring comes up, and it stays quiet.",
+          text: event.passed ? 'The trap springs on the roll.' : 'The trap does not spring on the roll.',
           detail,
           category: 'exploration',
           tone: 'info',
@@ -1106,7 +1106,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
       switch (event.code) {
         case 'exploration.trap.sprung':
           return {
-            text: who ? `A trap springs on ${who}!`.replace('!', '.') : 'A trap springs.',
+            text: who ? `A trap springs on ${who}.` : 'A trap springs.',
             detail: place ? `Trap: ${prettifyId(place)}.` : undefined,
             category: 'exploration',
             tone: 'danger',
@@ -1634,7 +1634,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
         .replace(/,?\s*cursed\b/i, '')
         .trim();
       return {
-        text: `${possessive(who)} ${item} is cursed, and ${who} can't get rid of it.`,
+        text: `${possessive(who)} ${item} is cursed and cannot be removed.`,
         category: 'item',
         tone: 'bad',
         icon: 'warning',
@@ -1656,15 +1656,20 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
     }
 
     // Town, experience, time, and the session ------------------------------------------------------------------
-    case 'adventure_xp_award':
+    case 'adventure_xp_award': {
+      const recipients =
+        event.survivors.length === 1
+          ? `giving the sole survivor ${formatInteger(event.share)} XP`
+          : `giving each of the ${count(event.survivors.length, 'survivor')} ${formatInteger(event.share)} XP`;
       return {
-        text: `The adventure earns ${formatInteger(event.monster_xp)} XP from monsters and ${formatInteger(event.treasure_xp)} XP from treasure, which gives each of ${count(event.survivors.length, 'survivor')} ${formatInteger(event.share)} XP.`,
+        text: `The party earns ${formatInteger(event.monster_xp)} XP from monsters and ${formatInteger(event.treasure_xp)} XP from treasure, ${recipients}.`,
         category: 'xp',
         tone: 'good',
         icon: 'star',
         ids: event.survivors,
         amount: event.share,
       };
+    }
     case 'treasure_sold':
       return {
         text: `${memberName(event.character_id, ctx)} sells ${countA(event.instance_ids.length, 'valuable')} for ${formatGold(event.gp_value)}.`,
@@ -1694,8 +1699,8 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
     case 'flag_set': {
       const info = ctx.flags?.[event.key];
       const uses = [
-        ...(info && info.setBy.length > 0 ? [`${capitalizeFirst(joinList(info.setBy))} also sets it.`] : []),
-        ...(info && info.readBy.length > 0 ? [`${capitalizeFirst(joinList(info.readBy))} reads it.`] : []),
+        ...(info && info.setBy.length > 0 ? [`Also set by ${joinList(info.setBy)}.`] : []),
+        ...(info && info.readBy.length > 0 ? [`Checked by ${joinList(info.readBy)}.`] : []),
       ];
       return {
         text: `The referee sets ${flagName(event.key, ctx)} to ${flagValueText(event.value)}.`,
@@ -1820,7 +1825,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
       const quest = event.quest_name || prettifyId(event.quest_id);
       const objective = event.name || prettifyId(event.objective_id);
       return {
-        text: withNarrative(`Objective done in ${quest}: ${objective}.`, event.narrative),
+        text: withNarrative(`Objective completed in ${quest}: ${objective}.`, event.narrative),
         category: 'quest',
         tone: 'good',
         icon: 'quest',

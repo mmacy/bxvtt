@@ -104,7 +104,7 @@ export function toValidationIssues(issues: z.core.$ZodIssue[]): ValidationIssue[
 export function parseWith<T extends z.ZodType>(schema: T, value: unknown, what = 'request body'): z.infer<T> {
   const result = schema.safeParse(value);
   if (!result.success) {
-    throw new ApiError('validation_error', `The ${what} doesn't match the schema.`, {
+    throw new ApiError('validation_error', `The ${what} contains invalid values.`, {
       errors: toValidationIssues(result.error.issues),
     });
   }
@@ -138,5 +138,8 @@ export function parseQuery<T extends z.ZodType>(schema: T, request: FastifyReque
  * @param id - The ID that matched nothing.
  */
 export function notFound(resource: string, id: string): never {
-  throw new ApiError('not_found', `No ${resource} you can read has the ID ${id}.`, { resource, id });
+  throw new ApiError('not_found', `That ${resource} wasn't found, or you don't have access to it.`, {
+    resource,
+    id,
+  });
 }

@@ -159,7 +159,7 @@ describe('Compendium search', () => {
     );
     const { user } = setup({ api });
     await user.type(search(), 'goblin');
-    expect(await screen.findByText(/The monsters didn’t load/)).toBeInTheDocument();
+    expect(await screen.findByText(/Couldn’t load monsters/)).toBeInTheDocument();
     fail = false;
     await user.click(screen.getByRole('button', { name: 'Try again' }));
     expect(await screen.findByRole('option', { name: /^Goblin\s*Hit dice/ })).toBeInTheDocument();
@@ -254,7 +254,7 @@ describe('magic item notice', () => {
   it('asks a player once before showing magic items', async () => {
     const { user, unmount } = setup({ role: 'player' });
     await user.click(screen.getByRole('tab', { name: 'Magic items' }));
-    expect(await screen.findByText('This section can spoil surprises')).toBeInTheDocument();
+    expect(await screen.findByText('Magic item spoilers')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Potion of Healing' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Show magic items' }));
     expect(await screen.findByRole('button', { name: 'Potion of Healing' })).toBeInTheDocument();
@@ -266,7 +266,7 @@ describe('magic item notice', () => {
   it('keeps magic items out of a player’s search until they accept the notice', async () => {
     const { user } = setup({ role: 'player' });
     await user.type(search(), 'potion of heal');
-    const row = await screen.findByRole('option', { name: /Magic items can spoil surprises/ });
+    const row = await screen.findByRole('option', { name: /hidden to avoid spoilers/ });
     expect(screen.queryByText('Potion of Healing')).not.toBeInTheDocument();
     await user.click(row);
     expect(await screen.findByRole('option', { name: /Potion of Healing/ })).toBeInTheDocument();
@@ -276,6 +276,6 @@ describe('magic item notice', () => {
     const { user } = setup({ role: 'referee' });
     await user.click(screen.getByRole('tab', { name: 'Magic items' }));
     expect(await screen.findByRole('button', { name: 'Potion of Healing' })).toBeInTheDocument();
-    expect(screen.queryByText('This section can spoil surprises')).not.toBeInTheDocument();
+    expect(screen.queryByText('Magic item spoilers')).not.toBeInTheDocument();
   });
 });

@@ -35,11 +35,11 @@ export const UpdateUserRequest = z
   .strictObject({
     name: displayString(LIMITS.userName).optional(),
     color: UserColor.refine((color) => PickableUserColor.safeParse(color).success, {
-      message: 'must be one of USER_COLORS',
+      message: 'Choose one of the available user colors.',
     }).optional(),
   })
   .refine((value) => value.name !== undefined || value.color !== undefined, {
-    message: 'set name, color, or both',
+    message: 'Provide a name, a color, or both.',
   });
 /** Body of `PATCH /api/users/me`. */
 export type UpdateUserRequest = z.infer<typeof UpdateUserRequest>;

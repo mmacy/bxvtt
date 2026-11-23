@@ -159,7 +159,7 @@ export function TownActions() {
     { label: 'Open rest and prepare', icon: 'rest', onSelect: () => setSection('rest') },
   ];
 
-  const reason = (enabled: boolean) => (enabled ? undefined : "The party can't do that right now.");
+  const reason = (enabled: boolean) => (enabled ? undefined : 'Unavailable right now.');
   const button = (place: Destination) => (
     <ActionBarItem key={place.id}>
       <Button

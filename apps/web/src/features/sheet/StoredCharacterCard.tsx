@@ -84,7 +84,7 @@ function StoredSheetDrawer({ characterId, name, color, onClose }: DrawerProps) {
       errorTitle: `Couldn't delete ${name}`,
     });
     if (result.ok) {
-      toast.success(`${name} is gone`, { description: 'The character left every party it was in.' });
+      toast.success(`Deleted ${name}`, { description: 'Removed from every lobby roster.' });
       await mine.refresh();
       onClose();
     }
@@ -104,7 +104,7 @@ function StoredSheetDrawer({ characterId, name, color, onClose }: DrawerProps) {
       footer={
         owned ? (
           <div className={sheetStyles.storedFooter}>
-            <span className={sheetStyles.note}>A stored character changes only in a game.</span>
+            <span className={sheetStyles.note}>Characters only change during an active game.</span>
             <Button variant="danger" icon="trash" size="sm" onClick={() => setConfirming(true)}>
               Delete character
             </Button>
@@ -120,7 +120,7 @@ function StoredSheetDrawer({ characterId, name, color, onClose }: DrawerProps) {
             title={error.code === 'not_found' ? "You can't open this sheet" : error.title}
           >
             {error.code === 'not_found'
-              ? "Only the character's owner and the referee of a table with this character in its party can read it."
+              ? "Only the character's owner or the table's referee can view this sheet."
               : error.detail}
           </Banner>
         )}
@@ -135,7 +135,7 @@ function StoredSheetDrawer({ characterId, name, color, onClose }: DrawerProps) {
         open={confirming}
         onOpenChange={setConfirming}
         title={`Delete ${name}?`}
-        description={`${name} leaves every lobby party and can't come back. Saved games keep their copy.`}
+        description={`This removes ${name} from every lobby party and cannot be undone. Saved games keep their copy.`}
         confirmLabel="Delete character"
         tone="danger"
         onConfirm={remove}

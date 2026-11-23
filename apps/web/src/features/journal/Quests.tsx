@@ -157,8 +157,8 @@ export function Quests() {
       <EmptyState
         icon="flag"
         size="compact"
-        title="No game yet"
-        description="Quests show here once the game starts."
+        title="No active game"
+        description="Start a game to track the party's quests."
       />
     );
   }
@@ -168,7 +168,7 @@ export function Quests() {
         icon="flag"
         size="compact"
         title="No quests yet"
-        description="When someone in the adventure gives the party a task, it shows here with its objectives."
+        description="Quests and their objectives appear here once the party takes them on."
       />
     );
   }
@@ -179,7 +179,7 @@ export function Quests() {
           Active quests
         </SectionLabel>
         {log.active.length === 0 ? (
-          <p className={styles.quiet}>The party has no quest in hand right now.</p>
+          <p className={styles.quiet}>No active quests.</p>
         ) : (
           log.active.map((quest) => <QuestItem key={quest.id} quest={quest} seen={seen} />)
         )}

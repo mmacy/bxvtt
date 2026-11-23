@@ -66,11 +66,10 @@ export function AdjustStep({ scores, adjustment, onChange, detail, tables, check
   return (
     <div className={styles.stepBody}>
       <p className={styles.lead}>
-        B/X usually lets a character lower Strength, Intelligence, or Wisdom by 2 points to raise a prime
-        requisite by 1, with no score below 9. For a {name}, the prime{' '}
+        In B/X, most classes can lower Strength, Intelligence, or Wisdom by 2 points to raise a prime
+        requisite by 1, down to a minimum score of 9. For a {name}, your prime{' '}
         {primes.length === 1 ? 'requisite is' : 'requisites are'}{' '}
-        {joinList(primes.map((a) => abilityLabel(a)))}. The rules engine checks each trade as you make it.
-        This step is optional, so skip it to keep the scores you rolled.
+        {joinList(primes.map((a) => abilityLabel(a)))}. Skip this step if you want to keep your rolled scores.
       </p>
       <div className={styles.adjustGrid} role="group" aria-label="Ability trades">
         {ABILITIES.map((ability) => {
@@ -133,28 +132,30 @@ export function AdjustStep({ scores, adjustment, onChange, detail, tables, check
 
       <div className={styles.adjustFooter}>
         <div className={styles.adjustVerdict} aria-live="polite">
-          {!traded && <span className={styles.muted}>No points traded. Your scores stay as rolled.</span>}
+          {!traded && (
+            <span className={styles.muted}>No points traded. Your rolled scores are unchanged.</span>
+          )}
           {traded && check.status === 'checking' && (
             <span className={styles.checking}>
-              <Spinner size={14} label="" /> Checking the trade with the rules engine
+              <Spinner size={14} label="" /> Checking ability trade
             </span>
           )}
           {traded && check.status === 'ok' && (
-            <Banner tone="success" title="The rules engine accepts this trade">
+            <Banner tone="success" title="Valid ability trade">
               {before !== null && after !== null && before !== after
-                ? `Your experience bonus changes from ${formatModifier(before)}% to ${formatModifier(after)}%.`
-                : 'Your experience bonus stays the same.'}
+                ? `Your experience modifier changes from ${formatModifier(before)}% to ${formatModifier(after)}%.`
+                : 'Your experience modifier stays the same.'}
             </Banner>
           )}
           {traded && check.status === 'invalid' && (
-            <Banner tone="warning" title="This trade breaks a rule">
-              {general.length > 0 ? general.join(' ') : 'The score marked above explains why.'}
+            <Banner tone="warning" title="This ability trade isn't allowed">
+              {general.length > 0 ? general.join(' ') : 'Check the message beside each adjusted score above.'}
             </Banner>
           )}
         </div>
         {traded && (
           <Button variant="ghost" icon="undo" onClick={() => onChange({ lowered: {}, raised: {} })}>
-            Keep the scores as rolled
+            Reset to rolled scores
           </Button>
         )}
       </div>

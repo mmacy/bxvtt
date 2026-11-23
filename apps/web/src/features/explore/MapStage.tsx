@@ -261,7 +261,7 @@ export function MapStage() {
       if (map === null) return;
       const now = Date.now();
       if (now - lastPing.current < PING_INTERVAL_MS) {
-        say('Ping a little less often, so everyone can follow.', 'info');
+        say('Wait a moment before pinging again.', 'info');
         return;
       }
       lastPing.current = now;
@@ -489,8 +489,8 @@ export function MapStage() {
   if (view === null) return null;
 
   const ariaLabel = canMove
-    ? 'Dungeon map. The arrow keys move the party. Alt and an arrow key turns it. Shift and an arrow key pans. Shift and F10 opens the actions where the party stands. With the pin, ping, ruler, or a picking tool, the arrow keys move a cursor and Enter acts.'
-    : 'Dungeon map. With the pin, ping, ruler, or a picking tool, the arrow keys move a cursor and Enter acts.';
+    ? "Dungeon map. The arrow keys move the party. Alt with an arrow key changes facing. Shift with an arrow key pans. Shift+F10 opens actions at the party's square. With the pin, ping, ruler, or picker tools, the arrow keys move a cursor and Enter confirms."
+    : 'Dungeon map. With the pin, ping, ruler, or picker tools, the arrow keys move a cursor and Enter confirms.';
 
   return (
     <div
@@ -525,7 +525,7 @@ export function MapStage() {
           }
           if (target.direction && canMove) move(target.direction);
           else if (target.floor && canMove && partyShown)
-            say('Step one square at a time. Click a square beside the party.', 'info');
+            say('Move one square at a time. Click a square next to the party.', 'info');
         }}
         onEdgeClick={(target, info) => {
           if (target.edge.kind === 'passage' && target.direction && canMove) {
@@ -674,7 +674,7 @@ export function MapStage() {
             <Icon name="eye" size={14} />
             <span>The party is on {levelName(partyLevel).toLowerCase()}.</span>
             <Button size="sm" variant="ghost" onClick={() => setViewedLevel(null)}>
-              Show the party
+              Show party
             </Button>
           </div>
         )}
@@ -684,7 +684,7 @@ export function MapStage() {
             <Icon name="ruler" size={14} />
             <span className={measureText ? styles.measureDistance : undefined}>
               {measureText ??
-                'Point at a square to measure. Click or press Enter to keep it, or Escape to stop.'}
+                'Point at a square to measure. Click or press Enter to keep the measurement, or Escape to cancel.'}
             </span>
           </div>
         )}
@@ -711,10 +711,10 @@ export function MapStage() {
                 onHide={() => setMinimapOpen(false)}
               />
             ) : (
-              <Tooltip content="Show the minimap" side="left">
+              <Tooltip content="Show minimap" side="left">
                 <IconButton
                   icon="map"
-                  label="Show the minimap"
+                  label="Show minimap"
                   variant="secondary"
                   className={styles.minimapShow}
                   onClick={() => setMinimapOpen(true)}

@@ -71,7 +71,7 @@ export const SECTIONS: readonly SectionInfo[] = [
     label: 'Actions',
     singular: 'Action',
     icon: 'hand',
-    blurb: 'What the party can do, and when.',
+    blurb: 'Player and party actions by game mode.',
   },
 ];
 

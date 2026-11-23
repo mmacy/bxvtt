@@ -59,8 +59,8 @@ function RowView({ row, index, active, query, onHover, onChoose }: RowViewProps)
       <div {...common} className={`${styles.row} ${styles.moreRow}`} data-active={active || undefined}>
         <Icon name="eye-off" size={16} />
         <span className={styles.moreText}>
-          {row.hidden} magic {row.hidden === 1 ? 'item matches' : 'items match'}. Magic items can spoil
-          surprises. Show them
+          {row.hidden} matching magic {row.hidden === 1 ? 'item' : 'items'} hidden to avoid spoilers. Show
+          magic items
         </span>
       </div>
     );
@@ -102,7 +102,7 @@ export function CatalogNotice({ statuses }: { statuses: readonly CatalogStatus[]
       {loading.length > 0 && (
         <p className={styles.loadingNote} role="status">
           <Spinner size={14} label="" />
-          Still loading the {joinNames(loading.map((status) => status.label))}. More results can appear.
+          Loading {joinNames(loading.map((status) => status.label))}… More results might appear.
         </p>
       )}
       {failed.length > 0 && (
@@ -119,8 +119,8 @@ export function CatalogNotice({ statuses }: { statuses: readonly CatalogStatus[]
             </Button>
           }
         >
-          The {joinNames(failed.map((status) => status.label))} didn&rsquo;t load, so they aren&rsquo;t in
-          these results.
+          Couldn&rsquo;t load {joinNames(failed.map((status) => status.label))}, so those entries are missing
+          from these results.
         </Banner>
       )}
     </div>
@@ -155,8 +155,8 @@ export function SearchResults({
       <>
         <EmptyState
           icon="search"
-          title={`Nothing matches "${query.trim()}"`}
-          description="Search by name, such as sleep or goblin. You can also search by level, such as 3rd level, or by hit dice, such as 4 hd."
+          title={`No results for "${query.trim()}"`}
+          description="Try a name such as sleep or goblin, a spell level such as 3rd level, or hit dice such as 4 hd."
           action={
             <Button variant="secondary" size="sm" onClick={onClear}>
               Clear search

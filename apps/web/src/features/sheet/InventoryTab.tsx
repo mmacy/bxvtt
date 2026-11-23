@@ -251,7 +251,7 @@ export function InventoryTab({ member, model }: TabProps) {
           </h3>
           <div className={styles.lightRow}>
             {lights.length === 0 ? (
-              <span className={styles.muted}>{member.name} carries no light.</span>
+              <span className={styles.muted}>{member.name} has no active light.</span>
             ) : (
               lights.map((effect, index) => (
                 <ConditionChip
@@ -294,7 +294,7 @@ export function InventoryTab({ member, model }: TabProps) {
                 title={extinguish.permission.reason ?? undefined}
                 onClick={() => void send({ command_type: 'extinguish_source', character_id: member.id })}
               >
-                Put out the torch or lantern
+                Put out light
               </Button>
             )}
             {light.legal && scene?.here?.pile && (
@@ -308,7 +308,7 @@ export function InventoryTab({ member, model }: TabProps) {
                   void send({ command_type: 'light_source', character_id: member.id, item_id: 'oil_flask' })
                 }
               >
-                Set fire to dropped oil
+                Light dropped oil
               </Button>
             )}
           </div>
@@ -448,8 +448,8 @@ function TransferDialog({ mode, member, model, initialKey, onClose }: TransferPr
       title={title}
       description={
         mode === 'give'
-          ? 'Choose what to hand over. Outside a battle the party stands together, so anyone can reach anyone.'
-          : 'Dropped goods land in a pile where the party stands, and the party can pick them up again.'
+          ? 'Choose items or coins to hand to another party member.'
+          : 'Dropped items stay in a pile on this square until someone picks them up.'
       }
       size="md"
       footer={
@@ -470,7 +470,7 @@ function TransferDialog({ mode, member, model, initialKey, onClose }: TransferPr
     >
       <div className={styles.form}>
         {error && (
-          <Banner tone="warning" title="That didn't work">
+          <Banner tone="warning" title={mode === 'give' ? "Couldn't give items" : "Couldn't drop items"}>
             {error}
           </Banner>
         )}
@@ -604,26 +604,26 @@ function UseItemDialog({
             Cancel
           </Button>
           <Button variant="primary" icon="spell" loading={pending} onClick={() => void submit()}>
-            Use it
+            Use item
           </Button>
         </>
       }
     >
       <div className={styles.form}>
         {error && (
-          <Banner tone="warning" title="That didn't work">
+          <Banner tone="warning" title="Couldn't use item">
             {error}
           </Banner>
         )}
         <Field
-          label="Use it on"
-          hint="A potion is drunk by the member you choose. A wand, staff, or rod aims at a member or a group."
+          label="Target"
+          hint="Choose who drinks a potion, or choose a target for a wand, staff, or rod."
         >
           <Select value={target} onValueChange={setTarget} options={targetOptions} />
         </Field>
         {scroll && (
           <>
-            <Field label="Spell to read" hint="Leave it empty to read the first spell on the scroll.">
+            <Field label="Spell to read" hint="Leave blank to read the first spell on the scroll.">
               <Combobox
                 value={spellId}
                 onChange={(value) => {
@@ -639,11 +639,11 @@ function UseItemDialog({
               />
             </Field>
             {spell.data && spell.data.modes.length > 1 && (
-              <Field label="How to cast it">
+              <Field label="Casting mode">
                 <Select
                   value={mode}
                   onValueChange={setMode}
-                  placeholder="The spell's first usage"
+                  placeholder="Default usage"
                   options={spell.data.modes.map((m) => ({
                     value: m.key,
                     label: capitalizeFirst(m.key.replaceAll('_', ' ')),
@@ -654,7 +654,7 @@ function UseItemDialog({
             )}
             {creatureOptions.length > 0 && (
               <fieldset className={styles.section}>
-                <legend className={styles.slotLabel}>The spell's targets</legend>
+                <legend className={styles.slotLabel}>Spell targets</legend>
                 {creatureOptions.map((o) => (
                   <Checkbox
                     key={o.value}
@@ -670,8 +670,7 @@ function UseItemDialog({
           </>
         )}
         <p className={styles.note}>
-          <Icon name="info" size={14} /> The rules engine checks whether {member.name} can use it, and says
-          why if not.
+          <Icon name="info" size={14} /> Some magic items work only for certain classes.
         </p>
       </div>
     </Dialog>

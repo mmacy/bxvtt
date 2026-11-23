@@ -2,7 +2,6 @@ import type { AbilityTables, EquipmentSummary, SpellSummary } from '@bxvtt/share
 import {
   abilityLabel,
   alignmentLabel,
-  capitalizeFirst,
   classLabel,
   joinList,
   languageLabel,
@@ -11,7 +10,7 @@ import {
 import type { ClassDetail } from '@/app';
 import { Badge, Banner, CoinPurse, Parchment, StatBox, formatModifier } from '@/ui';
 import type { WizardDraft } from './draft';
-import { cartPhrase, type CartLine } from './kits';
+import { cartLabel, cartPhrase, type CartLine } from './kits';
 import { ABILITIES, casterNextStep, headlineModifier, xpModifierFor, type Scores } from './tables';
 import { RuleLink } from '../sheet/RuleLink';
 import styles from './wizard.module.css';
@@ -32,7 +31,8 @@ function cartNames(cart: CartLine[], equip: string[], equipment: EquipmentSummar
     const item = equipment?.find((e) => e.id === line.itemId);
     return {
       key: line.itemId,
-      name: cartPhrase(line.itemId, line.quantity, item?.name),
+      name: cartLabel(line.itemId, line.quantity, item?.name),
+      phrase: cartPhrase(line.itemId, line.quantity, item?.name).toLowerCase(),
       quantity: line.quantity,
       equipped: equip.includes(line.itemId),
       kind: item?.item_type,
@@ -63,12 +63,8 @@ export function ReviewStep({
     detail,
     draft.spells.map((id) => spells?.find((s) => s.id === id)?.name ?? id),
   );
-  const wearing = gear
-    .filter((item) => item.equipped && item.kind === 'armour')
-    .map((item) => item.name.toLowerCase());
-  const wielding = gear
-    .filter((item) => item.equipped && item.kind !== 'armour')
-    .map((item) => item.name.toLowerCase());
+  const wearing = gear.filter((item) => item.equipped && item.kind === 'armour').map((item) => item.phrase);
+  const wielding = gear.filter((item) => item.equipped && item.kind !== 'armour').map((item) => item.phrase);
   const outfit = [
     ...(wearing.length > 0 ? [`wearing ${joinList(wearing)}`] : []),
     ...(wielding.length > 0 ? [`wielding ${joinList(wielding)}`] : []),
@@ -125,7 +121,7 @@ export function ReviewStep({
         <section className={styles.reviewSection} aria-label="Combat">
           <h4 className={styles.reviewHeading}>Hit points</h4>
           <p className={styles.reviewText}>
-            A d{detail?.hit_die ?? '?'}
+            1d{detail?.hit_die ?? '?'}
             {con !== undefined && con !== 0 ? `, ${formatModifier(con)} for Constitution` : ''}
             {draft.hpReroll ? ', rerolling a 1 or 2' : ''}.
           </p>
@@ -146,10 +142,9 @@ export function ReviewStep({
               </dl>
               <p className={styles.reviewNote}>
                 {outfit.length > 0
-                  ? `You go out ${outfit.join(' and ')}. `
-                  : 'You go out with nothing worn or wielded. '}
-                The rules engine rolls hit points and works out armour class when it creates the character,
-                and the finished sheet shows both.
+                  ? `You set out ${outfit.join(' and ')}. `
+                  : 'You set out with nothing worn or wielded. '}
+                You roll hit points and get your final armour class when you create your character.
               </p>
             </>
           )}
@@ -204,12 +199,10 @@ export function ReviewStep({
           </ul>
         )}
         {unworn.length > 0 && (
-          <Banner tone="warning" title="Some gear stays in the pack">
-            {`${capitalizeFirst(joinList(unworn.map((item) => item.name.toLowerCase())))} ${
-              unworn.length === 1 ? 'goes' : 'go'
-            } in the pack, so ${unworn.length === 1 ? 'it' : 'they'} won't protect you or fight for you. Choose Change to wear or wield ${
+          <Banner tone="warning" title="Unequipped weapons or armour">
+            {`You packed ${joinList(unworn.map((item) => item.phrase))} without equipping ${
               unworn.length === 1 ? 'it' : 'them'
-            }.`}
+            }. Select Change if you want to wear or wield ${unworn.length === 1 ? 'it' : 'them'}.`}
           </Banner>
         )}
         {goldLeft !== null && <CoinPurse coins={{ gp: goldLeft }} />}

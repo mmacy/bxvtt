@@ -270,6 +270,23 @@ export function itemPhrase(noun: ItemNoun, quantity = 1): string {
 }
 
 /**
+ * Short display label for an item in an inventory list, card, or form option, with no leading article:
+ * `Chainmail`, `Leather armour`, `Shield`, `Mace`, `6 torches`, `Flask of oil`, `Hand of Saint Corvane`.
+ *
+ * ```ts
+ * itemLabel(itemNounFromName('Chainmail')); // 'Chainmail'
+ * itemLabel(itemNounFromName('Torches (6)'), 6); // '6 torches'
+ * ```
+ */
+export function itemLabel(noun: ItemNoun, quantity = 1): string {
+  if (quantity !== 1) return `${quantity} ${noun.many}`;
+  const single = noun.one
+    .replace(/^suit of /i, '')
+    .replace(/^set of wooden stakes and a mallet$/i, 'wooden stakes and mallet');
+  return capitalizeFirst(single);
+}
+
+/**
  * Noun for an item by its printed catalog name, such as `Oil (1 flask)`. An attack event names the weapon
  * this way. A name that isn't in the catalog, such as `Sword +1`, comes back in lower case.
  */

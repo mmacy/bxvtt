@@ -66,7 +66,7 @@ describe('FeedPanel', () => {
     const { api, user } = renderWithTable(<FeedPanel />);
     await user.type(screen.getByRole('textbox', { name: 'Message the table' }), '/roll 2x6{Enter}');
     expect(api.postFeed).not.toHaveBeenCalled();
-    expect(screen.getByText(/isn't a dice roll/).closest('[role="alert"]')).not.toBeNull();
+    expect(screen.getByText(/isn't a valid dice roll/).closest('[role="alert"]')).not.toBeNull();
   });
 
   it('lists the commands when you type a slash', async () => {
@@ -101,8 +101,8 @@ describe('FeedPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Dice tray' }));
     await user.click(screen.getByRole('button', { name: 'Add a d6' }));
     await user.click(screen.getByRole('button', { name: 'Add another d6, 1 chosen' }));
-    await user.click(screen.getByRole('button', { name: 'Raise the modifier' }));
-    await user.type(screen.getByLabelText('What the roll is for'), 'to force the door');
+    await user.click(screen.getByRole('button', { name: 'Increase modifier' }));
+    await user.type(screen.getByLabelText('Roll label'), 'to force the door');
     await user.click(screen.getByRole('button', { name: 'Roll 2d6+1' }));
     expect(api.postFeed).toHaveBeenCalledWith(store.getState().tableId, {
       text: '/roll 2d6+1 to force the door',
@@ -182,7 +182,7 @@ describe('FeedPanel', () => {
     act(() => {
       store.getState().receive({ type: 'feed', entry: chat(80, RUTH, 'The bell tolls again.') });
     });
-    expect(screen.getByRole('separator', { name: 'New since you last looked' })).toBeInTheDocument();
+    expect(screen.getByRole('separator', { name: 'New entries' })).toBeInTheDocument();
     const live = container.querySelector('[aria-live="polite"][aria-atomic="true"]');
     expect(live?.textContent).toBe('');
   });

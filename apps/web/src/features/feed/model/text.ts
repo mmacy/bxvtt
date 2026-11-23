@@ -42,14 +42,13 @@ export function systemSentence(entry: SystemEntry, nameOf: NameOf, ctx: TextCont
       return name ? `${actor} started ${name}.` : `${actor} started the game.`;
     }
     case 'game_ended':
-      return `${actor} ended the game, and the table is back in its lobby.`;
+      return `${actor} ended the game and returned the table to the lobby.`;
     case 'save_created': {
       const label = param(entry, 'label');
       if (entry.params.autosave === true) {
-        // The server writes an autosave label as a phrase, "Entered the priory on Corvane's Holm".
         return label
-          ? `The server saved the game: ${lowerFirst(label.replace(AUTOSAVE_PREFIX, ''))}.`
-          : 'The server saved the game.';
+          ? `Autosaved: ${lowerFirst(label.replace(AUTOSAVE_PREFIX, ''))}.`
+          : 'Autosaved the game.';
       }
       // A label someone typed is a name, so it is quoted rather than run into the sentence.
       return label ? `${actor} saved the game as “${label}”.` : `${actor} saved the game.`;
@@ -65,13 +64,13 @@ export function systemSentence(entry: SystemEntry, nameOf: NameOf, ctx: TextCont
       const member = memberName(param(entry, 'member_id'), ctx);
       const userId = param(entry, 'user_id');
       return userId === null
-        ? `${actor} emptied ${member}'s seat, so the referees play ${member} now.`
+        ? `${actor} cleared ${member}'s seat. The referee controls ${member} now.`
         : `${actor} gave ${member}'s seat to ${nameOf(userId)}.`;
     }
     case 'caller_changed':
       return param(entry, 'user_id') === null
-        ? 'The party has no caller now.'
-        : `${subject} is the caller now and speaks for the party.`;
+        ? 'The party no longer has a caller.'
+        : `${subject} is now the caller.`;
     case 'adventure_uploaded': {
       const name = param(entry, 'name');
       return name ? `${actor} uploaded the adventure ${name}.` : `${actor} uploaded an adventure.`;

@@ -52,7 +52,7 @@ export function CommandConsole() {
     return (
       <Banner
         tone="danger"
-        title="The command list didn't load"
+        title="Couldn't load commands"
         actions={
           <Button size="sm" variant="secondary" onClick={catalog.retry}>
             Try again
@@ -66,8 +66,7 @@ export function CommandConsole() {
   return (
     <div className={styles.section}>
       <p className={styles.secondaryLine}>
-        Every referee command the rules engine offers, with a form built from its rules. The ones you can send
-        now come first.
+        All referee commands. Commands available in the current mode appear first.
       </p>
       <SearchInput
         value={query}
@@ -75,7 +74,7 @@ export function CommandConsole() {
         placeholder="Search commands"
         aria-label="Search commands"
       />
-      {commands.length === 0 && <p className={styles.secondaryLine}>No command matches.</p>}
+      {commands.length === 0 && <p className={styles.secondaryLine}>No matching commands.</p>}
       <Accordion
         type="single"
         value={open}
@@ -96,7 +95,7 @@ export function CommandConsole() {
             meta: !now ? (
               <UnavailableMark />
             ) : ended && changesEndedStory(c.type) ? (
-              <UnavailableMark>The game is over</UnavailableMark>
+              <UnavailableMark>Game over</UnavailableMark>
             ) : undefined,
             content:
               open === c.type ? (

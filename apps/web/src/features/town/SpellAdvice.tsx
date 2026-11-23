@@ -119,7 +119,7 @@ export function spellAdviceStatus(advice: SpellAdvice): string {
   if (advice.canPrepare.length > 0) {
     parts.push(`${joinList(advice.canPrepare.map((member) => member.name))} can prepare spells now`);
   }
-  return parts.join(', and ');
+  return parts.join(', while ');
 }
 
 /** The advice for the readiness card, or `undefined` when there is none. */
@@ -203,7 +203,7 @@ export function SpellBanner() {
   const advice = useSpellAdvice();
   if (!hasSpellAdvice(advice)) return null;
   return (
-    <Banner tone="warning" title="Spells aren't prepared" actions={<SpellActions advice={advice} />}>
+    <Banner tone="warning" title="Unprepared spells" actions={<SpellActions advice={advice} />}>
       {spellAdviceText(advice)}
     </Banner>
   );

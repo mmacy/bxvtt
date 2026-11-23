@@ -33,7 +33,7 @@ export function MonsterRoster({ encounter }: { encounter: EncounterView | null }
   const morale = asRecord(asRecord(referee.battle)?.morale);
   const passed = asRecord(morale?.passed) ?? {};
   return (
-    <div className={styles.roster} aria-label="Monsters, as the referee sees them">
+    <div className={styles.roster} aria-label="Referee monster roster">
       {groups.map((group) => {
         const view = encounter?.groups.find((g) => g.id === group.id);
         const monsters = group.monster_ids
@@ -139,7 +139,7 @@ export function RefereeActions() {
         title={canEnd.reason ?? undefined}
         onClick={() => setEnding('parley')}
       >
-        They came to terms
+        End in parley
       </Button>
       <Button
         size="sm"
@@ -148,7 +148,7 @@ export function RefereeActions() {
         title={canEnd.reason ?? undefined}
         onClick={() => setEnding('departed')}
       >
-        One side left
+        End as departed
       </Button>
       <SpawnMonsters disabled={!canSpawn.allowed} reason={canSpawn.reason} />
       <ConfirmDialog
@@ -156,19 +156,19 @@ export function RefereeActions() {
         onOpenChange={(open) => {
           if (!open) setEnding(null);
         }}
-        title={ending === 'parley' ? `The party came to terms with ${sides}` : 'One side left the other'}
+        title={ending === 'parley' ? `End encounter in parley with ${sides}?` : 'End encounter as departed?'}
         description={`${
           ending === 'parley'
-            ? 'The encounter ends peacefully, as after a toll paid or a bluff believed.'
-            : 'The encounter ends because the party walked away or the monsters let it go.'
-        } Monsters already slain, fled, or turned count as defeated. Monsters still standing give no experience.`}
-        confirmLabel="End the encounter"
+            ? 'The encounter ends peacefully, such as after paying a toll or striking a bargain.'
+            : 'The encounter ends because one side walked away or broke off the chase.'
+        } Monsters already slain, fled, or turned still count as defeated, while monsters left standing award no experience.`}
+        confirmLabel="End encounter"
         onConfirm={end}
       >
         {fromArea && (
           <Checkbox
-            label="Keep this area's monsters peaceful"
-            description="They won't appear again when the party walks back in."
+            label="Mark area encounter resolved"
+            description="These monsters won't appear again when the party returns."
             checked={resolveArea}
             onCheckedChange={setResolveArea}
           />
@@ -204,7 +204,7 @@ function SpawnMonsters({ disabled, reason }: { disabled: boolean; reason: string
     <Popover
       open={open}
       onOpenChange={setOpen}
-      title="Bring in monsters"
+      title="Add monsters"
       width="300px"
       trigger={
         <Button size="sm" variant="ghost" icon="plus" disabled={disabled} title={reason ?? undefined}>
@@ -218,18 +218,20 @@ function SpawnMonsters({ disabled, reason }: { disabled: boolean; reason: string
             options={options}
             value={templateId}
             onChange={setTemplateId}
-            placeholder={catalog.loading ? 'Loading the monsters…' : 'Search the monsters'}
+            placeholder={catalog.loading ? 'Loading monsters…' : 'Search monsters'}
           />
         </Field>
         <div className={styles.popoverRow}>
-          <Field label="How many">
+          <Field label="Count">
             <NumberInput value={count} onChange={setCount} min={1} max={50} />
           </Field>
           <Field label="Distance in feet">
             <NumberInput value={distance} onChange={setDistance} min={0} max={500} step={10} width={4} />
           </Field>
         </div>
-        <p className={styles.choiceHint}>They join the fight as a new group and act from the next round.</p>
+        <p className={styles.choiceHint}>
+          New monsters join as a separate group and act starting next round.
+        </p>
         <Button
           variant="primary"
           size="sm"
@@ -237,7 +239,7 @@ function SpawnMonsters({ disabled, reason }: { disabled: boolean; reason: string
           disabled={templateId === null || count === null || distance === null}
           onClick={() => void spawn()}
         >
-          Add to the fight
+          Add monsters
         </Button>
       </div>
     </Popover>

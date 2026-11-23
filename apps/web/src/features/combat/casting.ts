@@ -57,8 +57,8 @@ export function castEverySpell(feed: readonly FeedEntry[], memberId: string): bo
 /** The reason text for a caster with nothing to cast. */
 export function noSpellsReason(name: string, spent: boolean): string {
   return spent
-    ? `${name} has cast every memorized spell. A caster prepares spells again after a night's rest.`
-    : `${name} has no spells memorized. A caster prepares spells after a night's rest, from the Spells tab of the character sheet.`;
+    ? `${name} has cast every memorized spell. Rest for a night to prepare spells again.`
+    : `${name} has no spells memorized. Rest for a night, then prepare spells from the Spells tab on ${name}'s sheet.`;
 }
 
 /** Whether a member casts, and why they have nothing to cast now. */

@@ -170,7 +170,7 @@ export function resolveHandles<T extends Record<string, unknown>>(
     if (monsterId === undefined) {
       throw new ApiError(
         'target_unknown',
-        "That target isn't one the party can single out now. Pick a target from the scene again.",
+        'That target is no longer available. Choose a target from the current encounter.',
         { field, id: value },
       );
     }

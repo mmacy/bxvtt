@@ -53,7 +53,7 @@ export function DiceTray({
     <section className={styles.tray} aria-label="Dice tray">
       <div className={styles.trayHeader}>
         <p className={styles.trayTitle}>Roll dice</p>
-        <IconButton icon="close" label="Close the dice tray" size="sm" onClick={onClose} />
+        <IconButton icon="close" label="Close dice tray" size="sm" onClick={onClose} />
       </div>
       <div className={styles.dice} role="group" aria-label="Add a die">
         {TRAY_DICE.map((sides) => {
@@ -79,7 +79,7 @@ export function DiceTray({
           <span className={styles.stepperLabel}>Dice</span>
           <IconButton
             icon="minus"
-            label="One die fewer"
+            label="Fewer dice"
             size="sm"
             disabled={tray.count < 1}
             onClick={() => setCount(tray.count - 1)}
@@ -89,7 +89,7 @@ export function DiceTray({
           </span>
           <IconButton
             icon="plus"
-            label="One die more"
+            label="More dice"
             size="sm"
             disabled={tray.sides === null || tray.count >= TRAY_MAX_COUNT}
             onClick={() => setCount(tray.count + 1)}
@@ -99,7 +99,7 @@ export function DiceTray({
           <span className={styles.stepperLabel}>Modifier</span>
           <IconButton
             icon="minus"
-            label="Lower the modifier"
+            label="Decrease modifier"
             size="sm"
             onClick={() => setModifier(tray.modifier - 1)}
           />
@@ -112,7 +112,7 @@ export function DiceTray({
           </span>
           <IconButton
             icon="plus"
-            label="Raise the modifier"
+            label="Increase modifier"
             size="sm"
             onClick={() => setModifier(tray.modifier + 1)}
           />
@@ -120,14 +120,14 @@ export function DiceTray({
       </div>
       <div className={styles.trayRow}>
         <label htmlFor={labelId} className="visually-hidden">
-          What the roll is for
+          Roll label
         </label>
         <TextInput
           id={labelId}
           size="sm"
           value={label}
           maxLength={120}
-          placeholder="What's it for? Such as: to open the door"
+          placeholder="Open stuck door"
           onChange={(event) => onLabelChange(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && expression !== null) {
@@ -147,9 +147,7 @@ export function DiceTray({
           className={styles.traySecret}
         />
       )}
-      {whisperTo !== null && !secret && (
-        <p className={styles.trayNote}>The roll goes to {whisperTo} as a whisper.</p>
-      )}
+      {whisperTo !== null && !secret && <p className={styles.trayNote}>Whispered to {whisperTo}.</p>}
       <div className={styles.trayActions}>
         <Button
           variant="ghost"

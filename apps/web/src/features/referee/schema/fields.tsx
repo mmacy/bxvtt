@@ -5,6 +5,7 @@
  */
 import {
   abilityLabel,
+  classLabel,
   COIN_FIELD_TEXT,
   commandFieldOptionLabel,
   commandFieldText,
@@ -245,7 +246,7 @@ function useSmartEditor(props: FieldEditorProps): ReactNode | undefined {
         <MemberPicker
           value={str(value)}
           invalid={invalid}
-          noneLabel="Nobody: the belongings leave the game"
+          noneLabel="Nobody (discard belongings)"
           exclude={str(parent.character_id)}
           onChange={(v) => onChange(v ?? undefined)}
         />
@@ -267,10 +268,10 @@ function useSmartEditor(props: FieldEditorProps): ReactNode | undefined {
             onChange={(v) => onChange(v ?? undefined)}
             emptyText={
               memberId === null
-                ? 'Choose a member first'
+                ? 'Choose a party member first'
                 : commandType === 'identify_item'
-                  ? 'They carry no magic items'
-                  : 'They carry nothing'
+                  ? 'No magic items carried'
+                  : 'No items carried'
             }
           />
         </Labelled>
@@ -838,7 +839,7 @@ function JsonEditor(props: FieldEditorProps) {
             onChange(JSON.parse(next) as FormValue);
             setExtraError(path, null);
           } catch {
-            setExtraError(path, "This isn't valid JSON yet.");
+            setExtraError(path, 'Enter valid JSON.');
           }
         }}
       />
@@ -910,7 +911,7 @@ function LocationEditor(props: FieldEditorProps) {
             label: env.data.ctx.townName ? `Town: ${env.data.ctx.townName}` : 'Town',
             icon: 'town',
           },
-          { value: 'dungeon', label: 'A dungeon cell', icon: 'map' },
+          { value: 'dungeon', label: 'Dungeon cell', icon: 'map' },
         ]}
       />
       {kind === 'dungeon' && (
@@ -1075,13 +1076,13 @@ function CharacterEditor(props: FieldEditorProps) {
   const options = (mine.items ?? []).map((c) => ({
     value: c.id,
     label: c.name,
-    description: `Level ${c.level} ${c.class_id}`,
+    description: `Level ${c.level} ${classLabel(c.class_id).toLowerCase()}`,
   }));
   return (
     <div className={styles.fields}>
       <Field
         label="Stored character"
-        hint="One of the characters you made. Make a new one from the lobby or the home page."
+        hint="Choose one of your stored characters, or create one from the lobby or home page."
         id={selectId}
         error={error > 0 && !isRecord(props.value) ? 'Choose a character.' : undefined}
       >
@@ -1091,9 +1092,9 @@ function CharacterEditor(props: FieldEditorProps) {
           value={chosen ?? undefined}
           placeholder={
             mine.loading
-              ? 'Loading your characters'
+              ? 'Loading characters…'
               : options.length === 0
-                ? 'You have no stored characters'
+                ? 'No stored characters'
                 : 'Choose a character'
           }
           onValueChange={setChosen}
@@ -1115,7 +1116,7 @@ function CharacterEditor(props: FieldEditorProps) {
             aria-expanded={editing}
             onClick={() => setEditing(!editing)}
           >
-            {editing ? 'Hide the sheet' : 'Edit the sheet'}
+            {editing ? 'Hide sheet' : 'Edit sheet'}
             {error > 0 ? ` (${error} to fix)` : ''}
           </Button>
           {editing && (

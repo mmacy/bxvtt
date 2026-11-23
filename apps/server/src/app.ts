@@ -102,7 +102,7 @@ export async function createServer(config: Config): Promise<Server> {
         return;
       }
       if (nestingDepth(value) > MAX_JSON_DEPTH) {
-        done(new ApiError('bad_request', 'The request body nests too deeply.'), undefined);
+        done(new ApiError('bad_request', 'The request JSON is nested too deeply.'), undefined);
         return;
       }
       done(null, value);
@@ -173,7 +173,7 @@ export async function createServer(config: Config): Promise<Server> {
     if (error instanceof ZodError) {
       return sendApiError(
         reply,
-        new ApiError('validation_error', "The request doesn't match the schema.", {
+        new ApiError('validation_error', 'The request contains invalid fields.', {
           errors: toValidationIssues(error.issues),
         }),
       );
@@ -185,7 +185,7 @@ export async function createServer(config: Config): Promise<Server> {
     if (code === 'FST_ERR_CTP_INVALID_MEDIA_TYPE') {
       return sendApiError(
         reply,
-        new ApiError('unsupported_media_type', 'Send the body as application/json.'),
+        new ApiError('unsupported_media_type', 'Send the request body as application/json.'),
       );
     }
     if ((code !== undefined && BAD_BODY_CODES.has(code)) || error instanceof SyntaxError) {
@@ -198,7 +198,10 @@ export async function createServer(config: Config): Promise<Server> {
     request.log.error({ err: error }, 'unhandled error');
     return sendApiError(
       reply,
-      new ApiError('internal_error', 'Something went wrong in bxvtt. The server logged it.'),
+      new ApiError(
+        'internal_error',
+        'Something went wrong on the server. Ask the server host to check the server logs.',
+      ),
     );
   });
 

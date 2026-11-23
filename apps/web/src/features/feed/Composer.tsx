@@ -101,7 +101,7 @@ export function Composer({ onPosted, insert }: ComposerProps) {
         const problem = describeProblem(caught);
         setError(
           problem.code === 'content_invalid' || problem.code === 'validation_error'
-            ? "The server couldn't read that roll. Write one kind of die with a count and a modifier, such as 2d6+1."
+            ? 'Invalid dice roll. Use one die type with an optional count and modifier, such as 2d6+1.'
             : `${problem.title}. ${problem.detail}`,
         );
         return false;
@@ -266,7 +266,7 @@ export function Composer({ onPosted, insert }: ComposerProps) {
             <p className={styles.trayTitle}>Commands</p>
             <IconButton
               icon="close"
-              label="Close the command list"
+              label="Close command list"
               size="sm"
               onClick={() => setHelpOpen(false)}
             />
@@ -282,7 +282,7 @@ export function Composer({ onPosted, insert }: ComposerProps) {
             ))}
           </dl>
           <p className={styles.helpKeys}>
-            <Kbd keys="Enter" /> sends. <Kbd keys={['Shift', 'Enter']} /> starts a new line. Write{' '}
+            <Kbd keys="Enter" /> sends. <Kbd keys={['Shift', 'Enter']} /> adds a new line. Use{' '}
             <code>**bold**</code> or <code>*italic*</code> for emphasis.
           </p>
         </section>
@@ -357,11 +357,7 @@ export function Composer({ onPosted, insert }: ComposerProps) {
             trigger={
               <IconButton
                 icon="whisper"
-                label={
-                  whispering
-                    ? `Whispering to ${joinList(targetNames)}. Change who hears it`
-                    : 'Whisper to someone'
-                }
+                label={whispering ? `Whispering to ${joinList(targetNames)} (change recipients)` : 'Whisper'}
                 pressed={whispering}
                 size="sm"
                 disabled={recipients.length === 0}
@@ -370,7 +366,7 @@ export function Composer({ onPosted, insert }: ComposerProps) {
           />
           <IconButton
             icon="send"
-            label={whispering ? 'Send the whisper' : 'Send'}
+            label={whispering ? 'Send whisper' : 'Send'}
             variant={trayOpen ? 'secondary' : 'primary'}
             size="sm"
             loading={pending}

@@ -59,7 +59,7 @@ export function displayString(max: number) {
     .trim()
     .min(1)
     .max(max)
-    .refine((value) => !hasControlCharacter(value), { message: 'must not contain a control character' });
+    .refine((value) => !hasControlCharacter(value), { message: 'Must not contain control characters.' });
 }
 
 /** A user ID: `usr_` and 22 URL-safe characters. */

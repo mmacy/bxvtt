@@ -28,7 +28,7 @@ export interface ModeInfo {
 const SESSION_MODES: Record<string, ModeInfo> = {
   town: {
     label: 'In town',
-    description: 'The party is in town, where it can shop, rest, heal, and set out for a dungeon.',
+    description: 'Shop, rest, visit the temple, and set out for a dungeon.',
   },
   exploring: { label: 'Exploring', description: 'The party is exploring a dungeon, one turn at a time.' },
   encounter: {
@@ -36,8 +36,8 @@ const SESSION_MODES: Record<string, ModeInfo> = {
     description: 'The party has met monsters and can talk, run, wait, or fight.',
   },
   battle: { label: 'Battle', description: 'The party is fighting, one 10-second round at a time.' },
-  game_over: { label: 'Game over', description: 'Every party member has fallen, and the game has ended.' },
-  victory: { label: 'Victory', description: 'The party has finished the adventure.' },
+  game_over: { label: 'Game over', description: 'Every party member has fallen.' },
+  victory: { label: 'Victory', description: 'The party has completed the adventure.' },
 };
 
 export const SESSION_MODE_VALUES = Object.keys(SESSION_MODES);
@@ -70,68 +70,68 @@ const CONDITIONS: Record<string, ConditionInfo> = {
     label: 'Paralysed',
     gained: 'is paralysed',
     removed: 'is no longer paralysed',
-    description: 'Cannot move or act, and any melee attack against them hits.',
+    description: 'Unable to move or act. Melee attacks against this creature hit automatically.',
   },
   asleep: {
     label: 'Asleep',
     gained: 'falls asleep',
     removed: 'wakes up',
-    description: 'Helpless and unaware. Any melee attack against them hits.',
+    description: 'Unaware and helpless. Melee attacks against this creature hit automatically.',
   },
   blind: {
     label: 'Blind',
     gained: 'is struck blind',
     removed: 'can see again',
-    description: 'Cannot see, so cannot attack.',
+    description: 'Unable to see or make attacks.',
   },
   charmed: {
     label: 'Charmed',
     gained: 'is charmed',
     removed: 'is no longer charmed',
-    description: 'Treats the one who charmed them as a friend.',
+    description: 'Regards the caster as a trusted friend and ally.',
   },
   petrified: {
     label: 'Petrified',
     gained: 'is turned to stone',
     removed: 'turns back to flesh',
-    description: 'Turned to stone. Cannot act, and counts as helpless.',
+    description: 'Turned to stone and unable to act.',
   },
   diseased: {
     label: 'Diseased',
     gained: 'falls ill with disease',
     removed: 'is cured of disease',
-    description: 'Suffers from a disease and cannot be healed by magic.',
+    description: 'Afflicted with a disease that blocks magical healing.',
   },
   exhausted: {
     label: 'Exhausted',
     gained: 'is exhausted',
     removed: 'is no longer exhausted',
-    description: 'Worn out from running, with a penalty to attacks, damage, and armour class.',
+    description: 'Worn out from fleeing, with a penalty to attack rolls, damage, and armour class.',
   },
   lycanthropy_incubation: {
     label: 'Lycanthropy incubating',
     gained: 'is infected with lycanthropy',
     removed: 'is no longer infected with lycanthropy',
-    description: 'Infected with lycanthropy, which will take hold unless cured.',
+    description: 'Infected with lycanthropy, which takes hold unless cured in time.',
   },
   averted_eyes: {
     label: 'Eyes averted',
     gained: 'looks away',
     removed: 'looks up again',
-    description: 'Looking away to guard against a gaze.',
+    description: 'Looking away from a gaze monster, taking a penalty to attack rolls.',
   },
   poisoned: {
     label: 'Poisoned',
     gained: 'is poisoned',
     removed: 'is no longer poisoned',
-    description: 'Poisoned, and will die unless cured.',
+    description: 'Afflicted with poison that proves fatal unless neutralized.',
   },
-  dead: { label: 'Dead', gained: 'dies', removed: 'returns to life', description: 'Dead.' },
+  dead: { label: 'Dead', gained: 'dies', removed: 'returns to life', description: 'Slain.' },
   silenced: {
     label: 'Silenced',
     gained: 'is silenced',
     removed: 'can speak again',
-    description: 'Cannot speak, so cannot cast spells.',
+    description: 'Unable to speak or cast spells.',
   },
   entangled: {
     label: 'Entangled',
@@ -143,60 +143,68 @@ const CONDITIONS: Record<string, ConditionInfo> = {
     label: 'Afraid',
     gained: 'is afraid',
     removed: 'is no longer afraid',
-    description: 'Frightened and fleeing.',
+    description: 'Panicked and forced to flee.',
   },
   feebleminded: {
     label: 'Feebleminded',
     gained: 'is feebleminded',
     removed: 'is no longer feebleminded',
-    description: 'Cannot think clearly, so cannot cast spells or use magic.',
+    description: 'Unable to think clearly, cast spells, or use magic items.',
   },
   invisible: {
     label: 'Invisible',
     gained: 'turns invisible',
     removed: 'becomes visible',
-    description: 'Cannot be seen, so attacks against them are harder.',
+    description: 'Unseen by normal sight, penalizing attacks against this creature.',
   },
   turned: {
     label: 'Turned',
     gained: 'is turned and flees',
     removed: 'is no longer turned',
-    description: 'Driven off by a holy symbol.',
+    description: "Driven back by a cleric's holy symbol.",
   },
   confused: {
     label: 'Confused',
     gained: 'is confused',
     removed: 'is no longer confused',
-    description: 'Acts at random.',
+    description: 'Disoriented and acting unpredictably each round.',
   },
   weakened: {
     label: 'Weakened',
     gained: 'is weakened',
     removed: 'is no longer weakened',
-    description: 'Too weak to fight well, and cannot be healed.',
+    description: 'Drained of strength, fighting poorly and unable to heal.',
   },
 };
 
 export const CONDITION_VALUES = Object.keys(CONDITIONS);
 
+function normalizeCondition(condition: string): string {
+  return condition === 'paralyzed' ? 'paralysed' : condition;
+}
+
 /** Label for a condition: `Paralysed`. */
 export function conditionLabel(condition: string): string {
-  return lookup(CONDITIONS, condition)?.label ?? fallbackLabel(condition);
+  const key = normalizeCondition(condition);
+  return lookup(CONDITIONS, key)?.label ?? fallbackLabel(key);
 }
 
 /** What a creature does on gaining the condition, as a verb phrase: `falls asleep`. */
 export function conditionGained(condition: string): string {
-  return lookup(CONDITIONS, condition)?.gained ?? `is ${lowerFirst(prettifyId(condition))}`;
+  const key = normalizeCondition(condition);
+  return lookup(CONDITIONS, key)?.gained ?? `is ${lowerFirst(prettifyId(key))}`;
 }
 
 /** What a creature does on losing the condition, as a verb phrase: `wakes up`. */
 export function conditionRemoved(condition: string): string {
-  return lookup(CONDITIONS, condition)?.removed ?? `is no longer ${lowerFirst(prettifyId(condition))}`;
+  const key = normalizeCondition(condition);
+  return lookup(CONDITIONS, key)?.removed ?? `is no longer ${lowerFirst(prettifyId(key))}`;
 }
 
 /** One-sentence description of a condition. */
 export function conditionDescription(condition: string): string {
-  return lookup(CONDITIONS, condition)?.description ?? `${fallbackLabel(condition)}.`;
+  const key = normalizeCondition(condition);
+  return lookup(CONDITIONS, key)?.description ?? `${fallbackLabel(key)}.`;
 }
 
 // Abilities and saving throws -------------------------------------------------------------------------------
@@ -343,12 +351,11 @@ const WEAPON_QUALITIES: Record<string, { label: string; description: string }> =
   },
   reload: {
     label: 'Reload',
-    description: "Can't fire in two rounds in a row, when the table's rules use reloading.",
+    description: 'Requires a round to reload between shots when weapon reloading is enabled.',
   },
   slow: {
     label: 'Slow',
-    description:
-      'The wielder always acts after everyone without a slow weapon, whatever the initiative roll.',
+    description: 'Always acts last in the round, regardless of initiative.',
   },
   splash: {
     label: 'Splash',
@@ -357,7 +364,7 @@ const WEAPON_QUALITIES: Record<string, { label: string; description: string }> =
   },
   two_handed: {
     label: 'Two-handed',
-    description: "Needs both hands, so the wielder can't use a shield with it.",
+    description: 'Requires both hands and cannot be used with a shield.',
   },
 };
 
@@ -379,10 +386,10 @@ const DOOR_STATES: Record<string, { label: string; description: string }> = {
   open: { label: 'Open', description: 'The door stands open.' },
   closed: { label: 'Closed', description: 'The door is shut but not locked.' },
   locked: { label: 'Locked', description: 'The door is locked. A thief can pick the lock.' },
-  stuck: { label: 'Stuck', description: 'The door is stuck. Someone has to force it open.' },
+  stuck: { label: 'Stuck', description: 'The door is stuck and must be forced open.' },
   wedged: {
     label: 'Wedged',
-    description: 'An iron spike holds the door in place, so it cannot swing shut or be closed.',
+    description: 'Wedged with an iron spike so it cannot swing shut or be closed.',
   },
   secret: { label: 'Secret', description: 'The door is hidden until someone finds it.' },
   wall: { label: 'Wall', description: 'Solid wall.' },
@@ -579,15 +586,15 @@ export function timeUnitNoun(unit: string, count = 1): string {
 const REST_KINDS: Record<string, { label: string; description: string }> = {
   turn: {
     label: 'One turn',
-    description: 'Rest for one turn, which is 10 minutes. A party needs this breather once every six turns.',
+    description: 'Rest for one turn (10 minutes) to avoid fatigue.',
   },
   night: {
     label: 'A night',
-    description: 'Rest for a night, which is 48 turns or 8 hours. Casters can prepare spells afterward.',
+    description: 'Rest for a night (8 hours) so casters can prepare spells.',
   },
   day: {
     label: 'A full day',
-    description: 'Rest for a full day, which is 144 turns. It also heals the party.',
+    description: 'Rest for a full day (24 hours) to recover hit points.',
   },
 };
 

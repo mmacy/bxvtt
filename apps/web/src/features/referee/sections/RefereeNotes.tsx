@@ -102,7 +102,7 @@ export function RefereeNotes() {
   };
 
   const status = saving
-    ? 'Saving'
+    ? 'Saving…'
     : conflict
       ? 'Not saved'
       : dirty
@@ -114,27 +114,27 @@ export function RefereeNotes() {
   return (
     <div className={styles.section}>
       <p className={styles.secondaryLine}>
-        Only referees read these notes. They save as you type, and they stay with the table between games.
+        Only referees can see these notes. Changes save automatically and persist between games.
       </p>
       {conflict && (
         <Banner
           tone="info"
           title={
             author?.user_id === me?.id
-              ? 'You saved these notes from another window while you were writing here'
-              : `${author?.name ?? 'Another referee'} changed these notes while you were writing`
+              ? 'You saved these notes in another window while editing'
+              : `${author?.name ?? 'Another referee'} updated these notes while you were editing`
           }
         >
           <p className={styles.bannerText}>
-            Your text is still in the box below, and nothing is lost yet. Keep yours to replace theirs, or use
-            theirs and copy anything you need from yours first.
+            Your edits are still in the box below. Keep yours to overwrite theirs, or take theirs after
+            copying anything you want to keep.
           </p>
           <div className={styles.rowActions}>
             <Button size="sm" variant="secondary" onClick={keepMine}>
-              Keep my version
+              Keep mine
             </Button>
             <Button size="sm" variant="ghost" onClick={useTheirs}>
-              Use theirs
+              Take theirs
             </Button>
             <Button
               size="sm"
@@ -142,7 +142,7 @@ export function RefereeNotes() {
               aria-expanded={showTheirs}
               onClick={() => setShowTheirs(!showTheirs)}
             >
-              {showTheirs ? 'Hide their version' : 'Show their version'}
+              {showTheirs ? 'Hide theirs' : 'See both'}
             </Button>
           </div>
         </Banner>
@@ -150,7 +150,7 @@ export function RefereeNotes() {
       {conflict && showTheirs && (
         <figure className={styles.offer}>
           <figcaption className={styles.minorHead}>Their version</figcaption>
-          <pre className={styles.theirs}>{notes.text || '(Empty)'}</pre>
+          <pre className={styles.theirs}>{notes.text || 'Empty'}</pre>
         </figure>
       )}
       {conflict && <h4 className={styles.minorHead}>Your version</h4>}
@@ -160,7 +160,7 @@ export function RefereeNotes() {
         rows={16}
         maxLength={LIMITS.notesText}
         value={value}
-        placeholder="Plans, secrets, what each faction wants, what the players said they'd do next session."
+        placeholder="Gashnak trades stolen cargo to the ferryman on new moons. Party plans to rest at the chapel next."
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => {
           if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && draft !== null && !conflict) {
@@ -181,7 +181,7 @@ export function RefereeNotes() {
       {error && (
         <Banner
           tone="danger"
-          title="The notes didn't save"
+          title="Couldn't save notes"
           actions={
             draft !== null && (
               <Button size="sm" variant="secondary" onClick={() => void save(draft, base)}>

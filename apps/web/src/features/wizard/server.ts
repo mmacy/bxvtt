@@ -75,11 +75,11 @@ function stepForCode(code: string): StepId {
 
 const STEP_TITLES: Record<StepId, string> = {
   roll: 'Roll new ability scores',
-  class: 'This class needs a change',
-  adjust: "The trade of ability points doesn't work",
-  identity: 'A choice about who your character is needs a change',
-  outfit: 'The shopping list needs a change',
-  review: "The character couldn't be made",
+  class: 'Choose an eligible class',
+  adjust: 'Check your ability score adjustments',
+  identity: 'Check your character details',
+  outfit: 'Check your starting equipment',
+  review: "Couldn't create character",
 };
 
 /**
@@ -105,25 +105,27 @@ export function explainInvalid(problem: Problem, ctx: TextContext = emptyContext
       return {
         step: 'class',
         title: STEP_TITLES.class,
-        sentences: ["The rules don't have that class. Pick one of the classes listed."],
+        sentences: ['Choose one of the available classes.'],
       };
     case 'purchases':
       return {
         step: 'outfit',
         title: STEP_TITLES.outfit,
-        sentences: [`The shop doesn't sell ${phrase(id, ctx)}. Take it out of your cart.`],
+        sentences: [`You can't buy ${phrase(id, ctx)} here. Remove it from your cart.`],
       };
     case 'equip_item_ids':
       return {
         step: 'outfit',
         title: STEP_TITLES.outfit,
-        sentences: [`You chose to equip ${phrase(id, ctx)}, but your cart doesn't have it. Buy it first.`],
+        sentences: [
+          `You chose to equip ${phrase(id, ctx)}, which isn't in your cart. Add it to your cart first.`,
+        ],
       };
     default:
       return {
         step: 'review',
         title: STEP_TITLES.review,
-        sentences: ['The rules engine refused one of the choices. Check each step and try again.'],
+        sentences: ['One of your choices is not valid for this character. Review each step and try again.'],
       };
   }
 }
@@ -139,31 +141,33 @@ export function explainCreationError(error: unknown, ctx?: TextContext): WizardP
   if (isProblem(error, 'ability_roll_used')) {
     return {
       step: 'roll',
-      title: 'These scores already made a character',
-      sentences: ['Each roll makes one character. Roll new ability scores to make another.'],
+      title: 'You already used this ability roll',
+      sentences: ['Each ability roll can create one character. Roll new ability scores to create another.'],
     };
   }
   if (isProblem(error, 'not_found')) {
     return {
       step: 'roll',
-      title: 'This server no longer has your roll',
-      sentences: ['Roll new ability scores to start again.'],
+      title: 'Your ability roll expired',
+      sentences: ['Roll new ability scores to continue.'],
     };
   }
   if (isProblem(error, 'validation_error')) {
     return {
       step: 'identity',
-      title: "The name can't be used",
-      sentences: ['Use 1 to 100 characters, with no tabs, line breaks, or text direction marks.'],
+      title: 'Enter a valid character name',
+      sentences: ['Use 1 to 100 characters without tabs, line breaks, or text direction marks.'],
     };
   }
   const message = describeProblem(error);
-  // A failure that never reached the rules engine loses nothing: the draft stays in this browser.
+  // A failure that never reached the server loses nothing: the draft stays in this browser.
   const kept = ['server_unavailable', 'network', 'invalid_response', 'rate_limited', 'bxapi_unavailable'];
   return {
     step: null,
     title: message.title,
-    sentences: kept.includes(message.code) ? [message.detail, 'Your choices are kept.'] : [message.detail],
+    sentences: kept.includes(message.code)
+      ? [message.detail, 'Your draft is still saved in this browser.']
+      : [message.detail],
   };
 }
 
