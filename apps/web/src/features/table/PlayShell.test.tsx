@@ -1,6 +1,6 @@
 import { act, fireEvent, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { END_GRACE_MS, END_MAX_HOLD_MS, ShortcutLayer, useCombatStage, useTableUi } from '@/app';
+import { END_GRACE_MS, END_STALL_MS, ShortcutLayer, useCombatStage, useTableUi } from '@/app';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { renderWithTable } from '@/app/testing/renderWithTable';
 import { PlayShell } from './PlayShell';
@@ -128,11 +128,38 @@ describe('PlayShell at the end of a game', () => {
     expect(screen.getByText('The party has fallen')).toBeInTheDocument();
   });
 
-  it('never holds the end screen longer than its limit', () => {
+  it('shows the end screen when a running playback stops reporting new beats', () => {
     const { end } = endTheGame();
     act(() => useCombatStage.getState().setPlaying(true));
     end();
-    act(() => vi.advanceTimersByTime(END_MAX_HOLD_MS));
+    act(() => vi.advanceTimersByTime(END_STALL_MS));
+    expect(screen.getByText('The party has fallen')).toBeInTheDocument();
+  });
+
+  it('holds the end screen as long as new beats arrive, past the limit in all', () => {
+    const { end } = endTheGame();
+    act(() => useCombatStage.getState().setPlaying(true));
+    end();
+    for (let beat = 0; beat < 4; beat += 1) {
+      act(() => useCombatStage.getState().setProgress(`12-${beat}`, false));
+      act(() => vi.advanceTimersByTime(END_STALL_MS - 1000));
+    }
+    expect(screen.queryByText('The party has fallen')).not.toBeInTheDocument();
+    act(() => useCombatStage.getState().setPlaying(false));
+    act(() => vi.advanceTimersByTime(0));
+    expect(screen.getByText('The party has fallen')).toBeInTheDocument();
+  });
+
+  it('holds the end screen while the viewer is paused on the last round, until they skip', () => {
+    const { end } = endTheGame();
+    act(() => useCombatStage.getState().setPlaying(true));
+    act(() => useCombatStage.getState().setProgress('12-2', true));
+    end();
+    act(() => vi.advanceTimersByTime(END_STALL_MS * 10));
+    expect(screen.queryByText('The party has fallen')).not.toBeInTheDocument();
+    // Skipping ends the playback, and the end screen follows.
+    act(() => useCombatStage.getState().setPlaying(false));
+    act(() => vi.advanceTimersByTime(0));
     expect(screen.getByText('The party has fallen')).toBeInTheDocument();
   });
 });

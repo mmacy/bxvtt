@@ -7,11 +7,11 @@ export { describeProblem, displayStringProblem, getApi, isNetworkError, reportEr
 export type { ProblemMessage } from './api';
 export { isRetiredToken, useCurrentUser, useIdentity } from './identity';
 export type { IdentityState, IdentityStatus } from './identity';
-export { DEFAULT_PREFERENCES, usePreferences, useReduceMotion } from './preferences';
+export { DEFAULT_PREFERENCES, PLAYBACK_SPEEDS, usePreferences, useReduceMotion } from './preferences';
 export { AppKitProvider } from './AppKitProvider';
 export { DOCS_URL, SiteInfo } from './SiteInfo';
 export type { SiteInfoProps } from './SiteInfo';
-export type { DockTabId, MapThemeName, MotionPreference, Preferences } from './preferences';
+export type { DockTabId, MapThemeName, MotionPreference, PlaybackSpeed, Preferences } from './preferences';
 export {
   canActForParty,
   canControlMember,
@@ -105,7 +105,7 @@ export {
   usePartyLight,
 } from './light';
 export type { MemberLight, PartyLight } from './light';
-export { END_GRACE_MS, END_MAX_HOLD_MS, ShownModeProvider, useHeldMode, useShownMode } from './shownMode';
+export { END_GRACE_MS, END_STALL_MS, ShownModeProvider, useHeldMode, useShownMode } from './shownMode';
 export type { CombatStageState, PlaybackMemberState, PlaybackMoment } from './combatStage';
 export { lazyPart, type LazyPart } from './lazyPart';
 export { UNKEYED_PLACE_PHRASE, UNKEYED_PLACE_TITLE } from './places';

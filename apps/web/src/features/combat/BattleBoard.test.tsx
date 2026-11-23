@@ -1,7 +1,8 @@
 import type { DeclarationsState, FeedEntry } from '@bxvtt/shared/protocol';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { fixtureSnapshot } from '@/app/testing/fixtures';
+import { usePreferences } from '@/app';
+import { fixtureSnapshot, type Snapshot } from '@/app/testing/fixtures';
 import { createFakeApi, renderWithTable, type FakeApi } from '@/app/testing/renderWithTable';
 import { BattleBoard } from './BattleBoard';
 import { resetCombatMemory } from './memory';
@@ -26,15 +27,138 @@ beforeEach(() => {
   resetCombatUi();
 });
 
+/** The battle fixture with every declarer declared, and automatic resolution on or off. */
+function everyoneDeclared(role: 'player' | 'referee', autoResolve: boolean): Snapshot {
+  const snapshot = fixtureSnapshot('battle', role);
+  const declarations = snapshot.declarations as DeclarationsState;
+  declarations.declared = [...declarations.declarers];
+  for (const id of declarations.declarers)
+    declarations.declarations[id] ??= { action: 'hold', character_id: id } as never;
+  if (snapshot.table) snapshot.table.settings.auto_resolve = autoResolve;
+  return snapshot;
+}
+
+/** The board's footer, which says who still has to declare and what starts the round. */
+function footer(): HTMLElement {
+  return screen.getByRole('contentinfo');
+}
+
+/** A resolved round in the feed, as the server pushes it. */
+function roundEntry(snapshot: Snapshot, offset: number, round: number): FeedEntry {
+  const last = snapshot.feed.entries.at(-1)?.seq ?? 0;
+  return {
+    seq: last + offset,
+    created_at: '2026-11-22T05:20:00Z',
+    user_id: null,
+    visibility: 'everyone',
+    to: [],
+    kind: 'game',
+    command_type: 'resolve_battle_round',
+    revision: (snapshot.game?.revision ?? 0) + offset,
+    session_id: snapshot.game?.session_id ?? '',
+    messages: [],
+    events: [
+      { event_type: 'battle_round', code: 'battle.round.started', visibility: 'player', round },
+      {
+        event_type: 'damage_dealt',
+        code: 'combat.damage.dealt',
+        visibility: 'player',
+        target_id: 'character-0001',
+        attacker_id: 'monster-0001',
+        amount: round,
+        rolls: [round],
+        keys: [],
+        non_regenerable: false,
+      },
+    ] as never,
+  };
+}
+
 describe('BattleBoard', () => {
-  it('shows each declaration and who the table waits for', () => {
+  it('shows a player each saved declaration, who the table waits for, and what starts the round', () => {
     const api = createFakeApi();
     stubRules(api);
     renderWithTable(<BattleBoard />, { snapshot: fixtureSnapshot('battle', 'player'), api });
-    expect(within(row('Brenna')).getByText('Attack the goblins')).toBeInTheDocument();
+    expect(within(row('Brenna')).getByText(/Declared:/)).toBeInTheDocument();
+    expect(within(row('Brenna')).getByText(/Attack the goblins/)).toBeInTheDocument();
+    expect(within(row('Brenna')).getByRole('button', { name: 'Change' })).toBeInTheDocument();
+    expect(within(row('Wren')).getByText('Not declared yet')).toBeInTheDocument();
     expect(within(row('Osric')).getByText('Waiting for Ruth')).toBeInTheDocument();
-    expect(screen.getByText(/1 of 4/)).toBeInTheDocument();
-    expect(screen.getByText(/The round resolves when everyone has declared/)).toBeInTheDocument();
+    expect(footer()).toHaveTextContent('1 of 4 declared for round 1');
+    expect(footer()).toHaveTextContent(/Waiting for.*you \(Wren\).*Ruth \(Osric and Tamsin\)/);
+    expect(footer()).toHaveTextContent('The round resolves by itself as soon as everyone has declared.');
+    // Only a referee can resolve early.
+    expect(screen.queryByRole('button', { name: 'Resolve now' })).not.toBeInTheDocument();
+  });
+
+  it('tells a player who is not the caller who resolves the round once everyone has declared', () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = everyoneDeclared('player', false);
+    const ruth = snapshot.table?.members.find((m) => m.role === 'referee')?.user_id ?? null;
+    if (snapshot.table) snapshot.table.settings.caller_user_id = ruth;
+    renderWithTable(<BattleBoard />, { snapshot, api });
+    expect(footer()).toHaveTextContent('4 of 4 declared');
+    expect(footer()).toHaveTextContent('Everyone has declared');
+    expect(footer()).toHaveTextContent(
+      'Everyone has declared. Waiting for Ruth (the caller) or the referee to resolve the round.',
+    );
+    expect(screen.queryByRole('button', { name: 'Resolve round' })).not.toBeInTheDocument();
+  });
+
+  it('lets the caller resolve the round once everyone has declared, with automatic resolution off', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    api.resolveRound.mockRejectedValue(new Error('stop here'));
+    const { user, store } = renderWithTable(<BattleBoard />, {
+      snapshot: everyoneDeclared('player', false),
+      api,
+    });
+    expect(footer()).toHaveTextContent("Everyone has declared. Resolve the round when you're ready.");
+    await user.click(screen.getByRole('button', { name: 'Resolve round' }));
+    await waitFor(() => expect(api.resolveRound).toHaveBeenCalledWith(store.getState().tableId, false));
+  });
+
+  it('shows a referee the same status, and what Resolve now does with those who have not declared', () => {
+    const api = createFakeApi();
+    stubRules(api);
+    renderWithTable(<BattleBoard />, { snapshot: fixtureSnapshot('battle', 'referee'), api });
+    expect(within(row('Brenna')).getByText(/Declared:/)).toBeInTheDocument();
+    expect(footer()).toHaveTextContent('1 of 4 declared for round 1');
+    expect(footer()).toHaveTextContent(/Waiting for.*Sam \(Wren\).*you \(Osric and Tamsin\)/);
+    expect(footer()).toHaveTextContent(
+      "The round resolves by itself as soon as everyone has declared. Resolve now starts it at once, and anyone who hasn't declared holds.",
+    );
+    expect(screen.getByRole('button', { name: 'Resolve now' })).toBeInTheDocument();
+  });
+
+  it('shows a referee that everyone has declared and offers to resolve the round', () => {
+    const api = createFakeApi();
+    stubRules(api);
+    renderWithTable(<BattleBoard />, { snapshot: everyoneDeclared('referee', false), api });
+    expect(footer()).toHaveTextContent("Everyone has declared. Resolve the round when you're ready.");
+    expect(screen.getByRole('button', { name: 'Resolve round' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Resolve now' })).not.toBeInTheDocument();
+  });
+
+  it('says in the composer that choosing declares, and marks the saved choice', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const { user } = renderWithTable(<BattleBoard />, { snapshot: fixtureSnapshot('battle', 'player'), api });
+    await user.click(within(row('Wren')).getByRole('button', { name: 'Actions' }));
+    const wren = screen.getByRole('region', { name: 'Declare for Wren' });
+    expect(wren).toHaveTextContent(
+      'Choosing an action declares it for Wren this round. You can change it until the round resolves.',
+    );
+    await user.click(within(wren).getByRole('button', { name: "Close Wren's actions" }));
+    await user.click(within(row('Brenna')).getByRole('button', { name: 'Change' }));
+    const brenna = screen.getByRole('region', { name: 'Declare for Brenna' });
+    expect(brenna).toHaveTextContent(
+      'Brenna has declared: Attack the goblins. Choose another action to change it before the round resolves.',
+    );
+    expect(
+      within(brenna).getByRole('button', { name: /^(Attack|Close in and attack): the goblins/ }),
+    ).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('declares the common case in one click', async () => {
@@ -99,36 +223,96 @@ describe('BattleBoard', () => {
     const api = createFakeApi();
     stubRules(api);
     const snapshot = fixtureSnapshot('battle', 'player');
-    const { store } = renderWithTable(<BattleBoard />, { snapshot, api, preferences: { motion: 'reduce' } });
-    const last = snapshot.feed.entries.at(-1)?.seq ?? 0;
-    const entry: FeedEntry = {
-      seq: last + 1,
-      created_at: '2026-11-22T05:20:00Z',
-      user_id: null,
-      visibility: 'everyone',
-      to: [],
-      kind: 'game',
-      command_type: 'resolve_battle_round',
-      revision: (snapshot.game?.revision ?? 0) + 1,
-      session_id: snapshot.game?.session_id ?? '',
-      messages: [],
-      events: [
-        { event_type: 'battle_round', code: 'battle.round.started', visibility: 'player', round: 1 },
-        {
-          event_type: 'damage_dealt',
-          code: 'combat.damage.dealt',
-          visibility: 'player',
-          target_id: 'character-0001',
-          attacker_id: 'monster-0001',
-          amount: 2,
-          rolls: [2],
-          keys: [],
-          non_regenerable: false,
-        },
-      ] as never,
-    };
-    act(() => store.getState().receive({ type: 'feed', entry }));
-    expect(await screen.findByText('Round 1 result')).toBeInTheDocument();
+    const { store, user } = renderWithTable(<BattleBoard />, {
+      snapshot,
+      api,
+      preferences: { motion: 'reduce' },
+    });
+    act(() => store.getState().receive({ type: 'feed', entry: roundEntry(snapshot, 1, 2) }));
+    expect(await screen.findByText('Round 2 result')).toBeInTheDocument();
     expect(screen.getByText('2 damage taken')).toBeInTheDocument();
+    // A replay starts paused, so a viewer who reduces motion steps through it.
+    await user.click(screen.getByRole('button', { name: 'Replay' }));
+    expect(screen.getByText('Paused')).toBeInTheDocument();
+    expect(screen.getByText('Round 2 begins.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Step forward' }));
+    expect(screen.getByText(/Brenna takes 2 damage|2 damage/)).toBeInTheDocument();
+  });
+
+  it('pauses a round, and a round that resolves meanwhile replaces it, still paused, with the old one a step back', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('battle', 'player');
+    const { store, user } = renderWithTable(<BattleBoard />, {
+      snapshot,
+      api,
+      preferences: { motion: 'full', playbackSpeed: 'slow' },
+    });
+    act(() => store.getState().receive({ type: 'feed', entry: roundEntry(snapshot, 1, 2) }));
+    expect(await screen.findByText('Round 2 begins.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Pause playback' }));
+    expect(screen.getByText('Paused')).toBeInTheDocument();
+
+    // Another player declared and the next round resolved while this viewer was paused.
+    act(() => store.getState().receive({ type: 'feed', entry: roundEntry(snapshot, 2, 3) }));
+    expect(await screen.findByText('Round 3 begins.')).toBeInTheDocument();
+    expect(screen.getByText('Paused')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Resume playback' })).toBeInTheDocument();
+    // The declarations below the strip are the live ones, whatever the playback shows.
+    expect(footer()).toHaveTextContent('1 of 4 declared');
+
+    // One step back reaches the end of the round that was replaced.
+    await user.click(screen.getByRole('button', { name: 'Step back' }));
+    expect(screen.queryByText('Round 3 begins.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Resume playback' })).toBeInTheDocument();
+
+    // Skip lands on the summary of the newest round.
+    await user.click(screen.getByRole('button', { name: 'Skip' }));
+    expect(await screen.findByText('Round 3 result')).toBeInTheDocument();
+  });
+
+  it('remembers the speed each viewer chooses', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('battle', 'player');
+    const { store, user } = renderWithTable(<BattleBoard />, {
+      snapshot,
+      api,
+      preferences: { motion: 'full' },
+    });
+    act(() => store.getState().receive({ type: 'feed', entry: roundEntry(snapshot, 1, 2) }));
+    await user.click(await screen.findByRole('button', { name: 'Playback speed: Normal' }));
+    // A screen reader hears which speed is chosen: each speed is a checkable menu item.
+    expect(await screen.findByRole('menuitemcheckbox', { name: 'Normal' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    expect(screen.getByRole('menuitemcheckbox', { name: 'Fast' })).toHaveAttribute('aria-checked', 'false');
+    await user.click(screen.getByRole('menuitemcheckbox', { name: 'Fast' }));
+    expect(screen.getByRole('button', { name: 'Playback speed: Fast' })).toBeInTheDocument();
+    expect(usePreferences.getState().playbackSpeed).toBe('fast');
+  });
+
+  it('keeps keyboard focus in the strip when a round finishes, and when a replay starts', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('battle', 'player');
+    const { store, user } = renderWithTable(<BattleBoard />, {
+      snapshot,
+      api,
+      preferences: { motion: 'full', playbackSpeed: 'fastest' },
+    });
+    act(() => store.getState().receive({ type: 'feed', entry: roundEntry(snapshot, 1, 2) }));
+    // The keyboard user pauses, resumes, and lets the round finish.
+    const pause = await screen.findByRole('button', { name: 'Pause playback' });
+    pause.focus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByRole('button', { name: 'Resume playback' })).toHaveFocus();
+    await user.keyboard('{Enter}');
+    const replay = await screen.findByRole('button', { name: 'Replay' }, { timeout: 4000 });
+    expect(replay).toHaveFocus();
+    // Replay hands focus back to the pause button.
+    await user.keyboard('{Enter}');
+    expect(screen.getByRole('button', { name: 'Pause playback' })).toHaveFocus();
   });
 });

@@ -37,7 +37,7 @@ The play layout targets viewports from `820px` wide upward; below `1100px`, the 
 | Export | Description |
 | --- | --- |
 | `useIdentity(selector)`, `useCurrentUser()` | Current user and bearer token (`create`, `update`, `adopt` after rejoin approval, and `forget`). |
-| `usePreferences(selector)`, `useReduceMotion()` | Per-browser preferences (`mapTheme`, `dockWidth`, `dockCollapsed`, `dockTab`, `refereeLens`, `sound`, `motion`) and resolved motion setting. |
+| `usePreferences(selector)`, `useReduceMotion()` | Per-browser preferences (`mapTheme`, `dockWidth`, `dockCollapsed`, `dockTab`, `refereeLens`, `sound`, `motion`, `playbackSpeed`) and resolved motion setting. |
 | `scopedStorage(scope, area?)`, `readStored`, `writeStored`, `STORAGE_KEYS` | Namespaced JSON `localStorage` / `sessionStorage` with in-memory fallback when browser storage is blocked. |
 | `getApi()` | Shared `BxvttClient` configured with the active token. |
 | `describeProblem(error)`, `reportError(error, opts?)`, `isRetiredToken(error)`, `isTransientFailure(error)` | Maps every `PROBLEM_CODES` entry to user-facing `{ title, detail }`, triggers error toasts, and classifies retired-token or transient network failures. |

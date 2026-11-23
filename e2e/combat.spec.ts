@@ -271,7 +271,8 @@ test.describe('battle', () => {
   test('two players declare for their own members, see each other’s choices, and watch the round play back', async ({
     crew,
   }) => {
-    const table = await combatTable(crew);
+    // This test is about playback, so everyone watches at the normal pace.
+    const table = await combatTable(crew, { playbackSpeed: 'normal' });
     const { sam, ann, ruth, tableId } = table;
     await walkIntoGuardroom(sam.client, tableId);
     for (const actor of [sam, ann, ruth]) await openTable(actor.page, table.path);
@@ -327,22 +328,36 @@ test.describe('battle', () => {
         .click(),
     );
 
-    // The last declaration resolves the round by itself. Everyone sees the next round, and the feed tells it.
-    for (const actor of [sam, ann, ruth]) {
+    // The last declaration resolves the round by itself, and each page plays it back. Sam pauses his own
+    // playback and steps through it by keyboard.
+    const board = battleBoard(sam.page);
+    await expect(board.getByRole('button', { name: 'Pause playback' })).toBeVisible({ timeout: 30_000 });
+    await sam.page.keyboard.press('k');
+    await expect(board.getByText('Paused', { exact: true })).toBeVisible();
+    const beat = board.getByRole('status').first();
+    const before = await beat.innerText();
+    await sam.page.keyboard.press('.');
+    await expect(beat).not.toHaveText(before);
+    await sam.page.keyboard.press(',');
+    await expect(beat).toHaveText(before);
+    // Sam's pause holds up nobody else: everyone else's playback ends, and they see the next round.
+    for (const actor of [ann, ruth]) {
       await expect(battleBoard(actor.page).getByRole('heading', { name: 'Round 2' })).toBeVisible({
         timeout: 30_000,
       });
     }
-    // When the playback ends, the board sums the round up, and anyone can replay it.
-    const board = battleBoard(sam.page);
-    await expect(board.getByText('Round 1 result')).toBeVisible({ timeout: 30_000 });
+    await expect(board.getByRole('heading', { name: 'Round 1' })).toBeVisible();
+    await expect(board).toContainText(/0 of \d declared for round 2/);
+    await board.getByRole('button', { name: 'Skip' }).click();
+    await expect(board.getByRole('heading', { name: 'Round 2' })).toBeVisible();
+    // When the playback ends, the board sums the round up, and anyone can replay it at another speed.
+    await expect(board.getByText('Round 1 result')).toBeVisible();
     await board.getByRole('button', { name: 'Replay' }).click();
-    const playing = board
-      .getByRole('status')
-      .filter({ has: sam.page.getByRole('button', { name: /^Skip/ }) });
-    await expect(playing).toBeVisible();
+    await board.getByRole('button', { name: 'Playback speed: Normal' }).click();
+    await sam.page.getByRole('menuitemcheckbox', { name: 'Very fast' }).click();
     await shot(sam.page, 'battle-playback');
-    await playing.getByRole('button', { name: /^Skip/ }).click();
+    await expect(board.getByRole('button', { name: 'Playback speed: Very fast' })).toBeVisible();
+    await board.getByRole('button', { name: 'Skip' }).click();
     await expect(board.getByText('Round 1 result')).toBeVisible();
     const feed = await openFeed(sam.page);
     await expect(feed).toContainText(/magic missile/i);

@@ -1,10 +1,13 @@
-import { contextFromPlayerView, emptyContext } from '@bxvtt/shared/text';
+import { contextFromPlayerView, emptyContext, type EventLine } from '@bxvtt/shared/text';
 import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { fightEvents, summarizeFight, xpSentence } from './fight';
 import {
   applyEvent,
+  beatDuration,
+  beatText,
   buildBeats,
+  PACE,
   digestRound,
   monsterGroupsFromRound,
   sliceBeats,
@@ -151,10 +154,80 @@ describe('buildBeats', () => {
     expect(hit?.pops).toEqual([{ tokenId: 'group-0001', kind: 'damage', text: '−6' }]);
     expect(hit?.roll).toEqual({ natural: 15, modifier: -1, total: 14, hit: true });
     expect(hit?.lines[0]?.text).toMatch(/Brenna hits/);
-    for (const beat of beats) {
-      expect(beat.durationMs).toBeGreaterThanOrEqual(400);
-      expect(beat.durationMs).toBeLessThanOrEqual(700);
-    }
+  });
+});
+
+describe('the pace of a beat', () => {
+  const line = (text: string, detail?: string): EventLine => ({
+    text,
+    detail,
+    category: 'battle',
+    tone: 'neutral',
+    icon: 'sword',
+    actorIds: [],
+    code: 'test',
+    eventType: 'test',
+    visibility: 'player',
+  });
+
+  it('gives a line reading time in proportion to its length, between a floor and a ceiling', () => {
+    const short = beatDuration([line('Round 2 begins.')], []);
+    const attack = line(
+      'Mazpar misses a goblin with a dagger.',
+      'Rolled 6 +1 = 7, needed 13 against armour class 6.',
+    );
+    expect(short).toBe(PACE.minMs);
+    expect(beatDuration([attack], [])).toBe(PACE.settleMs + beatText([attack]).length * PACE.perCharMs);
+    expect(beatDuration([attack], [])).toBeGreaterThan(2000);
+    const wall = Array.from({ length: 6 }, () => attack);
+    expect(beatDuration(wall, [])).toBe(PACE.maxMs);
+  });
+
+  it('counts the text the strip shows: the first line, its numbers, two more lines, and how many it leaves out', () => {
+    const lines = [line('One.', '1 + 1'), line('Two.'), line('Three.'), line('Four.'), line('Five.')];
+    expect(beatText(lines)).toBe('One. 1 + 1 Two. Three. And 2 more.');
+  });
+
+  it('holds a death and a spell longer than a miss of the same length', () => {
+    const text = [line('A goblin falls.')];
+    const miss = beatDuration(text, [p({ event_type: 'attack_rolled', code: 'combat.attack.missed' })]);
+    const death = beatDuration(text, [p({ event_type: 'death', code: 'combat.death.died' })]);
+    const spell = beatDuration(text, [p({ event_type: 'spell_cast', code: 'magic.spell.cast' })]);
+    const end = beatDuration(text, [p({ event_type: 'battle_ended', code: 'battle.ended.victory' })]);
+    expect(death - miss).toBe(PACE.holdMs.death);
+    expect(spell - miss).toBe(PACE.holdMs.spell);
+    expect(end - miss).toBe(PACE.holdMs.end);
+  });
+
+  it('plays a member gaining the dead condition and dying as one beat, held as a death', () => {
+    const { view } = battle();
+    const events = [
+      p({
+        event_type: 'condition_gained',
+        code: 'effects.condition.gained',
+        target_id: 'character-0001',
+        condition: 'dead',
+      }),
+      p({ event_type: 'death', code: 'combat.death.died', target_id: 'character-0001' }),
+    ];
+    const beats = buildBeats(events, contextFromPlayerView(view), {
+      includeReferee: false,
+      lookup: () => null,
+    });
+    expect(beats).toHaveLength(1);
+    expect(beats[0]?.events).toHaveLength(2);
+    expect(beats[0]?.durationMs).toBe(PACE.minMs + PACE.holdMs.death);
+  });
+
+  it('paces a real round so each attack can be read, in about twenty seconds at normal speed', () => {
+    const { view } = battle();
+    const lookup = (id: string) => (id.startsWith('monster-') ? 'group-0001' : null);
+    const beats = buildBeats(round, contextFromPlayerView(view), { includeReferee: false, lookup });
+    for (const beat of beats.filter((b) => b.roll !== null))
+      expect(beat.durationMs).toBeGreaterThanOrEqual(2000);
+    const total = beats.reduce((sum, beat) => sum + beat.durationMs, 0);
+    expect(total).toBeGreaterThan(8000);
+    expect(total).toBeLessThan(20_000);
   });
 });
 

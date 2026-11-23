@@ -24,45 +24,66 @@ Individual players can also **Use an item**, **Give items**, or **Drop items** (
 
 ## Declare actions in battle
 
-B/X battles resolve simultaneously round by round. A range track at the top of the battle board shows the distance from the party line to each monster group, while the declaration list below tracks every character who can act this round. Party members see one another's declarations in real time so the group can coordinate targets, spells, and movement.
+B/X battles resolve simultaneously round by round. Each round, you choose an action for each of your characters. Your choice is saved the moment you pick it, and you can change it until the round resolves. The round resolves when everyone has declared (with automatic resolution on) or when the caller or the referee resolves it.
+
+A range track at the top of the battle board shows the distance from the party line to each monster group, and the declaration list below it shows every character who can act this round. Party members see one another's declarations in real time, so the group can coordinate targets, spells, and movement.
 
 ![Battle board showing round playback above party action declarations](../images/battle.webp)
 
-### Use smart quick actions or full choices
+### Declare with the suggested action or the full choices
 
-1. Locate your characters in the declaration list. Each undeclared character row offers a suggested quick action tailored to their rank, equipment, and class (press `A` to trigger it for your next character):
+Each of your characters' rows says **Not declared yet** until you declare, and **Declared:** followed by the action once you have. Every way of declaring below saves the declaration the same way, with no confirmation step:
+
+1. Select the suggested action on a character's row to declare it. The suggestion depends on the character's rank, equipment, and class, and the action bar offers the same choice for your next undeclared character as **Declare for** followed by the character's name (press `A`):
    - **Already in melee:** Attacks the engaged monster group with the character's wielded weapon (for example, **Attack the goblins with a sword**).
    - **Ranged weapon in range:** Shoots or throws at the nearest group in range (for example, **Shoot at the goblins with a shortbow**).
-   - **Caster with memorized spells:** **Choose a spell**, which opens that character's **Cast** tab.
+   - **Caster with memorized spells:** **Choose a spell**, which opens that character's **Cast** tab instead of declaring.
    - **Armoured non-caster front-rank fighter:** Closes in and attacks (such as **Attack the goblins with a sword, closing in** or **Close in on the goblins**).
    - **Back-rank or unarmoured characters without a ranged attack or spell:** Defaults to **Hold** so a quick keypress never sends unarmoured characters or casters charging into melee.
-2. For any other tactic, select **More choices** (or press `1` through `9` for your first through ninth character) to open the action composer:
+2. For any other tactic, select **Actions** on the character's row (or press `1` through `9` for your first through ninth character) to open the action composer. The composer states that choosing an action declares it, and choosing a tile or a button there saves the declaration at once:
    - **Attack:** Pick a target group, switch weapons, or enable **Back-stab** on a surprise free round for thieves.
    - **Cast:** Choose a memorized spell and aim at monster groups, specific individual monsters (such as `Goblin 2`), or party allies.
    - **Move:** Choose **Close in** on a monster group, **Fighting withdrawal** (step back out of melee defensively), **Retreat** (flee melee at full speed), or **Trade places** with another party member between ranks.
    - **Item:** Drink a potion, read a scroll, throw oil or holy water, or activate a magic item.
    - **Give**, **Turn undead**, and **Hold**.
    - When facing a monster with a petrifying gaze, a **Guard against the gaze** selector lets you choose **No guard**, **Avert eyes**, or **Watch in a mirror**.
-3. With **Resolve battle rounds automatically** enabled (the default), submitting the final character's declaration resolves the round immediately. While at least one character has yet to declare (or whenever automatic resolution is turned off), select **Change** to revise a character's declaration or click the clear button (`X`) to remove it.
-4. Starting in round 2, select **Same as last round for all** (`Shift+A`) to repeat your previous declarations for every eligible character you control, or click the repeat icon on a single character's row.
+3. Starting in round 2, select **Declare same as last round** (`Shift+A`) to declare your previous actions again for every eligible character you control, or select the repeat icon on a single character's row.
+4. To change a declaration before the round resolves, select **Change** on the character's row. The composer highlights the saved choice, and choosing another one replaces it. Select the clear button (`X`) to remove the declaration.
+
+### See who still has to declare
+
+The footer of the battle board counts the declarations for the round being declared (for example, **1 of 4 declared for round 2**), lists who is still to declare by player and character, and states what starts the round:
+
+- With **Resolve battle rounds automatically** on (the default), the round resolves by itself as soon as everyone has declared.
+- With automatic resolution off, the footer names the caller, and the caller or the referee selects **Resolve round** (`Ctrl+Enter`, or `Cmd+Enter` on macOS) once everyone has declared.
+
+Once you have declared for all your characters, the action bar names the characters the table is still waiting for.
 
 ## Resolve the round and watch playback
 
-With **Resolve battle rounds automatically** enabled (the default), `bxapi` resolves the round the moment the final character declares. If automatic resolution is turned off, the caller or referee selects **Resolve the round** (`Ctrl+Enter`, or `Cmd+Enter` on macOS). A referee can also select **Resolve now** to resolve early, assigning **Hold** to any character without a declaration.
+A referee can also select **Resolve now** to resolve the round before everyone has declared. Every character without a declaration holds that round.
 
-If `bxapi` refuses a declaration under the B/X rules (for example, casting a spell with the wrong number of targets or attacking out of reach), the round does not advance: the board flags the character whose declaration was refused and explains why so that player can pick a valid action.
+If `bxapi` refuses a declaration under the B/X rules (for example, casting a spell with the wrong number of targets or attacking out of reach), the round doesn't advance. The board flags the character whose declaration was refused and explains why, so that player can pick a valid action.
 
-Once accepted, `bxapi` rolls initiative, movement, attacks, damage, saving throws, spells, and morale checks, and the battle board plays the round back one beat at a time:
+Once `bxapi` accepts the round, it rolls initiative, movement, attacks, damage, saving throws, spells, and morale checks, and the battle board plays the round back one beat at a time. The playback strip narrates each roll, and the range track and the party panel follow the hit points and conditions of the beat on screen. Each beat stays up long enough to read: a short line lasts about a second, an attack with its roll about two and a half seconds, and a death or a spell holds a moment longer.
 
-- The playback strip narrates each roll and synchronizes hit points and conditions with the current beat.
-- Click the strip or press `Esc` (**Skip the playback**) to jump straight to the end of the round, or select **Replay** afterward to watch it again.
-- Enter declarations for the next round at any time, even while playback is still running.
+Playback runs separately in each browser, so pausing or slowing yours never holds up anyone else. Use the controls on the strip to set your own pace:
+
+- **Pause playback** (`K`) holds the beat on screen, and **Resume playback** (`K`) continues from it.
+- **Step back** (`,`) and **Step forward** (`.`) move one beat at a time and pause there. Stepping back from the first beat of a round reaches the round before it.
+- **Playback speed** offers **Slow**, **Normal**, **Fast**, and **Very fast**. Your browser remembers the speed you choose.
+- **Skip** (`Esc`) jumps to the end of the round, where the strip sums it up.
+- **Replay** on the summary plays the last round again. Pressing `,` at the summary steps back into the last beat of the last round.
+
+You can declare for the next round at any time, even while your playback is running or paused. The heading of the board names the round that's playing, and the footer names the round being declared. If the next round resolves while your playback is paused, the strip moves to the start of the new round and stays paused, and stepping back reaches the round you were watching.
+
+If your operating system is set to reduce motion, rounds don't play back by themselves, and the strip shows each round's summary at once. **Replay** then starts paused on the first beat, so you can step through the round.
 
 ## Aftermath and end of the game
 
 When a fight concludes and play returns to exploration, an aftermath summary card (titled, for example, **The goblins are beaten** or **The party got away**) lists defeated monsters, experience earned, fallen party members, and items left behind:
 
-- Select **Pick up the dropped goods** or **Take the treasure** directly on the card to collect floor loot or untrapped caches. (Under standard B/X rules, earned XP is awarded when survivors return to town.)
-- Select **Replay the last round** to rewatch the decisive round, or **Close** (`Esc`) to dismiss the card.
+- Select **Pick up dropped goods** or **Take treasure** directly on the card to collect floor loot or untrapped caches. (Under standard B/X rules, earned XP is awarded when survivors return to town.)
+- Select **Replay last round** to rewatch the decisive round, or **Close** (`Esc`) to dismiss the card.
 
 If the party completes an adventure's concluding quest, the **Victory** screen displays the closing narrative, total game time, completed quests, and final party roster. If every party member dies, **The party has fallen** (`Game over`) appears instead. On either end screen, the referee can restore a recent save to continue playing or select **Return the table to its lobby** to start fresh.

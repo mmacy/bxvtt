@@ -6,8 +6,9 @@
  *   fight (`exploring` and `town`). The content renders inside the table's providers, so it can use every hook.
  *   The shell clears it when a new encounter starts and when the user leaves the table.
  * - The shell holds the end screen (`game_over` or `victory`) while `playing` is true, so the round that ended
- *   the game plays back first. It waits a short grace period for playback to start, and it never waits longer
- *   than a safe limit.
+ *   the game plays back first. It waits a short grace period for playback to start. While the playback runs, it
+ *   waits as long as each new beat arrives in time; publish each beat with `setProgress`. While the viewer has
+ *   paused, it waits until they resume or skip.
  * - While a round plays back, the party panel shows `memberStates`, each member's hit points and conditions at the
  *   beat on the board. Publish them with `setMemberStates` at each beat, and clear them with `null` at the end.
  * - While `playing` is true, the top bar shows `moment`, the round and game time that the playback shows, so it
@@ -59,6 +60,12 @@ export interface CombatStageState {
    */
   memberStates: Record<string, PlaybackMemberState> | null;
   setMemberStates: (states: Record<string, PlaybackMemberState> | null) => void;
+  /** A key for the beat on screen, such as `12-3`, which changes at each beat, or `null`. */
+  beat: string | null;
+  /** Whether the viewer has paused the playback on the beat on screen. */
+  paused: boolean;
+  /** Reports the beat on screen and whether the viewer has paused on it. */
+  setProgress: (beat: string | null, paused: boolean) => void;
   /** Empties the slot and stops reporting playback, when the user leaves a table. */
   reset: () => void;
 }
@@ -74,7 +81,7 @@ export const useCombatStage = create<CombatStageState>()((set) => ({
         ? state
         : playing
           ? { playing }
-          : { playing, moment: null, memberStates: null },
+          : { playing, moment: null, memberStates: null, beat: null, paused: false },
     ),
   moment: null,
   setMoment: (moment) =>
@@ -85,5 +92,10 @@ export const useCombatStage = create<CombatStageState>()((set) => ({
     ),
   memberStates: null,
   setMemberStates: (memberStates) => set({ memberStates }),
-  reset: () => set({ aftermath: null, playing: false, moment: null, memberStates: null }),
+  beat: null,
+  paused: false,
+  setProgress: (beat, paused) =>
+    set((state) => (state.beat === beat && state.paused === paused ? state : { beat, paused })),
+  reset: () =>
+    set({ aftermath: null, playing: false, moment: null, memberStates: null, beat: null, paused: false }),
 }));

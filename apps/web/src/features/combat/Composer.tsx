@@ -23,6 +23,7 @@ import { Banner, Button, Card, Checkbox, cx, Icon, SegmentedControl, Select, typ
 import {
   attackDeclaration,
   carries,
+  describeDeclaration,
   liveGroups,
   memberDistance,
   memberGap,
@@ -208,6 +209,15 @@ export function Composer({
         </Button>
       </div>
 
+      <p className={styles.composerHint}>
+        <Icon name="info" size={14} />
+        <span>
+          {current
+            ? `${member.name} has declared: ${describeDeclaration(current, ctx, gear)}. Choose another action to change it before the round resolves.`
+            : `Choosing an action declares it for ${member.name} this round. You can change it until the round resolves.`}
+        </span>
+      </p>
+
       {casting.reason && (
         <div className={styles.noSpells}>
           <Icon name="spell" size={14} />
@@ -262,6 +272,7 @@ export function Composer({
             encounter={encounter}
             gear={gear}
             backStab={abilities.backStab}
+            current={current}
             pending={pending}
             onSubmit={submit}
           />
@@ -270,7 +281,14 @@ export function Composer({
           <CastChoices member={member} encounter={encounter} ctx={ctx} pending={pending} onSubmit={submit} />
         )}
         {tab === 'move' && (
-          <MoveChoices member={member} encounter={encounter} ctx={ctx} pending={pending} onSubmit={submit} />
+          <MoveChoices
+            member={member}
+            encounter={encounter}
+            ctx={ctx}
+            current={current}
+            pending={pending}
+            onSubmit={submit}
+          />
         )}
         {tab === 'item' && (
           <ItemChoices
@@ -415,9 +433,10 @@ function AttackChoices({
   encounter,
   gear,
   backStab,
+  current,
   pending,
   onSubmit,
-}: ChoiceProps & { gear: MemberGear; backStab: boolean }) {
+}: ChoiceProps & { gear: MemberGear; backStab: boolean; current: DeclarationBody | null }) {
   const [weaponId, setWeaponId] = useState<string>('auto');
   const [stab, setStab] = useState(false);
   const canStab = backStab && encounter.party_free_round;
@@ -477,6 +496,7 @@ function AttackChoices({
               note={conditions ? `${plan.note} ${capitalize(conditions)}.` : plan.note}
               disabledReason={plan.reason}
               label={`${verb}: ${theGroup(viewLabels(group))}, ${formatFeet(plan.distance)} away`}
+              selected={current?.action === 'attack' && current.target_group_id === group.id}
               pending={pending}
               onClick={() => void onSubmit(attackDeclaration(plan, { weaponId: chosen, backStab: stab }))}
             />
@@ -737,7 +757,15 @@ function firstSentence(text: string): string {
 
 // Move ---------------------------------------------------------------------------------------------------------
 
-function MoveChoices({ member, encounter, ctx, pending, onSubmit }: ChoiceProps & { ctx: TextContext }) {
+function MoveChoices({
+  member,
+  encounter,
+  ctx,
+  current,
+  pending,
+  onSubmit,
+}: ChoiceProps & { ctx: TextContext; current: DeclarationBody | null }) {
+  const moving = current?.action === 'move' ? current.move : null;
   const [replacement, setReplacement] = useState('none');
   const immobile = encounter.immobile.includes(member.id);
   const stuck = immobile ? `${member.name} can't move this round.` : null;
@@ -766,6 +794,7 @@ function MoveChoices({ member, encounter, ctx, pending, onSubmit }: ChoiceProps 
               }
               disabledReason={stuck}
               label={`Close in on ${theGroup(viewLabels(group))}`}
+              selected={moving === 'close' && current?.target_group_id === group.id}
               pending={pending}
               onClick={() => void onSubmit({ action: 'move', move: 'close', target_group_id: group.id })}
             />
@@ -778,6 +807,7 @@ function MoveChoices({ member, encounter, ctx, pending, onSubmit }: ChoiceProps 
           note="Back away facing the monsters at half speed without attacking."
           disabledReason={stuck}
           label="Fighting withdrawal"
+          selected={moving === 'fighting_withdrawal'}
           pending={pending}
           onClick={() => void onSubmit(away('fighting_withdrawal'))}
         />
@@ -788,6 +818,7 @@ function MoveChoices({ member, encounter, ctx, pending, onSubmit }: ChoiceProps 
           note="Turn and run at full speed. Attackers gain +2 to hit you this round."
           disabledReason={stuck}
           label="Retreat"
+          selected={moving === 'retreat'}
           pending={pending}
           onClick={() => void onSubmit(away('retreat'))}
         />
