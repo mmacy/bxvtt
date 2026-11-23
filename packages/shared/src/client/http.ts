@@ -108,6 +108,8 @@ interface RequestOptions {
   query?: Record<string, string | number | boolean | undefined>;
   /** Return `null` on a 204 response instead of parsing a body. */
   empty?: boolean;
+  /** The token to send instead of the client's own. */
+  token?: string;
 }
 
 /**
@@ -157,7 +159,8 @@ export class BxvttClient {
       if (value !== undefined) url.searchParams.set(key, String(value));
     }
     const headers: Record<string, string> = { Accept: 'application/json' };
-    if (this.token !== null) headers.Authorization = `Bearer ${this.token}`;
+    const token = options.token ?? this.token;
+    if (token !== null) headers.Authorization = `Bearer ${token}`;
     let body: string | undefined;
     if (options.body !== undefined) {
       headers['Content-Type'] = 'application/json';
@@ -212,6 +215,31 @@ export class BxvttClient {
    */
   updateMe(body: UpdateUserRequest): Promise<User> {
     return this.request('PATCH', '/api/users/me', { body });
+  }
+
+  /**
+   * Deletes the user. The user leaves every table as {@link BxvttClient.leaveTable} would, which deletes a table
+   * they are the last member of, and their characters are deleted. What they wrote in a table's feed stays, under
+   * a new, unassigned user ID. The token stops working, and the client forgets it.
+   *
+   * @throws BxvttProblemError `last_referee` when the user is the only referee of a table with other members.
+   *   Nothing changes then.
+   */
+  async deleteMe(): Promise<void> {
+    await this.request('DELETE', '/api/users/me');
+    this.token = null;
+  }
+
+  /**
+   * Signs the user out: the server stops accepting the token, and the client forgets it at once, before the
+   * server answers. The user and their tables and characters stay. A referee's approval of a rejoin request is the
+   * only way to get a token for the user again. Does nothing when the client has no token.
+   */
+  async signOut(): Promise<void> {
+    const token = this.token;
+    if (token === null) return;
+    this.token = null;
+    await this.request('POST', '/api/users/me/sign-out', { token });
   }
 
   // Tables.

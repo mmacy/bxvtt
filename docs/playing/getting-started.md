@@ -31,6 +31,13 @@ Do not pick a name on the server's home page or under **I'm new here**, which cr
 
 Reclaiming your identity retires your previous browser's token. If you later open the older browser tab, bxvtt displays **You've signed in from another browser** so you know why that tab was disconnected.
 
+## Sign out or delete your profile
+
+Select your name at the top right of the home page, the join page, or the lobby to open **Your profile**. Below the name and color, you find two buttons:
+
+- **Sign out:** This browser forgets you, and the server stops accepting its token. Your tables, characters, and seats stay as they are. Because bxvtt has no passwords, choosing your name again creates a new profile. To come back as yourself, open a table's invite link, choose **I've played at this table before**, and ask a referee there to let you in. A referee can come back this way only at a table with another referee, and a person who isn't at any table can't come back at all (choose **Delete profile** instead to remove your profile and characters from the server). The **Sign out of this browser?** dialog lists which of your tables you can come back to before you confirm.
+- **Delete profile:** bxvtt deletes your profile and every character you made, and takes you out of every table as **Leave table** would. A table where you're the only member is deleted with its saved games. At other tables, your seats become empty and the referee controls those characters, and your chat messages stay under the name **A former member**. You can't undo a deletion. If you're the only referee of a table where other people play, first make another member a referee, or delete the table from its table menu.
+
 ## Create a character
 
 In the lobby, locate **Your characters** inside the **Party** panel and select **Create a character**. A six-step wizard opens. Your in-progress choices stay saved in your browser if you close the window; **Start over** discards them.

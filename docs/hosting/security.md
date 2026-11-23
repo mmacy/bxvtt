@@ -73,7 +73,7 @@ The server groups IPv6 addresses by `/64` prefix and trusts forwarding headers (
 
 ## What bxvtt does not protect against
 
-- **Compromised browser tokens:** Anyone who copies `bxvtt.identity` from a shared computer or unencrypted backup can act as that user. Remove compromised members from the table (or rotate their token through an approved rejoin request).
+- **Compromised browser tokens:** Anyone who copies `bxvtt.identity` from a shared computer or unencrypted backup can act as that user. Signing out from the profile menu makes the server stop accepting the token, so sign out before you leave a shared computer. Remove compromised members from the table (or rotate their token through an approved rejoin request).
 - **Malicious or careless referees:** Referees see all hidden state, can alter the session, and verify returning players during rejoin approval.
 - **Uncooperative play within legal permissions:** The caller moves the party and distributes treasure; any member can edit shared party notes or pass items to another character.
 - **Metadata side channels:** Players can observe `game.revision` incrementing after a silent referee command or gaps in `feed.seq` when others exchange whispers or secret rolls, though never the contents.

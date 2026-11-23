@@ -193,6 +193,49 @@ test.describe('rejoining a table', () => {
     expect((await ruth.client.listRejoinRequests(tableId)).items).toEqual([]);
   });
 
+  test('a player signs out in the lobby and comes back in through the invite link', async ({ crew }) => {
+    const ruth = await crew.person('Ruth');
+    const sam = await crew.person('Sam');
+    const table = await ruth.client.createTable({ name: 'Round trip' });
+    await sam.client.joinTable(table.invite_code);
+    const flarg = await createCharacter(sam.client, { name: 'Flarg', classId: 'fighter' });
+    await sam.client.addToRoster(table.id, flarg.id);
+    waitingTables.push({ referee: ruth, tableId: table.id });
+    const path = `/tables/${table.id}`;
+    await openTable(ruth.page, path);
+    await openTable(sam.page, path);
+    const before = await storedIdentity(sam.page);
+
+    // The dialog says how Sam gets back to this table before he confirms, from the keyboard.
+    await sam.page.getByRole('button', { name: 'Sam, your profile' }).focus();
+    await sam.page.keyboard.press('Enter');
+    await sam.page.getByRole('button', { name: 'Sign out' }).focus();
+    await sam.page.keyboard.press('Enter');
+    const confirm = sam.page.getByRole('alertdialog', { name: 'Sign out of this browser?' });
+    await expect(confirm.getByRole('list', { name: 'Tables you can come back to' })).toContainText(
+      'Round trip',
+    );
+    await expect(confirm).toContainText(`choose "I've played at this table before"`);
+    await screenshot(sam.page, 'sign-out-confirm');
+    await confirm.getByRole('button', { name: 'Sign out' }).click();
+
+    await expect(sam.page).toHaveURL(/\/$/);
+    await expect(sam.page.getByRole('form', { name: 'Choose your name' })).toBeVisible();
+    await expect(sam.page.getByRole('textbox', { name: 'Your name' })).toHaveValue('');
+    await expect(ruth.page.getByText('1 of 2 online')).toBeVisible();
+    await expect(sdkClient(before.token).me()).rejects.toThrow();
+
+    // The way back the dialog promised works: Sam asks through the invite link, and Ruth lets him in.
+    await sam.page.goto(`/join/${table.invite_code}`);
+    await askToComeBack(sam.page);
+    await requests(ruth.page).getByRole('button', { name: 'Approve' }).click();
+    await expect(sam.page).toHaveURL(new RegExp(`${path}$`), { timeout: 15_000 });
+    await expect(sam.page.getByRole('heading', { name: 'Round trip', level: 1 })).toBeVisible();
+    const after = await storedIdentity(sam.page);
+    expect(after.user.id).toBe(before.user.id);
+    expect((await sdkClient(after.token).listCharacters()).items.map((item) => item.name)).toEqual(['Flarg']);
+  });
+
   test('when the referee says not now, the player is told and can ask again or stop waiting', async ({
     crew,
   }) => {

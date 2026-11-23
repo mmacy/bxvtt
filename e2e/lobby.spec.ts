@@ -6,6 +6,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { REPO_ROOT } from './support/env';
 import { expect, test } from './support/fixtures';
+import { screenshot } from './support/referee';
 import { stagedTable } from './support/states';
 import { expectSiteInfo } from './support/site-info';
 import { createCharacter, openTable, placeParty } from './support/table';
@@ -216,6 +217,43 @@ test.describe('first run and lobby', () => {
     await sam.page.getByRole('button', { name: 'Remove Tinks from party' }).click();
     await expect(order(ruth.page)).toHaveCount(2);
     await expect(mine.getByRole('listitem').filter({ hasText: 'Tinks' })).toBeVisible();
+  });
+
+  test('a player deletes their profile from the lobby, and the referee sees them leave', async ({ crew }) => {
+    const ruth = await crew.person('Ruth');
+    const sam = await crew.person('Sam');
+    const table = await ruth.client.createTable({ name: 'Farewell' });
+    await sam.client.joinTable(table.invite_code);
+    const flarg = await createCharacter(sam.client, { name: 'Flarg', classId: 'fighter' });
+    await sam.client.addToRoster(table.id, flarg.id);
+    const solo = await sam.client.createTable({ name: 'Sam alone' });
+    await openTable(ruth.page, `/tables/${table.id}`);
+    await openTable(sam.page, `/tables/${table.id}`);
+    await expect(ruth.page.getByText('2 of 2 online')).toBeVisible();
+
+    await sam.page.getByRole('button', { name: 'Sam, your profile' }).click();
+    await sam.page.getByRole('button', { name: 'Delete profile' }).click();
+    const confirm = sam.page.getByRole('alertdialog', { name: 'Delete your profile?' });
+    await expect(confirm.getByRole('list', { name: 'Tables that are deleted' })).toContainText('Sam alone');
+    await expect(confirm.getByRole('list', { name: 'Tables you leave' })).toContainText('Farewell');
+    await screenshot(sam.page, 'delete-profile-confirm');
+    await confirm.getByRole('button', { name: 'Delete profile' }).click();
+
+    // Sam lands on the first-run form with no notice and no name to reuse.
+    await expect(sam.page).toHaveURL(/\/$/);
+    await expect(sam.page.getByRole('form', { name: 'Choose your name' })).toBeVisible();
+    await expect(sam.page.getByRole('textbox', { name: 'Your name' })).toHaveValue('');
+    await expect(sam.page.getByText('Choose your name to continue')).toHaveCount(0);
+    expect(await sam.page.evaluate(() => localStorage.getItem('bxvtt.identity'))).toBeNull();
+
+    // Ruth sees Sam and Flarg go, and Sam's own table is gone.
+    await expect(ruth.page.getByText('1 of 1 online')).toBeVisible();
+    await expect(
+      ruth.page.getByRole('list', { name: 'Party in marching order' }).getByRole('listitem'),
+    ).toHaveCount(0);
+    const tables = await ruth.client.listTables();
+    expect(tables.items.map((item) => item.id)).not.toContain(solo.id);
+    await screenshot(ruth.page, 'delete-profile-referee-lobby');
   });
 
   test('the referee chooses each adventure and changes the settings', async ({ crew }) => {

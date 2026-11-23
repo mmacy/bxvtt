@@ -59,6 +59,18 @@ export interface IdentityState {
   /** Forgets the stored user, for example after the server answers 401 to the stored token. */
   forget: (notice?: IdentityNotice) => void;
   /**
+   * Signs this browser out. The browser forgets the user at once, so the app shows the first-run name form, and the
+   * server stops accepting the token. The user stays at their tables. If the server can't be reached, the browser
+   * forgets the user anyway.
+   */
+  signOut: () => Promise<void>;
+  /**
+   * Deletes the user on the server, and then forgets them here, so the app shows the first-run name form.
+   *
+   * @throws The API error, such as `last_referee`, for the caller to show. The user stays signed in then.
+   */
+  deleteUser: () => Promise<void>;
+  /**
    * Signs this browser in as an existing user with a token the server issued, such as the token a referee's
    * approval of a rejoin request returns. Stores it like a new user's token.
    */
@@ -79,6 +91,38 @@ function readIdentity(): StoredIdentity | null {
   return { token: record.token, user: record.user };
 }
 
+let followingOtherTabs = false;
+
+/**
+ * Follows the identity in this browser's other tabs, which share `localStorage`: when another tab signs out,
+ * deletes the user, or signs in as someone, this tab does the same, instead of acting for a user the browser has
+ * forgotten.
+ */
+function followOtherTabs(): void {
+  if (followingOtherTabs || typeof window === 'undefined') return;
+  followingOtherTabs = true;
+  window.addEventListener('storage', (event) => {
+    // A `null` key means the other tab cleared all of the site's storage.
+    if (event.key !== STORAGE_KEYS.identity && event.key !== null) return;
+    const stored = readIdentity();
+    const state = useIdentity.getState();
+    if (stored === null) {
+      if (state.status !== 'ready') return;
+      getApi().setToken(null);
+      useIdentity.setState({ status: 'anonymous', user: null, token: null, notice: null, lastName: null });
+    } else if (stored.token !== state.token) {
+      getApi().setToken(stored.token);
+      useIdentity.setState({
+        status: 'ready',
+        user: stored.user,
+        token: stored.token,
+        notice: null,
+        lastName: stored.user.name,
+      });
+    }
+  });
+}
+
 /**
  * The identity store. Read it with a selector, such as `useIdentity((s) => s.user)`.
  *
@@ -96,6 +140,7 @@ export const useIdentity = create<IdentityState>()((set, get) => ({
   lastName: null,
 
   load: async () => {
+    followOtherTabs();
     const stored = readIdentity();
     if (stored === null) {
       getApi().setToken(null);
@@ -151,7 +196,33 @@ export const useIdentity = create<IdentityState>()((set, get) => ({
       lastName: state.user?.name ?? state.lastName,
     }));
   },
+
+  signOut: async () => {
+    // The client forgets its token before the request leaves, so nothing else this page sends uses it.
+    const signingOut = getApi().signOut();
+    clear(set);
+    try {
+      await signingOut;
+    } catch {
+      // The browser has forgotten the token either way, and nothing else holds it.
+    }
+  },
+
+  deleteUser: async () => {
+    await getApi().deleteMe();
+    clear(set);
+  },
 }));
+
+/**
+ * Forgets the stored user without a notice or a name to prefill, so the name form looks as it does on a first
+ * visit. The person chose to leave, so the app doesn't offer their old name back.
+ */
+function clear(set: (state: Partial<IdentityState>) => void): void {
+  writeStored(STORAGE_KEYS.identity, null);
+  getApi().setToken(null);
+  set({ status: 'anonymous', user: null, token: null, notice: null, lastName: null });
+}
 
 /** The signed-in user, or `null` before the first-run name form. */
 export function useCurrentUser(): User | null {

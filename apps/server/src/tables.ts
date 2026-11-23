@@ -346,6 +346,51 @@ export class TableStore {
   }
 
   /**
+   * What a member's leaving would do to a table.
+   *
+   * - `delete_table`: the member is the last one, so leaving deletes the table.
+   * - `last_referee`: the member is the only referee and others remain, so the member can't leave.
+   * - `leave`: the member leaves and the table goes on.
+   *
+   * @param tableId - The table ID.
+   * @param userId - The member's user ID.
+   */
+  leaveOutcome(tableId: string, userId: string): 'leave' | 'delete_table' | 'last_referee' {
+    if (this.members(tableId).length === 1) return 'delete_table';
+    if (this.roleOf(tableId, userId) === 'referee' && this.refereeCount(tableId) === 1) return 'last_referee';
+    return 'leave';
+  }
+
+  /**
+   * Takes a member out of a table, as `POST /api/tables/{table_id}/leave` does. The last member's leaving deletes
+   * the table. Otherwise the member's seats become empty, their characters leave the roster, they stop being the
+   * caller, the feed says they left, and their connections to the table close with `removed`. Unless it deletes
+   * the table, it does all of this before it returns its promise.
+   *
+   * @param tableId - The table ID.
+   * @param userId - The member's user ID.
+   * @throws ApiError `last_referee` when the member is the only referee and others remain.
+   */
+  async leave(tableId: string, userId: string): Promise<void> {
+    const outcome = this.leaveOutcome(tableId, userId);
+    if (outcome === 'delete_table') {
+      await this.ctx.game.deleteTable(tableId);
+      return;
+    }
+    if (outcome === 'last_referee') {
+      throw new ApiError(
+        'last_referee',
+        "You are the table's only referee. Promote another member to referee before leaving.",
+      );
+    }
+    this.removeMember(tableId, userId);
+    this.ctx.feed.system(tableId, userId, 'member_left', { user_id: userId });
+    this.ctx.hub.removeUser(tableId, userId, 'left');
+    this.broadcastTable(tableId);
+    this.ctx.game.broadcastState(tableId);
+  }
+
+  /**
    * Counts a table's referees.
    *
    * @param tableId - The table ID.
@@ -515,23 +560,8 @@ export function registerTableRoutes(app: FastifyInstance, ctx: Context): void {
   app.post('/api/tables/:tableId/leave', async (request, reply) => {
     const { tableId } = TableParams.parse(request.params);
     const user = ctx.auth.user(request);
-    const role = tables.requireMember(tableId, user);
-    const memberCount = tables.members(tableId).length;
-    if (memberCount === 1) {
-      await ctx.game.deleteTable(tableId);
-      return reply.status(204).send();
-    }
-    if (role === 'referee' && tables.refereeCount(tableId) === 1) {
-      throw new ApiError(
-        'last_referee',
-        "You are the table's only referee. Promote another member to referee before leaving.",
-      );
-    }
-    tables.removeMember(tableId, user.id);
-    ctx.feed.system(tableId, user.id, 'member_left', { user_id: user.id });
-    ctx.hub.removeUser(tableId, user.id, 'left');
-    tables.broadcastTable(tableId);
-    ctx.game.broadcastState(tableId);
+    tables.requireMember(tableId, user);
+    await tables.leave(tableId, user.id);
     return reply.status(204).send();
   });
 
