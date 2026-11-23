@@ -24,7 +24,7 @@ You decide everything outside strict mechanics:
 
 Your top bar includes a **Referee lens** switch (`Shift+L`).
 
-- **Lens on (default):** Displays the full dungeon map (including unvisited areas, secret doors, monster markers, treasure, traps, and `R1`/`R2` referee pins), adds the **Referee** tab (`Alt+4`) to the dock, reveals exact monster hit points and referee controls on encounter and battle overlays, and adds secret rolls and referee events (plus a **Hidden** filter) to the **Feed**.
+- **Lens on (default):** Displays the full dungeon map (including unvisited areas, secret doors, monster markers, treasure, traps, and `R1`/`R2` referee pins), adds the **Referee** tab (`Alt+4`) to the dock, reveals exact monster hit points and referee controls on encounter and battle overlays, and adds secret rolls and referee events (plus a **Hidden from players** filter) to the **Feed**.
 - **Lens off:** Renders the table strictly as a player sees it, hiding unmapped rooms, referee pins, hidden feed entries, and referee tools so you can control a character without spoilers.
 
 Turning the lens off changes only what your browser renders; the server still treats your account as a referee, and your seat and round-resolution permissions remain active.

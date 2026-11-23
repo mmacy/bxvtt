@@ -223,7 +223,7 @@ export function PartyNotes() {
             iconEnd="arrow-right"
             onClick={() => setPreference('dockTab', 'referee')}
           >
-            Open
+            Open Referee tab
           </Button>
         </p>
       )}

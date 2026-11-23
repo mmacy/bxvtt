@@ -228,7 +228,13 @@ export function Composer({ onPosted, insert }: ComposerProps) {
         ] as MenuEntry[])
       : []),
     { type: 'separator' },
-    { label: 'Send to everyone', icon: 'users', disabled: targets.length === 0, onSelect: () => setTo([]) },
+    {
+      label: 'Send to everyone',
+      icon: 'users',
+      disabled: targets.length === 0,
+      disabledReason: targets.length === 0 ? 'Your message already goes to everyone.' : null,
+      onSelect: () => setTo([]),
+    },
   ];
 
   const length = text.trim().length;
@@ -357,10 +363,12 @@ export function Composer({ onPosted, insert }: ComposerProps) {
             trigger={
               <IconButton
                 icon="whisper"
-                label={whispering ? `Whispering to ${joinList(targetNames)} (change recipients)` : 'Whisper'}
+                label="Whisper"
+                tooltip="Whisper to one or more people at the table"
                 pressed={whispering}
                 size="sm"
                 disabled={recipients.length === 0}
+                disabledReason="No one else is at the table to whisper to."
               />
             }
           />
@@ -371,6 +379,11 @@ export function Composer({ onPosted, insert }: ComposerProps) {
             size="sm"
             loading={pending}
             disabled={length === 0 || over}
+            disabledReason={
+              over
+                ? `Shorten your message to ${LIMITS.feedText.toLocaleString()} characters or fewer.`
+                : 'Type a message to send it.'
+            }
             onClick={() => void send()}
           />
         </div>

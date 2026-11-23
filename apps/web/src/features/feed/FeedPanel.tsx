@@ -19,6 +19,7 @@ import {
   SearchInput,
   SegmentedControl,
   Spinner,
+  Tooltip,
   breakpoints,
   cx,
   useMediaQuery,
@@ -212,7 +213,9 @@ export function FeedPanel() {
     { value: 'chat', label: 'Chat' },
     { value: 'rolls', label: 'Rolls' },
     { value: 'game', label: 'Game' },
-    ...(lens ? [{ value: 'hidden', label: 'Hidden', icon: 'eye-off' as const, iconOnly: true }] : []),
+    ...(lens
+      ? [{ value: 'hidden', label: 'Hidden from players', icon: 'eye-off' as const, iconOnly: true }]
+      : []),
   ];
 
   const onPosted = useCallback(() => {
@@ -318,6 +321,7 @@ export function FeedPanel() {
                     <Button
                       size="sm"
                       icon="dice"
+                      tooltip="Start a d20 roll in the message box"
                       onClick={() => setInsert({ text: empty?.action?.text ?? '', nonce: Date.now() })}
                     >
                       {empty.action.label}
@@ -349,24 +353,28 @@ export function FeedPanel() {
             </div>
           )}
           {newCount > 0 && (
-            <button
-              type="button"
-              className={styles.newPill}
-              onClick={() => list.current?.scrollToBottom('smooth')}
-            >
-              <Icon name="arrow-down" size={14} />
-              {newCount === 1 ? '1 new entry' : `${newCount} new entries`}
-            </button>
+            <Tooltip content="Jump to the newest entries">
+              <button
+                type="button"
+                className={styles.newPill}
+                onClick={() => list.current?.scrollToBottom('smooth')}
+              >
+                <Icon name="arrow-down" size={14} />
+                {newCount === 1 ? '1 new entry' : `${newCount} new entries`}
+              </button>
+            </Tooltip>
           )}
           {!atBottom && newCount === 0 && empty === null && (
-            <button
-              type="button"
-              className={cx(styles.newPill, styles.jump)}
-              onClick={() => list.current?.scrollToBottom('smooth')}
-            >
-              <Icon name="arrow-down" size={14} />
-              Newest
-            </button>
+            <Tooltip content="Jump to the newest entry">
+              <button
+                type="button"
+                className={cx(styles.newPill, styles.jump)}
+                onClick={() => list.current?.scrollToBottom('smooth')}
+              >
+                <Icon name="arrow-down" size={14} />
+                Newest
+              </button>
+            </Tooltip>
           )}
         </div>
         <Composer onPosted={onPosted} insert={insert} />

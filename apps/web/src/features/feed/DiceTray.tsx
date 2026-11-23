@@ -82,6 +82,7 @@ export function DiceTray({
             label="Fewer dice"
             size="sm"
             disabled={tray.count < 1}
+            disabledReason="Choose a die first."
             onClick={() => setCount(tray.count - 1)}
           />
           <span className={styles.stepperValue} aria-live="polite">
@@ -92,6 +93,9 @@ export function DiceTray({
             label="More dice"
             size="sm"
             disabled={tray.sides === null || tray.count >= TRAY_MAX_COUNT}
+            disabledReason={
+              tray.sides === null ? 'Choose a die first.' : `A roll can have at most ${TRAY_MAX_COUNT} dice.`
+            }
             onClick={() => setCount(tray.count + 1)}
           />
         </div>
@@ -153,6 +157,7 @@ export function DiceTray({
           variant="ghost"
           size="sm"
           disabled={tray.sides === null && tray.modifier === 0}
+          disabledReason="The tray is already empty."
           onClick={() => onTrayChange(EMPTY_TRAY)}
         >
           Clear
@@ -162,6 +167,7 @@ export function DiceTray({
           size="sm"
           icon="dice"
           disabled={expression === null}
+          disabledReason="Choose a die above to build a roll."
           loading={pending}
           onClick={onRoll}
         >

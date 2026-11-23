@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { commandFromValues, fieldsFromSchema } from './CommandForm';
+import { commandFromValues, fieldsFromSchema, firstMissingField } from './CommandForm';
 
 /** A trimmed copy of the schema bxapi serves for `give_items`. */
 const giveItems = {
@@ -56,6 +56,20 @@ describe('fieldsFromSchema', () => {
       { name: 'hidden', kind: 'boolean', required: false, initial: false },
       { name: 'note', kind: 'text', required: false },
     ]);
+  });
+});
+
+describe('firstMissingField', () => {
+  it('names the first required field without a value, and skips booleans and groups', () => {
+    const fields = fieldsFromSchema(giveItems, 'character_id');
+    expect(firstMissingField(fields, {})?.name).toBe('character_id');
+    expect(firstMissingField(fields, { character_id: 'character-0001', recipient_id: '' })?.name).toBe(
+      'recipient_id',
+    );
+    expect(
+      firstMissingField(fields, { character_id: 'character-0001', recipient_id: 'character-0002' }),
+    ).toBeUndefined();
+    expect(firstMissingField(fieldsFromSchema(rest, null), { kind: 'turn' })).toBeUndefined();
   });
 });
 

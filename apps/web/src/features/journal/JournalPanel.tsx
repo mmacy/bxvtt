@@ -29,7 +29,12 @@ export function JournalPanel() {
           options={[
             { value: 'quests', label: 'Quests', icon: 'flag' },
             { value: 'journal', label: 'Journal', icon: 'journal' },
-            { value: 'notes', label: 'Notes', icon: 'edit' },
+            {
+              value: 'notes',
+              label: 'Notes',
+              icon: 'edit',
+              tooltip: 'Edit the notes that everyone at the table shares',
+            },
           ]}
           className={styles.sections}
         />

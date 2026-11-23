@@ -109,6 +109,31 @@ describe('FeedPanel', () => {
     });
   });
 
+  it('keeps Send and the dice tray’s buttons reachable and says why each is unavailable', async () => {
+    const { api, user } = renderWithTable(<FeedPanel />);
+    const send = screen.getByRole('button', { name: 'Send' });
+    expect(send).toHaveAttribute('aria-disabled', 'true');
+    await user.click(send);
+    expect(api.postFeed).not.toHaveBeenCalled();
+    await user.type(screen.getByRole('textbox', { name: 'Message the table' }), 'Hello');
+    expect(screen.getByRole('button', { name: 'Send' })).not.toHaveAttribute('aria-disabled');
+
+    // The panel remembers a tray from an earlier test, so open it only when it is closed and start it empty.
+    if (screen.queryByRole('region', { name: 'Dice tray' }) === null)
+      await user.click(screen.getByRole('button', { name: 'Dice tray' }));
+    const clear = screen.getByRole('button', { name: 'Clear' });
+    if (clear.getAttribute('aria-disabled') !== 'true') await user.click(clear);
+    expect(screen.getByRole('button', { name: 'More dice' })).toHaveAccessibleDescription(
+      'Choose a die first.',
+    );
+    expect(screen.getByRole('button', { name: 'Clear' })).toHaveAccessibleDescription(
+      'The tray is already empty.',
+    );
+    await user.click(screen.getByRole('button', { name: 'Add a d6' }));
+    expect(screen.getByRole('button', { name: 'Fewer dice' })).not.toHaveAttribute('aria-disabled');
+    expect(screen.getByRole('button', { name: 'Clear' })).not.toHaveAttribute('aria-disabled');
+  });
+
   it('keeps the draft when the panel closes and opens again', async () => {
     const first = renderWithTable(<FeedPanel />);
     await first.user.type(screen.getByRole('textbox', { name: 'Message the table' }), 'half a thought');

@@ -282,6 +282,31 @@ export function lightEntries(ctx: ActionContext): MenuEntry[] {
   return entries;
 }
 
+/**
+ * Why the Light menu is empty. When no living member carries or burns a light, no one has one to use. When someone
+ * does, the viewer lacks the right to act for them, and the reason is the permission's own.
+ *
+ * @param ctx - The action context.
+ * @param permissionFor - The permission to send `light_source` for a member, such as `canSendCommand`.
+ */
+export function lightUnavailableReason(
+  ctx: ActionContext,
+  permissionFor: (memberId: string) => { allowed: boolean; reason: string | null },
+): string {
+  const none = 'No one in the party carries a torch or lantern.';
+  const living = new Set(livingMembers(ctx.view.party).map((member) => member.id));
+  const holders = new Set([
+    ...carriedLights(ctx.view.party).map((light) => light.memberId),
+    ...partyLight(ctx.view).lights.map((light) => light.memberId),
+  ]);
+  for (const memberId of holders) {
+    if (!living.has(memberId)) continue;
+    const permission = permissionFor(memberId);
+    if (!permission.allowed && permission.reason !== null) return permission.reason;
+  }
+  return none;
+}
+
 /** A name for a cache in a list of caches. */
 export function cacheLabel(cache: SceneCache, caches: readonly SceneCache[]): string {
   if (caches.length <= 1) return 'Treasure';

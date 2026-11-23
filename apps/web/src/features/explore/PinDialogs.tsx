@@ -58,7 +58,13 @@ export function NewPinDialog({ open, referee, onCancel, onSave }: NewPinDialogPr
           <Button variant="ghost" onClick={close}>
             Cancel
           </Button>
-          <Button variant="primary" loading={saving} disabled={tooLong} onClick={() => void save()}>
+          <Button
+            variant="primary"
+            loading={saving}
+            disabled={tooLong}
+            disabledReason={`Shorten the note to ${LIMITS.pinText} characters or fewer.`}
+            onClick={() => void save()}
+          >
             Add pin
           </Button>
         </>
@@ -73,7 +79,7 @@ export function NewPinDialog({ open, referee, onCancel, onSave }: NewPinDialogPr
       >
         <Field
           label="Note"
-          hint="Optional. Hover over the pin to read it."
+          hint="Optional. Select the pin on the map to read it."
           error={tooLong ? `Keep notes under ${LIMITS.pinText} characters.` : undefined}
           aside={`${text.length} of ${LIMITS.pinText}`}
         >

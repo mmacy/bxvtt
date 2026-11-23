@@ -86,8 +86,14 @@ function Row({ icon, children, action, tone }: RowProps) {
   );
 }
 
+const MENU_HELP = {
+  Treasure: 'Choose what to do with the treasure',
+  'Dropped goods': 'Choose what to do with the dropped goods',
+  Door: 'Choose what to do with this door',
+} as const;
+
 /** One action as a button, or several as a menu. */
-function Actions({ entries, label }: { entries: MenuEntry[]; label: string }) {
+function Actions({ entries, label }: { entries: MenuEntry[]; label: keyof typeof MENU_HELP }) {
   const actionable = entries.filter((entry) => entry.type !== 'label' && entry.type !== 'separator');
   if (actionable.length === 0) return null;
   const [only] = actionable;
@@ -103,7 +109,7 @@ function Actions({ entries, label }: { entries: MenuEntry[]; label: string }) {
       align="end"
       items={entries}
       trigger={
-        <Button size="sm" variant="secondary" iconEnd="chevron-down">
+        <Button size="sm" variant="secondary" iconEnd="chevron-down" tooltip={MENU_HELP[label]}>
           {label}
         </Button>
       }
@@ -250,7 +256,7 @@ export function ScenePanel() {
             align="end"
             items={quick}
             trigger={
-              <Button size="sm" variant="secondary" icon="more">
+              <Button size="sm" variant="secondary" icon="more" tooltip="Choose an action for something here">
                 {thingsHere(count)}
               </Button>
             }

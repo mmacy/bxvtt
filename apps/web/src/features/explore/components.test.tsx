@@ -354,9 +354,40 @@ describe('ExploreActions', () => {
     expect(screen.getByRole('button', { name: 'Return to town' })).toBeInTheDocument();
   });
 
-  it('turns Listen off with a reason when no closed door is beside the party', () => {
+  it('turns Listen off with a reason that stays reachable when no closed door is beside the party', () => {
     const { snapshot } = exploring();
     renderWithTable(<Bar />, { snapshot });
-    expect(screen.getByRole('button', { name: 'Listen' })).toBeDisabled();
+    const listen = screen.getByRole('button', { name: 'Listen' });
+    expect(listen).toHaveAttribute('aria-disabled', 'true');
+    expect(listen).toHaveAccessibleDescription('No closed door is beside the party.');
+    listen.focus();
+    expect(listen).toHaveFocus();
+  });
+
+  it('shows a player who isn’t the caller why Search and Rest are unavailable', () => {
+    const { snapshot, game } = exploring();
+    const caller = snapshot.table.members.find((member) => member.user_id !== snapshot.user.id);
+    if (!caller) throw new Error('No other member.');
+    game.caller_user_id = caller.user_id;
+    if (snapshot.table.settings) snapshot.table.settings.caller_user_id = caller.user_id;
+    renderWithTable(<Bar />, { snapshot });
+    for (const [name, action] of [
+      ['Search', 'search'],
+      ['Rest', 'rest the party'],
+    ] as const) {
+      const button = screen.getByRole('button', { name });
+      expect(button).toHaveAttribute('aria-disabled', 'true');
+      expect(button).toHaveAccessibleDescription(new RegExp(`^Only the caller can ${action}\\.`));
+    }
+  });
+
+  it('shows what an available action does when keyboard focus reaches it', async () => {
+    const { snapshot } = exploring();
+    const { user } = renderWithTable(<Bar />, { snapshot });
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Search' })).toHaveFocus();
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'Search the room for secret doors, room traps, or construction tricks',
+    );
   });
 });

@@ -477,6 +477,17 @@ export function CommandFormDialog({ commandType, onClose }: CommandFormDialogPro
   );
 }
 
+/** The first required field that has no value yet, which keeps the form's submit button off. */
+export function firstMissingField(fields: readonly FormField[], values: Json): FormField | undefined {
+  return fields.find(
+    (field) =>
+      field.required &&
+      field.kind !== 'boolean' &&
+      field.kind !== 'group' &&
+      (values[field.name] === undefined || values[field.name] === ''),
+  );
+}
+
 function CommandFormBody({ commandType, onDone }: { commandType: string; onDone: () => void }) {
   const schema = useCommandSchema(commandType);
   const legal = useLegalCommand(commandType);
@@ -498,13 +509,7 @@ function CommandFormBody({ commandType, onDone }: { commandType: string; onDone:
       </Banner>
     );
   }
-  const missing = fields.some(
-    (field) =>
-      field.required &&
-      field.kind !== 'boolean' &&
-      field.kind !== 'group' &&
-      (values[field.name] === undefined || values[field.name] === ''),
-  );
+  const firstMissing = firstMissingField(fields, values);
   const submit = async () => {
     setError(null);
     const result = await send(commandFromValues(commandType, fields, values), { feedback: 'inline' });
@@ -537,7 +542,17 @@ function CommandFormBody({ commandType, onDone }: { commandType: string; onDone:
         <Button variant="ghost" type="button" onClick={onDone}>
           Cancel
         </Button>
-        <Button variant="primary" type="submit" loading={pending} disabled={missing}>
+        <Button
+          variant="primary"
+          type="submit"
+          loading={pending}
+          disabled={firstMissing !== undefined}
+          disabledReason={
+            firstMissing === undefined
+              ? null
+              : `Fill in ${commandFieldText(commandType, firstMissing.name).label} first.`
+          }
+        >
           {commandInfo(commandType).button}
         </Button>
       </div>
