@@ -27,7 +27,7 @@ import {
   type GameMode,
   type MenuEntry,
 } from '@/ui';
-import { copyInviteLink } from '@/features/lobby';
+import { copyInviteLink, useTableExit } from '@/features/lobby';
 import styles from './table.module.css';
 
 const GAME_MODES: readonly string[] = ['town', 'exploring', 'encounter', 'battle', 'game_over', 'victory'];
@@ -52,7 +52,8 @@ export function ShellTopBar() {
   const ui = useTableUi();
   const navigate = useNavigate();
   const { run } = useApiAction();
-  const [confirm, setConfirm] = useState<'leave' | 'end' | null>(null);
+  const [confirm, setConfirm] = useState<'end' | null>(null);
+  const exit = useTableExit();
   if (table === null) return null;
 
   const save = () =>
@@ -101,13 +102,9 @@ export function ShellTopBar() {
           },
         ]
       : []),
-    { label: 'Leave table', icon: 'log-out', danger: true, onSelect: () => setConfirm('leave') },
+    ...exit.items,
   ];
 
-  const leave = async () => {
-    const result = await run(() => getApi().leaveTable(table.id), { errorTitle: "Couldn't leave the table" });
-    if (result.ok) navigate('/');
-  };
   const end = async () => {
     await run(() => getApi().endGame(table.id), {
       success: 'Returned to lobby',
@@ -166,15 +163,7 @@ export function ShellTopBar() {
           <DropdownMenu align="end" trigger={<IconButton icon="menu" label="Table menu" />} items={items} />
         }
       />
-      <ConfirmDialog
-        open={confirm === 'leave'}
-        onOpenChange={(open) => !open && setConfirm(null)}
-        title="Leave table?"
-        description="You will be removed from this table and its party. You'll need a new invite link from the referee to rejoin."
-        confirmLabel="Leave table"
-        tone="danger"
-        onConfirm={leave}
-      />
+      {exit.dialogs}
       <ConfirmDialog
         open={confirm === 'end'}
         onOpenChange={(open) => !open && setConfirm(null)}

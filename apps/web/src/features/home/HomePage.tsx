@@ -2,7 +2,7 @@ import { LIMITS, type TableSummary } from '@bxvtt/shared/protocol';
 import { isProblem } from '@bxvtt/shared/client';
 import { sessionModeLabel } from '@bxvtt/shared/text';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { describeProblem, displayStringProblem, getApi, SiteInfo, useIdentity } from '@/app';
 import { Badge, Banner, Button, Card, EmptyState, Field, Icon, PageLayout, Skeleton, TextInput } from '@/ui';
 import { HealthBanner } from './HealthBanner';
@@ -10,6 +10,33 @@ import { NameForm } from './NameForm';
 import { ProfileMenu } from './ProfileMenu';
 import { RulesReference } from './RulesReference';
 import styles from './home.module.css';
+
+/**
+ * News for the home page that another page sends in the router state, such as a table that a referee deleted
+ * while this user had it open.
+ */
+export interface HomeNotice {
+  title: string;
+  detail: string;
+}
+
+/**
+ * The router state that shows a {@link HomeNotice} on the home page.
+ *
+ * @param notice - The notice.
+ */
+export function homeNoticeState(notice: HomeNotice): { homeNotice: HomeNotice } {
+  return { homeNotice: notice };
+}
+
+function readHomeNotice(state: unknown): HomeNotice | null {
+  if (typeof state !== 'object' || state === null || !('homeNotice' in state)) return null;
+  const notice = state.homeNotice;
+  if (typeof notice !== 'object' || notice === null || !('title' in notice) || !('detail' in notice))
+    return null;
+  const { title, detail } = notice;
+  return typeof title === 'string' && typeof detail === 'string' ? { title, detail } : null;
+}
 
 /**
  * Reads an invite code from what a visitor pasted: a full invite link such as
@@ -200,6 +227,9 @@ function CreateTable() {
             ? "That host key isn't right. Check it with the server host."
             : 'Enter the host key from the server host to create a table.',
         );
+      } else if (isProblem(problem, 'forbidden')) {
+        // The server's sentence names the limit and how to make room, so it stands without a generic title.
+        setError(problem.problem.detail);
       } else {
         const message = describeProblem(problem);
         setError(`${message.title}. ${message.detail}`);
@@ -279,6 +309,9 @@ function JoinTable() {
 
 function SignedInHome() {
   const user = useIdentity((s) => s.user);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const notice = readHomeNotice(location.state);
   const [tables, setTables] = useState<TableSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -318,6 +351,15 @@ function SignedInHome() {
         <h1 id="tables-title" className={styles.pageTitle}>
           Your tables
         </h1>
+        {notice !== null && (
+          <Banner
+            tone="info"
+            title={notice.title}
+            onDismiss={() => navigate(location.pathname, { replace: true, state: null })}
+          >
+            {notice.detail}
+          </Banner>
+        )}
         <TableList tables={tables} error={error} onRetry={load} />
       </section>
       <aside className={styles.side} aria-label="Start or join a table">

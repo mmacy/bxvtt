@@ -1,6 +1,6 @@
 import { isProblem } from '@bxvtt/shared/client';
 import { Suspense, useEffect, useState, type ReactNode } from 'react';
-import { Link as RouterLink, useParams } from 'react-router-dom';
+import { Navigate, Link as RouterLink, useParams } from 'react-router-dom';
 import {
   TableProvider,
   getApi,
@@ -13,9 +13,10 @@ import {
   useTableStore,
   useTableUi,
   type RemovedReason,
+  type TableData,
 } from '@/app';
 import { Button, Card, EmptyState, PageLayout, Skeleton, Spinner } from '@/ui';
-import { NameForm, ProfileMenu } from '@/features/home';
+import { NameForm, ProfileMenu, homeNoticeState, type HomeNotice } from '@/features/home';
 import { ConnectionBanner } from './ConnectionBanner';
 import { LoadingScreen } from './LoadingScreen';
 import { LobbyPagePart, PlayShellPart, preloadTableScreens } from './parts';
@@ -62,7 +63,10 @@ function RetiredSignIn() {
   );
 }
 
-const REMOVED_TEXT: Record<RemovedReason, { title: string; description: string }> = {
+const REMOVED_TEXT: Record<
+  Exclude<RemovedReason, 'table_deleted'>,
+  { title: string; description: string }
+> = {
   left: {
     title: 'You left this table',
     description: 'Ask the referee for a new invite link if you want to rejoin.',
@@ -71,11 +75,28 @@ const REMOVED_TEXT: Record<RemovedReason, { title: string; description: string }
     title: 'The referee removed you from this table',
     description: 'Ask the referee for a new invite link if you want to rejoin.',
   },
-  table_deleted: {
-    title: 'This table was deleted',
-    description: 'The referee deleted this table and its saved games.',
-  },
 };
+
+/**
+ * What the home page tells a member whose table a referee deleted while they had it open. The server doesn't say
+ * which referee did it, so the notice names the referee only when there is one other than this user. When this
+ * user is the only referee, they deleted it themselves in another tab.
+ *
+ * @param state - The table's state when the server removed this user.
+ */
+export function tableDeletedNotice(state: Pick<TableData, 'table' | 'user'>): HomeNotice {
+  const name = state.table?.name ?? 'The table';
+  const detail =
+    "Its saved games and chat are gone. You keep your characters, and you can add them to another table's party.";
+  const referees = (state.table?.members ?? []).filter((m) => m.role === 'referee');
+  const others = referees.filter((m) => m.user_id !== state.user?.id);
+  if (others.length === 0) return { title: `You deleted ${name} in another tab`, detail };
+  const only = others.length === 1 && others.length === referees.length ? others[0] : undefined;
+  return {
+    title: only ? `${only.name}, the referee, deleted ${name}` : `A referee deleted ${name}`,
+    detail,
+  };
+}
 
 /**
  * What to show when the server refused the connection: a sign-in that another browser took over, a forgotten
@@ -125,10 +146,18 @@ function TableScreen() {
   const status = useTableStore((s) => s.status);
   const closeReason = useTableStore((s) => s.closeReason);
   const removed = useTableStore((s) => s.removed);
+  const exitRequested = useTableStore((s) => s.exitRequested);
+  const table = useTableStore((s) => s.table);
+  const user = useTableStore((s) => s.user);
   const connectionError = useTableStore((s) => s.connectionError);
   const hasGame = useTableStore((s) => s.game !== null);
   const playing = useTableStore((s) => s.table?.phase === 'playing');
 
+  // The user's own leave or delete navigates home when its request answers. The removal can arrive first.
+  if (removed !== null && exitRequested) return <Navigate to="/" replace />;
+  if (removed === 'table_deleted') {
+    return <Navigate to="/" replace state={homeNoticeState(tableDeletedNotice({ table, user }))} />;
+  }
   if (removed !== null) {
     const text = REMOVED_TEXT[removed];
     return (

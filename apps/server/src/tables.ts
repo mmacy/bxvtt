@@ -399,14 +399,21 @@ export function registerTableRoutes(app: FastifyInstance, ctx: Context): void {
         throw new ApiError('host_key_required', 'Enter the host key from the server host to create a table.');
       }
     }
+    // A table counts while its creator is still one of its referees, so every table that counts is one the
+    // creator can open and delete. A creator who hands a table to another referee and leaves gets the slot back.
     const created = num(
-      ctx.db.get('SELECT count(*) AS n FROM tables WHERE created_by = ?', user.id) ?? { n: 0 },
+      ctx.db.get(
+        `SELECT count(*) AS n FROM tables t
+           JOIN members m ON m.table_id = t.id AND m.user_id = t.created_by AND m.role = 'referee'
+          WHERE t.created_by = ?`,
+        user.id,
+      ) ?? { n: 0 },
       'n',
     );
     if (created >= ctx.config.quotas.tablesPerUser) {
       throw new ApiError(
         'forbidden',
-        `You already have ${created} tables, which is the limit per user. Delete a table you no longer use.`,
+        `You're the referee of ${created} ${created === 1 ? 'table' : 'tables'} that you created, which is the limit for one person. To make room, open a table you no longer use and choose Delete table from its table menu.`,
       );
     }
     const id = tables.create(body.name, user);

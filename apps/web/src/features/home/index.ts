@@ -1,4 +1,5 @@
-export { HomePage, parseInvite } from './HomePage';
+export { HomePage, homeNoticeState, parseInvite } from './HomePage';
+export type { HomeNotice } from './HomePage';
 export { JoinPage } from './JoinPage';
 export { NotFoundPage } from './NotFoundPage';
 export { NameForm } from './NameForm';

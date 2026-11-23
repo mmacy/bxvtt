@@ -720,6 +720,32 @@ describe('rate limits and quotas', () => {
     );
   });
 
+  it('counts only the tables that their creator still referees, so deleting or handing one over makes room', async () => {
+    const creator = await createUser(server, 'Builder');
+    const heir = await createUser(server, 'Heir');
+    const kept = await creator.client.createTable({ name: 'Kept', host_key: 'correct-horse' });
+    const given = await creator.client.createTable({ name: 'Given', host_key: 'correct-horse' });
+    const full = (error: unknown) =>
+      isProblem(error, 'forbidden') && /Delete table from its table menu/.test(error.problem.detail);
+    await expect(creator.client.createTable({ name: 'Third', host_key: 'correct-horse' })).rejects.toSatisfy(
+      full,
+    );
+
+    // The creator makes another member a referee and leaves, so the table no longer counts.
+    await heir.client.joinTable(given.invite_code);
+    await creator.client.setMemberRole(given.id, heir.id, 'referee');
+    await creator.client.leaveTable(given.id);
+    const third = await creator.client.createTable({ name: 'Third', host_key: 'correct-horse' });
+    await expect(creator.client.createTable({ name: 'Fourth', host_key: 'correct-horse' })).rejects.toSatisfy(
+      full,
+    );
+
+    // Deleting a table makes room too.
+    await creator.client.deleteTable(kept.id);
+    await creator.client.createTable({ name: 'Fourth', host_key: 'correct-horse' });
+    expect((await creator.client.listTables()).items.map((item) => item.id)).toContain(third.id);
+  });
+
   it('limits WebSocket connections per user, sockets waiting to authenticate, and resyncs', async () => {
     const referee = await createUser(server, 'Sockets');
     const table = await referee.client.createTable({ name: 'Sockets', host_key: 'correct-horse' });

@@ -59,6 +59,7 @@ Before play starts, everyone gathers in the lobby.
 - **Your characters** lists any characters you created earlier (or removed from the roster) that are not currently in **Party**. Select **Add to party** if a character is waiting here.
 - **People at the table** shows everyone who joined, with a green indicator for members currently online.
 - **Invite players** provides a **Copy** button for the table's invite link.
+- **Table menu** in the page header contains **Leave table**. Leaving takes your characters out of the party, and you need the table's invite link to come back. You keep your characters for another table.
 - **Table settings** displays who moves the party, who the caller is (the player designated to speak for the party), and whether battle rounds and autosaves run automatically.
 
 While the referee selects the adventure and optional rules, your side column shows **Waiting for the referee to start** (plus a note if the table has saves from earlier sessions that the referee can restore). As soon as the referee starts or restores a game, everyone's browser transitions to the play screen automatically. Next, read [The table screen and town](table-and-town.md).

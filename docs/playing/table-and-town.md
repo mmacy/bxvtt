@@ -17,7 +17,7 @@ When the referee starts or restores a game, the play screen opens for everyone a
 - **Action bar (bottom):** Displays who the caller is alongside contextual actions for the current mode. On narrower screens, buttons condense to icons and excess items move into **More actions**.
 - **Dock (right):** Contains the **Party** (`Alt+1`), **Feed** (`Alt+2`), and **Journal** (`Alt+3`) tabs, plus **Referee** (`Alt+4`) for referees with the referee lens enabled.
 
-Open the **Table menu** in the top bar for **Save the game** (`Ctrl+S`, or `Cmd+S` on macOS), **Saves**, **Table settings**, **Copy invite link**, **Rules reference** (`B`), **Keyboard shortcuts** (`?`), **Command palette** (`Ctrl+K` or `Cmd+K`), **Your tables**, and **Leave the table**. Referees also see **Seats and caller** (to assign who controls each character and who speaks for the party) and **Return to the lobby**.
+Open the **Table menu** in the top bar for **Save the game** (`Ctrl+S`, or `Cmd+S` on macOS), **Saves**, **Table settings**, **Copy invite link**, **Rules reference** (`B`), **Keyboard shortcuts** (`?`), **Command palette** (`Ctrl+K` or `Cmd+K`), **Your tables**, and **Leave table**. Referees also see **Seats and caller** (to assign who controls each character and who speaks for the party), **Return to lobby**, and **Delete table**. See [Leave or delete a table](../refereeing/lobby-and-setup.md#leave-or-delete-a-table) for what leaving and deleting do.
 
 ## Who controls what
 

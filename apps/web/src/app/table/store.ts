@@ -67,6 +67,11 @@ export interface TableData {
   closeReason: CloseReason | null;
   /** Set when the server removed this user from the table. */
   removed: RemovedReason | null;
+  /**
+   * Whether this client asked to leave or delete the table and is waiting for the answer. A `removed` message
+   * that arrives meanwhile is the result of the user's own action, not news from someone else.
+   */
+  exitRequested: boolean;
   /** Whether the first snapshot has arrived. */
   ready: boolean;
   user: User | null;
@@ -122,6 +127,8 @@ export interface TableActions {
   /** Merges a page of feed entries, from catching up or scrolling back. */
   receiveFeedPage: (page: FeedPage, direction: 'older' | 'newer') => void;
   setStatus: (status: TableConnectionStatus, reason?: CloseReason) => void;
+  /** Records that this client is asking to leave or delete the table, or that the request failed. */
+  setExitRequested: (requested: boolean) => void;
   dismissNotice: (id: number) => void;
   removePing: (id: string) => void;
   /** Sends a map ping. */
@@ -145,6 +152,7 @@ export function initialTableData(tableId: string): TableData {
     status: 'idle',
     closeReason: null,
     removed: null,
+    exitRequested: false,
     ready: false,
     user: null,
     role: null,
@@ -386,6 +394,8 @@ export function createTableStore(
 
     setStatus: (status, reason) =>
       set(status === 'closed' ? { status, closeReason: reason ?? null } : { status }),
+
+    setExitRequested: (exitRequested) => set({ exitRequested }),
 
     dismissNotice: (id) => set((state) => ({ notices: state.notices.filter((n) => n.id !== id) })),
 
