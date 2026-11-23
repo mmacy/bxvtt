@@ -1,0 +1,24 @@
+.siteInfo {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* `PageLayout` is `position: relative` and its footer reserves a band at the bottom of the page, so the text sits in
+   the band, at the left edge of the page instead of the left edge of the content column. */
+.page {
+  position: absolute;
+  bottom: var(--space-3);
+  left: var(--space-2);
+}
+
+.stack {
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding-block: var(--space-2);
+}

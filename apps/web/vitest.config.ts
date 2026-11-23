@@ -1,9 +1,11 @@
 import react from '@vitejs/plugin-react';
 import { fileURLToPath } from 'node:url';
 import { defineProject } from 'vitest/config';
+import { buildConstants } from './vite.config';
 
 export default defineProject({
   plugins: [react()],
+  define: buildConstants,
   resolve: {
     // `@/app` names the app layer's barrel. Spelled out, because on a case-insensitive disk `src/app` would
     // otherwise resolve to `src/App.tsx`.

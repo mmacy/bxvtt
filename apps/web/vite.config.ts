@@ -1,11 +1,26 @@
 import react from '@vitejs/plugin-react';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 
 const serverUrl = process.env.BXVTT_SERVER_URL ?? 'http://127.0.0.1:8660';
 
+const rootPackage = JSON.parse(
+  readFileSync(fileURLToPath(new URL('../../package.json', import.meta.url)), 'utf8'),
+) as { version: string };
+
+/**
+ * Constants that the build writes into the client, declared in `src/build-info.d.ts`. `__BXVTT_VERSION__` is the
+ * root `package.json` version, so the client shows the version of the build it runs, with no request to the server.
+ * Vitest reads the same object.
+ */
+export const buildConstants = {
+  __BXVTT_VERSION__: JSON.stringify(rootPackage.version),
+};
+
 export default defineConfig({
   plugins: [react()],
+  define: buildConstants,
   resolve: {
     // `@/app` names the app layer's barrel. Spelled out, because on a case-insensitive disk `src/app` would
     // otherwise resolve to `src/App.tsx`.

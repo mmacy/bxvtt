@@ -8,6 +8,7 @@ import { describeViolations, seriousViolations } from './support/a11y';
 import { expect, test } from './support/fixtures';
 import { combatTable, fightThroughSdk, openFeed, walkIntoGuardroom } from './support/combat';
 import { SCREENS_DIR } from './support/env';
+import { expectSiteInfo } from './support/site-info';
 import { ADVENTURES, enterDungeon, openTable, send, setupTable, waitForGame } from './support/table';
 
 const shot = (page: Page, name: string) => page.screenshot({ path: `${SCREENS_DIR}/end-${name}.png` });
@@ -53,6 +54,7 @@ test('after a victory, the end screen tells the story and the referee restores a
     const { page } = actor;
     await expect(page.getByRole('heading', { name: 'Victory', level: 2 })).toBeVisible();
     await expect(page.getByRole('main')).toContainText('The Toll at Crookback Bridge');
+    await expectSiteInfo(page);
     await expect(await fact(page, 'Game time')).toContainText(/ending at Day \d+, \d\d:\d\d/);
     await expect(await fact(page, 'Fallen')).toHaveText('Nobody');
     await expect(await fact(page, 'Quests completed')).toHaveText('Open the Kingsway');

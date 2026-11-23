@@ -1,7 +1,15 @@
 import type { AdventureListing } from '@bxvtt/shared/protocol';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { describeProblem, getApi, useCaller, useIsReferee, useMembers, useTableDetail } from '@/app';
+import {
+  describeProblem,
+  getApi,
+  SiteInfo,
+  useCaller,
+  useIsReferee,
+  useMembers,
+  useTableDetail,
+} from '@/app';
 import { Badge, Banner, Panel, PageLayout, Wordmark } from '@/ui';
 import { ProfileMenu, RulesReference } from '@/features/home';
 import { AdventurePicker } from './AdventurePicker';
@@ -87,6 +95,7 @@ export function LobbyPage({ banner }: { banner?: ReactNode }) {
           <ProfileMenu />
         </>
       }
+      footer={<SiteInfo />}
     >
       <div className={styles.page}>
         {banner && <div className={styles.stickyBanner}>{banner}</div>}

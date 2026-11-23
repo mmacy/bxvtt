@@ -1,11 +1,12 @@
 import { Link as RouterLink } from 'react-router-dom';
+import { SiteInfo } from '@/app';
 import { Button, EmptyState, PageLayout } from '@/ui';
 import styles from './home.module.css';
 
 /** The page for an address the app doesn't have. */
 export function NotFoundPage() {
   return (
-    <PageLayout width="narrow">
+    <PageLayout width="narrow" footer={<SiteInfo />}>
       <div className={styles.joinWrap}>
         <EmptyState
           icon="compass"
