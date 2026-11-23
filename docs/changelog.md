@@ -8,7 +8,7 @@ sidebar_position: 11
 
 All notable changes to bxvtt are documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The release version (`SERVER_VERSION` and workspace `package.json` versions, reported by `GET /api/health`) covers the HTTP `/api` and WebSocket `/ws` protocol in `@bxvtt/shared/protocol`, the `@bxvtt/shared/client` TypeScript SDK, server environment variables, and the web client. `SCHEMA_VERSION` (`6` in `apps/server/src/db.ts`) versions the SQLite schema in `.data/bxvtt.db`, which the server migrates forward automatically at startup, whereas `bxapi` (the loopback HTTP rules server) and `osrlib` (its B/X rules engine) version game rules and save documents separately.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The release version (the root `package.json` version, which the server reads at startup and the web build reads at build time, and which `GET /api/health` reports) covers the HTTP `/api` and WebSocket `/ws` protocol in `@bxvtt/shared/protocol`, the `@bxvtt/shared/client` TypeScript SDK, server environment variables, and the web client. `SCHEMA_VERSION` (`6` in `apps/server/src/db.ts`) versions the SQLite schema in `.data/bxvtt.db`, which the server migrates forward automatically at startup, whereas `bxapi` (the loopback HTTP rules server) and `osrlib` (its B/X rules engine) version game rules and save documents separately.
 
 ## [Unreleased]
 
@@ -33,6 +33,7 @@ This release needs a `bxapi` that has `POST /v1/ability-rolls/{roll_id}/preview`
 - **Character checks (`@bxvtt/server`):** `POST /api/characters/check` asks `bxapi` for one preview and returns only `valid` and `problem`. `gold_gp` is gone from the response. A check or a creation from an ability roll with purchases or equipped items is refused with `gold_not_rolled` until the player rolls the gold.
 - **Per-user table limit (`@bxvtt/server`):** The limit of 50 now counts the tables a user created and still referees. A table that its creator hands to another referee and leaves no longer counts.
 - **Database schema (`@bxvtt/server`):** `SCHEMA_VERSION` is 6. The `ability_rolls` table records the class and reroll option that the hit points were rolled with and when each roll was made. The server migrates an existing database at startup.
+- **One version for a release (`@bxvtt/server`):** `GET /api/health` reports the root `package.json` version, which the server reads at startup into `SERVER_VERSION`, instead of a hand-maintained copy of it. A release changes one file now, so the health check and the web client's footer always report the same version for a build.
 
 ### Fixed
 
