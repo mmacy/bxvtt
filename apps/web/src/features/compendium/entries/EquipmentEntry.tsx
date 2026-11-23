@@ -127,7 +127,7 @@ export function EquipmentEntry({ id }: { id: string }) {
               {item.item_type === 'gear' && (
                 <>
                   {isNumber(item.capacity_coins) && (
-                    <Stat label="Holds">{formatWeight(item.capacity_coins)}</Stat>
+                    <Stat label="Capacity">{formatWeight(item.capacity_coins)}</Stat>
                   )}
                   {item.combat && (
                     <>

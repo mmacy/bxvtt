@@ -35,19 +35,23 @@ export const OPTIONAL_RULES: Array<BooleanOption | SelectOption> = [
     kind: 'select',
     key: 'encumbrance',
     label: 'Encumbrance',
-    description: 'How carried weight sets movement rate.',
+    description: 'Choose how carried weight affects movement rate.',
     defaultValue: 'basic',
     options: [
-      { value: 'none', label: 'None', description: 'Everyone moves 120 feet a turn, whatever they carry.' },
+      {
+        value: 'none',
+        label: 'None',
+        description: 'Every character moves 120 feet per turn regardless of carried weight.',
+      },
       {
         value: 'basic',
         label: 'Basic',
-        description: 'Worn armour and a significant load of treasure slow a character.',
+        description: 'Worn armour and heavy treasure slow a character down.',
       },
       {
         value: 'detailed',
         label: 'Detailed',
-        description: 'The weight of armour, gear, and treasure adds up and sets movement rate.',
+        description: 'Total coin weight of armour, gear, and treasure sets movement rate.',
       },
     ],
   },
@@ -55,18 +59,18 @@ export const OPTIONAL_RULES: Array<BooleanOption | SelectOption> = [
     kind: 'select',
     key: 'xp_award_timing',
     label: 'Experience awards',
-    description: 'When the party receives the experience it earns.',
+    description: 'Choose when the party receives earned experience.',
     defaultValue: 'on_return',
     options: [
       {
         value: 'on_return',
         label: 'On returning to town',
-        description: 'The tabletop rule: survivors receive experience once they are back in town.',
+        description: 'Survivors receive experience once they return to town, as in standard B/X.',
       },
       {
         value: 'immediate',
         label: 'As soon as it is earned',
-        description: 'Suits a game where the party never goes home.',
+        description: 'Characters receive experience right away, which fits delves that never return to town.',
       },
     ],
   },
@@ -74,37 +78,35 @@ export const OPTIONAL_RULES: Array<BooleanOption | SelectOption> = [
     kind: 'boolean',
     key: 'variable_weapon_damage',
     label: 'Variable weapon damage',
-    description:
-      'Each weapon deals the damage its description lists. Turn it off and every weapon deals 1d6.',
+    description: 'Weapons roll their listed damage dice instead of 1d6 for every weapon.',
     defaultValue: true,
   },
   {
     kind: 'boolean',
     key: 'individual_initiative',
     label: 'Individual initiative',
-    description: 'Every combatant rolls initiative, instead of one roll for each side.',
+    description: 'Each combatant rolls initiative individually instead of rolling once per side.',
     defaultValue: false,
   },
   {
     kind: 'boolean',
     key: 'thac0_arithmetic',
     label: 'THAC0 arithmetic',
-    description: 'The number to hit is THAC0 minus armour class, instead of the attack matrix.',
+    description: 'Calculate to-hit rolls with THAC0 minus armour class instead of the attack matrix.',
     defaultValue: false,
   },
   {
     kind: 'boolean',
     key: 'weapon_reload',
     label: 'Weapon reload',
-    description: "A crossbow, or another weapon that must reload, can't fire two rounds in a row.",
+    description: 'Crossbows and other slow-loading weapons must spend a round reloading between shots.',
     defaultValue: false,
   },
   {
     kind: 'boolean',
     key: 'hd5_counts_as_magical',
     label: 'Big monsters count as magical',
-    description:
-      'A monster of 5 Hit Dice or more can hurt creatures that only silver or magic weapons can harm.',
+    description: 'Monsters with 5 hit dice or more can hit creatures harmed only by silver or magic weapons.',
     defaultValue: false,
   },
   {
@@ -112,22 +114,21 @@ export const OPTIONAL_RULES: Array<BooleanOption | SelectOption> = [
     key: 'magic_item_death_save',
     label: 'Saving throws for magic items',
     description:
-      'When a breath weapon or a similar effect kills a character, each of their magic items saves to survive it.',
+      'When breath weapons or destructive effects kill a character, each of their magic items makes a saving throw to survive.',
     defaultValue: true,
   },
   {
     kind: 'boolean',
     key: 'deprivation_penalties',
     label: 'Hunger and thirst penalties',
-    description: 'Going without food or water costs attack bonus, then movement, then hit points.',
+    description: 'Going without food or water penalizes attacks, movement, and eventually hit points.',
     defaultValue: false,
   },
   {
     kind: 'boolean',
     key: 'aoe_friendly_fire',
     label: 'Area spells catch allies',
-    description:
-      'A spell such as fireball, cast at monsters in melee, can hit the party members fighting them.',
+    description: 'Area spells such as fireball can hit party members engaged in melee with the target.',
     defaultValue: true,
   },
   {
@@ -135,21 +136,21 @@ export const OPTIONAL_RULES: Array<BooleanOption | SelectOption> = [
     key: 'formation_width_limit',
     label: 'Passage width limits melee',
     description:
-      'Only as many combatants fight side by side as the passage allows: two in a 10-foot corridor.',
+      'Corridor width limits how many combatants can fight side by side, such as two abreast in a 10-foot passage.',
     defaultValue: true,
   },
   {
     kind: 'boolean',
     key: 'failed_trap_removal_springs',
-    label: 'A failed trap removal springs the trap',
-    description: 'A thief who fails to remove a treasure trap sets it off.',
+    label: 'Failed trap removal springs the trap',
+    description: 'A thief who fails to remove a treasure trap triggers it.',
     defaultValue: true,
   },
   {
     kind: 'boolean',
     key: 'hp_reroll_at_first_level',
     label: 'Reroll low first-level hit points',
-    description: 'A first-level hit die that comes up 1 or 2 is rolled again.',
+    description: 'Reroll 1s and 2s on hit dice at character creation.',
     defaultValue: false,
   },
 ];
@@ -175,12 +176,12 @@ export function OptionalRules({ value, onChange, disabled }: OptionalRulesProps)
       <div className={styles.rulesHeader}>
         <p className={styles.note}>
           {changed === 0
-            ? 'The game uses the standard B/X rules. Change a rule here before you start.'
-            : `${changed === 1 ? 'One rule differs' : `${changed} rules differ`} from the standard.`}
+            ? 'Using standard B/X rules. Toggle any house rule below before starting.'
+            : `${changed === 1 ? '1 rule differs' : `${changed} rules differ`} from standard B/X.`}
         </p>
         {changed > 0 && (
           <Button size="sm" variant="ghost" icon="undo" disabled={disabled} onClick={() => onChange({})}>
-            Use the standard rules
+            Reset to standard rules
           </Button>
         )}
       </div>

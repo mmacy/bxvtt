@@ -104,7 +104,7 @@ function partyCellActions(ctx: ActionContext, map: LevelMap, doors: MapMenuInput
       if (actionable.length === 0) continue;
       doorGroups.push({
         type: 'submenu',
-        label: `The door to the ${directionLabel(door.direction).toLowerCase()}`,
+        label: `Door to the ${directionLabel(door.direction).toLowerCase()}`,
         icon: door.open ? 'door-open' : 'door',
         items: items.slice(1),
       });
@@ -147,7 +147,7 @@ export function mapMenuEntries(input: MapMenuInput): MenuEntry[] {
     const near = sideNear(world);
     const wall = near ? partySideOf(party, near) : null;
     if (wall && partyEdge(ctx.view, wall)?.kind === 'wall') {
-      groups.push([{ type: 'label', label: `The wall to the ${directionLabel(wall).toLowerCase()}` }]);
+      groups.push([{ type: 'label', label: `Wall to the ${directionLabel(wall).toLowerCase()}` }]);
     }
     groups.push(partyCellActions(ctx, map, doors));
   } else if (party) {
@@ -155,7 +155,7 @@ export function mapMenuEntries(input: MapMenuInput): MenuEntry[] {
     const wall = near ? partySideOf(party, near) : null;
     if (wall && partyEdge(ctx.view, wall)?.kind === 'wall') {
       groups.push([
-        { type: 'label', label: `The wall to the ${directionLabel(wall).toLowerCase()}` },
+        { type: 'label', label: `Wall to the ${directionLabel(wall).toLowerCase()}` },
         ...searchEntries(ctx).filter((entry) => entryLabel(entry).toLowerCase().includes('secret')),
       ]);
     }
@@ -176,7 +176,7 @@ export function mapMenuEntries(input: MapMenuInput): MenuEntry[] {
   // The table's tools.
   groups.push([
     { label: 'Ping here', icon: 'ping', onSelect: () => tools.ping(world) },
-    { label: 'Add a pin here', icon: 'flag', onSelect: () => tools.pin(world) },
+    { label: 'Add pin here', icon: 'flag', onSelect: () => tools.pin(world) },
     { label: 'Measure from here', icon: 'ruler', onSelect: () => tools.measureFrom(cell) },
   ]);
 
@@ -186,7 +186,7 @@ export function mapMenuEntries(input: MapMenuInput): MenuEntry[] {
     const floor = map.cells.some((c) => c.x === cell.x && c.y === cell.y);
     if (floor && referee.can('place_party')) {
       items.push({
-        label: 'Place the party here',
+        label: 'Place party here',
         icon: 'users',
         onSelect: () =>
           referee.send({
@@ -246,7 +246,7 @@ export function mapMenuEntries(input: MapMenuInput): MenuEntry[] {
           onCheckedChange: (checked) => referee.send({ ...base, discovered: checked }),
         });
       }
-      items.push({ type: 'submenu', label: 'Set the door', icon: 'referee', items: toggles });
+      items.push({ type: 'submenu', label: 'Set door state', icon: 'referee', items: toggles });
     }
     if (items.length > 0) groups.push([{ type: 'label', label: 'Referee' }, ...items]);
   }

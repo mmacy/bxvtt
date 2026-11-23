@@ -27,7 +27,7 @@ export function EncounterTables() {
         <Figure
           title="Wandering monsters"
           id="wandering"
-          note="Roll a d20 on the table for the dungeon level. The number appearing here replaces the monster's own."
+          note="Roll a d20 on the table for the dungeon level. Use the number appearing listed here instead of the monster's stat block."
         >
           <div className={styles.tableControls}>
             <SegmentedControl

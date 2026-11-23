@@ -149,7 +149,7 @@ export class AdventureCatalog {
     if (count >= this.ctx.config.quotas.adventuresPerTable) {
       throw new ApiError(
         'forbidden',
-        `The table has uploaded ${count} adventures, the most this server keeps. Delete one first.`,
+        `This table already has ${count} uploaded adventures, which is the limit. Delete an uploaded adventure first.`,
       );
     }
     const info = await callBxapi(() => this.ctx.bxapi.post<AdventureInfo>('/v1/adventures', document));
@@ -179,7 +179,7 @@ export class AdventureCatalog {
     );
     if (row === undefined) {
       if (adventureId.startsWith(SAMPLE_PREFIX) || adventureId.startsWith('builtin-')) {
-        throw new ApiError('adventure_read_only', 'Only an adventure the table uploaded can be deleted.');
+        throw new ApiError('adventure_read_only', 'You can delete only adventures uploaded to this table.');
       }
       notFound('adventure', adventureId);
     }

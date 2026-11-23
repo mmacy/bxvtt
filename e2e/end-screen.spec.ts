@@ -36,8 +36,8 @@ test('after a victory, the end screen tells the story and the referee restores a
     referee: ruth,
     players: [sam],
     party: [
-      { owner: sam, name: 'Brenna', classId: 'fighter' },
-      { owner: sam, name: 'Tamsin', classId: 'magic_user' },
+      { owner: sam, name: 'Flarg', classId: 'fighter' },
+      { owner: sam, name: 'Mazpar', classId: 'magic_user' },
     ],
     adventure: ADVENTURES.toll,
   });
@@ -96,7 +96,7 @@ test('after a total party kill, the end screen names the fallen and the referee 
     const { page } = actor;
     await expect(page.getByRole('heading', { name: 'The party has fallen', level: 2 })).toBeVisible();
     await expect(page.getByRole('main')).toContainText('Every party member has fallen');
-    await expect(await fact(page, 'Fallen')).toHaveText('Brenna and Tamsin');
+    await expect(await fact(page, 'Fallen')).toHaveText('Flarg and Mazpar');
     await expect(await fact(page, 'Quests completed')).toHaveText('None');
     const party = page.getByRole('list', { name: 'The party' }).getByRole('listitem');
     await expect(party).toHaveCount(2);
@@ -144,7 +144,7 @@ test('after a victory, the end screen tells how the adventure ends in its own wo
   const setup = await setupTable({
     referee: ruth,
     players: [sam],
-    party: [{ owner: sam, name: 'Brenna', classId: 'fighter' }],
+    party: [{ owner: sam, name: 'Flarg', classId: 'fighter' }],
     adventure: ADVENTURES.toll,
   });
   const tableId = setup.table.id;
@@ -167,7 +167,7 @@ test('the end screen names each save in its restore button and its confirmation 
   const setup = await setupTable({
     referee: ruth,
     players: [sam],
-    party: [{ owner: sam, name: 'Brenna', classId: 'fighter' }],
+    party: [{ owner: sam, name: 'Flarg', classId: 'fighter' }],
     adventure: ADVENTURES.toll,
   });
   const tableId = setup.table.id;
@@ -188,7 +188,7 @@ test('a victory in the table’s second adventure counts only that game’s ques
   const setup = await setupTable({
     referee: ruth,
     players: [sam],
-    party: [{ owner: sam, name: 'Brenna', classId: 'fighter' }],
+    party: [{ owner: sam, name: 'Flarg', classId: 'fighter' }],
     adventure: ADVENTURES.toll,
   });
   const tableId = setup.table.id;
@@ -198,10 +198,10 @@ test('a victory in the table’s second adventure counts only that game’s ques
 
   // The referee returns the table to its lobby, and the confirmation says what that does to the characters.
   await openTable(ruth.page, setup.path);
-  await ruth.page.getByRole('button', { name: 'Return the table to its lobby' }).click();
-  const back = ruth.page.getByRole('alertdialog', { name: 'Return the table to its lobby?' });
-  await expect(back).toContainText('Characters start each new game as they were created');
-  await back.getByRole('button', { name: 'Return to the lobby' }).click();
+  await ruth.page.getByRole('button', { name: 'Return to lobby' }).click();
+  const back = ruth.page.getByRole('alertdialog', { name: 'Return to lobby?' });
+  await expect(back).toContainText('Starting a new game resets characters to their initial sheets');
+  await back.getByRole('button', { name: 'Return to lobby' }).click();
   await expect(ruth.page.getByRole('heading', { name: 'Victory' })).toHaveCount(0);
 
   await ruth.client.startGame(tableId, { adventure_id: ADVENTURES.bell, seed: 1981 });
@@ -226,10 +226,10 @@ test('after a total party kill, a referee command that changes the story asks fi
     .getByRole('tab', { name: 'Referee' })
     .click();
   await ruth.page.getByRole('tab', { name: 'Quests, flags, and triggers' }).click();
-  await ruth.page.getByRole('button', { name: 'Complete the quest' }).first().click();
+  await ruth.page.getByRole('button', { name: 'Complete quest' }).first().click();
   const guard = ruth.page.getByRole('alertdialog', { name: 'The game is over' });
   await expect(guard).toContainText('The party has fallen, so the game is over.');
-  await expect(guard).toContainText('To play on, restore a save instead.');
+  await expect(guard).toContainText('Restore a save to continue playing.');
   await shot(ruth.page, 'story-guard');
   await guard.getByRole('button', { name: 'Cancel' }).click();
   await expect(guard).toHaveCount(0);

@@ -43,7 +43,7 @@ export function TreasureTables() {
       <Figure
         title="Treasure types"
         id="treasure-types"
-        note="Each line has its own chance of being present. Lair treasure is generated once for a lair, the other types for each creature or for the whole group."
+        note="Each line has an independent chance to appear. Roll lair treasure once for a lair, or individual treasure for each creature or group."
       >
         <table className={styles.ruleTable}>
           <caption className="visually-hidden">Treasure types A to V</caption>
@@ -107,7 +107,7 @@ export function TreasureTables() {
       <Figure
         title="Magic item types"
         id="magic-item-types"
-        note="Roll d% to learn what kind of magic item a hoard holds. The Basic column is for Basic play and the Expert column for Expert play."
+        note="Roll d% to determine each magic item category, using the Basic or Expert column."
       >
         <table className={styles.ruleTable}>
           <caption className="visually-hidden">Magic item type by d% roll</caption>
@@ -137,11 +137,7 @@ export function TreasureTables() {
         </p>
       </Figure>
 
-      <Figure
-        title="Room stocking"
-        id="stocking"
-        note="Roll a d6 for what a dungeon room holds, then a d6 for treasure."
-      >
+      <Figure title="Room stocking" id="stocking" note="Roll 1d6 for room contents, then 1d6 for treasure.">
         <table className={styles.ruleTable}>
           <caption className="visually-hidden">What a dungeon room holds</caption>
           <thead>
@@ -167,11 +163,7 @@ export function TreasureTables() {
         </table>
       </Figure>
 
-      <Figure
-        title="Unguarded treasure"
-        id="unguarded"
-        note="What a cache with no monsters guarding it holds, by dungeon level."
-      >
+      <Figure title="Unguarded treasure" id="unguarded" note="Unprotected treasure caches by dungeon level.">
         <table className={styles.ruleTable}>
           <caption className="visually-hidden">Unguarded treasure by dungeon level</caption>
           <thead>

@@ -23,36 +23,32 @@ export function RejoinPrompt() {
   const self = first.user_id === me?.id;
   const until = clockTime(first.expires_at);
   return (
-    <section className={styles.rejoin} aria-label="Requests to come back in">
+    <section className={styles.rejoin} aria-label="Rejoin requests">
       <Banner
         tone="info"
         icon="users"
-        title={
-          self
-            ? 'Someone is asking to come back in as you'
-            : `Someone is asking to come back in as ${first.name}`
-        }
+        title={self ? 'Someone asked to rejoin as you' : `Someone asked to rejoin as ${first.name}`}
         actions={
           self ? undefined : (
             <>
               <Button size="sm" variant="primary" loading={pending} onClick={() => void approve(first.id)}>
-                Let them in
+                Approve
               </Button>
               <Button size="sm" variant="ghost" disabled={pending} onClick={() => void decline(first.id)}>
-                Not now
+                Decline
               </Button>
             </>
           )
         }
       >
         {self
-          ? `A referee can't let themselves in, so another referee has to answer. The request ends by itself at ${until}.`
-          : `Their browser doesn't remember them, so they need a referee to let them in. Let them in only if you know it's ${first.name}, such as by voice or chat. The request ends at ${until}.`}
+          ? `You can't approve your own rejoin request, so another referee must approve it. This request expires at ${until}.`
+          : `Approve this rejoin request only if you confirm by voice or chat that it's really ${first.name}. This request expires at ${until}.`}
         {others.length > 0 && (
           <span className={styles.rejoinMore}>
             {others.length === 1
-              ? ' One more request is waiting.'
-              : ` ${others.length} more requests are waiting.`}
+              ? ' 1 more rejoin request is waiting.'
+              : ` ${others.length} more rejoin requests are waiting.`}
           </span>
         )}
       </Banner>

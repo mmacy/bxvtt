@@ -10,7 +10,7 @@ import { expect, test, type Crew } from './support/fixtures';
 import { battleBoard, declarationRow, declareSuggested, declaring } from './support/combat';
 import { ADVENTURES, enterDungeon, openTable, send, setupTable } from './support/table';
 
-/** Ruth referees, and Sam plays Brenna (a fighter) and Tamsin (a magic-user who knows Sleep). */
+/** Ruth referees, and Sam plays Flarg (a fighter) and Mazpar (a magic-user who knows Sleep). */
 async function setup(crew: Crew) {
   const ruth = await crew.person('Ruth');
   const sam = await crew.person('Sam');
@@ -20,8 +20,8 @@ async function setup(crew: Crew) {
     players: [sam],
     adventure: ADVENTURES.toll,
     party: [
-      { owner: sam, name: 'Brenna', classId: 'fighter' },
-      { owner: sam, name: 'Tamsin', classId: 'magic_user' },
+      { owner: sam, name: 'Flarg', classId: 'fighter' },
+      { owner: sam, name: 'Mazpar', classId: 'magic_user' },
     ],
   });
   return { ruth, sam, ...table, tableId: table.table.id };
@@ -40,33 +40,33 @@ async function startFight(ruthClient: BxvttClient, tableId: string, samClient: B
   expect(game.mode).toBe('battle');
 }
 
-async function openTamsinsChoices(page: Page) {
-  const close = page.getByRole('button', { name: /^Close .*'s choices$/ });
+async function openMazparsChoices(page: Page) {
+  const close = page.getByRole('button', { name: /^Close .*'s actions$/ });
   if ((await close.count()) > 0) await close.first().click();
-  await declarationRow(page, 'Tamsin').getByRole('button', { name: 'More choices' }).click();
-  return page.getByRole('region', { name: 'Declare for Tamsin' });
+  await declarationRow(page, 'Mazpar').getByRole('button', { name: 'Actions' }).click();
+  return page.getByRole('region', { name: 'Declare for Mazpar' });
 }
 
 test.describe('a new caster', () => {
-  test('without a night of rest, the battle board says why Tamsin has no spell to cast', async ({ crew }) => {
+  test('without a night of rest, the battle board says why Mazpar has no spell to cast', async ({ crew }) => {
     const { ruth, sam, path, tableId } = await setup(crew);
     await startFight(ruth.client, tableId, sam.client);
     await openTable(sam.page, path);
     await expect(battleBoard(sam.page)).toBeVisible({ timeout: 20_000 });
 
-    const composer = await openTamsinsChoices(sam.page);
+    const composer = await openMazparsChoices(sam.page);
     const cast = composer
-      .getByRole('radiogroup', { name: 'What Tamsin does this round' })
+      .getByRole('radiogroup', { name: 'What Mazpar does this round' })
       .getByRole('radio', {
         name: 'Cast',
       });
     await expect(cast).toBeDisabled();
-    await expect(composer).toContainText('Tamsin has no spells memorized');
-    await expect(composer.getByRole('button', { name: "Open Tamsin's spells" })).toBeVisible();
+    await expect(composer).toContainText('Mazpar has no spells memorized');
+    await expect(composer.getByRole('button', { name: "Open Mazpar's spells" })).toBeVisible();
     await sam.page.screenshot({ path: `${SCREENS_DIR}/caster-no-spells-in-battle.png` });
   });
 
-  test('the town warns, the party rests, Tamsin prepares Sleep, and she casts it in the first fight', async ({
+  test('the town warns, the party rests, Mazpar prepares Sleep, and she casts it in the first fight', async ({
     crew,
   }) => {
     const { ruth, sam, path, tableId } = await setup(crew);
@@ -75,7 +75,7 @@ test.describe('a new caster', () => {
 
     // The town square warns by name before the party leaves.
     const warning = page
-      .getByText('Tamsin has no spells memorized. Rest for a night, then prepare spells.')
+      .getByText('Mazpar has no spells memorized. Rest for a night, then prepare spells.')
       .first();
     await expect(warning).toBeVisible({ timeout: 20_000 });
     await page.screenshot({ path: `${SCREENS_DIR}/caster-town-warning.png` });
@@ -85,12 +85,12 @@ test.describe('a new caster', () => {
       await confirm.getByRole('button', { name: /rest/i }).click();
 
     // After the rest, the town points at her spells.
-    await expect(page.getByText('Tamsin can prepare spells now.').first()).toBeVisible();
-    await page.getByRole('button', { name: "Open Tamsin's spells" }).first().click();
-    const sheet = page.getByRole('dialog', { name: 'Tamsin' });
+    await expect(page.getByText('Mazpar can prepare spells now.').first()).toBeVisible();
+    await page.getByRole('button', { name: "Open Mazpar's spells" }).first().click();
+    const sheet = page.getByRole('dialog', { name: 'Mazpar' });
     await expect(sheet.getByRole('tab', { name: 'Spells' })).toHaveAttribute('aria-selected', 'true');
     await sheet.getByRole('button', { name: 'Prepare spells' }).click();
-    const prepare = page.getByRole('dialog', { name: "Prepare Tamsin's spells" });
+    const prepare = page.getByRole('dialog', { name: "Prepare Mazpar's spells" });
     if (await prepare.getByText('Slots used: 0 of 1').isVisible()) {
       await prepare.getByRole('button', { name: 'More copies of Sleep' }).click();
     }
@@ -99,14 +99,14 @@ test.describe('a new caster', () => {
     await expect(prepare).toHaveCount(0);
     await expect(sheet.getByRole('region', { name: 'Memorized spells' })).toContainText('Sleep');
     await sheet.getByRole('button', { name: 'Close' }).first().click();
-    await expect(page.getByText('Tamsin has no spells memorized').first()).toHaveCount(0);
+    await expect(page.getByText('Mazpar has no spells memorized').first()).toHaveCount(0);
 
-    // The first fight: Tamsin casts Sleep at the goblins.
+    // The first fight: Mazpar casts Sleep at the goblins.
     await startFight(ruth.client, tableId, sam.client);
     await expect(battleBoard(page)).toBeVisible({ timeout: 20_000 });
-    const composer = await openTamsinsChoices(page);
+    const composer = await openMazparsChoices(page);
     await composer
-      .getByRole('radiogroup', { name: 'What Tamsin does this round' })
+      .getByRole('radiogroup', { name: 'What Mazpar does this round' })
       .getByRole('radio', { name: 'Cast' })
       .click();
     // Sleep by Hit Dice takes the goblins as a group, so it needs no single target.
@@ -116,12 +116,12 @@ test.describe('a new caster', () => {
     await expect(declare).toBeVisible();
     await page.screenshot({ path: `${SCREENS_DIR}/caster-casting-sleep.png` });
     await declaring(page, () => declare.click());
-    await expect(declarationRow(page, 'Tamsin')).toContainText(/sleep/i);
-    // Brenna takes her suggested action, so every member has declared and the round resolves.
-    expect(await declareSuggested(page, 'Brenna')).toBe(true);
+    await expect(declarationRow(page, 'Mazpar')).toContainText(/sleep/i);
+    // Flarg takes her suggested action, so every member has declared and the round resolves.
+    expect(await declareSuggested(page, 'Flarg')).toBe(true);
 
     await page.getByRole('tab', { name: /^Feed/ }).click();
-    await expect(page.getByRole('region', { name: 'Feed entries' })).toContainText(/Tamsin casts sleep/i, {
+    await expect(page.getByRole('region', { name: 'Feed entries' })).toContainText(/Mazpar casts sleep/i, {
       timeout: 20_000,
     });
   });

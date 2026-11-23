@@ -240,7 +240,7 @@ export function ShortcutLayer() {
   useShortcut({
     id: 'app.palette',
     keys: 'mod+k',
-    label: 'Open the command palette',
+    label: 'Open command palette',
     allowInInputs: true,
     run: () => setPaletteOpen(true),
   });
@@ -342,8 +342,8 @@ function CommandPaletteHost() {
       open={open}
       onOpenChange={setOpen}
       actions={actions}
-      placeholder="Type an action or search"
-      emptyText="No action matches that"
+      placeholder="Search actions"
+      emptyText="No matching actions"
     />
   );
 }

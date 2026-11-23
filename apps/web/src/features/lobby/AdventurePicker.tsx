@@ -23,7 +23,7 @@ export function partyRecommendation(info: AdventureListing['info']): string | nu
 }
 
 const SOURCE_LABEL: Record<AdventureListing['source'], string> = {
-  builtin: 'Comes with bxapi',
+  builtin: 'Built-in',
   sample: 'Sample',
   uploaded: 'Uploaded',
 };
@@ -76,7 +76,7 @@ export function AdventurePicker({
         kind: 'invalid',
         fileName,
         title: 'That file is too large',
-        detail: 'An adventure document can be up to 8 MB.',
+        detail: 'Adventure files can be up to 8 MB.',
       });
       return;
     }
@@ -88,8 +88,8 @@ export function AdventurePicker({
       setUpload({
         kind: 'invalid',
         fileName,
-        title: "That file isn't an adventure document",
-        detail: 'Pick the JSON file that osr-editor or osr-forge exported.',
+        title: "That file isn't valid JSON",
+        detail: 'Choose an adventure JSON file exported from osr-editor or osr-forge.',
       });
       return;
     }
@@ -102,7 +102,7 @@ export function AdventurePicker({
         kind: 'invalid',
         fileName,
         title: "That file isn't an adventure document",
-        detail: "It's JSON, but not an adventure. Pick the file that osr-editor or osr-forge exported.",
+        detail: 'Choose an adventure JSON file exported from osr-editor or osr-forge.',
       });
       return;
     }
@@ -114,7 +114,7 @@ export function AdventurePicker({
         setUpload({
           kind: 'invalid',
           fileName,
-          title: 'bxapi found a problem in this adventure',
+          title: 'This adventure has validation errors',
           detail: verdict.detail,
         });
     } catch (problem) {
@@ -259,8 +259,8 @@ export function AdventurePicker({
             </>
           }
         >
-          {partyRecommendation(upload.info) ?? 'It has no party recommendation.'} Upload it to add it to this
-          table's adventures.
+          {partyRecommendation(upload.info) ?? 'No party size or level recommendation.'} Upload it to add it
+          to this table.
         </Banner>
       )}
       <div className={styles.uploadRow}>
@@ -272,7 +272,7 @@ export function AdventurePicker({
         >
           Upload an adventure
         </Button>
-        <span className={styles.note}>A JSON document from osr-editor or osr-forge, up to 8 MB.</span>
+        <span className={styles.note}>Upload a JSON file from osr-editor or osr-forge (up to 8 MB).</span>
       </div>
 
       <ConfirmDialog
@@ -281,7 +281,7 @@ export function AdventurePicker({
           if (!open) setToDelete(null);
         }}
         title={`Delete ${toDelete?.info.name ?? 'this adventure'}?`}
-        description="The adventure leaves this table's list. Saves of games that used it stay."
+        description="This removes the adventure from your table's list. Existing saves from this adventure remain available."
         confirmLabel="Delete adventure"
         tone="danger"
         onConfirm={remove}

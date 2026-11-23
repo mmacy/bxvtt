@@ -97,7 +97,7 @@ describe('the town square', () => {
     player.table = { ...player.table, settings: { ...settings, caller_user_id: snapshot.user.id } };
     setup(player);
     expect(
-      await screen.findByText('Ruth is the caller, so Ruth leads the party out. Ask Ruth or the referee.'),
+      await screen.findByText('Ruth is the caller and leads the party out. Ask Ruth or the referee.'),
     ).toBeInTheDocument();
     for (const button of screen.getAllByRole('button', { name: 'Set out' })) expect(button).toBeDisabled();
   });
@@ -111,7 +111,7 @@ describe('leaving town', () => {
     api.sendCommand.mockResolvedValue(accepted(game));
     await user.click(await screen.findByRole('button', { name: 'Set out' }));
     const dialog = await screen.findByRole('dialog', { name: "Set out for the priory on Corvane's Holm?" });
-    expect(within(dialog).getByText('A tinder box to light it')).toBeInTheDocument();
+    expect(within(dialog).getByText('Tinder box')).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Set out' }));
     await waitFor(() =>
       expect(api.sendCommand).toHaveBeenCalledWith(
@@ -130,7 +130,7 @@ describe('leaving town', () => {
     await user.click(await screen.findByRole('button', { name: 'Set out' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Set out' }));
-    expect(await within(dialog).findByText("The party can't set out")).toBeInTheDocument();
+    expect(await within(dialog).findByText("Can't set out")).toBeInTheDocument();
   });
 });
 
@@ -143,7 +143,7 @@ describe('the outfitter', () => {
     expect(await screen.findByRole('button', { name: 'Add Torches (6) to the cart' })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Add Torches (6) to the cart' }));
-    await user.click(screen.getByRole('button', { name: 'Add one lot of Torches (6)' }));
+    await user.click(screen.getByRole('button', { name: 'Add one lot of torches' }));
     await user.click(screen.getByRole('button', { name: 'Add Sword to the cart' }));
     const cart = screen.getByRole('list', { name: 'Cart' });
     expect(within(cart).getByText('2 lots are 12 torches')).toBeInTheDocument();
@@ -187,7 +187,7 @@ describe('the outfitter', () => {
     api.sendCommand.mockResolvedValue(
       refused(game, 'items.equip.weapon_not_allowed', { class: 'cleric', item: 'sword' }),
     );
-    await user.click(screen.getByRole('button', { name: 'Wield Sword now' }));
+    await user.click(screen.getByRole('button', { name: 'Wield Sword' }));
     await waitFor(() =>
       expect(api.sendCommand).toHaveBeenLastCalledWith(
         store.getState().tableId,
@@ -195,9 +195,7 @@ describe('the outfitter', () => {
         game.revision + 1,
       ),
     );
-    expect(
-      await screen.findByText(/Clerics can use only certain weapons/, { selector: 'span' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/can't wield/i, { selector: 'span' })).toBeInTheDocument();
     expect(screen.getByText(/^Brenna buys /)).toBeInTheDocument();
     expect(useTownUi.getState().carts['character-0001']).toEqual({});
   });
@@ -210,9 +208,7 @@ describe('the outfitter', () => {
     await user.click(await screen.findByRole('button', { name: 'Add Leather to the cart' }));
     api.sendCommand.mockResolvedValue(refused(game, 'items.purchase.insufficient_funds', { cost_gp: 20 }));
     await user.click(screen.getByRole('button', { name: 'Buy for Brenna' }));
-    expect(
-      await screen.findByText("That costs 20 gp, and there isn't enough gold to pay for it."),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("That costs 20 gp, but you don't have enough gold.")).toBeInTheDocument();
     expect(useTownUi.getState().carts['character-0001']).toEqual({ leather: 1 });
   });
 
@@ -220,9 +216,9 @@ describe('the outfitter', () => {
     const { user } = setup();
     await user.click(screen.getByRole('tab', { name: 'Outfitter' }));
     await user.click(await screen.findByRole('button', { name: 'Add Rope (50’) to the cart' }));
-    await user.click(screen.getByRole('button', { name: 'Same for everyone you shop for' }));
+    await user.click(screen.getByRole('button', { name: 'Copy to your other characters' }));
     expect(useTownUi.getState().carts['character-0002']).toEqual({ rope: 1 });
-    expect(screen.getByRole('button', { name: 'Buy every cart (2)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Buy all carts (2)' })).toBeInTheDocument();
   });
 
   it('keeps each cart while the viewer visits another part of town', async () => {
@@ -244,8 +240,8 @@ describe('the outfitter', () => {
       .mockResolvedValueOnce(refused(game, 'items.purchase.insufficient_funds', { cost_gp: 20 }));
     await user.click(screen.getByRole('tab', { name: 'Outfitter' }));
     await user.click(await screen.findByRole('button', { name: 'Add Rope (50’) to the cart' }));
-    await user.click(screen.getByRole('button', { name: 'Same for everyone you shop for' }));
-    await user.click(screen.getByRole('button', { name: /^Buy every cart/ }));
+    await user.click(screen.getByRole('button', { name: 'Copy to your other characters' }));
+    await user.click(screen.getByRole('button', { name: /^Buy all carts/ }));
     await waitFor(() => expect(api.sendCommand).toHaveBeenCalledTimes(4), { timeout: 3000 });
     const ids = api.sendCommand.mock.calls.map((call) => (call[1] as { character_id?: string }).character_id);
     expect(ids).toEqual(['character-0001', 'character-0002', 'character-0003', 'character-0004']);
@@ -260,7 +256,7 @@ describe('the outfitter', () => {
     const { user } = setup(snapshot);
     await user.click(screen.getByRole('tab', { name: 'Outfitter' }));
     await user.click(await screen.findByRole('button', { name: 'Add Rope (50’) to the cart' }));
-    await user.click(screen.getByRole('button', { name: 'Same for everyone you shop for' }));
+    await user.click(screen.getByRole('button', { name: 'Copy to your other characters' }));
     expect(screen.getByText('Skips Osric, who is dead.')).toBeInTheDocument();
     expect(useTownUi.getState().carts['character-0003']).toBeUndefined();
     expect(useTownUi.getState().carts['character-0004']).toEqual({ rope: 1 });
@@ -303,7 +299,7 @@ describe('the temple', () => {
     hurtParty(snapshot);
     const { user } = setup(snapshot);
     await user.click(screen.getByRole('tab', { name: 'Temple' }));
-    const group = await screen.findByRole('group', { name: 'Who is treated' });
+    const group = await screen.findByRole('group', { name: 'Patient' });
     expect(
       within(group)
         .getAllByRole('button')
@@ -333,7 +329,7 @@ describe('the temple', () => {
         }),
       ]),
     );
-    expect(screen.getByText(/The whole party pays, not only the patient/)).toBeInTheDocument();
+    expect(screen.getByText(/The whole party shares temple fees/)).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Buy cure light wounds for Wren' }));
     await waitFor(() =>
       expect(api.sendCommand).toHaveBeenCalledWith(
@@ -401,7 +397,7 @@ describe('the treasure buyers', () => {
   it('says so when nobody carries treasure', async () => {
     const { user } = setup();
     await user.click(screen.getByRole('tab', { name: 'Treasure buyers' }));
-    expect(await screen.findByText('Nobody carries gems or jewellery')).toBeInTheDocument();
+    expect(await screen.findByText('No gems or jewellery to sell')).toBeInTheDocument();
   });
 });
 
@@ -564,10 +560,10 @@ describe('spells to prepare', () => {
     const { api, user, store } = setup(snapshot);
     const game = store.getState().game;
     if (!game) throw new Error('No game.');
-    const banner = await screen.findByText("Spells aren't prepared");
+    const banner = await screen.findByText('Unprepared spells');
     expect(banner).toBeInTheDocument();
     expect(screen.getAllByText(REST).length).toBeGreaterThanOrEqual(2);
-    expect(screen.queryByText('Looks ready')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ready')).not.toBeInTheDocument();
     api.sendCommand.mockResolvedValue(accepted(game));
     await user.click(screen.getAllByRole('button', { name: 'Rest for a night' })[0] as HTMLElement);
     await waitFor(() =>
@@ -594,11 +590,11 @@ describe('spells to prepare', () => {
 
   it('lists it with the other advice in the set-out dialog', async () => {
     const { user } = setup(withMage());
-    await screen.findByText("Spells aren't prepared");
+    await screen.findByText('Unprepared spells');
     await user.click(screen.getAllByRole('button', { name: 'Set out' })[0] as HTMLElement);
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText(REST)).toBeInTheDocument();
-    expect(within(dialog).getByText('A tinder box to light it')).toBeInTheDocument();
+    expect(within(dialog).getByText('Tinder box')).toBeInTheDocument();
   });
 
   it('says nothing about a new first-level cleric', async () => {
@@ -608,7 +604,7 @@ describe('spells to prepare', () => {
     await screen.findByRole('heading', { name: 'Hollin Ferry' });
     await waitFor(() => expect(api.fullCatalog).toHaveBeenCalledWith('classes'));
     await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(screen.queryByText("Spells aren't prepared")).not.toBeInTheDocument();
+    expect(screen.queryByText('Unprepared spells')).not.toBeInTheDocument();
   });
 });
 
@@ -625,7 +621,7 @@ describe('the temple and a dead member', () => {
   it('names the button "Osric, dead", lists raise dead first, and leaves every Buy button enabled', async () => {
     const { user } = setup(withDeadOsric());
     await user.click(screen.getByRole('tab', { name: 'Temple' }));
-    const group = await screen.findByRole('group', { name: 'Who is treated' });
+    const group = await screen.findByRole('group', { name: 'Patient' });
     expect(within(group).getByRole('button', { name: 'Osric, dead' })).toBeInTheDocument();
     expect(within(group).getByRole('button', { name: /^Brenna, \d+ of \d+ hp$/ })).toBeInTheDocument();
     const buttons = screen.getAllByRole('button', { name: /^Buy .* for Osric$/ });
@@ -642,19 +638,19 @@ describe('the temple and a dead member', () => {
     );
     await user.click(screen.getByRole('tab', { name: 'Temple' }));
     await user.click(await screen.findByRole('button', { name: 'Buy cure light wounds for Osric' }));
-    expect(await screen.findByText("The temple can't do that for Osric")).toBeInTheDocument();
+    expect(await screen.findByText("Couldn't treat Osric")).toBeInTheDocument();
     expect(api.sendCommand).toHaveBeenCalled();
   });
 
   it('shows the cleric level field to a referee only', async () => {
     const referee = setup(fixtureSnapshot('town', 'referee'));
     await referee.user.click(screen.getByRole('tab', { name: 'Temple' }));
-    expect(await screen.findByText("Temple cleric's level (optional)")).toBeInTheDocument();
+    expect(await screen.findByText('Cleric level (optional)')).toBeInTheDocument();
     referee.unmount();
     const player = setup(fixtureSnapshot('town', 'player'));
     await player.user.click(screen.getByRole('tab', { name: 'Temple' }));
-    await screen.findByRole('group', { name: 'Who is treated' });
-    expect(screen.queryByText("Temple cleric's level (optional)")).not.toBeInTheDocument();
+    await screen.findByRole('group', { name: 'Patient' });
+    expect(screen.queryByText('Cleric level (optional)')).not.toBeInTheDocument();
   });
 });
 
@@ -680,7 +676,7 @@ describe('recently in town', () => {
     const snapshot = fixtureSnapshot('town', 'player');
     makeCaster(snapshot, 'Tamsin', 'magic_user', { book: 1 });
     setup(snapshot);
-    await screen.findByText("Spells aren't prepared");
+    await screen.findByText('Unprepared spells');
     expect(screen.getByText(': Tamsin has none memorized')).toBeInTheDocument();
   });
 });
@@ -710,7 +706,7 @@ describe('member choosers name what they show', () => {
     tamsin.current_hp = 2;
     const { user } = setup(snapshot);
     await user.click(screen.getByRole('tab', { name: 'Temple' }));
-    const temple = await screen.findByRole('group', { name: 'Who is treated' });
+    const temple = await screen.findByRole('group', { name: 'Patient' });
     for (const button of chooserButtons(temple)) {
       expect(words(button.getAttribute('aria-label') ?? '')).toContain(words(button.textContent ?? ''));
     }
@@ -731,7 +727,7 @@ describe('town tokens', () => {
   it("wear the color of the player in the member's seat", async () => {
     const snapshot = fixtureSnapshot('town', 'player');
     const { container } = setup(snapshot);
-    await screen.findByRole('heading', { name: 'Purses and players' });
+    await screen.findByRole('heading', { name: 'Party purses' });
     const sam = snapshot.table.members.find((member) => member.name === 'Sam');
     const ruth = snapshot.table.members.find((member) => member.name === 'Ruth');
     if (!sam || !ruth) throw new Error('The fixture table changed.');

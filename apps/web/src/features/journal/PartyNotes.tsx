@@ -181,7 +181,7 @@ export function PartyNotes() {
         value={state.draft}
         aria-describedby={statusId}
         invalid={over}
-        placeholder="Write what the party should remember: names, debts, rumours, a map of the way back."
+        placeholder="Reeve Tamsin Hale promised 100 gp for Gashnak's ring. Locked iron door on level 1, east wall."
         className={styles.editor}
         wrapperClassName={styles.editorWrap}
         onChange={(event) => dispatch({ type: 'edit', text: event.target.value })}
@@ -206,7 +206,7 @@ export function PartyNotes() {
         )}
       </div>
       {state.status === 'error' && state.error !== null && (
-        <Banner tone="danger" title="Your notes aren't saved yet">
+        <Banner tone="danger" title="Couldn't save notes">
           <p className={styles.mergeText}>{state.error}</p>
           <Button size="sm" onClick={() => void save()}>
             Try again

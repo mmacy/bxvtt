@@ -154,13 +154,13 @@ function RefereeChoices() {
         <span id="end-choices">Continue from a save</span>
       </SectionLabel>
       {error !== null && (
-        <Banner tone="warning" title="Couldn't load the saves">
+        <Banner tone="warning" title="Couldn't load saves">
           {error}
         </Banner>
       )}
       {saves === null && error === null && <Skeleton lines={3} />}
       {saves !== null && saves.length === 0 && (
-        <p className={styles.endNote}>This table has no saves to restore.</p>
+        <p className={styles.endNote}>No saves are available to restore.</p>
       )}
       {saves !== null && saves.length > 0 && (
         <ul className={styles.saveList}>
@@ -193,14 +193,14 @@ function RefereeChoices() {
           </Button>
         )}
         <Button variant="ghost" icon="home" loading={pending && ending} onClick={() => setEnding(true)}>
-          Return the table to its lobby
+          Return to lobby
         </Button>
       </div>
       <ConfirmDialog
         open={restoring !== null}
         onOpenChange={(open) => !open && setRestoring(null)}
         title={`Restore ${restoring ? saveTitle(restoring) : 'this save'}?`}
-        description="The table moves to the saved game, and everyone keeps their seats."
+        description="Everyone resumes play from this saved game and keeps their current seats."
         confirmLabel="Restore save"
         onConfirm={async () => {
           if (restoring === null) return;
@@ -212,9 +212,9 @@ function RefereeChoices() {
       <ConfirmDialog
         open={ending}
         onOpenChange={setEnding}
-        title="Return the table to its lobby?"
-        description="The game ends for everyone, and its saves stay. Characters start each new game as they were created, so what happened to them in this game, such as experience, treasure, and deaths, stays in its saves. To keep playing the characters as they are now, continue from a save instead."
-        confirmLabel="Return to the lobby"
+        title="Return to lobby?"
+        description="This ends the current session for everyone, while keeping all saves. Starting a new game resets characters to their initial sheets, so restore a save if you want to continue with their earned experience, treasure, and injuries."
+        confirmLabel="Return to lobby"
         onConfirm={async () => {
           await run(() => getApi().endGame(tableId), { errorTitle: "Couldn't end the game" });
         }}
@@ -307,7 +307,7 @@ export function EndScreen() {
           <RefereeChoices />
         ) : (
           <Banner tone="neutral" title="The referee decides what comes next">
-            They can restore a save to play on, or return the table to its lobby for a new game.
+            The referee can restore a save to keep playing, or return to the lobby to start a new game.
           </Banner>
         )}
       </div>

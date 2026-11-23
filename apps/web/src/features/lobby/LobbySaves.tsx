@@ -45,10 +45,9 @@ export function LobbySaves() {
   if (!referee) {
     return (
       <p className={styles.note}>
-        This table has {saveCount(saves.length)} from earlier games. A new game starts every character as they
-        were created, so the experience, treasure, and deaths of an earlier game stay in its saves. To play on
-        with the characters as they were saved, the referee can continue from a save instead of starting a new
-        game.
+        This table has {saveCount(saves.length)} from earlier games. Starting a new game resets characters to
+        their initial sheets, while restoring a save keeps their earned experience, treasure, and injuries.
+        Ask the referee to continue from a save if you want to pick up where you left off.
       </p>
     );
   }
@@ -56,9 +55,9 @@ export function LobbySaves() {
     <div className={styles.continue}>
       <p className={styles.note}>
         This table has {saveCount(saves.length)} from earlier games
-        {newest ? `, the newest at ${formatGameClock(newest.clock.rounds)}` : ''}. A new game starts every
-        character as they were created, so the experience, treasure, and deaths of an earlier game stay in its
-        saves. To play on with the characters as they were saved, continue from a save.
+        {newest ? `, newest at ${formatGameClock(newest.clock.rounds)}` : ''}. Starting a new game resets
+        characters to their initial sheets. Continue from a save to keep your party's earned experience,
+        treasure, and injuries.
       </p>
       <Button variant="secondary" icon="undo" onClick={() => setOpen(true)}>
         Continue from a save

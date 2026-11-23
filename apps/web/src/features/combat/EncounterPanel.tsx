@@ -58,10 +58,10 @@ import { countBadge, countedGroup, groupHeading, theGroup, viewLabels } from './
 
 /** What each bearing means for the party's choices, from the `wait` and `parley` command documentation. */
 const STANCE_IMPLICATIONS: Record<string, string> = {
-  attacks: 'They attack now. Fight, or run before the battle starts.',
-  hostile: 'If the party waits, they attack once their patience runs out.',
-  uncertain: 'If the party waits, they decide again. Talking rolls their reaction again.',
-  indifferent: 'They leave the party be. Talking can still change their mood.',
+  attacks: 'Fight, or flee before battle begins.',
+  hostile: 'If you wait, they will attack once their patience runs out.',
+  uncertain: 'Wait to see what they do, or talk to roll their reaction again.',
+  indifferent: 'Talk if you want to test their reaction.',
   friendly: 'They mean the party no harm.',
 };
 
@@ -158,7 +158,7 @@ export function EncounterPanel() {
       )}
       {!commands.pursuit && opening.monstersSurprised && !opening.partySurprised && (
         <Banner tone="success" title="The monsters are surprised">
-          Fight now, and the party gets a free round while the monsters can't act.
+          Engage now to take a free round before the monsters can act.
         </Banner>
       )}
       {!commands.pursuit && opening.partySurprised && !opening.monstersSurprised && (
@@ -172,7 +172,7 @@ export function EncounterPanel() {
       <PlaybackStrip
         playback={playback}
         ctx={ctx}
-        summaryTitle="What happened"
+        summaryTitle="Result"
         idle={null}
         quietText={(item) => quietRound(item.commandType, encounter)}
       />
@@ -357,10 +357,10 @@ function PartyOptions({
       disabledReason: reasonFor(commands, 'parley'),
       loading: busy('parley'),
       popover: {
-        title: 'Who speaks for the party?',
+        title: 'Choose a speaker',
         content: (close) => (
           <List
-            aria-label="Who speaks for the party"
+            aria-label="Choose a speaker"
             onValueChange={(id) => {
               commands.talk(id);
               close();
@@ -397,7 +397,7 @@ function PartyOptions({
     options.push({
       icon: 'footprints',
       label: 'Flee',
-      description: 'Run before a battle starts. Monsters that are hostile give chase if they can.',
+      description: 'Flee before battle begins. Hostile monsters pursue if they can.',
       disabledReason: reasonFor(commands, 'evade'),
       loading: busy('evade'),
       popover: {
@@ -412,9 +412,9 @@ function PartyOptions({
           >
             {(
               [
-                ['none', 'Just run', 'Drop nothing.'],
-                ['treasure', 'Scatter coins', "Empties everyone's purse. Tempts clever pursuers."],
-                ['food', 'Drop food', 'One ration from each member. Tempts hungry pursuers.'],
+                ['none', 'Run', 'Drop nothing.'],
+                ['treasure', 'Scatter coins', "Empty everyone's purse to tempt clever pursuers."],
+                ['food', 'Drop food', 'Drop one ration per member to tempt hungry pursuers.'],
               ] as const
             ).map(([drop, label, hint]) => (
               <ListItem key={drop} value={drop} title={label} description={hint} />
@@ -430,7 +430,7 @@ function PartyOptions({
       label: commands.pursuit ? 'Turn and fight' : 'Fight',
       description: commands.pursuit
         ? 'Stop running and fight at the current distance.'
-        : 'Start a battle. Everyone declares, and the round resolves together.',
+        : 'Engage in battle. Everyone declares an action before each round resolves.',
       disabledReason: reasonFor(commands, 'engage_battle'),
       loading: busy('engage_battle'),
       primary: true,
@@ -451,10 +451,10 @@ function PartyOptions({
       popover:
         turners.length > 1
           ? {
-              title: 'Who presents the holy symbol?',
+              title: 'Choose who turns undead',
               content: (close) => (
                 <List
-                  aria-label="Who presents the holy symbol"
+                  aria-label="Choose who turns undead"
                   onValueChange={(id) => {
                     commands.turn(id);
                     close();
@@ -479,7 +479,7 @@ function PartyOptions({
   return (
     <div className={styles.optionsBlock}>
       {partyReason && <p className={styles.partyReason}>{partyReason}</p>}
-      <ul className={styles.options} aria-label="The party's choices">
+      <ul className={styles.options} aria-label="Encounter actions">
         {options.map((option) => (
           <Option
             key={option.label}
@@ -654,9 +654,7 @@ function UseItemPopover({
                 options={targets}
               />
             </Field>
-            <p className={styles.choiceHint}>
-              Using an item takes the round, and the monsters act on their bearing after it.
-            </p>
+            <p className={styles.choiceHint}>Using an item takes one round, after which the monsters act.</p>
             {error && <Banner tone="danger">{error}</Banner>}
             <Button size="sm" variant="primary" loading={pending} onClick={() => void use()}>
               Use {item?.name ?? 'the item'}
@@ -734,7 +732,7 @@ function GivePopover({ members, all, ctx }: { members: MemberView[]; all: Member
         <Field label="Gold pieces">
           <NumberInput value={gold} onChange={setGold} min={0} max={100000} width={6} />
         </Field>
-        <p className={styles.choiceHint}>Handing things over takes the round.</p>
+        <p className={styles.choiceHint}>Giving items takes one round.</p>
         {error && <Banner tone="danger">{error}</Banner>}
         <Button
           size="sm"
@@ -787,7 +785,7 @@ function DropPopover({
     <Popover
       open={open}
       onOpenChange={setOpen}
-      title={pursuit ? 'Drop something for the pursuers' : 'Drop items'}
+      title={pursuit ? 'Drop bait for pursuers' : 'Drop items'}
       width="300px"
       side="top"
       trigger={
@@ -823,8 +821,8 @@ function DropPopover({
         </Field>
         <p className={styles.choiceHint}>
           {pursuit
-            ? 'Dropped goods scatter behind the party and are lost. Coins tempt clever pursuers, and food tempts hungry ones.'
-            : 'Dropped goods land in a pile here. Dropping takes the round.'}
+            ? 'Items dropped during a chase are lost. Coins tempt clever pursuers, while food tempts hungry ones.'
+            : 'Dropped goods stay on the floor here. Dropping items takes one round.'}
         </p>
         {error && <Banner tone="danger">{error}</Banner>}
         <Button

@@ -17,7 +17,9 @@ export async function copyInviteLink(inviteCode: string): Promise<void> {
   const link = inviteLink(inviteCode);
   try {
     await navigator.clipboard.writeText(link);
-    toast.success('Invite link copied', { description: 'Send it to your players. It opens this table.' });
+    toast.success('Invite link copied', {
+      description: 'Share this link with players so they can join the table.',
+    });
   } catch {
     toast.info('Copy the invite link', { description: link, duration: 15_000 });
   }
@@ -35,8 +37,8 @@ export function InvitePanel() {
 
   const regenerate = async () => {
     const result = await run(() => getApi().regenerateInviteCode(table.id), {
-      success: 'The invite link changed',
-      errorTitle: "Couldn't change the invite link",
+      success: 'Invite link replaced',
+      errorTitle: "Couldn't replace invite link",
     });
     if (result.ok) store.getState().receiveTable(result.value);
   };
@@ -59,14 +61,14 @@ export function InvitePanel() {
       {referee && (
         <>
           <Button size="sm" variant="ghost" icon="refresh" onClick={() => setConfirming(true)}>
-            Make a new link
+            Replace invite link
           </Button>
           <ConfirmDialog
             open={confirming}
             onOpenChange={setConfirming}
-            title="Make a new invite link?"
-            description="The current link stops working. People already at the table stay."
-            confirmLabel="Make a new link"
+            title="Replace invite link?"
+            description="Anyone with the current link will no longer be able to use it to join. Current table members keep their places."
+            confirmLabel="Replace invite link"
             onConfirm={regenerate}
           />
         </>

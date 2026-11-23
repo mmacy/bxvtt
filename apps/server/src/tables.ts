@@ -362,7 +362,10 @@ export class TableStore {
    */
   requireLobby(tableId: string): void {
     if (this.game(tableId) !== null) {
-      throw new ApiError('game_active', 'The table is playing a game. End the game to change the roster.');
+      throw new ApiError(
+        'game_active',
+        'A game is in progress. End the game before changing the party roster.',
+      );
     }
   }
 }
@@ -387,10 +390,13 @@ export function registerTableRoutes(app: FastifyInstance, ctx: Context): void {
       const key = addressKey(request.clientIp);
       const blocked = ctx.limits.failedHostKey.peek(key);
       if (blocked > 0)
-        throw rateLimited('This address has sent too many wrong host keys. Try again later.', blocked);
+        throw rateLimited(
+          'Too many incorrect host key attempts from this IP address. Try again later.',
+          blocked,
+        );
       if (body.host_key === undefined || !secretsEqual(body.host_key, ctx.config.hostKey)) {
         if (body.host_key !== undefined) ctx.limits.failedHostKey.take(key);
-        throw new ApiError('host_key_required', 'Creating a table on this server needs the host key.');
+        throw new ApiError('host_key_required', 'Enter the host key from the server host to create a table.');
       }
     }
     const created = num(
@@ -400,7 +406,7 @@ export function registerTableRoutes(app: FastifyInstance, ctx: Context): void {
     if (created >= ctx.config.quotas.tablesPerUser) {
       throw new ApiError(
         'forbidden',
-        `You have created ${created} tables, the most this server allows. Delete one you no longer use.`,
+        `You already have ${created} tables, which is the limit per user. Delete a table you no longer use.`,
       );
     }
     const id = tables.create(body.name, user);
@@ -424,8 +430,8 @@ export function registerTableRoutes(app: FastifyInstance, ctx: Context): void {
     const settings = body.settings ?? {};
     if (settings.caller_user_id !== undefined && settings.caller_user_id !== null) {
       if (tables.roleOf(tableId, settings.caller_user_id) === null) {
-        throw new ApiError('validation_error', 'The caller must be a member of the table.', {
-          errors: [{ path: ['settings', 'caller_user_id'], message: 'not a member of the table' }],
+        throw new ApiError('validation_error', 'The caller must be a member of this table.', {
+          errors: [{ path: ['settings', 'caller_user_id'], message: 'Caller must be a table member.' }],
         });
       }
     }
@@ -473,14 +479,18 @@ export function registerTableRoutes(app: FastifyInstance, ctx: Context): void {
   app.post('/api/join', async (request) => {
     const user = ctx.auth.user(request);
     const retry = ctx.limits.join.take(addressKey(request.clientIp));
-    if (retry > 0) throw rateLimited('This address has tried too many invite codes. Try again later.', retry);
+    if (retry > 0)
+      throw rateLimited('Too many invite code attempts from this IP address. Try again later.', retry);
     const body = parseBody(JoinTableRequest, request);
     const row = ctx.db.get(
       'SELECT id FROM tables WHERE invite_code = ?',
       normalizeInviteCode(body.invite_code),
     );
     if (row === undefined)
-      throw new ApiError('invite_invalid', 'No table has that invite code. Check it with the referee.');
+      throw new ApiError(
+        'invite_invalid',
+        "That invite code doesn't match any table. Check the code with your referee.",
+      );
     const tableId = str(row, 'id');
     if (tables.roleOf(tableId, user.id) === null) {
       ctx.db.run(
@@ -507,7 +517,7 @@ export function registerTableRoutes(app: FastifyInstance, ctx: Context): void {
     if (role === 'referee' && tables.refereeCount(tableId) === 1) {
       throw new ApiError(
         'last_referee',
-        'You are the only referee. Make another member a referee before you leave.',
+        "You are the table's only referee. Promote another member to referee before leaving.",
       );
     }
     tables.removeMember(tableId, user.id);
@@ -528,7 +538,7 @@ export function registerTableRoutes(app: FastifyInstance, ctx: Context): void {
     if (current === 'referee' && body.role === 'player' && tables.refereeCount(tableId) === 1) {
       throw new ApiError(
         'last_referee',
-        'A table needs at least one referee. Make another member a referee first.',
+        'Every table needs at least one referee. Promote another member to referee first.',
       );
     }
     if (current !== body.role) {
@@ -551,7 +561,7 @@ export function registerTableRoutes(app: FastifyInstance, ctx: Context): void {
     const user = ctx.auth.user(request);
     tables.requireReferee(tableId, user);
     if (userId === user.id) {
-      throw new ApiError('forbidden', 'To leave the table yourself, use the leave route.');
+      throw new ApiError('forbidden', 'Use Leave table to leave the table yourself.');
     }
     if (tables.roleOf(tableId, userId) === null) notFound('member', userId);
     tables.removeMember(tableId, userId);
@@ -578,13 +588,13 @@ export function registerTableRoutes(app: FastifyInstance, ctx: Context): void {
       body.character_id,
     );
     if (existing !== undefined)
-      throw new ApiError('duplicate_character', 'That character is already on the roster.');
+      throw new ApiError('duplicate_character', 'That character is already on the party roster.');
     const count = num(
       ctx.db.get('SELECT count(*) AS n FROM roster WHERE table_id = ?', tableId) ?? { n: 0 },
       'n',
     );
     if (count >= 20) {
-      throw new ApiError('forbidden', 'A party has at most 20 members, and the roster is full.');
+      throw new ApiError('forbidden', 'The party roster is full (maximum 20 characters).');
     }
     const position = num(
       ctx.db.get('SELECT coalesce(max(position), -1) + 1 AS p FROM roster WHERE table_id = ?', tableId) ?? {
@@ -613,7 +623,10 @@ export function registerTableRoutes(app: FastifyInstance, ctx: Context): void {
     const entry = ctx.db.get('SELECT * FROM roster WHERE table_id = ? AND id = ?', tableId, entryId);
     if (entry === undefined) notFound('roster entry', entryId);
     if (role !== 'referee' && str(entry, 'owner_user_id') !== user.id) {
-      throw new ApiError('forbidden', "Only the character's owner or a referee can take it off the roster.");
+      throw new ApiError(
+        'forbidden',
+        "Only that character's owner or a referee can remove them from the roster.",
+      );
     }
     ctx.db.run('DELETE FROM roster WHERE id = ?', entryId);
     tables.broadcastTable(tableId);

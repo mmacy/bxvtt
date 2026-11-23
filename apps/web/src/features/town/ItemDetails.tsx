@@ -19,7 +19,7 @@ export function ItemDetails({ item, lots, onAdd, buyerName, disabled }: ItemDeta
     return (
       <div className={styles.empty}>
         <Icon name="search" size={20} />
-        <p>Choose an item to see its damage, armour class, weight, and what a lot holds.</p>
+        <p>Select an item to view its stats, weight, and bundle size.</p>
       </div>
     );
   }
@@ -69,7 +69,7 @@ export function ItemDetails({ item, lots, onAdd, buyerName, disabled }: ItemDeta
       ))}
       <Button variant="secondary" icon="plus" disabled={disabled} onClick={onAdd}>
         {lots > 0
-          ? `Add another to ${buyerName ?? 'the'} cart`
+          ? `Add another to ${buyerName ? `${buyerName}'s` : 'the'} cart`
           : `Add to ${buyerName ? `${buyerName}'s` : 'the'} cart`}
       </Button>
     </article>

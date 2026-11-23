@@ -133,7 +133,7 @@ describe('describeTarget', () => {
     const door = hitTest(scene, { x: 26.5, y: 8.04 }, { zoom: 40 });
     expect(door && describeTarget(door, map)).toEqual({ title: 'Door', lines: ['Closed, locked, stuck.'] });
     const secret = hitTest(scene, { x: 24.04, y: 17.5 }, { zoom: 40 });
-    expect(secret && describeTarget(secret, map)?.title).toBe('Secret door, not found');
+    expect(secret && describeTarget(secret, map)?.title).toBe('Secret door (undiscovered)');
     const cell = hitTest(scene, { x: 15.5, y: 3.5 }, { zoom: 40 });
     expect(cell && describeTarget(cell, map)).toMatchObject({ title: '3. Guard post' });
     expect(cell && describeTarget(cell, map)?.lines[0]).toBe('Encounter: 4 goblin');

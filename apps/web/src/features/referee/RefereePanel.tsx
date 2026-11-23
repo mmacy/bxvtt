@@ -31,14 +31,14 @@ import { useRefereeData, type RefereeData } from './useReferee';
 export type RefereeSection = 'now' | 'actions' | 'story' | 'key' | 'tables' | 'commands' | 'log' | 'notes';
 
 const SECTIONS: ReadonlyArray<{ value: RefereeSection; label: string; title: string; icon: IconName }> = [
-  { value: 'now', label: 'Now', title: 'Here and now', icon: 'eye' },
+  { value: 'now', label: 'Now', title: 'Current location', icon: 'eye' },
   { value: 'actions', label: 'Act', title: 'Quick actions', icon: 'hand' },
   { value: 'story', label: 'Story', title: 'Quests, flags, and triggers', icon: 'flag' },
-  { value: 'key', label: 'Key', title: 'The adventure key', icon: 'book' },
+  { value: 'key', label: 'Key', title: 'Adventure key', icon: 'book' },
   { value: 'tables', label: 'Roll', title: 'Generators', icon: 'dice' },
-  { value: 'log', label: 'Log', title: 'The log behind the screen', icon: 'feed' },
+  { value: 'log', label: 'Log', title: 'Referee log', icon: 'feed' },
   { value: 'notes', label: 'Notes', title: 'Private notes', icon: 'edit' },
-  { value: 'commands', label: 'All', title: 'Every referee command', icon: 'command' },
+  { value: 'commands', label: 'All', title: 'All commands', icon: 'command' },
 ];
 
 /** Below this width the section tabs show icons only, with the section's name under them. */
@@ -96,7 +96,7 @@ function StatusStrip({ data }: { data: RefereeData }) {
         {place?.kind === 'dungeon' && (
           <IconButton
             icon="target"
-            label="Center the map on the party"
+            label="Center map on party"
             size="sm"
             variant="ghost"
             onClick={() => requestFocus({ kind: 'party' })}
@@ -134,11 +134,11 @@ function EndedBanner() {
         title={endedSentence(ended)}
         actions={
           <Button size="sm" variant="secondary" onClick={() => setSavesOpen(true)}>
-            Open the saves
+            View saves
           </Button>
         }
       >
-        Commands that change the story ask first. To play on, restore a save.
+        Referee commands that alter the story require confirmation. Restore a save to continue playing.
       </Banner>
     </div>
   );
@@ -154,7 +154,7 @@ function SectionActions({ onOpen }: { onOpen: (section: RefereeSection) => void 
   };
   useAction({
     id: 'referee.now',
-    label: 'Referee: here and now',
+    label: 'Referee: current location',
     group: 'Referee',
     icon: 'eye',
     run: () => open('now'),
@@ -175,7 +175,7 @@ function SectionActions({ onOpen }: { onOpen: (section: RefereeSection) => void 
   });
   useAction({
     id: 'referee.key',
-    label: 'Referee: the adventure key',
+    label: 'Referee: adventure key',
     group: 'Referee',
     icon: 'book',
     run: () => open('key'),
@@ -189,7 +189,7 @@ function SectionActions({ onOpen }: { onOpen: (section: RefereeSection) => void 
   });
   useAction({
     id: 'referee.log',
-    label: 'Referee: the log behind the screen',
+    label: 'Referee: referee log',
     group: 'Referee',
     icon: 'feed',
     run: () => open('log'),
@@ -203,7 +203,7 @@ function SectionActions({ onOpen }: { onOpen: (section: RefereeSection) => void 
   });
   useAction({
     id: 'referee.commands',
-    label: 'Referee: every referee command',
+    label: 'Referee: all commands',
     group: 'Referee',
     icon: 'command',
     run: () => open('commands'),
@@ -231,7 +231,7 @@ export function RefereePanel() {
           icon="referee"
           size="compact"
           title="Referee tools"
-          description="The referee's key, actions, and log show here while a game is running."
+          description="Start a game to use the adventure key, quick actions, and referee log."
         />
       </div>
     );

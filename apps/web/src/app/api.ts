@@ -43,102 +43,104 @@ export function isNetworkError(error: unknown): boolean {
 
 const FIXED: Record<string, { title: string; detail: string }> = {
   bad_request: {
-    title: "The server couldn't read that request",
+    title: "The server couldn't process that request",
     detail: 'Reload the page and try again.',
   },
   unauthorized: {
-    title: "This server doesn't know your name anymore",
-    detail: 'Pick a name again on the home page to continue.',
+    title: 'Your sign-in expired',
+    detail: 'Choose your name on the home page to continue.',
   },
   token_retired: {
-    title: "You've signed in from another browser",
+    title: 'You signed in from another browser',
     detail:
-      "A referee let you back in at a table from another browser, so this browser's sign-in stopped working. Play on there, or open the table's invite link here and choose \"I've played at this table before\".",
+      'A referee approved your rejoin request in another browser, which signed this browser out. Keep playing in that browser, or open the table invite link here and choose "I\'ve played at this table before".',
   },
   referee_required: { title: 'Only a referee can do that', detail: 'Ask the referee at your table.' },
   host_key_required: {
-    title: 'Creating a table here needs the host key',
-    detail: 'Enter the host key that the person running this server gave you.',
+    title: 'Host key required to create a table',
+    detail: 'Enter the host key from the server host.',
   },
   referee_command: { title: 'Only a referee can do that', detail: 'Ask the referee at your table.' },
   not_found: {
-    title: "That isn't here anymore",
-    detail: 'Someone may have removed it. Reload the page to see the table as it is now.',
+    title: 'That item is no longer here',
+    detail: 'Someone might have removed it. Reload the page to get the latest table state.',
   },
   invite_invalid: {
-    title: "That invite code doesn't match a table",
-    detail: 'Check the code, or ask the referee for a new invite link.',
+    title: "That invite code isn't valid",
+    detail: 'Check the link or code, or ask the referee for the current invite link.',
   },
   last_referee: {
-    title: 'The table needs a referee',
-    detail: 'Make another member a referee first.',
+    title: 'Every table must have at least one referee',
+    detail: 'Make another member a referee before stepping down.',
   },
   game_active: {
-    title: 'The game is running',
-    detail: 'The lobby is locked while you play. The referee can end the game to change it.',
+    title: 'A game is in progress',
+    detail: 'You cannot change lobby setup during play. Ask the referee to return to the lobby first.',
   },
-  no_game: { title: 'No game is running', detail: 'The referee starts one from the lobby.' },
+  no_game: {
+    title: 'No game is in progress',
+    detail: 'Ask the referee to start a game from the lobby.',
+  },
   duplicate_character: {
     title: 'That character is already in the party',
-    detail: 'Pick a different character.',
+    detail: 'Choose a different character.',
   },
   roster_empty: {
     title: 'The party is empty',
-    detail: 'Add at least one character before you start the game.',
+    detail: 'Add at least one character before starting the game.',
   },
   revision_conflict: {
     title: 'The table changed',
-    detail: 'Someone acted before you did. Look at the new state and choose again.',
+    detail: 'Someone acted just before you. Check the updated table and try again.',
   },
   stale_version: {
     title: 'Someone else saved these notes first',
-    detail: 'Their version is showing now. Make your change again.',
+    detail: 'You are viewing their latest changes now. Apply your edit again.',
   },
   not_in_battle: {
-    title: "The party isn't in a battle",
-    detail: 'Declarations apply only during a battle round.',
+    title: "The party isn't in battle",
+    detail: 'You can declare actions only during a battle round.',
   },
   not_a_declarer: {
-    title: "That character doesn't declare this round",
-    detail: "They can't act in this round.",
+    title: "That character can't declare an action this round",
+    detail: 'Choose a character who can act this round.',
   },
   declarations_incomplete: {
-    title: 'Some characters still need to declare',
-    detail: 'The round resolves when every character has declared. A referee can resolve it early.',
+    title: 'Not everyone has declared an action',
+    detail: 'Wait for every eligible character to declare, or ask the referee to resolve the round early.',
   },
   use_declarations: {
-    title: 'Battle rounds resolve from declarations',
-    detail: 'Declare an action for each character instead.',
+    title: 'Declare actions for the round first',
+    detail: 'Submit a declaration for each character, then resolve the round.',
   },
   ability_roll_used: {
-    title: 'Those ability scores already made a character',
-    detail: 'Roll new ability scores to make another.',
+    title: 'You already used this ability roll',
+    detail: 'Roll new ability scores to create another character.',
   },
   version_unsupported: {
-    title: 'That document is newer than this server',
-    detail: 'Ask the host to update bxapi, or export the document for an older version.',
+    title: 'This server does not support that file version',
+    detail: 'Ask the server host to update the game service, or export the file in an older format.',
   },
   session_busy: { title: 'The table is busy', detail: 'Wait a moment and try again.' },
   adventure_read_only: {
-    title: 'Built-in adventures stay',
-    detail: 'You can delete only an adventure that your table uploaded.',
+    title: "Built-in adventures can't be deleted",
+    detail: 'You can delete only adventures uploaded to this table.',
   },
   content_too_large: {
-    title: 'That is too large to send',
-    detail: 'An adventure document can be up to 8 MB. Other requests can be up to 64 KB.',
+    title: 'That file or message is too large',
+    detail: 'Adventure files can be up to 8 MB, while other requests can be up to 64 KB.',
   },
   unsupported_media_type: {
-    title: "The server couldn't read that request",
+    title: 'Unsupported request format',
     detail: 'Reload the page and try again.',
   },
   validation_error: {
-    title: "Something in that request isn't right",
-    detail:
-      "Check what you entered. Names and labels can't contain control characters or text direction marks.",
+    title: 'Check what you entered',
+    detail: "Names and labels can't contain control characters or text direction marks.",
   },
   unknown_command: {
-    title: "The rules engine doesn't know that action",
-    detail: 'Reload the page. The server may have been updated.',
+    title: "That action isn't recognized",
+    detail: 'Reload the page. The server might have been updated.',
   },
   party_invalid: {
     title: "These characters can't form a party",
@@ -146,58 +148,61 @@ const FIXED: Record<string, { title: string; detail: string }> = {
   },
   internal_error: {
     title: 'Something went wrong on the server',
-    detail: 'Try again. If it keeps happening, tell the person who runs this server.',
+    detail: 'Try again. If it keeps happening, contact the server host.',
   },
   bxapi_error: {
-    title: 'The rules engine gave an unexpected answer',
-    detail: 'Try again. If it keeps happening, tell the person who runs this server.',
+    title: 'The game server returned an unexpected response',
+    detail: 'Try again. If it keeps happening, contact the server host.',
   },
   bxapi_unavailable: {
-    title: "The rules engine isn't answering",
-    detail: "bxvtt can't reach bxapi. Ask the person who runs this server to start it, then try again.",
+    title: "Can't reach the game service",
+    detail:
+      "The server can't reach the game service. Ask the server host to start the game service, then try again.",
   },
   bxapi_storage_full: {
-    title: "The rules engine's storage is full",
+    title: 'Server storage is full',
     detail:
-      "bxvtt can't store anything new until there is room: no new characters, games, moves, or saves. A referee can delete tables nobody plays and saves nobody will restore. If that isn't enough, ask the person who runs this server to raise the rules engine's storage limit.",
+      "You can't create characters, start games, make moves, or save until space is freed. A referee can delete unused tables and old saves, or ask the server host to raise the storage limit.",
   },
   method_not_allowed: {
-    title: "The server doesn't take that request",
-    detail: 'Reload the page. The server may have been updated.',
+    title: 'The server rejected that request method',
+    detail: 'Reload the page. The server might have been updated.',
   },
   server_unavailable: {
-    title: "The bxvtt server isn't answering",
-    detail: 'It may be starting or restarting. Wait a few seconds and try again.',
+    title: "The bxvtt server isn't responding",
+    detail: 'It might be starting or restarting. Wait a few seconds and try again.',
   },
   invalid_response: {
-    title: "The server's answer couldn't be read",
-    detail: 'Reload the page. If it keeps happening, check that the address points at your bxvtt server.',
+    title: 'Received an unreadable response from the server',
+    detail: 'Reload the page. If it keeps happening, check that this address points to your bxvtt server.',
   },
   target_unknown: {
-    title: "That target isn't there anymore",
-    detail: 'The situation changed. Choose a target again.',
+    title: 'That target is no longer there',
+    detail: 'Choose a target again.',
   },
   character_invalid: {
-    title: 'That character breaks a rule',
-    detail: "Check the character's choices and try again.",
+    title: "Those character choices aren't valid",
+    detail: 'Review your choices and try again.',
   },
   rejoin_member_online: {
     title: 'That member is at the table right now',
-    detail: "Nobody needs to come back in as them. If that's you in another browser, keep playing there.",
+    detail:
+      "You can't rejoin as someone who is currently online. If that's you in another browser, keep playing in that browser.",
   },
   rejoin_pending: {
-    title: 'A request to come back in is already waiting',
+    title: 'A rejoin request is already pending',
     detail:
-      'Someone already asked to come back in as this member. Ask again after a referee answers it or it ends, in a few minutes at most.',
+      'Someone already asked to rejoin as this member. Try again after a referee responds or the request expires in a few minutes.',
   },
   rejoin_not_pending: {
-    title: 'That request has ended',
-    detail: 'A referee answered it, it ran out of time, or it was cancelled. Ask again if you still need to.',
+    title: 'That rejoin request has ended',
+    detail:
+      'A referee responded, the request expired, or it was cancelled. Send a new rejoin request if you still need one.',
   },
   rejoin_no_approver: {
-    title: 'No referee can let this member back in',
+    title: 'No referee is available to approve this rejoin request',
     detail:
-      "A referee can't approve their own request. If you run this server, open it on the host computer at its local address, where your sign-in still works.",
+      "Referees can't approve their own rejoin requests. If you are the server host, open bxvtt at its local address on the host computer, where you are still signed in.",
   },
 };
 
@@ -207,17 +212,17 @@ function describeKnownProblem(problem: Problem): ProblemMessage {
     const seconds = problem.retry_after;
     return {
       code,
-      title: 'That was a lot in a short time',
+      title: 'Too many requests',
       detail:
         seconds === undefined
-          ? 'The server slows down busy clients. Wait a moment and try again.'
-          : `The server slows down busy clients. Wait ${seconds === 1 ? 'a second' : `${seconds} seconds`} and try again.`,
+          ? 'Wait a moment and try again.'
+          : `Wait ${seconds === 1 ? '1 second' : `${seconds} seconds`} and try again.`,
     };
   }
   if (code === 'character_invalid' && problem.rejections && problem.rejections.length > 0) {
     return {
       code,
-      title: 'That character breaks a rule',
+      title: "Those character choices aren't valid",
       detail: describeRejectionsText(
         problem.rejections.map((r) => ({ code: r.code, params: toParamMap(r.params) })),
       ),
@@ -226,13 +231,13 @@ function describeKnownProblem(problem: Problem): ProblemMessage {
   // The server writes these details for a person: a seat check ("Only the player in Brenna's seat..."), a
   // quota ("You have 200 characters, the most this server keeps..."), or a full level of annotations.
   if (code === 'forbidden') {
-    return { code, title: "That isn't allowed here", detail: problem.detail };
+    return { code, title: "You can't do that here", detail: problem.detail };
   }
   if (code === 'content_too_large' && /annotations/.test(problem.detail)) {
-    return { code, title: 'The map is full of marks', detail: problem.detail };
+    return { code, title: 'Too many map marks on this level', detail: problem.detail };
   }
   if (code === 'content_invalid') {
-    return { code, title: "That document isn't valid", detail: problem.detail };
+    return { code, title: "That file isn't valid", detail: problem.detail };
   }
   const fixed = FIXED[code];
   if (fixed !== undefined) return { code, title: fixed.title, detail: fixed.detail };
@@ -255,7 +260,7 @@ export function describeProblem(error: unknown): ProblemMessage {
     return {
       code: 'network',
       title: "Can't reach the bxvtt server",
-      detail: 'Check your connection, or ask the person who runs the server whether it is up.',
+      detail: 'Check your connection, or ask the server host whether the server is running.',
     };
   }
   return {

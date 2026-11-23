@@ -21,14 +21,14 @@ export const DOOR_PROMPT =
 
 /** The section titles of the referee tab, which name its tabs when the dock is narrow. */
 export const REFEREE_SECTIONS = {
-  now: 'Here and now',
+  now: 'Current location',
   actions: 'Quick actions',
   story: 'Quests, flags, and triggers',
-  key: 'The adventure key',
+  key: 'Adventure key',
   tables: 'Generators',
-  log: 'The log behind the screen',
+  log: 'Referee log',
   notes: 'Private notes',
-  commands: 'Every referee command',
+  commands: 'All commands',
 } as const;
 
 /** Opens the referee tab of the dock and one of its sections, and returns the section's panel. */
@@ -52,7 +52,9 @@ export async function openRefereeSection(
  * cell coordinates only while the switch is on.
  */
 export async function showIds(page: Page, on: boolean): Promise<void> {
-  const toggle = page.getByRole('tabpanel', { name: 'Referee' }).getByRole('switch', { name: 'Show IDs' });
+  const toggle = page
+    .getByRole('tabpanel', { name: 'Referee', exact: true })
+    .getByRole('switch', { name: 'Show IDs' });
   if ((await toggle.isChecked()) !== on) await toggle.click();
   if (on) await expect(toggle).toBeChecked();
   else await expect(toggle).not.toBeChecked();
@@ -105,7 +107,7 @@ export async function clickMapOffset(page: Page, dx: number, dy: number, cellPx 
 /** Opens a dialog from the table menu, such as "Saves" or "Seats and caller", and returns it. */
 export async function openFromTableMenu(page: Page, item: string, dialogName = item): Promise<Locator> {
   await page.getByRole('button', { name: 'Table menu' }).click();
-  // An exact match, because a looser one for "Saves" would also pick "Save the game".
+  // An exact match, because a looser one for "Saves" would also pick "Save game".
   await page.getByRole('menuitem', { name: item, exact: true }).click();
   const dialog = page.getByRole('dialog', { name: dialogName });
   await expect(dialog).toBeVisible();

@@ -24,6 +24,7 @@ import {
   extendContextWithNames,
   extendContextWithReferee,
   humanizeMessage,
+  itemLabel,
   itemName,
   itemNounFromName,
   itemPhrase,
@@ -195,6 +196,17 @@ describe('item names (reported)', () => {
     expect(itemPhrase(resolveItemNoun('hand_of_saint_corvane', ctx))).toBe('the Hand of Saint Corvane');
     expect(itemPhrase(resolveItemNoun('thieves_tools', ctx))).toBe("thieves' tools");
     expect(itemPhrase(resolveItemNoun('thieves_tools', ctx), 2)).toBe("2 sets of thieves' tools");
+    expect(itemLabel(resolveItemNoun('chainmail', ctx))).toBe('Chainmail');
+    expect(itemLabel(resolveItemNoun('leather', ctx))).toBe('Leather armour');
+    expect(itemLabel(resolveItemNoun('plate_mail', ctx))).toBe('Plate mail');
+    expect(itemLabel(resolveItemNoun('shield', ctx))).toBe('Shield');
+    expect(itemLabel(resolveItemNoun('mace', ctx))).toBe('Mace');
+    expect(itemLabel(resolveItemNoun('backpack', ctx))).toBe('Backpack');
+    expect(itemLabel(resolveItemNoun('tinder_box', ctx))).toBe('Tinder box');
+    expect(itemLabel(resolveItemNoun('waterskin', ctx))).toBe('Waterskin');
+    expect(itemLabel(resolveItemNoun('torch', ctx), 6)).toBe('6 torches');
+    expect(itemLabel(resolveItemNoun('rations_standard', ctx), 7)).toBe('7 standard rations');
+    expect(itemLabel(resolveItemNoun('hand_of_saint_corvane', ctx))).toBe('Hand of Saint Corvane');
   });
 
   it.each([
@@ -849,10 +861,10 @@ describe('flags in words (referee confirmations)', () => {
     const priory = extendContextWithReferee(emptyContext(), { adventure: bell.payload } as never);
     const sluice = describeEvent(flagSet('priory.sluice', 'open'), priory);
     expect(sluice.text).toBe('The referee sets the priory sluice flag to "open".');
-    expect(sluice.detail).toMatch(/^Entering the sluice room also sets it\./);
+    expect(sluice.detail).toMatch(/^Also set by entering the sluice room\./);
     const toll = extendContextWithReferee(emptyContext(), { adventure: bridge.payload } as never);
     expect(describeEvent(flagSet('bridge.captain', 'beaten'), toll).detail).toMatch(
-      /The trigger for entering the toll gate reads it\./,
+      /Checked by the trigger for entering the toll gate\./,
     );
   });
 });

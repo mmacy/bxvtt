@@ -46,15 +46,15 @@ export function CatalogGate<T>({
       return (
         <EmptyState
           icon="book"
-          title={`No ${label} to show`}
-          description="The rules server returned an empty list."
+          title={`No ${label} available`}
+          description={`No ${label} entries were found in this catalog.`}
         />
       );
     return <>{children(result.data)}</>;
   }
-  if (result.error !== null) return <CatalogProblem title={`Couldn't load the ${label}`} result={result} />;
+  if (result.error !== null) return <CatalogProblem title={`Couldn't load ${label}`} result={result} />;
   return (
-    <div className={styles.loading} aria-busy="true" aria-label={`Loading the ${label}`}>
+    <div className={styles.loading} aria-busy="true" aria-label={`Loading ${label}`}>
       <Skeleton shape="block" height={36} />
       <Skeleton shape="text" lines={8} />
     </div>
@@ -72,7 +72,7 @@ export function NoMatches({ onClear, message }: { onClear: () => void; message?:
     <EmptyState
       icon="search"
       size="compact"
-      title="Nothing matches those filters"
+      title="No matching entries"
       description={message}
       action={
         <Button size="sm" variant="secondary" onClick={onClear}>

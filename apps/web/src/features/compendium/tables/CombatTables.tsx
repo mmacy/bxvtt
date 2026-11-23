@@ -57,7 +57,7 @@ function TurningRows({ table }: { table: CombatTableSet }) {
           <tr key={row.label}>
             <th scope="row">{row.label}</th>
             {columns.map((column) => {
-              const value = row.cells[column] ?? '—';
+              const value = row.cells[column] ?? '';
               return (
                 <td
                   key={column}

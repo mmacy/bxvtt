@@ -178,7 +178,7 @@ export function RangeTrack({
   return (
     <figure
       className={cx(styles.track, compact && styles.compact, !animate && styles.still)}
-      aria-label="Battlefield: the party on the left, the monsters on the right"
+      aria-label="Battlefield: party on the left, monsters on the right"
     >
       <div className={styles.lane} style={laneStyle}>
         <div className={styles.line} style={{ left: at(0) }} aria-hidden="true"></div>

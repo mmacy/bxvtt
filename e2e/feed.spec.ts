@@ -45,8 +45,8 @@ async function townTable(crew: Crew): Promise<{ ruth: Actor; sam: Actor; pip: Ac
     referee: ruth,
     players: [sam, pip],
     party: [
-      { owner: sam, name: 'Brenna', classId: 'fighter' },
-      { owner: pip, name: 'Wren', classId: 'thief' },
+      { owner: sam, name: 'Flarg', classId: 'fighter' },
+      { owner: pip, name: 'Tinks', classId: 'thief' },
     ],
   });
   for (const person of [ruth, sam, pip]) {
@@ -71,7 +71,7 @@ test.describe('feed', () => {
     await expect(feed(sam.page).getByText("I want to steal the reeve's purse")).toBeVisible();
 
     // A whisper chosen from the menu: Pip whispers to Sam, and the referee doesn't read it.
-    await pip.page.getByRole('button', { name: 'Whisper to someone' }).click();
+    await pip.page.getByRole('button', { name: 'Whisper' }).click();
     await pip.page.getByRole('menuitemcheckbox', { name: 'Sam' }).click();
     await pip.page.keyboard.press('Escape');
     await expect(pip.page.getByRole('textbox', { name: 'Whisper to Sam' })).toBeVisible();
@@ -146,7 +146,7 @@ test.describe('feed', () => {
     await lightTorch(sam.page);
     await openScene(sam.page);
     await place(15, 12, 'east');
-    for (const member of ['Brenna', 'Wren']) {
+    for (const member of ['Flarg', 'Tinks']) {
       if (await scene.getByText(/A door to the east/).isVisible()) break;
       await pickFromMenu(
         partyActions(sam.page).getByRole('button', { name: 'Search' }),
@@ -156,11 +156,11 @@ test.describe('feed', () => {
       await sam.page.waitForTimeout(800);
     }
     await place(26, 17, 'east');
-    await pickFromMenu(scene.getByRole('button', { name: 'Treasure' }), 'Take the treasure');
+    await pickFromMenu(scene.getByRole('button', { name: 'Treasure' }), 'Take treasure');
     await expect(scene.getByText('Treasure is within reach.')).toHaveCount(0);
     await place(18, 15, 'north');
-    await pickFromMenu(scene.getByRole('button', { name: 'Door' }), 'Open it');
-    await expect(scene.getByText('A door to the north, open.')).toBeVisible();
+    await pickFromMenu(scene.getByRole('button', { name: 'Door' }), 'Open door');
+    await expect(scene.getByText('A door to the north is open.')).toBeVisible();
     await send(ruth.client, table.id, {
       command_type: 'grant_coins',
       character_id: 'character-0002',
@@ -191,7 +191,7 @@ test.describe('feed', () => {
       // Each filter shows only its kind of entry and still reads as sentences.
       for (const filter of ['Game', 'Chat', 'Rolls', 'All']) {
         await person.page
-          .getByRole('radiogroup', { name: 'Show' })
+          .getByRole('radiogroup', { name: 'Filter feed' })
           .getByRole('radio', { name: filter })
           .click();
         expectNoRawText(await readFeedLines(person.page), `${person.name}'s ${filter} filter`);
@@ -218,8 +218,8 @@ test.describe('journal', () => {
 
     // Walking into the kobolds' warren reveals a hidden objective of the Hand's quest.
     await placeParty(ruth.client, table.id, { dungeon: 'priory', level: 1, x: 25, y: 7, facing: 'north' });
-    await pickFromMenu(scenePanel(sam.page).getByRole('button', { name: 'Door' }), 'Open it');
-    await expect(scenePanel(sam.page).getByText('A door to the north, open.')).toBeVisible();
+    await pickFromMenu(scenePanel(sam.page).getByRole('button', { name: 'Door' }), 'Open door');
+    await expect(scenePanel(sam.page).getByText('A door to the north is open.')).toBeVisible();
     await send(sam.client, table.id, { command_type: 'move_party', direction: 'north' });
     await expect(hand).toContainText('Learn where the brothers hid the Hand');
     await expect(
@@ -289,7 +289,7 @@ test('entering the dungeon writes the landing to the journal and the feed', asyn
   const { table, path } = await setupTable({
     referee: ruth,
     players: [sam],
-    party: [{ owner: sam, name: 'Brenna', classId: 'fighter' }],
+    party: [{ owner: sam, name: 'Flarg', classId: 'fighter' }],
   });
   await openTable(sam.page, path);
   await enterDungeon(sam.client, table.id, 'priory');
@@ -302,7 +302,5 @@ test('entering the dungeon writes the landing to the journal and the feed', asyn
   await openFeed(sam.page);
   await expect(feed(sam.page).getByText(/a bell tolls once/)).toBeVisible();
   // The autosave line reads as one sentence (D-208).
-  await expect(
-    feed(sam.page).getByText("The server saved the game: entered the priory on Corvane's Holm."),
-  ).toBeVisible();
+  await expect(feed(sam.page).getByText("Autosaved: entered the priory on Corvane's Holm.")).toBeVisible();
 });

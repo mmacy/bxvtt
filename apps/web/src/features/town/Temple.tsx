@@ -79,7 +79,7 @@ export function Temple() {
     null;
   const partyGold = party.reduce((sum, member) => sum + readPurse(member).gp, 0);
 
-  if (patient === null) return <EmptyState icon="heart" title="Nobody to treat" />;
+  if (patient === null) return <EmptyState icon="heart" title="No party members to treat" />;
   const permission = canAct(patient);
   const status = memberStatus(patient);
 
@@ -101,12 +101,12 @@ export function Temple() {
       setOutcome({
         tone: 'success',
         title: `${healingServiceLabel(service)} for ${patient.name}`,
-        lines: lines.length > 0 ? lines : ['The temple has done its work.'],
+        lines: lines.length > 0 ? lines : ['Service complete.'],
       });
     } else if (result.status === 'refused' || result.status === 'error' || result.status === 'skipped') {
       setOutcome({
         tone: 'warning',
-        title: `The temple can't do that for ${patient.name}`,
+        title: `Couldn't treat ${patient.name}`,
         lines: [result.message],
       });
     }
@@ -116,13 +116,13 @@ export function Temple() {
     <div className={styles.temple}>
       <PlaceHeader
         icon="heart"
-        title={placeName('temple', view?.town_services ?? []) ?? 'The temple'}
-        lead="Each service is cast on one member. The whole party pays the fee."
+        title={placeName('temple', view?.town_services ?? []) ?? 'Temple'}
+        lead="Purchase healing and cures for one character. The whole party shares the cost."
       />
       <div className={styles.patients}>
-        <span className={styles.label}>Who needs the temple</span>
+        <span className={styles.label}>Patient</span>
         <MemberChooser
-          label="Who is treated"
+          label="Patient"
           members={ordered}
           value={patient.id}
           onChange={setPatientId}
@@ -160,7 +160,8 @@ export function Temple() {
                     <p className={styles.serviceDetail}>{healingServiceDescription(service)}</p>
                     {short && (
                       <p className={styles.short}>
-                        The party carries {formatGold(partyGold)} in all, which is less than this costs.
+                        The party has {formatGold(partyGold)} in gold, but this service costs{' '}
+                        {formatGold(price)}.
                       </p>
                     )}
                   </div>
@@ -182,14 +183,12 @@ export function Temple() {
           </ul>
           {!permission.allowed && <p className={styles.explain}>{permission.reason}</p>}
           {status.dead && (
-            <p className={styles.explain}>
-              {`${patient.name} is dead. Raise dead is the service for a dead member, so it is listed first.`}
-            </p>
+            <p className={styles.explain}>{`${patient.name} is dead, so Raise dead appears first.`}</p>
           )}
           {referee && (
             <Field
-              label="Temple cleric's level (optional)"
-              hint="Leave this empty and the temple sends the lowest level that can cast the service."
+              label="Cleric level (optional)"
+              hint="Leave blank to use the minimum caster level for the spell."
             >
               <NumberInput value={level} onChange={setLevel} min={1} width={4} className={styles.level} />
             </Field>
@@ -240,9 +239,9 @@ export function Temple() {
           </Panel>
           <Panel title="Who pays">
             <p className={styles.pays}>
-              The whole party pays, not only the patient. The temple takes the fee from {patient.name}&apos;s
-              purse first, then from the others in marching order, in whole gold pieces. A dead member can be
-              raised even when their own purse is empty.
+              The whole party shares temple fees. Gold comes from {patient.name}&apos;s purse first, then from
+              other party members in marching order (in whole gold pieces). You can raise a dead character
+              even if their purse is empty.
             </p>
             <ul className={styles.purses}>
               {party.map((member) => (

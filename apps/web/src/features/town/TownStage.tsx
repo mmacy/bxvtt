@@ -46,7 +46,7 @@ export function TownStage() {
         variant="line"
         className={styles.tabs}
       >
-        <TabsList aria-label="Parts of town" className={styles.tabList}>
+        <TabsList aria-label="Town locations" className={styles.tabList}>
           <TabsTrigger value="square" icon="town">
             Town square
           </TabsTrigger>

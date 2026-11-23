@@ -21,54 +21,54 @@ export type Rejection = components['schemas']['Rejection'];
 export const REJECTION_TEMPLATES: Record<string, Template> = {
   // Battle declarations ----------------------------------------------------------------------------------------
   'battle.declaration.back_stab_no_ability':
-    "{character|member} can't back-stab, because only thieves have that ability.",
+    "{character|member} can't back-stab. Only thieves can make a back-stab attack.",
   'battle.declaration.back_stab_not_attack':
-    'A back-stab has to be an attack. Choose Attack for {character|member}, or turn off the back-stab.',
+    'Back-stab only works with an attack. Choose Attack for {character|member}, or turn off back-stab.',
   'battle.declaration.back_stab_not_melee':
-    "{character|member} can't back-stab with a missile weapon, because a back-stab is a melee attack.",
+    "{character|member} can't back-stab with a missile weapon. Switch to a melee weapon or turn off back-stab.",
   'battle.declaration.back_stab_target_aware':
-    "The monsters are on guard, so {character|member} can't back-stab them. A back-stab works only in the free round after the party surprises the monsters.",
+    "The monsters are alert, so {character|member} can't back-stab them. You can back-stab only when the party surprises the monsters.",
   'battle.declaration.cannot_move':
-    "{character|member} can't move this round. Have them attack from where they stand, or hold.",
+    "{character|member} can't move this round. Attack in place or choose Hold.",
   'battle.declaration.cast_cannot_move':
-    "A caster can't move in the round they cast, so {character|member} can cast or move, but not both.",
+    "{character|member} can't move and cast a spell in the same round. Clear the move or choose another action.",
   'battle.declaration.invisible_target': "{target|entity} is invisible and can't be targeted.",
   'battle.declaration.item_unusable':
-    "{item|itemcap} can't be used that way in battle. Throw only splash weapons, such as a flask of oil, and attack only with weapons.",
+    "{item|itemcap} can't be used that way in battle. Attack with a weapon, or use a potion, scroll, wand, staff, or flask of oil.",
   'battle.declaration.member_out_of_reach':
-    '{character|member} is too far from {target|entity} to reach them. A member has to stand within 5 feet to hand over an item or touch someone.',
+    '{character|member} is too far from {target|entity}. Stay within 5 feet to hand over an item or touch an ally.',
   'battle.declaration.missing_move':
     'Choose how {character|member} moves: close in, fighting withdrawal, or retreat.',
   'battle.declaration.missing_spell': 'Choose a spell and a spell mode for {character|member}.',
   'battle.declaration.move_not_combinable':
-    "{character|member} can't move and do that in the same round. Only an attack can close in first, so choose one or the other.",
+    "{character|member} can't combine movement with that action. You can move in the same round only when closing in to attack.",
   'battle.declaration.no_mirror':
-    'Choose another way to guard against the gaze, because {character|member} has no mirror to fight by.',
+    "{character|member} isn't carrying a mirror. Avert eyes instead, or fight without gaze protection.",
   'battle.declaration.no_target': [
-    { when: ['group'], text: "There's no one left to attack in {group|group}." },
+    { when: ['group'], text: 'No targets remain in {group|group}. Choose another group.' },
     {
       when: ['character'],
-      text: '{character|member} has no undead to turn, because none are in this battle.',
+      text: 'There are no undead in this battle for {character|member} to turn.',
     },
-    { text: 'No monster is left to target.' },
+    { text: 'No monsters remain to target.' },
   ],
   'battle.declaration.not_in_front_rank':
     "{character|member} isn't in the front rank, so they can't attack in melee. Close with the monsters first, or use a missile weapon or spell.",
   'battle.declaration.replacement_unavailable':
-    "{character|member} can't trade places with {replacement|member}. The member they name has to be able to act and can't be falling back this round.",
+    "{character|member} can't trade places with {replacement|member}. Choose a party member who can act and isn't falling back this round.",
   'battle.declaration.roster_mismatch': [
     {
       when: ['expected', 'declared'],
-      text: 'Every member who can act has to declare, and no one else. This round needs declarations from {expected|members}, but you sent {declared|members}.',
+      text: 'Declare an action for {expected|members} this round. You sent declarations for {declared|members}.',
     },
-    { text: 'Every member who can act has to declare, and no one else.' },
+    { text: 'Declare an action for each party member who can act this round.' },
   ],
-  'battle.declaration.unknown_action': "{action|action} isn't something a member can do in battle.",
+  'battle.declaration.unknown_action': "{action|action} isn't a valid battle action.",
   'battle.declaration.unknown_group':
-    "The group {character|member} is aiming at isn't in the fight any more. Choose another group.",
+    'The group {character|member} targeted is no longer in the fight. Choose another group.',
   'battle.declaration.weapon_not_wielded':
-    "{item|itemcap} isn't wielded. Equip the weapon before attacking with it.",
-  'battle.none_active': "There's no battle to resolve.",
+    "{item|itemcap} isn't equipped. Wield the weapon before attacking with it.",
+  'battle.none_active': "The party isn't in a battle.",
 
   // Attacks ----------------------------------------------------------------------------------------------------
   'combat.attack.attacker_blind': "{attacker|entity} is blind and can't attack.",
@@ -97,47 +97,47 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
       text: 'The target is too far away for a melee attack. Close in first, or use a missile weapon or spell.',
     },
   ],
-  'combat.attack.reload':
-    "{attacker|entity} fired last round and has to reload, so they can't fire again this round.",
+  'combat.attack.reload': '{attacker|entity} fired last round and must reload this round.',
   'combat.breath.exhausted': '{monster|entity} has used its breath weapon as often as it can today.',
   'combat.breath.no_breath_weapon': '{monster|entity} has no breath weapon.',
 
   // Character creation -----------------------------------------------------------------------------------------
   'creation.adjustment.above_cap':
-    '{ability|ability} is {score} now, and raising it by {amount} would take it above 18. Raise it by less.',
+    '{ability|ability} is {score}, so raising it by {amount} exceeds the maximum of 18. Choose a smaller increase.',
   'creation.adjustment.below_floor':
-    "{ability|ability} is {score} now, and lowering it by {amount} would take it below 9. A score can't be traded down past 9.",
+    "{ability|ability} is {score}, so lowering it by {amount} drops it below 9. Ability scores can't be lowered below 9.",
   'creation.adjustment.class_restriction': "This class can't lower {ability|ability}.",
   'creation.adjustment.not_lowerable':
     "{ability|ability} can't be lowered. Only Strength, Intelligence, and Wisdom can be traded for points.",
   'creation.adjustment.points_mismatch':
-    'Lowering scores earns {points_available|count:point}, and you spent {points_spent|number}. Raise prime requisites by exactly 1 for every 2 points you lower.',
+    'You gained {points_available|count:point} from lowering scores, but you spent {points_spent|number}. Raise a prime requisite by 1 for every 2 points you lower.',
   'creation.adjustment.prime_requisite_lowered':
-    "{ability|ability} is a prime requisite for this class, so it can't be lowered.",
+    "You can't lower {ability|ability} because it is a prime requisite for this class.",
   'creation.adjustment.raise_not_prime_requisite':
-    "Only a prime requisite can be raised, and {ability|ability} isn't one for this class.",
+    "{ability|ability} isn't a prime requisite for this class, so you can't raise it.",
   'creation.adjustment.reduction_not_even':
-    "Scores are lowered in steps of 2, so {ability|ability} can't be lowered by {amount}. Lower it by an even number.",
+    "You can't lower {ability|ability} by {amount}. Lower ability scores by an even number, in steps of 2.",
   'creation.class.requirements_not_met':
-    '{class|classcap} need {ability|ability} {minimum|number} or higher, and this character has {score|number}.',
+    '{class|classcap} require {ability|ability} {minimum|number} or higher, but this character has {score|number}.',
   'creation.languages.duplicate_choice':
     'You chose {language|raw} more than once. Pick each language only once.',
   'creation.languages.duplicates_native':
-    'This class already speaks {language|raw}. Pick a different language.',
-  'creation.languages.not_available': "{language|raw} isn't a language this character can choose.",
+    'This character already speaks {language|raw}. Pick a different language.',
+  'creation.languages.not_available':
+    "{language|raw} isn't available to this character. Pick a language from the list.",
   'creation.languages.too_many':
     'This character can learn {allowed|count:extra language}, but you chose {chosen|number}.',
 
   // Encounters and chases --------------------------------------------------------------------------------------
   'encounter.evade.already_evading':
-    'The party is already running. Wait to keep running, or drop something behind to slow the monsters.',
+    'The party is already fleeing. Choose Wait to keep running, or drop food or treasure to slow the pursuit.',
   'encounter.evade.nothing_to_drop':
     'The party has no {drop|raw} to drop. Run without dropping anything, or choose something else.',
-  'encounter.none_active': "There's no encounter to act on.",
+  'encounter.none_active': "The party isn't in an encounter.",
   'encounter.parley.mid_pursuit':
     "The monsters are chasing the party, so there's no time to talk. Keep running or fight.",
-  'encounter.spawn.mid_pursuit': "Monsters can't join a chase that is under way. Wait until the chase ends.",
-  'encounter.turning.mid_pursuit': "The party can't turn undead in the middle of a chase.",
+  'encounter.spawn.mid_pursuit': "You can't spawn monsters during a chase. Wait until the chase ends.",
+  'encounter.turning.mid_pursuit': "You can't turn undead during a chase. Keep running or turn and fight.",
 
   // Exploration ------------------------------------------------------------------------------------------------
   'exploration.action.requires_light':
@@ -152,8 +152,7 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
     },
     { text: "The door won't open. The party doesn't have what it needs to pass yet." },
   ],
-  'exploration.door.locked':
-    'The door is locked. A thief can pick the lock, or the party can find another way.',
+  'exploration.door.locked': 'The door is locked. Have a thief pick the lock, or find another way.',
   'exploration.door.no_door': [
     {
       when: ['direction'],
@@ -161,29 +160,28 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
     },
     { text: "There's no door on that side. Choose a side with a door the party has found." },
   ],
-  'exploration.door.no_spike': 'No one in the party has an iron spike to wedge the door with.',
-  'exploration.door.not_stuck': "The door isn't stuck, so there's nothing to force. Open it instead.",
-  'exploration.door.stuck': 'The door is stuck. Have a strong member force it open.',
+  'exploration.door.no_spike': 'No one in the party is carrying an iron spike to wedge the door.',
+  'exploration.door.not_stuck': "The door isn't stuck. Open it normally instead of forcing it.",
+  'exploration.door.stuck': 'The door is stuck. Choose a party member to force it open.',
   'exploration.door.wedged':
-    "An iron spike already holds the door in place, so it can't be closed or wedged again.",
+    "The door is already wedged with an iron spike, so you can't close or wedge it again.",
   'exploration.feature.emptied': 'That treasure has already been taken.',
-  'exploration.feature.unknown':
-    "The party can't find that cache or pile here. Move to the cell that holds it first.",
+  'exploration.feature.unknown': "That treasure isn't within reach here. Move to where it lies first.",
   'exploration.give.same_member':
     "{character|member} can't give items to themselves. Choose another party member.",
   'exploration.item.not_carried': "That character doesn't have {item|carried}.",
-  'exploration.item.not_equipped': "{item|itemcap} isn't equipped, so it can't be taken off.",
+  'exploration.item.not_equipped': "{item|itemcap} isn't equipped right now.",
   'exploration.light.no_flame':
-    '{character|member} has no tinder box, and the party has no open flame to light it from. Nothing can be lit.',
+    '{character|member} has no tinder box, and no one in the party has an open flame to light from.',
   'exploration.light.not_a_source':
-    "{item|itemcap} can't be lit. Light a torch, a lantern, or a flask of oil.",
+    "You can't light {item|item}. Choose a torch, a lantern, or a flask of oil.",
   'exploration.light.not_burning': '{character|member} has no torch or lantern burning.',
   'exploration.listen.already_tried':
-    '{character|member} has already listened at that door. Send someone else.',
+    '{character|member} has already listened at that door. Have another party member try.',
   'exploration.lock.locked_out':
     "{character|member} failed to pick that lock and can't try again until they gain a level.",
   'exploration.lock.no_tools': "{character|member} needs thieves' tools to pick a lock.",
-  'exploration.lock.not_a_thief': "Only a thief can pick locks, and {character|member} isn't one.",
+  'exploration.lock.not_a_thief': "{character|member} isn't a thief. Only a thief can pick locks.",
   'exploration.lock.not_locked': "That door isn't locked.",
   'exploration.move.blocked': [
     {
@@ -195,78 +193,77 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   'exploration.move.cannot_move': [
     {
       when: ['reason'],
-      text: "The party can't move, because {reason|moveReason}. Drop some gear or treasure, or hand it to someone with room.",
+      text: "The party can't move because {reason|moveReason}. Drop some gear or treasure, or give it to someone who can carry more.",
     },
-    { when: ['character'], text: "{character|member} can't move, so the party can't move either." },
+    { when: ['character'], text: "{character|member} can't move, so the party can't advance." },
     { text: "The party can't move right now." },
   ],
   'exploration.party.bad_order':
-    'A marching order has to list every party member exactly once, including the dead.',
+    'Include every party member in the marching order exactly once, including fallen members.',
   'exploration.search.already_tried':
-    '{character|member} has already made that search here. Send someone else, or search for something different.',
-  'exploration.stairs.none': 'There are no stairs or other way between levels on this cell.',
+    '{character|member} has already searched for that here. Have another party member search, or look for something else.',
+  'exploration.stairs.none': 'There are no stairs, trapdoors, or passages to another level here.',
   'exploration.transition.gate_refused': [
     { when: ['refusal'], text: '{refusal|raw}' },
-    { text: "Something bars the way. The party doesn't have what it needs to pass yet." },
+    { text: "The way is barred. The party doesn't have what it needs to pass yet." },
   ],
-  'exploration.trap.already_resolved': 'That trap has already gone off or been removed.',
-  'exploration.trap.not_a_thief': "Only a thief can work on traps, and {character|member} isn't one.",
-  'exploration.trap.not_found': 'No one has found a trap on that cache. Have a thief inspect it first.',
+  'exploration.trap.already_resolved': 'That trap has already sprung or been disarmed.',
+  'exploration.trap.not_a_thief':
+    "{character|member} isn't a thief. Only a thief can find and disarm treasure traps.",
+  'exploration.trap.not_found':
+    "The party hasn't found a trap on that cache. Have a thief check it for traps first.",
   'exploration.travel.not_at_entrance':
-    "The party can travel to town only from the dungeon's entrance. Walk back to it first.",
+    'You can return to town only from the dungeon entrance. Walk back to the entrance first.',
 
   // Items ------------------------------------------------------------------------------------------------------
   'items.coins.insufficient': "{character|member} doesn't have enough {coin|coin}.",
   'items.curse.stuck':
-    '{item|itemcap} is cursed and stays with its bearer. The curse has to be lifted first, for example by the temple.',
-  'items.device.inert': '{item|itemcap} has no charges left and does nothing.',
+    "{item|itemcap} is cursed, so you can't put it away or drop it until the curse is removed.",
+  'items.device.inert': '{item|itemcap} has no charges left.',
   'items.equip.armour_forbidden': "{class|classcap} can't wear armour.",
-  'items.equip.armour_not_allowed': "{class|classcap} aren't allowed to wear {item|item}.",
+  'items.equip.armour_not_allowed': "{class|classcap} can't wear {item|item}.",
   'items.equip.not_equippable':
-    "{item|itemcap} can't be equipped. Only armour, shields, rings, and weapons are worn or wielded.",
-  'items.equip.not_usable': "{item|itemcap} can't be used by that character's class.",
+    "You can't equip {item|item}. Only weapons, armour, shields, and rings can be equipped.",
+  'items.equip.not_usable': "That character's class can't equip {item|item}.",
   'items.equip.shield_forbidden': "{class|classcap} can't use shields.",
   'items.equip.two_handed_with_shield': [
     {
       when: ['item'],
-      text: "{item|itemcap} needs both hands, so it can't be wielded with a shield. Take off the shield first.",
+      text: "{item|itemcap} is a two-handed weapon, so you can't wield it with a shield. Unequip the shield first.",
     },
-    { text: "A shield can't be carried with a two-handed weapon. Put one of them away first." },
+    { text: "You can't use a shield while wielding a two-handed weapon. Unequip one of them first." },
   ],
   'items.equip.weapon_forbidden': "{class|classcap} can't use {item|item}.",
-  'items.equip.weapon_not_allowed':
-    "{class|classcap} can use only certain weapons, and {item|item} isn't one of them.",
-  'items.purchase.insufficient_funds': "That costs {cost_gp|gp}, and there isn't enough gold to pay for it.",
-  'items.purchase.not_stocked': "The town doesn't sell {item|item}.",
+  'items.equip.weapon_not_allowed': "{class|classcap} can't wield {item|item}.",
+  'items.purchase.insufficient_funds': "That costs {cost_gp|gp}, but you don't have enough gold.",
+  'items.purchase.not_stocked': "Merchants in town don't sell {item|item}.",
   'items.remove.not_carried': "{character|member} isn't carrying {item|item}.",
-  'items.ring.hands_full': 'Only two rings can be worn at once. Take one off before putting on {item|item}.',
-  'items.scroll.no_such_spell': "That scroll doesn't hold {spell|spell}.",
+  'items.ring.hands_full':
+    'A character can wear at most two rings. Unequip a ring before putting on {item|item}.',
+  'items.scroll.no_such_spell': "That scroll doesn't contain {spell|spell}.",
   'items.scroll.spent': '{item|itemcap} has no spells left.',
   'items.scroll.wrong_caster':
-    "{item|itemcap} holds spells that the reader can't cast. Choose a character whose class uses that kind of magic.",
-  'items.use.battle_only': '{item|itemcap} can be used only in battle.',
-  'items.use.not_usable': "{item|itemcap} can't be used by that character's class.",
+    "That character can't read {item|item}. Choose a caster whose class uses that kind of magic.",
+  'items.use.battle_only': 'You can use {item|item} only during a battle.',
+  'items.use.not_usable': "That character's class can't use {item|item}.",
   'items.use.target_cannot_be_healed': "{target|member} can't be healed by {item|item} right now.",
-  'items.use.target_cannot_drink':
-    "{target|member} can't drink {item|item}, because they can't act right now.",
+  'items.use.target_cannot_drink': "{target|member} can't act right now and can't drink {item|item}.",
   'items.use.target_not_allowed':
-    "{target|entity} isn't in the party, so can't drink {item|item}. A potion can be given only to a party member.",
+    "{target|entity} isn't in the party. You can give {item|item} only to a party member.",
   'items.use.target_required': 'Choose a target for {item|item}.',
   'items.use.unknown_target': "That target isn't in the party or the encounter.",
 
   // Magic ------------------------------------------------------------------------------------------------------
-  'magic.book.already_chosen':
-    "{character|member} already has spells in their spell book, so starting spells can't be chosen again.",
+  'magic.book.already_chosen': '{character|member} already has starting spells in their spell book.',
   'magic.book.capacity_exceeded':
-    "The spell book holds only {capacity|count:spell} of level {spell_level|number}, so {spell|spell} doesn't fit.",
+    "The spell book fits at most {capacity|count:spell} of level {spell_level|number}, so there's no room for {spell|spell}.",
   'magic.book.capacity_mismatch':
-    'The spell book needs exactly {capacity|count:spell} of level {spell_level|number}, but {chosen|number} were chosen.',
+    'Choose {capacity|count:spell} of level {spell_level|number} for the spell book. You chose {chosen|number}.',
   'magic.book.duplicate': '{spell|spellcap} is already in the spell book.',
-  'magic.book.not_arcane': "{class|classcap} don't keep spell books. Only arcane casters do.",
-  'magic.book.unknown_spell': "That spell isn't in the game's spell list.",
-  'magic.book.wrong_list':
-    "{spell|spellcap} is a {list|spelllist} spell, and this class can't keep spells from that list in its spell book.",
-  'magic.cast.anti_magic_shell': 'An anti-magic shell stops {caster|member} from casting.',
+  'magic.book.not_arcane': "{class|classcap} don't use spell books. Only arcane casters use spell books.",
+  'magic.book.unknown_spell': "{spell|spellcap} isn't available in this adventure.",
+  'magic.book.wrong_list': "{spell|spellcap} is a {list|spelllist} spell, which this class can't learn.",
+  'magic.cast.anti_magic_shell': 'An anti-magic shell blocks {caster|member} from casting spells.',
   'magic.cast.caster_incapacitated': "{caster|member} can't cast while {condition|condition}.",
   'magic.cast.caster_restrained': "{caster|member} can't cast while {restraint|restraint}.",
   'magic.cast.not_memorized':
@@ -274,46 +271,46 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   'magic.cast.not_reversible': '{spell|spellcap} has no reversed form.',
   'magic.cast.out_of_range':
     'The target is {distance_feet|feet} away, but {spell|spell} reaches only {range_feet|feet}.',
-  'magic.cast.silenced_area':
-    '{caster|member} is standing in an area of silence, so no spell can be cast here.',
+  'magic.cast.silenced_area': "{caster|member} is standing in magical silence and can't cast spells.",
   'magic.cast.target_count':
     'This spell mode takes {expected|count:target}, but you chose {supplied|number}.',
-  'magic.cast.target_must_be_creature': '{spell|spellcap} can target only creatures, not a place.',
+  'magic.cast.target_must_be_creature': 'Choose a creature to target with {spell|spell}, not a location.',
   'magic.cast.unknown_mode': [
     {
       when: ['spell', 'mode'],
-      text: '{spell|spellcap} has no {mode|mode} mode. Choose one of the modes it lists.',
+      text: "{spell|spellcap} has no {mode|mode} mode. Choose one of the spell's available modes.",
     },
-    { text: 'That spell has no such mode. Choose one of the modes it lists.' },
+    { text: "That spell doesn't support that mode. Choose one of the spell's available modes." },
   ],
-  'magic.cast.unknown_spell': "That spell isn't in the game's spell list.",
+  'magic.cast.unknown_spell': "{spell|spellcap} isn't available in this adventure.",
   'magic.cast.unknown_target': "That target isn't in the party or the encounter.",
   'magic.memorize.divine_reverses_at_cast':
-    'A cleric picks the reversed form when casting, not when memorizing. Memorize {spell|spell} as it is.',
-  'magic.memorize.needs_sleep':
-    "{character|member} can't prepare spells yet. The party has to rest for a night first.",
+    'Clerics choose the reversed form when casting, not when memorizing. Memorize {spell|spell} in its normal form.',
+  'magic.memorize.needs_sleep': "{character|member} needs a night's rest before preparing spells.",
   'magic.memorize.not_a_caster': "{class|classcap} can't memorize spells.",
-  'magic.memorize.not_in_book': "{spell|spellcap} isn't in the spell book, so it can't be memorized.",
+  'magic.memorize.not_in_book': "{spell|spellcap} isn't in this caster's spell book.",
   'magic.memorize.not_reversible': '{spell|spellcap} has no reversed form to memorize.',
   'magic.memorize.slots_exceeded':
-    'This caster has {slots|count:slot} for level {spell_level|number} spells, but {selected|number} were chosen.',
-  'magic.memorize.unknown_spell': "That spell isn't in the game's spell list.",
+    'This caster has {slots|count:slot} for level {spell_level|number} spells, but you chose {selected|number}.',
+  'magic.memorize.unknown_spell': "{spell|spellcap} isn't available in this adventure.",
   'magic.memorize.wrong_list':
-    "{spell|spellcap} is a {list|spelllist} spell, and this class can't memorize spells from that list.",
+    "{spell|spellcap} is a {list|spelllist} spell, which this class can't memorize.",
   'magic.turning.caster_incapacitated': "{caster|member} can't turn undead while {condition|condition}.",
   'magic.turning.not_a_turner': "{class|classcap} can't turn undead.",
 
   // Party changes ----------------------------------------------------------------------------------------------
   'party.add.carries_instances':
-    "{name|raw} can't join while carrying {item|item}, because a new member can't bring an item that already has a game ID. Remove it first.",
+    "{name|raw} can't join the party while carrying {item|item} from another session. Remove that item first.",
   'party.add.id_assigned':
-    "That character already belongs to a game, so can't be added as a new member. Use a fresh copy of the character.",
+    "That character is already part of a session. Add a fresh character who hasn't joined a game yet.",
   'party.add.under_effects':
-    "{name|raw} is under a spell or condition, so can't join the party until it ends.",
+    "{name|raw} is under an active spell or condition and can't join the party until it ends.",
   'party.remove.carries_quest_item':
-    '{character|member} is carrying {item|item}, which a quest needs. Give it to a member who is staying first.',
-  'party.remove.last_standing': "{character|member} is the last member standing, so can't leave.",
-  'party.remove.same_member': "A member can't give their belongings to themselves. Choose another member.",
+    '{character|member} is carrying {item|item}, which is needed for a quest. Give it to another party member first.',
+  'party.remove.last_standing':
+    "{character|member} is the last party member standing and can't leave the party.",
+  'party.remove.same_member':
+    "{character|member} can't leave their belongings to themselves. Choose another party member.",
 
   // Session ----------------------------------------------------------------------------------------------------
   'session.command.member_incapacitated': "{character|member} can't act right now.",
@@ -321,17 +318,17 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
     { when: ['x', 'y'], text: 'The cell at ({x|number}, {y|number}) has no door on that side.' },
     { text: 'That cell has no door on that side.' },
   ],
-  'session.command.no_living_members': 'No one in the party is alive to do that.',
-  'session.command.out_of_bounds': "That cell is outside the level's map.",
+  'session.command.no_living_members': 'No living party members remain to do that.',
+  'session.command.out_of_bounds': 'That square is outside the level map.',
   'session.command.quest_state': [
     { when: ['objective', 'state'], text: 'That objective is already {state|raw}.' },
     { when: ['state'], text: 'That quest is {state|questStatus}.' },
     { text: "The quest isn't in the right state for that." },
   ],
-  'session.command.unknown_item': "That item isn't in this game's catalog.",
+  'session.command.unknown_item': "That item isn't available in this adventure.",
   'session.command.unknown_location': "{dungeon|dungeon} isn't a dungeon in this adventure.",
-  'session.command.unknown_member': 'No party member matches that character.',
-  'session.command.unknown_monster': "That monster isn't in this game's catalog.",
+  'session.command.unknown_member': "That character isn't in the party.",
+  'session.command.unknown_monster': "That monster type isn't available in this adventure.",
   'session.command.unknown_objective': 'That quest has no such objective.',
   'session.command.unknown_quest': 'This adventure has no such quest.',
   'session.command.wrong_mode': "You can't {command|command} {mode|modephrase}.",
@@ -339,17 +336,15 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   // Town -------------------------------------------------------------------------------------------------------
   'town.healing.caster_level_out_of_range':
     "A level {caster_level|number} cleric can't cast {item|service}. Choose a level from {minimum|number} to {maximum|number}.",
-  'town.healing.no_effect':
-    "{item|service} would do nothing for {character|member}, so the temple won't cast it.",
-  'town.sell.no_fixed_value':
-    'No buyer will pay a fixed price for {item|item}. Only gems and jewellery sell for their full value.',
+  'town.healing.no_effect': "{character|member} doesn't need {item|service} right now.",
+  'town.sell.no_fixed_value': 'Merchants in town buy only gems and jewellery, not {item|item}.',
 };
 
 /** Build a sentence from the words of a code that has no template: `items.equip.too_heavy` gives `Equip too heavy`. */
 export function fallbackRejectionText(code: string): string {
   const words = code.split('.').slice(1).map(prettifyId);
   const reason = words.length > 0 ? words.join(' ') : prettifyId(code);
-  return `That wasn't allowed: ${reason.charAt(0).toLowerCase()}${reason.slice(1)}.`;
+  return `You can't do that: ${reason.charAt(0).toLowerCase()}${reason.slice(1)}.`;
 }
 
 /**

@@ -99,7 +99,7 @@ export function canSendCommand(ctx: PermissionContext, commandType: string, memb
   }
   switch (command.class) {
     case 'battle':
-      return deny('In a battle, each character declares an action and the round resolves from them.');
+      return deny('During battle, declare an action for each character instead.');
     case 'referee':
       if (!isReferee(ctx)) return deny('Only the referee can do that.');
       if (!ctx.lens) return deny('Turn on the referee lens to use referee tools.');
@@ -108,7 +108,7 @@ export function canSendCommand(ctx: PermissionContext, commandType: string, memb
       if (memberId === undefined)
         return isReferee(ctx) || seatedMemberIds(ctx).length > 0
           ? ALLOWED
-          : deny('You have no character to act for.');
+          : deny("You don't control any characters.");
       return canControlMember(ctx, memberId);
     case 'party':
       return canActForParty(ctx);
@@ -125,7 +125,8 @@ export function canDeclare(ctx: PermissionContext, memberId: string): Permission
   const control = canControlMember(ctx, memberId);
   if (!control.allowed) return control;
   const declarers = ctx.game?.view.encounter?.declarers ?? [];
-  if (!declarers.includes(memberId)) return deny(`${memberName(ctx, memberId)} doesn't declare this round.`);
+  if (!declarers.includes(memberId))
+    return deny(`${memberName(ctx, memberId)} can't declare an action this round.`);
   return ALLOWED;
 }
 

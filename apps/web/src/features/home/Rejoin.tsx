@@ -40,40 +40,41 @@ function endedText(status: string, name: string): { title: string; detail: strin
   switch (status) {
     case 'declined':
       return {
-        title: `The referee didn't let you in as ${name}`,
-        detail: 'If that was a mistake, ask the referee, and then ask again. Or join as someone new.',
+        title: `The referee declined your request to rejoin as ${name}`,
+        detail:
+          'Ask the referee if that was a mistake and try again, or enter a new name above to join as a new member.',
       };
     case 'expired':
       return {
-        title: 'Nobody answered in time',
-        detail: 'A request lasts five minutes. Ask again when a referee is at the table.',
+        title: 'Your rejoin request expired',
+        detail: 'Rejoin requests last 5 minutes. Send a new request when a referee is at the table.',
       };
     case 'cancelled':
       return {
-        title: `${name} is back at the table, or has left it`,
-        detail: 'So the request ended. If you are that member in another browser, play on there.',
+        title: `${name} is back at the table or has left it`,
+        detail: `Your rejoin request was cancelled. If you're signed in as ${name} in another browser, keep playing in that browser.`,
       };
     default:
       return {
-        title: 'This request was already used',
-        detail: 'Open the table in the browser that came back in, or ask again here.',
+        title: 'This rejoin request was already used',
+        detail: 'Keep playing in the browser where you rejoined, or send a new rejoin request here.',
       };
   }
 }
 
 /** What the page says when the server ended the request because the page didn't check in for a while. */
 const AWAY_TEXT = {
-  title: 'Your request ended while this page was away',
+  title: 'Your rejoin request timed out',
   detail:
-    "This page couldn't check in for a while, such as while the computer slept, so the request ended. Ask again.",
+    'Your browser stopped checking in, for example while your device was asleep. Send a new rejoin request to try again.',
 };
 /** How long without a successful poll before a `cancelled` answer most likely means the server gave up on the page. */
 const AWAY_AFTER_MS = 18_000;
 
 /** What the page says when the browser left the page while waiting and then came back to it. */
 const LEFT_TEXT = {
-  title: 'Your request ended when you left this page',
-  detail: 'Ask again, and keep this page open while you wait.',
+  title: 'Your rejoin request ended when you left this page',
+  detail: 'Send a new rejoin request, and keep this page open while you wait.',
 };
 
 export interface RejoinProps {
@@ -242,28 +243,28 @@ export function Rejoin({ inviteCode, members, onActiveChange }: RejoinProps) {
       <Card padding="lg">
         <section className={styles.rejoin} aria-labelledby="rejoin-waiting" aria-live="polite">
           <h2 id="rejoin-waiting" className={styles.cardTitle}>
-            Waiting for a referee to let you in as {member.name}
+            Waiting to rejoin as {member.name}
           </h2>
           <div className={styles.rejoinWait}>
             <Spinner size={20} label="" />
             <p className={styles.cardLead}>
               {step.kind === 'stopping'
-                ? 'Ending your request.'
+                ? 'Cancelling your rejoin request.'
                 : ticket === null
-                  ? 'Sending your request.'
+                  ? 'Sending your rejoin request.'
                   : ticket.approvers_online > 0
-                    ? `A referee is at the table now and sees your request. Tell them it's you, by voice or chat, so they know to let you in.`
-                    : 'No referee is at the table right now. A referee sees your request as soon as they open the table.'}
+                    ? `A referee is online now. Let them know it's you by voice or message so they can approve your rejoin request.`
+                    : 'No referee is online right now. They will see your rejoin request when they open the table.'}
             </p>
           </div>
           {ticket !== null && hiccup && (
             <p className={styles.rejoinNote}>
-              Still waiting. The connection hiccuped, so this page keeps trying.
+              Connection interrupted. Retrying automatically while you wait.
             </p>
           )}
           {ticket !== null && (
             <p className={styles.rejoinNote}>
-              Your request lasts until {clockTime(ticket.expires_at)}. Keep this page open.
+              Your rejoin request expires at {clockTime(ticket.expires_at)}. Keep this page open.
             </p>
           )}
           <Button variant="ghost" loading={step.kind === 'stopping'} onClick={() => void stop(member)}>
@@ -281,21 +282,21 @@ export function Rejoin({ inviteCode, members, onActiveChange }: RejoinProps) {
           I've played at this table before
         </h2>
         <p className={styles.cardLead}>
-          Played here before, but this browser doesn't remember you? Pick who you were, and a referee at the
-          table lets you back in. Your characters and your place at the table come with you.
+          If you played here in another browser or session, select your name to send a rejoin request. Once a
+          referee approves it, you keep your characters and your seat.
         </p>
         {step.kind === 'ended' && (
           <Banner tone="warning" title={step.title}>
             {step.detail}
           </Banner>
         )}
-        <ul className={styles.rejoinList} aria-label="Members who can come back in">
+        <ul className={styles.rejoinList} aria-label="Members who can rejoin">
           {members.map((member) => (
             <li key={member.user_id}>
               <Button variant="secondary" block onClick={() => void ask(member)}>
                 <span className={styles.rejoinMember}>
                   <Avatar name={member.name} color={member.color} size="xs" decorative />
-                  <span className="visually-hidden">Come back in as</span> {member.name}
+                  <span className="visually-hidden">Rejoin as</span> {member.name}
                 </span>
               </Button>
             </li>

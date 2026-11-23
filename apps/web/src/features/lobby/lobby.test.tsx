@@ -49,7 +49,7 @@ describe('startChecks', () => {
     const small = { ...table, roster: table.roster.slice(0, 2) };
     const { blockers, warnings } = startChecks(small, bell);
     expect(blockers).toEqual([]);
-    expect(warnings[0]).toBe('The Drowned Bell is written for at least 3 characters, and the party has 2.');
+    expect(warnings[0]).toBe('The Drowned Bell is written for at least 3 characters, but the party has 2.');
   });
 });
 
@@ -84,7 +84,7 @@ describe('LobbyPage', () => {
     const game = fixtureSnapshot('town', 'referee').game;
     api.startGame.mockResolvedValue(game!);
     await screen.findByRole('radio', { name: /The Drowned Bell/ });
-    await user.click(screen.getByRole('button', { name: 'Start the game' }));
+    await user.click(screen.getByRole('button', { name: 'Start game' }));
     expect(api.startGame).toHaveBeenCalledWith(store.getState().tableId, {
       adventure_id: 'sample:the-drowned-bell',
     });
@@ -97,11 +97,11 @@ describe('LobbyPage', () => {
     });
     api.listCharacters.mockResolvedValue({ items: [] });
     expect(screen.getByText('Waiting for the referee to start')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Start the game' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Start game' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Move .* forward/ })).not.toBeInTheDocument();
     // Sam may take his own characters off the roster, but not the referee's.
-    expect(screen.getByRole('button', { name: 'Take Brenna out of the party' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Take Osric out of the party' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove Brenna from party' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Remove Osric from party' })).not.toBeInTheDocument();
     expect(api.listAdventures).not.toHaveBeenCalled();
     expect(store.getState().role).toBe('player');
     await user.click(screen.getByRole('button', { name: 'Table settings' }));

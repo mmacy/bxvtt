@@ -75,7 +75,7 @@ function PlaceHereButton({
             setPlaced(ok);
           }}
         >
-          Place the party here
+          Place party here
         </Button>
       </div>
       <CommandOutcome outcome={outcome} onDismiss={clear} />
@@ -98,7 +98,7 @@ export function AreaKey({ data }: { data: RefereeData }) {
       <EmptyState
         icon="warning"
         size="compact"
-        title="The adventure didn't load"
+        title="Couldn't load adventure"
         description={data.adventureError.detail}
       />
     ) : (
@@ -115,9 +115,9 @@ export function AreaKey({ data }: { data: RefereeData }) {
         value={query}
         onValueChange={setQuery}
         placeholder="Search names, descriptions, and monsters"
-        aria-label="Search the key"
+        aria-label="Search adventure key"
       />
-      {total === 0 && <p className={styles.secondaryLine}>No area matches.</p>}
+      {total === 0 && <p className={styles.secondaryLine}>No matching areas.</p>}
       {levels.map(({ dungeon, level }) => {
         const areas = level.areas.filter((a) => matches(a, deferred));
         if (areas.length === 0) return null;

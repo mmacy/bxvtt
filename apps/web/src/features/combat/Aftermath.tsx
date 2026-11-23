@@ -131,7 +131,7 @@ export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
           <PickUp />
           {playback.last && playback.last.beats.length > 0 && (
             <Button size="sm" variant="ghost" icon="rotate" onClick={playback.replay}>
-              {summary.rounds > 0 ? 'Replay the last round' : 'Replay what happened'}
+              {summary.rounds > 0 ? 'Replay last round' : 'Replay encounter'}
             </Button>
           )}
         </div>
@@ -182,7 +182,7 @@ function PickUp() {
             title={canTake.reason ?? undefined}
             onClick={() => void take('pile')}
           >
-            Pick up the dropped goods
+            Pick up dropped goods
           </Button>
         </div>
       )}
@@ -191,7 +191,7 @@ function PickUp() {
           <Icon name="chest" size={16} />
           <span className={styles.pickUpText}>
             {cache.trap
-              ? 'There is treasure here, and the party knows it is trapped. Deal with the trap from the area panel first.'
+              ? 'There is treasure here, but the party knows it is trapped. Disarm the trap from the current location card or the Treasure menu first.'
               : 'There is treasure here.'}
           </span>
           {!cache.trap && (
@@ -203,7 +203,7 @@ function PickUp() {
               title={canTake.reason ?? undefined}
               onClick={() => void take(cache.id)}
             >
-              Take the treasure
+              Take treasure
             </Button>
           )}
         </div>

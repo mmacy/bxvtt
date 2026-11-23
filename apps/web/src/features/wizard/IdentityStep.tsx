@@ -137,7 +137,7 @@ export function IdentityStep(props: IdentityStepProps) {
       <div className={styles.identityColumn}>
         <Field
           label="Name"
-          hint="Up to 100 characters."
+          hint="Choose a name up to 100 characters."
           error={showErrors && nameProblem ? nameProblem : undefined}
           required
         >
@@ -151,7 +151,7 @@ export function IdentityStep(props: IdentityStepProps) {
                 size="sm"
                 variant="ghost"
                 icon="dice"
-                onClick={() => onName(suggestName(detail?.race, name, Math.random(), taken))}
+                onClick={() => onName(suggestName(detail?.id ?? detail?.race, name, Math.random(), taken))}
               >
                 Suggest a name
               </Button>
@@ -175,7 +175,9 @@ export function IdentityStep(props: IdentityStepProps) {
             }))}
           />
           {showErrors && alignment === null && <p className={styles.fieldError}>Choose an alignment.</p>}
-          <p className={styles.muted}>Each alignment has a secret tongue that its followers speak.</p>
+          <p className={styles.muted}>
+            Characters of the same alignment also share a secret alignment tongue.
+          </p>
         </fieldset>
       </div>
 
@@ -186,13 +188,13 @@ export function IdentityStep(props: IdentityStepProps) {
           </h3>
           <p className={styles.prose}>
             A {className} speaks{' '}
-            {native.length > 0 ? native.map((id) => languageLabel(id)).join(', ') : 'Common'}, and the tongue
-            of their alignment.
+            {native.length > 0 ? native.map((id) => languageLabel(id)).join(', ') : 'Common'} and their
+            alignment tongue.
           </p>
           {extraLanguages > 0 ? (
             <>
               <p className={styles.muted}>
-                An Intelligence of {intelligence} lets you learn {extraLanguages} more{' '}
+                With Intelligence {intelligence}, you can learn {extraLanguages} extra{' '}
                 {extraLanguages === 1 ? 'language' : 'languages'}. Chosen: {languages.length} of{' '}
                 {extraLanguages}.
               </p>
@@ -216,7 +218,7 @@ export function IdentityStep(props: IdentityStepProps) {
               </div>
             </>
           ) : (
-            <p className={styles.muted}>An Intelligence of {intelligence} allows no extra languages.</p>
+            <p className={styles.muted}>With Intelligence {intelligence}, you gain no extra languages.</p>
           )}
         </section>
 
@@ -231,9 +233,8 @@ export function IdentityStep(props: IdentityStepProps) {
               </Badge>
             </div>
             <p className={styles.muted}>
-              Your spell book starts with{' '}
-              {bookSize === 1 ? 'one first-level spell' : `${bookSize} first-level spells`}. Many referees
-              choose it for you, so ask yours.
+              Choose {bookSize === 1 ? '1 first-level spell' : `${bookSize} first-level spells`} for your
+              starting spell book. Check with your referee if they assign starting spells at your table.
             </p>
             {showErrors && spells.length !== bookSize && (
               <p className={styles.fieldError}>
@@ -274,8 +275,8 @@ export function IdentityStep(props: IdentityStepProps) {
               Spells
             </h3>
             <p className={styles.muted}>
-              A {className} prays for spells each day instead of keeping a spell book, once their level gives
-              them spell slots.
+              A {className} doesn&apos;t keep a spell book. Instead, they pray for spells each day once they
+              reach a level with spell slots.
             </p>
           </section>
         )}

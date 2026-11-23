@@ -91,7 +91,7 @@ describe('the checklist wording', () => {
   it('uses carries for one member', () => {
     expect(details(packWith(base, ['Brenna'], kit))).toEqual([
       'Brenna carries torches or a lantern.',
-      'Brenna carries one.',
+      'Brenna carries a tinder box.',
       'Brenna carries rations.',
       'Brenna carries rope.',
     ]);
@@ -100,7 +100,7 @@ describe('the checklist wording', () => {
   it('uses carry for two or more members', () => {
     expect(details(packWith(base, ['Brenna', 'Wren'], kit))).toEqual([
       'Brenna and Wren carry torches or a lantern.',
-      'Brenna and Wren carry one.',
+      'Brenna and Wren carry a tinder box.',
       'Brenna and Wren carry rations.',
       'Brenna and Wren carry rope.',
     ]);
@@ -111,10 +111,10 @@ describe('the checklist wording', () => {
 
   it('reads as a suggestion when nobody carries the item', () => {
     expect(details(packWith(base, [], kit))).toEqual([
-      'Torches or a lantern light the way underground.',
-      'A torch or lantern needs a tinder box to light it.',
-      'A party that stays out for days needs food.',
-      'Rope is handy for pits, ledges, and prisoners.',
+      'Bring torches or a lantern to see underground.',
+      'You need a tinder box to light torches and lanterns.',
+      'Pack food for multi-day expeditions.',
+      'Bring rope for pits, ledges, and climbing.',
     ]);
   });
 });
@@ -137,7 +137,7 @@ describe('counted words', () => {
     } as unknown as ShopItem;
     const facts = describeItem(torch, CTX);
     expect(facts.notes).toContain('Light reaches 1 foot. Burns for 1 turn.');
-    expect(facts.facts).toContainEqual({ label: 'Holds', value: '1 coin' });
+    expect(facts.facts).toContainEqual({ label: 'Capacity', value: '1 coin' });
   });
 
   it('says one hit point, not one hit points', () => {

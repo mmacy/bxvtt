@@ -1603,7 +1603,7 @@ export class MapRenderer {
       case 'pick-edge': {
         const target = cursorEdge(scene, cursor);
         if (target) this.callbacks.onPickEdge?.(target);
-        else this.announce('The map shows nothing on that side yet. Press E for the next side.');
+        else this.announce('That side is unexplored. Press E for the next side.');
         break;
       }
       case 'pin':

@@ -46,11 +46,11 @@ export function NewPinDialog({ open, referee, onCancel, onSave }: NewPinDialogPr
       onOpenChange={(next) => {
         if (!next) close();
       }}
-      title="Add a pin"
+      title="Add pin"
       description={
         refereesOnly
-          ? 'Only referees see this pin and its note. Players never receive it.'
-          : 'Everyone at the table sees the pin and its note on this level.'
+          ? 'Only referees can see this pin and its note. Players never receive it.'
+          : 'Everyone at the table can see this pin and its note on this level.'
       }
       size="sm"
       footer={
@@ -59,7 +59,7 @@ export function NewPinDialog({ open, referee, onCancel, onSave }: NewPinDialogPr
             Cancel
           </Button>
           <Button variant="primary" loading={saving} disabled={tooLong} onClick={() => void save()}>
-            Add the pin
+            Add pin
           </Button>
         </>
       }
@@ -74,12 +74,13 @@ export function NewPinDialog({ open, referee, onCancel, onSave }: NewPinDialogPr
         <Field
           label="Note"
           hint="Optional. Hover over the pin to read it."
-          error={tooLong ? `Keep the note to ${LIMITS.pinText} characters.` : undefined}
+          error={tooLong ? `Keep notes under ${LIMITS.pinText} characters.` : undefined}
           aside={`${text.length} of ${LIMITS.pinText}`}
         >
           <Textarea
             value={text}
             rows={3}
+            placeholder="Loose flagstone by the north wall"
             autoFocus
             onChange={(event) => setText(event.target.value)}
             onKeyDown={(event) => {
@@ -92,7 +93,7 @@ export function NewPinDialog({ open, referee, onCancel, onSave }: NewPinDialogPr
         </Field>
         {referee && (
           <Checkbox
-            label="Only referees see this pin"
+            label="Visible only to referees"
             checked={refereesOnly}
             onCheckedChange={setRefereesOnly}
           />
@@ -138,7 +139,7 @@ export function PinDetailDialog({ pin, label, mayRemove, onClose, onRemove }: Pi
                 if (ok) onClose();
               }}
             >
-              Remove the pin
+              Remove pin
             </Button>
           )}
           <Button variant="secondary" onClick={onClose}>
@@ -147,8 +148,8 @@ export function PinDetailDialog({ pin, label, mayRemove, onClose, onRemove }: Pi
         </>
       }
     >
-      <p className={styles.pinNote}>{pin?.text ? pin.text : 'This pin has no note.'}</p>
-      {pin?.visibility === 'referees' && <p className={styles.pinMeta}>Only referees see this pin.</p>}
+      <p className={styles.pinNote}>{pin?.text ? pin.text : 'No note.'}</p>
+      {pin?.visibility === 'referees' && <p className={styles.pinMeta}>Visible only to referees.</p>}
     </Dialog>
   );
 }

@@ -59,7 +59,7 @@ describe('BattleBoard', () => {
     const snapshot = fixtureSnapshot('battle', 'player');
     api.declare.mockResolvedValue(snapshot.declarations as DeclarationsState);
     const { user, store } = renderWithTable(<BattleBoard />, { snapshot, api });
-    await user.click(within(row('Wren')).getByRole('button', { name: 'More choices' }));
+    await user.click(within(row('Wren')).getByRole('button', { name: 'Actions' }));
     const composer = screen.getByRole('region', { name: 'Declare for Wren' });
     await user.click(within(composer).getByRole('radio', { name: 'Hold' }));
     await user.click(within(composer).getByRole('button', { name: 'Hold this round' }));

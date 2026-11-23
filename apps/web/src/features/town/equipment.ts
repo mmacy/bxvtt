@@ -181,7 +181,7 @@ export function describeItem(item: ShopItem, ctx: TextContext): ItemFacts {
       out.notes.push(`Light reaches ${formatFeet(radius)}. ${burn}`.trim());
     }
     if (typeof detail.capacity_coins === 'number') {
-      out.facts.push({ label: 'Holds', value: count(detail.capacity_coins, 'coin') });
+      out.facts.push({ label: 'Capacity', value: count(detail.capacity_coins, 'coin') });
     }
     if (detail.combat) {
       out.facts.push({ label: 'Thrown for', value: detail.combat.damage });

@@ -61,7 +61,7 @@ export async function expectPartyAt(page: Page, x: number, y: number): Promise<v
 
 /** The scene panel: where the party stands and what is there. */
 export function scenePanel(page: Page): Locator {
-  return page.getByRole('region', { name: 'Where the party stands' });
+  return page.getByRole('region', { name: 'Current location' });
 }
 
 /**
@@ -71,10 +71,10 @@ export function scenePanel(page: Page): Locator {
 export async function openScene(page: Page): Promise<void> {
   const scene = scenePanel(page);
   await expect(scene).toBeVisible();
-  const hide = scene.getByRole('button', { name: 'Hide the description' });
+  const hide = scene.getByRole('button', { name: 'Hide description' });
   // The panel opens by itself on a new area, but only a press on its button keeps it open, so fold it first.
   if (await hide.isVisible()) await hide.click();
-  await scene.getByRole('button', { name: 'Show the description' }).click();
+  await scene.getByRole('button', { name: 'Show description' }).click();
   await expect(hide).toBeVisible();
 }
 
@@ -93,10 +93,10 @@ export function lightStatus(page: Page): Locator {
   return mapOptions(page).getByRole('status');
 }
 
-/** Lights Brenna's torch from the action bar's Light menu and waits until the map says it burns. */
+/** Lights Flarg's torch from the action bar's Light menu and waits until the map says it burns. */
 export async function lightTorch(page: Page): Promise<void> {
-  await pickFromMenu(partyActions(page).getByRole('button', { name: 'Light' }), /^Brenna lights/);
-  await expect(lightStatus(page)).toHaveText(/^Brenna's torch, about \d+ turns left/);
+  await pickFromMenu(partyActions(page).getByRole('button', { name: 'Light' }), /^Flarg lights/);
+  await expect(lightStatus(page)).toHaveText(/^Flarg's torch, about \d+ turns left/);
 }
 
 /**
@@ -158,13 +158,13 @@ export function explorationParty(sam: Actor, ruth: Actor): MemberSpec[] {
   return [
     {
       owner: sam,
-      name: 'Brenna',
+      name: 'Flarg',
       classId: 'fighter',
       buy: ['chainmail', 'shield', 'sword', 'torch', 'tinder_box'],
     },
-    { owner: sam, name: 'Wren', classId: 'thief' },
-    { owner: ruth, name: 'Osric', classId: 'cleric' },
-    { owner: ruth, name: 'Tamsin', classId: 'magic_user', buy: ['dagger', 'torch', 'holy_water'] },
+    { owner: sam, name: 'Tinks', classId: 'thief' },
+    { owner: ruth, name: 'Clarence', classId: 'cleric' },
+    { owner: ruth, name: 'Mazpar', classId: 'magic_user', buy: ['dagger', 'torch', 'holy_water'] },
   ];
 }
 

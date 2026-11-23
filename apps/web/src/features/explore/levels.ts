@@ -121,7 +121,7 @@ export function sceneExtras(level: SceneLevel | null): PlayerMapExtras {
       kind: cache.source === 'generated' ? 'generated_cache' : 'cache',
       x: cell[0],
       y: cell[1],
-      description: 'Treasure the party can see.',
+      description: 'Visible treasure.',
     });
   }
   for (const feature of level.features) {

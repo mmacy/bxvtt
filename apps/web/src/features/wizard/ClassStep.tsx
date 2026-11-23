@@ -31,7 +31,7 @@ export function armourText(detail: ClassDetail): string {
     case 'none':
       return detail.armour.shields_allowed ? 'No armour, shields allowed' : 'No armour or shields';
     default:
-      return `Armour as the class description says, ${shields}`;
+      return `See class description for armour, ${shields}`;
   }
 }
 
@@ -214,7 +214,7 @@ export function ClassStep({
       )}
       <Checkbox
         label="Reroll a first hit die of 1 or 2"
-        description="An optional rule. Turn it on only if your referee plays with it."
+        description="Enable this optional house rule only if your referee uses it at your table."
         checked={hpReroll}
         onCheckedChange={onHpReroll}
       />

@@ -65,7 +65,7 @@ export function CartPanel({
       )}
       {short && lines.length > 0 && buyer && (
         <p className={styles.hint} role="status">
-          {`That is more than the ${formatGold(gold)} ${buyer.name} carries in gold. The shop decides if other coins cover it.`}
+          {`This total exceeds ${buyer.name}'s ${formatGold(gold)} in gold pieces. Other coins in ${buyer.name}'s purse can cover the rest.`}
         </p>
       )}
       {problem !== null && (
@@ -90,13 +90,13 @@ export function CartPanel({
         </Button>
         {lines.length > 0 && (
           <Button variant="ghost" onClick={onClear}>
-            Empty the cart
+            Empty cart
           </Button>
         )}
       </div>
       {lines.length === 0 ? (
         <p className={styles.empty}>
-          The cart is empty. Add items from the shelves, and each one waits here until you buy.
+          The cart is empty. Add gear from the catalog to buy it for this character.
         </p>
       ) : (
         <ul className={styles.lines} aria-label="Cart">
@@ -127,7 +127,7 @@ export function CartPanel({
         <div className={styles.party}>
           {copyTargets > 0 && lines.length > 0 && (
             <Button variant="ghost" size="sm" icon="copy" onClick={onCopy}>
-              Same for everyone you shop for
+              Copy to your other characters
             </Button>
           )}
           {copyTargets > 0 && lines.length > 0 && skipped.length > 0 && (
@@ -137,7 +137,7 @@ export function CartPanel({
           )}
           {othersWithCarts > 0 && (
             <Button variant="secondary" size="sm" icon="users" loading={pending} onClick={onBuyEveryone}>
-              {`Buy every cart (${othersWithCarts + (lines.length > 0 ? 1 : 0)})`}
+              {`Buy all carts (${othersWithCarts + (lines.length > 0 ? 1 : 0)})`}
             </Button>
           )}
         </div>
@@ -179,9 +179,9 @@ function EquipRow({ report, bought }: { report: PurchaseReport; bought: Purchase
           variant="secondary"
           loading={pending}
           onClick={equip}
-          aria-label={`${verb} ${bought.name} now`}
+          aria-label={`${verb} ${bought.name}`}
         >
-          {`${verb} it now`}
+          {verb}
         </Button>
       )}
       {error !== null && (
@@ -201,7 +201,7 @@ export function PurchaseCard({ report, onDismiss }: { report: PurchaseReport; on
     <section className={styles.report} aria-label={`${report.memberName}'s purchase`}>
       <header className={styles.reportHead}>
         <h3 className={styles.reportTitle}>{`${report.memberName} bought`}</h3>
-        <IconButton icon="close" size="sm" label="Dismiss this purchase" onClick={onDismiss} />
+        <IconButton icon="close" size="sm" label="Dismiss purchase" onClick={onDismiss} />
       </header>
       <ul className={styles.reportLines}>
         {report.lines.map((line) => (
@@ -216,7 +216,7 @@ export function PurchaseCard({ report, onDismiss }: { report: PurchaseReport; on
       </div>
       {equippable.length > 0 && (
         <div>
-          <p className={styles.equipTitle}>Ready to use?</p>
+          <p className={styles.equipTitle}>Equip now</p>
           <ul className={styles.equipList}>
             {equippable.map((bought) => (
               <EquipRow key={bought.id} report={report} bought={bought} />

@@ -62,7 +62,7 @@ export function ShellTopBar() {
     });
 
   const items: MenuEntry[] = [
-    { label: 'Save the game', icon: 'save', shortcut: formatShortcut('mod+s'), onSelect: save },
+    { label: 'Save game', icon: 'save', shortcut: formatShortcut('mod+s'), onSelect: save },
     { label: 'Saves', icon: 'download', onSelect: () => ui.setSavesOpen(true) },
     { type: 'separator' },
     { label: 'Table settings', icon: 'settings', onSelect: () => ui.setSettingsOpen(true) },
@@ -94,14 +94,14 @@ export function ShellTopBar() {
     ...(referee
       ? [
           {
-            label: 'Return to the lobby',
+            label: 'Return to lobby',
             icon: 'undo' as const,
             danger: true,
             onSelect: () => setConfirm('end'),
           },
         ]
       : []),
-    { label: 'Leave the table', icon: 'log-out', danger: true, onSelect: () => setConfirm('leave') },
+    { label: 'Leave table', icon: 'log-out', danger: true, onSelect: () => setConfirm('leave') },
   ];
 
   const leave = async () => {
@@ -110,7 +110,7 @@ export function ShellTopBar() {
   };
   const end = async () => {
     await run(() => getApi().endGame(table.id), {
-      success: 'The table is back in its lobby',
+      success: 'Returned to lobby',
       errorTitle: "Couldn't end the game",
     });
   };
@@ -126,7 +126,7 @@ export function ShellTopBar() {
         mode={isGameMode(mode) ? mode : undefined}
         clock={
           view ? (
-            <Tooltip content="Game time since the adventure began. A turn is 10 minutes, a round is 10 seconds.">
+            <Tooltip content="Elapsed game time since the adventure began (1 turn = 10 minutes, 1 round = 10 seconds).">
               <span className={styles.clockWrap} tabIndex={0}>
                 <GameClock
                   time={formatGameClock(clockRounds ?? view.clock_rounds)}
@@ -138,7 +138,7 @@ export function ShellTopBar() {
         }
         actions={
           referee ? (
-            <Tooltip content="Shows referee data: the full map, monsters, and the referee tools. Turn it off to see only what players see.">
+            <Tooltip content="Show referee details, including the full map, hidden monsters, and referee tools. Turn off to see the player view.">
               <span className={styles.lens}>
                 <Switch
                   label="Referee lens"
@@ -169,18 +169,18 @@ export function ShellTopBar() {
       <ConfirmDialog
         open={confirm === 'leave'}
         onOpenChange={(open) => !open && setConfirm(null)}
-        title="Leave this table?"
-        description="You leave the table and its party. To come back, you need a new invite link from the referee."
-        confirmLabel="Leave the table"
+        title="Leave table?"
+        description="You will be removed from this table and its party. You'll need a new invite link from the referee to rejoin."
+        confirmLabel="Leave table"
         tone="danger"
         onConfirm={leave}
       />
       <ConfirmDialog
         open={confirm === 'end'}
         onOpenChange={(open) => !open && setConfirm(null)}
-        title="Return the table to its lobby?"
-        description="The game ends for everyone. Characters start each new game as they were created, so what happened to them in this game, such as experience, treasure, and deaths, stays in its saves. To keep playing the characters as they are now, continue from a save, in the lobby or later."
-        confirmLabel="Return to the lobby"
+        title="Return to lobby?"
+        description="This ends the current session for everyone, while keeping all saves. Starting a new game resets characters to their initial sheets, so restore a save if you want to continue with their earned experience, treasure, and injuries."
+        confirmLabel="Return to lobby"
         tone="danger"
         onConfirm={end}
       />

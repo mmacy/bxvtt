@@ -60,7 +60,7 @@ describe('JoinPage', () => {
     renderJoin(api);
     const user = userEvent.setup();
     await user.type(screen.getByRole('textbox', { name: 'Your name' }), 'Sam');
-    await user.click(screen.getByRole('button', { name: 'Join the table' }));
+    await user.click(screen.getByRole('button', { name: 'Join table' }));
     expect(await screen.findByText(`At table ${table.id}`)).toBeInTheDocument();
     expect(api.createUser).toHaveBeenCalledWith('Sam');
     expect(api.joinTable).toHaveBeenCalledTimes(1);
@@ -71,7 +71,7 @@ describe('JoinPage', () => {
     renderJoin(api);
     const user = userEvent.setup();
     await user.type(screen.getByRole('textbox', { name: 'Your name' }), 'Sam‮');
-    await user.click(screen.getByRole('button', { name: 'Join the table' }));
+    await user.click(screen.getByRole('button', { name: 'Join table' }));
     expect(await screen.findByText(/text direction marks/)).toBeInTheDocument();
     expect(api.createUser).not.toHaveBeenCalled();
   });
@@ -88,7 +88,7 @@ describe('JoinPage', () => {
       }),
     );
     renderJoin(api);
-    expect(await screen.findByText("That invite code doesn't match a table")).toBeInTheDocument();
+    expect(await screen.findByText("That invite code isn't valid")).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Go to your tables' })).toBeInTheDocument();
   });
 });

@@ -32,7 +32,7 @@ test.describe('play screen shell', () => {
     await page.getByRole('button', { name: 'Table menu' }).click();
     const menu = page.getByRole('menu', { name: 'Table menu' });
     await expect(menu.getByRole('menuitem', { name: /^Keyboard shortcuts/ })).toBeVisible();
-    await expect(menu.getByRole('menuitem', { name: 'Return to the lobby' })).toHaveCount(0);
+    await expect(menu.getByRole('menuitem', { name: 'Return to lobby' })).toHaveCount(0);
     await menu.getByRole('menuitem', { name: /^Keyboard shortcuts/ }).click();
     await expect(help).toBeVisible();
   });
@@ -60,7 +60,7 @@ test.describe('play screen shell', () => {
     await expect(ruth.page.getByRole('group', { name: '2 at the table' })).toBeVisible();
 
     await sam.page.getByRole('button', { name: 'Table menu' }).click();
-    await sam.page.getByRole('menuitem', { name: 'Leave the table' }).click();
+    await sam.page.getByRole('menuitem', { name: 'Leave table' }).click();
     const confirm = sam.page.getByRole('alertdialog');
     await expect(confirm).toBeVisible();
     await confirm.getByRole('button', { name: /leave/i }).click();
@@ -75,8 +75,8 @@ test.describe('play screen shell', () => {
     await openTable(ruth.page, staged.path);
     await openTable(sam.page, staged.path);
     await ruth.page.getByRole('button', { name: 'Table menu' }).click();
-    await ruth.page.getByRole('menuitem', { name: 'Return to the lobby' }).click();
-    const confirm = ruth.page.getByRole('alertdialog', { name: 'Return the table to its lobby?' });
+    await ruth.page.getByRole('menuitem', { name: 'Return to lobby' }).click();
+    const confirm = ruth.page.getByRole('alertdialog', { name: 'Return to lobby?' });
     await confirm.getByRole('button', { name: /lobby/i }).click();
     for (const page of [ruth.page, sam.page]) {
       await expect(page.getByRole('heading', { name: 'Party', level: 2 })).toBeVisible({ timeout: 20_000 });

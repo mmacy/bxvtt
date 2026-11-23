@@ -17,7 +17,6 @@ import type {
   User,
 } from '@bxvtt/shared/protocol';
 import { REFEREE_VIEW_OMITTED_FIELDS } from '@bxvtt/shared/protocol';
-import { nameInSentence } from '@bxvtt/shared/text';
 import { BxapiProblem, BxapiUnreachable, callBxapi, toApiError } from '../bxapi';
 import type { Context } from '../context';
 import { str } from '../db';
@@ -208,7 +207,7 @@ export class GameService {
    */
   async require(tableId: string): Promise<LiveGame> {
     const live = await this.current(tableId);
-    if (live === null) throw new ApiError('no_game', 'The table has no game in progress.');
+    if (live === null) throw new ApiError('no_game', 'No game is in progress at this table.');
     return live;
   }
 
@@ -422,7 +421,7 @@ export class GameService {
       this.ctx.tables.requireLobby(tableId);
       const roster = this.ctx.tables.roster(tableId);
       if (roster.length === 0)
-        throw new ApiError('roster_empty', 'Put at least one character on the roster first.');
+        throw new ApiError('roster_empty', 'Add at least one character to the party roster before starting.');
       let adventure = await this.ctx.adventures.resolve(tableId, request.adventure_id);
       const body = (bxapiId: string) => ({
         adventure_id: bxapiId,
@@ -500,7 +499,7 @@ export class GameService {
       this.ctx.hub.broadcast(tableId, {
         type: 'notice',
         code: 'game_started',
-        detail: `The game of ${nameInSentence(session.adventure_name)} has started.`,
+        detail: `${session.adventure_name} has begun.`,
       });
       this.ctx.tables.broadcastTable(tableId);
       await this.pushStateLocked(tableId);
@@ -519,7 +518,7 @@ export class GameService {
   async end(tableId: string, user: User): Promise<void> {
     await this.locked(tableId, async () => {
       const game = this.ctx.tables.game(tableId);
-      if (game === null) throw new ApiError('no_game', 'The table has no game in progress.');
+      if (game === null) throw new ApiError('no_game', 'No game is in progress at this table.');
       this.ctx.tables.setGame(tableId, null);
       this.live.delete(tableId);
       this.ctx.db.run('DELETE FROM declarations WHERE table_id = ?', tableId);
@@ -529,7 +528,7 @@ export class GameService {
       this.ctx.hub.broadcast(tableId, {
         type: 'notice',
         code: 'game_ended',
-        detail: 'The game has ended. The table is back in its lobby.',
+        detail: 'The game has ended, and the table is back in the lobby.',
       });
       this.ctx.tables.broadcastTable(tableId);
       await this.pushStateLocked(tableId);
@@ -571,7 +570,7 @@ export class GameService {
     this.ctx.hub.broadcast(tableId, {
       type: 'notice',
       code: 'game_restored',
-      detail: 'A referee restored a save. The table plays on from it.',
+      detail: 'The referee restored a saved game.',
     });
     this.ctx.tables.broadcastTable(tableId);
     await this.pushStateLocked(tableId);
@@ -598,14 +597,14 @@ export class GameService {
     const command = request.command;
     const info = await callBxapi(() => this.classifier.classify(command.command_type));
     if (info === null) {
-      throw new ApiError('unknown_command', `bxapi has no command ${command.command_type}.`, {
+      throw new ApiError('unknown_command', 'Unknown action.', {
         command_type: command.command_type,
       });
     }
     if (info.class === 'battle') {
       throw new ApiError(
         'use_declarations',
-        'Declare for each member with the declarations routes, then resolve the round.',
+        'Submit declarations for each party member to resolve a battle round.',
       );
     }
     if (role !== 'referee' && 'source' in command) {
@@ -617,7 +616,7 @@ export class GameService {
         this.notifyConflict(tableId, user.id);
         throw new ApiError(
           'revision_conflict',
-          'The game moved on before your command arrived. Look again and retry.',
+          'The table updated before your action went through. Check the current state and try again.',
           {
             revision: live.revision,
           },
@@ -682,7 +681,7 @@ export class GameService {
   checkPermission(live: LiveGame, user: User, role: Role, info: CommandInfo, command: Command): void {
     if (role === 'referee') return;
     if (info.class === 'referee') {
-      throw new ApiError('referee_command', 'Only a referee can send a referee command.', {
+      throw new ApiError('referee_command', 'Only a referee can use that action.', {
         command_type: command.command_type,
       });
     }
@@ -690,13 +689,9 @@ export class GameService {
     if (info.class === 'member' && info.memberField !== null) {
       const memberId = command[info.memberField];
       if (typeof memberId !== 'string') {
-        throw new ApiError(
-          'validation_error',
-          `The command needs ${info.memberField}, the member who acts.`,
-          {
-            errors: [{ path: ['command', info.memberField], message: 'required' }],
-          },
-        );
+        throw new ApiError('validation_error', 'Choose which party member performs this action.', {
+          errors: [{ path: ['command', info.memberField], message: 'Required.' }],
+        });
       }
       const seat = seats.find((candidate) => candidate.member_id === memberId);
       if (seat === undefined || seat.user_id !== user.id) {
@@ -730,10 +725,10 @@ export class GameService {
       if (seated) return;
       throw new ApiError(
         'forbidden',
-        'Only a member with a seat, the caller, or a referee can act for the party.',
+        'Only a seated player, the caller, or a referee can act for the party.',
       );
     }
-    throw new ApiError('forbidden', 'Only the caller or a referee can act for the whole party.');
+    throw new ApiError('forbidden', 'Only the caller or a referee can act for the party.');
   }
 
   /**
@@ -780,7 +775,7 @@ export class GameService {
             await this.conflictLocked(live, userId);
             throw new ApiError(
               'revision_conflict',
-              'The game changed before your command arrived. Look again and retry.',
+              'The table updated before your action went through. Check the current state and try again.',
               {
                 revision: live.revision,
               },
@@ -793,14 +788,17 @@ export class GameService {
               await this.conflictLocked(live, userId);
               throw new ApiError(
                 'revision_conflict',
-                'The game changed before your command arrived. Look again and retry.',
+                'The table updated before your action went through. Check the current state and try again.',
                 {
                   revision: live.revision,
                 },
               );
             }
             if (last)
-              throw new ApiError('session_busy', 'bxapi is busy with this game. Try again in a moment.');
+              throw new ApiError(
+                'session_busy',
+                'This table is busy processing another action. Try again in a moment.',
+              );
             await sleep(250 * attempt);
             continue;
           }
@@ -809,7 +807,10 @@ export class GameService {
           case 'database_busy':
           case 'request_timeout':
             if (last)
-              throw new ApiError('session_busy', 'bxapi is busy with this game. Try again in a moment.');
+              throw new ApiError(
+                'session_busy',
+                'This table is busy processing another action. Try again in a moment.',
+              );
             await sleep(Math.min(2000, (error.retryAfter ?? 0.25 * attempt) * 1000));
             continue;
           case 'idempotency_key_interrupted': {
@@ -818,7 +819,7 @@ export class GameService {
             if (live.revision !== before || last) {
               throw new ApiError(
                 'session_busy',
-                'bxapi stopped while it ran the command. The table shows the game as it is now.',
+                'That action was interrupted before it finished. The table has refreshed with the latest state.',
                 {
                   revision: live.revision,
                 },
@@ -895,7 +896,7 @@ export class GameService {
       () => ({
         type: 'notice',
         code: 'table_changed',
-        detail: "The game moved on before your command arrived, so the server didn't send it.",
+        detail: "Someone acted first, so your action wasn't applied.",
       }),
       userId,
     );

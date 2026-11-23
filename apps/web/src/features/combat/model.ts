@@ -319,7 +319,7 @@ export function planAttack(
       kind: 'out_of_reach',
       weapon: null,
       note: '',
-      reason: `${name} can't move this round, and ${formatFeet(distance)} is too far to strike.`,
+      reason: `${name} can't move this round and can't reach ${formatFeet(distance)}.`,
     };
   }
   const rate = member.encounter_rate_feet;
@@ -335,8 +335,8 @@ export function planAttack(
   const shortRange = missiles.find((w) => w.longRangeFeet !== null);
   const reason =
     shortRange && shortRange.longRangeFeet !== null
-      ? `Out of range: ${formatFeet(distance)} away, and ${shortRange.name} reaches ${formatFeet(shortRange.longRangeFeet)}.`
-      : `Out of reach: ${formatFeet(distance)} away, and ${name} moves ${formatFeet(rate)} a round.`;
+      ? `Out of range: ${formatFeet(distance)} away, while ${shortRange.name} reaches ${formatFeet(shortRange.longRangeFeet)}.`
+      : `Out of reach: ${formatFeet(distance)} away, while ${name} moves ${formatFeet(rate)} per round.`;
   return { ...base, kind: 'out_of_reach', weapon: null, note: '', reason };
 }
 
@@ -446,7 +446,7 @@ export function suggestAction(
   const missile = gear.wielded.some((w) => w.missile);
   const reason = !encounter.front_rank.includes(member.id)
     ? `${member.name} is in the back rank with no missile weapon${missile ? ' in range' : ''}.`
-    : `${member.name} has no missile weapon${missile ? ' in range' : ''}. Close in from More choices if you mean to.`;
+    : `${member.name} has no missile weapon${missile ? ' in range' : ''}. Open Actions to close in.`;
   return { kind: 'hold', body: { action: 'hold' }, plan: null, reason };
 }
 
@@ -692,21 +692,21 @@ export function spellRangeFeet(
   return null;
 }
 
-/** A label for a spell mode from its targeting, such as "One creature" or "By Hit Dice". */
+/** A label for a spell mode from its targeting, such as "One creature" or "By hit dice". */
 export function spellModeLabel(targeting: string | null | undefined): string {
   switch (targeting) {
     case 'self':
-      return 'On the caster';
+      return 'Self';
     case 'single':
       return 'One creature';
     case 'up_to_n':
-      return 'Several creatures';
+      return 'Multiple creatures';
     case 'hd_budget':
-      return 'By Hit Dice';
+      return 'By hit dice';
     case 'area':
-      return 'An area';
+      return 'Area';
     case 'gaze':
-      return 'A gaze';
+      return 'Gaze';
     default:
       return 'Cast';
   }

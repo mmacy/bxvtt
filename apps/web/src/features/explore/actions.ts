@@ -11,6 +11,7 @@ import type { PlayerView, Scene, SceneCache, SceneTransition } from '@bxvtt/shar
 import {
   directionLabel,
   itemPhrase,
+  joinList,
   resolveItemNoun,
   restKindLabel,
   searchKindLabel,
@@ -129,13 +130,13 @@ export function doorLoreText(lore: DoorLore | undefined, party: readonly MemberV
   if (!lore) return null;
   const name = (id: string) => party.find((member) => member.id === id)?.name ?? 'Someone';
   const parts: string[] = [];
-  if (lore.locked === true) parts.push('It is locked.');
-  else if (lore.unlocked === true) parts.push('Its lock is open.');
-  if (lore.stuck === true) parts.push('It is stuck.');
-  if (lore.heard === 'noise') parts.push('Someone heard noise beyond it.');
-  if (lore.heard === 'silence') parts.push('It was quiet beyond it.');
+  if (lore.locked === true) parts.push('The door is locked.');
+  else if (lore.unlocked === true) parts.push('The door is unlocked.');
+  if (lore.stuck === true) parts.push('The door is stuck.');
+  if (lore.heard === 'noise') parts.push('Someone heard noise beyond the door.');
+  if (lore.heard === 'silence') parts.push('No sound came from beyond the door.');
   if (lore.pickFailed && lore.pickFailed.length > 0)
-    parts.push(`${lore.pickFailed.map(name).join(' and ')} couldn't pick the lock.`);
+    parts.push(`${joinList(lore.pickFailed.map(name))} couldn't pick the lock.`);
   return parts.length > 0 ? parts.join(' ') : null;
 }
 
@@ -149,19 +150,19 @@ export function doorEntries(
   const entries: MenuEntry[] = [];
   const living = livingMembers(ctx.view.party);
   const base = { direction };
-  entries.push({ type: 'label', label: `The door to the ${directionLabel(direction).toLowerCase()}` });
+  entries.push({ type: 'label', label: `Door to the ${directionLabel(direction).toLowerCase()}` });
   const known = doorLoreText(lore, ctx.view.party);
   if (known) entries.push({ type: 'label', label: known });
   if (!door.open && ctx.can('open_door')) {
     entries.push({
-      label: 'Open it',
+      label: 'Open door',
       icon: 'door-open',
       onSelect: () => ctx.run({ command_type: 'open_door', ...base }),
     });
   }
   if (door.open && !door.wedged && ctx.can('close_door')) {
     entries.push({
-      label: 'Close it',
+      label: 'Close door',
       icon: 'door',
       onSelect: () => ctx.run({ command_type: 'close_door', ...base }),
     });
@@ -170,7 +171,7 @@ export function doorEntries(
     entries.push(
       ...perMember(
         ctx,
-        'Force it open',
+        'Force door',
         'hand',
         actors(ctx, 'force_door'),
         (member) => ({ command_type: 'force_door', ...base, character_id: member.id }),
@@ -182,27 +183,27 @@ export function doorEntries(
     entries.push(
       ...perMember(
         ctx,
-        'Pick the lock',
+        'Pick lock',
         'key',
         actors(ctx, 'pick_lock', (member) => hasThiefSkill(member, 'open_locks')),
         (member) => ({ command_type: 'pick_lock', ...base, character_id: member.id }),
-        (member) => ({ nothingText: `${member.name} works at the lock, but nothing seems to happen.` }),
+        (member) => ({ nothingText: `${member.name} works at the lock, but it doesn't yield.` }),
       ),
     );
     entries.push(
       ...perMember(
         ctx,
-        'Listen at it',
+        'Listen at door',
         'ear',
         actors(ctx, 'listen_at_door'),
         (member) => ({ command_type: 'listen_at_door', ...base, character_id: member.id }),
-        (member) => ({ nothingText: `${member.name} listens, but hears nothing.` }),
+        (member) => ({ nothingText: `${member.name} listens at the door, but hears nothing.` }),
       ),
     );
   }
   if (!door.wedged && ctx.can('wedge_door') && living.length > 0) {
     entries.push({
-      label: door.open ? 'Wedge it open with a spike' : 'Wedge it shut with a spike',
+      label: door.open ? 'Wedge open with a spike' : 'Wedge shut with a spike',
       icon: 'lock',
       onSelect: () => ctx.run({ command_type: 'wedge_door', ...base }),
     });
@@ -283,7 +284,7 @@ export function lightEntries(ctx: ActionContext): MenuEntry[] {
 
 /** A name for a cache in a list of caches. */
 export function cacheLabel(cache: SceneCache, caches: readonly SceneCache[]): string {
-  if (caches.length <= 1) return 'The treasure';
+  if (caches.length <= 1) return 'Treasure';
   return `Treasure ${caches.indexOf(cache) + 1}`;
 }
 
@@ -293,14 +294,14 @@ export function cacheEntries(ctx: ActionContext, cache: SceneCache, label: strin
   const living = livingMembers(ctx.view.party);
   if (cache.reachable && ctx.can('take_treasure')) {
     entries.push({
-      label: `Take ${label.toLowerCase()}`,
+      label: label === 'Treasure' ? 'Take treasure' : `Take ${label.toLowerCase()}`,
       icon: 'coins',
       onSelect: () => ctx.run({ command_type: 'take_treasure', feature_id: cache.id }),
     });
     if (living.length > 1) {
       entries.push({
         type: 'submenu',
-        label: 'Give it all to one member',
+        label: 'Give all to one member',
         icon: 'user',
         items: living.map((member) => ({
           label: member.name,
@@ -317,7 +318,7 @@ export function cacheEntries(ctx: ActionContext, cache: SceneCache, label: strin
       entries.push(
         ...perMember(
           ctx,
-          'Check it for traps',
+          'Check for traps',
           'trap',
           thieves('inspect_treasure'),
           (member) => ({ command_type: 'inspect_treasure', feature_id: cache.id, character_id: member.id }),
@@ -326,7 +327,7 @@ export function cacheEntries(ctx: ActionContext, cache: SceneCache, label: strin
       );
     } else {
       entries.push(
-        ...perMember(ctx, 'Disarm the trap', 'trap', thieves('remove_treasure_trap'), (member) => ({
+        ...perMember(ctx, 'Disarm trap', 'trap', thieves('remove_treasure_trap'), (member) => ({
           command_type: 'remove_treasure_trap',
           feature_id: cache.id,
           character_id: member.id,
@@ -342,7 +343,7 @@ export function pileEntries(ctx: ActionContext): MenuEntry[] {
   if (!ctx.can('take_treasure')) return [];
   return [
     {
-      label: 'Pick up the dropped goods',
+      label: 'Pick up dropped goods',
       icon: 'coins',
       onSelect: () => ctx.run({ command_type: 'take_treasure', feature_id: 'pile' }),
     },
@@ -384,7 +385,7 @@ export function transitionDescription(transition: Pick<SceneTransition, 'kind' |
     case 'same_level':
       return `${thing} ${plural ? 'lead' : 'leads'} elsewhere on this level.`;
     case 'elsewhere':
-      return `${thing} ${plural ? 'lead' : 'leads'} out of this place.`;
+      return `${thing} ${plural ? 'lead' : 'leads'} to another area.`;
   }
 }
 
@@ -413,7 +414,7 @@ export function turnEntries(ctx: ActionContext): MenuEntry[] {
   return [
     {
       type: 'submenu',
-      label: 'Face another way',
+      label: 'Change facing',
       icon: 'compass',
       items: DIRECTIONS.filter((direction) => direction !== facing).map((direction) => ({
         label: `Face ${directionLabel(direction).toLowerCase()}`,

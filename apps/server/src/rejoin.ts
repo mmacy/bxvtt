@@ -73,7 +73,10 @@ export class RejoinService {
       normalizeInviteCode(inviteCode),
     );
     if (row === undefined) {
-      throw new ApiError('invite_invalid', 'No table has that invite code. Check it with the referee.');
+      throw new ApiError(
+        'invite_invalid',
+        "That invite code doesn't match any table. Check the code with your referee.",
+      );
     }
     return { id: str(row, 'id'), name: str(row, 'name') };
   }
@@ -81,7 +84,8 @@ export class RejoinService {
   /** Counts one invite code attempt for the address. */
   private takeInviteAttempt(request: FastifyRequest): void {
     const retry = this.ctx.limits.join.take(addressKey(request.clientIp));
-    if (retry > 0) throw rateLimited('This address has tried too many invite codes. Try again later.', retry);
+    if (retry > 0)
+      throw rateLimited('Too many invite code attempts from this IP address. Try again later.', retry);
   }
 
   /** Ends the requests whose time ran out, and forgets the ones that ended long ago. */
@@ -162,7 +166,8 @@ export class RejoinService {
   create(request: FastifyRequest): RejoinTicket {
     const address = addressKey(request.clientIp);
     const retry = this.ctx.limits.rejoin.take(address);
-    if (retry > 0) throw rateLimited('This address has asked to rejoin too often. Try again later.', retry);
+    if (retry > 0)
+      throw rateLimited('Too many rejoin requests from this IP address. Try again later.', retry);
     this.takeInviteAttempt(request);
     const body = parseBody(CreateRejoinRequest, request);
     const table = this.tableFor(body.invite_code);
@@ -171,13 +176,13 @@ export class RejoinService {
     if (this.ctx.hub.presence(table.id).online.includes(body.user_id)) {
       throw new ApiError(
         'rejoin_member_online',
-        'That member is at the table now, so nobody can rejoin as them.',
+        'That member is already online at the table, so you cannot rejoin as them right now.',
       );
     }
     if (this.approvers(table.id, body.user_id, false).length === 0) {
       throw new ApiError(
         'rejoin_no_approver',
-        "Only another referee can approve rejoining as a referee, and this table has none. The host keeps their sign-in by opening the server at http://127.0.0.1 on the server's own computer.",
+        "Only another referee can approve a referee's rejoin request, but this table has no other referee. The server host can still sign in from http://127.0.0.1 on the host machine.",
       );
     }
     this.sweep();
@@ -188,7 +193,7 @@ export class RejoinService {
       if (pending.address !== address) {
         throw new ApiError(
           'rejoin_pending',
-          'Someone is already asking to rejoin as that member. Wait until it ends.',
+          'A rejoin request for that member is already pending. Wait for that request to finish.',
         );
       }
       pending.state = 'cancelled';
@@ -199,7 +204,7 @@ export class RejoinService {
     if (fromAddress.length >= MAX_PENDING_PER_ADDRESS) {
       throw new ApiError(
         'rejoin_pending',
-        'This address has too many requests to rejoin waiting. Wait until one ends.',
+        'Too many rejoin requests are already pending from this IP address. Wait for one to finish.',
       );
     }
     const secret = `rjs_${randomBytes(32).toString('base64url')}`;
@@ -236,7 +241,11 @@ export class RejoinService {
    */
   status(request: FastifyRequest): RejoinStatus {
     const retry = this.ctx.limits.rejoinPolls.take(addressKey(request.clientIp));
-    if (retry > 0) throw rateLimited('Ask about the request less often.', retry);
+    if (retry > 0)
+      throw rateLimited(
+        'You are checking that rejoin request too often. Wait a moment and try again.',
+        retry,
+      );
     const { requestId } = RequestParams.parse(request.params);
     const body = parseBody(RejoinStatusRequest, request);
     this.sweep();
@@ -275,7 +284,11 @@ export class RejoinService {
    */
   cancel(request: FastifyRequest): void {
     const retry = this.ctx.limits.rejoinPolls.take(addressKey(request.clientIp));
-    if (retry > 0) throw rateLimited('Ask about the request less often.', retry);
+    if (retry > 0)
+      throw rateLimited(
+        'You are checking that rejoin request too often. Wait a moment and try again.',
+        retry,
+      );
     const { requestId } = RequestParams.parse(request.params);
     const body = parseBody(RejoinStatusRequest, request);
     const pending = this.owned(requestId, body.secret);
@@ -362,13 +375,13 @@ export class RejoinService {
     const pending = this.requests.get(requestId);
     if (pending === undefined || pending.tableId !== tableId) notFound('rejoin request', requestId);
     if (pending.userId === userId) {
-      throw new ApiError(
-        'forbidden',
-        'A referee can’t approve or decline a request to rejoin as themselves.',
-      );
+      throw new ApiError('forbidden', "You can't approve or decline your own rejoin request.");
     }
     if (pending.state !== 'pending') {
-      throw new ApiError('rejoin_not_pending', `The request has ended: it is ${pending.state}.`);
+      throw new ApiError(
+        'rejoin_not_pending',
+        `That rejoin request is no longer pending (${pending.state}).`,
+      );
     }
     return pending;
   }
@@ -384,7 +397,10 @@ export class RejoinService {
   approve(tableId: string, requestId: string, refereeId: string): RejoinRequestList {
     const pending = this.decidable(tableId, requestId, refereeId);
     if (this.cancelIfOnline(pending)) {
-      throw new ApiError('rejoin_member_online', 'The member came back online, so the request has ended.');
+      throw new ApiError(
+        'rejoin_member_online',
+        'That member is back online, so the rejoin request was cancelled.',
+      );
     }
     // The member keeps their token until the visitor's browser claims the approval with its next poll.
     pending.state = 'approved';

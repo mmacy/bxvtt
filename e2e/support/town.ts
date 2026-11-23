@@ -3,14 +3,14 @@
  * SDK, so the town spec starts where a party returns from its first delve.
  *
  * bxapi has no command that grants a gem or jewellery, so the referee places the party in the chapel, where the
- * altar holds two silver candlesticks, and then in front of the scriptorium, whose room trap wounds Brenna under
+ * altar holds two silver candlesticks, and then in front of the scriptorium, whose room trap wounds Flarg under
  * the fixed session seed.
  */
 import type { GameState } from '@bxvtt/shared/protocol';
 import type { Actor } from './fixtures';
 import { ADVENTURES, placeParty, send, setupTable, type SetupResult } from './table';
 
-/** A town table: Ruth referees, Sam plays Brenna and Wren, and Alice plays Osric. */
+/** A town table: Ruth referees, Sam plays Flarg and Tinks, and Alice plays Clarence. */
 export interface TownTable extends SetupResult {
   ruth: Actor;
   sam: Actor;
@@ -19,18 +19,18 @@ export interface TownTable extends SetupResult {
 
 /** The party's state after {@link returnToTown}, under session seed 1981. */
 export const AFTER_DELVE = {
-  brennaHp: 7,
-  brennaMaxHp: 10,
+  flargHp: 7,
+  flargMaxHp: 10,
   candlestickGp: 60,
-  purses: { Brenna: 19, Wren: 74, Osric: 20 },
+  purses: { Flarg: 19, Tinks: 74, Clarence: 20 },
 } as const;
 
 /**
  * Sets up the table and starts the game in town.
  *
  * @param ruth - The referee.
- * @param sam - The player who owns Brenna and Wren, and the caller.
- * @param alice - The player who owns Osric.
+ * @param sam - The player who owns Flarg and Tinks, and the caller.
+ * @param alice - The player who owns Clarence.
  */
 export async function townTable(ruth: Actor, sam: Actor, alice: Actor): Promise<TownTable> {
   const setup = await setupTable({
@@ -39,16 +39,16 @@ export async function townTable(ruth: Actor, sam: Actor, alice: Actor): Promise<
     players: [sam, alice],
     adventure: ADVENTURES.bell,
     party: [
-      { owner: sam, name: 'Brenna', classId: 'fighter' },
-      { owner: sam, name: 'Wren', classId: 'thief' },
-      { owner: alice, name: 'Osric', classId: 'cleric' },
+      { owner: sam, name: 'Flarg', classId: 'fighter' },
+      { owner: sam, name: 'Tinks', classId: 'thief' },
+      { owner: alice, name: 'Clarence', classId: 'cleric' },
     ],
   });
   return { ...setup, ruth, sam, alice };
 }
 
 /**
- * Takes the party into the priory, takes the chapel's candlesticks, springs the scriptorium trap on Brenna, and
+ * Takes the party into the priory, takes the chapel's candlesticks, springs the scriptorium trap on Flarg, and
  * brings the party back to town.
  */
 export async function returnToTown(table: TownTable): Promise<void> {

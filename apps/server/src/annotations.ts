@@ -96,14 +96,15 @@ export function registerAnnotationRoutes(app: FastifyInstance, ctx: Context): vo
     const body = parseBody(CreateAnnotationRequest, request);
     const level = { dungeon_id: body.dungeon_id, level_number: body.level_number };
     if (body.kind === 'pin' && body.visibility === 'referees' && role !== 'referee') {
-      throw new ApiError('referee_required', 'Only a referee can place a pin that only referees see.');
+      throw new ApiError('referee_required', 'Only a referee can place a referee-only pin.');
     }
     const retry = ctx.limits.userPosts.take(user.id);
-    if (retry > 0) throw rateLimited('You are marking the map too fast. Wait a moment.', retry);
+    if (retry > 0)
+      throw rateLimited('You are adding map marks too quickly. Wait a moment and try again.', retry);
     if (role !== 'referee') {
       await ctx.game.current(tableId);
       if (!ctx.game.levelKnown(tableId, level)) {
-        throw new ApiError('forbidden', "The party hasn't mapped that level, so you can't mark it.");
+        throw new ApiError('forbidden', "The party hasn't explored that level yet, so you can't mark it.");
       }
     }
     const total = num(
@@ -113,7 +114,7 @@ export function registerAnnotationRoutes(app: FastifyInstance, ctx: Context): vo
     if (total >= ctx.config.quotas.annotationsPerTable) {
       throw new ApiError(
         'content_too_large',
-        'This table has as many annotations as it can hold. Erase some first.',
+        'This table has reached the limit for map annotations. Erase some marks first.',
       );
     }
     const count = num(
@@ -128,7 +129,7 @@ export function registerAnnotationRoutes(app: FastifyInstance, ctx: Context): vo
     if (count >= LIMITS.annotationsPerLevel) {
       throw new ApiError(
         'content_too_large',
-        'This level has as many annotations as it can hold. Erase some first.',
+        'This level has reached the limit for map annotations. Erase some marks first.',
       );
     }
     const base = {
@@ -187,7 +188,7 @@ export function registerAnnotationRoutes(app: FastifyInstance, ctx: Context): vo
       notFound('annotation', annotationId);
     }
     if (role !== 'referee' && str(row, 'author_id') !== user.id) {
-      throw new ApiError('forbidden', 'You can erase only your own marks. A referee can erase any.');
+      throw new ApiError('forbidden', 'You can erase only your own map marks. A referee can erase any mark.');
     }
     ctx.db.run('DELETE FROM annotations WHERE id = ?', annotationId);
     await broadcastLevel(ctx, tableId, {

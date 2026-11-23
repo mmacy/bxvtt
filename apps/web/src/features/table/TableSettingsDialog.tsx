@@ -12,7 +12,11 @@ export function TableSettingsDialog() {
       open={open}
       onOpenChange={setOpen}
       title="Table settings"
-      description={referee ? 'Changes apply at once, for everyone.' : 'Only the referee can change these.'}
+      description={
+        referee
+          ? 'Changes apply immediately for everyone at the table.'
+          : 'Only the referee can change these settings.'
+      }
       size="md"
     >
       {open && <TableSettingsForm showName />}

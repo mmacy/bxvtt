@@ -33,8 +33,8 @@ const SECTION_ICON: Record<TownSection, IconName> = {
 
 const SECTION_VERB: Record<TownSection, string> = {
   square: 'Visit',
-  outfitter: 'Go shopping',
-  temple: 'Visit the temple',
+  outfitter: 'Shop',
+  temple: 'Visit temple',
   treasure: 'Sell treasure',
   rest: 'Rest and prepare',
 };
@@ -50,13 +50,13 @@ export function ServicesPanel() {
     return { ...parseService(line), section, icon: section ? SECTION_ICON[section] : 'town' };
   });
   return (
-    <Panel title="What the town offers" meta={lines.length > 0 ? count(lines.length, 'place') : undefined}>
+    <Panel title="Town services" meta={lines.length > 0 ? count(lines.length, 'place') : undefined}>
       {lines.length === 0 ? (
         <EmptyState
           size="compact"
           icon="town"
-          title="Nothing is listed"
-          description="This town lists no services."
+          title="No services available"
+          description="No shops, temples, or inns are open in this town."
         />
       ) : (
         <ul className={styles.services}>
@@ -87,7 +87,7 @@ export function PartyGlance() {
   const party = useParty();
   const buyerId = useTownUi((s) => s.buyerId);
   return (
-    <Panel title="Purses and players" meta={count(party.length, 'adventurer')}>
+    <Panel title="Party purses" meta={count(party.length, 'adventurer')}>
       <ul className={styles.party}>
         {party.map((member) => {
           const status = memberStatus(member);
@@ -97,7 +97,7 @@ export function PartyGlance() {
               <div className={styles.memberBody}>
                 <div className={styles.memberHead}>
                   <h3 className={styles.memberName}>{member.name}</h3>
-                  {buyerId === member.id && <Badge tone="neutral">You are shopping</Badge>}
+                  {buyerId === member.id && <Badge tone="neutral">Shopping</Badge>}
                   {status.dead && <Badge tone="danger">Dead</Badge>}
                 </div>
                 <div className={styles.memberFoot}>
@@ -130,7 +130,7 @@ export function ChecklistPanel({ onShop }: { onShop?: (search: string) => void }
     }
   };
   return (
-    <Panel title="Ready for the dungeon?" meta={missing === 0 ? 'Looks ready' : `${missing} to think about`}>
+    <Panel title="Ready for the dungeon?" meta={missing === 0 ? 'Ready' : `${missing} suggested`}>
       <ul className={styles.checklist}>
         {checklist.map((line) => (
           <li key={line.key} className={styles.check} data-covered={line.covered}>
@@ -141,11 +141,7 @@ export function ChecklistPanel({ onShop }: { onShop?: (search: string) => void }
               <span className={styles.checkTitle}>
                 {line.title}
                 <span className="visually-hidden">
-                  {line.status
-                    ? `: ${line.status}`
-                    : line.covered
-                      ? ': the party has it'
-                      : ': nobody has it yet'}
+                  {line.status ? `: ${line.status}` : line.covered ? ': carried' : ': missing'}
                 </span>
               </span>
               <span className={styles.checkDetail}>{line.detail}</span>
@@ -157,13 +153,13 @@ export function ChecklistPanel({ onShop }: { onShop?: (search: string) => void }
             )}
             {!line.covered && line.key !== 'spells' && services.outfitter && (
               <Button size="sm" variant="ghost" onClick={() => shop(line.search)}>
-                Find it
+                Shop
               </Button>
             )}
           </li>
         ))}
       </ul>
-      <p className={styles.advice}>This is a suggestion. Nothing here stops the party from leaving.</p>
+      <p className={styles.advice}>These items are optional. You can set out without them.</p>
     </Panel>
   );
 }
@@ -175,13 +171,13 @@ export function BusinessPanel() {
   const journal = view?.journal ?? [];
   const recent = journal.slice(-3).reverse();
   return (
-    <Panel title="The party's business">
+    <Panel title="Quests and journal">
       {quests.length === 0 && recent.length === 0 ? (
         <EmptyState
           size="compact"
           icon="journal"
-          title="Nothing written yet"
-          description="Quests and journal lines appear here as the party learns of them."
+          title="No quests or journal entries"
+          description="Active quests and recent journal entries appear here as you play."
         />
       ) : (
         <div className={styles.business}>
@@ -195,7 +191,7 @@ export function BusinessPanel() {
                     <div>
                       <span className={styles.questName}>{quest.name}</span>
                       <span className={styles.questGoal}>
-                        {current ? `Now: ${current.name}` : 'Every objective is done.'}
+                        {current ? `Now: ${current.name}` : 'Completed'}
                       </span>
                     </div>
                   </li>
@@ -204,7 +200,7 @@ export function BusinessPanel() {
             </ul>
           )}
           {recent.length > 0 && (
-            <ul className={styles.journal} aria-label="Latest journal lines">
+            <ul className={styles.journal} aria-label="Recent journal entries">
               {recent.map((entry, index) => (
                 <li key={`${entry.rounds}-${index}`} className={styles.journalLine}>
                   <span className={styles.journalTime}>{formatGameClock(entry.rounds)}</span>
@@ -263,7 +259,7 @@ function ActivityRow({ item }: { item: ActivityItem }) {
   const [open, setOpen] = useState(false);
   return (
     <li className={styles.activityRow}>
-      <span className={styles.activityWho}>{sender?.name ?? 'The table'}</span>
+      <span className={styles.activityWho}>{sender?.name ?? 'Party'}</span>
       <div>
         <span>{item.headline}</span>
         {item.rest.length > 0 && (
@@ -313,8 +309,8 @@ export function ActivityPanel() {
         <EmptyState
           size="compact"
           icon="coins"
-          title="A quiet street"
-          description="Purchases, sales, and rests show here for the whole table."
+          title="No recent activity"
+          description="Purchases, sales, healing, and rests appear here."
         />
       ) : (
         <ul className={styles.activity}>

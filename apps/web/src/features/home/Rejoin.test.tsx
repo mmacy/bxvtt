@@ -50,7 +50,7 @@ const pending = {
   user: null,
 };
 
-describe('coming back in as an existing member', () => {
+describe('rejoining as an existing member', () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
   });
@@ -75,11 +75,9 @@ describe('coming back in as an existing member', () => {
       await screen.findByRole('heading', { name: "I've played at this table before" }),
     ).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: "I'm new here" })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Come back in as Sam' }));
-    expect(
-      await screen.findByRole('heading', { name: 'Waiting for a referee to let you in as Sam' }),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/A referee is at the table now/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Rejoin as Sam' }));
+    expect(await screen.findByRole('heading', { name: 'Waiting to rejoin as Sam' })).toBeInTheDocument();
+    expect(screen.getByText(/A referee is online now/)).toBeInTheDocument();
     await act(() => vi.advanceTimersByTimeAsync(REJOIN_POLL_MS * 2));
     expect(await screen.findByText('At table tbl_1')).toBeInTheDocument();
     expect(useIdentity.getState()).toMatchObject({ status: 'ready', token: 'tok_new', user: sam });
@@ -95,10 +93,10 @@ describe('coming back in as an existing member', () => {
     api.rejoinStatus.mockResolvedValue({ ...pending, status: 'declined' });
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderJoin(api);
-    await user.click(await screen.findByRole('button', { name: 'Come back in as Sam' }));
-    expect(await screen.findByText(/No referee is at the table right now/)).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: 'Rejoin as Sam' }));
+    expect(await screen.findByText(/No referee is online right now/)).toBeInTheDocument();
     await act(() => vi.advanceTimersByTimeAsync(REJOIN_POLL_MS));
-    expect(await screen.findByText("The referee didn't let you in as Sam")).toBeInTheDocument();
+    expect(await screen.findByText('The referee declined your request to rejoin as Sam')).toBeInTheDocument();
   });
 
   it('shows the refusal when the member is online', async () => {
@@ -118,7 +116,7 @@ describe('coming back in as an existing member', () => {
     );
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderJoin(api);
-    await user.click(await screen.findByRole('button', { name: 'Come back in as Sam' }));
+    await user.click(await screen.findByRole('button', { name: 'Rejoin as Sam' }));
     expect(await screen.findByText('That member is at the table right now')).toBeInTheDocument();
   });
 
@@ -131,14 +129,14 @@ describe('coming back in as an existing member', () => {
     api.cancelRejoin.mockImplementation(() => new Promise<void>((resolve) => (finishCancel = resolve)));
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderJoin(api);
-    await user.click(await screen.findByRole('button', { name: 'Come back in as Sam' }));
-    await screen.findByText(/Your request lasts until/);
+    await user.click(await screen.findByRole('button', { name: 'Rejoin as Sam' }));
+    await screen.findByText(/Your rejoin request expires at/);
     await user.click(screen.getByRole('button', { name: 'Stop waiting' }));
     expect(api.cancelRejoin).toHaveBeenCalledWith('rjq_1', 's3cret');
     // The page keeps waiting until the server confirms.
-    expect(screen.getByText('Ending your request.')).toBeInTheDocument();
+    expect(screen.getByText('Cancelling your rejoin request.')).toBeInTheDocument();
     await act(async () => finishCancel());
-    expect(await screen.findByRole('button', { name: 'Come back in as Sam' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Rejoin as Sam' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: "I'm new here" })).toBeInTheDocument();
   });
 
@@ -151,8 +149,8 @@ describe('coming back in as an existing member', () => {
     vi.stubGlobal('navigator', Object.assign(Object.create(navigator) as Navigator, { sendBeacon: beacon }));
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderJoin(api);
-    await user.click(await screen.findByRole('button', { name: 'Come back in as Sam' }));
-    await screen.findByText(/Your request lasts until/);
+    await user.click(await screen.findByRole('button', { name: 'Rejoin as Sam' }));
+    await screen.findByText(/Your rejoin request expires at/);
     window.dispatchEvent(new Event('pagehide'));
     expect(beacon).toHaveBeenCalledWith('/api/rejoin/rjq_1/cancel', JSON.stringify({ secret: 's3cret' }));
     vi.unstubAllGlobals();
@@ -171,18 +169,16 @@ describe('coming back in as an existing member', () => {
     api.joinTable.mockResolvedValue({ id: 'tbl_1' } as never);
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderJoin(api);
-    await user.click(await screen.findByRole('button', { name: 'Come back in as Sam' }));
-    await screen.findByText(/Your request lasts until/);
+    await user.click(await screen.findByRole('button', { name: 'Rejoin as Sam' }));
+    await screen.findByText(/Your rejoin request expires at/);
     await act(() => vi.advanceTimersByTimeAsync(REJOIN_POLL_MS));
     await act(() => vi.advanceTimersByTimeAsync(REJOIN_MAX_BACKOFF_MS));
-    expect(screen.queryByText(/The connection hiccuped/)).not.toBeInTheDocument();
-    expect(
-      screen.getByRole('heading', { name: 'Waiting for a referee to let you in as Sam' }),
-    ).toBeInTheDocument();
+    expect(screen.queryByText(/Connection interrupted/)).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Waiting to rejoin as Sam' })).toBeInTheDocument();
     await act(() => vi.advanceTimersByTimeAsync(REJOIN_MAX_BACKOFF_MS));
-    expect(await screen.findByText(/Still waiting. The connection hiccuped/)).toBeInTheDocument();
+    expect(await screen.findByText(/Connection interrupted\. Retrying automatically/)).toBeInTheDocument();
     await act(() => vi.advanceTimersByTimeAsync(REJOIN_MAX_BACKOFF_MS));
-    expect(screen.queryByText(/The connection hiccuped/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Connection interrupted/)).not.toBeInTheDocument();
     await act(() => vi.advanceTimersByTimeAsync(REJOIN_POLL_MS));
     expect(await screen.findByText('At table tbl_1')).toBeInTheDocument();
   });

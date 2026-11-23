@@ -52,13 +52,13 @@ export function MembersPanel() {
           const items: MenuEntry[] = [];
           if (member.role === 'player') {
             items.push({
-              label: 'Make a referee',
+              label: 'Make referee',
               icon: 'referee',
               onSelect: () => void setRole(member, 'referee'),
             });
           } else {
             items.push({
-              label: 'Make a player',
+              label: 'Make player',
               icon: 'user',
               disabled: refereeCount <= 1,
               onSelect: () => void setRole(member, 'player'),
@@ -67,7 +67,7 @@ export function MembersPanel() {
           if (!isMe) {
             items.push({ type: 'separator' });
             items.push({
-              label: 'Remove from the table',
+              label: 'Remove from table',
               icon: 'log-out',
               danger: true,
               onSelect: () => setRemoving(member),
@@ -112,7 +112,7 @@ export function MembersPanel() {
           if (!open) setRemoving(null);
         }}
         title={`Remove ${removing?.name ?? 'this member'} from the table?`}
-        description="They leave the table, and the invite link changes so the old one stops working. Their characters leave the party."
+        description="This removes them from the table, removes their characters from the party, and replaces the invite link so the old link no longer works."
         confirmLabel="Remove from table"
         tone="danger"
         onConfirm={remove}

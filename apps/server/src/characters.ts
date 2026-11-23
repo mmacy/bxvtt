@@ -84,7 +84,7 @@ export class CharacterStore {
  */
 function checkSeed(ctx: Context, seed: number | undefined): void {
   if (seed !== undefined && !ctx.config.allowCharacterSeeds) {
-    throw new ApiError('forbidden', "This server doesn't let users choose the dice for a new character.");
+    throw new ApiError('forbidden', 'Custom dice seeds for character creation are disabled on this server.');
   }
 }
 
@@ -149,7 +149,11 @@ export function registerCharacterRoutes(app: FastifyInstance, ctx: Context): voi
       notFound('ability roll', body.ability_roll_id);
     }
     const retry = ctx.limits.characterChecks.take(user.id);
-    if (retry > 0) throw rateLimited('You are checking characters too fast. Wait a moment.', retry);
+    if (retry > 0)
+      throw rateLimited(
+        'You are checking character choices too quickly. Wait a moment and try again.',
+        retry,
+      );
     return checker.check(user, body, request.id);
   });
 
@@ -164,7 +168,7 @@ export function registerCharacterRoutes(app: FastifyInstance, ctx: Context): voi
     if (owned >= ctx.config.quotas.charactersPerUser) {
       throw new ApiError(
         'forbidden',
-        `You have ${owned} characters, the most this server keeps for one user. Delete one you no longer play.`,
+        `You already have ${owned} characters, which is the limit per player. Delete a character you no longer play.`,
       );
     }
     if (body.ability_roll_id !== undefined) {

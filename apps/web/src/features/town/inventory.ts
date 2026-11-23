@@ -5,6 +5,7 @@
  * and never assumes a field exists. It only reads and formats. It decides nothing about what a member may use.
  */
 import type { MemberView } from '@bxvtt/shared/bxapi';
+import { capitalizeFirst } from '@bxvtt/shared/text';
 
 /** The five coin metals a purse holds. */
 export interface Purse {
@@ -62,6 +63,10 @@ function list(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
+function stripIndefinite(value: string): string {
+  return value.replace(/^(a|an|some)\s+/i, '');
+}
+
 /** Reads an item instance: a mundane stack (`template`) or a magic item. */
 function readInstance(value: unknown, equipped: boolean): CarriedItem | null {
   const instance = record(value);
@@ -70,7 +75,7 @@ function readInstance(value: unknown, equipped: boolean): CarriedItem | null {
   if (template !== null) {
     return {
       id: text(template.id, ''),
-      name: text(template.name, 'An item'),
+      name: capitalizeFirst(stripIndefinite(text(template.name, 'Item'))),
       itemType: text(template.item_type, 'gear'),
       quantity: Math.max(1, whole(instance.quantity)),
       equipped,
@@ -78,7 +83,7 @@ function readInstance(value: unknown, equipped: boolean): CarriedItem | null {
   }
   return {
     id: text(instance.instance_id, ''),
-    name: text(instance.name, text(instance.display, 'A magic item')),
+    name: capitalizeFirst(stripIndefinite(text(instance.name, text(instance.display, 'Magic item')))),
     itemType: 'magic_item',
     quantity: Math.max(1, whole(instance.quantity)),
     equipped,
@@ -127,7 +132,9 @@ export function readInventory(member: MemberView): MemberInventory {
     valuables.push({
       instanceId: valuable.instance_id,
       kind: valuable.kind === 'jewellery' ? 'jewellery' : 'gem',
-      name: text(valuable.name, valuable.kind === 'jewellery' ? 'A piece of jewellery' : 'A gem'),
+      name: capitalizeFirst(
+        stripIndefinite(text(valuable.name, valuable.kind === 'jewellery' ? 'Jewellery' : 'Gem')),
+      ),
       valueGp: whole(valuable.value_gp),
     });
   }

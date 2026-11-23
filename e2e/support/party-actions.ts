@@ -9,7 +9,7 @@ import { expect, type Page } from '@playwright/test';
  * @param kind - What to search for, such as "secret doors" or "room traps".
  * @param who - The member who searches.
  */
-export async function searchFor(page: Page, kind = 'secret doors', who = 'Brenna'): Promise<void> {
+export async function searchFor(page: Page, kind = 'secret doors', who = 'Flarg'): Promise<void> {
   await page.getByRole('toolbar', { name: 'Party actions' }).getByRole('button', { name: 'Search' }).click();
   const entry = page.getByRole('menuitem', { name: `Search for ${kind}` });
   await expect(entry).toBeVisible();

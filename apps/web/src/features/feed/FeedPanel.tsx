@@ -43,15 +43,15 @@ const FRESH_MS = 15_000;
 
 const FILTER_EMPTY: Record<FeedFilter, { title: string; description: string }> = {
   all: { title: '', description: '' },
-  chat: { title: 'No chat yet', description: 'Messages and whispers show here.' },
-  rolls: { title: 'No dice rolls yet', description: 'Open the dice tray, or type /roll 1d20 to roll.' },
+  chat: { title: 'No messages yet', description: 'Chat messages and whispers appear here.' },
+  rolls: { title: 'No dice rolls yet', description: 'Open the dice tray or type /roll 1d20.' },
   game: {
-    title: 'Nothing has happened in the game yet',
-    description: 'Each action the party takes shows here as it happens.',
+    title: 'No game events yet',
+    description: 'Party actions and game events appear here during play.',
   },
   hidden: {
-    title: 'Nothing hidden yet',
-    description: 'Secret rolls and the events players never see show here.',
+    title: 'No referee-only entries yet',
+    description: 'Secret rolls and referee-only events appear here.',
   },
 };
 
@@ -226,18 +226,18 @@ export function FeedPanel() {
   if (!visibleEntries) {
     if (searching) {
       empty = {
-        title: 'No matches',
+        title: 'No matching entries',
         description: hasOlder
-          ? `Nothing in the loaded entries matches “${query.trim()}”. Load older entries to search further back.`
-          : `Nothing in the feed matches “${query.trim()}”.`,
+          ? `No loaded entries match “${query.trim()}”. Load older entries to search further back.`
+          : `No feed entries match “${query.trim()}”.`,
       };
     } else if (activeFilter !== 'all') {
       empty = FILTER_EMPTY[activeFilter];
     } else {
       empty = {
-        title: 'The feed is quiet',
+        title: 'No entries yet',
         description:
-          'Chat, dice rolls, and everything that happens in the game appear here. Say hello, or roll a die to start.',
+          'Chat messages, dice rolls, and game events appear here. Send a message or roll a die to begin.',
         action: { label: 'Roll a d20', text: '/roll 1d20 ' },
       };
     }
@@ -251,7 +251,7 @@ export function FeedPanel() {
         </Button>
       ) : visibleEntries ? (
         <p className={styles.beginning}>
-          <Icon name="flag" size={12} /> This is where the table’s feed begins.
+          <Icon name="flag" size={12} /> Start of feed
         </p>
       ) : null}
     </div>
@@ -262,7 +262,7 @@ export function FeedPanel() {
       <div className={styles.panel}>
         <div className={styles.toolbar}>
           <SegmentedControl
-            aria-label="Show"
+            aria-label="Filter feed"
             size="sm"
             options={filterOptions}
             value={activeFilter}
@@ -271,7 +271,7 @@ export function FeedPanel() {
           />
           <IconButton
             icon="search"
-            label={searchOpen ? 'Close the search' : 'Search the feed'}
+            label={searchOpen ? 'Close search' : 'Search feed'}
             pressed={searchOpen}
             size="sm"
             onClick={() => {
@@ -288,8 +288,8 @@ export function FeedPanel() {
               size="sm"
               value={query}
               onValueChange={setQuery}
-              aria-label="Search the loaded entries"
-              placeholder="Search the loaded entries"
+              aria-label="Search loaded entries"
+              placeholder="Search loaded entries"
               onKeyDown={(event) => {
                 if (event.key === 'Escape' && query === '') {
                   setSearchOpen(false);

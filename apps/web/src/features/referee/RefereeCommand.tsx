@@ -77,7 +77,8 @@ export function useRefereeCommand(): {
             failure: {
               status: 'conflict',
               commandType,
-              message: 'The table changed before this arrived. Check the new state and send it again.',
+              message:
+                'The game state changed before your command arrived. Review the current state and try again.',
               id,
             },
           };
@@ -184,12 +185,12 @@ export function CommandOutcome({
   }
   const title =
     outcome.status === 'refused'
-      ? 'The rules engine refused this'
+      ? 'Action not allowed'
       : outcome.status === 'conflict'
-        ? 'The table changed'
+        ? 'Game state changed'
         : outcome.status === 'skipped'
-          ? 'Not sent'
-          : "That didn't go through";
+          ? 'Command skipped'
+          : "Couldn't send command";
   return (
     <Banner
       tone={outcome.status === 'refused' ? 'warning' : 'danger'}

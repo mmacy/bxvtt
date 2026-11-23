@@ -108,16 +108,16 @@ function formatClass(value: string): string {
 }
 
 const MODE_PHRASES: Record<string, string> = {
-  town: 'while the party is in town',
-  exploring: 'while the party is exploring',
+  town: 'while in town',
+  exploring: 'while exploring',
   encounter: 'during an encounter',
   battle: 'during a battle',
-  game_over: 'after the game is over',
-  victory: 'after the adventure is won',
+  game_over: 'after the game has ended',
+  victory: 'after the adventure is complete',
 };
 
 const MOVE_REASONS: Record<string, string> = {
-  overloaded: 'it is carrying too much',
+  overloaded: 'a party member is overloaded',
 };
 
 const QUEST_STATUSES: Record<string, string> = {

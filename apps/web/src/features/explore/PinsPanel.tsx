@@ -111,10 +111,10 @@ export function PinsPanel({ pins, records, partyHere, onShow, onOpen, onAddAtPar
             variant="secondary"
             icon="plus"
             disabled={!partyHere}
-            title={partyHere ? undefined : 'The party isn’t on this level.'}
+            title={partyHere ? undefined : "The party isn't on this level."}
             onClick={() => act(onAddAtParty)}
           >
-            Add a pin where the party stands
+            Add pin at party
           </Button>
         </section>
       )}

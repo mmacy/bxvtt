@@ -78,21 +78,20 @@ function MonsterLine({
 const ENDINGS = [
   {
     value: 'terms',
-    label: 'The monsters and the party came to terms',
-    description:
-      'A parley. The monsters stay settled, and they don’t appear again when the party comes back.',
+    label: 'Came to terms (mark area resolved)',
+    description: "Ends peacefully. These monsters won't appear again when the party returns.",
     command: { outcome: 'parley', resolve_area: true },
   },
   {
     value: 'parley',
-    label: 'A parley for now',
-    description: 'The monsters let the party pass. They are back the next time the party enters their area.',
+    label: 'Temporary truce',
+    description: 'The monsters let the party pass for now, but remain in this area.',
     command: { outcome: 'parley', resolve_area: false },
   },
   {
     value: 'departed',
-    label: 'One side walked away',
-    description: 'The party left, or you called off a pursuit. The monsters keep their area.',
+    label: 'Broke off',
+    description: 'One side walked away or ended a pursuit. The monsters remain in this area.',
     command: { outcome: 'departed', resolve_area: false },
   },
 ] as const;
@@ -120,11 +119,11 @@ export function EndEncounterForm() {
           onClick={async () => {
             // The encounter view closes with the encounter, so the confirmation goes to a toast as well.
             if (await run({ command_type: 'end_encounter', ...chosen.command })) {
-              toast.success('The encounter is over', { description: chosen.label });
+              toast.success('Encounter ended', { description: chosen.label });
             }
           }}
         >
-          End the encounter
+          End encounter
         </Button>
         {legal === null && <span className={styles.secondary}>No encounter is open.</span>}
       </div>
@@ -224,7 +223,7 @@ export function EncounterNow({
           </section>
         );
       })}
-      <SectionLabel level={4}>End it</SectionLabel>
+      <SectionLabel level={4}>End encounter</SectionLabel>
       <EndEncounterForm />
     </div>
   );

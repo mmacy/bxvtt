@@ -1,13 +1,12 @@
 /**
- * Rejoining a table after its address changed. A player whose browser lost its sign-in asks to come back in as
- * the member they were, and a referee lets them in. This module holds the referee's side (the pending requests
- * and the actions that decide one) and the visitor's way to end a request. The join page asks and polls with
- * `getApi()` directly.
+ * Rejoining a table after signing in from a new browser or tunnel address. A returning player sends a rejoin
+ * request for their offline seat, and a referee approves or declines it. This module holds the referee's hooks
+ * and the visitor's cancellation helpers.
  *
  * ```tsx
  * const requests = useRejoinRequests();
  * const { approve, decline, pending } = useDecideRejoin();
- * <Button onClick={() => void approve(request.id)}>Let them in</Button>
+ * <Button onClick={() => void approve(request.id)}>Approve</Button>
  * ```
  */
 import { isProblem } from '@bxvtt/shared/client';
@@ -36,7 +35,7 @@ export function useDecideRejoin(): {
       const result = await run(
         () =>
           approve ? getApi().approveRejoin(tableId, requestId) : getApi().declineRejoin(tableId, requestId),
-        { errorTitle: approve ? "Couldn't let them in" : "Couldn't answer the request" },
+        { errorTitle: approve ? "Couldn't approve rejoin request" : "Couldn't decline rejoin request" },
       );
       if (result.ok) store.setState({ rejoinRequests: result.value.items });
       return result.ok;

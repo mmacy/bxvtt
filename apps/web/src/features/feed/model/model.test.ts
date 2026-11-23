@@ -184,7 +184,7 @@ describe('the composer', () => {
   it('explains an unknown command', () => {
     expect(parse('/dance')).toEqual({
       kind: 'error',
-      message: "There's no /dance command. Type / to see the commands.",
+      message: 'Unknown command /dance. Type / to see available commands.',
     });
     expect(parse('/help')).toEqual({ kind: 'help' });
   });
@@ -488,7 +488,7 @@ describe('save notices', () => {
         nameOf,
         ctx,
       ),
-    ).toBe("The server saved the game: entered the priory on Corvane's Holm.");
+    ).toBe("Autosaved: entered the priory on Corvane's Holm.");
     expect(
       systemSentence(system('save_created', { label: 'Before the crypt', autosave: false }), nameOf, ctx),
     ).toBe('Ruth saved the game as “Before the crypt”.');

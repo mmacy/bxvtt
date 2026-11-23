@@ -230,7 +230,7 @@ export class CharacterChecker {
     );
     throw new ApiError(
       'bxapi_error',
-      'bxapi created the character instead of only checking it. It is in your character list.',
+      'Your character was saved early during validation. You can find them in your character list.',
     );
   }
 
@@ -248,7 +248,10 @@ export class CharacterChecker {
       throw toApiError(error);
     }
     if (page.items.some((item) => item.id === CHECK_SENTINEL)) {
-      throw new ApiError('internal_error', 'The equipment catalog has an item with the check sentinel ID.');
+      throw new ApiError(
+        'internal_error',
+        'An internal equipment catalog conflict prevented character validation.',
+      );
     }
     this.lots = page.items
       .filter((item) => Number.isInteger(item.cost_gp) && item.cost_gp >= 1)

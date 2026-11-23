@@ -202,8 +202,8 @@ export function RollStep({
         <AbilityRow scores={null} play={false} tables={tables} waiting />
         <div className={styles.rollCall}>
           <p className={styles.lead}>
-            The six scores, from Strength to Charisma, decide which classes you can choose, and you can't
-            rearrange them.
+            You roll 3d6 in order from Strength to Charisma. Under B/X rules, you keep each score where it
+            falls and choose from the classes you qualify for.
           </p>
           <Button variant="primary" icon="dice" size="lg" loading={rolling} onClick={onRoll}>
             Roll ability scores
@@ -223,7 +223,7 @@ export function RollStep({
       {revealed && (
         <section className={styles.qualifies} aria-labelledby="wizard-qualifies">
           <h3 id="wizard-qualifies" className={styles.subTitle}>
-            {eligible.size === 0 ? 'This roll qualifies for no class' : 'Classes this roll qualifies for'}
+            {eligible.size === 0 ? 'No classes available with this roll' : 'Classes this roll qualifies for'}
           </h3>
           <ul className={styles.classBadges}>
             {(classes ?? []).map((summary) => {
@@ -254,9 +254,8 @@ export function RollStep({
         <p className={styles.calmNote}>
           <Icon name="info" size={14} />
           <span>
-            The rules engine lets you roll as often as you like
-            {rolls > 1 ? `, and you have rolled ${rolls} times` : ''}. Your referee may have a house rule,
-            such as one roll only, so ask before you roll again.
+            {rolls > 1 ? `You have rolled ${rolls} times. ` : ''}You can reroll freely here, but check with
+            your referee first if your table limits rerolls.
           </span>
         </p>
       </div>

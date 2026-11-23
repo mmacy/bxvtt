@@ -112,7 +112,7 @@ export class UserStore {
     if (changes.color !== undefined)
       this.db.run('UPDATE users SET color = ? WHERE id = ?', changes.color, id);
     const user = this.get(id);
-    if (user === null) throw new ApiError('unauthorized', 'The user no longer exists.');
+    if (user === null) throw new ApiError('unauthorized', 'Your user account was not found.');
     return user;
   }
 }
@@ -139,7 +139,8 @@ function toUser(row: Row): User {
 export function registerUserRoutes(app: FastifyInstance, ctx: Context): void {
   app.post('/api/users', async (request, reply) => {
     const retry = ctx.limits.createUser.take(addressKey(request.clientIp));
-    if (retry > 0) throw rateLimited('This address has created too many users. Try again later.', retry);
+    if (retry > 0)
+      throw rateLimited('Too many accounts created from this IP address. Try again later.', retry);
     const body = parseBody(CreateUserRequest, request);
     const created = ctx.users.create(body.name);
     request.log.info({ user: created.user.id }, 'user created');

@@ -151,7 +151,7 @@ export function MagicItemEntry({ id }: { id: string }) {
             )}
 
             {item.hoard_recipe.length > 0 && (
-              <Block title="Treasure it leads to">
+              <Block title="Hoard contents">
                 <TreasureLines entries={item.hoard_recipe} />
               </Block>
             )}

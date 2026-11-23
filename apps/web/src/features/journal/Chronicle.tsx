@@ -46,8 +46,8 @@ export function Chronicle({
       <EmptyState
         icon="journal"
         size="compact"
-        title="No game yet"
-        description="The journal starts when the game does."
+        title="No active game"
+        description="Start a game to read the party's journal."
       />
     );
   }
@@ -75,10 +75,10 @@ export function Chronicle({
       <div className={styles.chronicleBar}>
         <p className={styles.quiet}>
           {view.journal.length === 0
-            ? 'No entries yet.'
+            ? 'No entries yet'
             : view.journal.length === 1
-              ? 'One entry.'
-              : `${view.journal.length} entries.`}
+              ? '1 entry'
+              : `${view.journal.length} entries`}
         </p>
         <SegmentedControl
           aria-label="Order"
@@ -86,7 +86,7 @@ export function Chronicle({
           value={order}
           onValueChange={(value) => onOrderChange(value === 'newest' ? 'newest' : 'chronicle')}
           options={[
-            { value: 'chronicle', label: 'In order' },
+            { value: 'chronicle', label: 'Oldest first' },
             { value: 'newest', label: 'Newest first' },
           ]}
         />
@@ -95,8 +95,7 @@ export function Chronicle({
         {order === 'chronicle' && opening}
         {days.length === 0 ? (
           <p className={styles.blank}>
-            Nothing is written here yet. The journal fills in as the party learns the story: who asks for
-            help, what the party finds, and what it means.
+            No journal entries yet. Story discoveries, quest leads, and handouts appear here as you play.
           </p>
         ) : (
           days.map((day) => (

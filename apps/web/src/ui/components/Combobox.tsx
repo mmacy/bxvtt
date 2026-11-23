@@ -57,7 +57,7 @@ export function Combobox({
   value,
   onChange,
   placeholder = 'Search',
-  emptyText = 'Nothing matches',
+  emptyText = 'No matching options',
   size = 'md',
   disabled,
   invalid,

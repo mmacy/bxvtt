@@ -56,8 +56,8 @@ export function CommandPalette({
   open,
   onOpenChange,
   actions,
-  placeholder = 'Type a command or search',
-  emptyText = 'No matching commands',
+  placeholder = 'Search actions',
+  emptyText = 'No matching actions',
 }: CommandPaletteProps) {
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
@@ -124,7 +124,7 @@ export function CommandPalette({
               aria-controls={listId}
               aria-autocomplete="list"
               aria-activedescendant={results.length > 0 ? optionId(activeIndex) : undefined}
-              aria-label="Command"
+              aria-label="Search actions"
               onChange={(event) => {
                 setQuery(event.target.value);
                 setActive(0);
@@ -133,7 +133,7 @@ export function CommandPalette({
             />
             <Kbd keys="Esc" decorative />
           </div>
-          <ul id={listId} role="listbox" aria-label="Commands" className={styles.list}>
+          <ul id={listId} role="listbox" aria-label="Actions" className={styles.list}>
             {results.length === 0 && <li className={styles.empty}>{emptyText}</li>}
             {results.map((action, index) => {
               const previous = results[index - 1];

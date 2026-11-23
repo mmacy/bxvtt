@@ -122,7 +122,7 @@ export function SpellEntry({ id }: { id: string }) {
             )}
 
             {spell.conjured_monster_ids.length > 0 && (
-              <Block title="Creatures it conjures">
+              <Block title="Conjured creatures">
                 <ul className={styles.plainList}>
                   {spell.conjured_monster_ids.map((monsterId) => {
                     const name = monsters.data?.find((m) => m.id === monsterId)?.name;

@@ -238,14 +238,14 @@ function BattleActions() {
   useShortcut({
     id: 'combat.repeat',
     keys: 'shift+a',
-    label: 'Same as last round for all your characters',
+    label: 'Repeat last round for all your characters',
     group,
     run: again,
   });
   useShortcut({
     id: 'combat.resolve',
     keys: 'mod+enter',
-    label: 'Resolve the round',
+    label: 'Resolve round',
     group,
     enabled: showResolve,
     run: resolveRound,
@@ -256,7 +256,7 @@ function BattleActions() {
   };
   useAction({
     id: 'combat.resolve',
-    label: 'Resolve the round',
+    label: 'Resolve round',
     group,
     icon: 'play',
     shortcut: 'mod+enter',
@@ -287,7 +287,7 @@ function BattleActions() {
       )}
       {repeatable.length > 0 && (
         <ActionButton
-          label={repeatable.length > 1 ? 'Same as last round for all' : 'Same as last round'}
+          label={repeatable.length > 1 ? 'Repeat last round for all' : 'Repeat last round'}
           keys="shift+a"
           icon="rotate"
           onClick={again}
@@ -295,23 +295,23 @@ function BattleActions() {
         />
       )}
       {playing && skip && (
-        <ActionButton label="Skip the playback" keys="escape" icon="chevron-right" onClick={skip} />
+        <ActionButton label="Skip playback" keys="escape" icon="chevron-right" onClick={skip} />
       )}
       {showResolve && (
         <>
           <ActionBarDivider />
           <ActionButton
-            label="Resolve the round"
+            label="Resolve round"
             keys="mod+enter"
             icon="play"
             primary
             onClick={resolveRound}
             disabled={!everyone || pending}
-            reason="Everyone declares first."
+            reason="Everyone must declare first."
           />
         </>
       )}
-      {!showResolve && mine.length === 0 && <span className={styles.barNote}>The party is declaring.</span>}
+      {!showResolve && mine.length === 0 && <span className={styles.barNote}>Waiting for declarations.</span>}
     </>
   );
 }

@@ -54,7 +54,7 @@ export function CommandForm(props: CommandFormProps) {
     return (
       <Banner
         tone="danger"
-        title="The form for this command didn't load"
+        title="Couldn't load command form"
         actions={
           <Button size="sm" variant="secondary" onClick={schema.retry}>
             Try again
@@ -168,8 +168,8 @@ export function SchemaForm({
         {showErrors && errorCount > 0 && (
           <p className={styles.formError} role="alert">
             {errorCount === 1
-              ? 'One field needs a value or a fix.'
-              : `${errorCount} fields need a value or a fix.`}
+              ? 'Fix 1 highlighted field before sending.'
+              : `Fix ${errorCount} highlighted fields before sending.`}
           </p>
         )}
         <div className={styles.actions}>

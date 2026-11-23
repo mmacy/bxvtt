@@ -30,7 +30,7 @@ export function SeatsDialog() {
   if (table === null) return null;
 
   const memberOptions = [
-    { value: EMPTY, label: 'Empty seat (the referee plays)' },
+    { value: EMPTY, label: 'Empty seat (referee controls)' },
     ...members.map((m) => ({
       value: m.user_id,
       label: m.role === 'referee' ? `${m.name} (referee)` : m.name,
@@ -39,7 +39,7 @@ export function SeatsDialog() {
 
   const setSeat = (memberId: string, name: string, value: string) =>
     void run(() => getApi().setSeat(table.id, memberId, value === EMPTY ? null : value), {
-      success: value === EMPTY ? `${name}'s seat is empty` : `${name} has a new player`,
+      success: value === EMPTY ? `${name}'s seat is now empty` : `Assigned ${name}'s seat`,
       errorTitle: `Couldn't change ${name}'s seat`,
     });
 
@@ -56,7 +56,7 @@ export function SeatsDialog() {
       open={open}
       onOpenChange={setOpen}
       title="Seats and caller"
-      description="Choose who plays each character. The caller speaks for the party and moves it."
+      description="Assign each character to a player. The caller speaks for the party and controls party actions."
       size="md"
     >
       <div className={styles.seats}>

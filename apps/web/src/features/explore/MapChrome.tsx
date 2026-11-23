@@ -43,10 +43,10 @@ export function LevelSwitcher({ levels, viewedKey, levelName, onSelect }: LevelS
   const current = levels.find((level) => level.key === viewedKey) ?? levels[0];
   if (!current) return null;
   const items: MenuEntry[] = [
-    { type: 'label', label: 'Show a level' },
+    { type: 'label', label: 'Dungeon level' },
     ...levels.map((level): MenuEntry => ({
       type: 'checkbox',
-      label: level.partyHere ? `${levelName(level)}, where the party is` : levelName(level),
+      label: level.partyHere ? `${levelName(level)} (party)` : levelName(level),
       checked: level.key === current.key,
       onCheckedChange: () => onSelect(level),
     })),
@@ -109,10 +109,10 @@ export function CameraControls({ map, follow, onFollowChange, partyShown }: Came
       <Tooltip content="Zoom out" shortcut="−" side="left">
         <IconButton icon="zoom-out" label="Zoom out" size="sm" onClick={() => map.current?.zoomOut()} />
       </Tooltip>
-      <Tooltip content="Show the whole map" shortcut="0" side="left">
+      <Tooltip content="Fit map" shortcut="0" side="left">
         <IconButton
           icon="maximize"
-          label="Show the whole map"
+          label="Fit map"
           size="sm"
           onClick={() => {
             onFollowChange(false);
@@ -194,7 +194,7 @@ export function MinimapCard({ map, target, theme, facing, onHide }: MinimapCardP
         />
         <IconButton
           icon="minimize"
-          label="Hide the minimap"
+          label="Hide minimap"
           size="sm"
           className={styles.minimapHide}
           onClick={onHide}
@@ -269,7 +269,7 @@ export function LayerBadge({ layer }: LayerBadgeProps) {
     </Badge>
   ) : (
     <Badge tone="neutral" icon="eye">
-      Players&apos; view
+      Player view
     </Badge>
   );
 }

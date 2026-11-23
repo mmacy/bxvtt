@@ -202,7 +202,7 @@ export function Composer({
           variant="ghost"
           icon="close"
           onClick={onClose}
-          aria-label={`Close ${member.name}'s choices`}
+          aria-label={`Close ${member.name}'s actions`}
         >
           Close
         </Button>
@@ -226,11 +226,11 @@ export function Composer({
       {gazers.length > 0 && (
         <div className={styles.gazeRow}>
           <Icon name="eye" size={14} />
-          <span className={styles.gazeText}>A gaze can turn whoever stands in the front rank to stone.</span>
+          <span className={styles.gazeText}>A petrifying gaze can turn front-rank characters to stone.</span>
           <Select
             size="sm"
             className={styles.compactSelect}
-            aria-label="Guard against the gaze"
+            aria-label="Guard against gaze"
             value={gaze}
             onValueChange={setGaze}
             options={[
@@ -249,7 +249,7 @@ export function Composer({
       )}
 
       {refusals.length > 0 && (
-        <Banner tone="danger" title="The round can't resolve with this declaration">
+        <Banner tone="danger" title="Declaration refused">
           {refusals.join(' ')}
         </Banner>
       )}
@@ -548,9 +548,9 @@ function SpellTargets({
   const [reversed, setReversed] = useState(memorizedReversed);
   const [targets, setTargets] = useState<string[]>([]);
   const mode = modes.find((m) => m.key === modeKey) ?? modes[0];
-  if (entry.loading) return <p className={styles.choiceHint}>Reading the spell…</p>;
+  if (entry.loading) return <p className={styles.choiceHint}>Loading spell details…</p>;
   if (!spell || !mode)
-    return <p className={styles.choiceHint}>This spell's details didn't load. Try again in a moment.</p>;
+    return <p className={styles.choiceHint}>Couldn't load this spell's details. Try again in a moment.</p>;
 
   const range = spellRangeFeet(spell.range_spec);
   const targeting = mode.targeting?.mode ?? null;
@@ -619,7 +619,7 @@ function SpellTargets({
             const distance = memberDistance(group, member.id);
             const reason =
               range !== null && distance > range
-                ? `Out of range: ${formatFeet(distance)} away, and ${name} reaches ${formatFeet(range)}.`
+                ? `Out of range: ${formatFeet(distance)} away, but ${name} only reaches ${formatFeet(range)}.`
                 : null;
             return (
               <Tile
@@ -775,7 +775,7 @@ function MoveChoices({ member, encounter, ctx, pending, onSubmit }: ChoiceProps 
           icon="shield"
           title="Fighting withdrawal"
           meta={formatFeet(Math.floor(rate / 2), 'short')}
-          note="Backs away facing the monsters, at half speed. No attack."
+          note="Back away facing the monsters at half speed without attacking."
           disabledReason={stuck}
           label="Fighting withdrawal"
           pending={pending}
@@ -785,7 +785,7 @@ function MoveChoices({ member, encounter, ctx, pending, onSubmit }: ChoiceProps 
           icon="footprints"
           title="Retreat"
           meta={formatFeet(rate, 'short')}
-          note="Turns and runs at full speed. Attackers get +2 this round."
+          note="Turn and run at full speed. Attackers gain +2 to hit you this round."
           disabledReason={stuck}
           label="Retreat"
           pending={pending}
@@ -808,8 +808,8 @@ function MoveChoices({ member, encounter, ctx, pending, onSubmit }: ChoiceProps 
         </div>
       )}
       <p className={styles.choiceHint}>
-        When everyone declares the same withdrawal or retreat, the party moves as one. A retreat by the whole
-        party ends the battle, and monsters that can follow give chase.
+        When everyone declares the same withdrawal or retreat, the party moves together. If the whole party
+        retreats, the battle ends, but monsters that can follow give chase.
       </p>
     </div>
   );
@@ -886,7 +886,7 @@ function ItemChoices({
                 <Icon name="scroll" size={14} /> {label}
                 {quantity}
               </span>
-              <span className={styles.itemNote}>Reads the first spell left on the scroll.</span>
+              <span className={styles.itemNote}>Casts the first spell remaining on the scroll.</span>
               <Button
                 size="sm"
                 variant="secondary"
@@ -928,8 +928,8 @@ function ItemChoices({
               })}
               {!thrown && (
                 <Tile
-                  title="Without a target"
-                  note="For a power that needs no group."
+                  title="No target"
+                  note="Use an effect that targets no monster group."
                   label={`Use ${item.name} without a target`}
                   pending={pending}
                   onClick={() => void onSubmit({ action: 'use_item', item_id: item.id })}
@@ -945,7 +945,7 @@ function ItemChoices({
                       <Tile
                         key={id}
                         title={`Touch ${memberName(id, ctx)}`}
-                        note="For a staff that heals by touch."
+                        note="Touch an ally within 5 feet."
                         disabledReason={
                           near
                             ? null
@@ -1024,8 +1024,8 @@ function TurnChoice({ member, encounter, pending, onSubmit }: ChoiceProps) {
     <div className={styles.tiles}>
       <Tile
         icon="class-cleric"
-        title="Present the holy symbol"
-        note={`Reaches ${joinList(undead.map((g) => theGroup(viewLabels(g))))}. A hit can't disrupt it.`}
+        title="Present holy symbol"
+        note={`Affects ${joinList(undead.map((g) => theGroup(viewLabels(g))))}. Taking damage doesn't disrupt turning.`}
         disabledReason={reason}
         label={`${member.name} turns undead`}
         pending={pending}

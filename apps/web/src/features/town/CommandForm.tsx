@@ -131,7 +131,7 @@ export function CommandForm({ commandType }: { commandType: string }) {
         <Combobox
           value={typeof value === 'string' ? value : null}
           onChange={(next) => set(field.name, next)}
-          placeholder={spells.loading ? 'Loading spells' : 'Search for a spell'}
+          placeholder={spells.loading ? 'Loading spells…' : 'Search spells'}
           options={(spells.data ?? []).map((spell) => ({
             value: spell.id,
             label: spell.name,
@@ -183,7 +183,7 @@ export function CommandForm({ commandType }: { commandType: string }) {
           <Select
             value={typeof value === 'string' ? value : undefined}
             onValueChange={(next) => set(field.name, next)}
-            placeholder="Choose"
+            placeholder="Choose an option"
             options={field.options.map((option) => ({
               value: option,
               label: commandFieldOptionLabel(commandType, field.name, option),
@@ -228,7 +228,7 @@ export function CommandForm({ commandType }: { commandType: string }) {
             rows={3}
             value={typeof value === 'string' ? value : ''}
             onChange={(event) => set(field.name, event.target.value)}
-            placeholder="One entry on each line"
+            placeholder="One value per line"
           />
         );
       case 'json':
@@ -237,7 +237,7 @@ export function CommandForm({ commandType }: { commandType: string }) {
             rows={4}
             value={typeof value === 'string' ? value : ''}
             onChange={(event) => set(field.name, event.target.value)}
-            placeholder="Enter this as JSON"
+            placeholder='{"gp": 10}'
           />
         );
       default:
@@ -255,7 +255,7 @@ export function CommandForm({ commandType }: { commandType: string }) {
     return (
       <Banner
         tone="warning"
-        title="This form didn't load"
+        title="Couldn't load this form"
         actions={
           <Button size="sm" variant="secondary" onClick={schema.retry}>
             Try again

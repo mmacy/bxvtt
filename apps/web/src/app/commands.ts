@@ -115,7 +115,7 @@ export type SendResult =
   | ErrorResult;
 
 function refusalToast(sentences: string[]): void {
-  const [first = "That wasn't allowed.", ...rest] = sentences;
+  const [first = "You can't do that right now.", ...rest] = sentences;
   toast.warning(first, { description: rest.length > 0 ? rest.join(' ') : undefined, id: 'command-refused' });
 }
 
@@ -178,22 +178,22 @@ const MODE_CHANGES: Record<string, string> = {
   encounter: 'monsters appeared',
   battle: 'a battle began',
   exploring: 'the fight ended',
-  town: 'the party is in town now',
+  town: 'the party returned to town',
   game_over: 'the game ended',
   victory: 'the game ended',
 };
 
 /** Why a waiting action no longer fits, or `null` when it still does. */
 function staleReason(command: GameCommand, then: Situation, now: Situation): string | null {
-  if (now.mode !== then.mode) return MODE_CHANGES[now.mode ?? ''] ?? 'the game moved on';
-  if (then.legal && !now.legal) return "it isn't possible now";
+  if (now.mode !== then.mode) return MODE_CHANGES[now.mode ?? ''] ?? 'the situation changed';
+  if (then.legal && !now.legal) return "it's no longer available";
   if (now.cell !== then.cell && PLACE_FIELDS.some((field) => field in command))
     return 'the party moved first';
   return null;
 }
 
 function droppedMessage(command: GameCommand, reason: string): string {
-  return `Your choice to ${commandInfo(command.command_type).phrase} wasn't sent, because ${reason}. Choose it again if you still want it.`;
+  return `Couldn't ${commandInfo(command.command_type).phrase} because ${reason}. Choose it again if you still want to.`;
 }
 
 interface Waiting {
@@ -398,7 +398,7 @@ export function useSendCommand(): {
           return {
             status: 'skipped',
             reason: 'throttled',
-            message: 'Slow down a little. The table is catching up.',
+            message: 'Wait a moment before sending another action.',
           };
         return transmit(store, lane, commandKey(command), command, display, ctxRef);
       }
@@ -409,7 +409,7 @@ export function useSendCommand(): {
       if (twin) return twin.promise;
       if (!busy && takeSendSlot(store)) return transmit(store, lane, key, command, display, ctxRef);
       if (lane.queue.length >= MAX_QUEUED_COMMANDS) {
-        const message = 'Several actions are still on their way. Try again when they land.';
+        const message = 'Several actions are still on their way. Wait a moment and try again.';
         if (display === 'toast') toast.info(message, { id: 'command-queue-full' });
         return { status: 'skipped', reason: 'busy', message };
       }
@@ -539,7 +539,7 @@ export function useSendDeclaration(): {
     ): Promise<DeclarationResult> => {
       const outcome = await run(work);
       if (outcome === null)
-        return { status: 'skipped', reason: 'busy', message: 'Another declaration is still on its way.' };
+        return { status: 'skipped', reason: 'busy', message: 'Wait for your previous declaration to save.' };
       if (!outcome.ok) return errorResult(outcome.error, options.display ?? 'toast');
       store.getState().receiveDeclarations(outcome.value);
       return { status: 'saved', declarations: outcome.value };

@@ -41,7 +41,7 @@ export function Figure({
   );
 }
 
-/** A cell value, with the em dash that the printed tables use for "no effect" shown as an empty mark. */
+/** A cell value, with the dash that printed tables use for "no effect" shown as an empty mark. */
 export function cellText(value: string): ReactNode {
-  return value === '—' || value === '' ? <Nothing /> : value;
+  return value === '\u2014' || value === '\u2013' || value === '' ? <Nothing /> : value;
 }

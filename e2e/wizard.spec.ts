@@ -31,13 +31,13 @@ const WEAPONS: Record<WizardClass, string> = {
 };
 
 const NAMES: Record<WizardClass, string> = {
-  cleric: 'Osric',
-  dwarf: 'Durgan',
-  elf: 'Ilsevel',
-  fighter: 'Brenna',
-  halfling: 'Pip',
-  magic_user: 'Tamsin',
-  thief: 'Wren',
+  cleric: 'Clarence',
+  dwarf: 'Doke',
+  elf: 'Elfy',
+  fighter: 'Flarg',
+  halfling: 'Huge',
+  magic_user: 'Mazpar',
+  thief: 'Tinks',
 };
 
 const ARCANE: WizardClass[] = ['magic_user', 'elf'];
@@ -75,7 +75,7 @@ test.describe('character wizard', () => {
       await expect(dialog.getByRole('heading', { name: 'Outfit', level: 3 })).toBeVisible();
       await expect(cart(dialog)).toContainText(/0 gp spent, \d+ gp left/);
       await addToCart(dialog, [WEAPONS[classId]]);
-      await expect(cart(dialog)).toContainText('The shop and your class accept this outfit.');
+      await expect(cart(dialog)).toContainText('Your character can afford and use this equipment.');
       await next(dialog);
       await createFromReview(sam.page, dialog, NAMES[classId]);
 
@@ -120,7 +120,7 @@ test.describe('character wizard', () => {
     await expect(dialog.getByRole('group', { name: /^Intelligence after the trade 12/ })).toBeVisible();
     await next(dialog);
 
-    await fillIdentity(dialog, 'Brenna');
+    await fillIdentity(dialog, 'Flarg');
     await next(dialog);
 
     // Two suits of plate mail cost more than the 110 gp this roll gives a fighter.
@@ -130,7 +130,7 @@ test.describe('character wizard', () => {
     await expect(shop).not.toContainText(/gold\s*g\s*\d/);
     await addToCart(dialog, ['Plate mail']);
     await shop.getByRole('button', { name: 'Add one suit of plate mail' }).click();
-    await expect(shop.getByRole('alert')).toContainText("there isn't enough gold");
+    await expect(shop.getByRole('alert')).toContainText("you don't have enough gold");
     await expect(dialog.getByRole('contentinfo').getByRole('button', { name: 'Continue' })).toBeDisabled();
 
     await shop.getByRole('button', { name: 'Remove Plate mail from the cart' }).click();
@@ -142,24 +142,24 @@ test.describe('character wizard', () => {
     await expect(shop.getByRole('checkbox', { name: 'Wear the shield', exact: true })).toBeChecked();
     await expect(shop.getByRole('checkbox', { name: 'Wield the sword', exact: true })).toBeChecked();
     await expect(shop.getByText('Wear the plate mail', { exact: true })).toBeVisible();
-    await expect(shop).toContainText('The shop and your class accept this outfit.');
+    await expect(shop).toContainText('Your character can afford and use this equipment.');
     await next(dialog);
 
     const review = dialog;
     await expect(review.getByRole('group', { name: /^Strength 16/ })).toBeVisible();
-    await expect(review.getByRole('region', { name: 'Equipment' })).toContainText('A suit of plate mail');
-    await createFromReview(sam.page, dialog, 'Brenna');
+    await expect(review.getByRole('region', { name: 'Equipment' })).toContainText('Plate mail');
+    await createFromReview(sam.page, dialog, 'Flarg');
     await expect(
       sam.page
         .getByRole('list', { name: 'Party in marching order' })
         .getByRole('listitem')
-        .filter({ hasText: 'Brenna' }),
+        .filter({ hasText: 'Flarg' }),
     ).toBeVisible({ timeout: 20_000 });
 
-    const summary = (await sam.client.listCharacters()).items.find((item) => item.name === 'Brenna');
-    if (summary === undefined) throw new Error('Brenna was not stored.');
-    const brenna = await sam.client.getCharacter(summary.id);
-    const sheet = brenna.character;
+    const summary = (await sam.client.listCharacters()).items.find((item) => item.name === 'Flarg');
+    if (summary === undefined) throw new Error('Flarg was not stored.');
+    const flarg = await sam.client.getCharacter(summary.id);
+    const sheet = flarg.character;
     expect(sheet.scores).toMatchObject({ str: 16, int: 12 });
     expect(sheet.inventory?.purse.gp).toBe(29);
     expect(sheet.inventory?.worn_armour).toBeTruthy();
@@ -182,13 +182,13 @@ test.describe('character wizard', () => {
       "Dexterity can't be lowered. Only Strength, Intelligence, and Wisdom can be traded for points.",
     );
     await expect(dialog).not.toContainText('steps of 2');
-    await dialog.getByRole('button', { name: 'Keep the scores as rolled' }).click();
+    await dialog.getByRole('button', { name: 'Reset to rolled scores' }).click();
     await dialog.getByRole('button', { name: 'Skip this step' }).click();
-    await fillIdentity(dialog, 'Tamsin', 'Neutral');
+    await fillIdentity(dialog, 'Mazpar', 'Neutral');
 
     const languages = dialog.getByRole('region', { name: 'Languages' });
     await expect(languages).toContainText(
-      'An Intelligence of 16 lets you learn 2 more languages. Chosen: 0 of 2.',
+      'With Intelligence 16, you can learn 2 extra languages. Chosen: 0 of 2.',
     );
     await languages.getByRole('checkbox', { name: 'Elvish', exact: true }).check();
     await languages.getByRole('checkbox', { name: 'Goblin', exact: true }).check();
@@ -210,8 +210,8 @@ test.describe('character wizard', () => {
     // and the wizard takes it off again with a note.
     const shop = cart(dialog);
     await addToCart(dialog, ['Chainmail']);
-    await expect(dialog.getByRole('region', { name: 'The shelves' })).toContainText(
-      "Magic-users can't wear armour. The suit of chainmail stays in the pack.",
+    await expect(dialog.getByRole('region', { name: 'Equipment' })).toContainText(
+      "Magic-users can't wear armour. Moved the suit of chainmail to your pack.",
     );
     const wear = shop.getByRole('checkbox', { name: 'Wear the chainmail', exact: true });
     await expect(wear).not.toBeChecked();
@@ -229,22 +229,22 @@ test.describe('character wizard', () => {
     await expect(review).toContainText('Magic Missile');
     // A weapon alone reads as wielding only (R-110).
     await expect(dialog.getByRole('region', { name: 'Combat' })).toContainText(
-      'You go out wielding a dagger.',
+      'You set out wielding a dagger.',
     );
-    await createFromReview(sam.page, dialog, 'Tamsin');
+    await createFromReview(sam.page, dialog, 'Mazpar');
     await expect(
       sam.page
         .getByRole('list', { name: 'Party in marching order' })
         .getByRole('listitem')
-        .filter({ hasText: 'Tamsin' }),
+        .filter({ hasText: 'Mazpar' }),
     ).toBeVisible({ timeout: 20_000 });
 
-    const summary = (await sam.client.listCharacters()).items.find((item) => item.name === 'Tamsin');
-    if (summary === undefined) throw new Error('Tamsin was not stored.');
-    const tamsin = (await sam.client.getCharacter(summary.id)).character;
-    expect(tamsin.extra_languages.length).toBe(2);
-    expect(tamsin.alignment).toBe('neutral');
-    expect(JSON.stringify(tamsin.spell_book)).toContain('magic_missile');
+    const summary = (await sam.client.listCharacters()).items.find((item) => item.name === 'Mazpar');
+    if (summary === undefined) throw new Error('Mazpar was not stored.');
+    const mazpar = (await sam.client.getCharacter(summary.id)).character;
+    expect(mazpar.extra_languages.length).toBe(2);
+    expect(mazpar.alignment).toBe('neutral');
+    expect(JSON.stringify(mazpar.spell_book)).toContain('magic_missile');
   });
 
   test('a draft survives closing the dialog and reloading the page', async ({ crew }) => {
@@ -257,19 +257,19 @@ test.describe('character wizard', () => {
     await next(dialog);
     await chooseClass(dialog, 'thief');
     await dialog.getByRole('button', { name: 'Skip this step' }).click();
-    await fillIdentity(dialog, 'Wren', 'Chaotic');
+    await fillIdentity(dialog, 'Tinks', 'Chaotic');
 
     await dialog.getByRole('banner').getByRole('button', { name: 'Close' }).click();
     await expect(wizard(sam.page)).toHaveCount(0);
 
     dialog = await openWizard(sam.page);
     await expect(dialog.getByRole('heading', { name: 'Identity', level: 3 })).toBeVisible();
-    await expect(dialog.getByRole('textbox', { name: 'Name' })).toHaveValue('Wren');
+    await expect(dialog.getByRole('textbox', { name: 'Name' })).toHaveValue('Tinks');
     await expect(dialog.getByRole('radio', { name: 'Chaotic' })).toBeChecked();
 
     await sam.page.reload();
     dialog = await openWizard(sam.page);
-    await expect(dialog.getByRole('textbox', { name: 'Name' })).toHaveValue('Wren');
+    await expect(dialog.getByRole('textbox', { name: 'Name' })).toHaveValue('Tinks');
     await expect(dialog.getByRole('button', { name: /^Choose a class \(complete\) Thief/ })).toBeVisible();
 
     // Starting over clears the draft after a confirmation.

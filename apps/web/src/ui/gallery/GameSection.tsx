@@ -44,7 +44,7 @@ export function GameSection() {
           <Row gap="lg" align="end">
             {sizes.map((size) => (
               <div key={size} className={styles.tokenCell}>
-                <TokenPortrait name="Kael Ironside" characterClass="fighter" color="vermilion" size={size} />
+                <TokenPortrait name="Flarg" characterClass="fighter" color="vermilion" size={size} />
                 <Caption>{size}</Caption>
               </div>
             ))}

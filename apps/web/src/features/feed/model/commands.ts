@@ -41,7 +41,7 @@ export const SLASH_COMMANDS: readonly SlashCommand[] = [
     description: 'Roll so only referees see the result.',
     refereeOnly: true,
   },
-  { insert: '/w ', usage: '/w Ruth message', description: 'Whisper to one member, or to referees.' },
+  { insert: '/w ', usage: '/w Ruth message', description: 'Whisper to a table member or all referees.' },
   { insert: '/help', usage: '/help', description: 'Show these commands.' },
 ];
 
@@ -120,31 +120,31 @@ export function parseComposer(
   if (command === '/roll' || command === '/r') {
     const roll = parseRollCommand(trimmed);
     if (roll === null) {
-      return { kind: 'error', message: 'Add the dice after /roll, such as /roll 2d6+1 for damage.' };
+      return { kind: 'error', message: 'Enter dice after /roll, for example /roll 2d6+1 for damage.' };
     }
     if (parseDiceExpression(roll.expression) === null) {
       return {
         kind: 'error',
-        message: `"${roll.expression}" isn't a dice roll. Write one kind of die with a count and a modifier, such as 2d6+1, d20, or d%.`,
+        message: `"${roll.expression}" isn't a valid dice roll. Use one die type with an optional count and modifier, such as 2d6+1, d20, or d%.`,
       };
     }
     if (roll.secret && !options.referee) {
       return {
         kind: 'error',
-        message: 'Only a referee can roll in secret. Leave out "secret" to roll for everyone.',
+        message: 'Only referees can roll in secret. Remove "secret" to roll openly.',
       };
     }
     return { kind: 'roll', text: trimmed, expression: roll.expression, secret: roll.secret };
   }
 
   if (command === '/w' || command === '/whisper') {
-    if (rest === '') return { kind: 'error', message: 'Name a member after /w, then write the message.' };
+    if (rest === '') return { kind: 'error', message: 'Enter a member name and message after /w.' };
     const resolved = resolveWhisper(rest, options.recipients, options.selfId);
     if (resolved === null) {
       return {
         kind: 'error',
         message:
-          'No one at the table has that name. Check the spelling, or pick a member from the whisper menu.',
+          'No one at the table has that name. Check the spelling or choose someone from the whisper menu.',
       };
     }
     if (resolved.to.length === 0)
@@ -158,5 +158,5 @@ export function parseComposer(
     };
   }
 
-  return { kind: 'error', message: `There's no ${word} command. Type / to see the commands.` };
+  return { kind: 'error', message: `Unknown command ${word}. Type / to see available commands.` };
 }

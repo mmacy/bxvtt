@@ -63,10 +63,10 @@ describe('readInventory', () => {
       purse: { gp: 12 },
     });
     expect(inventory.pack.map((e) => [e.name, e.commandId, e.identified])).toEqual([
-      ['A potion', 'magic-item-0001', false],
+      ['Potion', 'magic-item-0001', false],
       ['6 torches', 'torch', true],
     ]);
-    expect(inventory.wielded[0]?.commandId).toBe('sword');
+    expect(inventory.wielded[0]).toMatchObject({ name: 'Sword', commandId: 'sword' });
     expect(inventory.valuables[0]).toMatchObject({ name: 'Gem', valueGp: 50, commandId: 'valuable-0001' });
     expect(inventory.purse).toEqual({ pp: 0, gp: 12, ep: 0, sp: 0, cp: 0 });
   });
@@ -117,7 +117,7 @@ describe('PartyPanel', () => {
     });
     expect(rows[0]).toHaveAccessibleDescription(/0 of \d+ hit points, armour class -?\d+, dead\./);
     expect(rows[1]).toHaveAccessibleDescription(/unconscious/);
-    expect(rows[2]).toHaveAccessibleDescription(/^empty seat, .*paralyzed/);
+    expect(rows[2]).toHaveAccessibleDescription(/^empty seat, .*paralysed/);
   });
 
   it('lets the caller move a member back with the keyboard', async () => {

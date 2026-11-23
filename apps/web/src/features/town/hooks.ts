@@ -99,7 +99,7 @@ export function usePartyAccess(commandType: string): { allowed: boolean; explana
   if (settings?.party_control !== 'anyone' && member !== null && !isMe) {
     return {
       allowed: false,
-      explanation: `${member.name} is the caller, so ${member.name} speaks for the party here. Ask ${member.name} or the referee.`,
+      explanation: `${member.name} is the caller and speaks for the party here. Ask ${member.name} or the referee.`,
     };
   }
   return { allowed: false, explanation: permission.reason };
@@ -113,7 +113,7 @@ export function useLeaveAccess(): { allowed: boolean; explanation: string } {
   if (!access.allowed && settings?.party_control !== 'anyone' && member !== null && !isMe) {
     return {
       allowed: false,
-      explanation: `${member.name} is the caller, so ${member.name} leads the party out. Ask ${member.name} or the referee.`,
+      explanation: `${member.name} is the caller and leads the party out. Ask ${member.name} or the referee.`,
     };
   }
   return access;

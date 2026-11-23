@@ -23,8 +23,8 @@ export function ConnectionBanner({ floating = false }: { floating?: boolean }) {
       <span className={styles.bannerRow}>
         <Spinner size={14} label="" />
         {limited
-          ? `${error.detail} The page reconnects by itself.`
-          : 'Nothing you typed is lost. The table catches up when the connection returns.'}
+          ? `${error.detail} Reconnecting automatically.`
+          : 'Your unsent drafts are safe, and missed updates load once you reconnect.'}
       </span>
     </Banner>
   );

@@ -7,6 +7,7 @@ import {
   capitalizeFirst,
   emptyContext,
   equipmentLotSize,
+  itemLabel,
   itemPhrase,
   resolveItemNoun,
 } from '@bxvtt/shared/text';
@@ -164,7 +165,7 @@ export function applyKit(
 }
 
 /**
- * How a cart line reads: "12 torches" for two lots of torches, "a sword" for one.
+ * How a cart line reads inside a sentence: "12 torches" for two lots of torches, "a sword" for one.
  *
  * @param itemId - The equipment ID.
  * @param lots - The number of purchase lots.
@@ -173,4 +174,16 @@ export function applyKit(
 export function cartPhrase(itemId: string, lots: number, name?: string): string {
   const units = lots * (equipmentLotSize(itemId) ?? 1);
   return capitalizeFirst(itemPhrase(resolveItemNoun(itemId, emptyContext(), { name }), units));
+}
+
+/**
+ * How a cart line reads in an equipment list, with no leading article: "12 torches", "Chainmail", "Sword".
+ *
+ * @param itemId - The equipment ID.
+ * @param lots - The number of purchase lots.
+ * @param name - The catalog name, for an ID the text layer doesn't know.
+ */
+export function cartLabel(itemId: string, lots: number, name?: string): string {
+  const units = lots * (equipmentLotSize(itemId) ?? 1);
+  return itemLabel(resolveItemNoun(itemId, emptyContext(), { name }), units);
 }

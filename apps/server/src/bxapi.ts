@@ -214,7 +214,7 @@ export function toApiError(error: unknown, options: { passNotFound?: boolean } =
   if (error instanceof BxapiUnreachable) {
     return new ApiError(
       'bxapi_unavailable',
-      "bxvtt can't reach bxapi, the rules server. Ask the host to start it, then try again.",
+      "The server can't reach the game service. Ask the server host to check that it is running, then try again.",
     );
   }
   if (error instanceof BxapiProblem) {
@@ -240,7 +240,7 @@ export function toApiError(error: unknown, options: { passNotFound?: boolean } =
       // Waiting doesn't free storage, so this isn't a busy bxapi.
       return new ApiError(
         'bxapi_storage_full',
-        "bxapi's storage for bxvtt is full, so it can't store anything new. Delete old tables and saves, or raise BXAPI_MAX_CLIENT_BYTES.",
+        "Server storage is full, so new characters, games, actions, and saves can't be stored. Delete unused tables or saves, or ask the server host to raise the storage limit.",
         {
           ...(typeof extras.used_bytes === 'number' ? { used_bytes: extras.used_bytes } : {}),
           ...(typeof extras.max_bytes === 'number' || extras.max_bytes === null
@@ -250,9 +250,12 @@ export function toApiError(error: unknown, options: { passNotFound?: boolean } =
       );
     }
     if (code === 'rate_limited' || code === 'database_busy') {
-      return new ApiError('bxapi_unavailable', `bxapi is busy (${code}). Try again in a moment.`);
+      return new ApiError('bxapi_unavailable', 'The server is busy right now. Try again in a moment.');
     }
-    return new ApiError('bxapi_error', `bxapi answered ${status} ${code}: ${detail}`);
+    return new ApiError(
+      'bxapi_error',
+      'The server encountered an unexpected error while processing that action. Try again, or ask the server host to check the logs.',
+    );
   }
   return error;
 }

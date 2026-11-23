@@ -71,8 +71,8 @@ function ItemsAction() {
         value={mode}
         onChange={setMode}
         options={[
-          { value: 'give', label: 'Give an item' },
-          { value: 'take', label: 'Take an item' },
+          { value: 'give', label: 'Give item' },
+          { value: 'take', label: 'Take item' },
         ]}
       />
       <CommandForm key={mode} commandType={mode === 'give' ? 'grant_item' : 'remove_item'} />
@@ -107,8 +107,8 @@ function MembersAction() {
         value={mode}
         onChange={setMode}
         options={[
-          { value: 'add', label: 'Add a member' },
-          { value: 'remove', label: 'Remove a member' },
+          { value: 'add', label: 'Add member' },
+          { value: 'remove', label: 'Remove member' },
         ]}
       />
       <CommandForm key={mode} commandType={mode === 'add' ? 'add_member' : 'remove_member'} />
@@ -182,7 +182,7 @@ function CountField({
   return (
     <Field
       label={`How many ${what}`}
-      hint={mode === 'dice' ? 'The game rolls the dice, so the roll is logged and seeded.' : undefined}
+      hint={mode === 'dice' ? 'Rolls and logs the count when spawned.' : undefined}
       error={error}
       aside={
         <SegmentedControl
@@ -267,7 +267,7 @@ export function SpawnMonstersForm({
     const next: Record<string, string> = {};
     if (!monster) next.monster = 'Choose a monster.';
     if (mode === 'fixed' && (fixed === null || fixed < 1)) next.count = 'Enter 1 or more.';
-    if (mode === 'dice' && dice.trim() === '') next.count = 'Enter dice, such as 2d4.';
+    if (mode === 'dice' && dice.trim() === '') next.count = 'Enter a dice expression, such as 2d4.';
     if (distance === null || distance < 0) next.distance = 'Enter 0 or more.';
     setErrors(next);
     if (Object.keys(next).length > 0 || !monster || distance === null) return;
@@ -305,7 +305,7 @@ export function SpawnMonstersForm({
         <Button size="sm" variant="primary" loading={busy} onClick={submit}>
           Spawn
         </Button>
-        <span className={styles.secondary}>They join the open encounter, or start a new one.</span>
+        <span className={styles.secondary}>Joins the active encounter, or starts a new one.</span>
       </div>
       <CommandOutcome outcome={outcome} onDismiss={clear} />
     </div>
@@ -354,9 +354,9 @@ function SpawnNpcPartyForm() {
       <DistanceField value={distance} onChange={setDistance} />
       <div className={styles.rowActions}>
         <Button size="sm" variant="primary" loading={busy} onClick={submit}>
-          Spawn the party
+          Spawn party
         </Button>
-        <span className={styles.secondary}>Only while exploring.</span>
+        <span className={styles.secondary}>Available while exploring.</span>
       </div>
       <CommandOutcome outcome={outcome} onDismiss={clear} />
     </div>
@@ -424,8 +424,8 @@ function PlacePartyForm({ data }: { data: RefereeData }) {
         value={where}
         onValueChange={(next) => setWhere(next as typeof where)}
         options={[
-          { value: 'area', label: 'An area' },
-          { value: 'cell', label: 'A cell' },
+          { value: 'area', label: 'Area' },
+          { value: 'cell', label: 'Cell' },
           { value: 'town', label: 'Town' },
         ]}
       />
@@ -469,13 +469,13 @@ function PlacePartyForm({ data }: { data: RefereeData }) {
       )}
       <div className={styles.rowActions}>
         <Button size="sm" variant="primary" loading={busy} onClick={() => void submit()}>
-          Place the party
+          Place party
         </Button>
       </div>
       {where !== 'town' && (
         <p className={styles.secondaryLine}>
-          Placing the party doesn't start an area's monsters or fire its triggers, as walking in would. The
-          panel offers to start them once the party is there.
+          Placing the party skips keyed monsters and room triggers. After placing them, you can trigger those
+          effects below.
         </p>
       )}
       <CommandOutcome outcome={outcome} onDismiss={clear} />
@@ -517,13 +517,12 @@ function AdvanceTimeForm() {
         ))}
       </div>
       <p className={styles.secondaryLine}>
-        Effects run out, lights burn down, and the party eats each day as usual. The game makes no wandering
-        monster checks for this time, and it doesn't count as rest. Spawn monsters yourself if you roll an
-        encounter.
+        Effects expire, light sources burn down, and daily rations are consumed. Advancing time skips
+        wandering monster checks and doesn't count as rest.
       </p>
       <CommandOutcome outcome={outcome} onDismiss={clear} />
       <details className={styles.details}>
-        <summary>Another amount</summary>
+        <summary>Custom amount</summary>
         <CommandForm commandType="advance_time" />
       </details>
     </div>
@@ -569,14 +568,14 @@ function RollDiceForm() {
         }}
       >
         <Field label="Dice">
-          <TextInput value={expression} onChange={(e) => setExpression(e.target.value)} />
+          <TextInput value={expression} placeholder="3d6+1" onChange={(e) => setExpression(e.target.value)} />
         </Field>
         <Button type="submit" variant="primary" loading={busy}>
           Roll
         </Button>
       </form>
       <p className={styles.secondaryLine}>
-        Such as 3d6, 2d4+1, or 1d6x10. The game logs the roll for referees only.
+        Enter dice notation such as 3d6, 2d4+1, or 1d6x10. Only referees see this roll in the log.
       </p>
       {roll && outcome && (
         <div className={styles.rollResult} key={outcome.id}>
@@ -622,7 +621,7 @@ export function QuickActions({ data }: { data: RefereeData }) {
       actions: [
         {
           value: 'end',
-          label: 'End the encounter',
+          label: 'End encounter',
           icon: 'flag',
           commands: ['end_encounter'],
           render: () => <EndEncounterForm />,
@@ -644,7 +643,7 @@ export function QuickActions({ data }: { data: RefereeData }) {
       ],
     },
     {
-      title: 'The party',
+      title: 'Party',
       actions: [
         {
           value: 'items',
@@ -770,7 +769,7 @@ export function QuickActions({ data }: { data: RefereeData }) {
                 meta: !available ? (
                   <UnavailableMark />
                 ) : ended && action.commands.every(changesEndedStory) ? (
-                  <UnavailableMark>The game is over</UnavailableMark>
+                  <UnavailableMark>Game over</UnavailableMark>
                 ) : undefined,
                 content: open === action.value ? action.render() : null,
               };

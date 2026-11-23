@@ -68,12 +68,12 @@ const STEP_LABELS: Record<StepId, string> = {
 };
 
 const STEP_DESCRIPTIONS: Record<StepId, string> = {
-  roll: 'Roll 3d6 for each ability, in order.',
-  class: 'Your scores decide which classes you can play.',
-  adjust: 'Trade points into a prime requisite, or keep the scores as rolled.',
-  identity: 'Name your character and choose what they believe.',
-  outfit: 'Spend your starting gold on gear.',
-  review: 'Check the sheet. The rules engine rolls hit points when you create the character.',
+  roll: 'Roll 3d6 in order for each ability score.',
+  class: 'Choose from the classes your ability scores qualify for.',
+  adjust: 'Trade points into your prime requisite, or keep your rolled scores.',
+  identity: 'Choose a name, alignment, and languages.',
+  outfit: 'Spend your starting gold on weapons, armour, and gear.',
+  review: 'Review your character sheet before rolling hit points and saving.',
 };
 
 /** Debounce for the live checks, in milliseconds. The server allows 60 checks a minute per user. */
@@ -201,7 +201,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
         setProblem(explained);
         setGoldFailure({
           key,
-          message: "The gold can't be counted until the choices before this step are fixed.",
+          message: 'Fix the earlier steps before rolling starting gold.',
         });
         if (explained.step !== null && explained.step !== 'outfit') {
           setShowErrors(false);
@@ -252,7 +252,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
             setAutoEquipped((ids) => ids.filter((id) => id !== item));
             setDraft((d) => ({ ...d, equip: d.equip.filter((id) => id !== item) }));
             const noun = resolveItemNoun(item, emptyContext()).one;
-            setKitNote(`${sentence} The ${noun} stays in the pack.`);
+            setKitNote(`${sentence} Moved the ${noun} to your pack.`);
             return;
           }
           settle(
@@ -414,10 +414,10 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
     update({ cart: result.cart, equip: result.equip });
     setKitNote(
       result.skipped.length > 0
-        ? `The kit fits your gold without ${result.skipped
+        ? `Added what your gold covers, skipping ${result.skipped
             .map((id) => cartPhrase(id, 1, equipment.data?.find((e) => e.id === id)?.name).toLowerCase())
             .join(', ')}.`
-        : 'The kit is a starting point. Change anything you like.',
+        : 'Added the starter kit. Swap or remove anything you like.',
     );
   };
 
@@ -472,11 +472,11 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
       <div className={styles.created}>
         <Banner
           tone="success"
-          title={`${created.name} joins the world`}
+          title={`${created.name} is ready for adventure`}
           actions={
             <>
               <Button variant="ghost" size="sm" icon="plus" onClick={startOver}>
-                Make another
+                Create another
               </Button>
               <Button variant="primary" size="sm" onClick={onClose}>
                 Done
@@ -484,8 +484,8 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
             </>
           }
         >
-          The rules engine rolled {count(created.character.max_hp, 'hit point')} and stored the character. You
-          can bring {created.name} to any table.
+          {created.name} starts with {count(created.character.max_hp, 'hit point')} and is ready to join any
+          table.
           {createdNext && ` ${createdNext}`}
         </Banner>
         <StoredSheet character={created} color={user?.color} />
@@ -517,11 +517,11 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
         {restored && step !== 'roll' && (
           <Banner
             tone="info"
-            title="Your character is where you left it"
+            title="Resumed your unfinished character"
             onDismiss={() => setRestored(false)}
-            dismissLabel="Hide this message"
+            dismissLabel="Dismiss"
           >
-            The wizard kept your choices in this browser.
+            Pick up where you left off, or choose Start over below.
           </Banner>
         )}
         {problem && (problem.step === null || problem.step === step) && (
@@ -529,7 +529,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
             tone="warning"
             title={problem.title}
             onDismiss={() => setProblem(null)}
-            dismissLabel="Hide this message"
+            dismissLabel="Dismiss"
           >
             {problem.sentences.join(' ')}
           </Banner>
@@ -681,7 +681,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
         open={confirmReset}
         onOpenChange={setConfirmReset}
         title="Start over?"
-        description="This clears your scores and every choice. You roll new ability scores next."
+        description="This clears your rolled scores and all choices so you can roll a new character."
         confirmLabel="Start over"
         tone="danger"
         onConfirm={startOver}

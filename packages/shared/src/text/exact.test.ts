@@ -98,7 +98,7 @@ describe('rejections', () => {
       { direction: 'east' },
       "There's no door to the east. Choose a side with a door the party has found.",
     ],
-    ['exploration.door.stuck', {}, 'The door is stuck. Have a strong member force it open.'],
+    ['exploration.door.stuck', {}, 'The door is stuck. Choose a party member to force it open.'],
     [
       'exploration.action.requires_light',
       { character: 'character-0003' },
@@ -108,22 +108,22 @@ describe('rejections', () => {
     [
       'items.equip.weapon_not_allowed',
       { class: 'magic_user', item: 'sword' },
-      "Magic-users can use only certain weapons, and a sword isn't one of them.",
+      "Magic-users can't wield a sword.",
     ],
     [
       'items.equip.armour_not_allowed',
       { class: 'thief', item: 'chainmail' },
-      "Thieves aren't allowed to wear a suit of chainmail.",
+      "Thieves can't wear a suit of chainmail.",
     ],
     [
       'items.equip.two_handed_with_shield',
       { item: 'two_handed_sword' },
-      "A two-handed sword needs both hands, so it can't be wielded with a shield. Take off the shield first.",
+      "A two-handed sword is a two-handed weapon, so you can't wield it with a shield. Unequip the shield first.",
     ],
     [
       'items.purchase.insufficient_funds',
       { cost_gp: 1500 },
-      "That costs 1,500 gp, and there isn't enough gold to pay for it.",
+      "That costs 1,500 gp, but you don't have enough gold.",
     ],
     ['exploration.item.not_carried', { item: 'gp' }, "That character doesn't have enough gold pieces."],
     ['exploration.item.not_carried', { item: 'magic-item-0001' }, "That character doesn't have a potion."],
@@ -155,22 +155,22 @@ describe('rejections', () => {
     [
       'battle.declaration.roster_mismatch',
       { expected: ['character-0001', 'character-0002', 'character-0003'], declared: ['character-0001'] },
-      'Every member who can act has to declare, and no one else. This round needs declarations from Brenna, Tomas, and Wren, but you sent Brenna.',
+      'Declare an action for Brenna, Tomas, and Wren this round. You sent declarations for Brenna.',
     ],
     [
       'creation.class.requirements_not_met',
       { class: 'elf', ability: 'int', minimum: 9, score: 5 },
-      'Elves need Intelligence 9 or higher, and this character has 5.',
+      'Elves require Intelligence 9 or higher, but this character has 5.',
     ],
     [
       'creation.adjustment.below_floor',
       { ability: 'wis', score: 11, amount: 8 },
-      "Wisdom is 11 now, and lowering it by 8 would take it below 9. A score can't be traded down past 9.",
+      "Wisdom is 11, so lowering it by 8 drops it below 9. Ability scores can't be lowered below 9.",
     ],
     [
       'session.command.wrong_mode',
       { command: 'move_party', mode: 'town' },
-      "You can't move the party while the party is in town.",
+      "You can't move the party while in town.",
     ],
     [
       'session.command.wrong_mode',
@@ -192,11 +192,11 @@ describe('rejections', () => {
       { direction: 'east' },
       "The door to the east won't open. The party doesn't have what it needs to pass yet.",
     ],
-    ['items.scroll.no_such_spell', { spell: 'sleep' }, "That scroll doesn't hold Sleep."],
+    ['items.scroll.no_such_spell', { spell: 'sleep' }, "That scroll doesn't contain Sleep."],
     [
       'town.healing.no_effect',
       { item: 'cure_disease', character: 'character-0001' },
-      "Cure disease would do nothing for Brenna, so the temple won't cast it.",
+      "Brenna doesn't need cure disease right now.",
     ],
   ] as const)('%s', (code, params, expected) => {
     expect(rej(code, params as Record<string, string | number>)).toBe(expected);
@@ -886,7 +886,7 @@ describe('commands', () => {
       label: 'Open a door',
       button: 'Open',
       phrase: 'open a door',
-      description: "Open an unstuck, unlocked door on one side of the party's cell.",
+      description: 'Open an unlocked, unstuck door beside the party.',
       kind: 'play',
     });
     expect(commandInfo('award_xp')).toMatchObject({

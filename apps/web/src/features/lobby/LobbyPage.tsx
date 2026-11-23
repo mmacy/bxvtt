@@ -96,8 +96,8 @@ export function LobbyPage({ banner }: { banner?: ReactNode }) {
             <h1 className={styles.title}>{table.name}</h1>
             <p className={styles.lead}>
               {referee
-                ? 'Gather the party, choose the adventure, and start the game when everyone is ready.'
-                : `${refereeNames.length > 0 ? refereeNames.join(' and ') : 'The referee'} will start the game. Add your characters to the party while you wait.`}
+                ? 'Gather the party, choose an adventure, and start the game when everyone is ready.'
+                : `${refereeNames.length > 0 ? refereeNames.join(' and ') : 'The referee'} will start the game when everyone is ready. Add your characters to the party while you wait.`}
             </p>
           </div>
           <div className={styles.headerMeta}>
@@ -119,7 +119,7 @@ export function LobbyPage({ banner }: { banner?: ReactNode }) {
             </Panel>
             {referee ? (
               <>
-                <Panel title="Adventure" meta="Only you see this choice until the game starts">
+                <Panel title="Adventure" meta="Only referees see this until the game starts">
                   <AdventurePicker
                     tableId={table.id}
                     adventures={adventures}
@@ -138,14 +138,14 @@ export function LobbyPage({ banner }: { banner?: ReactNode }) {
 
           <aside className={styles.side}>
             {referee ? (
-              <Panel title="Start the game">
+              <Panel title="Start game">
                 <StartGamePanel table={table} adventure={adventure} ruleset={ruleset} />
                 <LobbySaves />
               </Panel>
             ) : (
               <>
                 <Banner tone="neutral" icon="hourglass" title="Waiting for the referee to start">
-                  The game starts for everyone at once. This page switches to the table by itself.
+                  You'll enter the game automatically as soon as the referee starts it.
                 </Banner>
                 <LobbySaves />
               </>

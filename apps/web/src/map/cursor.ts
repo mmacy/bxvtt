@@ -100,17 +100,17 @@ export function positionPhrase(x: number, y: number, party: MapParty | null): st
   return `${parts.join(' and ')} of the party`;
 }
 
-/** What a cell is: an area's name, the name for a place no area covers, or unexplored. */
+/** What a cell is: an area's name, the name for an unkeyed place, or unexplored. */
 function placePhrase(scene: Scene, x: number, y: number): string {
   const referee = scene.map.layer === 'referee';
   if (!scene.isFloor(x, y)) return referee ? 'Solid rock' : 'Unexplored';
   const area = scene.map.areas[scene.areaAt(x, y)];
-  const name = area ? area.name || 'An area' : UNKEYED_PLACE_TITLE;
+  const name = area ? area.name || 'Unnamed area' : UNKEYED_PLACE_TITLE;
   return referee && !scene.isKnown(x, y) ? `${name}, not yet seen by the party` : name;
 }
 
 function edgePhrase(edge: MapEdge | undefined): string {
-  if (!edge) return 'nothing known';
+  if (!edge) return 'unexplored';
   switch (edge.kind) {
     case 'wall':
       return 'a wall';
@@ -121,7 +121,7 @@ function edgePhrase(edge: MapEdge | undefined): string {
     case 'door': {
       const door = edge.door;
       if (!door) return 'a door';
-      if (door.secret && door.discovered === false) return 'a secret door, not found';
+      if (door.secret && door.discovered === false) return 'a secret door, undiscovered';
       return `${door.secret ? 'a secret door' : 'a door'}, ${doorSummary(door)}`;
     }
   }
@@ -143,10 +143,10 @@ export function describeCursor(
   const where = `${placePhrase(scene, cursor.x, cursor.y)}, ${positionPhrase(cursor.x, cursor.y, party)}.`;
   switch (tool) {
     case 'pick-cell':
-      return `${where} Press Enter to choose this square, or Escape to stop.`;
+      return `${where} Press Enter to choose this square, or Escape to cancel.`;
     case 'pick-edge': {
       const edge = scene.edgeAt(cursor.x, cursor.y, cursor.side);
-      return `${cursor.side.charAt(0).toUpperCase()}${cursor.side.slice(1)} side: ${edgePhrase(edge)}. ${where} Press E for the next side, Enter to choose it, or Escape to stop.`;
+      return `${cursor.side.charAt(0).toUpperCase()}${cursor.side.slice(1)} side: ${edgePhrase(edge)}. ${where} Press E for the next side, Enter to choose this edge, or Escape to cancel.`;
     }
     case 'pin':
       return `${where} Press Enter to place a pin here.`;
@@ -154,7 +154,7 @@ export function describeCursor(
       return `${where} Press Enter to ping here.`;
     case 'ruler':
       return measurement
-        ? `${measurementText(measurement)}. ${where} Press Enter to keep the measurement, or Escape to stop.`
+        ? `${measurementText(measurement)}. ${where} Press Enter to keep this measurement, or Escape to cancel.`
         : `${where} Press Enter to measure from here.`;
   }
 }

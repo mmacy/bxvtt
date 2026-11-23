@@ -93,25 +93,25 @@ test.describe('exploration', () => {
 
     // The chapter house's south door, from the corridor below it.
     await place(12, 15, 'north');
-    await expect(scene.getByText('A door to the north, closed.')).toBeVisible();
-    await pickFromMenu(door, 'Open it');
-    await expect(scene.getByText('A door to the north, open.')).toBeVisible();
+    await expect(scene.getByText('A door to the north is closed.')).toBeVisible();
+    await pickFromMenu(door, 'Open door');
+    await expect(scene.getByText('A door to the north is open.')).toBeVisible();
 
-    // The chapter house's north door is stuck. Brenna forces it.
+    // The chapter house's north door is stuck. Flarg forces it.
     await place(12, 9, 'south');
-    await expect(scene.getByText('A door to the south, closed.')).toBeVisible();
-    await pickFromMenu(door, 'Open it');
+    await expect(scene.getByText('A door to the south is closed.')).toBeVisible();
+    await pickFromMenu(door, 'Open door');
     // The refusal shows beside the party, and the map's live region speaks the same words.
     await expect(
-      sam.page.getByText('The door is stuck. Have a strong member force it open.').first(),
+      sam.page.getByText('The door is stuck. Choose a party member to force it open.').first(),
     ).toBeVisible();
-    await expect(scene.getByText('It is stuck.')).toBeVisible();
+    await expect(scene.getByText('The door is stuck.')).toBeVisible();
     for (let attempt = 0; attempt < 6; attempt += 1) {
-      if (await scene.getByText('A door to the south, open.').isVisible()) break;
-      await pickFromMenu(door, 'Force it open', /^Brenna/);
+      if (await scene.getByText('A door to the south is open.').isVisible()) break;
+      await pickFromMenu(door, 'Force door', /^Flarg/);
       await sam.page.waitForTimeout(500);
     }
-    await expect(scene.getByText('A door to the south, open.')).toBeVisible();
+    await expect(scene.getByText('A door to the south is open.')).toBeVisible();
 
     // The chapel's bronze doors refuse with the adventure's own words until someone carries holy water.
     await place(18, 15, 'north');
@@ -121,17 +121,17 @@ test.describe('exploration', () => {
       item_id: 'holy_water',
       quantity: 1,
     });
-    await pickFromMenu(door, 'Open it');
+    await pickFromMenu(door, 'Open door');
     await expect(sam.page.getByText(/POUR AND ENTER/).first()).toBeVisible();
-    await expect(scene.getByText('A door to the north, closed.')).toBeVisible();
+    await expect(scene.getByText('A door to the north is closed.')).toBeVisible();
     await send(ruth.client, table.id, {
       command_type: 'grant_item',
       character_id: 'character-0004',
       item_id: 'holy_water',
       quantity: 1,
     });
-    await pickFromMenu(door, 'Open it');
-    await expect(scene.getByText('A door to the north, open.')).toBeVisible();
+    await pickFromMenu(door, 'Open door');
+    await expect(scene.getByText('A door to the north is open.')).toBeVisible();
 
     const lines = await feedLines(sam.page);
     expect(lines.join('\n')).toMatch(/holy water runs away/);
@@ -148,14 +148,14 @@ test.describe('exploration', () => {
 
     // The cellarer's store, south of the kitchen.
     await placer(setup)(2, 18, 'south');
-    await pickFromMenu(door, 'Open it');
+    await pickFromMenu(door, 'Open door');
     await expect(sam.page.getByText(/locked/i).first()).toBeVisible();
-    await expect(scene.getByText('It is locked.')).toBeVisible();
+    await expect(scene.getByText('The door is locked.')).toBeVisible();
     // Only the thief has the skill, so the menu names her.
-    await pickFromMenu(door, 'Pick the lock: Wren');
-    await expect(scene.getByText('Its lock is open.')).toBeVisible();
-    await pickFromMenu(door, 'Open it');
-    await expect(scene.getByText('A door to the south, open.')).toBeVisible();
+    await pickFromMenu(door, 'Pick lock: Tinks');
+    await expect(scene.getByText('The door is unlocked.')).toBeVisible();
+    await pickFromMenu(door, 'Open door');
+    await expect(scene.getByText('A door to the south is open.')).toBeVisible();
   });
 
   test('a secret door shows only after a search finds it', async ({ crew }) => {
@@ -171,14 +171,14 @@ test.describe('exploration', () => {
     await expect(scene.getByRole('heading', { name: 'Chapter house' })).toBeVisible();
     await expect(scene.getByText(/A door to the east/)).toHaveCount(0);
     const search = partyActions(sam.page).getByRole('button', { name: 'Search' });
-    for (const member of ['Brenna', 'Wren', 'Osric', 'Tamsin']) {
+    for (const member of ['Flarg', 'Tinks', 'Clarence', 'Mazpar']) {
       if (await scene.getByText(/A door to the east/).isVisible()) break;
       await pickFromMenu(search, 'Search for secret doors', member);
       await sam.page.waitForTimeout(800);
     }
-    await expect(scene.getByText('A door to the east, closed.')).toBeVisible();
+    await expect(scene.getByText('A door to the east is closed.')).toBeVisible();
     // The referee's lens shows the same door, now found.
-    await expect(scenePanel(ruth.page).getByText('A door to the east, closed.')).toBeVisible();
+    await expect(scenePanel(ruth.page).getByText('A door to the east is closed.')).toBeVisible();
 
     const lines = await feedLines(sam.page);
     expect(lines.join('\n')).toMatch(/secret door/i);
@@ -194,7 +194,7 @@ test.describe('exploration', () => {
     // The warden's iron chest is trapped.
     await place(26, 17, 'east');
     await expect(scene.getByText('Treasure is within reach.')).toBeVisible();
-    await pickFromMenu(scene.getByRole('button', { name: 'Treasure' }), 'Take the treasure');
+    await pickFromMenu(scene.getByRole('button', { name: 'Treasure' }), 'Take treasure');
     await expect(scene.getByText('Treasure is within reach.')).toHaveCount(0);
     let lines = await feedLines(sam.page);
     expect(lines.join('\n')).toMatch(/trap/i);
@@ -204,13 +204,13 @@ test.describe('exploration', () => {
     await expect(
       sam.page
         .getByRole('list', { name: 'Marching order' })
-        .getByRole('button', { name: 'Brenna', exact: true }),
+        .getByRole('button', { name: 'Flarg', exact: true }),
     ).toHaveAccessibleDescription(/, [1-9] of 10 hit points/);
 
     // The chapel altar has no trap.
     await place(17, 12, 'east');
     await expect(scene.getByText('Treasure is within reach.')).toBeVisible();
-    await pickFromMenu(scene.getByRole('button', { name: 'Treasure' }), 'Take the treasure');
+    await pickFromMenu(scene.getByRole('button', { name: 'Treasure' }), 'Take treasure');
     await expect(scene.getByText('Treasure is within reach.')).toHaveCount(0);
     lines = await feedLines(sam.page);
     expect(lines.join('\n')).toMatch(/holy water/i);
@@ -240,7 +240,7 @@ test.describe('exploration', () => {
     await levelButton.click();
     await sam.page.getByRole('menuitemcheckbox', { name: 'Level 1' }).click();
     await expect(sam.page.getByRole('status').filter({ hasText: /The party is on .*2/ })).toBeVisible();
-    await sam.page.getByRole('button', { name: 'Show the party' }).click();
+    await sam.page.getByRole('button', { name: 'Show party' }).click();
     await expect(sam.page.getByRole('status').filter({ hasText: /The party is on/ })).toHaveCount(0);
 
     // The referee's map follows the party to the new level too.
@@ -254,31 +254,31 @@ test.describe('exploration', () => {
     await lightTorch(sam.page);
     const status = lightStatus(sam.page);
     const light = mapOptions(sam.page).getByRole('button', { name: /^Light: / });
-    await expect(status).toHaveText("Brenna's torch, about 6 turns left");
+    await expect(status).toHaveText("Flarg's torch, about 6 turns left");
     await expect(light).toHaveText('6 turns');
-    await expect(light).toHaveAccessibleName("Light: Brenna's torch, about 6 turns left");
+    await expect(light).toHaveAccessibleName("Light: Flarg's torch, about 6 turns left");
     // The party panel shows the light on the row of the member who carries it, in the map's words (D-207), and no
     // party-wide light banner.
     await sam.page.getByRole('tab', { name: 'Party' }).click();
     const order = sam.page.getByRole('list', { name: 'Marching order' });
-    const brenna = order.getByRole('button', { name: /^Brenna\b/ });
-    await expect(brenna).toHaveAccessibleDescription(
+    const flarg = order.getByRole('button', { name: /^Flarg\b/ });
+    await expect(flarg).toHaveAccessibleDescription(
       /, torch, about 6 turns left\. Opens the character sheet\.$/,
     );
-    await expect(order.getByRole('listitem').filter({ hasText: 'Brenna' })).toContainText(
+    await expect(order.getByRole('listitem').filter({ hasText: 'Flarg' })).toContainText(
       'Torch, about 6 turns left',
     );
     await expect(sam.page.getByRole('region', { name: 'The party', exact: true })).toHaveCount(0);
 
     await send(ruth.client, table.id, { command_type: 'advance_time', n: 3, unit: 'turn' });
-    await expect(status).toHaveText("Brenna's torch, about 3 turns left");
-    await expect(order.getByRole('listitem').filter({ hasText: 'Brenna' })).toContainText(
+    await expect(status).toHaveText("Flarg's torch, about 3 turns left");
+    await expect(order.getByRole('listitem').filter({ hasText: 'Flarg' })).toContainText(
       'Torch, about 3 turns left',
     );
     await send(ruth.client, table.id, { command_type: 'advance_time', n: 3, unit: 'turn' });
     await expect(status).toHaveText('The party has no light.');
     await expect(light).toHaveAccessibleName('Light: The party has no light.');
-    await expect(order.getByRole('listitem').filter({ hasText: 'Brenna' })).not.toContainText(/torch/i);
+    await expect(order.getByRole('listitem').filter({ hasText: 'Flarg' })).not.toContainText(/torch/i);
     const lines = await feedLines(sam.page);
     expect(lines.join('\n')).toMatch(/torch/i);
   });
@@ -318,9 +318,9 @@ test.describe('exploration', () => {
     // A pin with a note: the referee opens it from her own map.
     await tools(sam.page).getByRole('button', { name: 'Pin a note' }).click();
     await clickSquare(sam.page, 1, 2);
-    const addPin = sam.page.getByRole('dialog', { name: 'Add a pin' });
+    const addPin = sam.page.getByRole('dialog', { name: 'Add pin' });
     await addPin.getByRole('textbox', { name: 'Note' }).fill('Rats scratch behind this wall');
-    await addPin.getByRole('button', { name: 'Add the pin' }).click();
+    await addPin.getByRole('button', { name: 'Add pin' }).click();
     await expect(addPin).toHaveCount(0);
     // The pin's head is drawn above and to the left of the point it marks, so click the head.
     await ruth.page.waitForTimeout(500);
@@ -332,10 +332,10 @@ test.describe('exploration', () => {
     // A pin only referees see never reaches the player.
     await tools(ruth.page).getByRole('button', { name: 'Pin a note' }).click();
     await clickSquare(ruth.page, -2, 2);
-    const refereePin = ruth.page.getByRole('dialog', { name: 'Add a pin' });
+    const refereePin = ruth.page.getByRole('dialog', { name: 'Add pin' });
     await refereePin.getByRole('textbox', { name: 'Note' }).fill('The goblins wait here at night');
-    await refereePin.getByRole('checkbox', { name: 'Only referees see this pin' }).check();
-    await refereePin.getByRole('button', { name: 'Add the pin' }).click();
+    await refereePin.getByRole('checkbox', { name: 'Visible only to referees' }).check();
+    await refereePin.getByRole('button', { name: 'Add pin' }).click();
     await expect(refereePin).toHaveCount(0);
     await expect
       .poll(async () =>
@@ -397,10 +397,10 @@ test.describe('exploration', () => {
     await expect(dungeonMap(sam.page)).toBeVisible();
     await expectPartyAt(sam.page, 12, 12);
     await expect(scenePanel(sam.page).getByRole('heading', { name: 'Chapter house' })).toBeVisible();
-    await expect(lightStatus(sam.page)).toHaveText(/^Brenna's torch/);
+    await expect(lightStatus(sam.page)).toHaveText(/^Flarg's torch/);
     await expect(sam.page.getByRole('banner').getByText('Exploring')).toBeVisible();
     const after = await feedLines(sam.page);
-    for (const line of before.filter((text) => /Brenna lights a torch|is placed/.test(text))) {
+    for (const line of before.filter((text) => /Flarg lights a torch|is placed/.test(text))) {
       expect(after).toContain(line);
     }
   });

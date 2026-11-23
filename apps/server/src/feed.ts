@@ -208,25 +208,25 @@ export class FeedStore {
     const to = request.to === undefined ? [] : [...new Set(request.to)].filter((id) => id !== user.id);
     for (const recipient of to) {
       if (this.ctx.tables.roleOf(tableId, recipient) === null) {
-        throw new ApiError('validation_error', 'A whisper can only go to members of the table.', {
-          errors: [{ path: ['to'], message: `${recipient} isn't a member of the table` }],
+        throw new ApiError('validation_error', 'You can whisper only to members of this table.', {
+          errors: [{ path: ['to'], message: 'Recipient is not a member of this table.' }],
         });
       }
     }
     if (request.to !== undefined && to.length === 0) {
-      throw new ApiError('validation_error', 'Name at least one other member to whisper to.', {
-        errors: [{ path: ['to'], message: 'must name another member' }],
+      throw new ApiError('validation_error', 'Choose at least one other table member to whisper to.', {
+        errors: [{ path: ['to'], message: 'Choose at least one other member.' }],
       });
     }
     const roll = parseRollCommand(request.text);
     const secret = request.secret === true || roll?.secret === true;
     if (secret && roll === null) {
-      throw new ApiError('validation_error', 'Only a dice roll can be secret.', {
-        errors: [{ path: ['secret'], message: 'only a /roll message can be secret' }],
+      throw new ApiError('validation_error', 'Only dice rolls can be rolled in secret.', {
+        errors: [{ path: ['secret'], message: 'Only a /roll message can be secret.' }],
       });
     }
     if (secret && role !== 'referee') {
-      throw new ApiError('referee_required', 'Only a referee can roll in secret.');
+      throw new ApiError('referee_required', 'Only a referee can make a secret roll.');
     }
     const visibility: FeedVisibility = to.length > 0 ? 'users' : secret ? 'referees' : 'everyone';
     let body: EntryBody;
@@ -278,7 +278,8 @@ export function registerFeedRoutes(app: FastifyInstance, ctx: Context): void {
     const role = ctx.tables.requireMember(tableId, user);
     const body = parseBody(PostFeedRequest, request);
     const retry = ctx.limits.userPosts.take(user.id);
-    if (retry > 0) throw rateLimited('You are posting too fast. Wait a moment.', retry);
+    if (retry > 0)
+      throw rateLimited('You are sending messages too quickly. Wait a moment and try again.', retry);
     return reply.status(201).send(await ctx.feed.post(tableId, user, role, body, request.id));
   });
 }

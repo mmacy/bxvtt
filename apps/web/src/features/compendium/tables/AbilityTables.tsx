@@ -120,7 +120,7 @@ export function AbilityTables() {
         id="prime-requisite"
         rows={t.prime_requisite}
         columns={[{ header: 'Experience modifier', cell: (r) => formatPercentModifier(r.xp_modifier_pct) }]}
-        note="For a class with one prime requisite. A class with two lists its own modifiers on its page."
+        note="Applies to classes with a single prime requisite. Classes with two prime requisites have separate experience modifiers."
       />
     </div>
   ));

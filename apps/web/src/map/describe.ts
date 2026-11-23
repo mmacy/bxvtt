@@ -36,12 +36,12 @@ export function doorSummary(door: MapDoor): string {
 function trapLine(trap: MapTrap): string {
   const state =
     trap.state === 'hidden'
-      ? 'not found'
+      ? 'undiscovered'
       : trap.state === 'found'
-        ? 'found by the party'
+        ? 'found'
         : trap.state === 'sprung'
           ? 'sprung'
-          : 'removed';
+          : 'disarmed';
   const trigger = trap.trigger === 'enter' ? 'springs on entry' : 'springs on opening';
   return `Trap (${state}): ${trap.summary}, ${trigger}`;
 }
@@ -55,7 +55,7 @@ function featureTitle(feature: MapFeature): string {
     case 'pile':
       return 'Dropped goods';
     case 'trick':
-      return feature.found === false ? 'Construction trick, not found' : 'Construction trick';
+      return feature.found === false ? 'Undiscovered construction trick' : 'Construction trick';
     case 'custom':
       return 'Feature';
   }
@@ -67,11 +67,11 @@ export function describeTarget(target: MapTarget, map: LevelMap): TargetDescript
   switch (target.kind) {
     case 'pin': {
       const lines = target.pin.note ? [target.pin.note] : [];
-      if (target.pin.refereeOnly) lines.push('Only referees see this pin.');
+      if (target.pin.refereeOnly) lines.push('Visible only to referees.');
       return { title: `Pin ${target.pin.label}`, lines };
     }
     case 'party': {
-      return { title: 'The party', lines: [`Facing ${target.party.facing}.`] };
+      return { title: 'Party', lines: [`Facing ${target.party.facing}.`] };
     }
     case 'edge': {
       const { edge } = target;
@@ -79,15 +79,15 @@ export function describeTarget(target: MapTarget, map: LevelMap): TargetDescript
       let title = 'Wall';
       if (edge.kind === 'door' && edge.door) {
         const hidden = edge.door.secret && edge.door.discovered === false;
-        title = edge.door.secret ? (hidden ? 'Secret door, not found' : 'Secret door, found') : 'Door';
-        lines.push(hidden ? 'Players see a wall here.' : humanize(doorSummary(edge.door)) + '.');
+        title = edge.door.secret ? (hidden ? 'Secret door (undiscovered)' : 'Secret door (found)') : 'Door';
+        lines.push(hidden ? 'Appears as a wall to players.' : humanize(doorSummary(edge.door)) + '.');
       } else if (edge.kind === 'passage') {
         title = 'Passage';
-        lines.push('A way through the wall.');
+        lines.push('Leads through the wall.');
       } else if (edge.kind === 'open') {
         title = 'Opening';
       }
-      if (target.direction) lines.push(`On the party's ${target.direction} side.`);
+      if (target.direction) lines.push(`To the ${target.direction} of the party.`);
       return { title, lines };
     }
     case 'feature': {
@@ -96,7 +96,7 @@ export function describeTarget(target: MapTarget, map: LevelMap): TargetDescript
       if (f.description) lines.push(f.description);
       if (f.contents.length > 0) lines.push(f.contents.join(', '));
       if (f.trap) lines.push(trapLine(f.trap));
-      if (referee && !f.known) lines.push('The party hasn’t seen it.');
+      if (referee && !f.known) lines.push('Unseen by the party.');
       return { title: featureTitle(f), lines };
     }
     case 'transition': {
@@ -106,7 +106,7 @@ export function describeTarget(target: MapTarget, map: LevelMap): TargetDescript
         const sameLevel = t.to.dungeonId === map.dungeonId && t.to.levelNumber === map.levelNumber;
         lines.push(sameLevel ? 'Leads elsewhere on this level.' : `Leads to level ${t.to.levelNumber}.`);
       }
-      if (t.gated) lines.push('Guarded by a condition.');
+      if (t.gated) lines.push('Requires a condition to pass.');
       return { title: TRANSITION_NAMES[t.kind], lines };
     }
     case 'cell': {
@@ -118,12 +118,12 @@ export function describeTarget(target: MapTarget, map: LevelMap): TargetDescript
         }
         if (area.treasure) lines.push(`${area.treasure.summary}${area.treasure.rolled ? ' (rolled)' : ''}`);
         if (area.trap) lines.push(trapLine(area.trap));
-        if (!area.known) lines.push('The party hasn’t seen this area.');
+        if (!area.known) lines.push('Unseen by the party.');
       }
       if (!area) {
         if (target.direction) return { title: `Step ${target.direction}`, lines: [] };
         if (!referee || !target.floor) return null;
-        return { title: 'Corridor', lines: target.known ? [] : ['The party hasn’t seen this cell.'] };
+        return { title: 'Corridor', lines: target.known ? [] : ['Unseen by the party.'] };
       }
       if (target.direction) lines.unshift(`Step ${target.direction}.`);
       const name = area.name || humanize(area.id);

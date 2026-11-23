@@ -65,7 +65,7 @@ function ObjectiveRow({
         {complete ? (
           <Badge tone="success">Complete</Badge>
         ) : revealed ? (
-          <Badge tone="info">Shown to the players</Badge>
+          <Badge tone="info">Revealed</Badge>
         ) : (
           <Badge tone="referee">Hidden</Badge>
         )}
@@ -233,7 +233,8 @@ function QuestBody({
         <div className={styles.rewards}>
           <h5 className={styles.minorHead}>Rewards</h5>
           <p className={styles.secondaryLine}>
-            Completing the quest gives nothing by itself. Give each reward when the party earns it.
+            Completing a quest doesn't grant rewards automatically. Grant each reward below when the party
+            earns it.
           </p>
           <ul className={styles.rewardList}>
             {quest.rewards.map((reward, index) => (
@@ -251,8 +252,8 @@ function QuestBody({
       )}
       {ready && (
         <p className={styles.readyLine}>
-          {quest.completion === 'any' ? 'An objective is done.' : 'Every objective is done.'} Complete the
-          quest to close it{quest.concludes_adventure ? ' and end the adventure' : ''}, then give the rewards.
+          {quest.completion === 'any' ? 'An objective is done.' : 'Every objective is done.'} Mark the quest
+          complete{quest.concludes_adventure ? ' to end the adventure' : ''}, then grant its rewards.
         </p>
       )}
       <div className={styles.rowActions}>
@@ -263,7 +264,7 @@ function QuestBody({
             disabled={busy}
             onClick={() => run({ command_type: 'activate_quest', quest_id: quest.id })}
           >
-            Activate the quest
+            Activate quest
           </Button>
         )}
         {status === 'active' && (
@@ -273,7 +274,7 @@ function QuestBody({
             disabled={busy}
             onClick={() => run({ command_type: 'complete_quest', quest_id: quest.id })}
           >
-            Complete the quest
+            Complete quest
           </Button>
         )}
       </div>
@@ -345,7 +346,7 @@ function Flags({ data }: { data: RefereeData }) {
     <div className={styles.form}>
       {known.length === 0 ? (
         <p className={styles.secondaryLine}>
-          No flags yet. Adventure triggers and gates read the flags you set.
+          No flags yet. Adventure triggers and gates can depend on the flags you set.
         </p>
       ) : (
         <ul className={styles.flagList} aria-label="Flags">
@@ -357,7 +358,7 @@ function Flags({ data }: { data: RefereeData }) {
                   <div className={styles.flagText}>
                     <span className={styles.flagUse}>
                       {uses.get(key)?.[0] ??
-                        `“${key}”: a flag set during play. The adventure doesn't read it.`}
+                        `“${key}”: set during play. No trigger, quest, or gate in this adventure checks it.`}
                     </span>
                     {(uses.get(key)?.length ?? 0) > 1 && (
                       <span className={styles.secondary}>{uses.get(key)?.slice(1).join(' ')}</span>
@@ -383,7 +384,7 @@ function Flags({ data }: { data: RefereeData }) {
                     commandType="set_flag"
                     fixed={{ key }}
                     initial={set ? { value: flags[key] } : { value: '' }}
-                    submitLabel="Set the flag"
+                    submitLabel="Set flag"
                   />
                 )}
               </li>
@@ -392,10 +393,10 @@ function Flags({ data }: { data: RefereeData }) {
         </ul>
       )}
       {adding ? (
-        <CommandForm commandType="set_flag" submitLabel="Set the flag" initial={{ value: '' }} />
+        <CommandForm commandType="set_flag" submitLabel="Set flag" initial={{ value: '' }} />
       ) : (
         <Button size="sm" variant="ghost" icon="plus" onClick={() => setAdding(true)}>
-          Set another flag
+          Set new flag
         </Button>
       )}
     </div>
@@ -443,7 +444,7 @@ function TriggerRow({
       )}
       {narrative?.journal && (
         <div>
-          <h5 className={styles.minorHead}>The players read</h5>
+          <h5 className={styles.minorHead}>Journal entry for players</h5>
           <p className={styles.quote}>{narrative.journal}</p>
         </div>
       )}
@@ -456,7 +457,7 @@ function TriggerRow({
         >
           {fired && !trigger.repeatable ? 'Already fired' : 'Mark fired'}
         </Button>
-        <span className={styles.secondary}>Marking records it without running what it does.</span>
+        <span className={styles.secondary}>Marks the trigger as fired without running its consequences.</span>
       </div>
       <CommandOutcome outcome={outcome} onDismiss={clear} />
     </div>
@@ -513,7 +514,7 @@ export function StoryState({ data }: { data: RefereeData }) {
         <EmptyState
           icon="warning"
           size="compact"
-          title="The adventure didn't load"
+          title="Couldn't load adventure"
           description={data.adventureError.detail}
         />
       );

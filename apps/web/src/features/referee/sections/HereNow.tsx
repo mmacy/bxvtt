@@ -65,7 +65,7 @@ export function WanderingBlock({
             {counter} of {wandering.interval_turns} {timeUnitNoun('turn', wandering.interval_turns)} since the
             last check.
           </span>
-          {state?.exploration.noise_since_check && <Badge tone="warning">The party made noise</Badge>}
+          {state?.exploration.noise_since_check && <Badge tone="warning">Party made noise</Badge>}
         </div>
       )}
       {rows.length > 0 && (
@@ -106,7 +106,7 @@ export function HereNow({ data }: { data: RefereeData }) {
   if (!state || !record || !place) return null;
   if (data.adventureError) {
     return (
-      <Banner tone="danger" title="The adventure's key didn't load">
+      <Banner tone="danger" title="Couldn't load adventure key">
         {data.adventureError.detail}
       </Banner>
     );
@@ -153,7 +153,7 @@ export function HereNow({ data }: { data: RefereeData }) {
   }
 
   if (!here) {
-    return <EmptyState icon="map" size="compact" title="This level isn't in the adventure's key" />;
+    return <EmptyState icon="map" size="compact" title="Level not found in adventure key" />;
   }
   const { dungeon, level, area } = here;
   const cornerDoors = area ? [] : doorsAround(level, [[here.x, here.y]], record.doors, dungeon.id);
@@ -161,7 +161,7 @@ export function HereNow({ data }: { data: RefereeData }) {
   return (
     <div className={styles.section}>
       {encounter && (
-        <section className={styles.urgent} aria-label="Encounter">
+        <section className={styles.urgent} aria-label={state.battle ? 'Active battle' : 'Active encounter'}>
           <h3 className={styles.sectionTitle}>
             <Icon name="battle" size={16} /> {state.battle ? 'Battle' : 'Encounter'}
           </h3>
@@ -186,7 +186,7 @@ export function HereNow({ data }: { data: RefereeData }) {
       ) : (
         cornerDoors.length > 0 && (
           <section aria-label="Doors">
-            <SectionLabel level={4}>Doors by the party</SectionLabel>
+            <SectionLabel level={4}>Nearby doors</SectionLabel>
             <ul className={styles.doorList}>
               {cornerDoors.map((door) => (
                 <DoorRow

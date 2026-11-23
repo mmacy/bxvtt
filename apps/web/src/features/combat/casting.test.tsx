@@ -51,7 +51,7 @@ describe('a caster with nothing to cast', () => {
     const { user } = renderWithTable(<BattleBoard />, { snapshot, api });
     const row = screen.getAllByRole('listitem').find((li) => within(li).queryByText('Wren', { exact: true }));
     if (!row) throw new Error('No row for Wren.');
-    await user.click(within(row).getByRole('button', { name: 'More choices' }));
+    await user.click(within(row).getByRole('button', { name: 'Actions' }));
     expect(await screen.findByText(noSpellsReason('Wren', false))).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'Cast' })).toBeDisabled();
     await user.click(screen.getByRole('button', { name: "Open Wren's spells" }));

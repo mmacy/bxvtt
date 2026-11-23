@@ -85,7 +85,7 @@ export function PlaybackStrip({
   useShortcut({
     id: 'combat.playback.skip',
     keys: 'escape',
-    label: 'Skip the round playback',
+    label: 'Skip round playback',
     group: 'Battle',
     enabled: shortcuts && playing,
     run: skip,
@@ -173,7 +173,7 @@ export function PlaybackStrip({
         </div>
         <div className={styles.stripText}>
           <SectionLabel level="none">
-            {summaryTitle ?? (round !== null ? `Round ${round} result` : 'What happened')}
+            {summaryTitle ?? (round !== null ? `Round ${round} result` : 'Result')}
           </SectionLabel>
           {chips.length > 0 ? (
             <ul className={styles.chips}>

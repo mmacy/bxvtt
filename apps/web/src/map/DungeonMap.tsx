@@ -431,7 +431,7 @@ export function DungeonMap(props: DungeonMapProps) {
   const party = map?.party;
   const status = party
     ? `The party is at ${party.x}, ${party.y}, facing ${party.facing}.`
-    : 'The party isn’t on this level.';
+    : "The party isn't on this level.";
   const wandering = map?.layer === 'referee' && (props.showWandering ?? true) ? map.wandering : null;
 
   return (
@@ -460,7 +460,7 @@ export function DungeonMap(props: DungeonMapProps) {
           ? `Arrow keys move the party. Shift and the arrow keys${letterKeys ? ' or W, A, S, and D' : ''} pan the map.`
           : `Arrow keys${letterKeys ? ' or W, A, S, and D' : ''} pan the map.`}{' '}
         Plus and minus zoom. Zero fits the explored map.
-        {letterKeys ? ' C centres on the party. F follows the party.' : ''}
+        {letterKeys ? ' C centers on the party. F follows the party.' : ''}
       </div>
       <div aria-live="polite" style={hiddenText}>
         {status}
