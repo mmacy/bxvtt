@@ -10,3 +10,5 @@ test-results
 *.md
 .bxapi
 .github
+website/.docusaurus
+website/build

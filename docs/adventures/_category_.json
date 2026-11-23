@@ -1,9 +1,4 @@
 {
   "label": "Adventures",
-  "position": 5,
-  "link": {
-    "type": "generated-index",
-    "slug": "/adventures",
-    "description": "Run the bundled adventures, upload custom JSON dungeons, or build and play-test new adventures against bxapi."
-  }
+  "position": 5
 }

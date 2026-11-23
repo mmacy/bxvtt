@@ -1,9 +1,4 @@
 {
   "label": "API and protocol",
-  "position": 8,
-  "link": {
-    "type": "generated-index",
-    "slug": "/reference",
-    "description": "Use the TypeScript SDK, call HTTP endpoints, subscribe to WebSocket updates, and inspect server limits."
-  }
+  "position": 8
 }

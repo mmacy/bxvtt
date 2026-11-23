@@ -1,9 +1,4 @@
 {
   "label": "Contributing",
-  "position": 9,
-  "link": {
-    "type": "generated-index",
-    "slug": "/contributing",
-    "description": "Run the development environment, verify changes with automated tests, and work with the web client, UI kit, and map."
-  }
+  "position": 9
 }

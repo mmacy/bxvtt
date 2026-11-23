@@ -13,6 +13,8 @@ export default tseslint.config(
       'packages/shared/src/bxapi/schema.d.ts',
       'playwright-report/**',
       'test-results/**',
+      'website/.docusaurus/**',
+      'website/build/**',
     ],
   },
   js.configs.recommended,

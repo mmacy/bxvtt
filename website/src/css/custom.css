@@ -1,0 +1,398 @@
+/*
+ * Torch ember: the theme for the bxvtt documentation.
+ *
+ * Dark mode sets faded torch ember on matte plum, and light mode sets rust on warm paper. The
+ * Docusaurus toggle switches between them through the data-theme attribute on <html>. The shared
+ * rules after the two mode blocks map these values onto Infima and style the page.
+ *
+ * Every text color meets WCAG AA (4.5:1) on the backgrounds it appears on.
+ */
+
+:root {
+  --ifm-font-family-base: 'Noto Sans Variable', 'Noto Sans', system-ui, sans-serif;
+  --ifm-heading-font-family: var(--ifm-font-family-base);
+  --ifm-font-family-monospace: 'Noto Sans Mono Variable', 'Noto Sans Mono', ui-monospace, monospace;
+  --ifm-heading-font-weight: 600;
+  --ifm-code-font-size: 95%;
+}
+
+/* Dark mode: faded torch ember on matte plum, with bone titles. */
+html[data-theme='dark'] {
+  --pal-ground: #1f191d;
+  --pal-surface: #292126;
+  --pal-navbar: #241d22;
+  --pal-sidebar: #241d22;
+  --pal-footer: #1a1518;
+  --pal-card: #271f24;
+  --pal-card-hover: #2f262c;
+  --pal-border: #362c33;
+  --pal-text: #cfc9c5;
+  --pal-muted: #9c9692;
+  --pal-separator: var(--pal-muted);
+  --pal-table-header: var(--pal-surface);
+  --pal-table-stripe: #241d22;
+  --pal-code-inline-background: #2b2227;
+  --pal-code-title-background: #231c21;
+  --pal-tint-active: 14%;
+  --pal-tint-breadcrumb: 16%;
+
+  --code-background: #161215;
+  --code-plain: #d6cfc9;
+  --code-comment: #867c81;
+  --code-punctuation: #a49b96;
+  --code-keyword: #cf7f6c;
+  --code-string: #8ea87c;
+  --code-function: #d4b16a;
+  --code-number: #da946a;
+  --code-property: #85ab96;
+  --code-operator: #b89c8a;
+  --code-deleted: #c76b63;
+
+  --ifm-color-secondary-contrast-background: #282126;
+  --ifm-color-secondary-contrast-foreground: #cfc9c5;
+  --ifm-color-secondary-dark: #857b82;
+  --ifm-color-success-contrast-background: #1f2620;
+  --ifm-color-success-contrast-foreground: #d2d8cc;
+  --ifm-color-success-dark: #7a956b;
+  --ifm-color-info-contrast-background: #1d2427;
+  --ifm-color-info-contrast-foreground: #ccd6da;
+  --ifm-color-info-dark: #6b8d99;
+  --ifm-color-warning-contrast-background: #2b241b;
+  --ifm-color-warning-contrast-foreground: #dfd4be;
+  --ifm-color-warning-dark: #b89552;
+  --ifm-color-danger-contrast-background: #2c1d1e;
+  --ifm-color-danger-contrast-foreground: #e0cac7;
+  --ifm-color-danger-dark: #b5655b;
+
+  --ifm-color-primary: #d18354;
+  --ifm-color-primary-dark: #c47240;
+  --ifm-color-primary-darker: #b86837;
+  --ifm-color-primary-darkest: #97552d;
+  --ifm-color-primary-light: #da946a;
+  --ifm-color-primary-lighter: #df9f78;
+  --ifm-color-primary-lightest: #eab99b;
+
+  --pal-heading: #e6ded5;
+  --pal-title: var(--pal-heading);
+  --pal-code-inline: #e2c7a8;
+  --pal-accent-on-tint: var(--ifm-color-primary);
+  --docusaurus-highlighted-code-line-bg: rgb(209 131 84 / 14%);
+}
+
+/* Light mode: rust on warm paper, with rust-brown page titles. */
+html[data-theme='light'] {
+  --pal-ground: #f6f4ee;
+  --pal-surface: #f2ede6;
+  --pal-navbar: #f2ede6;
+  --pal-sidebar: #efeae2;
+  --pal-footer: #efeae2;
+  --pal-card: #fcfaf7;
+  --pal-card-hover: #fffefc;
+  --pal-border: #ded5ca;
+  --pal-text: #2c2528;
+  --pal-muted: #63595d;
+  --pal-separator: #b3adac;
+  --pal-table-header: #efeae2;
+  --pal-table-stripe: #f2ede6;
+  --pal-code-inline-background: #ede7de;
+  --pal-code-title-background: #e6dfd4;
+  --pal-tint-active: 11%;
+  --pal-tint-breadcrumb: 9%;
+
+  --code-background: #efeae2;
+  --code-plain: #2c2528;
+  --code-comment: #645b60;
+  --code-punctuation: #63595d;
+  --code-keyword: #9e3c30;
+  --code-string: #3a6335;
+  --code-function: #7c5212;
+  --code-number: #974217;
+  --code-property: #2e6656;
+  --code-operator: #974217;
+  --code-deleted: #a6332f;
+
+  --ifm-color-secondary-contrast-background: #ede8e3;
+  --ifm-color-secondary-contrast-foreground: #2c2528;
+  --ifm-color-secondary-dark: #7a7076;
+  --ifm-color-success-contrast-background: #e8eee5;
+  --ifm-color-success-contrast-foreground: #2c2528;
+  --ifm-color-success-dark: #4f6f44;
+  --ifm-color-info-contrast-background: #e6edf0;
+  --ifm-color-info-contrast-foreground: #2c2528;
+  --ifm-color-info-dark: #406573;
+  --ifm-color-warning-contrast-background: #f3ecdb;
+  --ifm-color-warning-contrast-foreground: #2c2528;
+  --ifm-color-warning-dark: #8f6a24;
+  --ifm-color-danger-contrast-background: #f3e3e4;
+  --ifm-color-danger-contrast-foreground: #2c2528;
+  --ifm-color-danger-dark: #944139;
+
+  --ifm-color-primary: #9e471c;
+  --ifm-color-primary-dark: color-mix(in srgb, #9e471c 90%, black);
+  --ifm-color-primary-darker: color-mix(in srgb, #9e471c 85%, black);
+  --ifm-color-primary-darkest: color-mix(in srgb, #9e471c 70%, black);
+  --ifm-color-primary-light: color-mix(in srgb, #9e471c 85%, white);
+  --ifm-color-primary-lighter: color-mix(in srgb, #9e471c 78%, white);
+  --ifm-color-primary-lightest: color-mix(in srgb, #9e471c 60%, white);
+
+  --pal-heading: #231d20;
+  --pal-title: #8b3e1b;
+  --pal-code-inline: #7d3415;
+  --pal-accent-on-tint: #8b3e1b;
+  --docusaurus-highlighted-code-line-bg: #e6d9cd;
+}
+
+/* Shared mapping onto Infima. */
+html[data-theme] {
+  --ifm-color-emphasis-0: var(--pal-ground);
+  --ifm-color-emphasis-100: color-mix(in srgb, var(--pal-text) 6%, var(--pal-ground));
+  --ifm-color-emphasis-200: var(--pal-border);
+  --ifm-color-emphasis-300: color-mix(in srgb, var(--pal-text) 22%, var(--pal-ground));
+  --ifm-color-emphasis-400: color-mix(in srgb, var(--pal-text) 34%, var(--pal-ground));
+  --ifm-color-emphasis-500: color-mix(in srgb, var(--pal-text) 46%, var(--pal-ground));
+  --ifm-color-emphasis-600: color-mix(in srgb, var(--pal-text) 58%, var(--pal-ground));
+  --ifm-color-emphasis-700: var(--pal-muted);
+  --ifm-color-emphasis-800: color-mix(in srgb, var(--pal-text) 82%, var(--pal-ground));
+  --ifm-color-emphasis-900: color-mix(in srgb, var(--pal-text) 92%, var(--pal-ground));
+  --ifm-color-emphasis-1000: var(--pal-text);
+
+  --ifm-background-color: var(--pal-ground);
+  --ifm-background-surface-color: var(--pal-surface);
+  --ifm-dropdown-background-color: var(--pal-surface);
+  --ifm-card-background-color: var(--pal-card);
+  --ifm-font-color-base: var(--pal-text);
+  --ifm-font-color-secondary: var(--pal-muted);
+  --ifm-heading-color: var(--pal-heading);
+  --ifm-link-color: var(--ifm-color-primary);
+  --ifm-link-hover-color: var(--ifm-color-primary);
+  --ifm-hr-background-color: var(--pal-border);
+  --ifm-toc-border-color: var(--pal-border);
+  --ifm-table-border-color: var(--pal-border);
+  --ifm-table-stripe-background: var(--pal-table-stripe);
+  --ifm-blockquote-border-color: var(--pal-border);
+
+  --ifm-navbar-background-color: var(--pal-navbar);
+  --ifm-navbar-link-color: var(--pal-text);
+  --ifm-navbar-shadow: none;
+  --ifm-footer-background-color: var(--pal-footer);
+  --ifm-menu-color: var(--pal-muted);
+  --ifm-menu-color-active: var(--pal-accent-on-tint);
+  --ifm-menu-color-background-active: color-mix(
+    in srgb,
+    var(--ifm-color-primary) var(--pal-tint-active),
+    transparent
+  );
+  --ifm-menu-color-background-hover: color-mix(in srgb, var(--pal-text) 5%, transparent);
+
+  --ifm-code-background: var(--pal-code-inline-background);
+  --ifm-pre-background: var(--code-background);
+  --prism-background-color: var(--code-background);
+}
+
+html[data-theme] ::selection {
+  background: color-mix(in srgb, var(--ifm-color-primary) 28%, transparent);
+}
+
+/* Page titles: bone in dark mode, rust-brown in light mode. */
+
+html[data-theme] h1,
+html[data-theme] .hero__title {
+  color: var(--pal-title);
+}
+
+.navbar__title {
+  color: var(--pal-heading);
+  font-weight: 600;
+}
+
+/* Chrome edges: hairlines instead of shadows. */
+
+html[data-theme] .navbar {
+  border-bottom: 1px solid var(--pal-border);
+}
+
+html[data-theme] [class*='toggleButton'] {
+  border: 1px solid var(--pal-border);
+  border-radius: 0.5rem;
+}
+
+html[data-theme] .footer--dark {
+  --ifm-footer-background-color: var(--pal-footer);
+  --ifm-footer-color: var(--pal-muted);
+  --ifm-footer-link-color: var(--pal-muted);
+  --ifm-footer-link-hover-color: var(--ifm-color-primary);
+  --ifm-footer-title-color: var(--pal-heading);
+
+  border-top: 1px solid var(--pal-border);
+}
+
+/* Sidebar: bright top-level items, muted nested items on a guide line, and a tinted active item
+   with an accent edge. */
+
+html[data-theme] .theme-doc-sidebar-container {
+  border-right-color: var(--pal-border) !important;
+  background-color: var(--pal-sidebar);
+}
+
+html[data-theme] .theme-doc-sidebar-item-category-level-1 > .menu__list-item-collapsible > .menu__link,
+html[data-theme] .theme-doc-sidebar-item-link-level-1 > .menu__link {
+  color: var(--pal-heading);
+}
+
+html[data-theme] .theme-doc-sidebar-item-category-level-1 > .menu__list {
+  margin: 0.25rem 0 0.25rem var(--ifm-menu-link-padding-horizontal);
+  padding-left: 0.5rem;
+  border-left: 1px solid var(--pal-border);
+}
+
+html[data-theme] .menu__link--sublist.menu__link--active:not([aria-current='page']) {
+  color: var(--pal-heading);
+}
+
+html[data-theme] .menu .menu__link--active:not(.menu__link--sublist),
+html[data-theme] .menu .menu__link[aria-current='page'] {
+  background-color: var(--ifm-menu-color-background-active);
+  box-shadow: inset 2px 0 0 var(--ifm-color-primary);
+  color: var(--ifm-menu-color-active);
+}
+
+/* Breadcrumbs: slash separators, muted links, and the current page as an accent pill. */
+
+html[data-theme] .breadcrumbs__item:not(:last-child)::after {
+  content: '/';
+  width: auto;
+  height: auto;
+  margin: 0 0.15rem;
+  background: none;
+  color: var(--pal-separator);
+  filter: none;
+  opacity: 1;
+}
+
+html[data-theme] .breadcrumbs__link {
+  color: var(--pal-muted);
+}
+
+html[data-theme] .breadcrumbs__item--active .breadcrumbs__link {
+  background: color-mix(in srgb, var(--ifm-color-primary) var(--pal-tint-breadcrumb), transparent);
+  color: var(--pal-accent-on-tint);
+}
+
+/* Table of contents: an "On this page" label and a dot on the active entry. */
+
+html[data-theme] .theme-doc-toc-desktop .table-of-contents::before {
+  content: 'On this page';
+  display: block;
+  margin-bottom: 0.5rem;
+  padding-left: var(--ifm-toc-padding-horizontal);
+  color: var(--pal-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+html[data-theme] .table-of-contents__link {
+  position: relative;
+  color: var(--pal-muted);
+}
+
+html[data-theme] .table-of-contents__link--active {
+  color: var(--ifm-color-primary);
+}
+
+html[data-theme] .table-of-contents__link--active::before {
+  content: '';
+  position: absolute;
+  top: 0.5em;
+  left: -0.75rem;
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background-color: currentcolor;
+}
+
+/* Links: a solid accent underline. */
+
+html[data-theme] .markdown a {
+  text-decoration: underline;
+  text-decoration-color: currentcolor;
+  text-underline-offset: 0.18em;
+}
+
+/* Tables: a tinted header row and horizontal rules only. */
+
+html[data-theme] .markdown table thead tr {
+  background-color: var(--pal-table-header);
+}
+
+html[data-theme] .markdown table th,
+html[data-theme] .markdown table td {
+  border-width: 0 0 1px;
+}
+
+html[data-theme] .markdown table th {
+  text-align: start;
+}
+
+/* Admonitions: rounded, with a sentence-case title in the callout's color. i18n/en/code.json
+   capitalizes the default titles. The title blends 20% of the body color into the callout color
+   so it meets 4.5:1. */
+
+html[data-theme] .theme-admonition {
+  --ifm-alert-border-left-width: 4px;
+  --ifm-alert-border-radius: 0.5rem;
+}
+
+html[data-theme] .theme-admonition [class*='admonitionHeading'] {
+  color: color-mix(in srgb, var(--ifm-alert-border-color) 80%, var(--ifm-alert-foreground-color));
+  font-size: 0.9rem;
+  text-transform: none;
+}
+
+html[data-theme] .theme-admonition [class*='admonitionIcon'] svg {
+  fill: currentcolor;
+}
+
+/* Category and generated-index cards. */
+
+html[data-theme] .card {
+  border: 1px solid var(--pal-border);
+}
+
+html[data-theme] a[class*='cardContainer']:hover {
+  background-color: var(--pal-card-hover);
+  border-color: var(--ifm-color-primary);
+}
+
+/* Inline code. */
+
+html[data-theme] :not(pre) > code {
+  border: 1px solid var(--pal-border);
+  background-color: var(--pal-code-inline-background);
+  color: var(--pal-code-inline);
+}
+
+/* Fenced code blocks: a monospace title bar and an accent edge on highlighted lines. */
+
+html[data-theme] .theme-code-block {
+  border: 1px solid var(--pal-border);
+  box-shadow: none;
+}
+
+html[data-theme] .theme-code-block [class*='codeBlockTitle'] {
+  border-bottom: 1px solid var(--pal-border);
+  background-color: var(--pal-code-title-background);
+  color: var(--pal-muted);
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.85rem;
+}
+
+html[data-theme] .theme-code-block-highlighted-line {
+  box-shadow: inset 3px 0 0 var(--ifm-color-primary);
+}
+
+/* Images: a frame so screenshots sit on the page instead of floating on it. */
+
+html[data-theme] .markdown img {
+  border: 1px solid var(--pal-border);
+  border-radius: var(--ifm-global-radius);
+}
