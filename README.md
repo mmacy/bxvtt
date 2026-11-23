@@ -81,7 +81,7 @@ See [`docs/`](docs/index.md) for the full documentation set:
 - **Adventures:** [Included and custom adventures](docs/adventures/included-adventures.md) and [Author and validate adventures](docs/adventures/authoring-and-checking.md).
 - **Hosting and operations:** [Run and maintain a server](docs/hosting/running-a-server.md) and [Security and trust model](docs/hosting/security.md).
 - **Architecture and API:** [Architecture](docs/architecture.md), [HTTP API, WebSocket, and SDK](docs/reference/http-and-websocket.md), and [Environment variables and limits](docs/reference/environment-variables.md).
-- **Contributing:** [Local development and testing](docs/contributing/development.md), [Web client, UI kit, and map](docs/contributing/web-client.md), and [Credits and licenses](docs/credits.md).
+- **Contributing:** [Local development and testing](docs/contributing/development.md), [Web client, UI kit, and map](docs/contributing/web-client.md), [Credits and licenses](docs/credits.md), and [Changelog](docs/changelog.md).
 
 ## Configuration
 
