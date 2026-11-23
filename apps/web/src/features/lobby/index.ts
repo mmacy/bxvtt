@@ -7,3 +7,4 @@ export { AdventurePicker, partyRecommendation } from './AdventurePicker';
 export { OPTIONAL_RULES, OptionalRules } from './OptionalRules';
 export type { RulesetChoices } from './OptionalRules';
 export { StartGamePanel, startChecks } from './StartGamePanel';
+export { useTableExit } from './TableExit';

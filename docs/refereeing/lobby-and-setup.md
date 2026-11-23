@@ -23,6 +23,15 @@ You enter the lobby as the table's referee. The server requires at least one ref
 - **Change roles or remove members:** In **People at the table**, open **Actions for** any member to choose **Make a referee**, **Make a player** (disabled when only one referee remains), or **Remove from the table**. Removing a member disconnects them immediately and rotates the invite code so the old link cannot be reused. Manage removals in the lobby between games, because the play screen has no member removal menu.
 - **Approve returning players:** When a player opens your invite link from a new quick-tunnel URL or a different browser and chooses **I've played at this table before**, a banner appears at the top of your lobby or play screen: **Someone is asking to come back in as** followed by that member's name. Confirm with the player over voice or chat, then select **Let them in** (or **Not now** to decline). A referee can never approve a rejoin request for their personal account; if you might switch browsers, promote a co-referee beforehand.
 
+## Leave or delete a table
+
+Open the **Table menu** in the lobby header or in the play screen's top bar to leave or delete the table. Every member sees **Leave table**, and only referees see **Delete table**.
+
+- **Delete table:** Deletes the table for everyone, with its saved games, chat, notes, and uploaded adventures. You can't recover them, but every member keeps their characters. Members who have the table open return to their table list, which tells them that a referee deleted the table.
+- **Leave table:** Takes you off the table and your characters out of the party. If you're the only referee and other members remain, you can't leave until you make another member a referee in **People at the table** (in the lobby, so return to the lobby first during play). If you're the last member, leaving also deletes the table, and the dialog says so before you confirm.
+
+Each person can be the referee of up to 50 tables that they created. When you reach the limit, delete a table you no longer use to make room. A table that you hand to another referee and leave stops counting toward your limit.
+
 ## Choose an adventure
 
 Under **Adventure** (visible only to referees until play starts), choose which module to run:

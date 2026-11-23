@@ -132,6 +132,39 @@ test.describe('first run and lobby', () => {
     await ruth.page.keyboard.press('Escape');
   });
 
+  test('the referee deletes the table, and a player at it returns to the table list', async ({ crew }) => {
+    const ruth = await crew.person('Ruth');
+    const sam = await crew.person('Sam');
+    const table = await ruth.client.createTable({ name: 'Doomed table' });
+    await sam.client.joinTable(table.invite_code);
+    await openTable(ruth.page, `/tables/${table.id}`);
+    await openTable(sam.page, `/tables/${table.id}`);
+    await expect(sam.page.getByText('2 of 2 online')).toBeVisible();
+
+    // A player can leave but not delete.
+    await sam.page.getByRole('button', { name: 'Table menu' }).click();
+    await expect(sam.page.getByRole('menuitem', { name: 'Leave table' })).toBeVisible();
+    await expect(sam.page.getByRole('menuitem', { name: 'Delete table' })).toHaveCount(0);
+    await sam.page.keyboard.press('Escape');
+
+    await ruth.page.getByRole('button', { name: 'Table menu' }).click();
+    await ruth.page.getByRole('menuitem', { name: 'Delete table' }).click();
+    const confirm = ruth.page.getByRole('alertdialog', { name: 'Delete table?' });
+    await expect(confirm).toContainText('This deletes Doomed table for everyone');
+    await confirm.getByRole('button', { name: 'Delete table' }).click();
+
+    // Both land on the table list, which no longer has the table, and Sam learns who deleted it.
+    for (const page of [ruth.page, sam.page]) {
+      await expect(page).toHaveURL(/\/$/);
+      await expect(page.getByRole('heading', { name: 'Your tables', level: 1 })).toBeVisible();
+      await expect(page.getByRole('link', { name: /Doomed table/ })).toHaveCount(0);
+    }
+    await expect(
+      sam.page.getByRole('status').filter({ hasText: 'Ruth, the referee, deleted Doomed table' }),
+    ).toBeVisible();
+    await expect(ruth.page.getByText('the referee, deleted')).toHaveCount(0);
+  });
+
   test('players bring characters, the referee orders the party, and the order reaches everyone', async ({
     crew,
   }) => {

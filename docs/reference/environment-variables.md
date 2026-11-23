@@ -72,7 +72,7 @@ Defined in `packages/shared/src/protocol/common.ts` (`LIMITS`) and `apps/server/
 | Adventure JSON body (`adventureBodyBytes`) | 8 MiB (`8,388,608` bytes) |
 | WebSocket client frame (`wsMessageBytes`) | 16 KiB (`16,384` bytes) |
 | WebSocket outbound buffer (`MAX_BUFFERED_BYTES`) | 8 MiB (`8,388,608` bytes) |
-| Tables per user / characters per user | 50 tables / 200 characters |
+| Tables per user (created and still refereed by that user) / characters per user | 50 tables / 200 characters |
 | Roster entries / uploaded adventures per table | 20 roster entries / 20 uploaded adventures |
 | Saves per table | 100 manual saves + 10 newest autosaves |
 | Annotations | 20,000 per table / 2,000 per dungeon level |

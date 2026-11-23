@@ -60,7 +60,7 @@ The server groups IPv6 addresses by `/64` prefix and trusts forwarding headers (
 | Authenticated state-changing requests per user | 100 per 20 seconds |
 | Feed posts and new annotations per user | 30 per 30 seconds |
 | Character wizard checks per user | 60 per minute |
-| Tables created per user | 50 |
+| Tables per user (tables they created and still referee) | 50 |
 | Stored characters per user | 200 |
 | Lobby roster entries per table | 20 |
 | Manual saves per table | 100 (plus the newest 10 autosaves) |

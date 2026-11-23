@@ -41,6 +41,19 @@ describe('PlayShell', () => {
     expect(screen.queryByRole('tab', { name: /Referee/ })).not.toBeInTheDocument();
   });
 
+  it('offers "Delete table" in the table menu to a referee and not to a player', async () => {
+    const player = renderWithTable(<PlayShell />, { snapshot: fixtureSnapshot('town', 'player') });
+    await player.user.click(screen.getByRole('button', { name: 'Table menu' }));
+    expect(await screen.findByRole('menuitem', { name: 'Leave table' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Delete table' })).not.toBeInTheDocument();
+    player.unmount();
+
+    const referee = renderWithTable(<PlayShell />, { snapshot: fixtureSnapshot('town', 'referee') });
+    await referee.user.click(screen.getByRole('button', { name: 'Table menu' }));
+    await referee.user.click(await screen.findByRole('menuitem', { name: 'Delete table' }));
+    expect(screen.getByRole('alertdialog', { name: 'Delete table?' })).toBeInTheDocument();
+  });
+
   it('says so when the connection drops, without unmounting the table', () => {
     renderWithTable(<PlayShell />, { data: { status: 'reconnecting' } });
     expect(screen.getByText('Connection lost. Reconnecting to the table.')).toBeInTheDocument();

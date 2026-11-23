@@ -10,7 +10,7 @@ import {
   useMembers,
   useTableDetail,
 } from '@/app';
-import { Badge, Banner, Panel, PageLayout, Wordmark } from '@/ui';
+import { Badge, Banner, DropdownMenu, IconButton, Panel, PageLayout, Wordmark } from '@/ui';
 import { ProfileMenu, RulesReference } from '@/features/home';
 import { AdventurePicker } from './AdventurePicker';
 import { InvitePanel } from './InvitePanel';
@@ -20,6 +20,7 @@ import { RosterPanel } from './RosterPanel';
 import { LobbySaves } from './LobbySaves';
 import { StartGamePanel } from './StartGamePanel';
 import { TableSettingsForm } from './TableSettingsForm';
+import { useTableExit } from './TableExit';
 import styles from './lobby.module.css';
 
 /** The default adventure to suggest: the first sample, or else the first adventure. */
@@ -42,6 +43,7 @@ export function LobbyPage({ banner }: { banner?: ReactNode }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [ruleset, setRuleset] = useState<RulesetChoices>({});
   const tableId = table?.id ?? null;
+  const exit = useTableExit();
 
   const [reload, setReload] = useState(0);
   const loadAdventures = useCallback(async () => setReload((n) => n + 1), []);
@@ -92,6 +94,11 @@ export function LobbyPage({ banner }: { banner?: ReactNode }) {
       headerActions={
         <>
           <RulesReference />
+          <DropdownMenu
+            align="end"
+            trigger={<IconButton icon="menu" label="Table menu" size="sm" />}
+            items={exit.items}
+          />
           <ProfileMenu />
         </>
       }
@@ -171,6 +178,7 @@ export function LobbyPage({ banner }: { banner?: ReactNode }) {
           </aside>
         </div>
       </div>
+      {exit.dialogs}
     </PageLayout>
   );
 }
