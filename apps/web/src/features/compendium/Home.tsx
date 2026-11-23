@@ -109,7 +109,12 @@ export function Home({
         <ul className={styles.examples}>
           {EXAMPLES.map((example) => (
             <li key={example}>
-              <Button variant="secondary" size="sm" onClick={() => onExample(example)}>
+              <Button
+                variant="secondary"
+                size="sm"
+                tooltip={`Search the rules for "${example}"`}
+                onClick={() => onExample(example)}
+              >
                 {example}
               </Button>
             </li>

@@ -12,21 +12,21 @@ export function EntryLink({
   id,
   anchor,
   children,
-  title,
+  tooltip,
   tone = 'inline',
 }: {
   kind: EntryKind;
   id: string;
   anchor?: string;
   children: ReactNode;
-  title?: string;
+  tooltip?: string;
   tone?: 'inline' | 'quiet';
 }) {
   const { go } = useNavigation();
   return (
     <LinkButton
       tone={tone}
-      title={title}
+      tooltip={tooltip}
       onClick={() => go({ page: 'entry', kind, id, ...(anchor ? { anchor } : {}) })}
     >
       {children}

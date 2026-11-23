@@ -66,6 +66,7 @@ export function SpellEntry({ id }: { id: string }) {
                     variant="secondary"
                     size="sm"
                     icon="spell"
+                    tooltip={`Show the ${ordinal(spell.level)} level ${listName} spells`}
                     className={styles.listButton}
                     onClick={() => {
                       setIndex({ spells: { list: spell.spell_list, level: String(spell.level), query: '' } });

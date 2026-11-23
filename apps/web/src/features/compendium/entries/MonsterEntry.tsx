@@ -126,7 +126,7 @@ export function MonsterBody({ monster }: { monster: MonsterDetail }) {
                       kind="tables"
                       id="treasure"
                       anchor={`type-${letter}`}
-                      title={`Treasure type ${letter}`}
+                      tooltip={`Show treasure type ${letter} in the treasure tables`}
                     >
                       {letter}
                     </EntryLink>
@@ -142,7 +142,7 @@ export function MonsterBody({ monster }: { monster: MonsterDetail }) {
                           kind="tables"
                           id="treasure"
                           anchor={`type-${letter}`}
-                          title={`Treasure type ${letter}`}
+                          tooltip={`Show lair treasure type ${letter} in the treasure tables`}
                         >
                           {letter}
                         </EntryLink>

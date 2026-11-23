@@ -62,7 +62,6 @@ function TurningRows({ table }: { table: CombatTableSet }) {
                 <td
                   key={column}
                   className={`${styles.num} ${value === 'T' ? styles.turned : ''} ${value === 'D' ? styles.destroyed : ''}`}
-                  title={value === 'T' ? 'Turned' : value === 'D' ? 'Destroyed' : undefined}
                 >
                   {cellText(value)}
                 </td>
