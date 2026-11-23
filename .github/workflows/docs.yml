@@ -1,0 +1,58 @@
+name: Docs
+
+# Publishes the documentation site in website/ to GitHub Pages at https://mmacy.github.io/bxvtt/ when
+# documentation or site changes land on main, when a release is published, or when triggered manually from
+# the Actions tab. The repository's Pages source is "GitHub Actions", so no gh-pages branch is needed.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - 'website/**'
+      - '.github/workflows/docs.yml'
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Lets a newer publish replace one that is waiting, but never cancels a deployment that has started.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+      - run: npm ci
+        working-directory: website
+      - run: npm run typecheck
+        working-directory: website
+      # The build fails on a broken link or anchor.
+      - run: npm run build
+        working-directory: website
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: website/build
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

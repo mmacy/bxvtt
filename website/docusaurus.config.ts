@@ -6,7 +6,7 @@ const config: Config = {
   title: 'bxvtt',
   tagline: 'A virtual tabletop for the 1981 B/X rules, powered by bxapi.',
   url: 'https://mmacy.github.io',
-  baseUrl: '/',
+  baseUrl: '/bxvtt/',
   organizationName: 'mmacy',
   projectName: 'bxvtt',
   trailingSlash: false,

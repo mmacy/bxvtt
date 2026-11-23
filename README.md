@@ -73,7 +73,7 @@ Press `Ctrl+C` to close the tunnel when the session ends. When the tunnel URL ch
 
 ## Documentation
 
-See [`docs/`](docs/index.md) for the full documentation set:
+Read the documentation at <https://mmacy.github.io/bxvtt/>, or browse the source in [`docs/`](docs/index.md):
 
 - **Getting started:** [Quickstart](docs/getting-started/quickstart.md) and [Play over the internet](docs/getting-started/share-online.md).
 - **Player guide:** [Join and make a character](docs/playing/getting-started.md), [Table screen and town](docs/playing/table-and-town.md), [Explore the dungeon](docs/playing/dungeon-exploration.md), [Encounters and battle](docs/playing/encounters-and-battle.md), [Feed, journal, and rules reference](docs/playing/chat-journal-compendium.md), and [Keyboard shortcuts](docs/playing/keyboard-shortcuts.md).
