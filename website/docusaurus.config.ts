@@ -74,7 +74,7 @@ const config: Config = {
           title: 'Docs',
           items: [
             { label: 'Quickstart', to: '/getting-started/quickstart' },
-            { label: 'Player guide', to: '/playing' },
+            { label: 'Player guide', to: '/playing/getting-started' },
             { label: 'Architecture', to: '/architecture' },
           ],
         },
