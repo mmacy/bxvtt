@@ -70,6 +70,8 @@ All paths below sit under `/api` (for example, `GET /api/health`), and `{t}` den
 | `POST /users` | `createUser(name)` | Public (rate-limited) | `CreateUserResponse` (includes `token`) |
 | `GET /users/me` | `me()` | User | `User` |
 | `PATCH /users/me` | `updateMe(body)` | User | `User` |
+| `DELETE /users/me` | `deleteMe()` | User (except sole referee of a table while others remain) | `204` |
+| `POST /users/me/sign-out` | `signOut()` | User | `204` |
 | `POST /rejoin/lookup` | `lookupRejoin(code)` | Invite code (rate-limited) | `RejoinLookup` |
 | `POST /rejoin` | `requestRejoin(code, userId)` | Invite code (rate-limited) | `RejoinTicket` |
 | `POST /rejoin/{request_id}/status` | `rejoinStatus(id, secret)` | Ticket secret | `RejoinStatus` |
@@ -77,6 +79,16 @@ All paths below sit under `/api` (for example, `GET /api/health`), and `{t}` den
 | `GET /tables/{t}/rejoin-requests` | `listRejoinRequests(tableId)` | Referee | `RejoinRequestList` |
 | `POST /tables/{t}/rejoin-requests/{id}/approve` | `approveRejoin(tableId, id)` | Referee (other than requested member) | `RejoinRequestList` |
 | `POST /tables/{t}/rejoin-requests/{id}/decline` | `declineRejoin(tableId, id)` | Referee (other than requested member) | `RejoinRequestList` |
+
+`POST /users/me/sign-out` makes the server stop accepting the token without issuing a new one, and closes the user's WebSocket connections with `auth_failed`. The user, their memberships, seats, and characters stay. Because bxvtt has no passwords, only an approved rejoin request gives the user a token again. `signOut()` clears the SDK client's token before the request leaves, so later calls on that client send no token.
+
+`DELETE /users/me` deletes the calling user. The server checks every table the user belongs to first, and when the user is the only referee of a table with other members it answers `409 last_referee`, names those tables in `detail`, and changes nothing. The user can make another member a referee or delete the table, then try again. If a leave or the row deletion fails, the server restores the token and answers with the error. Tables the user already left stay left, and the user can try again. Otherwise it does the following:
+
+1. Stops accepting the user's token.
+2. Takes the user out of each table exactly as `POST /tables/{t}/leave` does. A table where the user is the last member is deleted with its saves. At every other table, the user's seats become empty (a referee controls those characters), their characters leave the lobby roster, they stop being the caller, a `member_left` notice joins the feed, their connections receive `removed` with reason `left`, and the other members receive `presence`, `table`, and `game` updates.
+3. Replaces the user's ID in the rows of every remaining table, including tables the user left earlier, with a new, unassigned user ID (one per table). Chat, whispers, rolls, notices, saves, notes, pins, and declarations stay, and clients show their author as a former member. A table the user created names its first referee as `created_by` instead.
+4. Deletes the user's stored characters (also from `bxapi`), ability rolls, retired tokens, and user row. A game in progress keeps its copy of each character.
+5. Cancels pending rejoin requests for the user.
 
 ### Tables, members, roster, and characters
 
@@ -177,7 +189,7 @@ Clients send `auth` as their first frame within 10 seconds of connecting. `Table
 | `1001` | `server_shutdown` | Reconnects with backoff. |
 | `1009` | `message_too_large` | Frame exceeded 16 KiB or used binary encoding. |
 | `1013` | `try_again_later` | Reconnects with backoff. |
-| `4001` | `auth_failed` | Stops reconnecting (invalid or retired token). |
+| `4001` | `auth_failed` | Stops reconnecting (invalid, retired, or signed-out token). |
 | `4003` | `removed` | Stops reconnecting (user left, was removed, or table was deleted). |
 | `4008` | `rate_limited` | Exceeded connection quota or 40 frames per 2 seconds. |
 | `4010` | `resync` | Reconnects immediately (sent when a member's role changes). |

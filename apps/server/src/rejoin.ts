@@ -335,6 +335,25 @@ export class RejoinService {
   }
 
   /**
+   * Forgets a user who was deleted: requests to rejoin as them end as `cancelled`, and an unclaimed approval they gave
+   * stays good but no longer names them. The server calls it after the user's rows are gone.
+   *
+   * @param userId - The deleted user.
+   */
+  forgetUser(userId: string): void {
+    const changed = new Set<string>();
+    for (const pending of this.requests.values()) {
+      if (pending.approvedBy === userId) pending.approvedBy = null;
+      if (pending.userId !== userId) continue;
+      if (pending.state === 'pending' || pending.state === 'approved') {
+        pending.state = 'cancelled';
+        changed.add(pending.tableId);
+      }
+    }
+    for (const tableId of changed) this.broadcast(tableId);
+  }
+
+  /**
    * The pending requests of a table, for its referees.
    *
    * @param tableId - The table.

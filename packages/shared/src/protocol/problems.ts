@@ -28,7 +28,10 @@ export const PROBLEM_CODES = {
   invite_invalid: 404,
   /** 405: the path exists, but not with that method. */
   method_not_allowed: 405,
-  /** 409: the change would leave the table without a referee. */
+  /**
+   * 409: the change would leave a table without a referee: a demotion, or the only referee leaving or deleting their
+   * user while others remain at the table.
+   */
   last_referee: 409,
   /** 409: the table is playing a game, so the lobby can't change. End the game first. */
   game_active: 409,

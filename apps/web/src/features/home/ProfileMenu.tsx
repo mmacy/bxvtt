@@ -2,7 +2,9 @@ import { LIMITS, USER_COLORS, type UserColor } from '@bxvtt/shared/protocol';
 import { useState, type FormEvent } from 'react';
 import { describeProblem, displayStringProblem, useIdentity } from '@/app';
 import { Avatar, Button, Field, Popover, TextInput, toast } from '@/ui';
+import { DeleteProfileDialog, SignOutDialog } from './ProfileDialogs';
 import styles from './home.module.css';
+import profileStyles from './profile.module.css';
 
 /**
  * Plain names for the user colors, for the color picker's accessible labels, in the palette's order. Keyed by
@@ -99,15 +101,47 @@ export function ProfileForm({ onDone }: { onDone?: () => void }) {
   );
 }
 
-/** The user's avatar in the page header, which opens the profile form. */
+/**
+ * The user's avatar in the page header, which opens the profile form and the buttons that sign out and delete the
+ * profile. Each button closes the menu and opens its confirm dialog.
+ */
 export function ProfileMenu() {
   const user = useIdentity((s) => s.user);
   const [open, setOpen] = useState(false);
+  const [dialog, setDialog] = useState<'sign-out' | 'delete' | null>(null);
+  if (user === null) return null;
+  const show = (next: 'sign-out' | 'delete') => {
+    setOpen(false);
+    setDialog(next);
+  };
+  const dialogProps = (kind: 'sign-out' | 'delete') => ({
+    open: dialog === kind,
+    onOpenChange: (next: boolean) => !next && setDialog(null),
+  });
+  return (
+    <>
+      <ProfilePopover open={open} onOpenChange={setOpen} onShow={show} />
+      <SignOutDialog {...dialogProps('sign-out')} />
+      <DeleteProfileDialog {...dialogProps('delete')} />
+    </>
+  );
+}
+
+function ProfilePopover({
+  open,
+  onOpenChange,
+  onShow,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onShow: (dialog: 'sign-out' | 'delete') => void;
+}) {
+  const user = useIdentity((s) => s.user);
   if (user === null) return null;
   return (
     <Popover
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={onOpenChange}
       align="end"
       width="300px"
       title="Your profile"
@@ -124,7 +158,15 @@ export function ProfileMenu() {
         </button>
       }
     >
-      <ProfileForm onDone={() => setOpen(false)} />
+      <ProfileForm onDone={() => onOpenChange(false)} />
+      <div className={profileStyles.actions}>
+        <Button size="sm" variant="ghost" icon="log-out" onClick={() => onShow('sign-out')}>
+          Sign out
+        </Button>
+        <Button size="sm" variant="danger" icon="trash" onClick={() => onShow('delete')}>
+          Delete profile
+        </Button>
+      </div>
     </Popover>
   );
 }

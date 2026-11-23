@@ -23,8 +23,8 @@ export const WS_CLOSE_CODES = {
   message_too_large: 1009,
   /**
    * The first message wasn't a valid `auth` message, or the token or table is wrong. The server also closes a
-   * user's connections with it when a referee approves a rejoin request for that user, because the token they
-   * used no longer works.
+   * user's connections with it when the user signs out (`POST /api/users/me/sign-out`) and when a referee
+   * approves a rejoin request for that user, because the token they used no longer works.
    */
   auth_failed: 4001,
   /** The user isn't a member of the table anymore: they left, a referee removed them, or the table was deleted. */
