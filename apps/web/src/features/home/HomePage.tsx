@@ -3,7 +3,7 @@ import { isProblem } from '@bxvtt/shared/client';
 import { sessionModeLabel } from '@bxvtt/shared/text';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
-import { describeProblem, displayStringProblem, getApi, useIdentity } from '@/app';
+import { describeProblem, displayStringProblem, getApi, SiteInfo, useIdentity } from '@/app';
 import { Badge, Banner, Button, Card, EmptyState, Field, Icon, PageLayout, Skeleton, TextInput } from '@/ui';
 import { HealthBanner } from './HealthBanner';
 import { NameForm } from './NameForm';
@@ -342,6 +342,7 @@ export function HomePage() {
           <ProfileMenu />
         </>
       }
+      footer={<SiteInfo />}
     >
       <div className={styles.stack}>
         <HealthBanner />

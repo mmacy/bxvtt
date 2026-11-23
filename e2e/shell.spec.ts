@@ -3,6 +3,7 @@
  * table, and the referee returning the table to its lobby.
  */
 import { expect, test } from './support/fixtures';
+import { expectSiteInfo } from './support/site-info';
 import { stagedTable } from './support/states';
 import { openTable, placeParty } from './support/table';
 
@@ -12,6 +13,7 @@ test.describe('play screen shell', () => {
     const { page } = staged.sam;
     await openTable(page, staged.path);
     await expect(page.getByRole('application', { name: /^Dungeon map/ })).toBeVisible();
+    await expectSiteInfo(page);
 
     await page.keyboard.press('?');
     const help = page.getByRole('dialog', { name: 'Keyboard shortcuts' });

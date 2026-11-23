@@ -5,6 +5,7 @@ import {
   TableProvider,
   getApi,
   isRetiredToken,
+  SiteInfo,
   useCombatStage,
   useIdentity,
   useMapBus,
@@ -28,7 +29,7 @@ const PlayShell = PlayShellPart;
 
 function Centered({ children }: { children: ReactNode }) {
   return (
-    <PageLayout width="narrow" headerActions={<ProfileMenu />}>
+    <PageLayout width="narrow" headerActions={<ProfileMenu />} footer={<SiteInfo />}>
       <div className={styles.centered}>{children}</div>
     </PageLayout>
   );

@@ -9,6 +9,8 @@ export { isRetiredToken, useCurrentUser, useIdentity } from './identity';
 export type { IdentityState, IdentityStatus } from './identity';
 export { DEFAULT_PREFERENCES, usePreferences, useReduceMotion } from './preferences';
 export { AppKitProvider } from './AppKitProvider';
+export { DOCS_URL, SiteInfo } from './SiteInfo';
+export type { SiteInfoProps } from './SiteInfo';
 export type { DockTabId, MapThemeName, MotionPreference, Preferences } from './preferences';
 export {
   canActForParty,

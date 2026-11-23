@@ -340,3 +340,16 @@
 .seatSelect {
   width: 240px;
 }
+
+/* The tool rail with the documentation link and the version under it. The rail keeps the height it needs. */
+.rail {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.rail > :first-child {
+  flex: 1 1 auto;
+  min-height: 0;
+}

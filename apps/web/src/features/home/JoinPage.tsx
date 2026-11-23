@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import type { RejoinLookup } from '@bxvtt/shared/protocol';
-import { describeProblem, getApi, isRetiredToken, useIdentity, type ProblemMessage } from '@/app';
+import { describeProblem, getApi, isRetiredToken, SiteInfo, useIdentity, type ProblemMessage } from '@/app';
 import { Banner, Button, Card, PageLayout, Spinner } from '@/ui';
 import { NameForm } from './NameForm';
 import { ProfileMenu } from './ProfileMenu';
@@ -59,7 +59,7 @@ export function JoinPage() {
   }, [status, token, code, navigate, forget]);
 
   return (
-    <PageLayout width="narrow" headerActions={<ProfileMenu />}>
+    <PageLayout width="narrow" headerActions={<ProfileMenu />} footer={<SiteInfo />}>
       <div className={styles.joinWrap}>
         {status === 'anonymous' && !rejoining && (
           <Card padding="lg">

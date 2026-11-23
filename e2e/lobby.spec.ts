@@ -7,6 +7,7 @@ import { resolve } from 'node:path';
 import { REPO_ROOT } from './support/env';
 import { expect, test } from './support/fixtures';
 import { stagedTable } from './support/states';
+import { expectSiteInfo } from './support/site-info';
 import { createCharacter, openTable, placeParty } from './support/table';
 
 test.describe('first run and lobby', () => {
@@ -26,12 +27,14 @@ test.describe('first run and lobby', () => {
     await expect(page.getByRole('heading', { name: 'Your tables', level: 1 })).toBeVisible();
     // The name has no stray space before the comma (R-101).
     await expect(page.getByRole('button', { name: 'Ruth, your profile', exact: true })).toBeVisible();
+    await expectSiteInfo(page);
 
     await page.getByRole('textbox', { name: 'Table name' }).fill('Thursday at the bell');
     await page.getByRole('button', { name: 'Create table' }).click();
     await expect(page).toHaveURL(/\/tables\/tbl_/);
     await expect(page.getByRole('heading', { name: 'Thursday at the bell', level: 1 })).toBeVisible();
     await expect(page.getByText('1 of 1 online')).toBeVisible();
+    await expectSiteInfo(page);
 
     // The name survives a reload, and the table is on the home page.
     await page.reload();
@@ -101,6 +104,7 @@ test.describe('first run and lobby', () => {
         .or(sam.page.getByText(/doesn't work|no longer|isn't valid/i))
         .first(),
     ).toBeVisible();
+    await expectSiteInfo(sam.page);
   });
 
   test('the referee promotes and demotes a member, and the player sees the change', async ({ crew }) => {
