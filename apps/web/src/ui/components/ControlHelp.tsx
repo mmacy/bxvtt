@@ -17,8 +17,8 @@ import styles from './ControlHelp.module.css';
 export interface ControlHelpProps {
   /**
    * What the control does or what happens next, in one short phrase, such as "Search the room for secret doors
-   * and traps (1 turn)". It shows on hover and on keyboard focus, and screen readers read it as the control's
-   * description. Leave it out when the visible label already says everything.
+   * and traps". It shows on hover and on keyboard focus, and screen readers read it as the control's description.
+   * Leave it out when the visible label already says everything.
    */
   tooltip?: ReactNode;
   /**

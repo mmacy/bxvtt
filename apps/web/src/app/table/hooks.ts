@@ -36,6 +36,7 @@ import {
   type PermissionContext,
 } from '../permissions';
 import { usePreferences } from '../preferences';
+import { useCommandCatalog } from '../rules';
 import { useTableStore, useTableStoreApi } from './context';
 import { levelKey, type TableNotice, type TablePing } from './store';
 import type { TableConnectionStatus } from './store';
@@ -240,8 +241,14 @@ export function usePermissionContext(): PermissionContext {
   const role = useTableStore((s) => s.role);
   const game = useTableStore((s) => s.game);
   const settings = useTableStore((s) => s.table?.settings ?? null);
+  const members = useTableStore((s) => s.table?.members);
   const lens = usePreferences((s) => s.refereeLens);
-  return useMemo(() => ({ userId, role, game, settings, lens }), [userId, role, game, settings, lens]);
+  // The catalog says in which modes a command works, for the reason on a command that isn't legal now.
+  const catalog = useCommandCatalog().data;
+  return useMemo(
+    () => ({ userId, role, game, settings, lens, members, catalog }),
+    [userId, role, game, settings, lens, members, catalog],
+  );
 }
 
 /**
@@ -249,7 +256,7 @@ export function usePermissionContext(): PermissionContext {
  *
  * ```tsx
  * const permission = useCanSend('cast_spell', member.id);
- * <Button disabled={!permission.allowed} title={permission.reason ?? undefined}>Cast</Button>
+ * <Button disabled={!permission.allowed} disabledReason={permission.reason}>Cast</Button>
  * ```
  *
  * @param commandType - The command type.

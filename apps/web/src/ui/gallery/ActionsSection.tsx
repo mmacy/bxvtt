@@ -120,11 +120,7 @@ export function ActionsSection() {
         >
           <Stack gap="md">
             <Row>
-              <Button
-                icon="search"
-                shortcut="S"
-                tooltip="Search the room for secret doors and traps (1 turn)"
-              >
+              <Button icon="search" shortcut="S" tooltip="Search the room for secret doors and traps">
                 Search
               </Button>
               <IconButton

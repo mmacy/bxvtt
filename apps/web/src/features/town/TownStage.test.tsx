@@ -351,9 +351,7 @@ describe('the temple', () => {
     await user.click(await screen.findByRole('button', { name: /^Osric/ }));
     const button = screen.getByRole('button', { name: 'Buy raise dead for Osric' });
     expect(button).toBeDisabled();
-    expect(
-      screen.getByText(/Only the player in Osric's seat or the referee can act for Osric/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Only Ruth, who plays Osric, can have Osric buy healing/)).toBeInTheDocument();
   });
 });
 

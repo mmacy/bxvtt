@@ -101,7 +101,7 @@ Hover help is the tooltip that appears when someone hovers over a control or mov
 
 | Case | Props | Example |
 | --- | --- | --- |
-| The label doesn't say what happens | `tooltip` | `<Button icon="search" tooltip="Search the room for secret doors and traps (1 turn)">Search</Button>` |
+| The label doesn't say what happens | `tooltip` | `<Button icon="search" tooltip="Search the room for secret doors and traps">Search</Button>` |
 | Icon-only control | `label` (the tooltip shows it) | `<IconButton icon="settings" label="Table settings" />` |
 | Icon-only control that needs more than its name | `label` and `tooltip` | `<IconButton icon="hourglass" label="Advance time" tooltip="Advance time by 1 turn (10 minutes)" />` |
 | Unavailable control | `disabled` and `disabledReason` | `<Button disabled={!permission.allowed} disabledReason={permission.reason}>Start game</Button>` |
@@ -117,7 +117,13 @@ These controls take the props:
 - `MenuEntry` items and submenus: `disabledReason`, which the menu shows as text under the label instead of in a tooltip.
 - `CommandPalette` actions (and `useAction` definitions in `@/app`): `disabledReason`, which the palette shows under the label.
 
-Form controls (`TextInput`, `Select`, `Combobox`, `Switch`, `Checkbox`, `RadioGroup`, and `Slider`) take their help as visible text: the `hint` of their `Field`, or their own `description`.
+Form controls (`TextInput`, `NumberInput`, `Select`, `Combobox`, `Switch`, `Checkbox`, `RadioGroup`, and `Slider`) take their help as visible text: the `hint` of their `Field`, or their own `description`. A `NumberInput` also takes `minReason` and `maxReason`, which say why the value can't go further, such as `maxReason="All 2 first-level slots are full."`. While the value sits at that limit, the reason joins the field's description, and the step button shows it on hover.
+
+These parts take no hover help, because their visible text already names them:
+
+- `Combobox` list toggles and `NumberInput` step buttons stay out of the tab order (the arrow keys work in the field), and their icons are the standard chevron, minus, and plus.
+- `DataTable` sort buttons are the column headings. The arrow beside a heading shows the order, and `aria-sort` gives it to screen readers. A tooltip such as "Sort by price" would repeat the heading.
+- `Accordion` and collapsible `Panel` triggers are the section headings. When a section is unavailable, say why in visible text inside the section or beside its heading.
 
 The kit handles the rest:
 
@@ -138,14 +144,15 @@ A touch screen has no hover, and a tap moves focus without opening a tooltip. Th
 
 Follow the writing rules in `AGENTS.md`: sentence case, no em dashes or en dashes, the game's vocabulary (referee, party, caller, marching order, turn, round, hit points, armour class), and no raw IDs, codes, or catalog names.
 
-1. **Say what the control does or what happens next, in the game's terms.** Write a tooltip as a phrase that starts with a verb, with no period at the end: "Search the room for secret doors and traps (1 turn)", "Show the full map, hidden monsters, and referee tools".
+1. **Say what the control does or what happens next, in the game's terms.** Write a tooltip as a phrase that starts with a verb, with no period at the end: "Search the room for secret doors and traps", "Show the full map, hidden monsters, and referee tools".
 2. **Don't repeat the visible label.** A text button whose label says everything, such as "Cancel", "Create table", or "Save profile", needs no tooltip. A tooltip that repeats its label is a defect.
 3. **Name an icon-only control in its `label`.** The label is the tooltip, so write it as the control's name in sentence case: "Table settings", "Actions for Wren". When you add a `tooltip`, start it with the label's words ("Zoom in on the map" for "Zoom in"), so a voice control user can say what they see.
 4. **Say why a control is unavailable and what would make it available.** Write a disabled reason as one or two full sentences that end with a period: "Add at least one character to the party to start the game." or "Only the caller can rest the party. Wren is the caller." Never write "Disabled", "Not allowed", or "You can't do that right now."
-5. **Use the reason the app already has.** The permission helpers in `@/app` (`useCanSend`, `useCanControlMember`, and the others) return `{ allowed, reason }` with the reason written for the player. Pass `reason` straight to `disabledReason`. If that text breaks these rules, report it instead of rewording it in a feature.
+5. **Use the reason the app already has.** The permission helpers in `@/app` (`useCanSend`, `useCanControlMember`, and the others) return `{ allowed, reason }` with the reason written for the player: it names the action, the caller, or the player in the seat, and says what would make the action available. Pass `reason` straight to `disabledReason`. When a command doesn't work in the current mode, `commandModesSentence(type, allowedModes, mode)` from `@bxvtt/shared/text` builds the sentence from the `allowed_modes` in bxapi's command catalog (`useCommandCatalog()`), such as "You can search only while exploring. The party is in town now." If a reason breaks these rules, report it instead of rewording it in a feature.
 6. **Pass keys in `shortcut`, never in text.** Write "Search the room", not "Search the room (S)".
-7. **Keep it to one line.** A tooltip is at most 260 px wide, which fits about 80 characters on two short lines. Text longer than that belongs on the screen.
-8. **Leave a control without a reason only while it waits for a request.** Show `loading` on the control that sent the request. Other controls can stay natively disabled for that moment without a reason.
+7. **State a cost only when bxapi states it.** Write "(1 turn)" or a price in a tooltip only when a catalog field supplies it. Never compute or remember a rule in the client.
+8. **Keep it to one line.** A tooltip is at most 260 px wide, which fits about 80 characters on two short lines. Text longer than that belongs on the screen.
+9. **Leave a control without a reason only while it waits for a request.** Show `loading` on the control that sent the request. Other controls can stay natively disabled for that moment without a reason.
 
 Put help in visible text instead of a tooltip when any of these is true:
 
@@ -155,7 +162,7 @@ Put help in visible text instead of a tooltip when any of these is true:
 
 | Control | Weak | Better |
 | --- | --- | --- |
-| "Search" button in the action bar | "Search" | "Search the room for secret doors and traps (1 turn)" |
+| "Search" button in the action bar | "Search" | "Search the room for secret doors and traps" |
 | Icon button that opens the dock | "Click to toggle" | Label "Hide table panels", no `tooltip` |
 | "Start game" while the party is empty | (none) | `disabledReason`: "Add at least one character to the party to start the game." |
 | "Move up" on the first character | (none) | `disabledReason`: "Wren is already first in the marching order." |

@@ -264,6 +264,8 @@ interface OptionProps {
   onClick?: () => void;
   /** Whether `disabledReason` is the one the panel states above every choice, so the explanation stays. */
   sharedReason?: boolean;
+  /** A party command, which only the caller or a referee may send, so the panel's sentence covers its refusal. */
+  party?: boolean;
   /** A popover with more choices, instead of `onClick`. */
   popover?: { title: string; content: (close: () => void) => ReactNode };
 }
@@ -355,6 +357,7 @@ function PartyOptions({
       label: 'Talk',
       description: `Roll the monsters' reaction again. ${commands.speaker ? `${commands.speaker.name} has the best reaction bonus.` : ''}`,
       disabledReason: reasonFor(commands, 'parley'),
+      party: true,
       loading: busy('parley'),
       popover: {
         title: 'Choose a speaker',
@@ -389,6 +392,7 @@ function PartyOptions({
         ? 'Run one more round of the chase.'
         : 'Spend a round and see what the monsters do.',
       disabledReason: reasonFor(commands, 'wait'),
+      party: true,
       loading: busy('wait'),
       onClick: commands.wait,
     });
@@ -399,6 +403,7 @@ function PartyOptions({
       label: 'Flee',
       description: 'Flee before battle begins. Hostile monsters pursue if they can.',
       disabledReason: reasonFor(commands, 'evade'),
+      party: true,
       loading: busy('evade'),
       popover: {
         title: 'Flee',
@@ -432,6 +437,7 @@ function PartyOptions({
         ? 'Stop running and fight at the current distance.'
         : 'Engage in battle. Everyone declares an action before each round resolves.',
       disabledReason: reasonFor(commands, 'engage_battle'),
+      party: true,
       loading: busy('engage_battle'),
       primary: true,
       onClick: commands.fight,
@@ -485,7 +491,7 @@ function PartyOptions({
             key={option.label}
             {...option}
             sharedReason={
-              option.disabledReason !== null && option.disabledReason === commands.partyPermission.reason
+              option.party === true && option.disabledReason !== null && !commands.partyPermission.allowed
             }
           />
         ))}

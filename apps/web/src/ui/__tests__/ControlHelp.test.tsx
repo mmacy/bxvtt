@@ -9,6 +9,8 @@ import { LinkButton } from '../components/Link';
 import { DropdownMenu } from '../components/Menu';
 import { CommandPalette } from '../components/CommandPalette';
 import { Dialog } from '../components/Dialog';
+import { Field } from '../components/Field';
+import { NumberInput } from '../components/NumberInput';
 import { Popover, Tooltip } from '../components/Popover';
 import { Tabs, TabsList, TabsTrigger } from '../components/Tabs';
 import { ActionBar, ActionBarMenu } from '../layout/ActionBar';
@@ -46,15 +48,15 @@ describe('tooltips on kit controls', () => {
   it('describes a control with a tooltip that adds to its label', async () => {
     const user = userEvent.setup();
     render(
-      <Button tooltip="Search the room for secret doors and traps (1 turn)" shortcut="S">
+      <Button tooltip="Search the room for secret doors and traps" shortcut="S">
         Search
       </Button>,
     );
     const button = screen.getByRole('button', { name: 'Search' });
-    expect(button).toHaveAccessibleDescription('Search the room for secret doors and traps (1 turn)');
+    expect(button).toHaveAccessibleDescription('Search the room for secret doors and traps');
     await user.tab();
     const tip = await screen.findByRole('tooltip');
-    expect(tip).toHaveTextContent('Search the room for secret doors and traps (1 turn)');
+    expect(tip).toHaveTextContent('Search the room for secret doors and traps');
     // One description, from the kit, not a second one from the open tooltip.
     expect(button.getAttribute('aria-describedby')?.split(' ')).toHaveLength(1);
   });
@@ -412,5 +414,41 @@ describe('tooltips around other triggers', () => {
     const option = screen.getByRole('option', { name: 'Seats and caller' });
     expect(option).toHaveAttribute('aria-disabled', 'true');
     expect(option).toHaveAccessibleDescription('Only a referee can assign seats and choose the caller.');
+  });
+});
+
+describe('number fields at a limit', () => {
+  it('describes the reason at the limit and shows it on the step button', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <Field label="Copies of sleep" hint="Each copy fills one first-level slot.">
+        <NumberInput
+          value={2}
+          min={0}
+          max={2}
+          onChange={onChange}
+          maxReason="All 2 first-level slots are full."
+        />
+      </Field>,
+    );
+    const field = screen.getByRole('spinbutton', { name: 'Copies of sleep' });
+    expect(field).toHaveAccessibleDescription(
+      'Each copy fills one first-level slot. All 2 first-level slots are full.',
+    );
+    const more = screen.getByRole('button', { name: 'Increase Copies of sleep' });
+    expect(more).toHaveAttribute('aria-disabled', 'true');
+    await user.hover(more);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('All 2 first-level slots are full.');
+    await user.click(more);
+    expect(onChange).not.toHaveBeenCalled();
+    // Below the limit, the reason goes away and the button steps.
+    expect(screen.getByRole('button', { name: 'Decrease Copies of sleep' })).toBeEnabled();
+  });
+
+  it('stays natively disabled at a limit without a reason', () => {
+    render(<NumberInput aria-label="Torches" value={0} min={0} max={3} onChange={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Decrease Torches' })).toBeDisabled();
+    expect(screen.getByRole('spinbutton', { name: 'Torches' })).not.toHaveAccessibleDescription();
   });
 });

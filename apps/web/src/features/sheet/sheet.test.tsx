@@ -178,9 +178,7 @@ describe('CharacterSheet', () => {
       snapshot,
     });
     await user.click(await screen.findByRole('tab', { name: 'Inventory' }));
-    expect(
-      screen.getByText(/Only the player in Osric's seat or the referee can act for Osric/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Only Ruth, who plays Osric, can have Osric /)).toBeInTheDocument();
     for (const button of screen.getAllByRole('button', { name: 'Unequip' })) expect(button).toBeDisabled();
   });
 

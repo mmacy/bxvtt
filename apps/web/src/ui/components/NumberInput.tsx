@@ -1,7 +1,9 @@
-import { useId, useState, type KeyboardEvent } from 'react';
+import { useId, useState, type KeyboardEvent, type ReactElement } from 'react';
 import { Icon } from '../icons/Icon';
 import { cx } from '../lib/cx';
+import { joinIds } from './ControlHelp';
 import { useFieldContext } from './Field';
+import { Tooltip } from './Popover';
 import type { InputSize } from './TextInput';
 import styles from './Input.module.css';
 
@@ -23,6 +25,16 @@ export interface NumberInputProps {
    */
   decrementLabel?: string;
   incrementLabel?: string;
+  /**
+   * Why the value can't go below `min`, such as "Wren carries only 3 torches." While the value sits at `min`,
+   * screen readers read it as the field's description, and the decrease button shows it on hover.
+   */
+  minReason?: string;
+  /**
+   * Why the value can't go above `max`, such as "All 2 first-level slots are full." While the value sits at
+   * `max`, screen readers read it as the field's description, and the increase button shows it on hover.
+   */
+  maxReason?: string;
   /** Width of the text area in characters. Defaults to 3. */
   width?: number;
   className?: string;
@@ -52,6 +64,8 @@ export function NumberInput({
   'aria-label': ariaLabel,
   decrementLabel,
   incrementLabel,
+  minReason,
+  maxReason,
   width = 3,
   className,
 }: NumberInputProps) {
@@ -69,6 +83,45 @@ export function NumberInput({
   const isDisabled = disabled ?? field?.disabled ?? false;
   const isInvalid = invalid ?? field?.invalid ?? false;
   const shown = draft ?? (value === null ? '' : String(value));
+  const atMin = min !== undefined && value !== null && value <= min;
+  const atMax = max !== undefined && value !== null && value >= max;
+  const limits = [atMin ? minReason : undefined, atMax ? maxReason : undefined].filter(
+    (reason): reason is string => reason !== undefined && reason !== '',
+  );
+  const limitId = `${stepId}-limit`;
+
+  /**
+   * A step button. At its limit it is natively disabled, unless a reason says why, which it then shows on hover.
+   * The buttons stay out of the tab order, because the arrow keys step the field.
+   */
+  const stepButton = (direction: 'decrease' | 'increase', atLimit: boolean, reason: string | undefined) => {
+    const explained = !isDisabled && atLimit && reason !== undefined && reason !== '';
+    const button: ReactElement = (
+      <button
+        type="button"
+        tabIndex={-1}
+        className={styles.step}
+        {...(direction === 'decrease'
+          ? stepName('Decrease', decrementLabel, `${stepId}-decrease`)
+          : stepName('Increase', incrementLabel, `${stepId}-increase`))}
+        disabled={isDisabled || (atLimit && !explained)}
+        aria-disabled={explained || undefined}
+        data-unavailable={explained || undefined}
+        onClick={() => {
+          if (!explained) stepBy(direction === 'decrease' ? -step : step);
+        }}
+      >
+        <Icon name={direction === 'decrease' ? 'minus' : 'plus'} size={14} />
+      </button>
+    );
+    return explained ? (
+      <Tooltip content={reason} describe={false}>
+        {button}
+      </Tooltip>
+    ) : (
+      button
+    );
+  };
 
   const commit = (next: number | null) => {
     setDraft(null);
@@ -110,16 +163,7 @@ export function NumberInput({
         className,
       )}
     >
-      <button
-        type="button"
-        tabIndex={-1}
-        className={styles.step}
-        {...stepName('Decrease', decrementLabel, `${stepId}-decrease`)}
-        disabled={isDisabled || (min !== undefined && value !== null && value <= min)}
-        onClick={() => stepBy(-step)}
-      >
-        <Icon name="minus" size={14} />
-      </button>
+      {stepButton('decrease', atMin, minReason)}
       <input
         id={id ?? field?.id}
         type="text"
@@ -135,7 +179,7 @@ export function NumberInput({
         aria-valuemin={min}
         aria-valuemax={max}
         aria-invalid={isInvalid || undefined}
-        aria-describedby={field?.describedBy}
+        aria-describedby={joinIds(field?.describedBy, limits.length > 0 ? limitId : undefined)}
         onChange={(event) => {
           const text = event.target.value;
           if (/^-?\d*$/.test(text)) setDraft(text);
@@ -147,16 +191,12 @@ export function NumberInput({
         }}
         onKeyDown={onKeyDown}
       />
-      <button
-        type="button"
-        tabIndex={-1}
-        className={styles.step}
-        {...stepName('Increase', incrementLabel, `${stepId}-increase`)}
-        disabled={isDisabled || (max !== undefined && value !== null && value >= max)}
-        onClick={() => stepBy(step)}
-      >
-        <Icon name="plus" size={14} />
-      </button>
+      {stepButton('increase', atMax, maxReason)}
+      {limits.length > 0 && (
+        <span id={limitId} hidden>
+          {limits.join(' ')}
+        </span>
+      )}
     </div>
   );
 }
