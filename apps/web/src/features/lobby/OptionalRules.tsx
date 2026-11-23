@@ -180,7 +180,14 @@ export function OptionalRules({ value, onChange, disabled }: OptionalRulesProps)
             : `${changed === 1 ? '1 rule differs' : `${changed} rules differ`} from standard B/X.`}
         </p>
         {changed > 0 && (
-          <Button size="sm" variant="ghost" icon="undo" disabled={disabled} onClick={() => onChange({})}>
+          <Button
+            size="sm"
+            variant="ghost"
+            icon="undo"
+            disabled={disabled}
+            disabledReason="Only a referee can change the optional rules."
+            onClick={() => onChange({})}
+          >
             Reset to standard rules
           </Button>
         )}

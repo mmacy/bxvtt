@@ -130,6 +130,7 @@ function ShellShortcuts() {
     group: 'Referee',
     icon: 'users',
     disabled: !referee,
+    disabledReason: 'Only a referee can assign seats and choose the caller.',
     run: () => setSeatsOpen(true),
   });
   useAction({
@@ -139,6 +140,7 @@ function ShellShortcuts() {
     icon: lens ? 'eye-off' : 'eye',
     shortcut: 'shift+l',
     disabled: !referee,
+    disabledReason: 'Only a referee can see the referee lens.',
     run: () => setPreference('refereeLens', !lens),
   });
   return null;

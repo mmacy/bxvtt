@@ -1,0 +1,11 @@
+/* An unavailable icon-only control's tooltip: its name, then why it is unavailable. */
+.lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+}
+
+/* The tooltip stays dark in every theme, like the tooltip itself. */
+.reason {
+  color: var(--palette-bone-300);
+}

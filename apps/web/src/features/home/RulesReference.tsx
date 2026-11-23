@@ -1,6 +1,6 @@
 import { Suspense, lazy, useState } from 'react';
 import { NoTableProvider, formatShortcut, useAction, useShortcut, useTableUi } from '@/app';
-import { Button, Tooltip } from '@/ui';
+import { Button } from '@/ui';
 import styles from './home.module.css';
 
 // The compendium is large, so it loads the first time someone opens it.
@@ -43,12 +43,19 @@ export function RulesReference({ away = false }: RulesReferenceProps) {
   ) : null;
   return (
     <>
-      <Tooltip content="Rules reference" shortcut={formatShortcut('b')} side="bottom">
-        <Button variant="ghost" size="sm" icon="book" onClick={() => openCompendium()}>
-          {/* At phone width the header shows the book alone, and the name stays for assistive technology. */}
-          <span className={styles.narrowHidden}>Rules reference</span>
-        </Button>
-      </Tooltip>
+      <Button
+        variant="ghost"
+        size="sm"
+        icon="book"
+        shortcut={formatShortcut('b')}
+        tooltip="Look up classes, spells, monsters, equipment, and tables"
+        tooltipSide="bottom"
+        className={styles.rulesButton}
+        onClick={() => openCompendium()}
+      >
+        {/* At phone width the header shows the book alone, and the name stays for assistive technology. */}
+        <span className={styles.narrowHidden}>Rules reference</span>
+      </Button>
       {away ? <NoTableProvider>{book}</NoTableProvider> : book}
     </>
   );

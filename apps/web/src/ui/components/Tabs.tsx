@@ -2,6 +2,7 @@ import { Tabs as TabsPrimitive } from 'radix-ui';
 import { createContext, useContext, type ReactNode } from 'react';
 import { Icon, type IconName } from '../icons/Icon';
 import { cx } from '../lib/cx';
+import { hasContent, useControlHelp } from './ControlHelp';
 import { KbdControlScope } from './Kbd';
 import { useControllableState } from '../lib/hooks';
 import styles from './Tabs.module.css';
@@ -79,8 +80,10 @@ export interface TabsTriggerProps {
   /** A number after the label, such as unread feed entries. */
   count?: number;
   disabled?: boolean;
-  /** Hides the text visually and keeps it as the accessible name. Requires `icon`. */
+  /** Hides the text visually and keeps it as the accessible name. Requires `icon`. The tooltip then shows the text. */
   iconOnly?: boolean;
+  /** What the tab shows, when its label doesn't say. Leave it out for a tab whose label is enough. */
+  tooltip?: ReactNode;
   children: ReactNode;
   className?: string;
 }
@@ -91,10 +94,18 @@ export function TabsTrigger({
   count,
   disabled,
   iconOnly = false,
+  tooltip,
   children,
   className,
 }: TabsTriggerProps) {
-  return (
+  const explicit = hasContent(tooltip);
+  const help = useControlHelp({
+    tooltip: explicit ? tooltip : iconOnly ? children : null,
+    tooltipIsName: !explicit,
+    reason: null,
+    side: 'bottom',
+  });
+  return help.render(
     <TabsPrimitive.Trigger
       value={value}
       disabled={disabled}
@@ -110,6 +121,7 @@ export function TabsTrigger({
       onBlur={(event) => {
         delete event.currentTarget.dataset.pointerFocus;
       }}
+      aria-describedby={help.describedBy}
     >
       {icon && <Icon name={icon} size={16} />}
       <span className={iconOnly ? 'visually-hidden' : undefined}>
@@ -120,7 +132,7 @@ export function TabsTrigger({
           {count > 99 ? '99+' : count}
         </span>
       )}
-    </TabsPrimitive.Trigger>
+    </TabsPrimitive.Trigger>,
   );
 }
 

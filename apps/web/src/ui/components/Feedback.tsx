@@ -2,6 +2,7 @@ import { Progress } from 'radix-ui';
 import type { CSSProperties, ReactNode } from 'react';
 import { Icon, type IconName } from '../icons/Icon';
 import { cx } from '../lib/cx';
+import { Tooltip } from './Popover';
 import styles from './Feedback.module.css';
 
 export interface SkeletonProps {
@@ -169,9 +170,16 @@ export function Banner({
       </div>
       {actions && <div className={styles.bannerActions}>{actions}</div>}
       {onDismiss && (
-        <button type="button" className={styles.bannerDismiss} aria-label={dismissLabel} onClick={onDismiss}>
-          <Icon name="close" size={16} />
-        </button>
+        <Tooltip content={dismissLabel} describe={false}>
+          <button
+            type="button"
+            className={styles.bannerDismiss}
+            aria-label={dismissLabel}
+            onClick={onDismiss}
+          >
+            <Icon name="close" size={16} />
+          </button>
+        </Tooltip>
       )}
     </div>
   );

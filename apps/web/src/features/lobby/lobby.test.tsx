@@ -91,6 +91,24 @@ describe('LobbyPage', () => {
     await waitFor(() => expect(store.getState().game?.mode).toBe('town'));
   });
 
+  it("says why the game can't start and why the leader can't move forward", async () => {
+    const { api, store, user } = renderWithTable(<LobbyPage />, {
+      snapshot: fixtureSnapshot('lobby', 'referee'),
+    });
+    api.listAdventures.mockResolvedValue({ items: [] });
+    api.listCharacters.mockResolvedValue({ items: [] });
+    const start = screen.getByRole('button', { name: 'Start game' });
+    expect(start).toHaveAttribute('aria-disabled', 'true');
+    expect(start).toHaveAccessibleDescription('Choose an adventure.');
+    await user.click(start);
+    expect(api.startGame).not.toHaveBeenCalled();
+    const leader = (store.getState().table as TableDetail).roster[0]!.name;
+    const forward = screen.getByRole('button', { name: `Move ${leader} forward` });
+    expect(forward).toHaveAccessibleDescription(`${leader} already leads the marching order.`);
+    await user.click(forward);
+    expect(api.reorderRoster).not.toHaveBeenCalled();
+  });
+
   it('shows a player the lobby read-only while waiting for the referee', async () => {
     const { api, store, user } = renderWithTable(<LobbyPage />, {
       snapshot: fixtureSnapshot('lobby', 'player'),

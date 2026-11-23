@@ -31,12 +31,23 @@
     transform var(--duration-instant) var(--ease-standard);
 }
 
-.button:active:not(:disabled, [aria-busy='true']) {
+.button:active:not(:disabled, [aria-busy='true'], [data-unavailable]) {
   transform: translateY(1px);
 }
 
-.button:disabled {
+.button:disabled,
+.button[data-unavailable] {
   opacity: 0.45;
+}
+
+/* An unavailable button stays focusable so it can say why. The cursor says it won't act. */
+.button[data-unavailable] {
+  cursor: not-allowed;
+}
+
+/* The fade would dim the focus ring too, so a focused unavailable button fades less. */
+.button[data-unavailable]:focus-visible {
+  opacity: 0.8;
 }
 
 .label {
@@ -78,11 +89,11 @@
     var(--shadow-1);
 }
 
-.primary:hover:not(:disabled, [aria-busy='true']) {
+.primary:hover:not(:disabled, [aria-busy='true'], [data-unavailable]) {
   --button-bg: var(--color-accent-hover);
 }
 
-.primary:active:not(:disabled, [aria-busy='true']) {
+.primary:active:not(:disabled, [aria-busy='true'], [data-unavailable]) {
   --button-bg: var(--color-accent-active);
   box-shadow: var(--shadow-inset);
 }
@@ -94,12 +105,12 @@
   box-shadow: var(--edge-highlight), var(--shadow-1);
 }
 
-.secondary:hover:not(:disabled, [aria-busy='true']) {
+.secondary:hover:not(:disabled, [aria-busy='true'], [data-unavailable]) {
   --button-border: var(--color-border-input);
   background-image: linear-gradient(var(--color-surface-hover), var(--color-surface-hover));
 }
 
-.secondary:active:not(:disabled, [aria-busy='true']) {
+.secondary:active:not(:disabled, [aria-busy='true'], [data-unavailable]) {
   background-image: linear-gradient(var(--color-surface-active), var(--color-surface-active));
   box-shadow: var(--shadow-inset);
 }
@@ -108,12 +119,12 @@
   --button-fg: var(--color-text-muted);
 }
 
-.ghost:hover:not(:disabled, [aria-busy='true']) {
+.ghost:hover:not(:disabled, [aria-busy='true'], [data-unavailable]) {
   --button-bg: var(--color-surface-hover);
   --button-fg: var(--color-text-strong);
 }
 
-.ghost:active:not(:disabled, [aria-busy='true']) {
+.ghost:active:not(:disabled, [aria-busy='true'], [data-unavailable]) {
   --button-bg: var(--color-surface-active);
 }
 
@@ -126,11 +137,11 @@
     var(--shadow-1);
 }
 
-.danger:hover:not(:disabled, [aria-busy='true']) {
+.danger:hover:not(:disabled, [aria-busy='true'], [data-unavailable]) {
   --button-bg: color-mix(in srgb, var(--color-danger-strong) 88%, white);
 }
 
-.danger:active:not(:disabled, [aria-busy='true']) {
+.danger:active:not(:disabled, [aria-busy='true'], [data-unavailable]) {
   --button-bg: color-mix(in srgb, var(--color-danger-strong) 85%, black);
   box-shadow: var(--shadow-inset);
 }
@@ -147,7 +158,7 @@
   --button-border: var(--color-border-accent);
 }
 
-.pressed:hover:not(:disabled) {
+.pressed:hover:not(:disabled, [data-unavailable]) {
   --button-bg: var(--color-surface-selected);
   --button-fg: var(--color-accent-text);
 }

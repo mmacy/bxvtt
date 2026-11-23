@@ -1,7 +1,9 @@
 import { Slot } from 'radix-ui';
-import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { useComposedRefs } from 'radix-ui/internal';
+import { forwardRef, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { Icon, type IconName } from '../icons/Icon';
 import { cx } from '../lib/cx';
+import { hasContent, joinIds, labelIsCut, useControlHelp, type ControlHelpProps } from './ControlHelp';
 import { Kbd, KbdControlScope, ariaKeyShortcuts } from './Kbd';
 import { Spinner } from './Spinner';
 import styles from './Button.module.css';
@@ -9,7 +11,7 @@ import styles from './Button.module.css';
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
-export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, ControlHelpProps {
   variant?: ButtonVariant;
   size?: ButtonSize;
   /** Icon before the label. */
@@ -24,8 +26,8 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   asChild?: boolean;
   /**
    * Keys of the button's keyboard shortcut as `Kbd` shows them, such as `'G'` or `['Shift', 'R']`. The button
-   * shows them after its label, keeps them out of its accessible name, and sets `aria-keyshortcuts` (unless you
-   * pass your own). Register the shortcut itself with the app's shortcut hook.
+   * shows them after its label and in its tooltip, keeps them out of its accessible name, and sets
+   * `aria-keyshortcuts` (unless you pass your own). Register the shortcut itself with the app's shortcut hook.
    */
   shortcut?: string | string[];
   children?: ReactNode;
@@ -33,7 +35,13 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const iconSize: Record<ButtonSize, number> = { sm: 14, md: 16, lg: 18 };
 
-/** The kit's only button. Use `variant` for emphasis and `asChild` to style a link as a button. */
+const preventDefault = (event: { preventDefault: () => void }) => event.preventDefault();
+
+/**
+ * The kit's only button. Use `variant` for emphasis and `asChild` to style a link as a button. Pass `tooltip` for
+ * help the label doesn't give, and `disabledReason` with `disabled` to say why the button is unavailable. When an
+ * action bar hides the label, or the label is cut off, the button shows its label as a tooltip.
+ */
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   {
     variant = 'secondary',
@@ -44,15 +52,33 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     block = false,
     asChild = false,
     shortcut,
+    tooltip,
+    disabledReason,
+    tooltipSide,
     className,
     disabled,
     children,
     type,
     onClick,
+    onPointerDown,
+    onKeyDown,
     ...rest
   },
   ref,
 ) {
+  const own = useRef<HTMLButtonElement>(null);
+  const setRef = useComposedRefs(ref, own);
+  const explicit = hasContent(tooltip);
+  // A native title is the old way to give help. Until a feature moves to `tooltip`, the kit adds no label tooltip.
+  const fallback = !explicit && !asChild && rest.title === undefined;
+  const help = useControlHelp({
+    tooltip: explicit ? tooltip : fallback ? children : null,
+    tooltipIsName: !explicit,
+    reason: disabled && hasContent(disabledReason) ? disabledReason : null,
+    shortcut,
+    side: tooltipSide,
+    when: explicit ? undefined : () => labelIsCut(own.current),
+  });
   const keyShortcuts = rest['aria-keyshortcuts'] ?? (shortcut ? ariaKeyShortcuts(shortcut) : undefined);
   const classes = cx(
     styles.button,
@@ -62,25 +88,44 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     loading && styles.loading,
     className,
   );
+  const handlers = help.handlers<HTMLButtonElement>({
+    onClick: loading ? preventDefault : onClick,
+    onPointerDown,
+    onKeyDown,
+  });
+  const describedBy = joinIds(rest['aria-describedby'], help.describedBy);
   if (asChild) {
     return (
       <KbdControlScope>
-        <Slot.Root ref={ref} className={classes} {...rest} aria-keyshortcuts={keyShortcuts}>
-          {children}
-        </Slot.Root>
+        {help.render(
+          <Slot.Root
+            ref={setRef}
+            className={classes}
+            aria-disabled={help.unavailable || undefined}
+            data-unavailable={help.unavailable || undefined}
+            {...rest}
+            {...handlers}
+            aria-describedby={describedBy}
+            aria-keyshortcuts={keyShortcuts}
+          >
+            {children}
+          </Slot.Root>,
+        )}
       </KbdControlScope>
     );
   }
-  return (
+  return help.render(
     <button
-      ref={ref}
+      ref={setRef}
       type={type ?? 'button'}
       className={classes}
-      disabled={disabled}
+      disabled={help.unavailable ? undefined : disabled}
       aria-busy={loading || undefined}
-      aria-disabled={loading || undefined}
-      onClick={loading ? (event) => event.preventDefault() : onClick}
+      aria-disabled={loading || help.unavailable || undefined}
+      data-unavailable={help.unavailable || undefined}
       {...rest}
+      {...handlers}
+      aria-describedby={describedBy}
       aria-keyshortcuts={keyShortcuts}
     >
       <KbdControlScope>
@@ -97,15 +142,24 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
         {shortcut !== undefined && <Kbd keys={shortcut} decorative className={styles.shortcut} />}
         {iconEnd && !loading && <Icon name={iconEnd} size={iconSize[size]} />}
       </KbdControlScope>
-    </button>
+    </button>,
   );
 });
 
-export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
+export interface IconButtonProps
+  extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'>, ControlHelpProps {
   /** Icon to show. */
   icon: IconName;
-  /** Accessible name, also shown as a native tooltip unless `title` is set. */
+  /**
+   * Accessible name, and the tooltip unless you pass `tooltip`. Every icon button shows a tooltip, because the
+   * icon is its only visible label.
+   */
   label: string;
+  /**
+   * Keys of the button's keyboard shortcut, such as `'P'`. The tooltip shows them, and the button sets
+   * `aria-keyshortcuts`. Register the shortcut itself with the app's shortcut hook.
+   */
+  shortcut?: string | string[];
   variant?: ButtonVariant;
   size?: ButtonSize;
   /** Marks a toggle button as on, for tool rails and toolbars. */
@@ -113,29 +167,59 @@ export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonEle
   loading?: boolean;
 }
 
-/** A square button with an icon and no visible text. `label` is required. */
+/**
+ * A square button with an icon and no visible text. `label` is required, and the tooltip shows it unless you pass
+ * a `tooltip` that says more. Start such a tooltip with the label's words, so a voice control user can say what
+ * they see.
+ */
 export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(function IconButton(
   {
     icon,
     label,
+    shortcut,
+    tooltip,
+    disabledReason,
+    tooltipSide,
     variant = 'ghost',
     size = 'md',
     pressed,
     loading = false,
     className,
+    disabled,
     type,
     onClick,
+    onPointerDown,
+    onKeyDown,
     ...rest
   },
   ref,
 ) {
-  return (
+  const explicit = hasContent(tooltip);
+  // A native title is the old way to give help. Until a feature moves to `tooltip`, the kit adds no label tooltip.
+  const shown = explicit ? tooltip : rest.title === undefined ? label : null;
+  const help = useControlHelp({
+    tooltip: shown,
+    tooltipIsName: !explicit || tooltip === label,
+    reason: disabled && hasContent(disabledReason) ? disabledReason : null,
+    name: explicit ? tooltip : label,
+    shortcut,
+    side: tooltipSide,
+  });
+  const handlers = help.handlers<HTMLButtonElement>({
+    onClick: loading ? preventDefault : onClick,
+    onPointerDown,
+    onKeyDown,
+  });
+  return help.render(
     <button
       ref={ref}
       type={type ?? 'button'}
       aria-label={label}
       aria-pressed={pressed}
       aria-busy={loading || undefined}
+      aria-disabled={help.unavailable || undefined}
+      data-unavailable={help.unavailable || undefined}
+      disabled={help.unavailable ? undefined : disabled}
       className={cx(
         styles.button,
         styles.iconOnly,
@@ -144,10 +228,12 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(functio
         pressed && styles.pressed,
         className,
       )}
-      onClick={loading ? (event) => event.preventDefault() : onClick}
       {...rest}
+      {...handlers}
+      aria-describedby={joinIds(rest['aria-describedby'], help.describedBy)}
+      aria-keyshortcuts={rest['aria-keyshortcuts'] ?? (shortcut ? ariaKeyShortcuts(shortcut) : undefined)}
     >
       {loading ? <Spinner size={iconSize[size]} label="" /> : <Icon name={icon} size={iconSize[size] + 2} />}
-    </button>
+    </button>,
   );
 });

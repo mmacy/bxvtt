@@ -338,4 +338,9 @@
     clip: rect(0 0 0 0);
     white-space: nowrap;
   }
+
+  /* The rules reference button shows its book alone, so its key hint goes too. The tooltip still shows the key. */
+  .rulesButton [data-kbd-hint] {
+    display: none;
+  }
 }

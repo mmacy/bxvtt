@@ -139,6 +139,7 @@ export function StartGamePanel({ table, adventure, ruleset }: StartGamePanelProp
         block
         loading={busy}
         disabled={blockers.length > 0}
+        disabledReason={blockers.join(' ')}
         onClick={() => void start()}
       >
         Start game

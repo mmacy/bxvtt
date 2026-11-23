@@ -43,6 +43,8 @@ export interface ActionDefinition {
   shortcut?: string;
   keywords?: string[];
   disabled?: boolean;
+  /** Why the action is unavailable, which the command palette shows under its label while `disabled` is true. */
+  disabledReason?: string | null;
   run: () => void;
 }
 
@@ -194,7 +196,7 @@ export function useAction(definition: ActionDefinition): void {
   useEffect(() => {
     runRef.current = definition.run;
   });
-  const { id, label, group, icon, shortcut, disabled } = definition;
+  const { id, label, group, icon, shortcut, disabled, disabledReason } = definition;
   const keywords = definition.keywords?.join(' ');
   useEffect(() => {
     const entry: ActionDefinition = {
@@ -204,6 +206,7 @@ export function useAction(definition: ActionDefinition): void {
       icon,
       shortcut,
       disabled,
+      disabledReason,
       keywords: keywords?.split(' '),
       run: () => runRef.current(),
     };
@@ -215,7 +218,7 @@ export function useAction(definition: ActionDefinition): void {
         return { actions: rest };
       });
     };
-  }, [id, label, group, icon, shortcut, disabled, keywords]);
+  }, [id, label, group, icon, shortcut, disabled, disabledReason, keywords]);
 }
 
 /** Every registered shortcut, for the help dialog. */
@@ -333,6 +336,7 @@ function CommandPaletteHost() {
           shortcut: action.shortcut === undefined ? undefined : formatShortcut(action.shortcut),
           keywords: action.keywords,
           disabled: action.disabled,
+          disabledReason: action.disabledReason,
           onRun: action.run,
         })),
     [registered],

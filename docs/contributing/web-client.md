@@ -30,6 +30,7 @@ Both routes load lazily (`lazyPart`) so gallery code stays out of the main bundl
 - **Three token tiers:** Raw `--palette-*` values are referenced only inside `tokens.css`; components and features consume semantic role tokens (`--color-*`) and scale tokens (`--space-*`, `--text-*`, `--radius-*`, `--duration-*`, `--z-*`).
 - **Single portal layer:** Dialogs, drawers, menus, selects, comboboxes, and popovers all share `--z-layer` (`1200`) and render in portals so nested popups stack naturally in open order without custom `z-index` overrides.
 - **WCAG label-in-name key hints:** Pass keyboard hints via `<Button shortcut="G">Set out</Button>` (or `ActionBarMenu` / `ToolRailButton`), which renders visual keycaps outside the accessible label and sets `aria-keyshortcuts`.
+- **Hover help:** Pass `tooltip` for help the label doesn't give, and `disabledReason` with `disabled` so an unavailable control stays focusable and says why. Never use the native `title` attribute on a control, because `npm run lint` rejects it. See "Hover help" in the kit README for the props and the writing rules.
 
 See [`apps/web/src/ui/README.md`](https://github.com/mmacy/bxvtt/blob/main/apps/web/src/ui/README.md) for the complete export catalog.
 

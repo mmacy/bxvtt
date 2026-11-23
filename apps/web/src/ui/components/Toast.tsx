@@ -2,6 +2,7 @@ import { useSyncExternalStore, type ReactNode } from 'react';
 import { Icon, type IconName } from '../icons/Icon';
 import { cx } from '../lib/cx';
 import { toast, toastStore, type ToastRecord, type ToastTone } from './toastStore';
+import { Tooltip } from './Popover';
 import styles from './Toast.module.css';
 
 const toneIcon: Record<ToastTone, IconName> = {
@@ -39,14 +40,16 @@ function ToastItem({ record }: { record: ToastRecord }) {
           {record.action.label}
         </button>
       )}
-      <button
-        type="button"
-        className={styles.close}
-        aria-label="Dismiss notification"
-        onClick={() => toast.dismiss(record.id)}
-      >
-        <Icon name="close" size={14} />
-      </button>
+      <Tooltip content="Dismiss notification" describe={false}>
+        <button
+          type="button"
+          className={styles.close}
+          aria-label="Dismiss notification"
+          onClick={() => toast.dismiss(record.id)}
+        >
+          <Icon name="close" size={14} />
+        </button>
+      </Tooltip>
     </li>
   );
 }

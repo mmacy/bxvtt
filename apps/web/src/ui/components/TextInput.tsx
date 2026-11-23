@@ -11,6 +11,7 @@ import {
 import { Icon, type IconName } from '../icons/Icon';
 import { cx } from '../lib/cx';
 import { useFieldContext } from './Field';
+import { Tooltip } from './Popover';
 import styles from './Input.module.css';
 
 export type InputSize = 'sm' | 'md' | 'lg';
@@ -96,14 +97,16 @@ export const SearchInput = forwardRef<HTMLInputElement, SearchInputProps>(functi
       }}
       end={
         value ? (
-          <button
-            type="button"
-            className={styles.clear}
-            aria-label={clearLabel}
-            onClick={() => onValueChange('')}
-          >
-            <Icon name="close" size={14} />
-          </button>
+          <Tooltip content={clearLabel} describe={false}>
+            <button
+              type="button"
+              className={styles.clear}
+              aria-label={clearLabel}
+              onClick={() => onValueChange('')}
+            >
+              <Icon name="close" size={14} />
+            </button>
+          </Tooltip>
         ) : undefined
       }
       {...rest}

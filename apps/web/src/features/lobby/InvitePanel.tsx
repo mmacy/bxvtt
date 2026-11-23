@@ -54,7 +54,12 @@ export function InvitePanel() {
           wrapperClassName={styles.grow}
           onFocus={(event) => event.target.select()}
         />
-        <Button variant="secondary" icon="copy" onClick={() => void copyInviteLink(table.invite_code)}>
+        <Button
+          variant="secondary"
+          icon="copy"
+          tooltip="Copy the invite link to send to your players"
+          onClick={() => void copyInviteLink(table.invite_code)}
+        >
           Copy
         </Button>
       </div>

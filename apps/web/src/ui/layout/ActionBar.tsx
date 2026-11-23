@@ -13,6 +13,7 @@ interface MenuRecord {
   icon?: IconName;
   items: MenuEntry[];
   disabled: boolean;
+  disabledReason?: string | null;
 }
 
 interface ActionBarContextValue {
@@ -94,6 +95,19 @@ function nameOf(element: HTMLElement): string {
   if (label) return label;
   const text = element.querySelector('[data-button-label]')?.textContent ?? element.textContent ?? '';
   return text.replace(/\s+/g, ' ').trim();
+}
+
+/** Why a bar button is unavailable, from the description the kit gives an unavailable control. */
+function reasonOf(element: HTMLElement): string | undefined {
+  if (element.getAttribute('aria-disabled') !== 'true') return undefined;
+  for (const id of (element.getAttribute('aria-describedby') ?? '').split(/\s+/)) {
+    const description = id === '' ? null : document.getElementById(id);
+    if (description?.hasAttribute('data-control-description')) {
+      const text = description.textContent?.trim();
+      if (text) return text;
+    }
+  }
+  return undefined;
 }
 
 /** Presses a button that sits in the overflow, which is inert while it waits there. */
@@ -186,11 +200,13 @@ export function ActionBar({
           icon: menu.icon,
           items: menu.items,
           disabled: menu.disabled,
+          disabledReason: menu.disabledReason,
         };
       }
       return {
         label: nameOf(element),
         disabled: element.matches(':disabled, [aria-disabled="true"]'),
+        disabledReason: reasonOf(element),
         // Let the overflow menu close first, so its focus return doesn't race what the action opens.
         onSelect: () => setTimeout(() => press(element), 0),
       };
@@ -243,7 +259,7 @@ export interface ActionBarMenuProps {
   label: string;
   icon?: IconName;
   items: MenuEntry[];
-  /** A tooltip for the button. Defaults to `label`. Pass `null` for none. */
+  /** A tooltip for the button. Defaults to `label`, which carries the shortcut. Pass `null` for none. */
   tooltip?: ReactNode;
   /**
    * Keys shown in the tooltip, such as `['S']`, and named on the button with `aria-keyshortcuts`. Register the
@@ -251,6 +267,11 @@ export interface ActionBarMenuProps {
    */
   shortcut?: string | string[];
   disabled?: boolean;
+  /**
+   * Why the menu is unavailable, while `disabled` is true, such as "Only the caller can rest the party." The
+   * button stays focusable and shows the reason in its tooltip, and the overflow menu shows it under the label.
+   */
+  disabledReason?: string | null;
   loading?: boolean;
   variant?: ButtonVariant;
   /** Controls the menu, for a shortcut that opens it. Leave both out to let the menu manage itself. */
@@ -271,6 +292,7 @@ export function ActionBarMenu({
   tooltip,
   shortcut,
   disabled = false,
+  disabledReason,
   loading = false,
   variant = 'secondary',
   open,
@@ -284,8 +306,10 @@ export function ActionBarMenu({
   useLayoutEffect(() => {
     const element = buttonRef.current;
     if (!bar || !element) return;
-    return bar.register(element, { label, icon, items, disabled });
-  }, [bar, label, icon, items, disabled]);
+    return bar.register(element, { label, icon, items, disabled, disabledReason });
+  }, [bar, label, icon, items, disabled, disabledReason]);
+
+  const unavailable = disabled && typeof disabledReason === 'string' && disabledReason !== '';
 
   const button = (
     <Toolbar.Button asChild>
@@ -298,6 +322,7 @@ export function ActionBarMenu({
           iconEnd={side === 'top' ? 'chevron-up' : 'chevron-down'}
           loading={loading}
           disabled={disabled}
+          disabledReason={disabledReason}
           aria-keyshortcuts={shortcut ? ariaKeyShortcuts(shortcut) : undefined}
         >
           {label}
@@ -311,10 +336,15 @@ export function ActionBarMenu({
       open={open === undefined ? undefined : open && !disabled}
       onOpenChange={onOpenChange}
     >
-      {tooltip === null ? (
+      {tooltip === null && !unavailable ? (
         button
       ) : (
-        <Tooltip content={tooltip ?? label} shortcut={shortcut}>
+        // The button describes its own reason to screen readers, and the default tooltip repeats its name.
+        <Tooltip
+          content={unavailable ? disabledReason : (tooltip ?? label)}
+          shortcut={unavailable ? undefined : shortcut}
+          describe={!unavailable && tooltip !== undefined && tooltip !== label}
+        >
           {button}
         </Tooltip>
       )}

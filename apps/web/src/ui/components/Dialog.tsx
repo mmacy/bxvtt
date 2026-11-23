@@ -4,6 +4,7 @@ import { Icon } from '../icons/Icon';
 import { cx } from '../lib/cx';
 import { useReturnFocus } from '../lib/hooks';
 import { Button } from './Button';
+import { Tooltip } from './Popover';
 import styles from './Dialog.module.css';
 
 /**
@@ -100,9 +101,11 @@ export function Dialog({
               )}
             </div>
             {!hideClose && (
-              <DialogPrimitive.Close className={styles.close} aria-label="Close">
-                <Icon name="close" size={18} />
-              </DialogPrimitive.Close>
+              <Tooltip content="Close" describe={false}>
+                <DialogPrimitive.Close className={styles.close} aria-label="Close">
+                  <Icon name="close" size={18} />
+                </DialogPrimitive.Close>
+              </Tooltip>
             )}
           </header>
           {children !== undefined && <div className={styles.body}>{children}</div>}
@@ -277,9 +280,11 @@ export function Drawer({
                 </DialogPrimitive.Description>
               )}
             </div>
-            <DialogPrimitive.Close className={styles.close} aria-label="Close">
-              <Icon name="close" size={18} />
-            </DialogPrimitive.Close>
+            <Tooltip content="Close" describe={false}>
+              <DialogPrimitive.Close className={styles.close} aria-label="Close">
+                <Icon name="close" size={18} />
+              </DialogPrimitive.Close>
+            </Tooltip>
           </header>
           <div className={cx(styles.drawerBody, flush && styles.flush)}>{children}</div>
           {footer && <footer className={styles.footer}>{footer}</footer>}

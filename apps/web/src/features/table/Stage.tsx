@@ -1,5 +1,12 @@
 import { Suspense, useEffect } from 'react';
-import { useCombatStage, useMapBus, usePartyLocation, useShortcut, useShownMode } from '@/app';
+import {
+  formatShortcut,
+  useCombatStage,
+  useMapBus,
+  usePartyLocation,
+  useShortcut,
+  useShownMode,
+} from '@/app';
 import { Button } from '@/ui';
 import { BattleBoard, EncounterPanel } from '@/features/combat';
 import { ScenePanel } from '@/features/explore';
@@ -30,7 +37,7 @@ function PickPrompt() {
   return (
     <div className={styles.pickPrompt} role="status">
       <span>{pick.prompt}</span>
-      <Button size="sm" variant="secondary" onClick={cancel}>
+      <Button size="sm" variant="secondary" shortcut={formatShortcut('escape')} onClick={cancel}>
         Cancel
       </Button>
     </div>

@@ -6,7 +6,7 @@ import { ConfirmDialog, Dialog, DialogClose, Drawer } from '../components/Dialog
 import { Field } from '../components/Field';
 import { Kbd } from '../components/Kbd';
 import { ContextMenu, DropdownMenu } from '../components/Menu';
-import { Popover, Tooltip } from '../components/Popover';
+import { Popover } from '../components/Popover';
 import { Stepper } from '../components/Stepper';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/Tabs';
 import { TextInput } from '../components/TextInput';
@@ -233,12 +233,10 @@ export function OverlaysSection() {
                   </Row>
                 </Stack>
               </Popover>
-              <Tooltip content="Ping the map" shortcut="P">
-                <IconButton icon="ping" label="Ping the map" variant="secondary" />
-              </Tooltip>
-              <Tooltip content="Armour class 4. Lower is better.">
-                <Button variant="ghost">AC 4</Button>
-              </Tooltip>
+              <IconButton icon="ping" label="Ping the map" shortcut="P" variant="secondary" />
+              <Button variant="ghost" tooltip="Armour class 4, where lower is harder to hit">
+                AC 4
+              </Button>
               <DropdownMenu
                 trigger={<IconButton icon="more" label="Table menu" variant="secondary" />}
                 items={[
