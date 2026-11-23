@@ -1,0 +1,734 @@
+{
+  "note": "Captured from POST /api/characters/check against a real bxapi. Rolls: fighter seed 5, thief seed 14, halfling seed 80, elf seed 99. Class entries come from GET /v1/rules/classes/{id}, trimmed to the fields the adjust step reads.",
+  "cases": [
+    {
+      "label": "fighter lowers Intelligence by 1",
+      "class_id": "fighter",
+      "scores": {
+        "str": 15,
+        "int": 14,
+        "wis": 11,
+        "dex": 9,
+        "con": 11,
+        "cha": 10
+      },
+      "adjustment": {
+        "lowered": {
+          "int": 1
+        },
+        "raised": {}
+      },
+      "valid": false,
+      "rejections": [
+        {
+          "code": "creation.adjustment.reduction_not_even",
+          "params": {
+            "ability": "int",
+            "amount": 1
+          }
+        }
+      ]
+    },
+    {
+      "label": "fighter lowers Intelligence by 2",
+      "class_id": "fighter",
+      "scores": {
+        "str": 15,
+        "int": 14,
+        "wis": 11,
+        "dex": 9,
+        "con": 11,
+        "cha": 10
+      },
+      "adjustment": {
+        "lowered": {
+          "int": 2
+        },
+        "raised": {}
+      },
+      "valid": false,
+      "rejections": [
+        {
+          "code": "creation.adjustment.points_mismatch",
+          "params": {
+            "points_available": 1,
+            "points_spent": 0
+          }
+        }
+      ]
+    },
+    {
+      "label": "fighter lowers Intelligence by 3 and raises Strength by 1",
+      "class_id": "fighter",
+      "scores": {
+        "str": 15,
+        "int": 14,
+        "wis": 11,
+        "dex": 9,
+        "con": 11,
+        "cha": 10
+      },
+      "adjustment": {
+        "lowered": {
+          "int": 3
+        },
+        "raised": {
+          "str": 1
+        }
+      },
+      "valid": false,
+      "rejections": [
+        {
+          "code": "creation.adjustment.reduction_not_even",
+          "params": {
+            "ability": "int",
+            "amount": 3
+          }
+        }
+      ]
+    },
+    {
+      "label": "fighter lowers Intelligence by 3",
+      "class_id": "fighter",
+      "scores": {
+        "str": 15,
+        "int": 14,
+        "wis": 11,
+        "dex": 9,
+        "con": 11,
+        "cha": 10
+      },
+      "adjustment": {
+        "lowered": {
+          "int": 3
+        },
+        "raised": {}
+      },
+      "valid": false,
+      "rejections": [
+        {
+          "code": "creation.adjustment.reduction_not_even",
+          "params": {
+            "ability": "int",
+            "amount": 3
+          }
+        },
+        {
+          "code": "creation.adjustment.points_mismatch",
+          "params": {
+            "points_available": 1,
+            "points_spent": 0
+          }
+        }
+      ]
+    },
+    {
+      "label": "fighter lowers Intelligence by 4 and raises Strength by 1",
+      "class_id": "fighter",
+      "scores": {
+        "str": 15,
+        "int": 14,
+        "wis": 11,
+        "dex": 9,
+        "con": 11,
+        "cha": 10
+      },
+      "adjustment": {
+        "lowered": {
+          "int": 4
+        },
+        "raised": {
+          "str": 1
+        }
+      },
+      "valid": false,
+      "rejections": [
+        {
+          "code": "creation.adjustment.points_mismatch",
+          "params": {
+            "points_available": 2,
+            "points_spent": 1
+          }
+        }
+      ]
+    },
+    {
+      "label": "fighter lowers Intelligence by 2 and raises Strength by 1",
+      "class_id": "fighter",
+      "scores": {
+        "str": 15,
+        "int": 14,
+        "wis": 11,
+        "dex": 9,
+        "con": 11,
+        "cha": 10
+      },
+      "adjustment": {
+        "lowered": {
+          "int": 2
+        },
+        "raised": {
+          "str": 1
+        }
+      },
+      "valid": true,
+      "rejections": []
+    },
+    {
+      "label": "fighter raises Strength by 1 only",
+      "class_id": "fighter",
+      "scores": {
+        "str": 15,
+        "int": 14,
+        "wis": 11,
+        "dex": 9,
+        "con": 11,
+        "cha": 10
+      },
+      "adjustment": {
+        "lowered": {},
+        "raised": {
+          "str": 1
+        }
+      },
+      "valid": false,
+      "rejections": [
+        {
+          "code": "creation.adjustment.points_mismatch",
+          "params": {
+            "points_available": 0,
+            "points_spent": 1
+          }
+        }
+      ]
+    },
+    {
+      "label": "fighter lowers Intelligence by 2 and raises Strength by 3",
+      "class_id": "fighter",
+      "scores": {
+        "str": 15,
+        "int": 14,
+        "wis": 11,
+        "dex": 9,
+        "con": 11,
+        "cha": 10
+      },
+      "adjustment": {
+        "lowered": {
+          "int": 2
+        },
+        "raised": {
+          "str": 3
+        }
+      },
+      "valid": false,
+      "rejections": [
+        {
+          "code": "creation.adjustment.points_mismatch",
+          "params": {
+            "points_available": 1,
+            "points_spent": 3
+          }
+        }
+      ]
+    },
+    {
+      "label": "fighter lowers Dexterity",
+      "class_id": "fighter",
+      "scores": {
+        "str": 15,
+        "int": 14,
+        "wis": 11,
+        "dex": 9,
+        "con": 11,
+        "cha": 10
+      },
+      "adjustment": {
+        "lowered": {
+          "dex": 2
+        },
+        "raised": {
+          "str": 1
+        }
+      },
+      "valid": false,
+      "rejections": [
+        {
+          "code": "creation.adjustment.not_lowerable",
+          "params": {
+            "ability": "dex"
+          }
+        },
+        {
+          "code": "creation.adjustment.below_floor",
+          "params": {
+            "ability": "dex",
+            "score": 9,
+            "amount": 2
+          }
+        }
+      ]
+    },
+    {
+      "label": "fighter lowers Strength",
+      "class_id": "fighter",
+      "scores": {
+        "str": 15,
+        "int": 14,
+        "wis": 11,
+        "dex": 9,
+        "con": 11,
+        "cha": 10
+      },
+      "adjustment": {
+        "lowered": {
+          "str": 2
+        },
+        "raised": {
+          "str": 1
+        }
+      },
+      "valid": false,
+      "rejections": [
+        {
+          "code": "creation.adjustment.prime_requisite_lowered",
+          "params": {
+            "ability": "str"
+          }
+        }
+      ]
+    },
+    {
+      "label": "fighter raises Wisdom",
+      "class_id": "fighter",
+      "scores": {
+        "str": 15,
+        "int": 14,
+        "wis": 11,
+        "dex": 9,
+        "con": 11,
+        "cha": 10
+      },
+      "adjustment": {
+        "lowered": {
+          "int": 2
+        },
+        "raised": {
+          "wis": 1
+        }
+      },
+      "valid": false,
+      "rejections": [
+        {
+          "code": "creation.adjustment.raise_not_prime_requisite",
+          "params": {
+            "ability": "wis"
+          }
+        }
+      ]
+    },
+    {
+      "label": "fighter lowers Intelligence below 9",
+      "class_id": "fighter",
+      "scores": {
+        "str": 15,
+        "int": 14,
+        "wis": 11,
+        "dex": 9,
+        "con": 11,
+        "cha": 10
+      },
+      "adjustment": {
+        "lowered": {
+          "int": 6
+        },
+        "raised": {
+          "str": 3
+        }
+      },
+      "valid": false,
+      "rejections": [
+        {
+          "code": "creation.adjustment.below_floor",
+          "params": {
+            "ability": "int",
+            "score": 14,
+            "amount": 6
+          }
+        }
+      ]
+    },
+    {
+      "label": "fighter raises Strength above 18",
+      "class_id": "fighter",
+      "scores": {
+        "str": 15,
+        "int": 14,
+        "wis": 11,
+        "dex": 9,
+        "con": 11,
+        "cha": 10
+      },
+      "adjustment": {
+        "lowered": {
+          "int": 4,
+          "wis": 4
+        },
+        "raised": {
+          "str": 4
+        }
+      },
+      "valid": false,
+      "rejections": [
+        {
+          "code": "creation.adjustment.below_floor",
+          "params": {
+            "ability": "wis",
+            "score": 11,
+            "amount": 4
+          }
+        },
+        {
+          "code": "creation.adjustment.above_cap",
+          "params": {
+            "ability": "str",
+            "score": 15,
+            "amount": 4
+          }
+        }
+      ]
+    },
+    {
+      "label": "thief lowers Strength",
+      "class_id": "thief",
+      "scores": {
+        "str": 8,
+        "int": 11,
+        "wis": 12,
+        "dex": 16,
+        "con": 11,
+        "cha": 12
+      },
+      "adjustment": {
+        "lowered": {
+          "str": 2
+        },
+        "raised": {
+          "dex": 1
+        }
+      },
+      "valid": false,
+      "rejections": [
+        {
+          "code": "creation.adjustment.class_restriction",
+          "params": {
+            "ability": "str"
+          }
+        },
+        {
+          "code": "creation.adjustment.below_floor",
+          "params": {
+            "ability": "str",
+            "score": 8,
+            "amount": 2
+          }
+        }
+      ]
+    },
+    {
+      "label": "halfling lowers Wisdom by 2",
+      "class_id": "halfling",
+      "scores": {
+        "str": 16,
+        "int": 10,
+        "wis": 14,
+        "dex": 16,
+        "con": 13,
+        "cha": 12
+      },
+      "adjustment": {
+        "lowered": {
+          "wis": 2
+        },
+        "raised": {}
+      },
+      "valid": false,
+      "rejections": [
+        {
+          "code": "creation.adjustment.points_mismatch",
+          "params": {
+            "points_available": 1,
+            "points_spent": 0
+          }
+        }
+      ]
+    },
+    {
+      "label": "halfling lowers Wisdom by 4 and raises Strength by 1",
+      "class_id": "halfling",
+      "scores": {
+        "str": 16,
+        "int": 10,
+        "wis": 14,
+        "dex": 16,
+        "con": 13,
+        "cha": 12
+      },
+      "adjustment": {
+        "lowered": {
+          "wis": 4
+        },
+        "raised": {
+          "str": 1
+        }
+      },
+      "valid": false,
+      "rejections": [
+        {
+          "code": "creation.adjustment.points_mismatch",
+          "params": {
+            "points_available": 2,
+            "points_spent": 1
+          }
+        }
+      ]
+    },
+    {
+      "label": "halfling lowers Wisdom by 4 and raises Strength and Dexterity by 1",
+      "class_id": "halfling",
+      "scores": {
+        "str": 16,
+        "int": 10,
+        "wis": 14,
+        "dex": 16,
+        "con": 13,
+        "cha": 12
+      },
+      "adjustment": {
+        "lowered": {
+          "wis": 4
+        },
+        "raised": {
+          "str": 1,
+          "dex": 1
+        }
+      },
+      "valid": true,
+      "rejections": []
+    },
+    {
+      "label": "halfling lowers Wisdom by 2 and raises Strength and Dexterity by 1",
+      "class_id": "halfling",
+      "scores": {
+        "str": 16,
+        "int": 10,
+        "wis": 14,
+        "dex": 16,
+        "con": 13,
+        "cha": 12
+      },
+      "adjustment": {
+        "lowered": {
+          "wis": 2
+        },
+        "raised": {
+          "str": 1,
+          "dex": 1
+        }
+      },
+      "valid": false,
+      "rejections": [
+        {
+          "code": "creation.adjustment.points_mismatch",
+          "params": {
+            "points_available": 1,
+            "points_spent": 2
+          }
+        }
+      ]
+    },
+    {
+      "label": "halfling lowers Wisdom by 8 and raises Strength by 4",
+      "class_id": "halfling",
+      "scores": {
+        "str": 16,
+        "int": 10,
+        "wis": 14,
+        "dex": 16,
+        "con": 13,
+        "cha": 12
+      },
+      "adjustment": {
+        "lowered": {
+          "wis": 8
+        },
+        "raised": {
+          "str": 4
+        }
+      },
+      "valid": false,
+      "rejections": [
+        {
+          "code": "creation.adjustment.below_floor",
+          "params": {
+            "ability": "wis",
+            "score": 14,
+            "amount": 8
+          }
+        },
+        {
+          "code": "creation.adjustment.above_cap",
+          "params": {
+            "ability": "str",
+            "score": 16,
+            "amount": 4
+          }
+        }
+      ]
+    },
+    {
+      "label": "elf lowers Wisdom by 4 and raises Strength by 1",
+      "class_id": "elf",
+      "scores": {
+        "str": 16,
+        "int": 14,
+        "wis": 11,
+        "dex": 13,
+        "con": 16,
+        "cha": 14
+      },
+      "adjustment": {
+        "lowered": {
+          "wis": 4
+        },
+        "raised": {
+          "str": 1
+        }
+      },
+      "valid": false,
+      "rejections": [
+        {
+          "code": "creation.adjustment.below_floor",
+          "params": {
+            "ability": "wis",
+            "score": 11,
+            "amount": 4
+          }
+        },
+        {
+          "code": "creation.adjustment.points_mismatch",
+          "params": {
+            "points_available": 2,
+            "points_spent": 1
+          }
+        }
+      ]
+    }
+  ],
+  "details": {
+    "halfling": {
+      "id": "halfling",
+      "name": "Halfling",
+      "race": "halfling",
+      "requirements": {
+        "con": 9,
+        "dex": 9
+      },
+      "prime_requisites": ["dex", "str"],
+      "xp_tiers": [
+        {
+          "modifier_pct": 10,
+          "minimums": {
+            "dex": 13,
+            "str": 13
+          }
+        },
+        {
+          "modifier_pct": 5,
+          "minimums": {
+            "dex": 13
+          }
+        },
+        {
+          "modifier_pct": 5,
+          "minimums": {
+            "str": 13
+          }
+        }
+      ],
+      "may_not_lower": [],
+      "hit_die": 6,
+      "max_level": 8
+    },
+    "thief": {
+      "id": "thief",
+      "name": "Thief",
+      "race": "human",
+      "requirements": {},
+      "prime_requisites": ["dex"],
+      "xp_tiers": [
+        {
+          "modifier_pct": 10,
+          "minimums": {
+            "dex": 16
+          }
+        },
+        {
+          "modifier_pct": 5,
+          "minimums": {
+            "dex": 13
+          }
+        },
+        {
+          "modifier_pct": 0,
+          "minimums": {
+            "dex": 9
+          }
+        },
+        {
+          "modifier_pct": -10,
+          "minimums": {
+            "dex": 6
+          }
+        },
+        {
+          "modifier_pct": -20,
+          "minimums": {
+            "dex": 3
+          }
+        }
+      ],
+      "may_not_lower": ["str"],
+      "hit_die": 4,
+      "max_level": 14
+    },
+    "elf": {
+      "id": "elf",
+      "name": "Elf",
+      "race": "elf",
+      "requirements": {
+        "int": 9
+      },
+      "prime_requisites": ["int", "str"],
+      "xp_tiers": [
+        {
+          "modifier_pct": 10,
+          "minimums": {
+            "int": 16,
+            "str": 13
+          }
+        },
+        {
+          "modifier_pct": 5,
+          "minimums": {
+            "int": 13,
+            "str": 13
+          }
+        }
+      ],
+      "may_not_lower": [],
+      "hit_die": 6,
+      "max_level": 10
+    }
+  }
+}

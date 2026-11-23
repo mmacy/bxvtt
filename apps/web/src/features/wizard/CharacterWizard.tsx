@@ -15,7 +15,8 @@ import {
 import { Banner, Button, ConfirmDialog, Dialog, Stepper, type StepperStep } from '@/ui';
 import { RuleLinksContext } from '../sheet/RuleLink';
 import { StoredSheet } from '../sheet/StoredSheet';
-import { AdjustStep, type CheckState } from './AdjustStep';
+import { ADJUST_GUIDANCE_ID, AdjustStep, type AdjustCheckState, type CheckState } from './AdjustStep';
+import { explainAdjustCheck } from './adjustCheck';
 import { ClassStep } from './ClassStep';
 import {
   STEP_IDS,
@@ -34,13 +35,7 @@ import { applyKit, cartPhrase } from './kits';
 import { OutfitStep, cartCost, type GoldState } from './OutfitStep';
 import { ReviewStep } from './ReviewStep';
 import { RollStep } from './RollStep';
-import {
-  checkChoices,
-  explainByAbility,
-  explainCreationError,
-  explainInvalid,
-  type WizardProblem,
-} from './server';
+import { checkChoices, explainCreationError, explainInvalid, type WizardProblem } from './server';
 import { casterNextStep, classMagic, extraLanguageCount, readScores, spellSlotsAt } from './tables';
 import styles from './wizard.module.css';
 import { useClassDetail } from '../sheet/catalogs';
@@ -107,6 +102,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
   const [created, setCreated] = useState<StoredCharacter | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [kitNote, setKitNote] = useState<string | null>(null);
+  const [tradeAttempts, setTradeAttempts] = useState(0);
 
   const classes = useClassCatalog();
   const abilityTable = useRuleTable('abilities');
@@ -133,6 +129,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
   const go = useCallback(
     (step: StepId) => {
       setShowErrors(false);
+      setTradeAttempts(0);
       update({ step });
     },
     [update],
@@ -144,12 +141,12 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
     draft.step === 'adjust' && draft.roll && draft.classId && hasAdjustment(draft.adjustment)
       ? JSON.stringify(requestFromDraft(draft, { withoutOutfit: true, placeholderIdentity: true }))
       : null;
-  const [adjustResult, setAdjustResult] = useState<{ key: string; state: CheckState } | null>(null);
+  const [adjustResult, setAdjustResult] = useState<{ key: string; state: AdjustCheckState } | null>(null);
   useEffect(() => {
     if (adjustJson === null) return;
     let cancelled = false;
     const timer = setTimeout(() => {
-      const settle = (state: CheckState) => {
+      const settle = (state: AdjustCheckState) => {
         if (!cancelled) setAdjustResult({ key: adjustJson, state });
       };
       checkChoices(getApi(), JSON.parse(adjustJson) as CharacterRequest).then(
@@ -157,8 +154,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
           if (!result.valid && result.problem) {
             const explained = explainInvalid(result.problem);
             if (explained.step !== null && stepIndex(explained.step) <= stepIndex('adjust')) {
-              const split = explainByAbility(result.problem);
-              settle({ status: 'invalid', sentences: split.general, byAbility: split.byAbility });
+              settle(explainAdjustCheck(result.problem));
               return;
             }
           }
@@ -172,7 +168,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
       clearTimeout(timer);
     };
   }, [adjustJson]);
-  const adjustCheck: CheckState =
+  const adjustCheck: AdjustCheckState =
     adjustJson === null
       ? { status: 'idle' }
       : adjustResult?.key === adjustJson
@@ -371,6 +367,11 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
         go('adjust');
         return;
       case 'adjust':
+        // A trade in progress stays on the step. The step says to finish it or reset it.
+        if (adjustCheck.status === 'in_progress') {
+          setTradeAttempts((n) => n + 1);
+          return;
+        }
         if (
           await check(requestFromDraft(draft, { withoutOutfit: true, placeholderIdentity: true }), 'adjust')
         )
@@ -565,10 +566,14 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
           <AdjustStep
             scores={scores}
             adjustment={draft.adjustment}
-            onChange={(adjustment) => update({ adjustment, languages: [] })}
+            onChange={(adjustment) => {
+              setTradeAttempts(0);
+              update({ adjustment, languages: [] });
+            }}
             detail={detail}
             tables={tables}
             check={adjustCheck}
+            continueAttempts={tradeAttempts}
           />
         )}
         {step === 'identity' && adjusted && (
@@ -653,6 +658,9 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
             iconEnd="arrow-right"
             loading={busy}
             disabled={!canContinue}
+            aria-describedby={
+              draft.step === 'adjust' && adjustCheck.status === 'in_progress' ? ADJUST_GUIDANCE_ID : undefined
+            }
             onClick={() => void next()}
           >
             {draft.step === 'adjust' && !hasAdjustment(draft.adjustment) ? 'Skip this step' : 'Continue'}

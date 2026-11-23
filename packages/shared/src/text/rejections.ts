@@ -389,3 +389,76 @@ export function describeRejectionsText(
 ): string {
   return describeRejections(rejections, ctx).map(capitalizeFirst).join(' ');
 }
+
+// Ability trades in progress -----------------------------------------------------------------------------------
+
+/**
+ * The refusals that describe a trade of ability points the player has not finished, not a choice that breaks a
+ * rule. The first click on a minus button lowers a score by 1, which is odd, and the second lowers it by 2, which
+ * buys a point the player hasn't spent yet. Both are the next step toward a valid trade, so the wizard shows them as
+ * guidance. Every other refusal about a trade (a score that can't be lowered or raised, the floor, the cap) means
+ * the player chose something bxapi won't take, and stays a warning. A code that is not listed here, including one
+ * that bxapi adds later, is a warning until someone decides otherwise.
+ */
+const TRADE_IN_PROGRESS_CODES: ReadonlySet<string> = new Set([
+  'creation.adjustment.reduction_not_even',
+  'creation.adjustment.points_mismatch',
+]);
+
+/**
+ * Whether a refusal describes an ability trade the player is still making.
+ *
+ * @param code - The rejection code.
+ */
+export function isTradeInProgress(code: string): boolean {
+  return TRADE_IN_PROGRESS_CODES.has(code);
+}
+
+/**
+ * What to do next, for each trade in progress. Each sentence uses only what bxapi's refusal carries. The
+ * `points_mismatch` params already state the points in the unit that a prime requisite spends, so no sentence
+ * converts between lowering and raising.
+ */
+const TRADE_GUIDANCE_TEMPLATES: Record<string, Template> = {
+  'creation.adjustment.reduction_not_even':
+    "You've lowered {ability|ability} by {amount}. Lower a score by an even amount to gain points.",
+  'creation.adjustment.points_mismatch.unspent':
+    "You've gained {points_available|count:point} from lowering scores. Raise a prime requisite to finish the trade.",
+  'creation.adjustment.points_mismatch.partly_spent':
+    "You've gained {points_available|count:point} from lowering scores and spent {points_spent|number}. Raise a prime requisite to spend the rest.",
+  'creation.adjustment.points_mismatch.unfunded':
+    "You've spent {points_spent|count:point} without lowering a score to pay for the trade. Lower a score to gain points, or reset to your rolled scores.",
+  'creation.adjustment.points_mismatch.overspent':
+    "You've gained {points_available|count:point} from lowering scores, but you spent {points_spent|number}. Raise a prime requisite by less, or lower a score to gain more points.",
+};
+
+function tradeGuidanceKey(rejection: { code: string; params?: ParamMap | undefined }): string | undefined {
+  if (rejection.code !== 'creation.adjustment.points_mismatch') return rejection.code;
+  const available = Number(rejection.params?.points_available);
+  const spent = Number(rejection.params?.points_spent);
+  if (!Number.isFinite(available) || !Number.isFinite(spent)) return undefined;
+  if (spent === 0) return `${rejection.code}.unspent`;
+  if (available === 0) return `${rejection.code}.unfunded`;
+  return `${rejection.code}.${spent < available ? 'partly_spent' : 'overspent'}`;
+}
+
+/**
+ * Describes a trade in progress as guidance about the next step, in the player's terms. A rejection that
+ * {@link isTradeInProgress} doesn't list, or one that lacks the params the guidance needs, gets the sentence
+ * from {@link describeRejection}.
+ *
+ * @param rejection - A rejection from a character check, with `code` and `params`.
+ * @param ctx - Names for the IDs in the params. Defaults to an empty context.
+ */
+export function describeTradeGuidance(
+  rejection: { code: string; params?: ParamMap | undefined },
+  ctx: TextContext = emptyContext(),
+): string {
+  const key = isTradeInProgress(rejection.code) ? tradeGuidanceKey(rejection) : undefined;
+  const template =
+    key !== undefined && Object.hasOwn(TRADE_GUIDANCE_TEMPLATES, key)
+      ? TRADE_GUIDANCE_TEMPLATES[key]
+      : undefined;
+  if (template === undefined) return describeRejection(rejection, ctx);
+  return removeDashes(renderTemplate(template, rejection.params ?? {}, ctx));
+}
