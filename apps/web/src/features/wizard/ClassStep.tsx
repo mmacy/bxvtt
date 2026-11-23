@@ -1,7 +1,14 @@
 import type { ClassSummary, EquipmentSummary } from '@bxvtt/shared/bxapi';
-import { abilityLabel, classLabel, emptyContext, joinList, resolveItemNoun } from '@bxvtt/shared/text';
+import {
+  abilityLabel,
+  classLabel,
+  emptyContext,
+  joinList,
+  resolveItemNoun,
+  withArticle,
+} from '@bxvtt/shared/text';
 import { tokenClass, type ClassDetail } from '@/app';
-import { Accordion, Badge, Checkbox, Skeleton, TokenPortrait, cx, formatModifier } from '@/ui';
+import { Accordion, Badge, Banner, Checkbox, Skeleton, TokenPortrait, cx, formatModifier } from '@/ui';
 import { requirementGap } from './RollStep';
 import { xpModifierFor, type Scores } from './tables';
 import { RuleLink } from '../sheet/RuleLink';
@@ -58,25 +65,33 @@ interface CardProps {
   scores: Scores;
   eligible: boolean;
   selected: boolean;
+  /** Whether rolled hit points fixed the class, so this card can't be chosen unless it's the chosen one. */
+  locked: boolean;
   onSelect: () => void;
   equipment: readonly EquipmentSummary[] | null;
 }
 
-function ClassCard({ summary, scores, eligible, selected, onSelect, equipment }: CardProps) {
+/** The id of the note that says why the class is fixed. */
+const LOCK_NOTE_ID = 'class-lock-note';
+
+function ClassCard({ summary, scores, eligible, selected, locked, onSelect, equipment }: CardProps) {
   const entry = useClassDetail(summary.id);
   const detail = entry.data;
   const gap = requirementGap(summary, scores);
   const xp = detail ? xpModifierFor(detail, scores) : null;
   const reqs = Object.entries(summary.requirements);
   const reasonId = `class-reason-${summary.id}`;
+  const facts = `class-facts-${summary.id}`;
   return (
     <button
       type="button"
       className={cx(styles.classCard, selected && styles.classCardSelected)}
       aria-pressed={selected}
-      disabled={!eligible}
+      disabled={!eligible || (locked && !selected)}
       aria-labelledby={`class-name-${summary.id}`}
-      aria-describedby={!eligible ? `${reasonId} class-facts-${summary.id}` : `class-facts-${summary.id}`}
+      aria-describedby={
+        !eligible ? `${reasonId} ${facts}` : locked && !selected ? `${LOCK_NOTE_ID} ${facts}` : facts
+      }
       onClick={onSelect}
     >
       <span className={styles.classHead}>
@@ -153,6 +168,11 @@ export interface ClassStepProps {
   hpReroll: boolean;
   onHpReroll: (value: boolean) => void;
   equipment: readonly EquipmentSummary[] | null;
+  /**
+   * Whether the player rolled hit points from these ability scores, which fixes `classId` and `hpReroll`. The
+   * other classes and the reroll option are then unavailable.
+   */
+  locked?: boolean;
 }
 
 /** Step 2: choose a class, with the facts a new player needs and the reason a class is out of reach. */
@@ -165,6 +185,7 @@ export function ClassStep({
   hpReroll,
   onHpReroll,
   equipment,
+  locked = false,
 }: ClassStepProps) {
   const selected = useClassDetail(classId ? classId : null);
   if (classes === null) return <Skeleton shape="block" height={360} />;
@@ -173,6 +194,17 @@ export function ClassStep({
   );
   return (
     <div className={styles.stepBody}>
+      {locked && classId && (
+        <Banner
+          tone="info"
+          title={`Your class is fixed as ${withArticle(classLabel(classId).toLowerCase())}`}
+        >
+          <span id={LOCK_NOTE_ID}>
+            You rolled hit points for these ability scores, which fixed your class and the reroll option. To
+            play another class, select Start over and roll new ability scores.
+          </span>
+        </Banner>
+      )}
       <div className={styles.classGrid} role="group" aria-label="Classes">
         {sorted.map((summary) => (
           <ClassCard
@@ -181,6 +213,7 @@ export function ClassStep({
             scores={scores}
             eligible={eligible.includes(summary.id)}
             selected={summary.id === classId}
+            locked={locked}
             onSelect={() => onSelect(summary.id)}
             equipment={equipment}
           />
@@ -214,9 +247,14 @@ export function ClassStep({
       )}
       <Checkbox
         label="Reroll a first hit die of 1 or 2"
-        description="Enable this optional house rule only if your referee uses it at your table."
+        description={
+          locked
+            ? 'Your hit points are rolled, so this option stays as it was when you rolled them.'
+            : 'Enable this optional house rule only if your referee uses it at your table.'
+        }
         checked={hpReroll}
         onCheckedChange={onHpReroll}
+        disabled={locked}
       />
     </div>
   );

@@ -3,10 +3,12 @@ import {
   abilityLabel,
   alignmentLabel,
   classLabel,
+  count,
   joinList,
   languageLabel,
   saveLabel,
 } from '@bxvtt/shared/text';
+import type { StartingRolls } from '@bxvtt/shared/protocol';
 import type { ClassDetail } from '@/app';
 import { Badge, Banner, CoinPurse, Parchment, StatBox, formatModifier } from '@/ui';
 import type { WizardDraft } from './draft';
@@ -23,6 +25,8 @@ export interface ReviewStepProps {
   equipment: EquipmentSummary[] | null;
   spells: SpellSummary[] | null;
   goldLeft: number | null;
+  /** The hit points and gold the player rolled, as the server returned them. */
+  rolls: StartingRolls | null;
   onEdit: (step: WizardDraft['step']) => void;
 }
 
@@ -40,7 +44,7 @@ function cartNames(cart: CartLine[], equip: string[], equipment: EquipmentSummar
   });
 }
 
-/** Step 6: the finished sheet on parchment, before the server rolls hit points and stores the character. */
+/** The last step: the finished sheet on parchment, with the rolled hit points and gold, before the server stores it. */
 export function ReviewStep({
   draft,
   scores,
@@ -49,8 +53,11 @@ export function ReviewStep({
   equipment,
   spells,
   goldLeft,
+  rolls,
   onEdit,
 }: ReviewStepProps) {
+  const hp = rolls?.hit_point_roll ?? null;
+  const gold = rolls?.gold_roll ?? null;
   const first = detail?.progression.find((row) => row.level === 1);
   const title = detail?.level_titles[0] ?? null;
   const primes = detail?.prime_requisites ?? [];
@@ -120,10 +127,29 @@ export function ReviewStep({
       <div className={styles.reviewColumns}>
         <section className={styles.reviewSection} aria-label="Combat">
           <h4 className={styles.reviewHeading}>Hit points</h4>
+          {hp ? (
+            <p className={styles.reviewText}>
+              <span className={styles.reviewNumber}>{count(hp.hit_points, 'hit point')}</span>. You rolled{' '}
+              {hp.rolls.at(-1)} on 1d{detail?.hit_die ?? '?'}
+              {con !== undefined && con !== 0 ? `, ${formatModifier(con)} for Constitution` : ''}
+              {hp.rolls.length > 1
+                ? `, after setting aside ${joinList(hp.rolls.slice(0, -1).map(String))}`
+                : ''}
+              .
+            </p>
+          ) : (
+            <p className={styles.reviewText}>Roll your hit points on the hit points and gold step.</p>
+          )}
+          <h4 className={styles.reviewHeading}>Starting gold</h4>
           <p className={styles.reviewText}>
-            1d{detail?.hit_die ?? '?'}
-            {con !== undefined && con !== 0 ? `, ${formatModifier(con)} for Constitution` : ''}
-            {draft.hpReroll ? ', rerolling a 1 or 2' : ''}.
+            {gold ? (
+              <>
+                <span className={styles.reviewNumber}>{gold.total} gp</span>. You rolled{' '}
+                {joinList(gold.rolls.map(String))} on {gold.rolls.length}d6, times {gold.multiplier}.
+              </>
+            ) : (
+              'Roll your starting gold on the hit points and gold step.'
+            )}
           </p>
           {first && (
             <>
@@ -144,7 +170,7 @@ export function ReviewStep({
                 {outfit.length > 0
                   ? `You set out ${outfit.join(' and ')}. `
                   : 'You set out with nothing worn or wielded. '}
-                You roll hit points and get your final armour class when you create your character.
+                You get your final armour class when you create your character.
               </p>
             </>
           )}

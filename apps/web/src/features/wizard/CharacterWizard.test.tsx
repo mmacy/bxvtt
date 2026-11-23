@@ -3,9 +3,11 @@ import type {
   CharacterCheckRequest,
   CharacterRequest,
   Problem,
+  StartingRolls,
+  StartingRollsStatus,
   StoredCharacter,
 } from '@bxvtt/shared/protocol';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { createFakeApi, renderWithTable, type FakeApi } from '@/app/testing/renderWithTable';
@@ -14,7 +16,7 @@ import stored from './__fixtures__/stored.json';
 import type { ClassDetail } from '@/app';
 import { AdjustStep } from './AdjustStep';
 import { CharacterWizard } from './CharacterWizard';
-import { draftKey, emptyDraft } from './draft';
+import { draftKey, emptyDraft, type WizardDraft } from './draft';
 
 const ROLL = {
   id: 'rol_test',
@@ -22,6 +24,12 @@ const ROLL = {
   eligible_class_ids: ['fighter', 'dwarf', 'magic_user'],
   used: false,
   created_at: '2026-11-21T00:00:00Z',
+};
+
+/** The dice the fake server rolls: a 6 on the hit die, and 4, 6, and 1 for gold. */
+const DICE = {
+  hit_point_roll: { rolls: [6], hit_points: 6 },
+  gold_roll: { rolls: [4, 6, 1], modifier: 0, multiplier: 10, total: 110 },
 };
 
 function invalid(body: Partial<Problem>): BxvttProblemError {
@@ -39,8 +47,18 @@ function page<T>(items: T[]) {
   return { items, total: items.length, limit: 200, offset: 0 };
 }
 
-/** A fake API that serves the catalogs and answers checks with 60 gp of starting gold. */
-function wizardApi(options: { refusal?: BxvttProblemError } = {}): FakeApi {
+interface ServerRolls {
+  /** What the server recorded when the wizard opens. */
+  status?: Partial<StartingRollsStatus>;
+  /** The hit point roll the server returns. */
+  hitPoints?: StartingRolls['hit_point_roll'];
+}
+
+/**
+ * A fake API that serves the catalogs, answers checks, and keeps the starting rolls of one ability roll the way
+ * the server does: rolling hit points fixes the class, and a repeat returns the same dice.
+ */
+function wizardApi(options: { refusal?: BxvttProblemError; rolls?: ServerRolls } = {}): FakeApi {
   const api = createFakeApi();
   api.rules.mockImplementation(async (path: string) => {
     if (path === 'classes') return page(catalog.classes.items);
@@ -69,10 +87,9 @@ function wizardApi(options: { refusal?: BxvttProblemError } = {}): FakeApi {
           sum + (catalog.equipment.items.find((e) => e.id === p.item_id)?.cost_gp ?? 0) * (p.quantity ?? 1),
         0,
       ) ?? 0;
-    if (lots > 60) {
+    if (lots > DICE.gold_roll.total) {
       return {
         valid: false,
-        gold_gp: 60,
         problem: invalid({
           rejections: [
             { code: 'items.purchase.insufficient_funds', params: { item: 'plate_mail', cost_gp: lots } },
@@ -80,16 +97,64 @@ function wizardApi(options: { refusal?: BxvttProblemError } = {}): FakeApi {
         }).problem,
       };
     }
-    if (options.refusal) {
-      return { valid: false, gold_gp: 60, problem: options.refusal.problem };
+    if (options.refusal) return { valid: false, problem: options.refusal.problem };
+    return { valid: true, problem: null };
+  });
+  const server: StartingRollsStatus = {
+    used: false,
+    class_id: null,
+    hp_reroll_at_first_level: null,
+    gold_rolled: false,
+    ...options.rolls?.status,
+  };
+  const hitPoints = options.rolls?.hitPoints ?? DICE.hit_point_roll;
+  const answer = (): StartingRolls => ({
+    class_id: server.class_id ?? '',
+    hp_reroll_at_first_level: server.hp_reroll_at_first_level === true,
+    hit_point_roll: hitPoints,
+    gold_roll: server.gold_rolled ? DICE.gold_roll : null,
+  });
+  api.getStartingRolls.mockImplementation(async () => ({ ...server }));
+  api.rollHitPoints.mockImplementation(async (_rollId, body) => {
+    if (server.class_id === null) {
+      server.class_id = body.class_id;
+      server.hp_reroll_at_first_level = body.hp_reroll_at_first_level === true;
     }
-    return { valid: true, problem: null, gold_gp: 60 };
+    return answer();
+  });
+  api.rollStartingGold.mockImplementation(async () => {
+    server.gold_rolled = true;
+    return answer();
   });
   api.createCharacter.mockImplementation(async (request: CharacterRequest) => ({
     ...(stored as unknown as StoredCharacter),
     name: request.name,
   }));
   return api;
+}
+
+/** Opens the wizard on a stored draft. */
+function openOn(draft: Partial<WizardDraft> & Record<string, unknown>, api: FakeApi) {
+  localStorage.setItem(
+    draftKey(null),
+    JSON.stringify({
+      ...emptyDraft(),
+      roll: ROLL,
+      classId: 'fighter',
+      name: 'Wren',
+      alignment: 'lawful',
+      ...draft,
+    }),
+  );
+  return renderWithTable(<CharacterWizard open onClose={() => {}} onCreated={() => {}} />, {
+    api,
+    snapshot: fixtureSnapshot('lobby', 'player'),
+    preferences: { motion: 'reduce' },
+  });
+}
+
+function continueButton() {
+  return screen.queryByRole('button', { name: /^Continue/ });
 }
 
 beforeEach(() => {
@@ -120,14 +185,22 @@ describe('CharacterWizard', () => {
     await user.click(screen.getByRole('radio', { name: /Lawful/ }));
     await user.click(screen.getByRole('button', { name: /Continue/ }));
 
-    // The wizard counts the gold the roll gives these choices before the shop opens.
-    expect(await screen.findByText('60')).toBeInTheDocument();
+    // The player rolls hit points, then gold, before the shop opens.
+    await user.click(await screen.findByRole('button', { name: 'Roll hit points' }));
+    await user.click(await screen.findByRole('button', { name: 'Roll starting gold' }));
+    expect(
+      await screen.findByText('You start with 110 gold pieces to spend on equipment.'),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Continue/ }));
+
+    expect(await screen.findByText('110')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Add Sword to the cart' }));
     await waitFor(() =>
       expect(screen.getByText('Your character can afford and use this equipment.')).toBeInTheDocument(),
     );
     await user.click(screen.getByRole('button', { name: /Continue/ }));
 
+    expect(await screen.findByText('6 hit points')).toBeInTheDocument();
     await user.click(await screen.findByRole('button', { name: 'Create character' }));
     await waitFor(() => expect(onCreated).toHaveBeenCalled());
     const body = api.createCharacter.mock.calls.at(-1)?.[0];
@@ -138,7 +211,7 @@ describe('CharacterWizard', () => {
       ability_roll_id: 'rol_test',
       purchases: [{ item_id: 'sword' }],
     });
-    expect(api.checkCharacter).toHaveBeenCalled();
+    expect(api.rollHitPoints).toHaveBeenCalledWith('rol_test', { class_id: 'fighter' });
     expect(await screen.findByText('Wren is ready')).toBeInTheDocument();
     expect(localStorage.getItem(draftKey(null))).toBeNull();
   });
@@ -150,40 +223,133 @@ describe('CharacterWizard', () => {
           { code: 'items.equip.armour_not_allowed', params: { class: 'magic_user', item: 'leather' } },
         ],
       }),
+      rolls: { status: { class_id: 'fighter', hp_reroll_at_first_level: false, gold_rolled: true } },
     });
-    localStorage.setItem(
-      draftKey(null),
-      JSON.stringify({
-        ...emptyDraft(),
-        roll: ROLL,
-        classId: 'fighter',
-        name: 'Wren',
-        alignment: 'lawful',
-        step: 'review',
-      }),
-    );
-    const { user } = renderWithTable(<CharacterWizard open onClose={() => {}} onCreated={() => {}} />, {
-      api,
-      snapshot: fixtureSnapshot('lobby', 'player'),
-      preferences: { motion: 'reduce' },
-    });
+    const { user } = openOn({ step: 'review' }, api);
     await user.click(await screen.findByRole('button', { name: 'Create character' }));
     expect(await screen.findByText('Check your starting equipment')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Outfit' })).toBeInTheDocument();
   });
 
   it('keeps the choices when the dialog closes and reopens', async () => {
-    localStorage.setItem(
-      draftKey(null),
-      JSON.stringify({ ...emptyDraft(), roll: ROLL, classId: 'fighter', step: 'identity', name: 'Wren' }),
-    );
-    renderWithTable(<CharacterWizard open onClose={() => {}} onCreated={() => {}} />, {
-      api: wizardApi(),
-      snapshot: fixtureSnapshot('lobby', 'player'),
-      preferences: { motion: 'reduce' },
-    });
+    openOn({ step: 'identity' }, wizardApi());
     expect(await screen.findByText('Resumed your unfinished character')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: /Name/ })).toHaveValue('Wren');
+  });
+
+  it('starts again from new scores when the server says the roll is used', async () => {
+    openOn({ step: 'outfit' }, wizardApi({ rolls: { status: { used: true } } }));
+    expect(
+      await screen.findByText('You already made a character from these ability scores'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Roll ability scores' })).toBeInTheDocument();
+  });
+});
+
+describe('the hit points and gold step', () => {
+  it('before any roll, says what rolling fixes and offers only the hit points', async () => {
+    openOn({ step: 'hp_gold' }, wizardApi());
+    const roll = await screen.findByRole('button', { name: 'Roll hit points' });
+    expect(roll).toHaveAccessibleDescription(
+      'Rolling hit points fixes your class as a fighter and keeps the reroll option off for these ability scores. You can still change your ability trade, identity, and equipment. To play another class after you roll, start over with new ability scores.',
+    );
+    expect(screen.getByRole('button', { name: 'Roll starting gold' })).toBeDisabled();
+    expect(screen.getByText('d8')).toBeInTheDocument();
+    expect(continueButton()).toBeNull();
+  });
+
+  it('shows the hit die, the modifier, and the total from the server once the hit points are rolled', async () => {
+    const api = wizardApi();
+    const { user } = openOn({ step: 'hp_gold' }, api);
+    await user.click(await screen.findByRole('button', { name: 'Roll hit points' }));
+    const dice = await screen.findByRole('group', { name: 'Hit points roll' });
+    expect(within(dice).getByText('Hit points: rolled 6 on 1d8, total 6.')).toBeInTheDocument();
+    expect(screen.getByText('You start with 6 hit points.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Roll hit points' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Roll starting gold' })).toBeEnabled();
+    expect(continueButton()).toBeNull();
+    expect(api.rollStartingGold).not.toHaveBeenCalled();
+  });
+
+  it('lets the player continue once both are rolled, with focus following the rolls', async () => {
+    const { user } = openOn({ step: 'hp_gold' }, wizardApi());
+    (await screen.findByRole('button', { name: 'Roll hit points' })).focus();
+    await user.keyboard('{Enter}');
+    const gold = await screen.findByRole('button', { name: 'Roll starting gold' });
+    await waitFor(() => expect(gold).toHaveFocus());
+    await user.keyboard('{Enter}');
+    expect(await screen.findByRole('group', { name: 'Starting gold roll' })).toBeInTheDocument();
+    const result = screen.getByText('You start with 110 gold pieces to spend on equipment.');
+    await waitFor(() => expect(result).toHaveFocus());
+    expect(screen.queryByRole('button', { name: /^Roll (hit points|starting gold)$/ })).toBeNull();
+    expect(continueButton()).toBeEnabled();
+  });
+
+  it('after a reload, shows the rolls the server kept and offers neither roll again', async () => {
+    const api = wizardApi({
+      rolls: { status: { class_id: 'fighter', hp_reroll_at_first_level: false, gold_rolled: true } },
+    });
+    openOn({ step: 'hp_gold' }, api);
+    expect(
+      await screen.findByText('You start with 110 gold pieces to spend on equipment.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('You start with 6 hit points.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Roll (hit points|starting gold)$/ })).toBeNull();
+    // The wizard reads the dice with the request that returns the rolls already made, and never rolls gold.
+    expect(api.rollHitPoints).toHaveBeenCalledWith('rol_test', { class_id: 'fighter' });
+    expect(api.rollStartingGold).not.toHaveBeenCalled();
+  });
+
+  it('shows the dice the first-level reroll set aside', async () => {
+    const api = wizardApi({
+      rolls: {
+        status: { class_id: 'fighter', hp_reroll_at_first_level: true, gold_rolled: false },
+        hitPoints: { rolls: [1, 2, 5], hit_points: 5 },
+      },
+    });
+    openOn({ step: 'hp_gold', hpReroll: true }, api);
+    expect(
+      await screen.findByRole('group', { name: 'Set aside by the reroll option: 1 and 2' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('The reroll option set aside 1 and 2 and rolled again. You start with 5 hit points.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('On')).toBeInTheDocument();
+    expect(api.rollHitPoints).toHaveBeenCalledWith('rol_test', {
+      class_id: 'fighter',
+      hp_reroll_at_first_level: true,
+    });
+  });
+
+  it('sends a draft from the version that counted gold back to the rolls before the shop', async () => {
+    openOn({ step: 'outfit', gold: { key: 'rol_test:fighter:plain', gp: 90 } }, wizardApi());
+    expect(await screen.findByRole('button', { name: 'Roll hit points' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Hit points and gold', level: 3 })).toBeInTheDocument();
+  });
+});
+
+describe('the class step after the hit points are rolled', () => {
+  it('shows the class as fixed and says how to play another', async () => {
+    const api = wizardApi({
+      rolls: { status: { class_id: 'dwarf', hp_reroll_at_first_level: true, gold_rolled: false } },
+    });
+    openOn({ step: 'class', classId: 'fighter', hpReroll: false }, api);
+    expect(await screen.findByText('Your class is fixed as a dwarf')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'You rolled hit points for these ability scores, which fixed your class and the reroll option. To play another class, select Start over and roll new ability scores.',
+      ),
+    ).toBeInTheDocument();
+    // The server's record wins over the draft in this browser.
+    const dwarf = await screen.findByRole('button', { name: 'Dwarf' });
+    expect(dwarf).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Fighter' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Fighter' })).toHaveAccessibleDescription(
+      /^You rolled hit points for these ability scores/,
+    );
+    const reroll = screen.getByRole('checkbox', { name: 'Reroll a first hit die of 1 or 2' });
+    expect(reroll).toBeChecked();
+    expect(reroll).toBeDisabled();
   });
 });
 

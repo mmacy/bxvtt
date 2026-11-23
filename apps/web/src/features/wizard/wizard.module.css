@@ -575,6 +575,89 @@
   margin: 0;
 }
 
+/* Hit points and gold ----------------------------------------------------------------------------------------- */
+
+.startGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+@media (max-width: 860px) {
+  .startGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.startPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: var(--border-hair) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-2);
+}
+
+.startFacts {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.startFacts > div {
+  display: grid;
+  grid-template-columns: 11rem 1fr;
+  gap: var(--space-2);
+}
+
+.startFacts dt {
+  color: var(--color-text-muted);
+}
+
+.startFacts dd {
+  margin: 0;
+  color: var(--color-text);
+  font-family: var(--font-numeric);
+}
+
+.startResultRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: var(--control-lg);
+}
+
+.setAside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.setAsideLabel {
+  font-size: var(--text-xs);
+  color: var(--color-text-subtle);
+}
+
+.setAsideDice {
+  display: flex;
+  gap: var(--space-1);
+  opacity: 0.55;
+}
+
+.goldTimes {
+  font-family: var(--font-numeric);
+  font-size: var(--text-xl);
+  color: var(--color-text-muted);
+}
+
+.startResult {
+  margin: 0;
+  color: var(--color-text);
+}
+
 /* Outfit ------------------------------------------------------------------------------------------------------ */
 
 .outfitGrid {
@@ -783,6 +866,11 @@
 .reviewNote {
   margin: 0;
   line-height: var(--leading-normal);
+}
+
+.reviewNumber {
+  font-family: var(--font-numeric);
+  font-weight: var(--weight-semibold);
 }
 
 .reviewNote {

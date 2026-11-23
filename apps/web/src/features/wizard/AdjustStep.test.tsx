@@ -241,9 +241,14 @@ function tradeApi(answer?: (request: CharacterCheckRequest) => Promise<void>): F
         JSON.stringify(c.adjustment) ===
           JSON.stringify({ lowered: adjustment?.lowered ?? {}, raised: adjustment?.raised ?? {} }),
     );
-    if (!trade || trade.valid || trade.rejections.length === 0)
-      return { valid: true, problem: null, gold_gp: 60 };
-    return { valid: false, problem: problemOf(trade), gold_gp: 60 };
+    if (!trade || trade.valid || trade.rejections.length === 0) return { valid: true, problem: null };
+    return { valid: false, problem: problemOf(trade) };
+  });
+  api.getStartingRolls.mockResolvedValue({
+    used: false,
+    class_id: null,
+    hp_reroll_at_first_level: null,
+    gold_rolled: false,
   });
   return api;
 }

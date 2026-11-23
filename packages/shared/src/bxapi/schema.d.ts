@@ -496,7 +496,9 @@ export interface paths {
          *     omit it to draw a new seed.
          *
          *     Because the character isn't stored, it has `id` set to `null` and cannot be passed in `character_ids` to
-         *     `POST /v1/sessions`. To store a character for play, call `POST /v1/characters` instead.
+         *     `POST /v1/sessions`. To store a character for play, call `POST /v1/characters` instead. This operation rolls new
+         *     scores and takes no `ability_roll_id`. To see the character a stored ability roll would create, call
+         *     `POST /v1/ability-rolls/{roll_id}/preview`.
          */
         post: operations["generate_character"];
         delete?: never;
@@ -636,7 +638,8 @@ export interface paths {
          *
          *     The server stores the roll's seed privately and derives the character's hit points and starting gold from that
          *     same seed when `POST /v1/characters` consumes the roll. Retrying `POST /v1/characters` after a 422
-         *     `character_invalid` error therefore keeps the exact same rolls.
+         *     `character_invalid` error therefore keeps the exact same rolls. To show the player those hit points and that gold
+         *     before you create the character, call `POST /v1/ability-rolls/{roll_id}/preview`.
          *
          *     Ability rolls cannot be deleted (each uses at most 55 bytes toward `storage.used_bytes`), and the server places
          *     no limit on how many rolls a client creates. To roll scores and create the character in one step, omit
@@ -667,6 +670,50 @@ export interface paths {
         get: operations["get_ability_roll"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ability-rolls/{roll_id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview a character from an ability roll
+         * @description Return the character that `POST /v1/characters` would create from this ability roll and these choices.
+         *
+         *     The response has the `character`, its `derived` stats, and every die osrlib rolled for it in `rolls`: the dice
+         *     behind the roll's scores in `ability_rolls`, the hit point roll in `hit_point_roll`, and the starting gold roll in
+         *     `gold_roll`. Use it to show a player their hit points and starting gold before they shop, and before the character
+         *     exists. The roll stays unused. Without an `Idempotency-Key`, the server stores nothing and `storage.used_bytes`
+         *     doesn't change. With one, the server stores the response for the key, as it does for every `POST`.
+         *
+         *     Send the choices `POST /v1/characters` accepts, without `ability_roll_id`, because the path names the roll, and
+         *     without `seed`. The preview and the creation run the same steps on the roll's private seed, so:
+         *
+         *     - Every preview of one roll with the same choices returns the same response.
+         *     - `POST /v1/characters` with this roll and the same choices stores a character equal to `character`, with the
+         *       same hit points, gold, and inventory.
+         *     - A choice that `POST /v1/characters` refuses gets the same 422 `character_invalid` here, with the same members,
+         *       and the roll stays unused.
+         *
+         *     For one roll, `hit_point_roll` and `gold_roll` change only when `class_id` or `hp_reroll_at_first_level` changes.
+         *     The `adjustment`, `starting_spell_ids`, `extra_languages`, `name`, `alignment`, `purchases`, and `equip_item_ids`
+         *     change neither roll. So once the player has chosen a class and the reroll option, you can show the hit points and
+         *     gold and let the player make every other choice without the dice changing. A different class or reroll option can
+         *     change the gold as well as the hit points.
+         *
+         *     The response has no `seed`, because the roll's seed stays private, and no `id`, because the server stores no
+         *     character. `character.id` is `null`. A `player` key and a `referee` key can both call this operation.
+         */
+        post: operations["preview_character"];
         delete?: never;
         options?: never;
         head?: never;
@@ -705,7 +752,9 @@ export interface paths {
          *     and stores nothing.
          *
          *     Look up catalog ids via `GET /v1/rules/classes`, `GET /v1/rules/spells`, `GET /v1/rules/languages`, and
-         *     `GET /v1/rules/equipment`. To preview rolled dice without storing anything, call `POST /v1/generate/character`.
+         *     `GET /v1/rules/equipment`. To show the player the hit points and starting gold of an ability roll before you
+         *     create the character, call `POST /v1/ability-rolls/{roll_id}/preview` with the same choices. To roll a character
+         *     from new scores without storing anything, call `POST /v1/generate/character`.
          */
         post: operations["create_character"];
         delete?: never;
@@ -1354,7 +1403,7 @@ export interface components {
             /**
              * Id
              * @description Ability roll identifier (`rol_` followed by 22 characters). Pass as `ability_roll_id` to
-             *     `POST /v1/characters`.
+             *     `POST /v1/characters`, or as `roll_id` to `POST /v1/ability-rolls/{roll_id}/preview`.
              */
             id: string;
             /**
@@ -3908,6 +3957,88 @@ export interface components {
             title: string | null;
         };
         /**
+         * CharacterPreview
+         * @description Unstored first-level character that `POST /v1/characters` would create from an ability roll, with its dice.
+         */
+        CharacterPreview: {
+            /**
+             * @description osrlib `Character` model that `POST /v1/characters` stores for the same roll and choices, with
+             *     `id` set to `null`.
+             */
+            character: components["schemas"]["Character"];
+            /** @description Combat, saving throw, modifier, and language values computed by osrlib from `character`. */
+            derived: components["schemas"]["DerivedValues"];
+            /** @description Individual dice rolled for the roll's ability scores, the hit points, and the starting gold. */
+            rolls: components["schemas"]["CreationRolls"];
+        };
+        /**
+         * CharacterPreviewRequest
+         * @description Choices for previewing the character `POST /v1/characters` would create from an ability roll.
+         *
+         *     The body has every member `POST /v1/characters` accepts except `ability_roll_id`, because the
+         *     path names the roll, and `seed`, because the roll's seed decides the dice.
+         */
+        CharacterPreviewRequest: {
+            /**
+             * Name
+             * @description Character name, 1 to 100 characters, without control characters such as tabs or newlines.
+             */
+            name: string;
+            /**
+             * Class Id
+             * @description Character class `id` from `GET /v1/rules/classes`, such as `fighter`. Must meet the class's
+             *     ability score requirements (`eligible_class_ids` on `POST /v1/ability-rolls`).
+             */
+            class_id: string;
+            /** @description Character alignment: `lawful`, `neutral`, or `chaotic`. */
+            alignment: components["schemas"]["Alignment"];
+            /**
+             * @description Optional point trade between ability scores before rolling hit points, as osrlib's
+             *     `AbilityAdjustment`. Map abilities to lower in `lowered` and abilities to raise in `raised`
+             *     using keys `str`, `int`, `wis`, `dex`, `con`, and `cha`. If osrlib refuses the trade, creation
+             *     fails with 422 `character_invalid` and `rejections`. Omit or set to `null` to keep the rolled
+             *     scores.
+             */
+            adjustment?: components["schemas"]["AbilityAdjustment"] | null;
+            /**
+             * Starting Spell Ids
+             * @description First-level spell `id` values from `GET /v1/rules/spells` for an arcane caster's starting
+             *     spell book. A first-level `magic_user` or `elf` requires exactly one first-level `magic_user`
+             *     spell. Leave empty (`[]`) for every other class.
+             * @default []
+             */
+            starting_spell_ids: string[];
+            /**
+             * Extra Languages
+             * @description Extra language `id` values from `GET /v1/rules/languages` (entries with `choosable` set to
+             *     `true`), up to the bonus languages granted by the character's adjusted Intelligence score.
+             * @default []
+             */
+            extra_languages: string[];
+            /**
+             * Purchases
+             * @description Starting equipment bought in list order from rolled starting gold (3d6 x 10 gp). To show the
+             *     player their gold before they shop, call `POST /v1/ability-rolls/{roll_id}/preview` with the
+             *     same roll, class, and `hp_reroll_at_first_level`, and read `rolls.gold_roll.total`. The
+             *     purchases don't change the gold roll.
+             * @default []
+             */
+            purchases: components["schemas"]["Purchase"][];
+            /**
+             * Equip Item Ids
+             * @description Purchased item `id` values to wear or wield, applied in list order. Each entry equips one
+             *     purchased stack from `purchases` and must be permitted for `class_id`.
+             * @default []
+             */
+            equip_item_ids: string[];
+            /**
+             * Hp Reroll At First Level
+             * @description Whether to reroll a first-level hit die result of 1 or 2. Defaults to `false`.
+             * @default false
+             */
+            hp_reroll_at_first_level: boolean;
+        };
+        /**
          * CharacterRequest
          * @description Choices and optional ability roll or referee seed for `POST /v1/characters`.
          */
@@ -3950,10 +4081,10 @@ export interface components {
             extra_languages: string[];
             /**
              * Purchases
-             * @description Starting equipment bought in list order from rolled starting gold (3d6 x 10 gp). Because the
-             *     server rolls gold during this same request, leave `purchases` empty if you want the player to
-             *     see their gold first, then send `purchase_equipment` and `equip_item` commands to a session in
-             *     `town` mode.
+             * @description Starting equipment bought in list order from rolled starting gold (3d6 x 10 gp). To show the
+             *     player their gold before they shop, call `POST /v1/ability-rolls/{roll_id}/preview` with the
+             *     same roll, class, and `hp_reroll_at_first_level`, and read `rolls.gold_roll.total`. The
+             *     purchases don't change the gold roll.
              * @default []
              */
             purchases: components["schemas"]["Purchase"][];
@@ -9108,10 +9239,10 @@ export interface components {
             extra_languages: string[];
             /**
              * Purchases
-             * @description Starting equipment bought in list order from rolled starting gold (3d6 x 10 gp). Because the
-             *     server rolls gold during this same request, leave `purchases` empty if you want the player to
-             *     see their gold first, then send `purchase_equipment` and `equip_item` commands to a session in
-             *     `town` mode.
+             * @description Starting equipment bought in list order from rolled starting gold (3d6 x 10 gp). To show the
+             *     player their gold before they shop, call `POST /v1/ability-rolls/{roll_id}/preview` with the
+             *     same roll, class, and `hp_reroll_at_first_level`, and read `rolls.gold_roll.total`. The
+             *     purchases don't change the gold roll.
              * @default []
              */
             purchases: components["schemas"]["Purchase"][];
@@ -22571,6 +22702,8 @@ export type BattleState = components['schemas']['BattleState'];
 export type CastSpell = components['schemas']['CastSpell'];
 export type Character = components['schemas']['Character'];
 export type CharacterLeveledUpEvent = components['schemas']['CharacterLeveledUpEvent'];
+export type CharacterPreview = components['schemas']['CharacterPreview'];
+export type CharacterPreviewRequest = components['schemas']['CharacterPreviewRequest'];
 export type CharacterRequest = components['schemas']['CharacterRequest'];
 export type CharacterSummary = components['schemas']['CharacterSummary'];
 export type CharismaRow = components['schemas']['CharismaRow'];
@@ -26086,6 +26219,184 @@ export interface operations {
                 headers: {
                     /** @description Whole seconds to wait before retrying: `1`. */
                     "Retry-After"?: number;
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    preview_character: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Client-chosen key (1 to 255 printable ASCII characters with no spaces, such as a UUID) that deduplicates retries of this `POST` for 24 hours. Resending the identical request with the same key returns the stored 2xx response with `Idempotent-Replayed: true` instead of running the operation again. */
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                /** @description Ability roll `id` (`rol_` followed by 22 characters), from `POST /v1/ability-rolls`. */
+                roll_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CharacterPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description The character `POST /v1/characters` would store, its derived stats, and its dice. */
+            200: {
+                headers: {
+                    "Idempotent-Replayed": components["headers"]["Idempotent-Replayed"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CharacterPreview"];
+                };
+            };
+            /** @description - `bad_request`: The body doesn't decode as text, or contains a disallowed value: an integer with more than 4,300 digits, `NaN`, `Infinity`, a number too large for a 64-bit float, a string with half of a UTF-16 surrogate pair, or arrays and objects nested more than 100 levels deep. Check `detail` and send UTF-8 JSON without those values. Retrying the same body fails. */
+            400: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `unauthorized`: The request has no API key or has an unknown key. Send `Authorization: Bearer <key>` with a key configured on the server. Retrying the same request fails. */
+            401: {
+                headers: {
+                    /** @description `Bearer`, the authentication scheme the server accepts. */
+                    "WWW-Authenticate"?: string;
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `not_found`: Your client has no ability roll with this id, including a roll that another client created. `POST /v1/ability-rolls` creates one. */
+            404: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `request_timeout`: The full request body didn't arrive within `BXAPI_BODY_TIMEOUT_SECONDS` (30 seconds by default). Retry the request. */
+            408: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description - `ability_roll_used`: A character was already created from this roll, so `POST /v1/characters` would refuse it too. Create a new roll with `POST /v1/ability-rolls`.
+             *     - `idempotency_key_in_progress`: The first request with this `Idempotency-Key` is still running. Wait the 1 second in the `Retry-After` header and retry.
+             *     - `idempotency_key_interrupted`: The server failed or stopped while handling the first request with this `Idempotency-Key` and has no record of whether it took effect. Inspect the target resource first. If the change didn't take effect, send the request again with a new key.
+             */
+            409: {
+                headers: {
+                    /** @description With `idempotency_key_in_progress`, whole seconds to wait before retrying: `1`. */
+                    "Retry-After"?: number;
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `content_too_large`: The request body exceeds 65,536 bytes (the limit for operations that take no document), or exceeds `BXAPI_MAX_BODY_BYTES` when set lower. Send a smaller body. Retrying the same body fails. */
+            413: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `unsupported_media_type`: The request includes a non-empty body without a JSON `Content-Type` header. Send `Content-Type: application/json`. */
+            415: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `misdirected_request`: The server runs without API keys, and the request's `Host` header isn't `localhost`, `127.0.0.1`, or `[::1]`. Call the server by one of those names, or configure API keys on the server. A server with API keys never returns this code. */
+            421: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description - `validation_error`: The request doesn't match the operation's schema. A required field is missing, a value has the wrong type or is out of range, or the body isn't valid JSON. `errors` lists the first 20 problems, and the `loc` of each is the path to the value. Fix the request before you send it again. A body with `seed` or `ability_roll_id` returns this code too, as does any member `POST /v1/characters` doesn't accept.
+             *     - `character_invalid`: A choice violates a B/X creation rule, such as choosing a class whose minimum scores the character misses, omitting a magic-user's starting spell, or spending more than starting gold. `rejections` lists osrlib's reasons (`code` and `params`). When an unknown `class_id` or `item_id` is sent, or `equip_item_ids` names an unpurchased item, the problem includes `field`, `id`, and `index` (for list fields) instead of `rejections`. Adjust the choice and retry. The roll stays unused, and `POST /v1/characters` refuses the same choices with the same problem.
+             *     - `idempotency_key_reused`: Your client already sent this `Idempotency-Key` with a different method, path, query, body, or role. Generate a new key for each distinct request.
+             */
+            422: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `rate_limited`: Your client exceeded the per-minute request budget (`BXAPI_RATE_LIMIT_PER_MINUTE`, 600 by default). Wait the seconds in the `Retry-After` header and retry. Requests without a valid API key share a separate budget and receive 429 instead of 401 `unauthorized` when that budget is exhausted. */
+            429: {
+                headers: {
+                    /** @description Whole seconds to wait before retrying, at least `1`. */
+                    "Retry-After"?: number;
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `internal_error`: The server failed because of a bug. The response says nothing about the cause, and the server logs it. Report the request to the server's operator. */
+            500: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `database_busy`: Another process held the SQLite write lock for more than 5 seconds. Wait the 1 second in the `Retry-After` header and retry. */
+            503: {
+                headers: {
+                    /** @description Whole seconds to wait before retrying: `1`. */
+                    "Retry-After"?: number;
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `storage_full`: Stored documents for your client have reached `BXAPI_MAX_CLIENT_BYTES` (1,073,741,824 bytes by default). `used_bytes` and `max_bytes` report your current usage and limit, and the request stored nothing. Delete unused sessions, saves, adventures, or characters, then retry. Stateless operations such as dice rolls return this code only when `Idempotency-Key` is set, because storing the replay response counts toward the limit. */
+            507: {
+                headers: {
                     "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;
                 };

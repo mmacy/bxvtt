@@ -2,12 +2,21 @@
  * The wizard's choices, kept in this browser so a dialog closed by accident loses nothing, and the request body
  * that turns them into a character.
  */
-import type { AbilityRoll, CharacterRequest } from '@bxvtt/shared/protocol';
+import type {
+  AbilityRoll,
+  CharacterRequest,
+  StartingRollRequest,
+  StartingRollsStatus,
+} from '@bxvtt/shared/protocol';
 import { ABILITIES, isAbility, readScores, type Ability, type Scores } from './tables';
 import type { CartLine } from './kits';
 
-/** The wizard's steps, in order. */
-export const STEP_IDS = ['roll', 'class', 'adjust', 'identity', 'outfit', 'review'] as const;
+/**
+ * The wizard's steps, in order. The hit points and gold come after the identity, because an arcane caster's
+ * first spell is chosen there and bxapi checks it before it rolls hit points, and before the outfit, because the
+ * player shops with the gold.
+ */
+export const STEP_IDS = ['roll', 'class', 'adjust', 'identity', 'hp_gold', 'outfit', 'review'] as const;
 /** A step of the wizard. */
 export type StepId = (typeof STEP_IDS)[number];
 
@@ -21,7 +30,11 @@ export interface Adjustment {
   raised: Partial<Record<Ability, number>>;
 }
 
-/** Everything the player chose so far. */
+/**
+ * Everything the player chose so far. The draft holds no rolled hit points or gold: the server keeps which rolls
+ * the player made, and the wizard reads them from it. A draft from an older version that has a `gold` member
+ * reads the same way, without it.
+ */
 export interface WizardDraft {
   version: 1;
   step: StepId;
@@ -37,8 +50,6 @@ export interface WizardDraft {
   spells: string[];
   cart: CartLine[];
   equip: string[];
-  /** The starting gold the server reported for the choices in `key` (see {@link goldKey}). */
-  gold: { key: string; gp: number } | null;
 }
 
 /** A draft with nothing chosen. */
@@ -57,7 +68,6 @@ export function emptyDraft(): WizardDraft {
     spells: [],
     cart: [],
     equip: [],
-    gold: null,
   };
 }
 
@@ -137,12 +147,49 @@ export function requestFromDraft(draft: WizardDraft, options: RequestOptions = {
 }
 
 /**
- * The choices that decide the starting gold. bxapi rolls hit points and then gold from the roll's seed, so the
- * gold can change with the class (its hit die) and the hit point reroll rule.
+ * The body of `POST /api/ability-rolls/{roll_id}/hit-points` and `.../gold` for a draft: the class, the reroll
+ * option, and an arcane caster's first spell, which are the choices the hit points and the gold depend on.
+ *
+ * @param draft - The draft. It must have a class, unless `status` fixes one.
+ * @param status - The server's record of the roll. When the hit points are rolled, its class and reroll option
+ *   replace the draft's.
  */
-export function goldKey(draft: WizardDraft): string | null {
-  if (!draft.roll || !draft.classId) return null;
-  return `${draft.roll.id}:${draft.classId}:${draft.hpReroll ? 'reroll' : 'plain'}`;
+export function startingRollRequest(
+  draft: WizardDraft,
+  status: StartingRollsStatus | null = null,
+): StartingRollRequest {
+  const fixed = status?.class_id ?? null;
+  const reroll = fixed === null ? draft.hpReroll : status?.hp_reroll_at_first_level === true;
+  const body: StartingRollRequest = { class_id: fixed ?? draft.classId ?? '' };
+  if (reroll) body.hp_reroll_at_first_level = true;
+  if (draft.spells.length > 0) body.starting_spell_ids = [...draft.spells];
+  return body;
+}
+
+/**
+ * Brings a draft in line with the server's record of its roll. The draft lives in the browser and the record on
+ * the server, so the record wins: once the hit points are rolled, the draft takes their class and reroll option,
+ * and a draft on a step after the hit points and gold returns to that step until both are rolled. A change of
+ * class also clears the choices that depend on the class, as choosing another class does.
+ *
+ * @param draft - The draft.
+ * @param status - The server's record of the draft's roll.
+ * @returns The same draft when nothing changes.
+ */
+export function reconcileDraft(draft: WizardDraft, status: StartingRollsStatus): WizardDraft {
+  let next = draft;
+  const fixed = status.class_id;
+  const reroll = status.hp_reroll_at_first_level === true;
+  if (fixed !== null && (draft.classId !== fixed || draft.hpReroll !== reroll)) {
+    next = { ...next, classId: fixed, hpReroll: reroll };
+    if (draft.classId !== fixed) {
+      next = { ...next, adjustment: { lowered: {}, raised: {} }, spells: [], languages: [] };
+    }
+  }
+  const rolled = fixed !== null && status.gold_rolled;
+  if (!rolled && STEP_IDS.indexOf(next.step) > STEP_IDS.indexOf('hp_gold'))
+    next = { ...next, step: 'hp_gold' };
+  return next;
 }
 
 // Storage ------------------------------------------------------------------------------------------------------
@@ -216,9 +263,6 @@ export function parseDraft(raw: unknown): WizardDraft | null {
       )
     : [];
   draft.equip = stringList(raw.equip);
-  if (isRecord(raw.gold) && typeof raw.gold.key === 'string' && typeof raw.gold.gp === 'number') {
-    draft.gold = { key: raw.gold.key, gp: raw.gold.gp };
-  }
   return draft;
 }
 

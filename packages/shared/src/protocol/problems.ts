@@ -55,6 +55,19 @@ export const PROBLEM_CODES = {
   use_declarations: 409,
   /** 409 (from bxapi): a character was already created from that ability roll. */
   ability_roll_used: 409,
+  /**
+   * 409: the player rolled hit points from this ability roll for another class or reroll option, which fixes both
+   * for the roll. Extra members: `class_id` and `hp_reroll_at_first_level`, the choices the hit points were rolled
+   * with. Use them, or roll new ability scores.
+   */
+  ability_roll_locked: 409,
+  /** 409: the request needs the hit points rolled first, such as rolling the starting gold. */
+  hit_points_not_rolled: 409,
+  /**
+   * 409: the request buys or equips items from an ability roll whose starting gold the player hasn't rolled, so
+   * its answer would reveal the gold. Roll the gold first.
+   */
+  gold_not_rolled: 409,
   /** 409 (from bxapi): a document is newer than bxapi's osrlib. */
   version_unsupported: 409,
   /** 409: bxapi kept the session locked, or the command's outcome is unknown after retries. Read the game state again. */
@@ -165,6 +178,8 @@ export const Problem = z.looseObject({
     .optional(),
   field: z.string().optional(),
   index: z.number().int().optional(),
+  class_id: z.string().optional(),
+  hp_reroll_at_first_level: z.boolean().optional(),
 });
 /** An RFC 9457 problem document. */
 export type Problem = z.infer<typeof Problem>;

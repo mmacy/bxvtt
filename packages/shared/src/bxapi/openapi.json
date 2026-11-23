@@ -2,7 +2,7 @@
  "openapi": "3.1.0",
  "info": {
   "title": "bxapi",
-  "description": "\nbxapi runs games of the 1981 B/X (Basic/Expert) fantasy adventure game over HTTP.\n[osrlib](https://github.com/mmacy/osrlib-python), a Python rules engine, applies every rule, while\nbxapi adds API keys, SQLite storage, one-at-a-time access to each game, and RFC 9457 error\nresponses. Your client application draws the screen and reads the player's input. bxapi rolls the\ndice, applies the rules, stores the game, and returns what happened.\n\n## Base URL\n\nEach bxapi server runs at its own address. The `bxapi` command listens on\n`http://127.0.0.1:8640` unless the server's `BXAPI_HOST` and `BXAPI_PORT` settings specify another\naddress, and the examples in this reference use `http://127.0.0.1:8640`. Every path in this\nreference is relative to the server's address. Every operation except `GET /health` is under `/v1`.\n\n## Play a game\n\n1. `GET /v1/meta` checks your API key and returns your client name, role, and storage usage.\n2. `POST /v1/ability-rolls` rolls six ability scores and lists the classes they qualify for.\n3. `POST /v1/characters` creates a character from the roll and the player's choices. Save the\n   character's `id`.\n4. `GET /v1/adventures` lists the adventures you can play. Every server includes `builtin-barrow`.\n5. `POST /v1/sessions` starts a game of an adventure with a party of stored characters. Save the\n   session's `id`.\n6. `GET /v1/sessions/{session_id}/commands` lists the commands that are legal now.\n7. `POST /v1/sessions/{session_id}/commands` sends one command and returns what happened.\n8. `GET /v1/sessions/{session_id}/view` returns what the players can see, so your client can draw\n   the screen. Pass `include=view` in step 7 to get the view in the command's response instead.\n\nRepeat steps 6 to 8 until `ended` is `true` in a command's response. For a runnable end-to-end\nwalkthrough with shell variables, see [Play a game](https://mmacy.github.io/bxapi/docs/play-a-game/)\nand [`examples/play_barrow.py`](https://github.com/mmacy/bxapi/blob/main/examples/play_barrow.py).\n\n## Authentication\n\nSend an API key as a bearer token in the `Authorization` header: `Authorization: Bearer <key>`.\nWhoever runs the server configures its keys in the `BXAPI_API_KEYS` setting and assigns each key a\nclient name and a role. Every path under `/v1` requires an API key, whereas `GET /health`, `/docs`,\n`/redoc`, and `/openapi.json` require none. A request with no key, or with an unknown key, gets 401\n`unauthorized`.\n\nA server started with no keys and `BXAPI_ALLOW_ANONYMOUS=true` asks for no key. It treats every\ncaller as a referee for the client `local`, and `GET /v1/meta` returns `auth_enabled` set to\n`false`. Such a server answers a request under `/v1` only when the request's `Host` header is\n`localhost`, `127.0.0.1`, or `[::1]`, with or without a port. A request with another host gets 421\n`misdirected_request`.\n\nEach key grants one of two roles:\n\n- `player`: everything a game client needs. In a session, a player sees only what the players may\n  see.\n- `referee`: everything a player may do, plus the referee view, referee events, referee commands,\n  chosen seeds, character and save imports, and full adventure and save documents.\n\nA player request for a referee feature gets 403 `referee_required`, or 403 `referee_command` when a\nplayer sends a referee command.\n\nA key identifies a client application, not a person. Every key for one client reads and changes\nthat client's characters, adventures, sessions, and saves, whereas another client's resources are\nhidden. A request for another client's resource gets the same 404 `not_found` as an id that\ndoesn't exist.\n\n## Conventions\n\n- **Ids.** A stored resource's id is a prefix followed by 22 random URL-safe characters: `rol_` for\n  an ability roll, `chr_` for a character, `adv_` for an adventure, `ses_` for a session, and\n  `sav_` for a save. Built-in adventure ids start with `builtin-`.\n- **Timestamps.** UTC timestamps in RFC 3339 format with whole seconds, such as\n  `2026-11-20T22:01:05Z`.\n- **Lists.** Every list operation except `GET /v1/sessions/{session_id}/events` accepts `limit` (1\n  to 200, default 50) and `offset` (0 to 2^53 - 1, default 0), and returns `items`, `total`,\n  `limit`, and `offset`. Add `limit` to `offset` for the next page, and stop when `offset` plus\n  `limit` is `total` or greater. The server lists stored resources newest first. The session event\n  log (`GET /v1/sessions/{session_id}/events`) uses `after` and `next_after` (`limit` 1 to 500,\n  default 100) per `visibility` instead.\n- **Documents.** A *document* is osrlib's JSON envelope for an adventure, a character, a party, or\n  a save. It is an object with `kind`, `schema_version`, `engine_version`, and `payload`. The\n  server accepts documents whose `schema_version` is at most the `schema_version` that\n  `GET /v1/meta` returns, and refuses newer ones with 409 `version_unsupported`.\n- **Seeds.** osrlib draws every random number from one integer, the *seed* (0 to 2^53 - 1). The\n  stateless operations under `/v1/dice` and `/v1/generate` accept an optional `seed` from any\n  caller and return the seed they used. Sending the same request with the same seed returns the\n  same result on the same osrlib version. For ability rolls, characters, and sessions, only a\n  referee may choose a seed, and the server never returns it to a player.\n- **Unknown fields.** A request body with a field the operation doesn't define gets 422\n  `validation_error`, whereas commands and documents are osrlib models and ignore unknown fields.\n- **osrlib's descriptions.** The schema descriptions for commands, events, views, and rules models\n  come from osrlib. Where an osrlib description mentions a validation check, the server returns 422\n  `validation_error` for a malformed command or request body, and 422 `content_invalid` for an\n  uploaded or imported document.\n- **JSON bodies.** Send a request body as UTF-8 JSON with `Content-Type: application/json` (or an\n  `application/*+json` media type). A non-empty body without a JSON `Content-Type` gets 415\n  `unsupported_media_type`. The server refuses undecodable bytes, integers with more than 4,300\n  digits, `NaN`, `Infinity`, numbers too large for a 64-bit float, strings with half of a UTF-16\n  surrogate pair, or arrays and objects nested more than 100 levels deep, with 400 `bad_request`.\n- **Body size.** A body is at most 65,536 bytes. On the five operations that accept an osrlib\n  document, the limit is the server's `BXAPI_MAX_BODY_BYTES` setting instead (8,388,608 bytes by\n  default): `POST /v1/adventures`, `POST /v1/adventures/validate`, `POST /v1/characters/import`,\n  `POST /v1/saves/import`, and `POST /v1/sessions`. A larger body gets 413 `content_too_large`.\n- **Compression.** Send `Accept-Encoding: gzip`, and the server compresses every response of 1,024\n  bytes or more. Most HTTP clients send the header and decompress the response automatically.\n- **Conditional requests and caching.** Every 200 response to a `GET` includes a weak `ETag`\n  header. Send that `ETag` in `If-None-Match` to check whether your copy is still current: the\n  server answers 304 with no body while the content is unchanged, or 200 with the new content when\n  it has changed. Successful `GET` responses under `/v1/rules` include\n  `Cache-Control: private, max-age=3600`, while other `/v1` `GET` responses include\n  `Cache-Control: private, no-cache`.\n- **HEAD.** Every `GET` operation also answers `HEAD` with the same status and headers and no body.\n- **Idempotency keys.** To retry a `POST` under `/v1` without running it twice, send an\n  `Idempotency-Key` header (1 to 255 printable ASCII characters with no spaces, such as a UUID) on\n  the first request and on every retry. The server stores a 2xx response for 24 hours and returns\n  it with `Idempotent-Replayed: true` on a retry. When a request fails with a problem other than\n  500 `internal_error`, nothing changed and the server releases the key so a retry runs the\n  request again. Keys are scoped to your client.\n- **Request ids.** Every response includes an `X-Request-Id` header, such as\n  `req_Zk3uY0mWq1x8Jr5cTt2aLw`, which the server logs with the request. Send `X-Request-Id` with 1\n  to 128 letters, digits, and `.`, `_`, `~`, or `-` to supply your own id. The server replaces any\n  other value with a generated `req_` id.\n- **Storage.** The server counts the bytes of the documents it stores for your client: ability\n  rolls, characters, adventures, sessions, saves, and stored idempotency responses. `GET /v1/meta`\n  returns the current count and the limit (`BXAPI_MAX_CLIENT_BYTES`, 1,073,741,824 bytes by\n  default, or `null` when disabled). At or above the limit, any request that would store a\n  document gets 507 `storage_full` until you delete something.\n- **Rate limits.** Each client has a token-bucket budget of `BXAPI_RATE_LIMIT_PER_MINUTE` requests\n  per server process (600 per minute by default). You can spend the full budget in a burst and\n  regain tokens steadily. A request over the limit gets 429 `rate_limited` with the seconds to wait\n  in `Retry-After`.\n\n## Refused commands\n\nA command that the B/X rules forbid isn't an HTTP error. `POST /v1/sessions/{session_id}/commands`\nreturns 200 with `accepted` set to `false` and osrlib's `rejections`, and the session doesn't\nchange. An HTTP 4xx or 5xx status means the request itself failed.\n\n## Errors\n\nEvery error response is an RFC 9457 problem document with the media type\n`application/problem+json`. Branch on `code`, which stays stable across releases. `detail` is a\nhuman-readable sentence of at most 1,000 characters. Each operation lists the codes it can return\nand how to handle each one.\n\n```json\n{\n  \"type\": \"about:blank\",\n  \"title\": \"Not Found\",\n  \"status\": 404,\n  \"detail\": \"No session has the id 'ses_nope'.\",\n  \"code\": \"not_found\",\n  \"request_id\": \"req_Zk3uY0mWq1x8Jr5cTt2aLw\",\n  \"resource\": \"session\",\n  \"id\": \"ses_nope\"\n}\n```\n\nEvery problem document includes `type`, `title`, `status`, `detail`, `code`, and `request_id`\n(matching the response's `X-Request-Id` header). Specific codes add extra members:\n\n| Code | Added members |\n| --- | --- |\n| `validation_error` | `errors`: the first 20 parts of the request that failed validation, each with `loc`, the path to the value, `msg`, and `type`. `error_count`: how many parts failed, including any that `errors` leaves out. |\n| `not_found` | `resource`: the kind of resource the request asked for, such as `session`. `id`: the id in the request, or its first 128 characters followed by `...`. |\n| `revision_conflict` and `session_busy` | `revision`: the session's current revision. |\n| `referee_command` | `command_type`: the `command_type` of the referee command a player sent. |\n| `character_invalid` | `rejections`: osrlib's reasons for refusing the character, each with `code` and `params`. When osrlib reports no rejections, `field` and `id` appear instead: the request field that failed and the value of the entry, plus `index` (from 0) when `field` is a list. |\n| `storage_full` | `used_bytes`: the bytes of documents the server stores for your client. `max_bytes`: the most bytes the server stores for one client. |\n\nLater releases may add members, so ignore any member your client doesn't recognize.\n\nFive error codes can succeed when you send the same request again: 409\n`idempotency_key_in_progress`, 429 `rate_limited`, and 503 `database_busy` after waiting the\nseconds in their `Retry-After` headers, 408 `request_timeout` right away, and 409 `session_busy`\nright away unless you passed `expected_revision` (if you did, read the session first). For any\nother code, fix the request before retrying. When no response arrives at all, retry a `POST` with\nthe same `Idempotency-Key`. For a 500 error, report `request_id` to the server's operator.\n",
+  "description": "\nbxapi runs games of the 1981 B/X (Basic/Expert) fantasy adventure game over HTTP.\n[osrlib](https://github.com/mmacy/osrlib-python), a Python rules engine, applies every rule, while\nbxapi adds API keys, SQLite storage, one-at-a-time access to each game, and RFC 9457 error\nresponses. Your client application draws the screen and reads the player's input. bxapi rolls the\ndice, applies the rules, stores the game, and returns what happened.\n\n## Base URL\n\nEach bxapi server runs at its own address. The `bxapi` command listens on\n`http://127.0.0.1:8640` unless the server's `BXAPI_HOST` and `BXAPI_PORT` settings specify another\naddress, and the examples in this reference use `http://127.0.0.1:8640`. Every path in this\nreference is relative to the server's address. Every operation except `GET /health` is under `/v1`.\n\n## Play a game\n\n1. `GET /v1/meta` checks your API key and returns your client name, role, and storage usage.\n2. `POST /v1/ability-rolls` rolls six ability scores and lists the classes they qualify for.\n3. `POST /v1/characters` creates a character from the roll and the player's choices. Save the\n   character's `id`. To show the player the hit points and starting gold first, send the same\n   choices to `POST /v1/ability-rolls/{roll_id}/preview`, which stores nothing.\n4. `GET /v1/adventures` lists the adventures you can play. Every server includes `builtin-barrow`.\n5. `POST /v1/sessions` starts a game of an adventure with a party of stored characters. Save the\n   session's `id`.\n6. `GET /v1/sessions/{session_id}/commands` lists the commands that are legal now.\n7. `POST /v1/sessions/{session_id}/commands` sends one command and returns what happened.\n8. `GET /v1/sessions/{session_id}/view` returns what the players can see, so your client can draw\n   the screen. Pass `include=view` in step 7 to get the view in the command's response instead.\n\nRepeat steps 6 to 8 until `ended` is `true` in a command's response. For a runnable end-to-end\nwalkthrough with shell variables, see [Play a game](https://mmacy.github.io/bxapi/docs/play-a-game/)\nand [`examples/play_barrow.py`](https://github.com/mmacy/bxapi/blob/main/examples/play_barrow.py).\n\n## Authentication\n\nSend an API key as a bearer token in the `Authorization` header: `Authorization: Bearer <key>`.\nWhoever runs the server configures its keys in the `BXAPI_API_KEYS` setting and assigns each key a\nclient name and a role. Every path under `/v1` requires an API key, whereas `GET /health`, `/docs`,\n`/redoc`, and `/openapi.json` require none. A request with no key, or with an unknown key, gets 401\n`unauthorized`.\n\nA server started with no keys and `BXAPI_ALLOW_ANONYMOUS=true` asks for no key. It treats every\ncaller as a referee for the client `local`, and `GET /v1/meta` returns `auth_enabled` set to\n`false`. Such a server answers a request under `/v1` only when the request's `Host` header is\n`localhost`, `127.0.0.1`, or `[::1]`, with or without a port. A request with another host gets 421\n`misdirected_request`.\n\nEach key grants one of two roles:\n\n- `player`: everything a game client needs. In a session, a player sees only what the players may\n  see.\n- `referee`: everything a player may do, plus the referee view, referee events, referee commands,\n  chosen seeds, character and save imports, and full adventure and save documents.\n\nA player request for a referee feature gets 403 `referee_required`, or 403 `referee_command` when a\nplayer sends a referee command.\n\nA key identifies a client application, not a person. Every key for one client reads and changes\nthat client's characters, adventures, sessions, and saves, whereas another client's resources are\nhidden. A request for another client's resource gets the same 404 `not_found` as an id that\ndoesn't exist.\n\n## Conventions\n\n- **Ids.** A stored resource's id is a prefix followed by 22 random URL-safe characters: `rol_` for\n  an ability roll, `chr_` for a character, `adv_` for an adventure, `ses_` for a session, and\n  `sav_` for a save. Built-in adventure ids start with `builtin-`.\n- **Timestamps.** UTC timestamps in RFC 3339 format with whole seconds, such as\n  `2026-11-20T22:01:05Z`.\n- **Lists.** Every list operation except `GET /v1/sessions/{session_id}/events` accepts `limit` (1\n  to 200, default 50) and `offset` (0 to 2^53 - 1, default 0), and returns `items`, `total`,\n  `limit`, and `offset`. Add `limit` to `offset` for the next page, and stop when `offset` plus\n  `limit` is `total` or greater. The server lists stored resources newest first. The session event\n  log (`GET /v1/sessions/{session_id}/events`) uses `after` and `next_after` (`limit` 1 to 500,\n  default 100) per `visibility` instead.\n- **Documents.** A *document* is osrlib's JSON envelope for an adventure, a character, a party, or\n  a save. It is an object with `kind`, `schema_version`, `engine_version`, and `payload`. The\n  server accepts documents whose `schema_version` is at most the `schema_version` that\n  `GET /v1/meta` returns, and refuses newer ones with 409 `version_unsupported`.\n- **Seeds.** osrlib draws every random number from one integer, the *seed* (0 to 2^53 - 1). The\n  stateless operations under `/v1/dice` and `/v1/generate` accept an optional `seed` from any\n  caller and return the seed they used. Sending the same request with the same seed returns the\n  same result on the same osrlib version. For ability rolls, characters, and sessions, only a\n  referee may choose a seed, and the server never returns it to a player.\n- **Unknown fields.** A request body with a field the operation doesn't define gets 422\n  `validation_error`, whereas commands and documents are osrlib models and ignore unknown fields.\n- **osrlib's descriptions.** The schema descriptions for commands, events, views, and rules models\n  come from osrlib. Where an osrlib description mentions a validation check, the server returns 422\n  `validation_error` for a malformed command or request body, and 422 `content_invalid` for an\n  uploaded or imported document.\n- **JSON bodies.** Send a request body as UTF-8 JSON with `Content-Type: application/json` (or an\n  `application/*+json` media type). A non-empty body without a JSON `Content-Type` gets 415\n  `unsupported_media_type`. The server refuses undecodable bytes, integers with more than 4,300\n  digits, `NaN`, `Infinity`, numbers too large for a 64-bit float, strings with half of a UTF-16\n  surrogate pair, or arrays and objects nested more than 100 levels deep, with 400 `bad_request`.\n- **Body size.** A body is at most 65,536 bytes. On the five operations that accept an osrlib\n  document, the limit is the server's `BXAPI_MAX_BODY_BYTES` setting instead (8,388,608 bytes by\n  default): `POST /v1/adventures`, `POST /v1/adventures/validate`, `POST /v1/characters/import`,\n  `POST /v1/saves/import`, and `POST /v1/sessions`. A larger body gets 413 `content_too_large`.\n- **Compression.** Send `Accept-Encoding: gzip`, and the server compresses every response of 1,024\n  bytes or more. Most HTTP clients send the header and decompress the response automatically.\n- **Conditional requests and caching.** Every 200 response to a `GET` includes a weak `ETag`\n  header. Send that `ETag` in `If-None-Match` to check whether your copy is still current: the\n  server answers 304 with no body while the content is unchanged, or 200 with the new content when\n  it has changed. Successful `GET` responses under `/v1/rules` include\n  `Cache-Control: private, max-age=3600`, while other `/v1` `GET` responses include\n  `Cache-Control: private, no-cache`.\n- **HEAD.** Every `GET` operation also answers `HEAD` with the same status and headers and no body.\n- **Idempotency keys.** To retry a `POST` under `/v1` without running it twice, send an\n  `Idempotency-Key` header (1 to 255 printable ASCII characters with no spaces, such as a UUID) on\n  the first request and on every retry. The server stores a 2xx response for 24 hours and returns\n  it with `Idempotent-Replayed: true` on a retry. When a request fails with a problem other than\n  500 `internal_error`, nothing changed and the server releases the key so a retry runs the\n  request again. Keys are scoped to your client.\n- **Request ids.** Every response includes an `X-Request-Id` header, such as\n  `req_Zk3uY0mWq1x8Jr5cTt2aLw`, which the server logs with the request. Send `X-Request-Id` with 1\n  to 128 letters, digits, and `.`, `_`, `~`, or `-` to supply your own id. The server replaces any\n  other value with a generated `req_` id.\n- **Storage.** The server counts the bytes of the documents it stores for your client: ability\n  rolls, characters, adventures, sessions, saves, and stored idempotency responses. `GET /v1/meta`\n  returns the current count and the limit (`BXAPI_MAX_CLIENT_BYTES`, 1,073,741,824 bytes by\n  default, or `null` when disabled). At or above the limit, any request that would store a\n  document gets 507 `storage_full` until you delete something.\n- **Rate limits.** Each client has a token-bucket budget of `BXAPI_RATE_LIMIT_PER_MINUTE` requests\n  per server process (600 per minute by default). You can spend the full budget in a burst and\n  regain tokens steadily. A request over the limit gets 429 `rate_limited` with the seconds to wait\n  in `Retry-After`.\n\n## Refused commands\n\nA command that the B/X rules forbid isn't an HTTP error. `POST /v1/sessions/{session_id}/commands`\nreturns 200 with `accepted` set to `false` and osrlib's `rejections`, and the session doesn't\nchange. An HTTP 4xx or 5xx status means the request itself failed.\n\n## Errors\n\nEvery error response is an RFC 9457 problem document with the media type\n`application/problem+json`. Branch on `code`, which stays stable across releases. `detail` is a\nhuman-readable sentence of at most 1,000 characters. Each operation lists the codes it can return\nand how to handle each one.\n\n```json\n{\n  \"type\": \"about:blank\",\n  \"title\": \"Not Found\",\n  \"status\": 404,\n  \"detail\": \"No session has the id 'ses_nope'.\",\n  \"code\": \"not_found\",\n  \"request_id\": \"req_Zk3uY0mWq1x8Jr5cTt2aLw\",\n  \"resource\": \"session\",\n  \"id\": \"ses_nope\"\n}\n```\n\nEvery problem document includes `type`, `title`, `status`, `detail`, `code`, and `request_id`\n(matching the response's `X-Request-Id` header). Specific codes add extra members:\n\n| Code | Added members |\n| --- | --- |\n| `validation_error` | `errors`: the first 20 parts of the request that failed validation, each with `loc`, the path to the value, `msg`, and `type`. `error_count`: how many parts failed, including any that `errors` leaves out. |\n| `not_found` | `resource`: the kind of resource the request asked for, such as `session`. `id`: the id in the request, or its first 128 characters followed by `...`. |\n| `revision_conflict` and `session_busy` | `revision`: the session's current revision. |\n| `referee_command` | `command_type`: the `command_type` of the referee command a player sent. |\n| `character_invalid` | `rejections`: osrlib's reasons for refusing the character, each with `code` and `params`. When osrlib reports no rejections, `field` and `id` appear instead: the request field that failed and the value of the entry, plus `index` (from 0) when `field` is a list. |\n| `storage_full` | `used_bytes`: the bytes of documents the server stores for your client. `max_bytes`: the most bytes the server stores for one client. |\n\nLater releases may add members, so ignore any member your client doesn't recognize.\n\nFive error codes can succeed when you send the same request again: 409\n`idempotency_key_in_progress`, 429 `rate_limited`, and 503 `database_busy` after waiting the\nseconds in their `Retry-After` headers, 408 `request_timeout` right away, and 409 `session_busy`\nright away unless you passed `expected_revision` (if you did, read the session first). For any\nother code, fix the request before retrying. When no response arrives at all, retry a `POST` with\nthe same `Idempotency-Key`. For a 500 error, report `request_id` to the server's operator.\n",
   "license": {
    "name": "MIT",
    "identifier": "MIT"
@@ -3814,7 +3814,7 @@
      "generate"
     ],
     "summary": "Roll a character without storing it",
-    "description": "Roll an unstored first-level character with osrlib from the same choices `POST /v1/characters` accepts.\n\nosrlib rolls the six ability scores and applies your class, adjustment, spell, language, and equipment choices in\norder, returning the `character`, `derived` stats, and every individual die in `rolls` (`ability_rolls`,\n`hit_point_roll`, and `gold_roll`). Both `player` and `referee` keys may pass `seed` to reproduce a character, or\nomit it to draw a new seed.\n\nBecause the character isn't stored, it has `id` set to `null` and cannot be passed in `character_ids` to\n`POST /v1/sessions`. To store a character for play, call `POST /v1/characters` instead.",
+    "description": "Roll an unstored first-level character with osrlib from the same choices `POST /v1/characters` accepts.\n\nosrlib rolls the six ability scores and applies your class, adjustment, spell, language, and equipment choices in\norder, returning the `character`, `derived` stats, and every individual die in `rolls` (`ability_rolls`,\n`hit_point_roll`, and `gold_roll`). Both `player` and `referee` keys may pass `seed` to reproduce a character, or\nomit it to draw a new seed.\n\nBecause the character isn't stored, it has `id` set to `null` and cannot be passed in `character_ids` to\n`POST /v1/sessions`. To store a character for play, call `POST /v1/characters` instead. This operation rolls new\nscores and takes no `ability_roll_id`. To see the character a stored ability roll would create, call\n`POST /v1/ability-rolls/{roll_id}/preview`.",
     "operationId": "generate_character",
     "requestBody": {
      "content": {
@@ -5129,7 +5129,7 @@
      "characters"
     ],
     "summary": "Roll ability scores",
-    "description": "Roll six 3d6 ability scores with osrlib, store the roll, and return the scores and eligible classes.\n\nDisplay `scores` and `eligible_class_ids` to the player, then pass `id` as `ability_roll_id` to\n`POST /v1/characters` along with the player's class, alignment, and equipment choices. The request body is\noptional: players send no body, whereas a referee may pass `seed`.\n\nThe server stores the roll's seed privately and derives the character's hit points and starting gold from that\nsame seed when `POST /v1/characters` consumes the roll. Retrying `POST /v1/characters` after a 422\n`character_invalid` error therefore keeps the exact same rolls.\n\nAbility rolls cannot be deleted (each uses at most 55 bytes toward `storage.used_bytes`), and the server places\nno limit on how many rolls a client creates. To roll scores and create the character in one step, omit\n`ability_roll_id` on `POST /v1/characters`.",
+    "description": "Roll six 3d6 ability scores with osrlib, store the roll, and return the scores and eligible classes.\n\nDisplay `scores` and `eligible_class_ids` to the player, then pass `id` as `ability_roll_id` to\n`POST /v1/characters` along with the player's class, alignment, and equipment choices. The request body is\noptional: players send no body, whereas a referee may pass `seed`.\n\nThe server stores the roll's seed privately and derives the character's hit points and starting gold from that\nsame seed when `POST /v1/characters` consumes the roll. Retrying `POST /v1/characters` after a 422\n`character_invalid` error therefore keeps the exact same rolls. To show the player those hit points and that gold\nbefore you create the character, call `POST /v1/ability-rolls/{roll_id}/preview`.\n\nAbility rolls cannot be deleted (each uses at most 55 bytes toward `storage.used_bytes`), and the server places\nno limit on how many rolls a client creates. To roll scores and create the character in one step, omit\n`ability_roll_id` on `POST /v1/characters`.",
     "operationId": "create_ability_roll",
     "requestBody": {
      "content": {
@@ -5588,13 +5588,302 @@
     }
    }
   },
+  "/v1/ability-rolls/{roll_id}/preview": {
+   "post": {
+    "tags": [
+     "characters"
+    ],
+    "summary": "Preview a character from an ability roll",
+    "description": "Return the character that `POST /v1/characters` would create from this ability roll and these choices.\n\nThe response has the `character`, its `derived` stats, and every die osrlib rolled for it in `rolls`: the dice\nbehind the roll's scores in `ability_rolls`, the hit point roll in `hit_point_roll`, and the starting gold roll in\n`gold_roll`. Use it to show a player their hit points and starting gold before they shop, and before the character\nexists. The roll stays unused. Without an `Idempotency-Key`, the server stores nothing and `storage.used_bytes`\ndoesn't change. With one, the server stores the response for the key, as it does for every `POST`.\n\nSend the choices `POST /v1/characters` accepts, without `ability_roll_id`, because the path names the roll, and\nwithout `seed`. The preview and the creation run the same steps on the roll's private seed, so:\n\n- Every preview of one roll with the same choices returns the same response.\n- `POST /v1/characters` with this roll and the same choices stores a character equal to `character`, with the\n  same hit points, gold, and inventory.\n- A choice that `POST /v1/characters` refuses gets the same 422 `character_invalid` here, with the same members,\n  and the roll stays unused.\n\nFor one roll, `hit_point_roll` and `gold_roll` change only when `class_id` or `hp_reroll_at_first_level` changes.\nThe `adjustment`, `starting_spell_ids`, `extra_languages`, `name`, `alignment`, `purchases`, and `equip_item_ids`\nchange neither roll. So once the player has chosen a class and the reroll option, you can show the hit points and\ngold and let the player make every other choice without the dice changing. A different class or reroll option can\nchange the gold as well as the hit points.\n\nThe response has no `seed`, because the roll's seed stays private, and no `id`, because the server stores no\ncharacter. `character.id` is `null`. A `player` key and a `referee` key can both call this operation.",
+    "operationId": "preview_character",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "roll_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "description": "Ability roll `id` (`rol_` followed by 22 characters), from `POST /v1/ability-rolls`.",
+       "title": "Roll Id"
+      },
+      "description": "Ability roll `id` (`rol_` followed by 22 characters), from `POST /v1/ability-rolls`."
+     },
+     {
+      "name": "Idempotency-Key",
+      "in": "header",
+      "required": false,
+      "description": "Client-chosen key (1 to 255 printable ASCII characters with no spaces, such as a UUID) that deduplicates retries of this `POST` for 24 hours. Resending the identical request with the same key returns the stored 2xx response with `Idempotent-Replayed: true` instead of running the operation again.",
+      "schema": {
+       "type": "string",
+       "minLength": 1,
+       "maxLength": 255,
+       "pattern": "^[!-~]+$"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/CharacterPreviewRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "The character `POST /v1/characters` would store, its derived stats, and its dice.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/CharacterPreview"
+        }
+       }
+      },
+      "headers": {
+       "Idempotent-Replayed": {
+        "$ref": "#/components/headers/Idempotent-Replayed"
+       },
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "400": {
+      "description": "- `bad_request`: The body doesn't decode as text, or contains a disallowed value: an integer with more than 4,300 digits, `NaN`, `Infinity`, a number too large for a 64-bit float, a string with half of a UTF-16 surrogate pair, or arrays and objects nested more than 100 levels deep. Check `detail` and send UTF-8 JSON without those values. Retrying the same body fails.",
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      },
+      "headers": {
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "401": {
+      "description": "- `unauthorized`: The request has no API key or has an unknown key. Send `Authorization: Bearer <key>` with a key configured on the server. Retrying the same request fails.",
+      "headers": {
+       "WWW-Authenticate": {
+        "description": "`Bearer`, the authentication scheme the server accepts.",
+        "schema": {
+         "type": "string"
+        }
+       },
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      },
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "- `not_found`: Your client has no ability roll with this id, including a roll that another client created. `POST /v1/ability-rolls` creates one.",
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      },
+      "headers": {
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "408": {
+      "description": "- `request_timeout`: The full request body didn't arrive within `BXAPI_BODY_TIMEOUT_SECONDS` (30 seconds by default). Retry the request.",
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      },
+      "headers": {
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "409": {
+      "description": "- `ability_roll_used`: A character was already created from this roll, so `POST /v1/characters` would refuse it too. Create a new roll with `POST /v1/ability-rolls`.\n- `idempotency_key_in_progress`: The first request with this `Idempotency-Key` is still running. Wait the 1 second in the `Retry-After` header and retry.\n- `idempotency_key_interrupted`: The server failed or stopped while handling the first request with this `Idempotency-Key` and has no record of whether it took effect. Inspect the target resource first. If the change didn't take effect, send the request again with a new key.",
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      },
+      "headers": {
+       "Retry-After": {
+        "description": "With `idempotency_key_in_progress`, whole seconds to wait before retrying: `1`.",
+        "schema": {
+         "type": "integer"
+        }
+       },
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "413": {
+      "description": "- `content_too_large`: The request body exceeds 65,536 bytes (the limit for operations that take no document), or exceeds `BXAPI_MAX_BODY_BYTES` when set lower. Send a smaller body. Retrying the same body fails.",
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      },
+      "headers": {
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "415": {
+      "description": "- `unsupported_media_type`: The request includes a non-empty body without a JSON `Content-Type` header. Send `Content-Type: application/json`.",
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      },
+      "headers": {
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "421": {
+      "description": "- `misdirected_request`: The server runs without API keys, and the request's `Host` header isn't `localhost`, `127.0.0.1`, or `[::1]`. Call the server by one of those names, or configure API keys on the server. A server with API keys never returns this code.",
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      },
+      "headers": {
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "422": {
+      "description": "- `validation_error`: The request doesn't match the operation's schema. A required field is missing, a value has the wrong type or is out of range, or the body isn't valid JSON. `errors` lists the first 20 problems, and the `loc` of each is the path to the value. Fix the request before you send it again. A body with `seed` or `ability_roll_id` returns this code too, as does any member `POST /v1/characters` doesn't accept.\n- `character_invalid`: A choice violates a B/X creation rule, such as choosing a class whose minimum scores the character misses, omitting a magic-user's starting spell, or spending more than starting gold. `rejections` lists osrlib's reasons (`code` and `params`). When an unknown `class_id` or `item_id` is sent, or `equip_item_ids` names an unpurchased item, the problem includes `field`, `id`, and `index` (for list fields) instead of `rejections`. Adjust the choice and retry. The roll stays unused, and `POST /v1/characters` refuses the same choices with the same problem.\n- `idempotency_key_reused`: Your client already sent this `Idempotency-Key` with a different method, path, query, body, or role. Generate a new key for each distinct request.",
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      },
+      "headers": {
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "429": {
+      "description": "- `rate_limited`: Your client exceeded the per-minute request budget (`BXAPI_RATE_LIMIT_PER_MINUTE`, 600 by default). Wait the seconds in the `Retry-After` header and retry. Requests without a valid API key share a separate budget and receive 429 instead of 401 `unauthorized` when that budget is exhausted.",
+      "headers": {
+       "Retry-After": {
+        "description": "Whole seconds to wait before retrying, at least `1`.",
+        "schema": {
+         "type": "integer"
+        }
+       },
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      },
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "- `internal_error`: The server failed because of a bug. The response says nothing about the cause, and the server logs it. Report the request to the server's operator.",
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      },
+      "headers": {
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "503": {
+      "description": "- `database_busy`: Another process held the SQLite write lock for more than 5 seconds. Wait the 1 second in the `Retry-After` header and retry.",
+      "headers": {
+       "Retry-After": {
+        "description": "Whole seconds to wait before retrying: `1`.",
+        "schema": {
+         "type": "integer"
+        }
+       },
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      },
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      }
+     },
+     "507": {
+      "description": "- `storage_full`: Stored documents for your client have reached `BXAPI_MAX_CLIENT_BYTES` (1,073,741,824 bytes by default). `used_bytes` and `max_bytes` report your current usage and limit, and the request stored nothing. Delete unused sessions, saves, adventures, or characters, then retry. Stateless operations such as dice rolls return this code only when `Idempotency-Key` is set, because storing the replay response counts toward the limit.",
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      },
+      "headers": {
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     }
+    }
+   }
+  },
   "/v1/characters": {
    "post": {
     "tags": [
      "characters"
     ],
     "summary": "Create a character",
-    "description": "Create and store a first-level character from the player's choices.\n\nPass the returned `id` in `character_ids` to `POST /v1/sessions` to start a game. Sessions copy their party\nmembers at start, so play never mutates the stored character and one character can enter any number of sessions.\n\nWhen `ability_roll_id` (from `POST /v1/ability-rolls`) is provided, the character uses those scores, draws hit\npoints and starting gold from that roll's seed, and marks the roll `used` in the same transaction. Without\n`ability_roll_id`, the server rolls ability scores first. osrlib then validates and applies choices in order:\nclass requirements, ability `adjustment`, `starting_spell_ids`, hit point roll, `extra_languages`, starting gold\nroll, `purchases`, and `equip_item_ids`. Creation stops at the first invalid step with 422 `character_invalid`\nand stores nothing.\n\nLook up catalog ids via `GET /v1/rules/classes`, `GET /v1/rules/spells`, `GET /v1/rules/languages`, and\n`GET /v1/rules/equipment`. To preview rolled dice without storing anything, call `POST /v1/generate/character`.",
+    "description": "Create and store a first-level character from the player's choices.\n\nPass the returned `id` in `character_ids` to `POST /v1/sessions` to start a game. Sessions copy their party\nmembers at start, so play never mutates the stored character and one character can enter any number of sessions.\n\nWhen `ability_roll_id` (from `POST /v1/ability-rolls`) is provided, the character uses those scores, draws hit\npoints and starting gold from that roll's seed, and marks the roll `used` in the same transaction. Without\n`ability_roll_id`, the server rolls ability scores first. osrlib then validates and applies choices in order:\nclass requirements, ability `adjustment`, `starting_spell_ids`, hit point roll, `extra_languages`, starting gold\nroll, `purchases`, and `equip_item_ids`. Creation stops at the first invalid step with 422 `character_invalid`\nand stores nothing.\n\nLook up catalog ids via `GET /v1/rules/classes`, `GET /v1/rules/spells`, `GET /v1/rules/languages`, and\n`GET /v1/rules/equipment`. To show the player the hit points and starting gold of an ability roll before you\ncreate the character, call `POST /v1/ability-rolls/{roll_id}/preview` with the same choices. To roll a character\nfrom new scores without storing anything, call `POST /v1/generate/character`.",
     "operationId": "create_character",
     "security": [
      {
@@ -12436,7 +12725,7 @@
      "id": {
       "type": "string",
       "title": "Id",
-      "description": "Ability roll identifier (`rol_` followed by 22 characters). Pass as `ability_roll_id` to\n`POST /v1/characters`."
+      "description": "Ability roll identifier (`rol_` followed by 22 characters). Pass as `ability_roll_id` to\n`POST /v1/characters`, or as `roll_id` to `POST /v1/ability-rolls/{roll_id}/preview`."
      },
      "scores": {
       "additionalProperties": {
@@ -14565,6 +14854,113 @@
     "title": "CharacterLeveledUpEvent",
     "description": "A character crossed a threshold and gained a level.\n\nEmitted right after that member's\n`XpAwardedEvent`, for whichever award crossed\nthe threshold. A character gains at most one level per award."
    },
+   "CharacterPreview": {
+    "properties": {
+     "character": {
+      "$ref": "#/components/schemas/Character",
+      "description": "osrlib `Character` model that `POST /v1/characters` stores for the same roll and choices, with\n`id` set to `null`."
+     },
+     "derived": {
+      "$ref": "#/components/schemas/DerivedValues",
+      "description": "Combat, saving throw, modifier, and language values computed by osrlib from `character`."
+     },
+     "rolls": {
+      "$ref": "#/components/schemas/CreationRolls",
+      "description": "Individual dice rolled for the roll's ability scores, the hit points, and the starting gold."
+     }
+    },
+    "type": "object",
+    "required": [
+     "character",
+     "derived",
+     "rolls"
+    ],
+    "title": "CharacterPreview",
+    "description": "Unstored first-level character that `POST /v1/characters` would create from an ability roll, with its dice."
+   },
+   "CharacterPreviewRequest": {
+    "properties": {
+     "name": {
+      "type": "string",
+      "maxLength": 100,
+      "minLength": 1,
+      "pattern": "^[^\\u0000-\\u001f\\u007f-\\u009f]*$",
+      "title": "Name",
+      "description": "Character name, 1 to 100 characters, without control characters such as tabs or newlines."
+     },
+     "class_id": {
+      "type": "string",
+      "title": "Class Id",
+      "description": "Character class `id` from `GET /v1/rules/classes`, such as `fighter`. Must meet the class's\nability score requirements (`eligible_class_ids` on `POST /v1/ability-rolls`)."
+     },
+     "alignment": {
+      "$ref": "#/components/schemas/Alignment",
+      "description": "Character alignment: `lawful`, `neutral`, or `chaotic`."
+     },
+     "adjustment": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/AbilityAdjustment"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Optional point trade between ability scores before rolling hit points, as osrlib's\n`AbilityAdjustment`. Map abilities to lower in `lowered` and abilities to raise in `raised`\nusing keys `str`, `int`, `wis`, `dex`, `con`, and `cha`. If osrlib refuses the trade, creation\nfails with 422 `character_invalid` and `rejections`. Omit or set to `null` to keep the rolled\nscores."
+     },
+     "starting_spell_ids": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Starting Spell Ids",
+      "description": "First-level spell `id` values from `GET /v1/rules/spells` for an arcane caster's starting\nspell book. A first-level `magic_user` or `elf` requires exactly one first-level `magic_user`\nspell. Leave empty (`[]`) for every other class.",
+      "default": []
+     },
+     "extra_languages": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Extra Languages",
+      "description": "Extra language `id` values from `GET /v1/rules/languages` (entries with `choosable` set to\n`true`), up to the bonus languages granted by the character's adjusted Intelligence score.",
+      "default": []
+     },
+     "purchases": {
+      "items": {
+       "$ref": "#/components/schemas/Purchase"
+      },
+      "type": "array",
+      "title": "Purchases",
+      "description": "Starting equipment bought in list order from rolled starting gold (3d6 x 10 gp). To show the\nplayer their gold before they shop, call `POST /v1/ability-rolls/{roll_id}/preview` with the\nsame roll, class, and `hp_reroll_at_first_level`, and read `rolls.gold_roll.total`. The\npurchases don't change the gold roll.",
+      "default": []
+     },
+     "equip_item_ids": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Equip Item Ids",
+      "description": "Purchased item `id` values to wear or wield, applied in list order. Each entry equips one\npurchased stack from `purchases` and must be permitted for `class_id`.",
+      "default": []
+     },
+     "hp_reroll_at_first_level": {
+      "type": "boolean",
+      "title": "Hp Reroll At First Level",
+      "description": "Whether to reroll a first-level hit die result of 1 or 2. Defaults to `false`.",
+      "default": false
+     }
+    },
+    "additionalProperties": false,
+    "type": "object",
+    "required": [
+     "name",
+     "class_id",
+     "alignment"
+    ],
+    "title": "CharacterPreviewRequest",
+    "description": "Choices for previewing the character `POST /v1/characters` would create from an ability roll.\n\nThe body has every member `POST /v1/characters` accepts except `ability_roll_id`, because the\npath names the roll, and `seed`, because the roll's seed decides the dice."
+   },
    "CharacterRequest": {
     "properties": {
      "name": {
@@ -14619,7 +15015,7 @@
       },
       "type": "array",
       "title": "Purchases",
-      "description": "Starting equipment bought in list order from rolled starting gold (3d6 x 10 gp). Because the\nserver rolls gold during this same request, leave `purchases` empty if you want the player to\nsee their gold first, then send `purchase_equipment` and `equip_item` commands to a session in\n`town` mode.",
+      "description": "Starting equipment bought in list order from rolled starting gold (3d6 x 10 gp). To show the\nplayer their gold before they shop, call `POST /v1/ability-rolls/{roll_id}/preview` with the\nsame roll, class, and `hp_reroll_at_first_level`, and read `rolls.gold_roll.total`. The\npurchases don't change the gold roll.",
       "default": []
      },
      "equip_item_ids": {
@@ -20511,7 +20907,7 @@
       },
       "type": "array",
       "title": "Purchases",
-      "description": "Starting equipment bought in list order from rolled starting gold (3d6 x 10 gp). Because the\nserver rolls gold during this same request, leave `purchases` empty if you want the player to\nsee their gold first, then send `purchase_equipment` and `equip_item` commands to a session in\n`town` mode.",
+      "description": "Starting equipment bought in list order from rolled starting gold (3d6 x 10 gp). To show the\nplayer their gold before they shop, call `POST /v1/ability-rolls/{roll_id}/preview` with the\nsame roll, class, and `hp_reroll_at_first_level`, and read `rolls.gold_roll.total`. The\npurchases don't change the gold roll.",
       "default": []
      },
      "equip_item_ids": {
@@ -33581,7 +33977,7 @@
   },
   {
    "name": "characters",
-   "description": "\nCreate, import, inspect, and delete stored player characters for starting game sessions. Each\nsession copies its party members when it starts, so play never modifies a stored character and one\nstored character can start any number of sessions.\n\nIn B/X, players roll six ability scores before choosing a class. An *ability roll* stores those\nsix scores along with a *seed* (the integer that determines osrlib's random rolls), which the\nserver never reveals to players. Creating a character from that roll derives hit points and\nstarting gold from the same seed, so retrying after an invalid choice keeps the same rolls.\n\n1. `POST /v1/ability-rolls` rolls and stores six scores, returning `id`, `scores`, and\n   `eligible_class_ids`. `GET /v1/ability-rolls/{roll_id}` reads a stored roll again.\n2. `POST /v1/characters` creates and stores a first-level character from `ability_roll_id` (or\n   freshly rolled scores) and the player's choices.\n3. `POST /v1/sessions` starts a game session with the character's `id` in `character_ids`.\n\n`GET /v1/characters` lists your client's stored characters, `GET /v1/characters/{character_id}`\nreturns one character with its derived stats, and `DELETE /v1/characters/{character_id}` deletes\none without affecting active sessions. A referee can import an osrlib *character document* (`kind`,\n`schema_version`, `engine_version`, and `payload`) with `POST /v1/characters/import`. To roll a\ncharacter without storing it, call `POST /v1/generate/character`.\n"
+   "description": "\nCreate, import, inspect, and delete stored player characters for starting game sessions. Each\nsession copies its party members when it starts, so play never modifies a stored character and one\nstored character can start any number of sessions.\n\nIn B/X, players roll six ability scores before choosing a class. An *ability roll* stores those\nsix scores along with a *seed* (the integer that determines osrlib's random rolls), which the\nserver never reveals to players. Creating a character from that roll derives hit points and\nstarting gold from the same seed, so retrying after an invalid choice keeps the same rolls.\n\n1. `POST /v1/ability-rolls` rolls and stores six scores, returning `id`, `scores`, and\n   `eligible_class_ids`. `GET /v1/ability-rolls/{roll_id}` reads a stored roll again.\n2. `POST /v1/ability-rolls/{roll_id}/preview` returns the character, hit points, and starting\n   gold that the player's choices would give, without storing anything or using the roll. Call it\n   as often as the player changes a choice.\n3. `POST /v1/characters` creates and stores a first-level character from `ability_roll_id` (or\n   freshly rolled scores) and the player's choices.\n4. `POST /v1/sessions` starts a game session with the character's `id` in `character_ids`.\n\n`GET /v1/characters` lists your client's stored characters, `GET /v1/characters/{character_id}`\nreturns one character with its derived stats, and `DELETE /v1/characters/{character_id}` deletes\none without affecting active sessions. A referee can import an osrlib *character document* (`kind`,\n`schema_version`, `engine_version`, and `payload`) with `POST /v1/characters/import`. To roll a\ncharacter from new scores without storing it, call `POST /v1/generate/character`.\n"
   },
   {
    "name": "adventures",

@@ -1,9 +1,11 @@
 /**
  * The character wizard: one character of each class, an ability trade, extra languages, an arcane caster's first
- * spell, shopping with the rolled gold, a refusal for overspending, and a draft that survives closing the dialog.
+ * spell, rolling hit points and gold, shopping with the rolled gold, a refusal for overspending, a draft that
+ * survives closing the dialog, rolls that survive a reload, and a class that rolling hit points fixes.
  */
 import { expect, test } from './support/fixtures';
 import {
+  CLASS_CARDS,
   ROLL_SEEDS,
   UNQUALIFIED_HALFLING_SEED,
   addToCart,
@@ -15,6 +17,7 @@ import {
   next,
   openWizard,
   rollFor,
+  rollHitPointsAndGold,
   wizard,
   type WizardClass,
 } from './support/wizard';
@@ -72,8 +75,8 @@ test.describe('character wizard', () => {
       }
       await next(dialog);
 
-      await expect(dialog.getByRole('heading', { name: 'Outfit', level: 3 })).toBeVisible();
-      await expect(cart(dialog)).toContainText(/0 gp spent, \d+ gp left/);
+      const rolled = await rollHitPointsAndGold(dialog);
+      await expect(cart(dialog)).toContainText(`0 gp spent, ${rolled.gold} gp left`);
       await addToCart(dialog, [WEAPONS[classId]]);
       await expect(cart(dialog)).toContainText('Your character can afford and use this equipment.');
       await next(dialog);
@@ -86,6 +89,8 @@ test.describe('character wizard', () => {
       });
       const stored = (await sam.client.listCharacters()).items.find((item) => item.name === NAMES[classId]);
       expect(stored?.class_id).toBe(classId);
+      // The character keeps the hit points the player rolled.
+      expect(stored?.max_hp).toBe(rolled.hitPoints);
       expect((await sam.client.getTable(table.id)).roster.map((entry) => entry.name)).toEqual([
         NAMES[classId],
       ]);
@@ -122,6 +127,7 @@ test.describe('character wizard', () => {
 
     await fillIdentity(dialog, 'Flarg');
     await next(dialog);
+    expect((await rollHitPointsAndGold(dialog)).gold).toBe(110);
 
     // Two suits of plate mail cost more than the 110 gp this roll gives a fighter.
     const shop = cart(dialog);
@@ -285,6 +291,7 @@ test.describe('character wizard', () => {
     await spells.getByRole('button', { name: /^Magic Missile / }).click();
     await expect(spells).toContainText('1 of 1 chosen');
     await next(dialog);
+    await rollHitPointsAndGold(dialog);
 
     // The class decides what the character may wear. The wizard puts the chainmail on, the rules engine refuses,
     // and the wizard takes it off again with a note.
@@ -359,5 +366,88 @@ test.describe('character wizard', () => {
       .getByRole('button', { name: /Start over/ })
       .click();
     await expect(dialog.getByRole('button', { name: 'Roll ability scores' })).toBeVisible();
+  });
+
+  test('the rolled hit points and gold survive a reload, and the wizard never offers them again', async ({
+    crew,
+  }) => {
+    const sam = await crew.person('Sam');
+    const table = await sam.client.createTable({ name: 'Rolls' });
+    await sam.seedAbilityRolls([ROLL_SEEDS.thief]);
+    await sam.page.goto(`/tables/${table.id}`);
+    let dialog = await openWizard(sam.page);
+    await rollFor(dialog, 'thief');
+    await next(dialog);
+    await chooseClass(dialog, 'thief');
+    await dialog.getByRole('button', { name: 'Skip this step' }).click();
+    await fillIdentity(dialog, 'Tinks', 'Chaotic');
+    await next(dialog);
+
+    const rollHitPoints = dialog.getByRole('button', { name: 'Roll hit points' });
+    const rollGold = dialog.getByRole('button', { name: 'Roll starting gold' });
+    // Gold waits for the hit points, and Continue waits for both.
+    await expect(rollGold).toBeDisabled();
+    await expect(dialog.getByRole('contentinfo').getByRole('button', { name: 'Continue' })).toHaveCount(0);
+    await rollHitPoints.click();
+    const hp = dialog.getByText(/You start with \d+ hit points?\./);
+    await expect(hp).toBeVisible();
+    await rollGold.click();
+    const gold = dialog.getByText(/You start with \d+ gold pieces? to spend on equipment\./);
+    await expect(gold).toBeVisible();
+    const hpText = (await hp.textContent()) ?? '';
+    const goldText = (await gold.textContent()) ?? '';
+
+    await sam.page.reload();
+    dialog = await openWizard(sam.page);
+    await expect(dialog.getByRole('heading', { name: 'Hit points and gold', level: 3 })).toBeVisible();
+    await expect(dialog.getByText(hpText)).toBeVisible();
+    await expect(dialog.getByText(goldText)).toBeVisible();
+    await expect(rollHitPoints).toHaveCount(0);
+    await expect(rollGold).toHaveCount(0);
+
+    await next(dialog);
+    const gp = /(\d+) gold piece/.exec(goldText)?.[1] ?? '';
+    await expect(cart(dialog)).toContainText(`0 gp spent, ${gp} gp left`);
+  });
+
+  test('rolling hit points fixes the class, and going back shows why it can’t change', async ({ crew }) => {
+    const sam = await crew.person('Sam');
+    const table = await sam.client.createTable({ name: 'Fixed class' });
+    await sam.seedAbilityRolls([ROLL_SEEDS.fighter]);
+    await sam.page.goto(`/tables/${table.id}`);
+    const dialog = await openWizard(sam.page);
+    await rollFor(dialog, 'fighter');
+    await next(dialog);
+    await chooseClass(dialog, 'fighter');
+    await dialog.getByRole('button', { name: 'Skip this step' }).click();
+    await fillIdentity(dialog, 'Flarg');
+    await next(dialog);
+
+    // Before the roll, the step says what rolling fixes.
+    await expect(dialog).toContainText('Rolling hit points fixes your class as a fighter');
+    await dialog.getByRole('button', { name: 'Roll hit points' }).click();
+    const hp = dialog.getByText(/You start with \d+ hit points?\./);
+    const hpText = (await hp.textContent()) ?? '';
+
+    await dialog.getByRole('button', { name: /^Choose a class \(complete\)/ }).click();
+    await expect(dialog.getByText('Your class is fixed as a fighter')).toBeVisible();
+    await expect(dialog).toContainText(
+      'To play another class, select Start over and roll new ability scores.',
+    );
+    await expect(dialog.getByRole('button', { name: CLASS_CARDS.cleric, exact: true })).toBeDisabled();
+    await expect(dialog.getByRole('button', { name: CLASS_CARDS.fighter, exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await expect(dialog.getByRole('checkbox', { name: 'Reroll a first hit die of 1 or 2' })).toBeDisabled();
+
+    // The other choices stay free, and the hit points wait where the player left them.
+    await next(dialog);
+    await dialog.getByRole('button', { name: 'Skip this step' }).click();
+    await fillIdentity(dialog, 'Flarg the Second');
+    await next(dialog);
+    await expect(dialog.getByText(hpText)).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Roll hit points' })).toHaveCount(0);
+    await expect(dialog.getByRole('button', { name: 'Roll starting gold' })).toBeEnabled();
   });
 });

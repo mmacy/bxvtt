@@ -1,10 +1,16 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { AbilityRoll, CharacterSummary, StoredCharacter, User } from '@bxvtt/shared/protocol';
-import { AbilityRollRequest, CharacterCheckRequest, CharacterRequest } from '@bxvtt/shared/protocol';
+import {
+  AbilityRollRequest,
+  CharacterCheckRequest,
+  CharacterRequest,
+  StartingRollRequest,
+} from '@bxvtt/shared/protocol';
 import { rateLimited } from './auth';
 import { callBxapi } from './bxapi';
 import { CharacterChecker } from './character-check';
+import { StartingRollKeeper } from './starting-rolls';
 import type { Context } from './context';
 import type { Row } from './db';
 import { num, str } from './db';
@@ -131,10 +137,39 @@ export function registerCharacterRoutes(app: FastifyInstance, ctx: Context): voi
     return callBxapi(() => bxapi.post('/v1/generate/character', choices, { requestId: request.id }));
   });
 
-  const checker = new CharacterChecker(ctx);
+  const startingRolls = new StartingRollKeeper(ctx);
+  const checker = new CharacterChecker(startingRolls);
+
+  /** Takes one bxapi preview from the user's limit for character checks and starting rolls. */
+  const takePreview = (userId: string, detail: string) => {
+    const retry = ctx.limits.characterChecks.take(userId);
+    if (retry > 0) throw rateLimited(detail, retry);
+  };
+
+  app.get('/api/ability-rolls/:rollId/starting-rolls', async (request) => {
+    const user = ctx.auth.user(request);
+    const { rollId } = RollParams.parse(request.params);
+    return startingRolls.status(rollId, user.id);
+  });
+
+  app.post('/api/ability-rolls/:rollId/hit-points', async (request) => {
+    const user = ctx.auth.user(request);
+    const { rollId } = RollParams.parse(request.params);
+    const body = parseBody(StartingRollRequest, request);
+    takePreview(user.id, 'You are rolling too quickly. Wait a moment and try again.');
+    return startingRolls.rollHitPoints(rollId, user.id, body, request.id);
+  });
+
+  app.post('/api/ability-rolls/:rollId/gold', async (request) => {
+    const user = ctx.auth.user(request);
+    const { rollId } = RollParams.parse(request.params);
+    const body = parseBody(StartingRollRequest, request);
+    takePreview(user.id, 'You are rolling too quickly. Wait a moment and try again.');
+    return startingRolls.rollGold(rollId, user.id, body, request.id);
+  });
 
   // Checking choices stores nothing, but it counts as a change for the per-user write limit like every POST, and
-  // against its own per-user limit, because one check can cost bxapi several requests.
+  // against the per-user limit for bxapi previews.
   app.post('/api/characters/check', async (request) => {
     const user = ctx.auth.user(request);
     const body = parseBody(CharacterCheckRequest, request);
@@ -148,12 +183,7 @@ export function registerCharacterRoutes(app: FastifyInstance, ctx: Context): voi
     ) {
       notFound('ability roll', body.ability_roll_id);
     }
-    const retry = ctx.limits.characterChecks.take(user.id);
-    if (retry > 0)
-      throw rateLimited(
-        'You are checking character choices too quickly. Wait a moment and try again.',
-        retry,
-      );
+    takePreview(user.id, 'You are checking character choices too quickly. Wait a moment and try again.');
     return checker.check(user, body, request.id);
   });
 
@@ -171,14 +201,9 @@ export function registerCharacterRoutes(app: FastifyInstance, ctx: Context): voi
         `You already have ${owned} characters, which is the limit per player. Delete a character you no longer play.`,
       );
     }
-    if (body.ability_roll_id !== undefined) {
-      const owns = db.get(
-        'SELECT 1 FROM ability_rolls WHERE id = ? AND owner_user_id = ?',
-        body.ability_roll_id,
-        user.id,
-      );
-      if (owns === undefined) notFound('ability roll', body.ability_roll_id);
-    }
+    // A creation from an ability roll keeps the class and reroll option its hit points were rolled with. A refused
+    // purchase leaves the roll unused, so buying before the gold is rolled would reveal the gold.
+    if (body.ability_roll_id !== undefined) startingRolls.guard(body.ability_roll_id, user.id, body);
     const character = await callBxapi(() =>
       bxapi.post<StoredCharacter>('/v1/characters', body, { requestId: request.id }),
     );

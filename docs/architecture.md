@@ -14,7 +14,7 @@ browser (apps/web)  <--HTTP /api, WebSocket /ws-->  bxvtt server (apps/server)  
 ```
 
 - **`bxapi`** enforces the 1981 B/X rules, rolls dice, and stores characters, adventures, sessions (active games), and saves. It has no user accounts, no WebSocket interface, and scopes data per API client rather than per person.
-- **The bxvtt server** stores everything about the people at a table and nothing about game mechanics: users, tables, memberships, seats, chat feed entries, notes, map annotations, monster target handles, and pending battle declarations. It calls `bxapi` as a `referee` (via `BXAPI_KEY` or loopback anonymous mode), verifies whether the requesting user has permission to send a command, and filters every response for each recipient's role.
+- **The bxvtt server** stores everything about the people at a table and nothing about game mechanics: users, tables, memberships, seats, chat feed entries, notes, map annotations, monster target handles, pending battle declarations, and the owner of each ability roll. For an ability roll, it also records the class and reroll option that rolling hit points fixed and whether the player rolled the gold, but never the dice, which `bxapi` returns again on request. It calls `bxapi` as a `referee` (via `BXAPI_KEY` or loopback anonymous mode), verifies whether the requesting user has permission to send a command, and filters every response for each recipient's role.
 - **The browser client** renders the table, map, sheets, and compendium, and submits user intent. It never evaluates a B/X rule and never contacts `bxapi`.
 
 In production, the bxvtt server also serves the pre-compressed client bundle (`apps/web/dist`), reducing deployment to one bxvtt process and one `bxapi` process on the same host.

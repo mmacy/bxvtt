@@ -7,7 +7,14 @@ import { createFakeApi } from '@/app/testing/renderWithTable';
 import catalog from './__fixtures__/catalog.json';
 import { facesForScore } from './dice';
 import { autoEquip } from './OutfitStep';
-import { emptyDraft, goldKey, parseDraft, requestFromDraft, type WizardDraft } from './draft';
+import {
+  emptyDraft,
+  parseDraft,
+  reconcileDraft,
+  requestFromDraft,
+  startingRollRequest,
+  type WizardDraft,
+} from './draft';
 import { applyKit } from './kits';
 import { suggestName } from './names';
 import { checkChoices, explainCreationError, explainInvalid, oneReasonPerAbility } from './server';
@@ -92,16 +99,69 @@ describe('requestFromDraft', () => {
 
 describe('parseDraft', () => {
   it('keeps a stored draft and refuses damaged ones', () => {
-    const draft = draftWith({ step: 'outfit', name: 'Wren', gold: { key: 'k', gp: 90 } });
+    const draft = draftWith({ step: 'hp_gold', name: 'Wren' });
     expect(parseDraft(JSON.parse(JSON.stringify(draft)))).toEqual(draft);
     expect(parseDraft({ version: 1, roll: { id: 'x', scores: { str: 3 } } })).toBeNull();
     expect(parseDraft('nonsense')).toBeNull();
   });
 
-  it('ties the gold to the roll, the class, and the hit point rule', () => {
-    expect(goldKey(draftWith({}))).toBe('rol_test:fighter:plain');
-    expect(goldKey(draftWith({ hpReroll: true }))).toBe('rol_test:fighter:reroll');
-    expect(goldKey(draftWith({ classId: null }))).toBeNull();
+  it('reads a draft from the version that kept a gold count, without the count', () => {
+    const old = {
+      ...draftWith({ step: 'outfit', name: 'Wren' }),
+      gold: { key: 'rol_test:fighter:plain', gp: 90 },
+    };
+    const parsed = parseDraft(JSON.parse(JSON.stringify(old)));
+    expect(parsed).toEqual(draftWith({ step: 'outfit', name: 'Wren' }));
+    expect(parsed).not.toHaveProperty('gold');
+  });
+});
+
+describe('reconcileDraft', () => {
+  const none = { used: false, class_id: null, hp_reroll_at_first_level: null, gold_rolled: false };
+
+  it("takes the class and reroll option the server fixed, and clears the class's choices on a change", () => {
+    const draft = draftWith({ classId: 'dwarf', spells: ['sleep'], languages: ['elvish'], hpReroll: false });
+    const fixed = reconcileDraft(draft, {
+      ...none,
+      class_id: 'fighter',
+      hp_reroll_at_first_level: true,
+      gold_rolled: true,
+    });
+    expect(fixed).toMatchObject({ classId: 'fighter', hpReroll: true, spells: [], languages: [] });
+    const same = draftWith({ classId: 'fighter', hpReroll: true, spells: ['sleep'] });
+    expect(
+      reconcileDraft(same, {
+        ...none,
+        class_id: 'fighter',
+        hp_reroll_at_first_level: true,
+        gold_rolled: true,
+      }),
+    ).toBe(same);
+  });
+
+  it('returns to the hit points and gold step until both are rolled', () => {
+    expect(reconcileDraft(draftWith({ step: 'outfit' }), none).step).toBe('hp_gold');
+    expect(
+      reconcileDraft(draftWith({ step: 'review' }), {
+        ...none,
+        class_id: 'fighter',
+        hp_reroll_at_first_level: false,
+      }).step,
+    ).toBe('hp_gold');
+    const early = draftWith({ step: 'identity' });
+    expect(reconcileDraft(early, none)).toBe(early);
+  });
+
+  it('asks for the rolls with the fixed class, whatever the draft says', () => {
+    const draft = draftWith({ classId: 'dwarf', hpReroll: true, spells: ['sleep'] });
+    expect(startingRollRequest(draft)).toEqual({
+      class_id: 'dwarf',
+      hp_reroll_at_first_level: true,
+      starting_spell_ids: ['sleep'],
+    });
+    expect(
+      startingRollRequest(draft, { ...none, class_id: 'fighter', hp_reroll_at_first_level: false }),
+    ).toEqual({ class_id: 'fighter', starting_spell_ids: ['sleep'] });
   });
 });
 
@@ -147,14 +207,14 @@ describe('suggestName', () => {
 describe('checkChoices', () => {
   it('asks the check route with the roll the choices name', async () => {
     const api = createFakeApi();
-    api.checkCharacter.mockResolvedValue({ valid: true, problem: null, gold_gp: 90 });
+    api.checkCharacter.mockResolvedValue({ valid: true, problem: null });
     const body: CharacterRequest = {
       name: 'Wren',
       class_id: 'fighter',
       alignment: 'lawful',
       ability_roll_id: 'rol_test',
     };
-    await expect(checkChoices(api, body)).resolves.toEqual({ valid: true, problem: null, gold_gp: 90 });
+    await expect(checkChoices(api, body)).resolves.toEqual({ valid: true, problem: null });
     expect(api.checkCharacter).toHaveBeenCalledWith(body);
     expect(api.createCharacter).not.toHaveBeenCalled();
   });

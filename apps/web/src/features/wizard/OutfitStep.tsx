@@ -34,9 +34,9 @@ import { isShield, itemIcon, lotSentence, lotSize, rowSummary, weightCoins } fro
 import styles from './wizard.module.css';
 import { useFullCatalog } from '../sheet/catalogs';
 
-/** What the wizard knows about the starting gold. */
+/** What the wizard knows about the rolled starting gold, which it reads from the server. */
 export type GoldState =
-  { status: 'counting' } | { status: 'known'; gp: number } | { status: 'unknown'; message: string };
+  { status: 'loading' } | { status: 'known'; gp: number } | { status: 'unknown'; message: string };
 
 export interface OutfitStepProps {
   equipment: EquipmentSummary[] | null;
@@ -316,10 +316,10 @@ export function OutfitStep({
       </section>
       <aside className={styles.cartPanel} aria-labelledby="wizard-cart">
         <div className={styles.purse}>
-          <span className={styles.purseLabel}>Starting gold</span>
-          {gold.status === 'counting' && (
+          <span className={styles.purseLabel}>Rolled starting gold</span>
+          {gold.status === 'loading' && (
             <span className={styles.checking}>
-              <Spinner size={14} label="" /> Counting your gold
+              <Spinner size={14} label="" /> Loading your gold
             </span>
           )}
           {gold.status === 'known' && (
