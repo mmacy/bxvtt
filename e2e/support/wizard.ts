@@ -1,6 +1,6 @@
 /**
  * Drives the character wizard through the interface. Seed the ability rolls with `actor.seedAbilityRolls` first,
- * so each roll repeats.
+ * so each roll repeats. The seed also fixes the hit points and gold, which bxapi rolls from the same roll.
  */
 import { expect, type Locator, type Page } from '@playwright/test';
 
@@ -102,6 +102,28 @@ export async function fillIdentity(dialog: Locator, name: string, alignment = 'L
   await expect(dialog.getByRole('heading', { name: 'Identity', level: 3 })).toBeVisible();
   await dialog.getByRole('textbox', { name: 'Name' }).fill(name);
   await dialog.getByRole('radio', { name: alignment }).click();
+}
+
+/**
+ * Rolls hit points and then starting gold on the hit points and gold step, and continues to the outfit step.
+ *
+ * @returns The hit points and the gold pieces as the step shows them.
+ */
+export async function rollHitPointsAndGold(dialog: Locator): Promise<{ hitPoints: number; gold: number }> {
+  await expect(dialog.getByRole('heading', { name: 'Hit points and gold', level: 3 })).toBeVisible();
+  await dialog.getByRole('button', { name: 'Roll hit points' }).click();
+  const hp = dialog.getByText(/You start with (\d+) hit points?\./);
+  await expect(hp).toBeVisible();
+  await dialog.getByRole('button', { name: 'Roll starting gold' }).click();
+  const gold = dialog.getByText(/You start with (\d+) gold pieces? to spend on equipment\./);
+  await expect(gold).toBeVisible();
+  const rolled = {
+    hitPoints: Number(/(\d+) hit point/.exec((await hp.textContent()) ?? '')?.[1]),
+    gold: Number(/(\d+) gold piece/.exec((await gold.textContent()) ?? '')?.[1]),
+  };
+  await next(dialog);
+  await expect(dialog.getByRole('heading', { name: 'Outfit', level: 3 })).toBeVisible();
+  return rolled;
 }
 
 /** Adds items to the cart on the outfit step. */

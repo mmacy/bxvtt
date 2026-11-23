@@ -117,6 +117,19 @@ const FIXED: Record<string, { title: string; detail: string }> = {
     title: 'You already used this ability roll',
     detail: 'Roll new ability scores to create another character.',
   },
+  ability_roll_locked: {
+    title: 'Your class is fixed for these ability scores',
+    detail:
+      'You rolled hit points for these ability scores, which fixed your class and the reroll option. To play another class, roll new ability scores.',
+  },
+  hit_points_not_rolled: {
+    title: 'Roll your hit points first',
+    detail: 'You roll your starting gold after your hit points.',
+  },
+  gold_not_rolled: {
+    title: 'Roll your starting gold first',
+    detail: 'Roll your starting gold so you know how much you can spend, then choose your equipment.',
+  },
   version_unsupported: {
     title: 'This server does not support that file version',
     detail: 'Ask the server host to update the game service, or export the file in an older format.',

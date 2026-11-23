@@ -1,15 +1,17 @@
 /**
  * The wizard's questions to the server. `POST /api/characters/check` checks the choices against the player's
- * own ability roll and reports the roll's starting gold, storing nothing and leaving the roll unused, so the
- * wizard asks it at each step and before it creates the character.
+ * own ability roll, storing nothing and leaving the roll unused, so the wizard asks it at each step and before it
+ * creates the character.
  */
 import { isProblem, type BxvttClient } from '@bxvtt/shared/client';
 import type { CharacterCheck, CharacterRequest, Problem } from '@bxvtt/shared/protocol';
 import {
+  classLabel,
   describeRejections,
   emptyContext,
   itemPhrase,
   resolveItemNoun,
+  withArticle,
   type TextContext,
 } from '@bxvtt/shared/text';
 import { describeProblem, toParamMap } from '@/app';
@@ -78,6 +80,7 @@ const STEP_TITLES: Record<StepId, string> = {
   class: 'Choose an eligible class',
   adjust: 'Check your ability score adjustments',
   identity: 'Check your character details',
+  hp_gold: 'Roll your hit points and gold',
   outfit: 'Check your starting equipment',
   review: "Couldn't create character",
 };
@@ -150,6 +153,33 @@ export function explainCreationError(error: unknown, ctx?: TextContext): WizardP
       step: 'roll',
       title: 'Your ability roll expired',
       sentences: ['Roll new ability scores to continue.'],
+    };
+  }
+  if (isProblem(error, 'ability_roll_locked')) {
+    const classId = error.problem.class_id;
+    return {
+      step: 'class',
+      title: 'Your class is fixed for these ability scores',
+      sentences: [
+        classId === undefined
+          ? 'You already rolled hit points for these ability scores, which fixed your class and the reroll option.'
+          : `You already rolled hit points as ${withArticle(classLabel(classId).toLowerCase())}, which fixed your class and the reroll option.`,
+        'To play another class, select Start over and roll new ability scores.',
+      ],
+    };
+  }
+  if (isProblem(error, 'hit_points_not_rolled')) {
+    return {
+      step: 'hp_gold',
+      title: 'Roll your hit points first',
+      sentences: ['You roll your starting gold after your hit points.'],
+    };
+  }
+  if (isProblem(error, 'gold_not_rolled')) {
+    return {
+      step: 'hp_gold',
+      title: 'Roll your starting gold first',
+      sentences: ['Roll your starting gold so you know how much you can spend, then choose your equipment.'],
     };
   }
   if (isProblem(error, 'validation_error')) {

@@ -1,5 +1,12 @@
 import type { AbilityTables } from '@bxvtt/shared/bxapi';
-import type { CharacterRequest, StoredCharacter } from '@bxvtt/shared/protocol';
+import { isProblem } from '@bxvtt/shared/client';
+import type {
+  CharacterRequest,
+  StartingRollRequest,
+  StartingRolls,
+  StartingRollsStatus,
+  StoredCharacter,
+} from '@bxvtt/shared/protocol';
 import { classLabel, count, emptyContext, resolveItemNoun } from '@bxvtt/shared/text';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -22,11 +29,12 @@ import {
   STEP_IDS,
   adjustedScores,
   emptyDraft,
-  goldKey,
   hasAdjustment,
   loadDraft,
+  reconcileDraft,
   requestFromDraft,
   saveDraft,
+  startingRollRequest,
   type StepId,
   type WizardDraft,
 } from './draft';
@@ -36,7 +44,15 @@ import { OutfitStep, cartCost, type GoldState } from './OutfitStep';
 import { ReviewStep } from './ReviewStep';
 import { RollStep } from './RollStep';
 import { checkChoices, explainCreationError, explainInvalid, type WizardProblem } from './server';
-import { casterNextStep, classMagic, extraLanguageCount, readScores, spellSlotsAt } from './tables';
+import { StartingRollsStep } from './StartingRollsStep';
+import {
+  casterNextStep,
+  classMagic,
+  extraLanguageCount,
+  headlineModifier,
+  readScores,
+  spellSlotsAt,
+} from './tables';
 import styles from './wizard.module.css';
 import { useClassDetail } from '../sheet/catalogs';
 
@@ -58,6 +74,7 @@ const STEP_LABELS: Record<StepId, string> = {
   class: 'Choose a class',
   adjust: 'Adjust scores',
   identity: 'Identity',
+  hp_gold: 'Hit points and gold',
   outfit: 'Outfit',
   review: 'Review',
 };
@@ -67,9 +84,21 @@ const STEP_DESCRIPTIONS: Record<StepId, string> = {
   class: 'Choose from the classes your ability scores qualify for.',
   adjust: 'Trade points into your prime requisite, or keep your rolled scores.',
   identity: 'Choose a name, alignment, and languages.',
+  hp_gold: 'Roll your hit points, then your starting gold.',
   outfit: 'Spend your starting gold on weapons, armour, and gear.',
-  review: 'Review your character sheet before rolling hit points and saving.',
+  review: 'Review your character sheet, then create your character.',
 };
+
+/** The steps that show the rolled hit points or gold, so the wizard reads the dice from the server for them. */
+const DICE_STEPS: readonly StepId[] = ['hp_gold', 'outfit', 'review'];
+
+/** What the server recorded about the draft's ability roll, or why the wizard couldn't read it. */
+type Recorded = { rollId: string; status: StartingRollsStatus } | { rollId: string; failure: string };
+
+/** A draft without its ability roll, for a roll the server says is used or gone. The identity stays. */
+function withoutRoll(draft: WizardDraft): WizardDraft {
+  return { ...emptyDraft(), name: draft.name, alignment: draft.alignment };
+}
 
 /** Debounce for the live checks, in milliseconds. The server allows 60 checks a minute per user. */
 const CHECK_DELAY_MS = 600;
@@ -118,7 +147,6 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
   const magic = classMagic(detail);
   const bookSize = magic?.kind === 'arcane' ? (spellSlotsAt(detail, 1)[0] ?? 0) : 0;
   const extraLanguages = tables && adjusted ? extraLanguageCount(tables, adjusted.int) : 0;
-  const key = goldKey(draft);
   // Keep the draft in this browser, so closing the dialog by accident loses nothing.
   useEffect(() => {
     if (created === null) saveDraft(userId, draft);
@@ -126,10 +154,106 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
 
   const update = useCallback((change: Partial<WizardDraft>) => setDraft((d) => ({ ...d, ...change })), []);
 
+  // The server keeps which starting rolls the player made from the ability roll, and the class and reroll option
+  // the hit points fixed. The wizard reads that record when it opens, so a reload never offers a roll again.
+  const rollId = draft.roll?.id ?? null;
+  const [recorded, setRecorded] = useState<Recorded | null>(null);
+  const status =
+    recorded !== null && recorded.rollId === rollId && 'status' in recorded ? recorded.status : null;
+  const statusFailure =
+    recorded !== null && recorded.rollId === rollId && 'failure' in recorded ? recorded.failure : null;
+  const statusFor = rollId !== null && recorded?.rollId !== rollId ? rollId : null;
+  useEffect(() => {
+    if (statusFor === null) return;
+    let cancelled = false;
+    getApi()
+      .getStartingRolls(statusFor)
+      .then(
+        (value) => {
+          if (cancelled) return;
+          setRecorded({ rollId: statusFor, status: value });
+          if (value.used) {
+            setDraft(withoutRoll);
+            setProblem({
+              step: 'roll',
+              title: 'You already made a character from these ability scores',
+              sentences: [
+                'Each roll of ability scores makes one character. Roll new ability scores to make another.',
+              ],
+            });
+            return;
+          }
+          // The record on the server wins over the draft in this browser.
+          setDraft((d) => (d.roll?.id === statusFor ? reconcileDraft(d, value) : d));
+        },
+        (error: unknown) => {
+          if (cancelled) return;
+          const explained = explainCreationError(error);
+          if (explained.step === 'roll') {
+            // The server has no such roll for this user anymore, so the draft starts again from new scores.
+            setDraft(withoutRoll);
+            setProblem(explained);
+            return;
+          }
+          setRecorded({ rollId: statusFor, failure: `${explained.title}. ${explained.sentences.join(' ')}` });
+        },
+      );
+    return () => {
+      cancelled = true;
+    };
+  }, [statusFor]);
+  const hitPointsRolled = status !== null && status.class_id !== null;
+
+  // The dice of the rolls already made. The server returns the same dice every time it's asked.
+  const [dice, setDice] = useState<{ rollId: string; rolls: StartingRolls } | null>(null);
+  const rolls = dice !== null && dice.rollId === rollId ? dice.rolls : null;
+  const [diceAttempt, setDiceAttempt] = useState(0);
+  const diceJson =
+    rollId !== null &&
+    status !== null &&
+    hitPointsRolled &&
+    DICE_STEPS.includes(draft.step) &&
+    (rolls === null || (status.gold_rolled && rolls.gold_roll === null))
+      ? JSON.stringify({ rollId, body: startingRollRequest(draft, status) })
+      : null;
+  const [diceFailure, setDiceFailure] = useState<{ key: string; message: string } | null>(null);
+  useEffect(() => {
+    if (diceJson === null) return;
+    let cancelled = false;
+    const { rollId: id, body } = JSON.parse(diceJson) as { rollId: string; body: StartingRollRequest };
+    getApi()
+      .rollHitPoints(id, body)
+      .then(
+        (value) => {
+          if (!cancelled) setDice({ rollId: id, rolls: value });
+        },
+        (error: unknown) => {
+          if (cancelled) return;
+          const explained = explainCreationError(error);
+          setDiceFailure({ key: diceJson, message: `${explained.title}. ${explained.sentences.join(' ')}` });
+          // A choice that stops the roll, such as a missing first spell, is fixed on its own step.
+          if (explained.step !== null && explained.step !== 'review') {
+            setProblem(explained);
+            setShowErrors(false);
+            setDraft((d) => ({ ...d, step: explained.step ?? d.step }));
+          }
+        },
+      );
+    return () => {
+      cancelled = true;
+    };
+  }, [diceJson, diceAttempt]);
+  const diceError = diceFailure !== null && diceFailure.key === diceJson ? diceFailure.message : null;
+
+  // The rolls the player made while this dialog was open play their dice. Restored rolls land at once.
+  const [played, setPlayed] = useState<{ rollId: string; hitPoints: boolean; gold: boolean } | null>(null);
+  const [startingRoll, setStartingRoll] = useState<'hit_points' | 'gold' | null>(null);
+
   const go = useCallback(
     (step: StepId) => {
       setShowErrors(false);
       setTradeAttempts(0);
+      setPlayed(null);
       update({ step });
     },
     [update],
@@ -175,50 +299,22 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
         ? adjustResult.state
         : { status: 'checking' };
 
-  // Step 5: ask the server for the gold the roll gives these choices.
-  const goldJson =
-    draft.step === 'outfit' && key !== null && draft.gold?.key !== key
-      ? JSON.stringify(requestFromDraft(draft, { withoutOutfit: true }))
-      : null;
-  const [goldFailure, setGoldFailure] = useState<{ key: string; message: string } | null>(null);
-  useEffect(() => {
-    if (goldJson === null || key === null) return;
-    let cancelled = false;
-    checkChoices(getApi(), JSON.parse(goldJson) as CharacterRequest).then(
-      (result) => {
-        if (cancelled) return;
-        if (result.gold_gp !== null) {
-          const gp = result.gold_gp;
-          setDraft((d) => (goldKey(d) === key ? { ...d, gold: { key, gp } } : d));
+  // The outfit step spends the rolled gold.
+  const gold: GoldState = rolls?.gold_roll
+    ? { status: 'known', gp: rolls.gold_roll.total }
+    : status !== null && !status.gold_rolled
+      ? {
+          status: 'unknown',
+          message: 'Roll your starting gold on the hit points and gold step before you shop.',
         }
-        if (result.valid || !result.problem) return;
-        const explained = explainInvalid(result.problem);
-        if (explained.step === 'outfit' && result.gold_gp !== null) return;
-        setProblem(explained);
-        setGoldFailure({
-          key,
-          message: 'Fix the earlier steps before rolling starting gold.',
-        });
-        if (explained.step !== null && explained.step !== 'outfit') {
-          setShowErrors(false);
-          setDraft((d) => ({ ...d, step: explained.step ?? d.step }));
-        }
-      },
-      (error: unknown) => {
-        if (cancelled) return;
-        const explained = explainCreationError(error);
-        setGoldFailure({ key, message: `${explained.title}. ${explained.sentences.join(' ')}` });
-      },
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [goldJson, key]);
-  const goldError = goldFailure !== null && goldFailure.key === key ? goldFailure.message : null;
+      : diceError !== null
+        ? { status: 'unknown', message: diceError }
+        : { status: 'loading' };
+  const goldLeft = gold.status === 'known' ? gold.gp - cartCost(draft.cart, equipment.data) : null;
 
-  // Step 5: check the cart live.
+  // The outfit step checks the cart live, once the gold is rolled.
   const cartJson =
-    draft.step === 'outfit' && draft.cart.length > 0 && draft.gold !== null && draft.gold.key === key
+    draft.step === 'outfit' && draft.cart.length > 0 && gold.status === 'known'
       ? JSON.stringify(requestFromDraft(draft))
       : null;
   const [cartResult, setCartResult] = useState<{ key: string; state: CheckState } | null>(null);
@@ -272,14 +368,6 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
         ? cartResult.state
         : { status: 'checking' };
 
-  const gold: GoldState =
-    draft.gold && draft.gold.key === key
-      ? { status: 'known', gp: draft.gold.gp }
-      : goldError
-        ? { status: 'unknown', message: goldError }
-        : { status: 'counting' };
-  const goldLeft = gold.status === 'known' ? gold.gp - cartCost(draft.cart, equipment.data) : null;
-
   const roll = async () => {
     setRolling(true);
     setProblem(null);
@@ -287,6 +375,11 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
       const result = await getApi().rollAbilities();
       setFreshRollId(result.id);
       setRestored(false);
+      // A new roll has no starting rolls yet, so the wizard needn't ask.
+      setRecorded({
+        rollId: result.id,
+        status: { used: false, class_id: null, hp_reroll_at_first_level: null, gold_rolled: false },
+      });
       setDraft((d) => ({
         ...emptyDraft(),
         name: d.name,
@@ -299,6 +392,48 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
       setProblem({ ...explainCreationError(error), step: 'roll' });
     } finally {
       setRolling(false);
+    }
+  };
+
+  /** Rolls the hit points or the starting gold on the server, which fixes the class and reroll option. */
+  const rollStarting = async (which: 'hit_points' | 'gold') => {
+    if (rollId === null || status === null) return;
+    setStartingRoll(which);
+    setProblem(null);
+    try {
+      const body = startingRollRequest(draft, status);
+      const api = getApi();
+      const value =
+        which === 'hit_points'
+          ? await api.rollHitPoints(rollId, body)
+          : await api.rollStartingGold(rollId, body);
+      setDice({ rollId, rolls: value });
+      setRecorded({
+        rollId,
+        status: {
+          ...status,
+          class_id: value.class_id,
+          hp_reroll_at_first_level: value.hp_reroll_at_first_level,
+          gold_rolled: value.gold_roll !== null,
+        },
+      });
+      setPlayed((p) => ({
+        rollId,
+        hitPoints: which === 'hit_points' || (p !== null && p.rollId === rollId && p.hitPoints),
+        gold: which === 'gold',
+      }));
+    } catch (error) {
+      const explained = explainCreationError(error);
+      if (isProblem(error, 'ability_roll_locked')) {
+        // Another tab rolled these hit points first. Read the record again, and say so on this step.
+        setProblem({ ...explained, step: null });
+        setRecorded(null);
+        return;
+      }
+      setProblem(explained);
+      if (explained.step !== null && explained.step !== draft.step) go(explained.step);
+    } finally {
+      setStartingRoll(null);
     }
   };
 
@@ -381,9 +516,12 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
         setShowErrors(true);
         if (displayStringProblem(draft.name, 100) !== null || draft.alignment === null) return;
         if (magic?.kind === 'arcane' && draft.spells.length !== bookSize) return;
-        if (await check(requestFromDraft(draft, { withoutOutfit: true }), 'identity')) go('outfit');
+        if (await check(requestFromDraft(draft, { withoutOutfit: true }), 'identity')) go('hp_gold');
         return;
       }
+      case 'hp_gold':
+        go('outfit');
+        return;
       case 'outfit':
         if (await check(requestFromDraft(draft), 'outfit')) go('review');
         return;
@@ -435,26 +573,29 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
         return draft.classId !== null && eligible.includes(draft.classId);
       case 'adjust':
         return adjustCheck.status !== 'invalid' && adjustCheck.status !== 'checking';
+      case 'hp_gold':
+        return rolls?.gold_roll != null;
       case 'outfit':
-        return (
-          gold.status !== 'counting' && cartCheck.status !== 'invalid' && cartCheck.status !== 'checking'
-        );
+        return gold.status === 'known' && cartCheck.status !== 'invalid' && cartCheck.status !== 'checking';
       default:
         return true;
     }
   })();
 
+  const past = (id: StepId) => stepIndex(draft.step) > stepIndex(id);
   const steps: StepperStep[] = STEP_IDS.map((id) => ({
     id,
     label: STEP_LABELS[id],
     description:
-      id === 'class' && draft.classId && stepIndex(draft.step) > 1
+      id === 'class' && draft.classId && past('class')
         ? classLabel(draft.classId)
-        : id === 'identity' && draft.name.trim() && stepIndex(draft.step) > 3
+        : id === 'identity' && draft.name.trim() && past('identity')
           ? draft.name.trim()
-          : id === 'outfit' && goldLeft !== null && stepIndex(draft.step) > 4
-            ? `${goldLeft} gp left`
-            : undefined,
+          : id === 'hp_gold' && rolls?.gold_roll && past('hp_gold')
+            ? `${rolls.hit_point_roll.hit_points} hp, ${rolls.gold_roll.total} gp`
+            : id === 'outfit' && goldLeft !== null && past('outfit')
+              ? `${goldLeft} gp left`
+              : undefined,
   }));
 
   const title = created ? `${created.name} is ready` : 'Create a character';
@@ -554,12 +695,14 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
             eligible={eligible}
             classId={draft.classId}
             onSelect={(classId) =>
+              !hitPointsRolled &&
               classId !== draft.classId &&
               update({ classId, adjustment: { lowered: {}, raised: {} }, spells: [], languages: [] })
             }
             hpReroll={draft.hpReroll}
-            onHpReroll={(hpReroll) => update({ hpReroll })}
+            onHpReroll={(hpReroll) => !hitPointsRolled && update({ hpReroll })}
             equipment={equipment.data}
+            locked={hitPointsRolled}
           />
         )}
         {step === 'adjust' && scores && (
@@ -596,6 +739,26 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
             showErrors={showErrors}
           />
         )}
+        {step === 'hp_gold' && draft.classId && (
+          <StartingRollsStep
+            classId={draft.classId}
+            hitDie={detail?.hit_die ?? null}
+            conModifier={tables && adjusted ? headlineModifier(tables, 'con', adjusted.con) : undefined}
+            hpReroll={draft.hpReroll}
+            rolls={rolls}
+            loading={status === null || (hitPointsRolled && rolls === null)}
+            rolling={startingRoll}
+            animate={played !== null && played.rollId === rollId ? played : { hitPoints: false, gold: false }}
+            onRollHitPoints={() => void rollStarting('hit_points')}
+            onRollGold={() => void rollStarting('gold')}
+            failure={statusFailure ?? diceError}
+            onRetry={() => {
+              setProblem(null);
+              if (statusFailure !== null) setRecorded(null);
+              else setDiceAttempt((n) => n + 1);
+            }}
+          />
+        )}
         {step === 'outfit' && (
           <OutfitStep
             equipment={equipment.data}
@@ -620,6 +783,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
             equipment={equipment.data}
             spells={spellCatalog.data}
             goldLeft={goldLeft}
+            rolls={rolls}
             onEdit={(target) => {
               setProblem(null);
               go(target);
@@ -652,7 +816,9 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
           Create character
         </Button>
       ) : (
-        draft.roll !== null && (
+        draft.roll !== null &&
+        // The step's own roll buttons lead until both rolls are made.
+        !(draft.step === 'hp_gold' && !canContinue) && (
           <Button
             variant="primary"
             iconEnd="arrow-right"

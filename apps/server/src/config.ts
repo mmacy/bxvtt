@@ -35,7 +35,8 @@ export interface Config {
   /**
    * Rate limits. `createUser`, `join`, `failedAuth`, and `failedHostKey` count requests per network address (an
    * IPv6 address counts by its /64 prefix). `userWrites` counts every request that changes something,
-   * `userPosts` counts feed posts and new annotations, and `characterChecks` counts character checks, per user.
+   * `userPosts` counts feed posts and new annotations, and `characterChecks` counts character checks and
+   * starting rolls (hit points and gold), per user.
    */
   rateLimits: {
     createUser: RateLimit;

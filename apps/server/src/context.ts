@@ -41,7 +41,7 @@ export interface Context {
     failedHostKey: RateLimiter;
     /** Feed posts and new annotations, by user. */
     userPosts: RateLimiter;
-    /** Character checks, by user. Each check can cost bxapi several requests. */
+    /** Character checks and starting rolls, by user. Each one costs bxapi a character preview. */
     characterChecks: RateLimiter;
     /** New rejoin requests, by address. */
     rejoin: RateLimiter;

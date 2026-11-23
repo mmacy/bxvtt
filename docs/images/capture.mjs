@@ -261,7 +261,7 @@ async function main() {
   await sleep(4500);
   await snap(theoPage, 'wizard-roll');
   await next();
-  await wizard.getByRole('button', { name: /^Magic-User Human/ }).click();
+  await wizard.getByRole('button', { name: 'Magic-User', exact: true }).click();
   await next();
   await next();
   await wizard.getByRole('textbox', { name: 'Name' }).fill('Tamsin');
@@ -269,6 +269,13 @@ async function main() {
   await wizard.getByRole('checkbox', { name: 'Elvish' }).click();
   await wizard.getByRole('checkbox', { name: 'Hobgoblin' }).click();
   await wizard.getByRole('button', { name: /^Sleep/ }).click();
+  await next();
+  await wizard.getByRole('button', { name: 'Roll hit points' }).click();
+  await wizard.getByText(/You start with \d+ hit points?\./).waitFor();
+  await wizard.getByRole('button', { name: 'Roll starting gold' }).click();
+  await wizard.getByText(/You start with \d+ gold pieces?/).waitFor();
+  await sleep(1500);
+  await snap(theoPage, 'wizard-rolls');
   await next();
   await wizard.getByRole('button', { name: /^Add Dagger/ }).click();
   await wizard.getByRole('button', { name: /^Add Torches/ }).click();

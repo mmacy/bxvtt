@@ -109,6 +109,9 @@ All paths below sit under `/api` (for example, `GET /api/health`), and `{t}` den
 | `DELETE /tables/{t}/roster/{entry_id}` | `removeFromRoster(tableId, entryId)` | Character owner or referee | `TableDetail` |
 | `POST /ability-rolls` | `rollAbilities(body?)` | User | `bxapi` `AbilityRoll` |
 | `GET /ability-rolls/{roll_id}` | `getAbilityRoll(rollId)` | Roll owner | `bxapi` `AbilityRoll` |
+| `GET /ability-rolls/{roll_id}/starting-rolls` | `getStartingRolls(rollId)` | Roll owner | `StartingRollsStatus` |
+| `POST /ability-rolls/{roll_id}/hit-points` | `rollHitPoints(rollId, body)` | Roll owner (rate-limited) | `StartingRolls` |
+| `POST /ability-rolls/{roll_id}/gold` | `rollStartingGold(rollId, body)` | Roll owner (rate-limited) | `StartingRolls` |
 | `POST /characters/preview` | `previewCharacter(body)` | User | `bxapi` generated character |
 | `POST /characters/check` | `checkCharacter(body)` | Roll owner (rate-limited) | `CharacterCheck` |
 | `POST /characters` | `createCharacter(body)` | User | `bxapi` `StoredCharacter` |
@@ -203,7 +206,7 @@ Every HTTP error returns an RFC 9457 `application/problem+json` object containin
 - **403:** `forbidden`, `referee_required`, `host_key_required`, `referee_command`, `adventure_read_only`
 - **404:** `not_found`, `invite_invalid`
 - **405:** `method_not_allowed`
-- **409:** `last_referee`, `game_active`, `no_game`, `duplicate_character`, `roster_empty`, `revision_conflict` (includes `revision`), `stale_version`, `not_in_battle`, `not_a_declarer`, `declarations_incomplete`, `use_declarations`, `ability_roll_used`, `version_unsupported`, `session_busy`, `rejoin_member_online`, `rejoin_pending`, `rejoin_not_pending`, `rejoin_no_approver`
+- **409:** `last_referee`, `game_active`, `no_game`, `duplicate_character`, `roster_empty`, `revision_conflict` (includes `revision`), `stale_version`, `not_in_battle`, `not_a_declarer`, `declarations_incomplete`, `use_declarations`, `ability_roll_used`, `ability_roll_locked` (includes `class_id` and `hp_reroll_at_first_level`), `hit_points_not_rolled`, `gold_not_rolled`, `version_unsupported`, `session_busy`, `rejoin_member_online`, `rejoin_pending`, `rejoin_not_pending`, `rejoin_no_approver`
 - **413:** `content_too_large`
 - **415:** `unsupported_media_type`
 - **422:** `validation_error` (includes `errors`), `unknown_command`, `content_invalid`, `character_invalid` (includes `rejections` or `field`/`index`/`id`), `party_invalid`, `target_unknown` (includes `field` and `id`)
@@ -228,6 +231,19 @@ When `bxapi` rejects `resolve_battle_round`, `osrlib` returns a flat list of rej
 2. Eliminate plain `hold` declarations; if only one non-hold suspect remains, assign remaining rejections to that member.
 3. Probe each remaining non-moving declaration by re-submitting the round with that member's declaration replaced by `{ action: "hold", back_stab: true }`, which `osrlib` unconditionally rejects with `battle.declaration.back_stab_not_attack` without advancing the session. Any rejection that disappears in the probe belongs to that member. Unresolved movement ties return `member_id: null` with `candidates`.
 
-### Non-destructive character checking (`POST /api/characters/check`)
+### Starting rolls and character checks
 
-The character wizard validates choices at every step without consuming the user's `ability_roll_id`. The server calls `bxapi`'s `POST /v1/characters` with a synthetic sentinel `'bxvtt-character-check'` appended to `equip_item_ids`. Because `osrlib` validates equipping last and aborts without storing the character or consuming the roll on `character_invalid`, failing specifically on `'bxvtt-character-check'` proves all real choices succeeded. To determine rolled starting gold (`gold_gp`), the server runs ~3 probe calls with calibrated equipment lots to locate the `items.purchase.insufficient_funds` threshold and caches `[ability_roll_id, class_id, hp_reroll_at_first_level]` in memory.
+The character wizard checks choices at every step and shows the player their hit points and starting gold before the character exists, without using up the user's ability roll. Both rely on `bxapi`'s `POST /v1/ability-rolls/{roll_id}/preview`, which returns the character that creation would store from the roll and the choices, stores nothing, and returns the same dice for the same class and reroll option every time.
+
+- **`POST /api/characters/check`** sends the choices to the preview and returns `{ valid, problem }`, where `problem` is `bxapi`'s `character_invalid` problem with its `rejections` or `field`, `index`, and `id`. The response never contains the previewed character, hit points, or gold.
+- **`POST /api/ability-rolls/{roll_id}/hit-points`** takes `class_id`, an optional `hp_reroll_at_first_level`, and an arcane caster's `starting_spell_ids` (because `bxapi` checks the first spell before it rolls hit points). It returns `StartingRolls`: `class_id`, `hp_reroll_at_first_level`, `bxapi`'s `hit_point_roll` (every die in the order thrown, the last one counting, and `hit_points`), and `gold_roll` (`null` until the gold is rolled). The first request fixes the class and the reroll option for the ability roll. A repeat with the same choices returns the same dice, so the wizard sends it again to show the rolls after a reload.
+- **`POST /api/ability-rolls/{roll_id}/gold`** takes the same body after the hit points are rolled and returns `StartingRolls` with `bxapi`'s `gold_roll` (`rolls`, `modifier`, `multiplier`, and `total`).
+- **`GET /api/ability-rolls/{roll_id}/starting-rolls`** returns `StartingRollsStatus`: `used`, the fixed `class_id` and `hp_reroll_at_first_level` (`null` before the hit points are rolled), and `gold_rolled`. It contains no dice.
+
+The server stores only the fixed class, the reroll option, and whether the gold is rolled, on its row for the ability roll. It refuses any request that would reveal a roll the player hasn't made:
+
+- A check, a roll, or a creation from the ability roll with another class or reroll option than the hit points were rolled with gets `409 ability_roll_locked`, with the fixed `class_id` and `hp_reroll_at_first_level`.
+- A check or a creation with `purchases` or `equip_item_ids` before the gold is rolled gets `409 gold_not_rolled`, because a refused purchase leaves the roll unused and reveals the gold.
+- Rolling the gold before the hit points gets `409 hit_points_not_rolled`.
+
+Creating a character from an ability roll in one request, with no purchases, needs no starting rolls. Two requests that roll hit points at once fix the choices once: the server asks `bxapi` first and records the choices only when none are recorded, so the second request either matches the first or gets `ability_roll_locked`. Checks and starting rolls share the per-user limit for character checks.

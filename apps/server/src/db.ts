@@ -8,7 +8,7 @@ import { RETIRED_USER_COLORS, USER_COLORS } from '@bxvtt/shared/protocol';
  * The version of the table layout. The server upgrades a database of an older version at startup with the
  * steps in {@link MIGRATIONS}, and refuses one of a newer version.
  */
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 /** The table of monster target handles, which layout version 2 added. */
 const TARGET_HANDLES = `
@@ -44,6 +44,18 @@ CREATE TABLE bxapi_garbage (
 );
 `;
 
+/**
+ * The columns that record an ability roll's starting rolls, which layout version 6 added. Rolling hit points sets
+ * `hp_class_id` and `hp_reroll`, which fix the class and the reroll option for the roll, and rolling the gold sets
+ * `gold_rolled_at`. The dice stay in bxapi, which returns the same dice for the same choices every time.
+ */
+const STARTING_ROLLS = `
+ALTER TABLE ability_rolls ADD COLUMN hp_class_id TEXT;
+ALTER TABLE ability_rolls ADD COLUMN hp_reroll INTEGER;
+ALTER TABLE ability_rolls ADD COLUMN hp_rolled_at TEXT;
+ALTER TABLE ability_rolls ADD COLUMN gold_rolled_at TEXT;
+`;
+
 /** The SQL that upgrades a database from the version before each key to that version. */
 const MIGRATIONS: Record<number, string> = {
   2: TARGET_HANDLES,
@@ -55,6 +67,7 @@ const MIGRATIONS: Record<number, string> = {
       `UPDATE users SET color = '${USER_COLORS[index] ?? USER_COLORS[0]}' WHERE color = '${old}';`,
   ).join('\n'),
   5: BXAPI_GARBAGE,
+  6: STARTING_ROLLS,
 };
 
 const SCHEMA = `
@@ -205,7 +218,7 @@ CREATE TABLE samples (
   uploaded_at TEXT NOT NULL,
   PRIMARY KEY (file_name, content_hash)
 );
-${TARGET_HANDLES}${RETIRED_TOKENS}${BXAPI_GARBAGE}`;
+${TARGET_HANDLES}${RETIRED_TOKENS}${BXAPI_GARBAGE}${STARTING_ROLLS}`;
 
 /** A row as `node:sqlite` returns it. */
 export type Row = Record<string, SQLInputValue>;

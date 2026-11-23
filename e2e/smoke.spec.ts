@@ -46,6 +46,9 @@ async function createWithWizard(actor: Actor, choices: WizardChoices): Promise<v
   await wizard.getByRole('radiogroup', { name: 'Alignment' }).getByRole('radio', { name: 'Lawful' }).click();
   if (choices.spell) await wizard.getByRole('button', { name: choices.spell }).click();
   await wizard.getByRole('button', { name: 'Continue' }).click();
+  await wizard.getByRole('button', { name: 'Roll hit points' }).click();
+  await wizard.getByRole('button', { name: 'Roll starting gold' }).click();
+  await wizard.getByRole('button', { name: 'Continue' }).click();
   await wizard.getByRole('button', { name: /^Fill with the .* kit$/ }).click();
   await expect(wizard.getByText('Your character can afford and use this equipment.')).toBeVisible({
     timeout: 20_000,

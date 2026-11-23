@@ -1,20 +1,19 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { isProblem } from '@bxvtt/shared/client';
 import type { AbilityRoll, CharacterCheckRequest } from '@bxvtt/shared/protocol';
-import { countGold } from '../src/character-check';
 import type { TestServer, TestUser } from './helpers';
 import { createUser, startServer } from './helpers';
 
-/** Counts the server's calls to bxapi's `POST /v1/characters`. */
-function countCreations(server: TestServer): { count: () => number } {
+/** Counts the server's calls to bxapi, by path. */
+function countCalls(server: TestServer): { count: (pattern: RegExp) => number } {
   const bxapi = server.server.ctx.bxapi;
   const original = bxapi.post.bind(bxapi);
-  let calls = 0;
+  const paths: string[] = [];
   bxapi.post = (async (path: string, body: unknown, options?: Parameters<typeof original>[2]) => {
-    if (path === '/v1/characters') calls += 1;
+    paths.push(path);
     return original(path, body, options);
   }) as typeof bxapi.post;
-  return { count: () => calls };
+  return { count: (pattern) => paths.filter((path) => pattern.test(path)).length };
 }
 
 describe('the character check', () => {
@@ -22,17 +21,16 @@ describe('the character check', () => {
   let alice: TestUser;
   let bob: TestUser;
   let roll: AbilityRoll;
-  let classId: string;
-  let creations: { count: () => number };
+  let calls: { count: (pattern: RegExp) => number };
 
   beforeAll(async () => {
     server = await startServer();
     alice = await createUser(server, 'Alice');
     bob = await createUser(server, 'Bob');
-    creations = countCreations(server);
-    roll = await alice.client.rollAbilities({ seed: 4242 });
-    classId = roll.eligible_class_ids.includes('fighter') ? 'fighter' : (roll.eligible_class_ids[0] ?? '');
-    expect(classId).not.toBe('');
+    calls = countCalls(server);
+    // Seed 5 qualifies for a fighter and gives 110 gp.
+    roll = await alice.client.rollAbilities({ seed: 5 });
+    expect(roll.eligible_class_ids).toContain('fighter');
   });
 
   afterAll(async () => {
@@ -41,56 +39,49 @@ describe('the character check', () => {
 
   const body = (extra: Partial<CharacterCheckRequest> = {}): CharacterCheckRequest => ({
     name: 'Brenna',
-    class_id: classId,
+    class_id: 'fighter',
     alignment: 'lawful',
     ability_roll_id: roll.id,
     ...extra,
   });
 
-  it('checks choices and counts the gold without storing a character or using the roll', async () => {
-    const before = creations.count();
-    const check = await alice.client.checkCharacter(body({ purchases: [{ item_id: 'torch' }] }));
-    expect(check).toMatchObject({ valid: true, problem: null });
-    expect(check.gold_gp).toBeGreaterThanOrEqual(30);
-    expect(check.gold_gp).toBeLessThanOrEqual(180);
-    // One request checks the choices, and a few more count the gold, the first time only.
-    const used = creations.count() - before;
-    expect(used).toBeGreaterThanOrEqual(2);
-    expect(used).toBeLessThanOrEqual(5);
-    const again = await alice.client.checkCharacter(body());
-    expect(again.gold_gp).toBe(check.gold_gp);
-    expect(creations.count() - before - used).toBe(1);
+  it('checks choices with one preview, without storing a character or using the roll', async () => {
+    const previews = calls.count(/\/preview$/);
+    const check = await alice.client.checkCharacter(body());
+    expect(check).toEqual({ valid: true, problem: null });
+    expect(calls.count(/\/preview$/) - previews).toBe(1);
+    expect(calls.count(/^\/v1\/characters$/)).toBe(0);
     expect((await alice.client.getAbilityRoll(roll.id)).used).toBe(false);
     expect((await alice.client.listCharacters()).items).toEqual([]);
   });
 
-  it('reports the gold that creating the character then gives', async () => {
-    const reroll = await alice.client.rollAbilities({ seed: 777 });
-    const fighterOrFirst = reroll.eligible_class_ids.includes('fighter')
-      ? 'fighter'
-      : (reroll.eligible_class_ids[0] ?? '');
-    const choices = {
-      name: 'Wren',
-      class_id: fighterOrFirst,
-      alignment: 'neutral' as const,
-      ability_roll_id: reroll.id,
-      hp_reroll_at_first_level: true,
-    };
-    const check = await alice.client.checkCharacter(choices);
-    expect(check.valid).toBe(true);
-    const character = await alice.client.createCharacter(choices);
-    const purse = (character.character.inventory as { purse?: { gp?: number } }).purse;
-    expect(purse?.gp).toBe(check.gold_gp);
+  it('refuses purchases and equipped items until the gold is rolled', async () => {
+    await expect(alice.client.checkCharacter(body({ purchases: [{ item_id: 'torch' }] }))).rejects.toSatisfy(
+      (error) => isProblem(error, 'gold_not_rolled'),
+    );
+    await expect(alice.client.checkCharacter(body({ equip_item_ids: ['sword'] }))).rejects.toSatisfy(
+      (error) => isProblem(error, 'gold_not_rolled'),
+    );
+    await alice.client.rollHitPoints(roll.id, { class_id: 'fighter' });
+    await expect(alice.client.checkCharacter(body({ purchases: [{ item_id: 'torch' }] }))).rejects.toSatisfy(
+      (error) => isProblem(error, 'gold_not_rolled'),
+    );
+    await alice.client.rollStartingGold(roll.id, { class_id: 'fighter' });
+    await expect(alice.client.checkCharacter(body({ purchases: [{ item_id: 'torch' }] }))).resolves.toEqual({
+      valid: true,
+      problem: null,
+    });
   });
 
-  it("returns bxapi's problem with its members when a choice breaks a rule", async () => {
+  it("returns bxapi's problem with its members, and never the hit points or the gold", async () => {
+    const before = alice.received.length;
     const tooDear = await alice.client.checkCharacter(
       body({ purchases: [{ item_id: 'plate_mail', quantity: 4 }] }),
     );
+    expect(Object.keys(tooDear).sort()).toEqual(['problem', 'valid']);
     expect(tooDear.valid).toBe(false);
     expect(tooDear.problem).toMatchObject({ code: 'character_invalid', status: 422 });
     expect(tooDear.problem?.rejections?.[0]?.code).toBe('items.purchase.insufficient_funds');
-    expect(tooDear.gold_gp).not.toBeNull();
 
     const unknown = await alice.client.checkCharacter(body({ purchases: [{ item_id: 'nope' }] }));
     expect(unknown.problem).toMatchObject({ field: 'purchases', index: 0, id: 'nope' });
@@ -98,16 +89,48 @@ describe('the character check', () => {
     const unbought = await alice.client.checkCharacter(body({ equip_item_ids: ['sword'] }));
     expect(unbought.problem).toMatchObject({ field: 'equip_item_ids', index: 0, id: 'sword' });
 
-    const ineligible = ['magic_user', 'cleric', 'fighter', 'thief', 'dwarf', 'elf', 'halfling'].find(
-      (id) => !roll.eligible_class_ids.includes(id),
-    );
-    if (ineligible !== undefined) {
-      const wrongClass = await alice.client.checkCharacter(body({ class_id: ineligible }));
-      expect(wrongClass.valid).toBe(false);
-      expect(wrongClass.problem?.rejections?.[0]?.code).toMatch(/^creation\.class\./);
-      expect(wrongClass.gold_gp).toBeNull();
+    const valid = await alice.client.checkCharacter(body({ purchases: [{ item_id: 'sword' }] }));
+    expect(Object.keys(valid).sort()).toEqual(['problem', 'valid']);
+    // Nothing in the answers carries the previewed character or its dice.
+    for (const text of alice.received.slice(before)) {
+      expect(text).not.toMatch(/hit_point|gold_roll|max_hp|purse|"rolls"|"character"|"derived"/);
     }
     expect((await alice.client.getAbilityRoll(roll.id)).used).toBe(false);
+  });
+
+  it('refuses a class other than the one the hit points were rolled for', async () => {
+    const other = roll.eligible_class_ids.find((id) => id !== 'fighter') ?? 'cleric';
+    await expect(alice.client.checkCharacter(body({ class_id: other }))).rejects.toSatisfy(
+      (error) => isProblem(error, 'ability_roll_locked') && error.problem.class_id === 'fighter',
+    );
+    await expect(alice.client.checkCharacter(body({ hp_reroll_at_first_level: true }))).rejects.toSatisfy(
+      (error) => isProblem(error, 'ability_roll_locked'),
+    );
+  });
+
+  it('checks any eligible class before the hit points are rolled', async () => {
+    const fresh = await alice.client.rollAbilities({ seed: 9 });
+    const ineligible = ['magic_user', 'cleric', 'fighter', 'thief', 'dwarf', 'elf', 'halfling'].find(
+      (id) => !fresh.eligible_class_ids.includes(id),
+    );
+    if (ineligible !== undefined) {
+      const wrongClass = await alice.client.checkCharacter({
+        ...body(),
+        ability_roll_id: fresh.id,
+        class_id: ineligible,
+      });
+      expect(wrongClass.valid).toBe(false);
+      expect(wrongClass.problem?.rejections?.[0]?.code).toMatch(/^creation\.class\./);
+    }
+    for (const classId of fresh.eligible_class_ids.slice(0, 2)) {
+      const check = await alice.client.checkCharacter({
+        ...body(),
+        ability_roll_id: fresh.id,
+        class_id: classId,
+        starting_spell_ids: classId === 'magic_user' || classId === 'elf' ? ['sleep'] : undefined,
+      });
+      expect(check).toEqual({ valid: true, problem: null });
+    }
   });
 
   it("refuses another user's roll and a used roll", async () => {
@@ -150,7 +173,7 @@ describe('the character check rate limit', () => {
     await server.close();
   });
 
-  it('limits how fast one user checks characters', async () => {
+  it('limits how fast one user checks characters and rolls hit points', async () => {
     const alice = await createUser(server, 'Alice');
     const roll = await alice.client.rollAbilities({ seed: 5 });
     const request: CharacterCheckRequest = {
@@ -164,68 +187,8 @@ describe('the character check rate limit', () => {
     await expect(alice.client.checkCharacter(request)).rejects.toSatisfy((error) =>
       isProblem(error, 'rate_limited'),
     );
-  });
-});
-
-describe('countGold', () => {
-  /** The equipment catalog's prices, as bxapi had them when this test was written. */
-  const lots = [
-    ...['javelin', 'iron_spikes', 'pole', 'rope', 'sack_small', 'torch', 'waterskin', 'wine'].map((id) => ({
-      id,
-      cost: 1,
-    })),
-    ...['sling', 'staff', 'hammer', 'oil_flask', 'sack_large'].map((id) => ({ id, cost: 2 })),
-    ...['club', 'dagger', 'spear', 'stakes_and_mallet', 'tinder_box'].map((id) => ({ id, cost: 3 })),
-    { id: 'hand_axe', cost: 4 },
-    ...['lance', 'mace', 'war_hammer', 'backpack', 'garlic', 'mirror', 'arrows'].map((id) => ({
-      id,
-      cost: 5,
-    })),
-    ...['sword', 'shield', 'crowbar', 'lantern', 'wolfsbane', 'crossbow_bolts'].map((id) => ({
-      id,
-      cost: 10,
-    })),
-    { id: 'leather', cost: 20 },
-    { id: 'crossbow', cost: 30 },
-    { id: 'chainmail', cost: 40 },
-  ];
-  const cost = new Map(lots.map((lot) => [lot.id, lot.cost]));
-
-  /** Simulates bxapi buying in order from a purse of `gold`. */
-  const purse = (gold: number) => {
-    let probes = 0;
-    const probe = async (purchases: { item_id: string; quantity: number }[]) => {
-      probes += 1;
-      let left = gold;
-      for (const purchase of purchases) {
-        const price = (cost.get(purchase.item_id) ?? 0) * purchase.quantity;
-        if (price > left) return { kind: 'short' as const, itemId: purchase.item_id };
-        left -= price;
-      }
-      return { kind: 'covered' as const };
-    };
-    return { probe, probes: () => probes };
-  };
-
-  it('finds the exact gold for every amount up to 3,000 gp', async () => {
-    let most = 0;
-    for (let gold = 0; gold <= 3000; gold += 1) {
-      const simulated = purse(gold);
-      await expect(countGold(lots, simulated.probe)).resolves.toBe(gold);
-      most = Math.max(most, simulated.probes());
-    }
-    expect(most).toBeLessThanOrEqual(6);
-  });
-
-  it('finds 3d6 x 10 gp in at most three probes', async () => {
-    for (let gold = 30; gold <= 180; gold += 10) {
-      const simulated = purse(gold);
-      await expect(countGold(lots, simulated.probe)).resolves.toBe(gold);
-      expect(simulated.probes()).toBeLessThanOrEqual(3);
-    }
-  });
-
-  it('gives up without an item that costs 1 gp', async () => {
-    await expect(countGold([{ id: 'sword', cost: 10 }], purse(50).probe)).resolves.toBeNull();
+    await expect(alice.client.rollHitPoints(roll.id, { class_id: request.class_id })).rejects.toSatisfy(
+      (error) => isProblem(error, 'rate_limited'),
+    );
   });
 });

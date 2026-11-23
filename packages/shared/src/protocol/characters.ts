@@ -1,5 +1,12 @@
 import { z } from 'zod';
-import type { AbilityRoll, CharacterSummary, GeneratedCharacterResponse, StoredCharacter } from '../bxapi';
+import type {
+  AbilityRoll,
+  CharacterSummary,
+  GeneratedCharacterResponse,
+  HitPointRoll,
+  RollResult,
+  StoredCharacter,
+} from '../bxapi';
 import { Problem } from './problems';
 
 /** The result of a character preview: `seed`, `character`, `derived`, and the creation `rolls`. */
@@ -55,10 +62,11 @@ export type CharacterCheckRequest = z.infer<typeof CharacterCheckRequest>;
 /**
  * Response of `POST /api/characters/check`.
  *
- * The server asks bxapi to create the character with the choices plus one item to equip that no purchase can
- * include. bxapi checks every choice in its documented order (class, adjustment, starting spells, hit points,
- * extra languages, gold, purchases, then equipping) and stops at the first choice that breaks a rule. The extra
- * item always stops creation after every real choice, so bxapi stores nothing and the roll stays unused.
+ * The server asks bxapi to preview the character from the roll and the choices. The preview checks every choice
+ * in the order creation does (class, adjustment, starting spells, hit points, extra languages, gold, purchases,
+ * then equipping) and stops at the first choice that breaks a rule. It stores nothing and leaves the roll unused.
+ * The response never carries the previewed character, its hit points, or its gold, so a check can't reveal a roll
+ * the player hasn't made.
  */
 export const CharacterCheck = z.object({
   /** Whether every choice passed. Creating the character with the same body would then succeed. */
@@ -68,16 +76,59 @@ export const CharacterCheck = z.object({
    * `index`, and `id`, intact. `null` when `valid` is `true`.
    */
   problem: Problem.nullable(),
-  /**
-   * The starting gold, in gold pieces, that the roll gives a character of `class_id` with the request's
-   * `hp_reroll_at_first_level`, before any purchase. The hit point roll comes before the gold roll, so the
-   * gold depends on the class's hit die and on the reroll option, and on nothing else. `null` when a choice
-   * that comes before the gold roll (the class or the starting spells) breaks a rule.
-   */
-  gold_gp: z.number().int().nullable(),
 });
 /** Response of `POST /api/characters/check`. */
 export type CharacterCheck = z.infer<typeof CharacterCheck>;
+
+/**
+ * Body of `POST /api/ability-rolls/{roll_id}/hit-points` and `POST /api/ability-rolls/{roll_id}/gold`: the
+ * choices the hit point roll and the gold roll depend on. bxapi rolls hit points with the class's hit die, with
+ * the first-level reroll when `hp_reroll_at_first_level` is `true`, and rolls the gold after them. A magic-user or
+ * an elf also needs its first spell, because creation checks the starting spells before it rolls hit points. No
+ * other choice changes either roll, so the body has no other members.
+ */
+export const StartingRollRequest = z.strictObject({
+  class_id: z.string().min(1).max(100),
+  hp_reroll_at_first_level: z.boolean().optional(),
+  starting_spell_ids: z.array(z.string().max(100)).max(50).optional(),
+});
+/** Body of `POST /api/ability-rolls/{roll_id}/hit-points` and `POST /api/ability-rolls/{roll_id}/gold`. */
+export type StartingRollRequest = z.infer<typeof StartingRollRequest>;
+
+/**
+ * Response of `GET /api/ability-rolls/{roll_id}/starting-rolls`: which starting rolls the player has made from an
+ * ability roll. Rolling hit points fixes the class and the reroll option for the ability roll, so `class_id` and
+ * `hp_reroll_at_first_level` are `null` until then. The response has no dice. To read them, send
+ * `POST /api/ability-rolls/{roll_id}/hit-points` again, which returns the rolls already made.
+ */
+export const StartingRollsStatus = z.object({
+  /** Whether a character was already created from the ability roll. */
+  used: z.boolean(),
+  /** The class the hit points were rolled for, or `null` before the player rolls them. */
+  class_id: z.string().nullable(),
+  /** The reroll option the hit points were rolled with, or `null` before the player rolls them. */
+  hp_reroll_at_first_level: z.boolean().nullable(),
+  /** Whether the player has rolled the starting gold. */
+  gold_rolled: z.boolean(),
+});
+/** Response of `GET /api/ability-rolls/{roll_id}/starting-rolls`. */
+export type StartingRollsStatus = z.infer<typeof StartingRollsStatus>;
+
+/**
+ * Response of `POST /api/ability-rolls/{roll_id}/hit-points` and `POST /api/ability-rolls/{roll_id}/gold`: the
+ * starting rolls the player has made, with the dice bxapi rolled. A character created from the ability roll with
+ * the same class and reroll option starts with these hit points and this gold.
+ */
+export interface StartingRolls {
+  /** The class the hit points were rolled for. */
+  class_id: string;
+  /** The reroll option the hit points were rolled with. */
+  hp_reroll_at_first_level: boolean;
+  /** bxapi's hit point roll: every die in the order thrown (the last one counts), and the hit points. */
+  hit_point_roll: HitPointRoll;
+  /** bxapi's starting gold roll (3d6 times 10), or `null` before the player rolls it. */
+  gold_roll: RollResult | null;
+}
 
 /** Response of `GET /api/characters`: the user's own stored characters, newest first. */
 export const CharacterList = z.object({
