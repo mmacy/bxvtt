@@ -11,7 +11,7 @@
 //
 // Settings (environment variables):
 //
-// - BXAPI_URL: where bxapi listens. Default: http://127.0.0.1:8640
+// - BXAPI_URL: where bxapi listens. Default: http://127.0.0.1:8651
 // - BXVTT_CAPTURE_PORT: the port of the temporary bxvtt server. Default: 8670
 // - CAPTURE_ONLY: a comma-separated list of file names (without the extension) to keep. The script still plays
 //   the whole game, but it writes only those files.
@@ -25,7 +25,7 @@ import { chromium } from '@playwright/test';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const outDir = dirname(fileURLToPath(import.meta.url));
-const bxapiUrl = process.env.BXAPI_URL ?? 'http://127.0.0.1:8640';
+const bxapiUrl = process.env.BXAPI_URL ?? 'http://127.0.0.1:8651';
 const port = process.env.BXVTT_CAPTURE_PORT ?? '8670';
 const base = `http://127.0.0.1:${port}`;
 const only = process.env.CAPTURE_ONLY?.split(',').map((name) => name.trim());
@@ -186,7 +186,7 @@ async function declareAll(page) {
       await sleep(500);
       return;
     }
-    const quick = page.getByRole('button', { name: /^(Attack|Close in on) the / }).first();
+    const quick = page.getByRole('button', { name: /^(Attack|Close in on)/ }).first();
     if ((await quick.count()) === 0) return;
     await quick.click().catch(() => {});
     await sleep(500);
@@ -294,7 +294,7 @@ async function main() {
   await priyaPage.goto(`${base}/tables/${tableId}`);
   const ruthPage = await newPage(ruth);
   await ruthPage.goto(`${base}/tables/${tableId}`);
-  await ruthPage.getByRole('button', { name: 'Start the game' }).waitFor();
+  await ruthPage.getByRole('button', { name: 'Start game' }).waitFor();
   await sleep(1200);
   await snap(ruthPage, 'lobby');
 
@@ -333,7 +333,7 @@ async function main() {
     await samPage.getByRole('button', { name: 'Light', exact: true }).last().click();
     await samPage.getByRole('menuitem', { name: /Wren lights a torch/ }).click();
     await sleep(1000);
-    if (!(await tableText(samPage)).includes('No light. The party is in the dark')) break;
+    if (!(await tableText(samPage)).includes('The party has no light.')) break;
   }
   await samPage.locator('h1').first().click();
   for (let step = 0; step < 4 && (await modeOf(samPage)) === 'Exploring'; step += 1) {
@@ -366,7 +366,7 @@ async function main() {
     .click()
     .catch(() => {});
   await samPage
-    .getByRole('button', { name: /Pick up the dropped goods/ })
+    .getByRole('button', { name: /Pick up dropped goods/ })
     .first()
     .click()
     .catch(() => {});
@@ -378,12 +378,17 @@ async function main() {
   await sleep(1300);
   await samPage.keyboard.press('ArrowUp');
   await sleep(1300);
-  await samPage
+  const scene = samPage.getByRole('region', { name: 'Current location' });
+  await scene
+    .getByRole('button', { name: 'Show description' })
+    .click({ timeout: 2000 })
+    .catch(() => {});
+  await scene
     .getByRole('button', { name: 'Door', exact: true })
     .click()
     .catch(() => {});
   await samPage
-    .getByRole('menuitem', { name: /Open it/ })
+    .getByRole('menuitem', { name: 'Open door' })
     .click()
     .catch(() => {});
   await sleep(1200);
@@ -423,7 +428,10 @@ async function main() {
   await snap(samPage, 'explore');
 
   // The character sheet.
-  await samPage.getByRole('button', { name: /^Wren, level 1 thief/ }).click();
+  await samPage
+    .getByRole('list', { name: 'Marching order' })
+    .getByRole('button', { name: 'Wren', exact: true })
+    .click();
   await samPage.getByRole('dialog').last().waitFor();
   await sleep(900);
   await snap(samPage, 'sheet');
@@ -448,7 +456,7 @@ async function main() {
   // The referee panel.
   await ruthPage.reload();
   await ruthPage.getByRole('tab', { name: 'Referee', exact: true }).click();
-  await ruthPage.getByRole('tab', { name: 'Quick actions' }).click();
+  await ruthPage.getByRole('tab', { name: /^(Act|Quick actions)$/ }).click();
   await sleep(1200);
   await snap(ruthPage, 'referee');
 }
