@@ -220,28 +220,28 @@ async function main() {
     return character;
   };
   await create(sam, {
-    name: 'Brenna',
+    name: 'Flarg',
     classId: 'fighter',
     seed: 109,
     buy: ['chainmail', 'shield', 'sword', 'torch'],
     equip: ['chainmail', 'shield', 'sword'],
   });
   await create(sam, {
-    name: 'Wren',
+    name: 'Tinks',
     classId: 'thief',
     seed: 19,
     buy: ['leather', 'sword', 'thieves_tools', 'torch'],
     equip: ['leather', 'sword'],
   });
   await create(priya, {
-    name: 'Osric',
+    name: 'Clarence',
     classId: 'cleric',
     seed: 63,
     buy: ['chainmail', 'shield', 'mace', 'holy_symbol'],
     equip: ['chainmail', 'shield', 'mace'],
   });
 
-  // Theo makes Tamsin in the wizard.
+  // Theo makes Mazpar in the wizard.
   const theoPage = await newPage(theo, { seedRolls: 9 });
   await theoPage.goto(`${base}/tables/${tableId}`);
   await theoPage
@@ -264,7 +264,7 @@ async function main() {
   await wizard.getByRole('button', { name: 'Magic-User', exact: true }).click();
   await next();
   await next();
-  await wizard.getByRole('textbox', { name: 'Name' }).fill('Tamsin');
+  await wizard.getByRole('textbox', { name: 'Name' }).fill('Mazpar');
   await wizard.getByRole('radio', { name: 'Lawful' }).click();
   await wizard.getByRole('checkbox', { name: 'Elvish' }).click();
   await wizard.getByRole('checkbox', { name: 'Hobgoblin' }).click();
@@ -283,7 +283,7 @@ async function main() {
   await snap(theoPage, 'wizard-outfit');
   await next();
   await wizard.getByRole('button', { name: 'Create character' }).click();
-  const ready = theoPage.getByRole('dialog', { name: 'Tamsin is ready' });
+  const ready = theoPage.getByRole('dialog', { name: 'Mazpar is ready' });
   await ready.waitFor({ timeout: 30_000 });
   await ready.getByRole('button', { name: 'Done' }).click();
 
@@ -306,10 +306,10 @@ async function main() {
   await samPage.getByRole('tab', { name: 'Outfitter' }).waitFor();
   await sleep(1500);
 
-  // Town: Sam shops for Wren.
+  // Town: Sam shops for Tinks.
   await samPage.getByRole('tab', { name: 'Outfitter' }).click();
   await samPage
-    .getByRole('button', { name: /^Wren\b.*gp/ })
+    .getByRole('button', { name: /^Tinks\b.*gp/ })
     .first()
     .click();
   await samPage.getByRole('button', { name: /^Add Tinder box/ }).click();
@@ -318,7 +318,7 @@ async function main() {
   await samPage.getByRole('button', { name: /^Add Oil/ }).click();
   await sleep(500);
   await snap(samPage, 'town');
-  await samPage.getByRole('button', { name: /^Buy for Wren/ }).click();
+  await samPage.getByRole('button', { name: /^Buy for Tinks/ }).click();
   await sleep(1500);
 
   // Set out, light a torch, and walk into the guardroom.
@@ -331,7 +331,7 @@ async function main() {
   await sleep(1500);
   for (let attempt = 0; attempt < 8; attempt += 1) {
     await samPage.getByRole('button', { name: 'Light', exact: true }).last().click();
-    await samPage.getByRole('menuitem', { name: /Wren lights a torch/ }).click();
+    await samPage.getByRole('menuitem', { name: /Tinks lights a torch/ }).click();
     await sleep(1000);
     if (!(await tableText(samPage)).includes('The party has no light.')) break;
   }
@@ -407,11 +407,11 @@ async function main() {
     await person.call('POST', `/tables/${tableId}/feed`, { text });
     await sleep(250);
   };
-  await say(sam, 'Torch is lit. Brenna goes first, shield up.');
-  await say(priya, 'Osric stays behind Wren. I have the holy symbol ready if anything cold shows up.');
-  await say(theo, 'Tamsin has sleep memorized and a dagger for anything that gets close.');
+  await say(sam, 'Torch is lit. Flarg goes first, shield up.');
+  await say(priya, 'Clarence stays behind Tinks. I have the holy symbol ready if anything cold shows up.');
+  await say(theo, 'Mazpar has sleep memorized and a dagger for anything that gets close.');
   await say(ruth, 'The corridor is wet underfoot. Somewhere below you, a bell tolls once.');
-  await say(sam, '/roll 1d20 Wren listens at the door');
+  await say(sam, '/roll 1d20 Tinks listens at the door');
   await sleep(600);
   await samPage.getByRole('tab', { name: /Feed/ }).click();
   await sleep(1200);
@@ -430,7 +430,7 @@ async function main() {
   // The character sheet.
   await samPage
     .getByRole('list', { name: 'Marching order' })
-    .getByRole('button', { name: 'Wren', exact: true })
+    .getByRole('button', { name: 'Tinks', exact: true })
     .click();
   await samPage.getByRole('dialog').last().waitFor();
   await sleep(900);
