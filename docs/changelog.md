@@ -40,6 +40,7 @@ This release needs a `bxapi` that has `POST /v1/ability-rolls/{roll_id}/preview`
 - **Replay with reduced motion (`@bxvtt/web`):** **Replay** between rounds did nothing when reduced motion was on. It now starts paused, and the viewer steps through the round.
 - **Explore action bar reasons (`@bxvtt/web`):** Search, Listen, Light, and Rest never showed why they were unavailable, because the reason went to a tooltip on a natively disabled button. They now stay focusable and show it.
 - **Repeated death line in playback (`@bxvtt/web`):** A member who gained the dead condition and died in the same round appeared as two identical beats.
+- **Documentation screenshot script (`docs/images/capture.mjs`):** The script waited on control labels that the 0.2.0 copy overhaul renamed, so it stopped at the lobby step. It now uses the current labels and sample party names, and every screenshot in `docs/images/` is regenerated. ([#33](https://github.com/mmacy/bxvtt/pull/33))
 
 ## [0.2.0] - 2026-11-22
 

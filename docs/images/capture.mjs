@@ -11,7 +11,7 @@
 //
 // Settings (environment variables):
 //
-// - BXAPI_URL: where bxapi listens. Default: http://127.0.0.1:8640
+// - BXAPI_URL: where bxapi listens. Default: http://127.0.0.1:8651
 // - BXVTT_CAPTURE_PORT: the port of the temporary bxvtt server. Default: 8670
 // - CAPTURE_ONLY: a comma-separated list of file names (without the extension) to keep. The script still plays
 //   the whole game, but it writes only those files.
@@ -25,7 +25,7 @@ import { chromium } from '@playwright/test';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const outDir = dirname(fileURLToPath(import.meta.url));
-const bxapiUrl = process.env.BXAPI_URL ?? 'http://127.0.0.1:8640';
+const bxapiUrl = process.env.BXAPI_URL ?? 'http://127.0.0.1:8651';
 const port = process.env.BXVTT_CAPTURE_PORT ?? '8670';
 const base = `http://127.0.0.1:${port}`;
 const only = process.env.CAPTURE_ONLY?.split(',').map((name) => name.trim());
@@ -186,7 +186,7 @@ async function declareAll(page) {
       await sleep(500);
       return;
     }
-    const quick = page.getByRole('button', { name: /^(Attack|Close in on) the / }).first();
+    const quick = page.getByRole('button', { name: /^(Attack|Close in on)/ }).first();
     if ((await quick.count()) === 0) return;
     await quick.click().catch(() => {});
     await sleep(500);
@@ -220,28 +220,28 @@ async function main() {
     return character;
   };
   await create(sam, {
-    name: 'Brenna',
+    name: 'Flarg',
     classId: 'fighter',
     seed: 109,
     buy: ['chainmail', 'shield', 'sword', 'torch'],
     equip: ['chainmail', 'shield', 'sword'],
   });
   await create(sam, {
-    name: 'Wren',
+    name: 'Tinks',
     classId: 'thief',
     seed: 19,
     buy: ['leather', 'sword', 'thieves_tools', 'torch'],
     equip: ['leather', 'sword'],
   });
   await create(priya, {
-    name: 'Osric',
+    name: 'Clarence',
     classId: 'cleric',
     seed: 63,
     buy: ['chainmail', 'shield', 'mace', 'holy_symbol'],
     equip: ['chainmail', 'shield', 'mace'],
   });
 
-  // Theo makes Tamsin in the wizard.
+  // Theo makes Mazpar in the wizard.
   const theoPage = await newPage(theo, { seedRolls: 9 });
   await theoPage.goto(`${base}/tables/${tableId}`);
   await theoPage
@@ -264,7 +264,7 @@ async function main() {
   await wizard.getByRole('button', { name: 'Magic-User', exact: true }).click();
   await next();
   await next();
-  await wizard.getByRole('textbox', { name: 'Name' }).fill('Tamsin');
+  await wizard.getByRole('textbox', { name: 'Name' }).fill('Mazpar');
   await wizard.getByRole('radio', { name: 'Lawful' }).click();
   await wizard.getByRole('checkbox', { name: 'Elvish' }).click();
   await wizard.getByRole('checkbox', { name: 'Hobgoblin' }).click();
@@ -283,7 +283,7 @@ async function main() {
   await snap(theoPage, 'wizard-outfit');
   await next();
   await wizard.getByRole('button', { name: 'Create character' }).click();
-  const ready = theoPage.getByRole('dialog', { name: 'Tamsin is ready' });
+  const ready = theoPage.getByRole('dialog', { name: 'Mazpar is ready' });
   await ready.waitFor({ timeout: 30_000 });
   await ready.getByRole('button', { name: 'Done' }).click();
 
@@ -294,7 +294,7 @@ async function main() {
   await priyaPage.goto(`${base}/tables/${tableId}`);
   const ruthPage = await newPage(ruth);
   await ruthPage.goto(`${base}/tables/${tableId}`);
-  await ruthPage.getByRole('button', { name: 'Start the game' }).waitFor();
+  await ruthPage.getByRole('button', { name: 'Start game' }).waitFor();
   await sleep(1200);
   await snap(ruthPage, 'lobby');
 
@@ -306,10 +306,10 @@ async function main() {
   await samPage.getByRole('tab', { name: 'Outfitter' }).waitFor();
   await sleep(1500);
 
-  // Town: Sam shops for Wren.
+  // Town: Sam shops for Tinks.
   await samPage.getByRole('tab', { name: 'Outfitter' }).click();
   await samPage
-    .getByRole('button', { name: /^Wren\b.*gp/ })
+    .getByRole('button', { name: /^Tinks\b.*gp/ })
     .first()
     .click();
   await samPage.getByRole('button', { name: /^Add Tinder box/ }).click();
@@ -318,7 +318,7 @@ async function main() {
   await samPage.getByRole('button', { name: /^Add Oil/ }).click();
   await sleep(500);
   await snap(samPage, 'town');
-  await samPage.getByRole('button', { name: /^Buy for Wren/ }).click();
+  await samPage.getByRole('button', { name: /^Buy for Tinks/ }).click();
   await sleep(1500);
 
   // Set out, light a torch, and walk into the guardroom.
@@ -331,9 +331,9 @@ async function main() {
   await sleep(1500);
   for (let attempt = 0; attempt < 8; attempt += 1) {
     await samPage.getByRole('button', { name: 'Light', exact: true }).last().click();
-    await samPage.getByRole('menuitem', { name: /Wren lights a torch/ }).click();
+    await samPage.getByRole('menuitem', { name: /Tinks lights a torch/ }).click();
     await sleep(1000);
-    if (!(await tableText(samPage)).includes('No light. The party is in the dark')) break;
+    if (!(await tableText(samPage)).includes('The party has no light.')) break;
   }
   await samPage.locator('h1').first().click();
   for (let step = 0; step < 4 && (await modeOf(samPage)) === 'Exploring'; step += 1) {
@@ -366,7 +366,7 @@ async function main() {
     .click()
     .catch(() => {});
   await samPage
-    .getByRole('button', { name: /Pick up the dropped goods/ })
+    .getByRole('button', { name: /Pick up dropped goods/ })
     .first()
     .click()
     .catch(() => {});
@@ -378,12 +378,17 @@ async function main() {
   await sleep(1300);
   await samPage.keyboard.press('ArrowUp');
   await sleep(1300);
-  await samPage
+  const scene = samPage.getByRole('region', { name: 'Current location' });
+  await scene
+    .getByRole('button', { name: 'Show description' })
+    .click({ timeout: 2000 })
+    .catch(() => {});
+  await scene
     .getByRole('button', { name: 'Door', exact: true })
     .click()
     .catch(() => {});
   await samPage
-    .getByRole('menuitem', { name: /Open it/ })
+    .getByRole('menuitem', { name: 'Open door' })
     .click()
     .catch(() => {});
   await sleep(1200);
@@ -402,11 +407,11 @@ async function main() {
     await person.call('POST', `/tables/${tableId}/feed`, { text });
     await sleep(250);
   };
-  await say(sam, 'Torch is lit. Brenna goes first, shield up.');
-  await say(priya, 'Osric stays behind Wren. I have the holy symbol ready if anything cold shows up.');
-  await say(theo, 'Tamsin has sleep memorized and a dagger for anything that gets close.');
+  await say(sam, 'Torch is lit. Flarg goes first, shield up.');
+  await say(priya, 'Clarence stays behind Tinks. I have the holy symbol ready if anything cold shows up.');
+  await say(theo, 'Mazpar has sleep memorized and a dagger for anything that gets close.');
   await say(ruth, 'The corridor is wet underfoot. Somewhere below you, a bell tolls once.');
-  await say(sam, '/roll 1d20 Wren listens at the door');
+  await say(sam, '/roll 1d20 Tinks listens at the door');
   await sleep(600);
   await samPage.getByRole('tab', { name: /Feed/ }).click();
   await sleep(1200);
@@ -423,7 +428,10 @@ async function main() {
   await snap(samPage, 'explore');
 
   // The character sheet.
-  await samPage.getByRole('button', { name: /^Wren, level 1 thief/ }).click();
+  await samPage
+    .getByRole('list', { name: 'Marching order' })
+    .getByRole('button', { name: 'Tinks', exact: true })
+    .click();
   await samPage.getByRole('dialog').last().waitFor();
   await sleep(900);
   await snap(samPage, 'sheet');
@@ -448,7 +456,7 @@ async function main() {
   // The referee panel.
   await ruthPage.reload();
   await ruthPage.getByRole('tab', { name: 'Referee', exact: true }).click();
-  await ruthPage.getByRole('tab', { name: 'Quick actions' }).click();
+  await ruthPage.getByRole('tab', { name: /^(Act|Quick actions)$/ }).click();
   await sleep(1200);
   await snap(ruthPage, 'referee');
 }
