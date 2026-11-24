@@ -1,11 +1,19 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import type { Meta } from '@bxvtt/shared/bxapi';
 import type { Health } from '@bxvtt/shared/protocol';
 import { BxapiProblem } from './bxapi';
+import { findRepoRoot } from './config';
 import type { Context } from './context';
 
-/** The bxvtt server's version. */
-export const SERVER_VERSION = '0.2.0';
+/**
+ * The bxvtt server's version: the root `package.json` version, read once at startup. The web build reads the same
+ * file, so one file versions a release.
+ */
+export const SERVER_VERSION = (
+  JSON.parse(readFileSync(join(findRepoRoot(), 'package.json'), 'utf8')) as { version: string }
+).version;
 
 /**
  * Checks bxapi and reports the server's health.
