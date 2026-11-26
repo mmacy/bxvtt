@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-26
+
 This release needs a `bxapi` built on `osrlib` 2.9.0, which is `bxapi` `main` from its pull request 60 onward. Update and restart `bxapi` before you start this version. With an older engine, the server serves no game and rolls no ability scores: it refuses every game request, every ability roll, and every WebSocket snapshot with `503 bxapi_outdated`, and `GET /api/health` reports `degraded` with the versions for a signed-in user. Without the check, an older `bxapi` couldn't roll with a table's `ruleset`, couldn't report a sub-par roll, and would leave the player view without the spell and valuable fields that the client reads now.
 
 ### Added
@@ -176,7 +178,8 @@ This release needs a `bxapi` built on `osrlib` 2.8, which is `bxapi` `main` from
 - **Bundled adventures, authoring builder, and automated verifier (`adventures/`):** Every server offers two original `osrlib` modules compiled from `adventures/src/*.mjs` (*The Drowned Bell*, a 3-level, 36-area campaign dungeon, and *The Toll at Crookback Bridge*, a 1-level, 13-area single-session module) alongside `bxapi`'s built-in *The Barrow of the Forgotten King*, plus per-table custom `.json` upload validation (up to 8 MiB) and live `adventures/` directory scanning. Zero-dependency scripts in `adventures/tools/` provide an ASCII grid compiler (`LevelBuilder` in `build.mjs`) and an automated static and live `bxapi` verifier (`check.mjs`) that checks schema validity, entrance reachability, level transitions, keyed encounters, triggers, and quests. See [Included and custom adventures](adventures/included-adventures.md) and [Author and validate adventures](adventures/authoring-and-checking.md).
 - **Design system, verification suites, and documentation site:** `@bxvtt/web` builds on a token-driven UI kit (`apps/web/src/ui`, with component galleries at `/kit` and `/kit/table`) using Radix UI primitives, self-hosted Fraunces, Atkinson Hyperlegible Next, and Rokkitt variable fonts, custom B/X class, equipment, and die SVGs, full keyboard navigation, code-split client bundles, and in-memory Brotli and gzip asset serving. Automated checks cover TypeScript, ESLint, Prettier, Vitest unit and live-`bxapi` server integration suites (including scans ensuring player responses never include referee data), multi-browser Playwright end-to-end game and `axe-core` accessibility suites (`e2e/`), GitHub Actions CI against production bundles, and a Docusaurus 3.10 documentation site (`website/` and `docs/`) with light and dark torch-ember themes.
 
-[Unreleased]: https://github.com/mmacy/bxvtt/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/mmacy/bxvtt/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/mmacy/bxvtt/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/mmacy/bxvtt/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/mmacy/bxvtt/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/mmacy/bxvtt/releases/tag/v0.1.0
