@@ -546,7 +546,25 @@ describe('entries without player events', () => {
     expect(narration.text).toContain('The party waits.');
   });
 
-  it('says when an award was capped at one level', () => {
+  it('says when an award was capped at one level, from the event of osrlib 2.7', () => {
+    const award = game(RUTH, 'award_xp', [
+      {
+        event_type: 'xp_awarded',
+        code: 'session.xp.awarded',
+        visibility: 'player',
+        character_id: 'character-0001',
+        award: 5000,
+        modified_award: 5000,
+        gained: 2399,
+        clamped: true,
+      },
+    ]);
+    expect(narrateEntry(award, ctx, { lens: false }).text).toContain(
+      'Brenna gains 2,399 of the 5,000 experience points awarded.',
+    );
+  });
+
+  it('says when an award was capped at one level, from an event before osrlib 2.7', () => {
     const award = game(RUTH, 'award_xp', [
       {
         event_type: 'xp_awarded',
@@ -559,7 +577,7 @@ describe('entries without player events', () => {
     ]);
     award.xp_gained = { 'character-0001': 2399 };
     expect(narrateEntry(award, ctx, { lens: false }).text).toContain(
-      'Brenna gains 2,399 experience points. One award raises a character only one level, so the rest is lost.',
+      'Brenna gains 2,399 of the 5,000 experience points awarded.',
     );
   });
 });

@@ -5,8 +5,8 @@
  * - `lobby`: four characters on the roster, no game.
  * - `town`: the game has started in town.
  * - `exploring`: the party has entered the priory.
- * - `encounter`: three goblins have appeared.
- * - `battle`: the battle has begun, and Brenna has declared an attack.
+ * - `encounter`: three goblins have appeared 30 feet away.
+ * - `battle`: the battle has begun, and Brenna has declared that she closes in and attacks.
  *
  * Sam (the player) owns Brenna and Wren and is the caller. Ruth (the referee) owns Osric and Tamsin.
  */

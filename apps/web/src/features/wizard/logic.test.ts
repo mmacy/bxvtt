@@ -5,7 +5,6 @@ import { describe, expect, it } from 'vitest';
 import type { ClassDetail, EquipmentDetail } from '@/app';
 import { createFakeApi } from '@/app/testing/renderWithTable';
 import catalog from './__fixtures__/catalog.json';
-import { facesForScore } from './dice';
 import { continueBlock, type ContinueFacts } from './CharacterWizard';
 import { autoEquip } from './OutfitStep';
 import {
@@ -36,12 +35,25 @@ function problem(body: Partial<Problem>): BxvttProblemError {
   } as Problem);
 }
 
+const SCORES = { str: 13, int: 9, wis: 10, dex: 12, con: 11, cha: 8 };
+
 function draftWith(change: Partial<WizardDraft>): WizardDraft {
   return {
     ...emptyDraft(),
     roll: {
       id: 'rol_test',
-      scores: { str: 13, int: 9, wis: 10, dex: 12, con: 11, cha: 8 },
+      scores: SCORES,
+      rolls: {
+        scores: SCORES,
+        rolls: {
+          str: [6, 4, 3],
+          int: [2, 3, 4],
+          wis: [1, 4, 5],
+          dex: [5, 5, 2],
+          con: [3, 2, 6],
+          cha: [1, 1, 6],
+        },
+      },
       eligible_class_ids: ['fighter', 'dwarf'],
       used: false,
       created_at: '',
@@ -50,18 +62,6 @@ function draftWith(change: Partial<WizardDraft>): WizardDraft {
     ...change,
   };
 }
-
-describe('facesForScore', () => {
-  it('returns three d6 faces that add up to every score from 3 to 18', () => {
-    for (let score = 3; score <= 18; score += 1) {
-      for (let salt = 0; salt < 6; salt += 1) {
-        const faces = facesForScore(score, salt);
-        expect(faces.reduce((a, b) => a + b, 0)).toBe(score);
-        for (const face of faces) expect(face >= 1 && face <= 6).toBe(true);
-      }
-    }
-  });
-});
 
 describe('requestFromDraft', () => {
   it('sends the roll, the trade, and only bought items to equip', () => {
@@ -104,6 +104,18 @@ describe('parseDraft', () => {
     expect(parseDraft(JSON.parse(JSON.stringify(draft)))).toEqual(draft);
     expect(parseDraft({ version: 1, roll: { id: 'x', scores: { str: 3 } } })).toBeNull();
     expect(parseDraft('nonsense')).toBeNull();
+  });
+
+  it('keeps a draft whose roll has no dice, or damaged dice, without them', () => {
+    const draft = draftWith({ step: 'identity', name: 'Wren' });
+    const stored = JSON.parse(JSON.stringify(draft)) as { roll: Record<string, unknown> };
+    const { rolls: _dice, ...withoutDice } = stored.roll;
+    const expected = { ...draft, roll: withoutDice };
+    expect(parseDraft({ ...stored, roll: withoutDice })).toEqual(expected);
+    const badFaces = { ...stored.roll, rolls: { scores: SCORES, rolls: { str: [6, 4, 7] } } };
+    const parsed = parseDraft({ ...stored, roll: badFaces });
+    expect(parsed).toEqual(expected);
+    expect(parsed?.roll).not.toHaveProperty('rolls');
   });
 
   it('reads a draft from the version that kept a gold count, without the count', () => {

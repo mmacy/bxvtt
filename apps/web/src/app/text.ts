@@ -3,7 +3,7 @@
  * `humanizeMessage` need to name party members, monsters, items, and places instead of showing IDs.
  *
  * The table store keeps a player-visible context and carries it forward across game states, as the text README
- * instructs: party names, encounter groups, the scene's area names, and `scene.names`. `useTextContext` adds the
+ * instructs: party names, encounter groups, the player view's dungeon and area names, and `scene.names`. `useTextContext` adds the
  * catalog names that have loaded, and for a referee with the lens on, the referee state and the adventure's
  * names.
  */

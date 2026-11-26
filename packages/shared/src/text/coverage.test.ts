@@ -11,8 +11,9 @@ import {
   hasCommandFieldText,
 } from './commands';
 import { emptyContext } from './context';
+import { BATTLE_ACTION_VALUES } from './labels';
 import { describeEvent, fallbackEventText, isKnownEventType } from './events';
-import { REJECTION_TEMPLATES, describeRejection } from './rejections';
+import { DECLARATION_CODES, REJECTION_TEMPLATES, declarationParams, describeRejection } from './rejections';
 import { TEMPLATE_FORMATS, templatePlaceholders, templateVariants } from './template';
 import { EVENT_SAMPLES } from './fixtures/event-samples';
 
@@ -62,9 +63,10 @@ describe('rejection coverage', () => {
   });
 
   it.each(rejectionCodes)('%s uses only params that osrlib passes with the code', (code) => {
-    const known = new Set<string>(
-      (codes.rejections as Record<string, { params: string[] }>)[code]?.params ?? [],
-    );
+    const known = new Set<string>([
+      ...((codes.rejections as Record<string, { params: string[] }>)[code]?.params ?? []),
+      ...declarationParams(code),
+    ]);
     const template = REJECTION_TEMPLATES[code];
     expect(template).toBeDefined();
     if (template === undefined) return;
@@ -115,6 +117,34 @@ describe('rejection coverage', () => {
     }
   });
 
+  it('lists only codes that osrlib defines as codes a declaration can refuse with the member named', () => {
+    expect([...DECLARATION_CODES].filter((code) => !(code in codes.rejections))).toEqual([]);
+  });
+
+  it('renders every declaration code with the declaring member named and no raw ID', () => {
+    const ctx = { ...emptyContext(), members: { 'character-0001': { name: 'Wren' } } };
+    for (const code of DECLARATION_CODES) {
+      const entry = (codes.rejections as Record<string, { params: string[] }>)[code];
+      // The declaring member is also the attacker or the caster of a kernel check that a declaration passes through.
+      const ids: Record<string, string> = {
+        character: 'character-0001',
+        attacker: 'character-0001',
+        caster: 'character-0001',
+        target: code.startsWith('session.command.') ? 'character-0002' : 'monster-0001',
+        monster: 'monster-0001',
+        item: 'magic-item-0001',
+        replacement: 'character-0002',
+      };
+      const params: Record<string, string | number> = { character: 'character-0001' };
+      for (const key of [...(entry?.params ?? []), ...declarationParams(code)])
+        params[key] = ids[key] ?? (NUMERIC_PARAMS.has(key) ? 3 : 'elvish');
+      const text = describeRejection({ code, params }, ctx);
+      expect(text, code).toContain('Wren');
+      expect(text, code).not.toMatch(/\{|\}|undefined|NaN|\[object|\b[a-z-]+-\d{4}\b/);
+      expect(text, code).not.toMatch(DASH);
+    }
+  });
+
   it('builds a sentence from the words of a code it does not know', () => {
     expect(describeRejection({ code: 'items.equip.too_heavy', params: {} })).toBe(
       "You can't do that: equip too heavy.",
@@ -151,7 +181,7 @@ describe('event coverage', () => {
   );
 
   it('covers the number of codes that osrlib defines', () => {
-    expect(cases.length).toBe(137);
+    expect(cases.length).toBe(141);
   });
 
   it.each(cases)('%s / %s has its own wording', (type, code) => {
@@ -302,6 +332,13 @@ describe('command coverage', () => {
       }
     }
     expect(missing).toEqual([]);
+  });
+
+  it('labels and describes every battle action that a declaration can take', () => {
+    const actions =
+      (schemas.BattleDeclaration?.properties?.action as { enum?: string[] } | undefined)?.enum ?? [];
+    expect(actions).toContain('hide');
+    expect([...BATTLE_ACTION_VALUES].sort()).toEqual([...actions].sort());
   });
 
   it('has text for the nested fields of declarations, locations, spells, and coins', () => {

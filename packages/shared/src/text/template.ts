@@ -41,7 +41,8 @@ import {
 } from './labels';
 
 export type ParamValue = number | string | readonly (number | string)[];
-export type ParamMap = Readonly<Record<string, ParamValue | undefined>>;
+/** A message's params. bxapi can send a param as `null`, and the text reads `null` as a missing param. */
+export type ParamMap = Readonly<Record<string, ParamValue | null | undefined>>;
 
 /** One wording of a message, used when every param in `when` is present. */
 export interface TemplateVariant {
@@ -59,6 +60,7 @@ const COIN_IDS = new Set(['pp', 'gp', 'ep', 'sp', 'cp']);
 export const TEMPLATE_FORMATS = [
   'raw',
   'member',
+  'possessive',
   'entity',
   'monster',
   'group',
@@ -94,11 +96,12 @@ export const TEMPLATE_FORMATS = [
   'number',
 ] as const;
 
-function first(value: ParamValue | undefined): number | string | undefined {
+function first(value: ParamValue | null | undefined): number | string | undefined {
+  if (value === null) return undefined;
   return Array.isArray(value) ? value[0] : (value as number | string | undefined);
 }
 
-function asText(value: ParamValue | undefined): string | undefined {
+function asText(value: ParamValue | null | undefined): string | undefined {
   const single = first(value);
   return single === undefined || single === '' ? undefined : String(single);
 }
@@ -131,12 +134,16 @@ const SPELL_LISTS: Record<string, string> = {
   magic_user: 'magic-user',
 };
 
-function formatValue(value: ParamValue | undefined, format: string, ctx: TextContext): string {
+function formatValue(value: ParamValue | null | undefined, format: string, ctx: TextContext): string {
   const text = asText(value);
   const [name, argument] = format.split(':') as [string, string | undefined];
   switch (name) {
     case 'member':
       return memberName(text, ctx);
+    case 'possessive': {
+      const name = memberName(text, ctx);
+      return /s$/i.test(name) ? `${name}'` : `${name}'s`;
+    }
     case 'entity':
       return text ? entityName(text, ctx) : 'someone';
     case 'monster':
@@ -234,7 +241,9 @@ export function templateVariants(template: Template): readonly TemplateVariant[]
 
 function present(params: ParamMap, key: string): boolean {
   const value = params[key];
-  return value !== undefined && value !== '' && !(Array.isArray(value) && value.length === 0);
+  return (
+    value !== undefined && value !== null && value !== '' && !(Array.isArray(value) && value.length === 0)
+  );
 }
 
 /** Pick the first variant whose required params are all present, and fill in its placeholders. */

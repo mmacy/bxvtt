@@ -253,9 +253,22 @@ function tradeApi(answer?: (request: CharacterCheckRequest) => Promise<void>): F
   return api;
 }
 
+const FIGHTER_SCORES = tradeNamed('fighter lowers Intelligence by 1').scores;
+
 const FIGHTER_ROLL = {
   id: 'rol_trade',
-  scores: tradeNamed('fighter lowers Intelligence by 1').scores,
+  scores: FIGHTER_SCORES,
+  rolls: {
+    scores: FIGHTER_SCORES,
+    rolls: {
+      str: [6, 5, 4],
+      int: [4, 5, 5],
+      wis: [3, 4, 4],
+      dex: [2, 3, 4],
+      con: [5, 3, 3],
+      cha: [4, 3, 3],
+    },
+  },
   eligible_class_ids: ['fighter'],
   used: false,
   created_at: '2026-11-21T00:00:00Z',

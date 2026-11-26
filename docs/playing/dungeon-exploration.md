@@ -8,7 +8,7 @@ sidebar_position: 3
 
 Once the party enters a dungeon, the central stage displays the explored map in **Exploring** mode. Each grid square measures 10 feet across, and the map reveals only cells and doors the party has discovered.
 
-![Exploring the first level of The Drowned Bell in the blueprint map theme](../images/explore.webp)
+![Exploring the first level of The Drowned Bell in the blueprint map theme, with the scene panel listing a treasure, dropped goods, and a door](../images/explore.webp)
 
 ## Read the map and controls
 
@@ -16,10 +16,10 @@ Once the party enters a dungeon, the central stage displays the explored map in 
 - **Top-left toolbar:**
   - **Level selector:** Switches between dungeon levels the party has visited.
   - **Map themes:** Choose **Blueprint map**, **Torchlit map**, or **Parchment map**. Your choice applies only to your own browser.
-  - **Pins:** Lists every note pin placed on the current level, with buttons to center on a pin, read it, or **Add a pin where the party stands**.
+  - **Pins:** Lists every note pin placed on the current level, with buttons to center on a pin, read it, or **Add pin at party**.
   - **Light status:** Shows remaining light duration (such as `6 turns`), **No light** (`The party has no light.`), or **Darkness** (`Magical darkness covers the party.`). Click this button at any time to light a torch or lantern or put out an active light.
-- **Scene panel (top-left, below toolbar):** Shows the name and description of the room the party occupies (or **Corridor** in unkeyed passages) alongside party facing and contextual prompts for doors or treasure. The description collapses automatically after 10 seconds or when you click the map; select **Show the description** or **Hide the description** to keep it expanded or tucked away.
-- **Bottom-right camera controls and minimap:** Use **Zoom in**, **Zoom out**, **Show the whole map**, **Center on the party**, and **Follow the party** (which tracks the party automatically until you pan manually), plus the collapsible minimap and compass.
+- **Scene panel (top-left, below toolbar):** Shows the name and description of the room the party occupies (or **On the way** where the adventure keys no room), the direction the party faces, and a list of what the party perceives here, each with its action: stairs, passages, treasure, dropped goods, doors, and known traps. A stairway says which way it leads, and a trapdoor, chute, or passage says what it is, but none says where it takes the party. The description collapses automatically after 10 seconds or when you click the map. Select **Collapse description** or **Show description** to keep it folded or open. When it's folded, a button counts what's here (**1 thing here**, **3 things here**) and opens a menu of the actions.
+- **Bottom-right camera controls and minimap:** Use **Zoom in**, **Zoom out**, **Fit map**, **Center on the party**, and **Follow the party** (which tracks the party automatically until you pan manually), plus the collapsible minimap and compass.
 
 ## Move, turn, and track time
 
@@ -39,7 +39,7 @@ Dungeon actions advance the game clock in the top bar. Torches last 6 turns (1 h
 | **Listen** | `L` | Listen for sound behind a closed door adjacent to the party's square (works on any side of your square, regardless of facing). |
 | **Light** | `T` | Light a torch or lantern, set fire to dropped oil, or put out a character's light. |
 | **Rest** | `Z` | Rest for one turn, a night, or a full day inside the dungeon. |
-| **Treasure** / **Dropped goods** | `G` | Appears when a visible treasure cache or dropped monster pile is in reach. |
+| **Treasure** / **Dropped goods** | `G` | Appears when treasure the party can see or dropped goods are in reach. |
 | **Go down the stairs** / **Climb the stairs** | `U` | Appears when the party stands on stairs, a trapdoor, or a chute between levels. |
 | **Return to town** | none | Appears when the party stands on the dungeon entrance cell. |
 | **Other** | `M` | Change facing, open character sheets to equip/drop/give items, reorder the party, prepare or learn spells, cast a spell, or use an item. |
@@ -50,19 +50,25 @@ Right-click any square, wall, or door on the map (or press `Shift+F10` with the 
 
 Stand next to a door and click it on the map, right-click it, or open the **Door** menu in the scene panel:
 
-- **Open it** or **Close it** for unlocked, unstuck doors.
-- **Force it open** to have a party member shoulder a stuck door (each member's `X in 6` chance is listed).
-- **Pick the lock** to have a thief attempt a locked door with thieves' tools.
-- **Listen at it** to spend a turn listening for monsters beyond.
-- **Wedge it shut with a spike** or **Wedge it open with a spike** using iron spikes.
+- **Open door** or **Close door** for unlocked, unstuck doors.
+- **Force door** to have a party member shoulder a stuck door (each member's `X in 6` chance is listed).
+- **Pick lock** to have a thief attempt a locked door with thieves' tools.
+- **Listen at door** to spend a turn listening for monsters beyond.
+- **Wedge shut with a spike** or **Wedge open with a spike** using iron spikes.
 
 ### Treasure and traps
 
-When the party discovers a treasure cache or stands over loot dropped by defeated monsters, open **Treasure** (`G`):
+Each treasure the party can see appears in the scene panel as a row that leads with its description, before anyone opens it, and stays listed after it's emptied. The description says what the treasure looks like, not what it holds, and a rolled treasure with no description reads **Treasure lies here.** A treasure the party can't reach yet says **Step closer to reach it.**
 
-- **Take the treasure** divides coins and valuables across the party, whereas **Give it all to one member** assigns the cache to one character.
-- **Check it for traps** and **Disarm the trap** let a thief inspect a cache and attempt trap removal before anyone touches it.
-- **Pick up the dropped goods** collects coins and gear left behind on the floor after a fight.
+A row shows a badge once the party knows about a trap: **Trapped** for a trap the party found, **Trap sprung**, or **Trap disarmed**. The game never says whether a treasure has a trap that the party hasn't found. A trap in the room itself shows as its own row: "The party found a trap in this room.", "The trap in this room has sprung.", or "The trap in this room is disarmed."
+
+Each row has a **Take** button and a **More for this treasure** menu (**More for** followed by the start of the description when several treasures lie here):
+
+- **Take** divides the treasure across the party. It stays available when the party found a trap, so the table decides whether to try first.
+- **Give all to one member** (in the **More** menu, when more than one character is alive) assigns the treasure to one character.
+- **Check for traps** lets a thief inspect a treasure that has no known trap, and **Disarm trap** lets a thief try to disarm one the party has found, before anyone touches the treasure.
+
+The **Treasure** menu on the action bar (`G`) lists the same actions for each treasure, with **Take treasure** first, and **Pick up dropped goods** collects coins and gear left on the floor after a fight. It appears when treasure or dropped goods are within reach. In the scene panel, dropped goods appear as their own row, "Dropped goods lie here.", with a **Pick up** button.
 
 ## Collaborate with map tools
 
@@ -80,6 +86,6 @@ Switch tools from the left-hand tool rail or by pressing their single-letter sho
 
 When you focus the map canvas while using **Measure** (`R`), **Ping** (`P`), or **Pin a note** (`N`), a highlighted cell cursor appears at the party's square:
 
-- Press the **arrow keys** to move the cursor cell by cell (the map announces rooms, doors, and relative coordinates to screen readers).
+- Press the **arrow keys** to move the cursor cell by cell (the map announces the room, the position, and anything lying on the square, such as treasure, dropped goods, stairs, and doors, to screen readers).
 - Press `Enter` to drop a ping, create a pin, or start and finish a ruler measurement.
 - Press `Esc` to clear a measurement or hide the cursor.

@@ -1,18 +1,19 @@
 import type { SaveEntry } from '@bxvtt/shared/protocol';
 import {
-  classLabel,
+  classInSentence,
   conditionLabel,
-  SECONDS_PER_ROUND,
   count,
-  formatInteger,
   formatGameClock,
+  formatInteger,
   joinList,
+  SECONDS_PER_ROUND,
   sessionModeDescription,
 } from '@bxvtt/shared/text';
 import { useEffect, useMemo, useState } from 'react';
 import {
   describeProblem,
   getApi,
+  memberClassName,
   tokenClass,
   useApiAction,
   useFeed,
@@ -278,7 +279,7 @@ export function EndScreen() {
                   <p className={styles.saveTitle}>{member.name}</p>
                   <p className={styles.endMeta}>
                     <span>
-                      Level {member.level} {classLabel(member.class_id).toLowerCase()}
+                      Level {member.level} {classInSentence(memberClassName(member))}
                       <span className="visually-hidden-inline">,</span>
                     </span>
                     <span>{formatInteger(member.xp)} XP</span>

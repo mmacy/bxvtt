@@ -38,12 +38,45 @@ const MOVES_TO_CELL = /\bThe party moves to \(-?\d+, -?\d+\), facing ([a-z]+)\./
 const DOOR_OF_CELL = /\b([Tt])he door ([a-z]+) of \(-?\d+, -?\d+\)/g;
 const NOTHING_LISTED = /\b(acquires|drops|gives) (?=\.| to )/g;
 const ENTERS_PLACE = /\bThe party enters (dungeon|area) ([a-z][a-z0-9_-]*) \(level (\d+)\)\./g;
-const ENCOUNTER = /\bEncounter: (\d+) (.+?) at (\d+)'/g;
+const ENCOUNTER = /\bEncounter: (\d+ .+?) at (\d+)'/g;
 
 /**
- * Who the party meets, for osrlib's `Encounter: 3 goblins at 60'`. osrlib names the first group and counts every
- * monster, so the groups the context knows replace it when their sizes add up, and a proper name such as `Mag
- * Corrie` never takes a plural.
+ * Hyphenated English words in osrlib's lines, which read as written rather than as the words of an ID such as
+ * `jade-idol`.
+ */
+const HYPHENATED_WORDS = new Set([
+  'back-stab',
+  'back-stabs',
+  'one-level',
+  'in-6',
+  'trap-spring',
+  'referee-only',
+]);
+
+/**
+ * Who the party meets, for osrlib's `Encounter: 2 goblins and 1 Mag Corrie at 60'`. A line that names several
+ * groups reads each one, and a proper name such as `Mag Corrie` takes no count. A line that names one group may
+ * come from before osrlib 2.7, which named the first group and counted every monster, so the groups the context
+ * knows replace it when their sizes add up.
+ */
+function encounterList(list: string, ctx: TextContext): string {
+  const parts = list.split(/, and |, | and /).map((part) => /^(\d+) (.+)$/.exec(part));
+  if (parts.some((part) => part === null)) return list;
+  const groups = parts.flatMap((part) =>
+    part?.[1] && part[2] ? [{ n: Number(part[1]), label: part[2] }] : [],
+  );
+  const first = groups[0];
+  if (groups.length === 1 && first) return encounterCompany(first.n, first.label, ctx);
+  return joinList(
+    groups.map(({ n, label }) =>
+      n === 1 ? (isProperLabel(label) ? label : withArticle(label)) : count(n, label, label),
+    ),
+  );
+}
+
+/**
+ * Who the party meets, for a line that names one group: `3 goblins`. When the groups the context knows add up to
+ * the count, they replace it, and a proper name such as `Mag Corrie` never takes a plural.
  */
 function encounterCompany(total: number, named: string, ctx: TextContext): string {
   const groups = Object.values(ctx.groups).filter((group) => group.count !== undefined && group.count > 0);
@@ -56,6 +89,7 @@ function encounterCompany(total: number, named: string, ctx: TextContext): strin
 }
 
 function nameForToken(token: string, ctx: TextContext): string {
+  if (HYPHENATED_WORDS.has(token)) return token;
   if (ctx.items[token] || equipmentNoun(token)) return itemNoun(token, ctx);
   if (ctx.spells[token]) return ctx.spells[token];
   if (spellCatalogName(token)) return spellCatalogName(token) ?? prettifyId(token);
@@ -91,8 +125,7 @@ function tidyWording(text: string, ctx: TextContext): string {
       )
       .replace(
         ENCOUNTER,
-        (_match, total: string, named: string, feet: string) =>
-          `Encounter: ${encounterCompany(Number(total), named, ctx)} at ${feet}'`,
+        (_match, list: string, feet: string) => `Encounter: ${encounterList(list, ctx)} at ${feet}'`,
       )
       .replace(ENTERS_TOWN, () => `The party arrives in ${ctx.townName ?? 'town'}.`)
       .replace(

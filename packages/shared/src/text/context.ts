@@ -20,11 +20,22 @@ import {
   spellCatalogName,
   type ItemNoun,
 } from './catalog';
-import { capitalizeFirst, lowerFirst, placeInSentence, pluralize, prettifyId, withArticle } from './format';
+import { creatureNames } from './creatures';
+import {
+  capitalizeFirst,
+  classInSentence,
+  lowerFirst,
+  placeInSentence,
+  pluralize,
+  prettifyId,
+  withArticle,
+} from './format';
 
 export interface MemberInfo {
   name: string;
   classId?: string;
+  /** The class's name as the player view states it, such as `Fighter`, which is right for a custom class too. */
+  className?: string;
   level?: number;
 }
 
@@ -49,6 +60,12 @@ export interface MonsterInfo {
   templateId?: string;
   /** A name for a creature that has one, such as an NPC adventurer. */
   name?: string;
+  /**
+   * What the table calls the creature in its encounter, such as `Goblin 2` or `Ogre`, from
+   * [`creatureNames`][creatureNames]. The text names a creature by `name` first, then by this, and then by its
+   * label: `a goblin`.
+   */
+  tableName?: string;
 }
 
 export interface TextContext {
@@ -65,8 +82,13 @@ export interface TextContext {
    * reads with its curated noun, whatever this record says.
    */
   items: Record<string, string>;
-  /** Spell names by ID, without an article: `magic missile`. */
+  /** Spell names by ID, as the rules write them: `Magic Missile`. */
   spells: Record<string, string>;
+  /**
+   * The name of each spell's reversed form by spell ID, such as `Darkness` for `light_mu`, from the player view's
+   * `reversed_spell_names`. A spell the context doesn't list here reads as `the reversed form of Light`.
+   */
+  reversedSpells?: Record<string, string>;
   /** Area names by area ID, or by `dungeon:level:area`. */
   areas: Record<string, string>;
   /** Dungeon names by dungeon ID. */
@@ -155,13 +177,32 @@ export interface PlayerViewLike {
     id: string;
     name: string;
     class_id?: string;
+    class_name?: string;
     level?: number;
     inventory?: unknown;
   }>;
   encounter?: {
-    groups?: ReadonlyArray<{ id: string; label: string; label_plural?: string; count?: number }>;
+    groups?: ReadonlyArray<{
+      id: string;
+      label: string;
+      label_plural?: string;
+      count?: number;
+      members?: ReadonlyArray<{ id: string; status: 'alive' | 'defeated' | 'fled' }>;
+    }>;
   } | null;
   town_name?: string;
+  /** Spell names by spell ID, for every spell the view shows. */
+  spell_names?: Readonly<Record<string, string>>;
+  /** The names of the reversed forms of the spells in `spell_names` that have one. */
+  reversed_spell_names?: Readonly<Record<string, string>>;
+  /** The dungeons the party has entered, with their names. */
+  dungeons?: ReadonlyArray<{ id?: string; name?: string }>;
+  /** The party's map, with the areas it has entered on each level. */
+  explored?: ReadonlyArray<{
+    dungeon_id: string;
+    level_number: number;
+    areas?: ReadonlyArray<{ id?: string; name?: string }>;
+  }>;
 }
 
 /**
@@ -202,18 +243,40 @@ function registerInventory(items: Record<string, string>, inventory: unknown): v
 }
 
 /**
- * Build a context from a player view: the party members (name and class), the current monster groups, the
- * display names of magic items and valuables the party carries, and the town name. Pass `base` to add the
- * view's data to a context you already have, so groups from earlier encounters stay known.
+ * Build a context from a player view: the party members (name and class), the current monster groups and the
+ * monsters in them, the display names of magic items and valuables the party carries, the names of the spells,
+ * dungeons, and areas the view shows, and the town name. Pass `base` to add the view's data to a context you
+ * already have, so groups from earlier encounters stay known.
+ *
+ * The view's own names win over the built-in catalog, so a custom class, a spell the adventure bundles, and an
+ * area or a dungeon of the adventure read by the names their author gave them, without the referee view. A view
+ * from before bxapi stated these names leaves the catalog to name them.
  */
 export function contextFromPlayerView(view: PlayerViewLike, base?: TextContext): TextContext {
   const ctx = cloneContext(base ?? emptyContext());
   for (const member of view.party ?? []) {
     const info: MemberInfo = { name: member.name };
     if (member.class_id !== undefined) info.classId = member.class_id;
+    if (member.class_name) info.className = member.class_name;
     if (member.level !== undefined) info.level = member.level;
     ctx.members[member.id] = info;
     registerInventory(ctx.items, member.inventory);
+  }
+  for (const [id, name] of Object.entries(view.spell_names ?? {})) {
+    if (name.trim() !== '') ctx.spells[id] = name;
+  }
+  for (const [id, name] of Object.entries(view.reversed_spell_names ?? {})) {
+    if (name.trim() !== '') (ctx.reversedSpells ??= {})[id] = name;
+  }
+  for (const dungeon of view.dungeons ?? []) {
+    if (dungeon.id && dungeon.name) ctx.dungeons[dungeon.id] = dungeon.name;
+  }
+  for (const level of view.explored ?? []) {
+    for (const area of level.areas ?? []) {
+      if (!area.id || !area.name) continue;
+      ctx.areas[`${level.dungeon_id}:${level.level_number}:${area.id}`] = area.name;
+      if (!(area.id in ctx.areas)) ctx.areas[area.id] = area.name;
+    }
   }
   // While an encounter is open, its groups replace the groups of earlier encounters, so that a monster ID
   // with no known template can take the label of the one kind of monster in the fight. When no encounter is
@@ -226,6 +289,16 @@ export function contextFromPlayerView(view: PlayerViewLike, base?: TextContext):
     const size = Math.max(group.count ?? 0, earlier[group.id]?.size ?? 0, earlier[group.id]?.count ?? 0);
     if (size > 0) info.size = size;
     ctx.groups[group.id] = info;
+  }
+  // Each creature reads by what the table calls it, such as `Goblin 2`, and otherwise by its group's label, which
+  // is what the players see. A label or a real name the context already has, such as a referee's NPC name, stays.
+  for (const creature of creatureNames(view.encounter?.groups)) {
+    const group = ctx.groups[creature.group_id];
+    const known: MonsterInfo = ctx.monsters[creature.id] ?? {
+      label: group?.label ?? 'monster',
+      ...(group === undefined ? {} : { labelPlural: group.labelPlural }),
+    };
+    ctx.monsters[creature.id] = { ...known, tableName: creature.name };
   }
   if (view.town_name) ctx.townName = view.town_name;
   return ctx;
@@ -263,11 +336,20 @@ export function extendContextWithReferee(ctx: TextContext, view: RefereeViewLike
       monster.template.name?.toLowerCase() ??
       prettifyId(monster.template.id);
     const labelPlural = monster.template.display_name_plural ?? labels?.labelPlural ?? pluralize(label);
-    next.monsters[monster.id] = { label, labelPlural, templateId: monster.template.id };
+    // What the table calls the monster stays, so the referee reads `Goblin 2` as the players do.
+    const tableName = next.monsters[monster.id]?.tableName;
+    next.monsters[monster.id] = {
+      label,
+      labelPlural,
+      templateId: monster.template.id,
+      ...(tableName === undefined ? {} : { tableName }),
+    };
   }
   for (const npc of view.npcs ?? []) {
     const info: MonsterInfo = { label: 'adventurer', labelPlural: 'adventurers', name: npc.name };
     if (npc.class_id) info.templateId = `npc:${npc.class_id}`;
+    const tableName = next.monsters[npc.id]?.tableName;
+    if (tableName !== undefined) info.tableName = tableName;
     next.monsters[npc.id] = info;
   }
   for (const group of view.encounter?.groups ?? []) {
@@ -471,6 +553,8 @@ export interface EntryLabelLike {
   count?: number;
   /** For a group, the most it has had alive. */
   size?: number;
+  /** For a monster, what the table called it in its encounter, such as `Goblin 2`. */
+  name?: string;
 }
 
 /** Loose shape of a game feed entry's `names` from the bxvtt server. A protocol `EntryNames` fits it. */
@@ -530,7 +614,15 @@ export function extendContextWithEntryNames(
     if (name.trim() !== '') next.dungeons[id] = name;
   }
   for (const [id, entry] of Object.entries(names.monsters ?? {})) {
-    if (entry.label.trim() !== '') next.monsters[id] = { ...next.monsters[id], ...label(entry) };
+    if (entry.label.trim() === '') continue;
+    // The entry's label and table name replace the context's, and a real name the context has, such as a
+    // referee's NPC name, stays.
+    const tableName = entry.name !== undefined && entry.name.trim() !== '' ? entry.name : undefined;
+    next.monsters[id] = {
+      ...next.monsters[id],
+      ...label(entry),
+      ...(tableName === undefined ? {} : { tableName }),
+    };
   }
   const unknownItems = Object.fromEntries(
     Object.entries(names.items ?? {}).filter(([id]) => next.items[id] === undefined),
@@ -538,27 +630,23 @@ export function extendContextWithEntryNames(
   return extendContextWithNames(next, unknownItems);
 }
 
-/** Loose shape of the parts of a bxvtt scene that name things. A protocol `Scene` fits it. */
+/** Loose shape of the part of a bxvtt scene that names things. A protocol `Scene` fits it. */
 export interface SceneNamesLike {
+  /** Item, magic item, and valuable display names by ID. */
   names?: Readonly<Record<string, string>>;
-  dungeon_names?: Readonly<Record<string, string>>;
 }
 
 /**
- * Add what a bxvtt scene names: item names from `scene.names`, read as in
- * [`extendContextWithNames`][extendContextWithNames], and the names of the dungeons the party has entered from
- * `scene.dungeon_names`, so a player's text reads "the priory on Corvane's Holm" where it would read "the priory".
+ * Add the item names that a bxvtt scene states in `scene.names`, read as in
+ * [`extendContextWithNames`][extendContextWithNames]. Dungeon and area names come from the player view, which
+ * `contextFromPlayerView` reads.
  *
  * ```ts
  * ctx = extendContextWithScene(contextFromPlayerView(game.view, ctx), game.scene);
  * ```
  */
 export function extendContextWithScene(ctx: TextContext, scene: SceneNamesLike): TextContext {
-  const next = extendContextWithNames(ctx, scene.names ?? {});
-  for (const [id, name] of Object.entries(scene.dungeon_names ?? {})) {
-    if (name.trim() !== '') next.dungeons[id] = name;
-  }
-  return next;
+  return extendContextWithNames(ctx, scene.names ?? {});
 }
 
 /** Shape of any event that the context can learn from. */
@@ -662,8 +750,10 @@ export function cloneContext(ctx: TextContext): TextContext {
     areas: { ...ctx.areas },
     dungeons: { ...ctx.dungeons },
   };
+  if (ctx.reversedSpells !== undefined) copy.reversedSpells = { ...ctx.reversedSpells };
   if (ctx.townName !== undefined) copy.townName = ctx.townName;
   if (ctx.triggers !== undefined) copy.triggers = { ...ctx.triggers };
+  if (ctx.flags !== undefined) copy.flags = { ...ctx.flags };
   return copy;
 }
 
@@ -678,8 +768,11 @@ export function mergeContexts(...contexts: readonly TextContext[]): TextContext 
     Object.assign(merged.spells, ctx.spells);
     Object.assign(merged.areas, ctx.areas);
     Object.assign(merged.dungeons, ctx.dungeons);
+    if (ctx.reversedSpells !== undefined)
+      merged.reversedSpells = { ...merged.reversedSpells, ...ctx.reversedSpells };
     if (ctx.townName !== undefined) merged.townName = ctx.townName;
     if (ctx.triggers !== undefined) merged.triggers = { ...merged.triggers, ...ctx.triggers };
+    if (ctx.flags !== undefined) merged.flags = { ...merged.flags, ...ctx.flags };
   }
   return merged;
 }
@@ -731,16 +824,22 @@ export function memberName(id: string | null | undefined, ctx: TextContext): str
   return isEntityId(id) ? entityName(id, ctx) : prettifyId(id);
 }
 
-/** The class of a member as a lower-case noun, when known: `thief`. */
+/**
+ * The class of a member as it reads in the middle of a sentence, when known: `thief`, or `warlock of Sarn`. The
+ * player view's class name comes first, so a custom class reads by its own name. {@link classInSentence} decides
+ * which letters read in lower case.
+ */
 export function memberClass(id: string, ctx: TextContext): string | undefined {
-  const classId = ctx.members[id]?.classId;
-  return classId ? (classCatalogName(classId)?.toLowerCase() ?? prettifyId(classId)) : undefined;
+  const known = ctx.members[id];
+  if (known?.className) return classInSentence(known.className);
+  const classId = known?.classId;
+  return classId ? classInSentence(classCatalogName(classId) ?? prettifyId(classId)) : undefined;
 }
 
 function npcName(id: string, ctx: TextContext): string {
   const known = ctx.monsters[id];
   if (known?.name) return known.name;
-  if (known) return oneOf(known.label);
+  if (known) return tabledName(known);
   return 'an adventurer';
 }
 
@@ -751,14 +850,15 @@ function soleGroupLabel(ctx: TextContext): string | undefined {
 }
 
 /**
- * Name of a monster: `a goblin`. A monster the context can't resolve takes the label of the encounter's only
- * monster group when there is just one kind, and otherwise reads as `a monster`.
+ * Name of a monster: its own name when it has one (an NPC adventurer's), what the table calls it in its encounter
+ * (`Goblin 2`), or its label (`a goblin`). A monster the context can't resolve takes the label of the encounter's
+ * only monster group when there is just one kind, and otherwise reads as `a monster`.
  */
 export function monsterName(id: string | null | undefined, ctx: TextContext): string {
   if (!id) return 'a monster';
   const known = ctx.monsters[id];
   if (known?.name) return known.name;
-  if (known) return oneOf(known.label);
+  if (known) return tabledName(known);
   const sole = soleGroupLabel(ctx);
   return sole ? oneOf(sole) : 'a monster';
 }
@@ -770,6 +870,16 @@ export function monsterName(id: string | null | undefined, ctx: TextContext): st
  */
 export function isProperLabel(label: string): boolean {
   return /^\p{Lu}/u.test(label.trim());
+}
+
+/**
+ * A creature the context knows, in a sentence: what the table calls it when that tells it apart from others of its
+ * label (`Goblin 2`), and otherwise its label (`an ogre`, or `Mag Corrie` for a proper name).
+ */
+function tabledName(known: MonsterInfo): string {
+  const table = known.tableName;
+  if (table !== undefined && table !== capitalizeFirst(known.label)) return table;
+  return oneOf(known.label);
 }
 
 /** One creature by its label: `a goblin`, or `Mag Corrie` for a proper name. */
@@ -905,6 +1015,20 @@ export function spellName(id: string | null | undefined, ctx: TextContext): stri
   return ctx.spells[id] ?? spellCatalogName(id) ?? prettifyId(id);
 }
 
+/**
+ * Name of a spell in the form it was cast or memorized: its name, or for the reversed form, the reverse's own
+ * name when the context knows it (`Darkness`), and otherwise `the reversed form of Light`.
+ */
+export function spellFormName(
+  id: string | null | undefined,
+  reversed: boolean | null | undefined,
+  ctx: TextContext,
+): string {
+  if (reversed !== true) return spellName(id, ctx);
+  const reverse = id ? ctx.reversedSpells?.[id] : undefined;
+  return reverse ?? `the reversed form of ${spellName(id, ctx)}`;
+}
+
 /** Name of an area, when the context knows it, and otherwise a phrase built from the ID. */
 export function areaName(
   id: string | null | undefined,
@@ -947,7 +1071,7 @@ export function entityName(id: string | null | undefined, ctx: TextContext): str
     case 'valuable':
       return itemName(id, ctx);
     case 'cache':
-      return 'a treasure cache';
+      return 'a treasure';
     case 'temple':
       return 'the temple cleric';
     case 'side':

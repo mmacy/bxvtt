@@ -140,6 +140,36 @@
   min-height: 64px;
 }
 
+/* A restored draft's dice while they load, laid out as `DiceRoll` lays out the dice that replace them. */
+.diceLoading {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+
+.diceLoadingHeader {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.diceLoadingLabel {
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-strong);
+}
+
+.diceLoadingFormula {
+  font-family: var(--font-numeric);
+  font-size: var(--text-md);
+  color: var(--color-text-subtle);
+}
+
+.diceLoadingDice {
+  display: flex;
+  gap: var(--space-2);
+}
+
 .diceWaiting {
   align-self: flex-start;
   font-size: var(--text-sm);

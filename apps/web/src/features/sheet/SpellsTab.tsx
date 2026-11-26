@@ -1,7 +1,14 @@
 import type { MemberView, SpellSummary } from '@bxvtt/shared/bxapi';
-import { capitalizeFirst, joinList, ordinal, prettifyId, spellCatalogName } from '@bxvtt/shared/text';
+import {
+  capitalizeFirst,
+  joinList,
+  ordinal,
+  spellFormName,
+  spellName,
+  type TextContext,
+} from '@bxvtt/shared/text';
 import { useMemo, useState } from 'react';
-import { useParty, usePartyLocation, useSendCommand, useSpellCatalog } from '@/app';
+import { useParty, usePartyLocation, useSendCommand, useSpellCatalog, useTextContext } from '@/app';
 import {
   Badge,
   Banner,
@@ -26,9 +33,12 @@ import type { SheetModel } from './model';
 import styles from './sheet.module.css';
 import { useClassDetail, useSpellDetail } from './catalogs';
 
-/** A spell's name from the catalog, or the built-in name. */
-function nameOf(id: string, catalog: readonly SpellSummary[] | null): string {
-  return catalog?.find((s) => s.id === id)?.name ?? capitalizeFirst(spellCatalogName(id) ?? prettifyId(id));
+/**
+ * A spell's name in the form a member has it: the name the player view states, including a spell the adventure
+ * bundles, and for a reversed copy the name of the reverse. The catalogs name a spell the view doesn't.
+ */
+function nameOf(id: string, reversed: boolean, ctx: TextContext): string {
+  return capitalizeFirst(spellFormName(id, reversed, ctx));
 }
 
 /** A spell's full text: the introduction and each way to cast it. */
@@ -82,6 +92,7 @@ function SpellInfo({ spellId, name }: { spellId: string; name: string }) {
 export function SpellsTab({ member, model }: { member: MemberView; model: SheetModel }) {
   const classEntry = useClassDetail(model.classId);
   const catalog = useSpellCatalog();
+  const ctx = useTextContext();
   const magic = classMagic(classEntry.data);
   const slots = spellSlotsAt(classEntry.data, model.level);
   const prepare = useMemberCommand('prepare_spells', member.id);
@@ -104,7 +115,7 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
   }, [model.memorized]);
 
   const blocked = [prepare, learn, cast].find((c) => c.legal !== null && !c.permission.allowed);
-  const bookNames = model.spellBook.map((id) => nameOf(id, spells));
+  const bookNames = model.spellBook.map((id) => nameOf(id, false, ctx));
   // A caster whose class table gives slots at this level but who has nothing memorized can't cast yet.
   const unprepared = magic !== null && model.memorized.length === 0 && slots.some((n) => n > 0);
   // After a level up, the class table can give more slots than the caster has memorized.
@@ -191,14 +202,13 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
         ) : (
           <div className={styles.spellGrid}>
             {memorized.map((copy) => {
-              const name = nameOf(copy.spellId, spells);
+              const name = nameOf(copy.spellId, copy.reversed, ctx);
               const summary = spells?.find((s) => s.id === copy.spellId);
               return (
                 <div key={`${copy.spellId}:${copy.reversed}`} className={styles.spellCard}>
                   <div className={styles.spellTop}>
                     <span className={styles.spellName}>
                       <RuleLink entry={{ kind: 'spells', id: copy.spellId }}>{name}</RuleLink>
-                      {copy.reversed && ' (reversed)'}
                     </span>
                     {copy.count > 1 && <Badge tone="magic">×{copy.count}</Badge>}
                   </div>
@@ -255,7 +265,7 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
             <div className={styles.spellGrid}>
               {model.spellBook.map((id) => {
                 const summary = spells?.find((s) => s.id === id);
-                const name = nameOf(id, spells);
+                const name = nameOf(id, false, ctx);
                 return (
                   <div key={id} className={styles.spellCard}>
                     <div className={styles.spellTop}>
@@ -543,6 +553,7 @@ function CastDialog({
 }) {
   const entry = useSpellDetail(copy.spellId);
   const party = useParty();
+  const ctx = useTextContext();
   const location = usePartyLocation();
   const { send, pending } = useSendCommand();
   const [reversed, setReversed] = useState(copy.reversed);
@@ -566,7 +577,7 @@ function CastDialog({
     ? reversed && spell.reversed_form
       ? spell.reversed_form.name
       : spell.name
-    : 'the spell';
+    : capitalizeFirst(spellName(copy.spellId, ctx));
 
   const submit = async () => {
     if (!mode) return;

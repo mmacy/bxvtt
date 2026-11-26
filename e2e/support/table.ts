@@ -195,6 +195,9 @@ export async function enterDungeon(
 export async function openTable(page: Page, path: string): Promise<void> {
   await page.goto(path);
   await expect(page.getByRole('main')).toBeVisible();
+  // The page says "Opening the table" until the first snapshot arrives. A command sent before then reaches this
+  // page as part of the snapshot, as history, and not as news (#29).
+  await expect(page.getByText('Opening the table')).toHaveCount(0, { timeout: 20_000 });
   await expect(page.getByText(/connecting|reconnecting/i)).toHaveCount(0, { timeout: 20_000 });
 }
 

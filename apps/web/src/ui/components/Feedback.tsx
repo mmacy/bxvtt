@@ -124,6 +124,12 @@ export function ProgressBar({
 
 export type BannerTone = 'info' | 'success' | 'warning' | 'danger' | 'referee' | 'neutral';
 
+/**
+ * How a screen reader learns of a banner: `alert` interrupts at once, `status` waits for a pause, and `none` says
+ * nothing until the reader reaches it.
+ */
+export type BannerAnnounce = 'alert' | 'status' | 'none';
+
 export interface BannerProps {
   tone?: BannerTone;
   title?: string;
@@ -135,6 +141,12 @@ export interface BannerProps {
   dismissLabel?: string;
   /** Overrides the default icon for the tone. */
   icon?: IconName;
+  /**
+   * How a screen reader learns of the banner. Defaults to `alert` for the warning and danger tones and to
+   * `status` for the rest. Pass `status` or `none` for a banner that appears whenever a view opens, such as a
+   * forecast that a choice won't work, so it doesn't interrupt each time.
+   */
+  announce?: BannerAnnounce;
   className?: string;
 }
 
@@ -156,12 +168,13 @@ export function Banner({
   onDismiss,
   dismissLabel = 'Dismiss',
   icon,
+  announce = tone === 'danger' || tone === 'warning' ? 'alert' : 'status',
   className,
 }: BannerProps) {
   return (
     <div
       className={cx(styles.banner, styles[`banner-${tone}`], className)}
-      role={tone === 'danger' || tone === 'warning' ? 'alert' : 'status'}
+      role={announce === 'none' ? undefined : announce}
     >
       <Icon name={icon ?? bannerIcon[tone]} size={18} className={styles.bannerIcon} />
       <div className={styles.bannerBody}>

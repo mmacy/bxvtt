@@ -1,10 +1,9 @@
 import type { AbilityTables, ClassSummary } from '@bxvtt/shared/bxapi';
-import type { AbilityRoll } from '@bxvtt/shared/protocol';
 import { abilityLabel, classLabel } from '@bxvtt/shared/text';
 import { useEffect, useState } from 'react';
 import { useReduceMotion } from '@/app';
-import { Badge, Button, DiceRoll, Icon, StatBox, Tooltip, formatModifier } from '@/ui';
-import { facesForScore } from './dice';
+import { Badge, Button, DiceRoll, Icon, Skeleton, StatBox, Tooltip, formatModifier } from '@/ui';
+import type { DraftRoll } from './draft';
 import { ABILITIES, headlineModifier, modifierLines, readScores, type Ability, type Scores } from './tables';
 import styles from './wizard.module.css';
 
@@ -12,7 +11,7 @@ import styles from './wizard.module.css';
 const STAGGER_MS = 320;
 
 export interface RollStepProps {
-  roll: AbilityRoll | null;
+  roll: DraftRoll | null;
   /** Whether to play the dice for this roll. Off for a roll restored from an earlier visit. */
   animate: boolean;
   rolls: number;
@@ -47,7 +46,7 @@ export function shortGap(summary: ClassSummary, scores: Record<string, number>):
 function AbilityCell({
   ability,
   score,
-  index,
+  faces,
   shown,
   animate,
   tables,
@@ -55,32 +54,48 @@ function AbilityCell({
 }: {
   ability: Ability;
   score: number;
-  index: number;
+  /** The three d6 results bxapi rolled for this ability, in the order it rolled them. */
+  faces: readonly [number, number, number] | undefined;
   shown: boolean;
   animate: boolean;
   tables: AbilityTables | null;
   onSettled?: () => void;
 }) {
-  const [settled, setSettled] = useState(!animate);
-  const faces = facesForScore(score, index);
+  // A restored draft shows its scores before it has fetched the dice behind them. When the dice arrive, they
+  // appear where they landed instead of rolling again.
+  const [restored] = useState(shown && faces === undefined);
+  const play = animate && !restored;
+  const [settled, setSettled] = useState(!play);
   const modifier = tables ? headlineModifier(tables, ability, score) : undefined;
   const lines = tables ? modifierLines(tables, ability, score) : [];
   return (
     <div className={styles.abilityCell}>
-      <div className={styles.diceSlot}>
-        {shown ? (
+      <div className={styles.diceSlot} aria-busy={shown && faces === undefined ? true : undefined}>
+        {shown && faces ? (
           <DiceRoll
             dice={faces.map((value) => ({ sides: 6, value }))}
             label={abilityLabel(ability)}
             size={34}
             hideTotal
             highlightExtremes={false}
-            animate={animate}
+            animate={play}
             onSettled={() => {
               setSettled(true);
               onSettled?.();
             }}
           />
+        ) : shown ? (
+          <div className={styles.diceLoading} aria-hidden="true">
+            <div className={styles.diceLoadingHeader}>
+              <span className={styles.diceLoadingLabel}>{abilityLabel(ability)}</span>
+              <span className={styles.diceLoadingFormula}>3d6</span>
+            </div>
+            <div className={styles.diceLoadingDice}>
+              <Skeleton shape="block" width={34} height={34} />
+              <Skeleton shape="block" width={34} height={34} />
+              <Skeleton shape="block" width={34} height={34} />
+            </div>
+          </div>
         ) : (
           <span className={styles.diceWaiting} aria-hidden="true">
             {abilityLabel(ability)}
@@ -128,12 +143,15 @@ function AbilityCell({
 /** The six scores, each revealed a moment after the one before when the roll plays. */
 function AbilityRow({
   scores,
+  dice,
   play,
   tables,
   waiting = false,
   onSettled,
 }: {
   scores: Scores | null;
+  /** The dice behind each score, from bxapi's roll. `null` until a restored draft has fetched them. */
+  dice: Record<string, readonly [number, number, number]> | null;
   play: boolean;
   tables: AbilityTables | null;
   waiting?: boolean;
@@ -154,7 +172,7 @@ function AbilityRow({
           key={ability}
           ability={ability}
           score={scores?.[ability] ?? 0}
-          index={index}
+          faces={dice?.[ability]}
           shown={index < shownCount}
           animate={play}
           tables={tables}
@@ -199,7 +217,7 @@ export function RollStep({
   if (!roll) {
     return (
       <div className={styles.stepBody}>
-        <AbilityRow scores={null} play={false} tables={tables} waiting />
+        <AbilityRow scores={null} dice={null} play={false} tables={tables} waiting />
         <div className={styles.rollCall}>
           <p className={styles.lead}>
             You roll 3d6 in order from Strength to Charisma. Under B/X rules, you keep each score where it
@@ -218,7 +236,14 @@ export function RollStep({
 
   return (
     <div className={styles.stepBody}>
-      <AbilityRow key={roll.id} scores={scores} play={play} tables={tables} onSettled={onLanded} />
+      <AbilityRow
+        key={roll.id}
+        scores={scores}
+        dice={roll.rolls?.rolls ?? null}
+        play={play}
+        tables={tables}
+        onSettled={onLanded}
+      />
 
       {revealed && (
         <section className={styles.qualifies} aria-labelledby="wizard-qualifies">

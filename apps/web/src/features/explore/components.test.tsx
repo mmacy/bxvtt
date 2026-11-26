@@ -117,7 +117,7 @@ describe('MapStage', () => {
     // A narrow screen, as jsdom reports, starts with the minimap folded, and the choice sticks.
     await user.click(screen.getByRole('button', { name: 'Show minimap' }));
     expect(screen.getByText('1 square is 10 feet')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Hide minimap' }));
+    await user.click(screen.getByRole('button', { name: 'Collapse minimap' }));
     expect(screen.getByRole('button', { name: 'Show minimap' })).toBeInTheDocument();
     await user.click(screen.getByRole('radio', { name: 'Parchment map' }));
     expect(screen.getByRole('radio', { name: 'Parchment map' })).toHaveAttribute('aria-checked', 'true');
@@ -223,6 +223,18 @@ describe('MapStage for keyboard and screen reader users', () => {
   });
 });
 
+/** An authored cache on the party's cell, as the player view lists it. */
+function chestAt(position: readonly number[]) {
+  return {
+    id: 'feature:chest',
+    kind: 'treasure_cache' as const,
+    description: 'An iron-bound chest stands against the wall.',
+    cell: [position[0] ?? 0, position[1] ?? 0] as [number, number],
+    area_id: null,
+    trap_state: null,
+  };
+}
+
 describe('ScenePanel', () => {
   it('reads the area aloud: its name, its description, and what is here', () => {
     const { snapshot } = exploring();
@@ -234,19 +246,19 @@ describe('ScenePanel', () => {
 
   it('gives an unkeyed place a neutral name', () => {
     const { snapshot } = exploring();
-    if (snapshot.game?.scene.here) snapshot.game.scene.here.area = null;
+    const level = snapshot.game?.view.explored[0];
+    if (level) level.areas = [];
     renderWithTable(<ScenePanel />, { snapshot });
     expect(screen.getByRole('heading', { name: 'On the way' })).toBeInTheDocument();
   });
 
   it('takes stairs and treasure from the panel', async () => {
     const { snapshot, game } = exploring();
-    const here = game.scene.here;
-    if (!here) throw new Error('No scene here.');
-    here.transitions = [{ kind: 'stairs_down', position: here.position, side: null, leads: 'down' }];
-    here.caches = [
-      { id: 'chest', source: 'authored', area_id: null, position: null, reachable: true, trap: null },
-    ];
+    const level = game.view.explored[0];
+    const position = game.view.location.position;
+    if (!level || !position) throw new Error('The party is in town.');
+    level.transitions = [{ kind: 'stairs_down', position, side: null }];
+    level.features = [...level.features, chestAt(position)];
     const api = createFakeApi();
     api.sendCommand.mockResolvedValue(result(game, { events: [] }));
     const { user } = renderWithTable(<ScenePanel />, { snapshot, api });
@@ -258,18 +270,169 @@ describe('ScenePanel', () => {
         game.revision,
       ),
     );
-    expect(screen.getByText('Treasure is within reach.')).toBeInTheDocument();
+    expect(screen.getByText('An iron-bound chest stands against the wall.')).toBeInTheDocument();
+    const take = screen.getByRole('button', { name: 'Take' });
+    expect(take).toHaveAccessibleDescription('An iron-bound chest stands against the wall.');
+    await user.click(take);
+    await waitFor(() =>
+      expect(api.sendCommand).toHaveBeenCalledWith(
+        expect.any(String),
+        { command_type: 'take_treasure', feature_id: 'feature:chest' },
+        game.revision,
+      ),
+    );
+  });
+
+  it('picks up dropped goods with a short button whose name says what it picks up', async () => {
+    const { snapshot, game } = exploring();
+    const { location } = game.view;
+    const position = location.position;
+    if (location.kind !== 'dungeon' || !position) throw new Error('The party is in town.');
+    const cell = `cell:${location.dungeon_id}:${location.level_number}:${position[0]},${position[1]}`;
+    game.view.piles = { ...game.view.piles, [cell]: { items: [], coins_gp_value: 5 } } as never;
+    const api = createFakeApi();
+    api.sendCommand.mockResolvedValue(result(game, { events: [] }));
+    const { user } = renderWithTable(<ScenePanel />, { snapshot, api });
+    expect(screen.getByText('Dropped goods lie here.')).toBeInTheDocument();
+    const pickUp = screen.getByRole('button', { name: 'Pick up dropped goods' });
+    expect(pickUp).toHaveTextContent(/^Pick up$/);
+    await user.click(pickUp);
+    await waitFor(() =>
+      expect(api.sendCommand).toHaveBeenCalledWith(
+        expect.any(String),
+        { command_type: 'take_treasure', feature_id: 'pile' },
+        game.revision,
+      ),
+    );
+  });
+
+  it('puts the other treasure actions under More, which the keyboard opens and closes', async () => {
+    const { snapshot, game } = exploring();
+    const level = game.view.explored[0];
+    const position = game.view.location.position;
+    if (!level || !position) throw new Error('The party is in town.');
+    level.features = [...level.features, chestAt(position)];
+    const { user } = renderWithTable(<ScenePanel />, { snapshot });
+    const more = screen.getByRole('button', { name: 'More for this treasure' });
+    more.focus();
+    await user.keyboard('{Enter}');
+    const menu = await screen.findByRole('menu');
+    expect(
+      within(menu)
+        .getAllByRole('menuitem')
+        .map((item) => item.textContent),
+    ).toEqual([
+      expect.stringContaining('Give all to one member'),
+      expect.stringContaining('Check for traps: Wren'),
+    ]);
+    expect(within(menu).queryByRole('menuitem', { name: /Take/ })).toBeNull();
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+    expect(more).toHaveFocus();
+  });
+
+  it('names each More menu by its treasure when several lie here', () => {
+    const { snapshot, game } = exploring();
+    const level = game.view.explored[0];
+    const position = game.view.location.position;
+    if (!level || !position) throw new Error('The party is in town.');
+    level.features = [
+      ...level.features,
+      chestAt(position),
+      { ...chestAt(position), id: 'feature:satchel', description: 'A rotted satchel hangs from a hook.' },
+    ];
+    renderWithTable(<ScenePanel />, { snapshot });
+    expect(
+      screen.getByRole('button', { name: 'More for An iron-bound chest stands against the w…' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'More for A rotted satchel hangs from a hook.' }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Take' })).toHaveLength(2);
+  });
+
+  it.each([
+    ['found', 'Trapped'],
+    ['sprung', 'Trap sprung'],
+    ['removed', 'Trap disarmed'],
+  ] as const)('marks a treasure whose trap is %s with a badge', (state, badge) => {
+    const { snapshot, game } = exploring();
+    const level = game.view.explored[0];
+    const position = game.view.location.position;
+    if (!level || !position) throw new Error('The party is in town.');
+    level.features = [...level.features, { ...chestAt(position), trap_state: state }];
+    renderWithTable(<ScenePanel />, { snapshot });
+    expect(screen.getByText(badge)).toBeInTheDocument();
+    // A found trap doesn't hide Take: the player decides.
+    expect(screen.getByRole('button', { name: 'Take' })).toBeInTheDocument();
+  });
+
+  it('says nothing of a trap the party hasn’t found', () => {
+    const { snapshot, game } = exploring();
+    const level = game.view.explored[0];
+    const position = game.view.location.position;
+    if (!level || !position) throw new Error('The party is in town.');
+    level.features = [...level.features, chestAt(position)];
+    renderWithTable(<ScenePanel />, { snapshot });
+    expect(screen.queryByText(/trap/i)).toBeNull();
+  });
+
+  it('asks the party to step closer to a treasure elsewhere in the room, and offers no Take', () => {
+    const { snapshot, game } = exploring();
+    const level = game.view.explored[0];
+    const position = game.view.location.position;
+    if (!level || !position) throw new Error('The party is in town.');
+    const area = level.areas.find((candidate) =>
+      candidate.cells.some(([x, y]) => x === position[0] && y === position[1]),
+    );
+    const other = area?.cells.find(([x, y]) => x !== position[0] || y !== position[1]);
+    if (!other) throw new Error('The party’s area has one cell.');
+    level.features = [...level.features, { ...chestAt(other), area_id: area?.id ?? null }];
+    renderWithTable(<ScenePanel />, { snapshot });
+    expect(screen.getByText('An iron-bound chest stands against the wall.')).toBeInTheDocument();
+    expect(screen.getByText('Step closer to reach it.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Take' })).toBeNull();
+  });
+
+  it('names a rolled treasure, which has no description', () => {
+    const { snapshot, game } = exploring();
+    const level = game.view.explored[0];
+    const position = game.view.location.position;
+    if (!level || !position) throw new Error('The party is in town.');
+    level.features = [...level.features, { ...chestAt(position), kind: 'generated_cache', description: '' }];
+    renderWithTable(<ScenePanel />, { snapshot });
+    expect(screen.getByText('Treasure lies here.')).toBeInTheDocument();
+  });
+
+  it('leaves out a cache the party emptied', () => {
+    const { snapshot, game } = exploring();
+    const level = game.view.explored[0];
+    const position = game.view.location.position;
+    if (!level || !position) throw new Error('The party is in town.');
+    level.features = [...level.features, chestAt(position)];
+    game.scene.emptied_features = ['feature:chest'];
+    renderWithTable(<ScenePanel />, { snapshot });
+    expect(screen.queryByText('An iron-bound chest stands against the wall.')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Take' })).toBeNull();
+  });
+
+  it('states a room trap the party knows about', () => {
+    const { snapshot, game } = exploring();
+    game.scene.room_traps = [
+      { dungeon_id: 'priory', level_number: 1, area_id: 'gatehouse_stair', state: 'found' },
+    ];
+    renderWithTable(<ScenePanel />, { snapshot });
+    expect(screen.getByText('The party found a trap in this room.')).toBeInTheDocument();
   });
 
   it('folds to its title bar after the first read, and keeps actions one click away', () => {
     vi.useFakeTimers();
     try {
       const { snapshot, game } = exploring();
-      const here = game.scene.here;
-      if (!here) throw new Error('No scene here.');
-      here.caches = [
-        { id: 'chest', source: 'authored', area_id: null, position: null, reachable: true, trap: null },
-      ];
+      const level = game.view.explored[0];
+      const position = game.view.location.position;
+      if (!level || !position) throw new Error('The party is in town.');
+      level.features = [...level.features, chestAt(position)];
       renderWithTable(<ScenePanel />, { snapshot });
       expect(screen.getByText(/A flight of worn steps/)).toBeInTheDocument();
       act(() => {
@@ -277,7 +440,7 @@ describe('ScenePanel', () => {
       });
       expect(screen.queryByText(/A flight of worn steps/)).toBeNull();
       expect(screen.getByRole('heading', { name: 'Gatehouse stair' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: '2 features here' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '2 things here' })).toBeInTheDocument();
       // Opening it by hand keeps it open, and this browser remembers.
       fireEvent.click(screen.getByRole('button', { name: 'Show description' }));
       act(() => {
@@ -293,7 +456,7 @@ describe('ScenePanel', () => {
   it('collapses without losing its title', async () => {
     const { snapshot } = exploring();
     const { user } = renderWithTable(<ScenePanel />, { snapshot });
-    await user.click(screen.getByRole('button', { name: 'Hide description' }));
+    await user.click(screen.getByRole('button', { name: 'Collapse description' }));
     expect(screen.queryByText(/A flight of worn steps/)).toBeNull();
     expect(screen.getByRole('heading', { name: 'Gatehouse stair' })).toBeInTheDocument();
   });
@@ -342,14 +505,14 @@ describe('ExploreActions', () => {
     expect(within(menu).queryByRole('menuitem', { name: /Move the party/ })).toBeNull();
   });
 
-  it('offers the way back to town only where the scene says the party can travel', () => {
+  it('offers the way back to town only where the player view says the party can travel', () => {
     const { snapshot } = exploring();
-    if (snapshot.game) snapshot.game.scene.can_travel_to_town = false;
+    if (snapshot.game) snapshot.game.view.can_travel_to_town = false;
     const { unmount } = renderWithTable(<Bar />, { snapshot });
     expect(screen.queryByRole('button', { name: 'Return to town' })).toBeNull();
     unmount();
     const atEntrance = exploring().snapshot;
-    if (atEntrance.game) atEntrance.game.scene.can_travel_to_town = true;
+    if (atEntrance.game) atEntrance.game.view.can_travel_to_town = true;
     renderWithTable(<Bar />, { snapshot: atEntrance });
     expect(screen.getByRole('button', { name: 'Return to town' })).toBeInTheDocument();
   });

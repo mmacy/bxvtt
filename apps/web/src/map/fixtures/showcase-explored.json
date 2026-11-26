@@ -19,6 +19,7 @@
         "id": "character-0001",
         "name": "Brenna",
         "class_id": "fighter",
+        "class_name": "Fighter",
         "level": 1,
         "current_hp": 1,
         "max_hp": 5,
@@ -155,6 +156,7 @@
         "id": "character-0002",
         "name": "Durin",
         "class_id": "dwarf",
+        "class_name": "Dwarf",
         "level": 1,
         "current_hp": 5,
         "max_hp": 5,
@@ -217,6 +219,7 @@
         "id": "character-0003",
         "name": "Elowen",
         "class_id": "elf",
+        "class_name": "Elf",
         "level": 1,
         "current_hp": 5,
         "max_hp": 5,
@@ -296,6 +299,7 @@
         "id": "character-0004",
         "name": "Wren",
         "class_id": "thief",
+        "class_name": "Thief",
         "level": 1,
         "current_hp": 3,
         "max_hp": 3,
@@ -3051,13 +3055,131 @@
             "door_open": null,
             "door_wedged": null
           }
-        }
+        },
+        "areas": [
+          {
+            "id": "entry",
+            "name": "Entry hall",
+            "description": "Dust lies thick on a floor of cracked flagstones. An offering bowl rests on a plinth.",
+            "cells": [
+              [6, 3],
+              [6, 4],
+              [9, 4],
+              [6, 5],
+              [6, 6]
+            ]
+          },
+          {
+            "id": "guard_post",
+            "name": "Guard post",
+            "description": "Bunks of rotten timber line the walls. A loose stone sits in the floor.",
+            "cells": [
+              [15, 3],
+              [16, 3],
+              [15, 4],
+              [16, 4],
+              [17, 4],
+              [18, 4],
+              [19, 4],
+              [16, 5],
+              [17, 5],
+              [18, 5]
+            ]
+          },
+          {
+            "id": "shrine",
+            "name": "Shrine of the hollow god",
+            "description": "A black altar stands under a vaulted ceiling. Its basin holds a hoard.",
+            "cells": [[27, 3]]
+          },
+          {
+            "id": "pillared_hall",
+            "name": "Pillared hall",
+            "description": "Rows of fluted pillars hold up a sagging roof. Some flagstones are hollow.",
+            "cells": [
+              [16, 9],
+              [16, 10],
+              [14, 11],
+              [15, 11],
+              [16, 11],
+              [16, 13],
+              [16, 14]
+            ]
+          },
+          {
+            "id": "stair_room",
+            "name": "Stair chamber",
+            "description": "Worn steps spiral down into the dark.",
+            "cells": [[26, 16]]
+          }
+        ],
+        "features": [
+          {
+            "id": "feature:031a29589a07f134f1b09fc210ddb3be9089e22b8ecf137244b174a23d46405b",
+            "kind": "custom",
+            "description": "A face carved in the wall.",
+            "cell": [6, 8],
+            "area_id": null,
+            "trap_state": null
+          },
+          {
+            "id": "feature:ed30c4f0e8963ad095e8e21ef0b9523b4b6e38c578508cb05e2f06f7695cfa6b",
+            "kind": "treasure_cache",
+            "description": "A bronze bowl of old coins.",
+            "cell": [6, 3],
+            "area_id": "entry",
+            "trap_state": null
+          },
+          {
+            "id": "feature:49f1d54c2c3c45cd498ffb431eeeef5916c30ede79b288372b36ea9c4089ac19",
+            "kind": "treasure_cache",
+            "description": "",
+            "cell": [27, 3],
+            "area_id": "shrine",
+            "trap_state": null
+          },
+          {
+            "id": "feature:8fabf21592453da6db5b945a70e3d8d8727f597fb903f4d41779a359ed1bf66a",
+            "kind": "generated_cache",
+            "description": "",
+            "cell": [16, 9],
+            "area_id": null,
+            "trap_state": null
+          }
+        ],
+        "transitions": [
+          {
+            "position": [26, 17],
+            "kind": "stairs_down",
+            "side": null
+          },
+          {
+            "position": [16, 18],
+            "kind": "trapdoor",
+            "side": null
+          }
+        ],
+        "entrance": [6, 10]
       }
     ],
+    "dungeons": [
+      {
+        "id": "vault",
+        "name": "The Showcase Vault"
+      }
+    ],
+    "can_travel_to_town": false,
     "piles": {
       "cell:vault:1:6,9": {
         "items": ["dagger×1"],
-        "coins_gp_value": 0
+        "coins_gp_value": 0,
+        "coins": {
+          "pp": 0,
+          "gp": 0,
+          "ep": 0,
+          "sp": 0,
+          "cp": 0
+        }
       }
     },
     "emptied_caches": ["vault:1:offering_bowl"],
@@ -3088,6 +3210,10 @@
         "remaining_rounds": 300
       }
     ],
+    "spell_names": {
+      "sleep": "Sleep"
+    },
+    "reversed_spell_names": {},
     "fatigued": true,
     "exhausted": false,
     "deprivation": {},
@@ -5916,7 +6042,9 @@
             "cp": 0
           },
           "valuables": [],
-          "magic_items": []
+          "magic_items": [],
+          "origin": "area",
+          "lair_area_ref": null
         }
       },
       "generated_treasure_areas": ["vault:1:pillared_hall"],

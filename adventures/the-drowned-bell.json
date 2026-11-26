@@ -2818,7 +2818,7 @@
                   {
                     "id": "chapel_altar",
                     "kind": "treasure_cache",
-                    "description": "Two silver candlesticks, two stoppered flasks of holy water, and a clay bottle wrapped in an altar cloth.",
+                    "description": "Two silver candlesticks stand on the altar beside two small stoppered flasks and a clay bottle wrapped in an altar cloth.",
                     "cell": null,
                     "item_ids": [
                       "holy_water",
@@ -3359,7 +3359,7 @@
                   {
                     "id": "goblin_loot",
                     "kind": "treasure_cache",
-                    "description": "A greasy sack of coins taken from ferry passengers, most of it copper and silver.",
+                    "description": "A greasy sack lies knotted shut in the deepest alcove. It clinks when you nudge it.",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [],
@@ -3485,7 +3485,7 @@
                   {
                     "id": "iron_chest",
                     "kind": "treasure_cache",
-                    "description": "Coins, a pale moonstone, and an old iron key whose bow is shaped like a bell.",
+                    "description": "A heavy hasp holds the lid shut, and blade marks score the iron around it.",
                     "cell": null,
                     "item_ids": [
                       "priors_iron_key"
@@ -3963,7 +3963,7 @@
                   {
                     "id": "lost_satchel",
                     "kind": "treasure_cache",
-                    "description": "A satchel of oiled leather holding a coil of rope, a few coins, and a rolled scroll in a bone case.",
+                    "description": "A satchel of oiled leather lies on the ledge beyond the crack, its flap buckled shut.",
                     "cell": [
                       1,
                       7
@@ -6739,7 +6739,7 @@
                   {
                     "id": "abbots_coffin",
                     "kind": "treasure_cache",
-                    "description": "Inside the sealed coffin, a skeleton in rotted vestments wears a heavy gold ring and has a purse of old coins under its folded hands.",
+                    "description": "The sealed coffin's lid is carved with an abbot's crook, and lead fills its seams.",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [],
@@ -6811,7 +6811,7 @@
                   {
                     "id": "priors_desk",
                     "kind": "treasure_cache",
-                    "description": "The desk drawers hold the prior's household money and a stoppered bottle of healing draught.",
+                    "description": "The prior's writing desk has a row of narrow drawers with tarnished brass pulls.",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [
@@ -6907,7 +6907,7 @@
                   {
                     "id": "reliquary_casket",
                     "kind": "treasure_cache",
-                    "description": "The casket holds the Hand of Saint Corvane. A thin pipe runs from its base into the shelf.",
+                    "description": "A casket of silver and crystal sits on the marble shelf. A thin pipe runs from its base into the shelf.",
                     "cell": null,
                     "item_ids": [
                       "hand_of_saint_corvane"
@@ -6947,7 +6947,7 @@
                   {
                     "id": "offering_chest",
                     "kind": "treasure_cache",
-                    "description": "Pilgrims' offerings in gold, and a scroll sealed with the priory's lantern seal.",
+                    "description": "A heavy oak chest bound with brass stands below the shelf, its lid stamped with the priory's lantern.",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [
@@ -9836,7 +9836,7 @@
                   {
                     "id": "vestment_chest",
                     "kind": "treasure_cache",
-                    "description": "Inside the chest, under folded altar linen: a silver chalice, a bag of gold, and a flanged mace wrapped in oilcloth.",
+                    "description": "The chest's doors are swollen in their frames, and its hinges are crusted green.",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [
@@ -9959,7 +9959,7 @@
                   {
                     "id": "brothers_strongbox",
                     "kind": "treasure_cache",
-                    "description": "A small strongbox under the bench, holding the gems the brothers saved from the treasury.",
+                    "description": "A small iron strongbox stands under the bench, its lid dull with damp.",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [],

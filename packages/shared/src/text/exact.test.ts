@@ -83,7 +83,7 @@ const rej = (
 describe('rejections', () => {
   it('names the member and says what to do', () => {
     expect(rej('battle.declaration.not_in_front_rank', { character: 'character-0003' })).toBe(
-      "Wren isn't in the front rank, so they can't attack in melee. Close with the monsters first, or use a missile weapon or spell.",
+      "Wren isn't in the front rank, so they can't reach the monsters in melee or with a touch. Close with the monsters first, or use a missile weapon or a spell with range.",
     );
   });
 
@@ -145,7 +145,7 @@ describe('rejections', () => {
     [
       'combat.attack.out_of_reach',
       { distance_feet: 20 },
-      'The target is 20 feet away, too far for a melee attack. Close in first, or use a missile weapon or spell.',
+      'The target is 20 feet away, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
     ],
     [
       'combat.attack.attacker_incapacitated',
@@ -155,7 +155,7 @@ describe('rejections', () => {
     [
       'battle.declaration.roster_mismatch',
       { expected: ['character-0001', 'character-0002', 'character-0003'], declared: ['character-0001'] },
-      'Declare an action for Brenna, Tomas, and Wren this round. You sent declarations for Brenna.',
+      'Declare an action for Brenna, Tomas, and Wren this round. You declared for Brenna.',
     ],
     [
       'creation.class.requirements_not_met',
@@ -204,7 +204,7 @@ describe('rejections', () => {
 
   it('names an unknown member as a party member, never as an ID', () => {
     expect(rej('battle.declaration.not_in_front_rank', { character: 'character-0099' }, emptyContext())).toBe(
-      "A party member isn't in the front rank, so they can't attack in melee. Close with the monsters first, or use a missile weapon or spell.",
+      "A party member isn't in the front rank, so they can't reach the monsters in melee or with a touch. Close with the monsters first, or use a missile weapon or a spell with range.",
     );
   });
 
@@ -218,7 +218,7 @@ describe('rejections', () => {
         ctx,
       ),
     ).toEqual([
-      'The target is 20 feet away, too far for a melee attack. Close in first, or use a missile weapon or spell.',
+      'The target is 20 feet away, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
     ]);
   });
 });
@@ -450,7 +450,7 @@ describe('events', () => {
     ],
     [
       { event_type: 'monster_fled', code: 'battle.side.fled', visibility: 'player', group_id: 'group-0001' },
-      'The goblins flee.',
+      'The goblins break and run.',
       'good',
       'battle',
     ],
@@ -815,6 +815,27 @@ describe('humanizeMessage', () => {
       'Wren acquires a potion, a ruby and 30 gp in coin.',
     ],
     ['npc-0001 hits character-0001 with Sword.', 'Aldric hits Brenna with Sword.'],
+    // osrlib 2.7 writes a serial comma, names every group of an encounter, and uses no dashes.
+    [
+      'character-0003 acquires valuable-0001, 18 pp, and 6 cp in coin.',
+      'Wren acquires a ruby, 18 pp, and 6 cp in coin.',
+    ],
+    [
+      "Encounter: 2 goblins, 1 Mag Corrie, and 1 ogre at 40'; the party is surprised.",
+      "Encounter: 2 goblins, Mag Corrie, and an ogre at 40'; the party is surprised.",
+    ],
+    [
+      'character-0001 gains 3999 XP (base 5000), now level 2. The rest is lost to the one-level limit.',
+      'Brenna gains 3999 XP (base 5000), now level 2. The rest is lost to the one-level limit.',
+    ],
+    [
+      'character-0003 back-stabs monster-0001 with Dagger: rolled 15+4 = 19, needing 10.',
+      'Wren back-stabs a goblin with Dagger: rolled 15+4 = 19, needing 10.',
+    ],
+    [
+      'Detection roll (listening, character-0003): 1 vs 2-in-6. Success.',
+      'Detection roll (listening, Wren): 1 vs 2-in-6. Success.',
+    ],
     ['Effect effect-0001 (haste) attached to character-0001.', 'The haste effect attached to Brenna.'],
   ])('%s', (message, expected) => {
     expect(humanizeMessage(message, refCtx)).toBe(expected);

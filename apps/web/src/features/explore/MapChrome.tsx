@@ -205,7 +205,7 @@ export function MinimapCard({ map, target, theme, facing, onHide }: MinimapCardP
         />
         <IconButton
           icon="minimize"
-          label="Hide minimap"
+          label="Collapse minimap"
           size="sm"
           className={styles.minimapHide}
           onClick={onHide}

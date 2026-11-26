@@ -92,7 +92,12 @@ describe('names on feed entries', () => {
     expect(entries.length).toBeGreaterThan(0);
     for (const entry of entries) {
       for (const monsterId of monsterIdsIn(entry)) {
-        expect(entry.names?.monsters[monsterId]).toEqual({ label: 'goblin', label_plural: 'goblins' });
+        // Two goblins: each has its group's label and its number in the encounter, from the player view.
+        expect(entry.names?.monsters[monsterId]).toEqual({
+          label: 'goblin',
+          label_plural: 'goblins',
+          name: monsterId === 'monster-0001' ? 'Goblin 1' : 'Goblin 2',
+        });
       }
       expect(Object.values(entry.names?.members ?? {}).every((name) => name.startsWith('Fighter'))).toBe(
         true,

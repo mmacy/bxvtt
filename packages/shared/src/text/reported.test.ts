@@ -16,11 +16,11 @@ import {
   emptyContext,
   extendContextWithCatalog,
   extendContextWithEntryNames,
-  extendContextWithScene,
   flagName,
   flagValueText,
   nameInSentence,
   placeInSentence,
+  classInSentence,
   extendContextWithNames,
   extendContextWithReferee,
   humanizeMessage,
@@ -656,6 +656,17 @@ describe('names with a leading article (D-404, D-208)', () => {
   });
 });
 
+describe('class names in the middle of a sentence', () => {
+  it('lowers a common class name and keeps the capitals of a proper name', () => {
+    expect(classInSentence('Fighter')).toBe('fighter');
+    expect(classInSentence('Magic-User')).toBe('magic-user');
+    expect(classInSentence('Hollow knight')).toBe('hollow knight');
+    expect(classInSentence('Warlock of Sarn')).toBe('warlock of Sarn');
+    expect(classInSentence('Knight of the Silver Hand')).toBe('knight of the Silver Hand');
+    expect(classInSentence('Hollow Knight')).toBe('Hollow Knight');
+  });
+});
+
 describe('dungeon names for players (D-210)', () => {
   const entered = {
     event_type: 'location_entered',
@@ -670,13 +681,10 @@ describe('dungeon names for players (D-210)', () => {
     transition_ref: null,
   } as unknown as Parameters<typeof describeEvent>[0];
 
-  it('names the dungeon from the scene, as the town and the referee do', () => {
+  it('names the dungeon from the player view, as the town and the referee do', () => {
     // Reported: a player's log read "The party is placed in the priory, level 1."
     expect(describeEvent(entered, emptyContext()).text).toBe('The party is placed in the priory, level 1.');
-    const ctx = extendContextWithScene(emptyContext(), {
-      names: {},
-      dungeon_names: { priory: "The priory on Corvane's Holm" },
-    });
+    const ctx = contextFromPlayerView({ dungeons: [{ id: 'priory', name: "The priory on Corvane's Holm" }] });
     expect(describeEvent(entered, ctx).text).toBe(
       "The party is placed in the priory on Corvane's Holm, level 1.",
     );
@@ -800,7 +808,7 @@ describe('group labels that are proper names (sample adventures)', () => {
         } as never,
         loft,
       ).text,
-    ).toBe('Mag Corrie flees.');
+    ).toBe('Mag Corrie breaks and runs.');
     const morale = describeEvent(
       {
         event_type: 'morale_checked',
@@ -887,7 +895,7 @@ describe('The Toll at Crookback Bridge read-through', () => {
 
   it('gives a proper place name no added article', () => {
     // Reported: "The party is placed in the Crookback Bridge, level 1."
-    const ctx = extendContextWithScene(emptyContext(), { dungeon_names: { bridge: 'Crookback Bridge' } });
+    const ctx = contextFromPlayerView({ dungeons: [{ id: 'bridge', name: 'Crookback Bridge' }] });
     expect(describeEvent(placed('dungeon', 'bridge'), ctx).text).toBe(
       'The party is placed in Crookback Bridge, level 1.',
     );
@@ -1254,9 +1262,7 @@ describe('the last QA run (F-102, F-103, F-204, F-208)', () => {
       { command_type: 'award_xp', events: [award] as never, xp_gained: { 'character-0002': 2399 } },
       party,
     );
-    expect(lines[0]?.text).toBe(
-      'Wren gains 2,399 experience points. One award raises a character only one level, so the rest is lost.',
-    );
+    expect(lines[0]?.text).toBe('Wren gains 2,399 of the 2,600 experience points awarded.');
     const whole = describeGameEntry(
       { command_type: 'award_xp', events: [award] as never, xp_gained: { 'character-0002': 2600 } },
       party,

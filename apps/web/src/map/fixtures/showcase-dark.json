@@ -19,6 +19,7 @@
         "id": "character-0001",
         "name": "Brenna",
         "class_id": "fighter",
+        "class_name": "Fighter",
         "level": 1,
         "current_hp": 5,
         "max_hp": 5,
@@ -184,6 +185,7 @@
         "id": "character-0002",
         "name": "Durin",
         "class_id": "dwarf",
+        "class_name": "Dwarf",
         "level": 1,
         "current_hp": 5,
         "max_hp": 5,
@@ -246,6 +248,7 @@
         "id": "character-0003",
         "name": "Elowen",
         "class_id": "elf",
+        "class_name": "Elf",
         "level": 1,
         "current_hp": 5,
         "max_hp": 5,
@@ -325,6 +328,7 @@
         "id": "character-0004",
         "name": "Wren",
         "class_id": "thief",
+        "class_name": "Thief",
         "level": 1,
         "current_hp": 3,
         "max_hp": 3,
@@ -474,12 +478,27 @@
             "door_open": null,
             "door_wedged": null
           }
-        }
+        },
+        "areas": [],
+        "features": [],
+        "transitions": [],
+        "entrance": [6, 10]
       }
     ],
+    "dungeons": [
+      {
+        "id": "vault",
+        "name": "The Showcase Vault"
+      }
+    ],
+    "can_travel_to_town": true,
     "piles": {},
     "emptied_caches": [],
     "effects": [],
+    "spell_names": {
+      "sleep": "Sleep"
+    },
+    "reversed_spell_names": {},
     "fatigued": false,
     "exhausted": false,
     "deprivation": {},

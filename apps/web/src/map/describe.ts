@@ -33,31 +33,39 @@ export function doorSummary(door: MapDoor): string {
   return parts.join(', ');
 }
 
-function trapLine(trap: MapTrap): string {
-  const state =
-    trap.state === 'hidden'
-      ? 'undiscovered'
-      : trap.state === 'found'
-        ? 'found'
-        : trap.state === 'sprung'
-          ? 'sprung'
-          : 'disarmed';
-  const trigger = trap.trigger === 'enter' ? 'springs on entry' : 'springs on opening';
-  return `Trap (${state}): ${trap.summary}, ${trigger}`;
+const TRAP_STATES: Record<MapTrap['state'], string> = {
+  hidden: 'Trap, not yet found',
+  found: 'Trapped',
+  sprung: 'Trap sprung',
+  removed: 'Trap disarmed',
+};
+
+/**
+ * The lines for a trap. A player's map holds only the traps the party knows about, so a player reads the state
+ * alone. A referee also reads what springs the trap and what it does.
+ */
+function trapLines(trap: MapTrap, referee: boolean): string[] {
+  const lines = [TRAP_STATES[trap.state]];
+  if (!referee) return lines;
+  if (trap.trigger !== null)
+    lines.push(trap.trigger === 'enter' ? 'Springs on entry' : 'Springs when opened');
+  if (trap.summary && trap.summary !== 'Trap')
+    lines.push(trap.summary.charAt(0).toUpperCase() + trap.summary.slice(1));
+  return lines;
 }
 
 function featureTitle(feature: MapFeature): string {
   switch (feature.kind) {
     case 'cache':
-      return feature.emptied ? 'Emptied treasure cache' : 'Treasure cache';
+      return feature.emptied ? 'Emptied' : 'Treasure';
     case 'generated_cache':
-      return 'Rolled treasure';
+      return 'Treasure';
     case 'pile':
       return 'Dropped goods';
     case 'trick':
       return feature.found === false ? 'Undiscovered construction trick' : 'Construction trick';
     case 'custom':
-      return 'Feature';
+      return 'Point of interest';
   }
 }
 
@@ -95,7 +103,7 @@ export function describeTarget(target: MapTarget, map: LevelMap): TargetDescript
       const lines: string[] = [];
       if (f.description) lines.push(f.description);
       if (f.contents.length > 0) lines.push(f.contents.join(', '));
-      if (f.trap) lines.push(trapLine(f.trap));
+      if (f.trap) lines.push(...trapLines(f.trap, referee));
       if (referee && !f.known) lines.push('Unseen by the party.');
       return { title: featureTitle(f), lines };
     }
@@ -117,7 +125,7 @@ export function describeTarget(target: MapTarget, map: LevelMap): TargetDescript
           lines.push(`${area.encounter.resolved ? 'Cleared' : 'Encounter'}: ${area.encounter.summary}`);
         }
         if (area.treasure) lines.push(`${area.treasure.summary}${area.treasure.rolled ? ' (rolled)' : ''}`);
-        if (area.trap) lines.push(trapLine(area.trap));
+        if (area.trap) lines.push(...trapLines(area.trap, referee));
         if (!area.known) lines.push('Unseen by the party.');
       }
       if (!area) {

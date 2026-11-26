@@ -96,7 +96,7 @@ export function keyDirection(event: Pick<KeyboardEvent, 'key' | 'code'>): Direct
  * mode, and draws the encounter and battle overlays above it.
  *
  * - The map shows the viewed level: the party's, or another one the switcher picks. A player sees the party's
- *   map with the scene's stairs, caches, and names. A referee with the lens on sees the whole keyed level.
+ *   map from the player view, with the caches it emptied. A referee with the lens on sees the whole keyed level.
  * - The arrow keys move the party while the map has focus, and Alt with an arrow key turns it. A click
  *   on a neighbouring square steps there. A click or right-click on a door, the party, or a square offers what
  *   bxapi allows there.

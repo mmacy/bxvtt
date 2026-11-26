@@ -11,16 +11,17 @@ import {
   useSendDeclaration,
   useShortcut,
   useTableSettings,
+  useTextContext,
 } from '@/app';
 import { ActionBarDivider, ActionBarItem, Button } from '@/ui';
 import { QUICK_ICONS, quickAction, quickTooltip, repeatTooltip, useRepeatLastRound } from './BattleBoard';
 import { useMemberCasts } from './casting';
-import { memberGear } from './model';
+import { useClassAbilities } from './Composer';
+import { blockedNote, blockedReason, blockingMembers, memberGear } from './model';
 import { useCombatPeople } from './people';
 import { useCombatUi } from './state';
 import { useEncounterCommands } from './useEncounterCommands';
 import styles from './combat.module.css';
-import { useCombatText } from './text';
 
 /** Why Talk is unavailable when nobody in the party can act, so nobody can speak. */
 const NO_SPEAKER = 'No one in the party can act, so no one can talk to the monsters.';
@@ -81,15 +82,18 @@ function ActionButton({
  * @param facts.canResolveEarly - Whether the user may resolve it sooner, which only a referee may.
  * @param facts.auto - Whether the table resolves each round by itself once everyone has declared.
  * @param facts.waiting - The characters who haven't declared yet.
+ * @param facts.refused - The names of the characters whose actions won't work, from {@link blockingMembers}.
  */
 export function resolveRoundReason(facts: {
   canResolve: { allowed: boolean; reason: string | null };
   canResolveEarly: { allowed: boolean; reason: string | null };
   auto: boolean;
   waiting: readonly string[];
+  refused?: readonly string[];
 }): string | null {
-  const { canResolve, canResolveEarly, auto, waiting } = facts;
+  const { canResolve, canResolveEarly, auto, waiting, refused = [] } = facts;
   if (!canResolve.allowed) return canResolve.reason;
+  if (refused.length > 0) return blockedReason(refused);
   if (auto) return 'The round resolves by itself once everyone has declared.';
   if (waiting.length === 0) return null;
   if (!canResolveEarly.allowed) return canResolveEarly.reason;
@@ -224,7 +228,7 @@ function BattleActions() {
   const encounter = useEncounter();
   const party = useParty();
   const declarations = useDeclarations();
-  const ctx = useCombatText();
+  const ctx = useTextContext();
   const people = useCombatPeople();
   const settings = useTableSettings();
   const canResolve = useCanResolveRound();
@@ -244,21 +248,26 @@ function BattleActions() {
   const next = mine.find((id) => !declared.includes(id)) ?? null;
   const nextMember = party.find((m) => m.id === next) ?? null;
   const casts = useMemberCasts(nextMember);
+  const { backStab } = useClassAbilities(nextMember?.class_id ?? null);
   const quick = useMemo(
     () =>
-      nextMember ? quickAction(nextMember, encounter, memberGear(nextMember, ctx), ctx, { casts }) : null,
-    [nextMember, encounter, ctx, casts],
+      nextMember
+        ? quickAction(nextMember, encounter, memberGear(nextMember, ctx), ctx, { casts, backStab })
+        : null,
+    [nextMember, encounter, ctx, casts, backStab],
   );
   const repeatable = repeat.candidates(mine.filter((id) => !declared.includes(id)));
   const everyone = declarers.length > 0 && declarers.every((id) => declared.includes(id));
   const waiting = declarers.filter((id) => !declared.includes(id));
   const auto = settings?.auto_resolve ?? true;
   const showResolve = canResolve.allowed && !auto;
+  const refused = blockingMembers(declarations?.refusals ?? [], declarers).map((id) => memberName(id, ctx));
   const resolveReason = resolveRoundReason({
     canResolve,
     canResolveEarly,
     auto,
     waiting,
+    refused,
   });
 
   // The bar offers the same highlighted choice as the member's row: it declares it, or opens the Cast tab.
@@ -270,8 +279,11 @@ function BattleActions() {
   const again = () => {
     if (repeatable.length > 0) void repeat.run(mine);
   };
+  // The round can't resolve while a declared action won't work, so the bar's button and the command palette's
+  // action are unavailable then, with the reason, like the board's button.
+  const resolvable = showResolve && everyone && refused.length === 0;
   const resolveRound = () => {
-    if (showResolve && everyone) void resolve();
+    if (resolvable) void resolve();
   };
   const group = 'Battle';
   useShortcut({
@@ -308,7 +320,7 @@ function BattleActions() {
     icon: 'play',
     shortcut: 'mod+enter',
     run: resolveRound,
-    disabled: !(showResolve && everyone),
+    disabled: !resolvable,
     disabledReason: resolveReason,
   });
 
@@ -365,7 +377,7 @@ function BattleActions() {
             icon="play"
             primary
             onClick={resolveRound}
-            disabled={!everyone || pending}
+            disabled={!resolvable || pending}
             reason={resolveReason}
           />
         </>
@@ -374,9 +386,10 @@ function BattleActions() {
         <span className={styles.barNote}>
           {waiting.length > 0
             ? `Waiting for ${joinList(waiting.map((id) => memberName(id, ctx)))} to declare.`
-            : auto
-              ? 'Everyone has declared. The round resolves now.'
-              : 'Everyone has declared. The caller or the referee resolves the round.'}
+            : (blockedNote(refused) ??
+              (auto
+                ? 'Everyone has declared. The round resolves now.'
+                : 'Everyone has declared. The caller or the referee resolves the round.'))}
         </span>
       )}
     </>

@@ -165,7 +165,7 @@ export function ExploreActions() {
   const restPermission = useCanSend('rest');
   const permissions = usePermissionContext();
 
-  const here = ctx?.scene?.here ?? null;
+  const here = ctx?.here ?? null;
   const location = ctx?.view.location;
   const doorLore = (direction: string) => {
     if (
@@ -174,7 +174,7 @@ export function ExploreActions() {
     )
       return undefined;
     return doors[
-      doorLoreKey(levelKey(here.dungeon_id, here.level_number), here.position[0], here.position[1], direction)
+      doorLoreKey(levelKey(here.dungeonId, here.levelNumber), here.position[0], here.position[1], direction)
     ];
   };
 
@@ -225,7 +225,7 @@ export function ExploreActions() {
   const rest = restEntries(ctx);
   const treasure = treasureEntries(ctx);
   const stairs = stairsEntries(ctx);
-  const [transition] = stairsHere(ctx.scene);
+  const [transition] = stairsHere(ctx.here);
   const hasDoor = doorsHere(ctx.view).some((door) => !door.open);
 
   return (
@@ -285,7 +285,7 @@ export function ExploreActions() {
       {treasure.length > 0 && (
         <MenuAction
           id="explore.treasure"
-          label={treasureMenuLabel(ctx.scene)}
+          label={treasureMenuLabel(ctx.here)}
           icon="chest"
           keys="g"
           items={treasure}

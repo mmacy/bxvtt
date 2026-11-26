@@ -1,14 +1,16 @@
 /**
  * Builds the map of one level from what the viewer may know.
  *
- * - A player, and a referee with the lens off, see the player view plus the scene: the stairs, caches, piles,
- *   features, and found traps the server says the party perceives. The table's session lore adds what refusals
- *   and events taught the party about doors, such as a door that turned out to be locked.
+ * - A player, and a referee with the lens off, see the player view: the entered areas, the features and
+ *   transitions the party knows, the piles, and the entrance. The scene marks the caches the party emptied. The
+ *   table's session lore adds what refusals and events taught the party about doors, such as a door that turned
+ *   out to be locked.
  * - A referee with the lens on sees the whole keyed level from the adventure document and the referee state.
  *
  * Every function here translates data. None decides what the party could see or do.
  */
-import type { PlayerView, RefereeState, Scene, SceneArea, SceneLevel } from '@bxvtt/shared/protocol';
+import type { ExploredLevelView } from '@bxvtt/shared/bxapi';
+import type { PlayerView, RefereeState, Scene } from '@bxvtt/shared/protocol';
 import {
   edgeKey,
   fromPlayerView,
@@ -18,6 +20,7 @@ import {
   playerLevelKeys,
   refereeLevelKeys,
   type Direction,
+  type FeatureKind,
   type LevelMap,
   type PlayerMapExtras,
   type RefereeMapSource,
@@ -88,14 +91,15 @@ export function levelOptions(view: PlayerView, source: RefereeMapSource | null):
   });
 }
 
-/** The scene's record of one level, or `null`. */
-export function sceneLevel(scene: Scene | null, key: string): SceneLevel | null {
-  if (scene === null) return null;
-  return scene.levels.find((level) => levelKey(level.dungeon_id, level.level_number) === key) ?? null;
+/** The player view's record of one level, or `null`. */
+export function viewLevel(view: PlayerView, key: string): ExploredLevelView | null {
+  return view.explored.find((level) => levelKey(level.dungeon_id, level.level_number) === key) ?? null;
 }
 
 /** The cell of an area nearest its centre, where a marker for the whole area goes. */
-export function areaCenterCell(area: Pick<SceneArea, 'cells'>): [number, number] | null {
+export function areaCenterCell(area: {
+  cells: readonly (readonly [number, number])[];
+}): [number, number] | null {
   if (area.cells.length === 0) return null;
   const cx = area.cells.reduce((sum, [x]) => sum + x + 0.5, 0) / area.cells.length;
   const cy = area.cells.reduce((sum, [, y]) => sum + y + 0.5, 0) / area.cells.length;
@@ -111,39 +115,49 @@ export function areaCenterCell(area: Pick<SceneArea, 'cells'>): [number, number]
   return best ? [best[0], best[1]] : null;
 }
 
-function isDirection(value: string | null): value is Direction {
+function isDirection(value: string | null | undefined): value is Direction {
   return value === 'north' || value === 'east' || value === 'south' || value === 'west';
 }
 
-/** What the scene adds to a player's map of one level: transitions, caches, features, and entered areas. */
-export function sceneExtras(level: SceneLevel | null): PlayerMapExtras {
-  if (level === null) return {};
-  const where = (areaId: string | null, position: [number, number] | null): [number, number] | null => {
-    if (position) return position;
-    const area = level.areas.find((candidate) => candidate.id === areaId);
-    return area ? areaCenterCell(area) : null;
-  };
-  const features: NonNullable<PlayerMapExtras['features']> = [];
-  for (const cache of level.caches) {
-    const cell = where(cache.area_id, cache.position);
-    if (!cell) continue;
-    features.push({
-      id: cache.id,
-      kind: cache.source === 'generated' ? 'generated_cache' : 'cache',
-      x: cell[0],
-      y: cell[1],
-      description: 'Visible treasure.',
-    });
+/** The map kind of a player view feature. */
+function featureKind(kind: ExploredLevelView['features'][number]['kind']): FeatureKind {
+  switch (kind) {
+    case 'treasure_cache':
+      return 'cache';
+    case 'generated_cache':
+      return 'generated_cache';
+    case 'construction_trick':
+      return 'trick';
+    case 'custom':
+      return 'custom';
   }
+}
+
+/**
+ * What the player view adds to a player's map of one level: transitions, features, and entered areas. An
+ * area-wide feature goes on the cell nearest the centre of the area's walked cells.
+ *
+ * @param level - The player view's level.
+ * @param emptied - The `feature:` handles of the caches the party emptied, from `scene.emptied_features`.
+ */
+export function viewExtras(
+  level: ExploredLevelView | null,
+  emptied: ReadonlySet<string> = new Set(),
+): PlayerMapExtras {
+  if (level === null) return {};
+  const features: NonNullable<PlayerMapExtras['features']> = [];
   for (const feature of level.features) {
-    const cell = where(feature.area_id, feature.position);
+    const area = level.areas.find((candidate) => candidate.id === feature.area_id);
+    const cell = feature.cell ?? (area ? areaCenterCell(area) : null);
     if (!cell) continue;
+    const kind = featureKind(feature.kind);
     features.push({
       id: feature.id,
-      kind: feature.kind === 'construction_trick' ? 'trick' : 'custom',
+      kind,
       x: cell[0],
       y: cell[1],
       description: feature.description,
+      emptied: emptied.has(feature.id),
     });
   }
   return {
@@ -175,7 +189,7 @@ export function partyLightRadiusFeet(view: PlayerView): number | undefined {
 }
 
 /**
- * Builds a player's map of one level: the player view, the scene's extras, the treasure traps the party found,
+ * Builds a player's map of one level: the player view, the caches the party emptied, the treasure traps it knows,
  * and the door states the table learned this session.
  *
  * @param view - The player view.
@@ -189,20 +203,20 @@ export function buildPlayerLevel(
   key: string,
   doors: Readonly<Record<string, DoorLore>> = {},
 ): LevelMap | null {
-  const level = sceneLevel(scene, key);
+  const level = viewLevel(view, key);
   const map = fromPlayerView(view, key, {
-    extras: sceneExtras(level),
+    extras: viewExtras(level, new Set(scene?.emptied_features ?? [])),
     lightRadiusFeet: partyLightRadiusFeet(view),
   });
   if (map === null) return null;
-  const trapByCache = new Map(
-    (level?.caches ?? []).flatMap((cache) => (cache.trap ? [[cache.id, cache.trap] as const] : [])),
+  const trapByFeature = new Map(
+    (level?.features ?? []).flatMap((feature) =>
+      feature.trap_state != null ? [[feature.id, feature.trap_state] as const] : [],
+    ),
   );
   const features = map.features.map((feature) => {
-    const trap = trapByCache.get(feature.id);
-    return trap
-      ? { ...feature, trap: { state: trap.state, trigger: trap.trigger, summary: 'Treasure trap' } }
-      : feature;
+    const state = trapByFeature.get(feature.id);
+    return state ? { ...feature, trap: { state, trigger: null, summary: 'Treasure trap' } } : feature;
   });
   const edges = map.edges.map((edge) => {
     const lore = doors[`${key}:${edge.key}`];
@@ -217,7 +231,7 @@ export function buildPlayerLevel(
       },
     };
   });
-  // The scene states the entrance once its cell is on the party's map, and the map draws it.
+  // The player view states the entrance once its cell is on the party's map, and the map draws it.
   const entrance = level?.entrance ?? null;
   return { ...map, features, edges, entrance: entrance ? [entrance[0], entrance[1]] : map.entrance };
 }

@@ -19,6 +19,30 @@ describe('characters', () => {
     await server.close();
   });
 
+  it('returns the three dice behind each ability score from both ability roll routes', async () => {
+    const posted = await alice.client.rollAbilities({ seed: 99 });
+    const fetched = await alice.client.getAbilityRoll(posted.id);
+    for (const roll of [posted, fetched]) {
+      expect(Object.keys(roll.rolls.rolls).sort()).toEqual(['cha', 'con', 'dex', 'int', 'str', 'wis']);
+      for (const [ability, score] of Object.entries(roll.scores)) {
+        const dice = roll.rolls.rolls[ability];
+        expect(dice).toHaveLength(3);
+        for (const die of dice ?? []) {
+          expect(Number.isInteger(die)).toBe(true);
+          expect(die).toBeGreaterThanOrEqual(1);
+          expect(die).toBeLessThanOrEqual(6);
+        }
+        expect((dice ?? []).reduce((sum, die) => sum + die, 0)).toBe(score);
+        expect(roll.rolls.scores[ability]).toBe(score);
+      }
+    }
+    // bxapi rolls the same dice again from the roll's seed.
+    expect(fetched.rolls).toEqual(posted.rolls);
+    await expect(bob.client.getAbilityRoll(posted.id)).rejects.toSatisfy((error) =>
+      isProblem(error, 'not_found'),
+    );
+  });
+
   it('rolls abilities and creates a character from the roll', async () => {
     const roll = await alice.client.rollAbilities({ seed: 99 });
     expect(roll.eligible_class_ids.length).toBeGreaterThan(0);

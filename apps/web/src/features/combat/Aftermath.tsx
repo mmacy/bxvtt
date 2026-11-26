@@ -1,16 +1,18 @@
 import type { GameEntry } from '@bxvtt/shared/protocol';
-import { describeEvents, joinList, type TextContext } from '@bxvtt/shared/text';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { coinParts, describeEvents, joinList, type Coins, type TextContext } from '@bxvtt/shared/text';
+import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import {
+  cachesToTake,
   useCanSend,
   useCombatStage,
   useFeed,
   useGameMode,
+  useHere,
   useReduceMotion,
   useRevision,
   useParty,
-  useScene,
   useSendCommand,
+  useTextContext,
   type TableStore,
 } from '@/app';
 import { Badge, Button, cx, Icon } from '@/ui';
@@ -21,7 +23,6 @@ import { useCombatPeople } from './people';
 import type { AnyEvent } from './playback';
 import { usePlayback, usePublishPlayback } from './usePlayback';
 import styles from './combat.module.css';
-import { useCombatText } from './text';
 
 export interface AftermathProps {
   /** The revision the fight ended at. The entry with this revision is the fight's last. */
@@ -37,7 +38,7 @@ export interface AftermathProps {
  */
 export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
   const feed = useFeed();
-  const ctx = useCombatText();
+  const ctx = useTextContext();
   const people = useCombatPeople();
   const reduce = useReduceMotion();
   const mode = useGameMode();
@@ -118,7 +119,7 @@ export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
             {summary.loot.length > 0 && (
               <div className={styles.fact}>
                 <dt>Left behind</dt>
-                <dd>{capitalize(joinList(summary.loot))}, now among the dropped goods here.</dd>
+                <dd>{capitalize(joinList(summary.loot))}.</dd>
               </div>
             )}
             {summary.fallen.length > 0 && (
@@ -151,15 +152,15 @@ export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
 }
 
 /** Points the party at what it can pick up where it stands: dropped goods, or a treasure hoard. */
-function PickUp() {
-  const here = useScene()?.here ?? null;
+export function PickUp() {
+  const here = useHere();
   const canTake = useCanSend('take_treasure');
-  const ctx = useCombatText();
+  const ctx = useTextContext();
   const { send, pendingType } = useSendCommand();
   const [outcome, setOutcome] = useState<{ tone: 'success' | 'info' | 'danger'; text: string } | null>(null);
-  const caches = here?.caches.filter((cache) => cache.reachable) ?? [];
+  const caches = cachesToTake(here).filter((cache) => cache.reachable);
   const pile = here?.pile === true;
-  // The answer stays on screen after the goods are gone from the scene.
+  // The answer stays on screen after the goods are gone.
   if (!pile && caches.length === 0 && outcome === null) return null;
   // Report what bxapi answered, including that there was nothing to take, so the button never fails silently.
   const take = async (featureId: string) => {
@@ -183,7 +184,7 @@ function PickUp() {
       {pile && (
         <div className={styles.pickUpRow}>
           <Icon name="coins" size={16} />
-          <span className={styles.pickUpText}>There are dropped goods here.</span>
+          <span className={styles.pickUpText}>Dropped goods lie here.</span>
           <Button
             size="sm"
             variant="secondary"
@@ -192,34 +193,85 @@ function PickUp() {
             disabledReason={canTake.reason}
             onClick={() => void take('pile')}
           >
-            Pick up dropped goods
+            Pick up
           </Button>
         </div>
       )}
       {caches.map((cache) => (
-        <div key={cache.id} className={styles.pickUpRow}>
-          <Icon name="chest" size={16} />
-          <span className={styles.pickUpText}>
-            {cache.trap
-              ? 'There is treasure here, but the party knows it is trapped. Disarm the trap from the current location card or the Treasure menu first.'
-              : 'There is treasure here.'}
-          </span>
-          {!cache.trap && (
-            <Button
-              size="sm"
-              variant="secondary"
-              loading={busy}
-              disabled={!canTake.allowed}
-              disabledReason={canTake.reason}
-              onClick={() => void take(cache.id)}
-            >
-              Take treasure
-            </Button>
-          )}
-        </div>
+        <CacheRow
+          key={cache.id}
+          description={cache.description}
+          trapFound={cache.trapState === 'found'}
+          busy={busy}
+          canTake={canTake}
+          onTake={() => void take(cache.id)}
+        />
       ))}
     </div>
   );
+}
+
+/**
+ * One treasure the party can take where it stands: its description on one line, and the take button. When the
+ * party has found a trap on it, a warning line says what's at risk and the button reads "Take anyway", so the
+ * player decides. The client never says whether a trap exists before the party finds it.
+ */
+function CacheRow({
+  description,
+  trapFound,
+  busy,
+  canTake,
+  onTake,
+}: {
+  /** The author's description, or an empty string for a rolled cache. */
+  description: string;
+  trapFound: boolean;
+  busy: boolean;
+  canTake: { allowed: boolean; reason: string | null };
+  onTake: () => void;
+}) {
+  const fullId = useId();
+  const text = description.trim() || 'Treasure lies here.';
+  return (
+    <div className={styles.pickUpRow}>
+      <Icon name="chest" size={16} />
+      <span className={styles.pickUpBlock}>
+        <span className={styles.pickUpLine} aria-hidden="true">
+          {text}
+        </span>
+        {/* The visible line may be cut off, so the button's description is the full text. */}
+        <span id={fullId} className="visually-hidden">
+          {text}
+        </span>
+        {trapFound && (
+          <span className={cx(styles.pickUpWarning, styles.toneBad)}>
+            The party found a trap on this. Taking it may spring the trap.
+          </span>
+        )}
+      </span>
+      <Button
+        size="sm"
+        variant="secondary"
+        loading={busy}
+        disabled={!canTake.allowed}
+        disabledReason={canTake.reason}
+        aria-describedby={fullId}
+        onClick={onTake}
+      >
+        {trapFound ? 'Take anyway' : 'Take treasure'}
+      </Button>
+    </div>
+  );
+}
+
+/**
+ * Whether an event acquired coins: any coin by denomination, which counts loot worth less than 1 gp, or the gp
+ * value when every coin count is zero, as in an event from before osrlib 2.7.
+ */
+function acquiredCoins(event: AnyEvent): boolean {
+  const coins = event.coins;
+  if (typeof coins === 'object' && coins !== null && coinParts(coins as Coins).length > 0) return true;
+  return typeof event.coins_gp_value === 'number' && event.coins_gp_value > 0;
 }
 
 /**
@@ -233,8 +285,7 @@ export function takeOutcome(
   const took = events.some(
     (e) =>
       e.event_type === 'item_acquired' &&
-      ((Array.isArray(e.item_ids) && e.item_ids.length > 0) ||
-        (typeof e.coins_gp_value === 'number' && e.coins_gp_value > 0)),
+      ((Array.isArray(e.item_ids) && e.item_ids.length > 0) || acquiredCoins(e)),
   );
   if (!took) return { tone: 'info', text: 'There was nothing to pick up.' };
   const lines = describeEvents(

@@ -150,7 +150,7 @@ function SheetContent({ memberId, initialTab }: { memberId: string; initialTab: 
                         {effects.map((effect, index) => (
                           <li key={`${effect.kind}-${index}`}>
                             <ConditionChip
-                              label={effectLabel(effect.kind)}
+                              label={effectLabel(effect.kind, ctx)}
                               tone={effect.kind === 'light' ? 'boon' : 'magic'}
                               icon={effect.kind === 'light' ? 'torch' : undefined}
                               duration={effectRemaining(effect.remaining_rounds)}

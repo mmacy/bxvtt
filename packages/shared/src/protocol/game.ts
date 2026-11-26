@@ -61,8 +61,8 @@ export type RefereeState = Omit<RefereeView, (typeof REFEREE_VIEW_OMITTED_FIELDS
 
 /**
  * The state of a table's game for one user. The `game` WebSocket message carries the same object, so a client
- * replaces its copy with each one. Every copy has the player `view` and the `scene`, which describes the areas,
- * features, transitions, and known traps that the player view leaves out. A player's copy has `referee: null`.
+ * replaces its copy with each one. Every copy has the player `view`, which states what the party perceives, and
+ * the `scene`, which adds item names, known room traps, and emptied caches. A player's copy has `referee: null`.
  * A referee's copy has the dynamic referee state in `referee`, built at the same `revision`.
  */
 export const GameState = z.object({
@@ -75,7 +75,7 @@ export const GameState = z.object({
   revision: z.number().int(),
   /** bxapi's player view at `revision`. */
   view: z.custom<PlayerView>(),
-  /** What the party knows of the dungeon beyond the player view, at `revision`. See {@link Scene}. */
+  /** What the server adds to the player view at `revision`. See {@link Scene}. */
   scene: Scene,
   /** The commands that are legal now and that this user's role may send. */
   commands: z.array(LegalCommand),

@@ -630,11 +630,12 @@ export interface paths {
         put?: never;
         /**
          * Roll ability scores
-         * @description Roll six 3d6 ability scores with osrlib, store the roll, and return the scores and eligible classes.
+         * @description Roll six 3d6 ability scores with osrlib, store the roll, and return the scores, their dice, and eligible classes.
          *
-         *     Display `scores` and `eligible_class_ids` to the player, then pass `id` as `ability_roll_id` to
-         *     `POST /v1/characters` along with the player's class, alignment, and equipment choices. The request body is
-         *     optional: players send no body, whereas a referee may pass `seed`.
+         *     Display `scores` and `eligible_class_ids` to the player. A client that animates the dice shows `rolls.rolls`, the
+         *     three d6 osrlib rolled for each score. Then pass `id` as `ability_roll_id` to `POST /v1/characters` along with
+         *     the player's class, alignment, and equipment choices. The request body is optional: players send no body, whereas
+         *     a referee may pass `seed`.
          *
          *     The server stores the roll's seed privately and derives the character's hit points and starting gold from that
          *     same seed when `POST /v1/characters` consumes the roll. Retrying `POST /v1/characters` after a 422
@@ -661,7 +662,7 @@ export interface paths {
         };
         /**
          * Get an ability roll
-         * @description Return a stored ability roll, including its six `scores`, `eligible_class_ids`, and `used` flag.
+         * @description Return a stored ability roll: its six `scores`, the dice in `rolls`, `eligible_class_ids`, and `used`.
          *
          *     Use this endpoint to resume character creation after a page reload. When `used` is `false`, pass `id` as
          *     `ability_roll_id` to `POST /v1/characters`. When `used` is `true`, the roll has already created a character and
@@ -979,7 +980,8 @@ export interface paths {
          *
          *     Sessions copy their party members and adventure at start, so play never mutates stored characters or adventures.
          *     A referee may pass `party_document` (up to `BXAPI_MAX_BODY_BYTES`, 8,388,608 bytes by default) instead of
-         *     `character_ids`, and may choose `seed`. The server never exposes `seed` outside `GET /v1/saves/{save_id}/document`.
+         *     `character_ids`, and may choose `seed`. The server also draws a separate secret key for opaque player feature
+         *     handles. It never exposes `seed` or that key outside `GET /v1/saves/{save_id}/document`.
          */
         post: operations["create_session"];
         delete?: never;
@@ -1067,11 +1069,14 @@ export interface paths {
          *       member ID in `encounter.declarers`. Pass `target_group_id` from `encounter.groups[i].id` (such as
          *       `"group-0001"`) for `attack`, `close`, thrown splash items, and `area` or `hd_budget` spells (such as
          *       `fire_ball` or `sleep` with `spell_mode: "hd_budget"`). In battle, spell casts set `spell_mode` rather than
-         *       `mode`. Spells with `single` or `up_to_n` targeting (such as `magic_missile` with `spell_mode: "missiles"`)
-         *       require individual creature IDs in `targets`: `PlayerView` hides `group.monster_ids`, so a `player`-only
-         *       client knows a monster's `"monster-NNNN"` ID only after that monster appears in a player-visible combat event
-         *       (`attacker_id` or `target_id`), whereas a `referee` backend can read `group.monster_ids` from
-         *       `GET /v1/sessions/{session_id}/referee-view`.
+         *       `mode`. Spells and scrolls with `single` or `up_to_n` targeting (such as `magic_missile` with
+         *       `spell_mode: "missiles"`) take individual `"monster-NNNN"` or `"npc-NNNN"` IDs from
+         *       `encounter.groups[i].members` in `targets`. Use an entry whose `status` is `"alive"`.
+         *     - **Treasure caches (`inspect_treasure`, `remove_treasure_trap`, `take_treasure`):** Pass the opaque
+         *       `explored[i].features[j].id` as `feature_id` for a feature on the party's current cell. The handle starts with
+         *       `feature:`. Don't parse it. A player can use the handle without reading the referee view. osrlib also accepts the
+         *       feature's authored ID from the adventure document, a legacy form for a referee tool, and resolves either form
+         *       only among the features at the party's location.
          *
          *     When osrlib refuses a command under the B/X rules, this operation still returns HTTP 200 with `accepted` set to
          *     `false` and rule `rejections`, leaving the session and `revision` unchanged. When accepted, the server persists
@@ -1083,6 +1088,40 @@ export interface paths {
          *     already succeeded).
          */
         post: operations["send_command"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sessions/{session_id}/battle-round/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview a battle round
+         * @description Judge the declarations planned so far for a battle round, and show where they would leave the party.
+         *
+         *     Call this after each choice on a battle screen, with every declaration made so far, to learn which declarations
+         *     the session would refuse and whose they are. `rejections` has one entry for each declaration you sent, keyed by
+         *     the declaring member's ID, with the same `code` and `params` that `resolve_battle_round` returns on
+         *     `POST /v1/sessions/{session_id}/commands`. An empty list means the session would accept that declaration. When
+         *     you send one declaration for each member in `encounter.declarers` and every list in `rejections` is empty,
+         *     `resolve_battle_round` accepts the same declarations.
+         *
+         *     `advance_feet` gives each living member's projected place on the range track once the planned moves are made,
+         *     and `front_rank` gives each group's projected front rank, keyed by group ID. The projection leaves out what the
+         *     monsters do, because the session decides that after it rolls initiative.
+         *
+         *     The preview takes the session lock, rolls no dice, passes no game time, and changes nothing: `revision` stays the
+         *     same, so the request takes no `expected_revision` and needs no `Idempotency-Key`.
+         */
+        post: operations["preview_battle_round"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1102,8 +1141,8 @@ export interface paths {
          *
          *     Render your game screen from this object (or pass `include=view` to `POST /v1/sessions/{session_id}/commands` to
          *     receive `PlayerView` alongside `revision` in one response, because standalone `PlayerView` omits `revision`).
-         *     Acquires the session lock so the snapshot always reflects state between commands, and never includes unexplored
-         *     cells, monster hit points, or referee rolls.
+         *     Acquires the session lock so the snapshot always reflects state between commands. The view never includes
+         *     unexplored cells, monster hit points, referee rolls, or the secret feature-handle key.
          *
          *     Key fields for rendering a client UI:
          *
@@ -1114,13 +1153,18 @@ export interface paths {
          *       `character_id` to commands), hit points, conditions, inventory, `scores`, `armour_class`, `thac0`, `saves`,
          *       `movement_rate_feet`, and `thief_skills`. Combat stats include bonuses and curses from worn unidentified magic
          *       items while `inventory` masks unidentified names (such as `"a shield with a faint aura"`).
-         *     - `explored`: visited cells and known `x,y:side` edges (such as `"0,0:north"`) per explored dungeon level.
+         *     - `dungeons`: IDs and names of dungeons the party has entered. `can_travel_to_town` states whether
+         *       `travel_to_town` is currently usable from the party's position.
+         *     - `explored`: the party's known map for each level. Each entry includes mapped `cells` and `edges`, entered
+         *       `areas` with their names, descriptions, and walked cells, visible `features` with opaque `feature:` IDs,
+         *       known `transitions` without destinations or gates, and `entrance` when that cell is known. A feature ID is ready
+         *       to pass as `feature_id`. Feature cache contents, hidden discoveries, and destinations that the party hasn't
+         *       learned stay omitted.
          *     - `encounter`: active encounter state, or `null`. Pass `declarers` to build `resolve_battle_round`, and pass a
          *       group's `id` as `target_group_id` for attacks, `close`, thrown splash items, and `area` or `hd_budget` spells
-         *       (such as `fire_ball` and `sleep`). `PlayerView` omits individual `monster_ids` (only
-         *       `GET /v1/sessions/{session_id}/referee-view` lists them), so `single` and `up_to_n` spells (such as
-         *       `magic_missile`) can target a monster from a `player` client only after that monster's `"monster-NNNN"` ID
-         *       appears in a player-visible combat event. To find catalog templates matching a group's `family_id`, search
+         *       (such as `fire_ball` and `sleep`). Each group also has `members` with individual `"monster-NNNN"` or
+         *       `"npc-NNNN"` IDs and coarse `status` values. Use an `"alive"` member's `id` in `targets` for a `single` or
+         *       `up_to_n` spell or scroll. To find catalog templates matching a group's `family_id`, search
          *       `GET /v1/rules/monsters` with `q` and check `family_id` on `GET /v1/rules/monsters/{monster_id}`.
          *     - `journal` and `quests`: discovered journal entries and active or completed quests.
          *     - `town_healing_prices`: gold-piece prices for temple services accepted by `purchase_healing`.
@@ -1143,12 +1187,13 @@ export interface paths {
         };
         /**
          * Get the referee view
-         * @description Requires a `referee` API key. Return osrlib's `RefereeView` of the session (excluding master seed and RNG).
+         * @description Requires a `referee` API key. Return osrlib's `RefereeView` of the session.
          *
          *     Acquires the session lock to return a consistent snapshot containing the full embedded adventure, all spawned
          *     monsters with hit points and group `monster_ids`, active effects, trigger flags, `command_log`, and `event_log`.
-         *     Use it to power a referee dashboard or choose referee commands for `POST /v1/sessions/{session_id}/commands`. To
-         *     create a restorable snapshot or export the master seed, call `POST /v1/sessions/{session_id}/saves` and
+         *     The view omits the master seed, RNG state, and secret feature-handle key. Use it to power a referee dashboard or
+         *     choose referee commands for `POST /v1/sessions/{session_id}/commands`. To create a restorable snapshot or export
+         *     the master seed and feature-handle key, call `POST /v1/sessions/{session_id}/saves` and
          *     `GET /v1/saves/{save_id}/document` instead.
          */
         get: operations["get_referee_view"];
@@ -1414,6 +1459,11 @@ export interface components {
                 [key: string]: number;
             };
             /**
+             * @description osrlib's `AbilityScoreRolls` behind `scores`: each score's total and its three d6 results in the order
+             *     osrlib rolled them, the same as `rolls.ability_rolls` on `POST /v1/ability-rolls/{roll_id}/preview`.
+             */
+            rolls: components["schemas"]["AbilityScoreRolls"];
+            /**
              * Eligible Class Ids
              * @description Class `id` values from `GET /v1/rules/classes` whose minimum ability requirements `scores`
              *     satisfy, in catalog order.
@@ -1595,7 +1645,9 @@ export interface components {
          *     the quest's event already includes the text. Only an `inactive` quest can be activated.
          *     This command is legal in every mode, `game_over` and `victory` included.
          *
-         *     **Modes:** `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
+         *     Modes:
+         *
+         *     `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
          *
          *     **Rejections:**
          *
@@ -1808,7 +1860,9 @@ export interface components {
          *     were written. This command is legal in every mode, `game_over` and `victory` included, so you
          *     can add a closing line after the adventure has ended.
          *
-         *     **Modes:** `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
+         *     Modes:
+         *
+         *     `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
          *
          *     **Rejections:**
          *
@@ -1879,7 +1933,9 @@ export interface components {
          *     all dead or turned to stone, first send `PlaceParty` to move it to town, which
          *     takes the session out of `game_over`. Then add the new character.
          *
-         *     **Modes:** `town`, `exploring`
+         *     Modes:
+         *
+         *     `town`, `exploring`
          *
          *     **Rejections:**
          *
@@ -1932,7 +1988,9 @@ export interface components {
          *     wandering-monster checks for it, because the referee decides on encounters, and the time
          *     doesn't count toward the party's rest.
          *
-         *     **Modes:** `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
+         *     Modes:
+         *
+         *     `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
          *
          *     **Rejections:**
          *
@@ -1959,8 +2017,10 @@ export interface components {
             source?: string | null;
             /**
              * N
-             * @description How many of `unit` to advance. `0` is legal, advances nothing, and still emits the
-             *     `TimeAdvancedEvent`.
+             * @description How many of `unit` to advance, up to 28 days of game time: 28 days, 4,032 turns, or
+             *     241,920 rounds. A larger `n` for its `unit` fails validation when the command is
+             *     constructed, so the session never sees it. For more time, send the command again. `0` is
+             *     legal, advances nothing, and still emits the `TimeAdvancedEvent`.
              */
             n: number;
             /**
@@ -1987,10 +2047,6 @@ export interface components {
          *     adventure as Python calls, generate it from your own file format, or round-trip it through
          *     JSON with pydantic's `model_dump_json` and `model_validate_json`. osrlib has no function that
          *     reads an adventure from a file.
-         *
-         *     **Validation:**
-         *
-         *     - Invalid when two dungeons have the same `id`.
          */
         Adventure: {
             /**
@@ -2411,10 +2467,6 @@ export interface components {
          *     corridor. When the party moves into a cell of the area, the session rolls the area's treasure,
          *     rolls for a trap that springs on entering, and spawns the encounter, in that order. Showing the
          *     area's description is up to you.
-         *
-         *     **Validation:**
-         *
-         *     - Invalid when `trap` is not a room trap.
          */
         AreaSpec: {
             /**
@@ -2490,10 +2542,6 @@ export interface components {
          *     When the treasure belongs to the monsters in the room, use the `hoard` flag of the area's
          *     `KeyedEncounter` instead. The session then rolls the
          *     monsters' lair treasure.
-         *
-         *     **Validation:**
-         *
-         *     - Invalid when both `letters` and `unguarded` are given, or neither.
          */
         AreaTreasureSpec: {
             /**
@@ -2502,7 +2550,7 @@ export interface components {
              *     and puts the results in one cache. The letters are `A` to `V`. See
              *     [the treasure type index](https://mmacy.github.io/osrlib-python/reference/content-ids/treasure-types/),
              *     or read the `letter` of each entry in the `treasure_types` of
-             *     `load_treasure_tables``()`.
+             *     `load_treasure_tables()`.
              *     `validate_adventure` reports any other letter. Set
              *     this or `unguarded`, not both.
              * @default []
@@ -2824,7 +2872,9 @@ export interface components {
          *     session has ended. The class's prime-requisite bonus or penalty applies to the award,
          *     and the award can raise the character a level.
          *
-         *     **Modes:** `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
+         *     Modes:
+         *
+         *     `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
          *
          *     **Rejections:**
          *
@@ -2888,6 +2938,9 @@ export interface components {
          *       when their distance to it is at most that rate plus 5'.
          *     - `immobile` and `reloading` on the encounter view: who can't move, and who can't fire a
          *       reloading weapon this round.
+         *     - Each group's `members`, the individual
+         *       monster or NPC ids and their coarse statuses. Use an `"alive"` entry's id to select a
+         *       creature for a single-target or `up_to_n` spell or scroll.
          *     - `advance_feet` on the encounter view,
          *       each member's place on the range track. Two members reach each other when their advances
          *       differ by 5' or less. A member needs to reach another to hand them an item, to give them a
@@ -2903,7 +2956,7 @@ export interface components {
          *       With no `weapon_id`, the member attacks with the wielded weapon that suits the attack,
          *       or with bare hands when they wield none. Set `move="close"` to close on the group first
          *       and attack it in the same round. Set `back_stab` for a thief's melee attack in the free
-         *       round the party gets when it surprises the monsters.
+         *       round the party gets when it surprises the monsters, or from hiding after a `hide`.
          *     - `cast` uses `spell_id`, `spell_mode`, `reversed`, and `targets`. `spell_id` is a spell
          *       id, like `"sleep"`. `spell_mode` is the key of one of the spell's modes, and `reversed`
          *       picks the spell's reversed form. A caster can't move in the round they cast, so leave
@@ -2929,7 +2982,8 @@ export interface components {
          *       touch another member with a staff of healing, name that member as the one id in
          *       `targets`. The two members have to reach each other once the round's moves are made. It's
          *       the action of the member who carries the item, and the potion's effect lands on the
-         *       drinker.
+         *       drinker. A scroll read uses `spell_id`, `spell_mode`, and `targets`, or `target_group_id`
+         *       for a group-targeted spell, on the same terms as a `cast`.
          *     - `give_item` uses `item_id` and `targets`. The member hands one item, or one unit of a
          *       stack, to the member named as the one id in `targets`. It's the giver's action for the
          *       round, and it resolves in the party's magic phase with the round's other item uses. The
@@ -2939,12 +2993,18 @@ export interface components {
          *     - `turn_undead` uses nothing else. It reaches every living monster in the groups that
          *       haven't fled when it resolves. Turning resolves with the spells in the round. A hit
          *       can't disrupt it, because it's a class ability, not a spell.
+         *     - `hide` uses nothing else. A thief tries to hide in shadows, which takes their action for
+         *       the round. The member is then hiding until the attempt ends, and a hiding member can
+         *       back-stab without a place in the front rank, as
+         *       `back_stab` describes.
+         *       `EncounterView.can_hide` lists the members who
+         *       can hide this round.
          *     - `hold` does nothing. A member with no legal action declares it, because every member
          *       in `declarers` needs a declaration.
          *
          *     Only `attack` and `move` take a `move`. The session refuses a `cast` that sets one with
-         *     `battle.declaration.cast_cannot_move`, and a `turn_undead`, `use_item`, `give_item`, or
-         *     `hold` that sets one with `battle.declaration.move_not_combinable`.
+         *     `battle.declaration.cast_cannot_move`, and a `turn_undead`, `use_item`, `give_item`, `hide`,
+         *     or `hold` that sets one with `battle.declaration.move_not_combinable`.
          *
          *     `gaze_defense` goes with any action. It guards the member against a petrifying gaze, like
          *     a basilisk's or a medusa's, for this round only. Its values are `avert_eyes` and `mirror`.
@@ -2966,11 +3026,40 @@ export interface components {
              * @description What this member does. `attack` strikes or shoots at a group, after a `close` when the
              *     declaration sets one, `cast` casts a spell, `turn_undead` presents a holy symbol, `move` moves
              *     the member toward the monsters or away from them, `use_item` uses a magic item or throws an
-             *     item, `give_item` hands an item to another member, and `hold` does nothing. This field
-             *     determines which other fields apply, and `hold` needs none of them.
+             *     item, `give_item` hands an item to another member, `hide` has a thief try to hide in shadows,
+             *     and `hold` does nothing. This field determines which other fields apply, and `hide` and `hold`
+             *     need none of them.
+             *
+             *     A `hide` is open to a member whose class has thief skills, as the thief's does, and who doesn't
+             *     stand in the party's front rank: the first row of the ranks toward any group that hasn't fled
+             *     and has a living member. The session judges that where the members will stand once the round's
+             *     declared moves are made, as it judges a melee attack. It refuses a `hide` by a member whose
+             *     class has no thief skills with `battle.declaration.hide_not_a_thief`, and a `hide` from the
+             *     front rank with `battle.declaration.hide_in_front_rank`, in that order, after the back-stab
+             *     checks and the check of `move`. Each has the member's id as its `character` param.
+             *
+             *     The hide resolves in the party's movement step, after the members' moves, in marching order
+             *     whatever order the declarations came in. A member who can't act or is confused when the step
+             *     comes doesn't hide, and the session draws nothing for them. Otherwise the session rolls the
+             *     member's hide in shadows skill, which only the referee sees, in a
+             *     `DetectionRolledEvent` of kind `"hide_in_shadows"`.
+             *     This roll, and the move silently roll of a back-stab from hiding, draw from the combat stream,
+             *     `COMBAT_STREAM`, with the rest of the round's resolution, so
+             *     a battle replays from its own streams. A session's thief checks outside a battle, like
+             *     `PickLock`, draw from the exploration stream instead. The
+             *     players see a
+             *     `HideAttemptedEvent`, which doesn't say whether the
+             *     roll passed. The member is then hiding, as
+             *     `EncounterView.hiding` shows, until the attempt ends.
+             *     A `hide` by a member who is already hiding replaces the attempt with a new roll, and a member
+             *     can hide again in a later round after an attempt has ended.
+             *
+             *     Hiding is a battle declaration only. A thief can't enter a battle already hiding, because
+             *     nothing outside a battle makes a member hide, and every battle starts with nobody hiding. The
+             *     back-stab in the party's free round after it surprises the monsters needs no `hide`.
              * @enum {string}
              */
-            action: "attack" | "cast" | "turn_undead" | "move" | "use_item" | "give_item" | "hold";
+            action: "attack" | "cast" | "turn_undead" | "move" | "use_item" | "give_item" | "hide" | "hold";
             /**
              * Target Group Id
              * @description Which monster group the action is aimed at, by
@@ -3065,11 +3154,19 @@ export interface components {
             reversed: boolean;
             /**
              * Targets
-             * @description The spell's targets, named as in
-             *     `CastSpell.targets`. Each one is a member id, a
-             *     monster id, or, for a spell that affects a place, a cell reference like
+             * @description The spell or scroll's targets: party member ids from
+             *     `PlayerView.party`, enemy ids from
+             *     `EncounterGroupView.members`, or, for a
+             *     spell that affects a place, a cell reference like
              *     `cell:crypt:1:3,4` that `cell_ref` builds. Leave it empty
              *     for a spell whose area covers creatures, which takes `target_group_id` instead.
+             *
+             *     An enemy must be a living monster or NPC in a current encounter group that hasn't fled.
+             *     An unknown id, an enemy outside the current groups, a dead enemy, or an enemy in a fled
+             *     group gets `magic.cast.unknown_target`, whose `target` param is the id you supplied.
+             *     Refresh the player view and choose an `"alive"` member. A running group remains targetable
+             *     until it leaves. A refused round changes no state, draws no randomness, and spends no time.
+             *     Party member and cell targets retain the spell mode's existing checks.
              *
              *     For a mode that affects a total number of Hit Dice (`hd_budget`), you can leave this empty
              *     and set `target_group_id` instead. The session then collects the targets from the group, as
@@ -3089,29 +3186,36 @@ export interface components {
              *     session refuses the cast with `combat.attack.out_of_reach`, whose `target` param is the
              *     monster's id.
              *
-             *     Three other declarations read one id from this field:
+             *     Three other declarations read one id from this field. The session refuses a declaration of
+             *     one of them with any other number of ids with `battle.declaration.target_count`, whose
+             *     `expected` param is 1 and whose `supplied` param is the number of ids you gave. A potion
+             *     and a staff of healing take an empty field as the member who uses them, and a `give_item`
+             *     needs exactly one id.
              *
              *     - For a `use_item` of a potion, it's the id of the member who drinks it. Leave it empty, or
-             *       give the carrier's id, and the carrier drinks. The session refuses an id that isn't a party member's, or
-             *       more than one id, with `items.use.target_not_allowed`, a member who is dead or turned to
+             *       give the carrier's id, and the carrier drinks. The session refuses an id that isn't a party
+             *       member's with `items.use.target_not_allowed`, a member who is dead or turned to
              *       stone with `items.use.target_cannot_drink`, and a member out of reach with
              *       `battle.declaration.member_out_of_reach`. A member who is asleep or paralysed can be given
              *       a potion to drink.
              *     - For a `use_item` of a staff of healing, it's the id of the creature the staff touches.
              *       Leave it empty, and the member using it is healed. The session refuses an id that matches no
-             *       creature, or more than one id, with `items.use.unknown_target`, a creature that's dead or
-             *       turned to stone with `items.use.target_cannot_be_healed`, and another member out of reach with
+             *       creature with `items.use.unknown_target`, a creature that's dead or turned to stone with
+             *       `items.use.target_cannot_be_healed`, a creature the staff already healed today with
+             *       `items.use.target_healed_today`, and another member out of reach with
              *       `battle.declaration.member_out_of_reach`. A monster's group has to stand within 5' of the
              *       member, or the use gets `combat.attack.out_of_reach`. A touch on a monster then follows the
              *       rule for melee, as a touch spell's does.
              *     - For a `give_item`, it's the id of the member who takes the item. The session refuses the giver with
-             *       `exploration.give.same_member`, an id that isn't a party member's, an empty field, or more
-             *       than one id with `session.command.unknown_member`, a member who can't act with
+             *       `exploration.give.same_member`, an id that isn't a party member's with
+             *       `session.command.unknown_member`, a member who can't act with
              *       `session.command.member_incapacitated`, and a member out of reach with
              *       `battle.declaration.member_out_of_reach`.
              *
-             *     `battle.declaration.member_out_of_reach` has the declaring member's id as its `character`
-             *     param and the named member's id as `target`.
+             *     `battle.declaration.member_out_of_reach` and `battle.declaration.target_count` have the
+             *     declaring member's id as their `character` param. The first has the named member's id as
+             *     `target`, and so do a `give_item`'s `session.command.unknown_member` and
+             *     `session.command.member_incapacitated`.
              * @default []
              */
             targets: string[];
@@ -3200,7 +3304,7 @@ export interface components {
              *     `battle.declaration.move_not_combinable` with a `fighting_withdrawal` or a `retreat`. A `cast`
              *     that sets any move gets `battle.declaration.cast_cannot_move`, because the OSE SRD says "The
              *     spell caster cannot move and cast a spell in the same round". A `turn_undead`, a `use_item`, a
-             *     `give_item`, or a `hold` that sets any move gets `battle.declaration.move_not_combinable`. Each
+             *     `give_item`, a `hide`, or a `hold` that sets any move gets `battle.declaration.move_not_combinable`. Each
              *     of these two codes has the member's id as its `character` param. The session checks for them
              *     after the back-stab checks and before the action's own checks.
              *     [The adaptations register](https://mmacy.github.io/osrlib-python/adaptations/)
@@ -3243,8 +3347,11 @@ export interface components {
              * @description Which item a `use_item` declaration uses: a magic item's per-instance id for a potion, a
              *     scroll, a wand, a staff, or a rod, or a mundane item's catalog id for a splash weapon thrown
              *     at a group, like a flask of oil or a vial of holy water. The session refuses any other
-             *     mundane item, like a torch or a rope, or a magic item that can't be used in battle, with
-             *     `battle.declaration.item_unusable`. To swing a torch, wield it and declare an `attack`.
+             *     mundane item, like a torch or a rope, an item the member doesn't carry, or a magic item that
+             *     can't be used in battle, with `battle.declaration.item_unusable`. It judges the item before
+             *     the group, so a declaration with no `target_group_id` and an item the member can't throw
+             *     gets this code, not `battle.declaration.unknown_group`. To swing a torch, wield it and
+             *     declare an `attack`.
              *
              *     For a `give_item` declaration, it's the item to hand over, named as in
              *     `GiveItems.item_ids`: a mundane item's catalog id,
@@ -3302,15 +3409,18 @@ export interface components {
              *
              *     The OSE SRD's thief entry says "When attacking an unaware opponent from behind, a thief
              *     receives a +4 bonus to hit and doubles any damage dealt." osrlib has no facing in battle, so
-             *     the session reads an unaware opponent from behind as a monster the party surprised, in the
-             *     round it can't act. Set this field only when all of these are true:
+             *     the session reads an unaware opponent from behind in one of two ways: a monster the party
+             *     surprised, in the round it can't act, or a monster a hiding thief strikes unnoticed. Set this
+             *     field only when all of these are true:
              *
              *     - The action is `attack`.
              *     - The member's class has the `back_stab` ability, as a thief's does.
-             *     - The monsters can't act this round because the party surprised them. That's the party's
-             *       free round, while
+             *     - The monsters can't act this round because the party surprised them, or the member is
+             *       hiding. The first is the party's free round, while
              *       `BattleState.monsters_hold_rounds`
-             *       is above zero. The session reads it when it accepts the round.
+             *       is above zero. The second holds while the member is in
+             *       `EncounterView.hiding`. The session reads both
+             *       when it accepts the round.
              *     - The attack is a melee attack. The weapon and the member's distance to the group after their
              *       `close`, if the declaration sets one, decide that, as
              *       `weapon_id` describes.
@@ -3319,15 +3429,87 @@ export interface components {
              *     `move="close"` and `back_stab=True`. The session judges the back-stab at the distance the move
              *     will reach. So a thief reaches a group up to their encounter rate plus 5' away. That's 35' for a
              *     thief in leather armour under the ruleset's default `basic` encumbrance, and 45' for one in no
-             *     armour. *Haste* doubles the rate. A group farther away can't be back-stabbed in the free round,
-             *     because the free round is the only round the monsters are unaware.
+             *     armour. *Haste* doubles the rate.
              *
-             *     An accepted back-stab hits the same monster an ordinary melee attack would. It gets +4 to
-             *     hit, the defender's shield doesn't count, and its damage is doubled. The bonus and the
-             *     doubling come from the class's `back_stab` ability. Every attack roll the declaration makes
-             *     in the round is a back-stab, even when the monsters win initiative, and the attack's
-             *     `AttackRolledEvent` has `back_stab` set to true, so
-             *     your game can say so.
+             *     An accepted back-stab in the free round is always a back-stab. It hits the same monster an
+             *     ordinary melee attack would. It gets +4 to hit, the defender's shield doesn't count, and its
+             *     damage is doubled: the whole sum of the weapon's dice and the member's modifiers, not the dice
+             *     alone. The bonus and the doubling come from the class's `back_stab` ability. Every attack roll
+             *     the declaration makes in the round is a back-stab, even when the monsters win initiative, and
+             *     the attack's `AttackRolledEvent` has `back_stab` set to
+             *     true, so your game can say so.
+             *
+             *     A back-stab from hiding works differently, because the session rolls the thief's skills in
+             *     secret, as the OSE SRD's "The referee should roll for hear noise, hide in shadows and move
+             *     silently on the player’s behalf" says:
+             *
+             *     - A hiding member's back-stab doesn't need the group's front rank, so
+             *       `battle.declaration.not_in_front_rank` doesn't apply to it, when the session accepts the
+             *       round or when the attack comes up. Every other melee check does, `combat.attack.out_of_reach`
+             *       among them, so the group has to be within 5' of the member, or the declaration has to set
+             *       `move="close"` to bring it within 5'. The attack hits the monster an ordinary melee attack
+             *       would. Without a `close`, the member strikes from where they stand, and their place in the
+             *       ranks doesn't change.
+             *     - A `close` on the back-stab is part of the approach. The member closes in the party's
+             *       movement step with the round's other moves, the move doesn't end the attempt, and the move
+             *       silently roll at the attack is the roll for that approach. After the attack the member stands
+             *       where the close took them, as any member who closes does.
+             *     - When the attack comes up, before its first attack roll, the session rolls the member's move
+             *       silently skill, which only the referee sees, in a
+             *       `DetectionRolledEvent` of kind
+             *       `"move_silently"`. It makes this roll for every such attack by a hiding member, whatever the
+             *       hide in shadows roll was and whichever way the ruleset is set, so the draws are the same
+             *       under both settings. An attack that fizzles makes no roll. A back-stab with a slow weapon,
+             *       like a battle axe, comes up when its blow resolves, after both sides' blocks, so the session
+             *       makes the roll then. The member is still hiding through the monsters' block before it, and the
+             *       monsters pass over them there if their hide in shadows roll passed.
+             *     - The attack is a back-stab when the two rolls pass the test the ruleset's
+             *       `back_stab_needs_both_skills`
+             *       sets: both rolls by default, or either roll with the flag off. Then every attack roll the
+             *       declaration makes is a back-stab, with the bonus and the doubling of the free round. Under
+             *       *haste*, the declaration's two swings share the one move silently roll, made before the
+             *       first, so both are back-stabs or neither is, as both are in the free round. Otherwise it's
+             *       an ordinary melee attack. The attack's `AttackRolledEvent.back_stab` is how
+             *       the players learn which.
+             *     - The attempt ends when the attack comes up, whatever happens.
+             *
+             *     A member stays hiding from the `hide` until the first of these:
+             *
+             *     - The member's next declaration other than `hold` or `hide` comes up in its step of the round.
+             *       A `hold` keeps the attempt, so a thief can stay hidden for several rounds. A second `hide`
+             *       replaces it with a new hide in shadows roll. An `attack` comes up in the missile or the melee
+             *       step, not in the movement step, so a `close` on any attack, a back-stab or an ordinary one,
+             *       doesn't end the attempt. An attack with a slow weapon, a back-stab or an ordinary one, comes
+             *       up when its blow resolves after both sides' blocks, so the member is still hiding through the
+             *       monsters' block before it, and passed over there if their hide in shadows roll passed.
+             *     - The member takes damage: a `DamageDealtEvent` on them
+             *       with an `amount` above 0. One with an `amount` of 0 doesn't end the attempt, because the
+             *       member took no damage.
+             *     - A monster or an NPC adventurer attacks the member, shoots at them, or casts a spell at them
+             *       alone, when that action resolves.
+             *     - The member can't act, or is confused, at the end of a round.
+             *     - The battle ends.
+             *
+             *     A back-stab declared from hiding whose attempt ended before the attack came up, because the
+             *     member took damage or was attacked, stays a melee attack without the front rank check. It's an
+             *     ordinary attack, and the session makes no move silently roll for it.
+             *
+             *     While a member is hiding, the monsters' choice of targets reads only the hide in shadows roll,
+             *     under both settings. When the session or a built-in policy picks one member for a monster or
+             *     an NPC adventurer to attack, shoot at, cast at, or breathe on, it passes over a hiding member
+             *     whose hide in shadows roll passed while it could pick another member. That covers the built-in
+             *     policies, a confused monster's attack on the party, and a breath that hits one target. A member
+             *     turned to stone is never another member it could pick: the session passes over statues first,
+             *     as it does for any target, so when every other member in reach is stone, the hiding member is
+             *     the only one it could pick. When that member is the only one it could pick, the monster finds
+             *     them and attacks, which ends the attempt. A member
+             *     whose roll failed has been noticed, as the OSE SRD's "If a hide in shadows or move silently
+             *     roll fails, the referee knows that the thief has been noticed" says, and can be picked like
+             *     any other. A policy of your own reads
+             *     `BattleState.hiding` to do the same. Hiding changes only
+             *     the choice of a target. A group still closes on the nearest member it can see, a hiding member
+             *     included, and an area, like a red dragon's breath, covers a hiding member as it covers anyone in
+             *     its ranks.
              *
              *     The session refuses a back-stab with the first of these that applies, in this order. Each
              *     of the four back-stab codes has the member's id as its `character` param.
@@ -3335,9 +3517,8 @@ export interface components {
              *     1. `battle.declaration.back_stab_not_attack`: the action isn't `attack`. The session checks
              *        this before any other check on the declaration.
              *     2. `battle.declaration.back_stab_no_ability`: the member's class has no `back_stab` ability.
-             *     3. `battle.declaration.back_stab_target_aware`: the monsters aren't surprised this round.
-             *        That's every round of a battle the party didn't open by surprising the monsters, and
-             *        every round after the free round.
+             *     3. `battle.declaration.back_stab_target_aware`: the monsters aren't surprised this round, and
+             *        the member isn't hiding.
              *     4. The checks of an ordinary attack on its group and weapon:
              *        `battle.declaration.unknown_group`, `battle.declaration.no_target`,
              *        `battle.declaration.weapon_not_wielded`, and `battle.declaration.item_unusable`.
@@ -3347,9 +3528,11 @@ export interface components {
              *        `close`.
              *     6. The rest of an ordinary melee attack's checks, like
              *        `battle.declaration.not_in_front_rank` and `combat.attack.out_of_reach`, judged after the
-             *        round's declared moves.
+             *        round's declared moves. A hiding member's back-stab skips `not_in_front_rank`.
              *
-             *     A declaration that leaves this field `false` resolves exactly as it would without it.
+             *     A declaration that leaves this field `false` resolves exactly as it would without it. A hiding
+             *     member's attack without it is an ordinary attack with every check, the front rank's included,
+             *     and it ends the attempt.
              *     [The adaptations register](https://mmacy.github.io/osrlib-python/adaptations/) describes the
              *     back-stab in full.
              * @default false
@@ -3422,6 +3605,64 @@ export interface components {
              * @description Which round of this battle is starting, counting from one.
              */
             round: number;
+        };
+        /**
+         * BattleRoundPreview
+         * @description What a battle round would do with the declarations planned so far, worked out without playing it.
+         *
+         *     `preview_battle_round` returns one. Read `rejections`
+         *     to grey out a choice the session would refuse, and read `advance_feet` and `front_rank` to show
+         *     where the members would stand once their declared moves are made. The model is frozen.
+         */
+        BattleRoundPreview: {
+            /**
+             * Rejections
+             * @description Every reason the session would refuse each planned declaration, keyed by the declaring member's
+             *     id. There's one entry for each declaration you passed. An empty tuple means the session would
+             *     accept that declaration.
+             *
+             *     The codes and params are the ones
+             *     `ResolveBattleRound` returns for the same declarations.
+             *     `battle.declaration.roster_mismatch` never appears, because a plan with members still missing
+             *     would always get it.
+             */
+            rejections: {
+                [key: string]: components["schemas"]["Rejection"][];
+            };
+            /**
+             * Advance Feet
+             * @description Where each living member would stand once the planned moves are made, keyed by member id, in feet
+             *     forward of the party line, as in
+             *     `BattleState.advance_feet`. Every living member has
+             *     an entry. A member with no planned move keeps their current advance, and a member on the line has
+             *     zero. When the planned moves would leave every member the monsters can see behind the line, the
+             *     values are the ones after the line moves back, as the round would leave them.
+             */
+            advance_feet: {
+                [key: string]: number;
+            };
+            /**
+             * Front Rank
+             * @description For each group that hasn't fled, keyed by group id, the members who would stand in its front rank
+             *     within 5' of it once the planned moves are made, in marching order. It means what
+             *     `EncounterGroupView.front_rank` means, after the
+             *     moves.
+             */
+            front_rank: {
+                [key: string]: string[];
+            };
+        };
+        /**
+         * BattleRoundPreviewRequest
+         * @description The declarations planned so far for a battle round, for `POST /v1/sessions/{session_id}/battle-round/preview`.
+         */
+        BattleRoundPreviewRequest: {
+            /**
+             * Declarations
+             * @description osrlib `BattleDeclaration` objects, at most one for each member ID in `encounter.declarers` of the player view,
+             *     in any order. Pass any subset of the declarers, including none (`[]`). At most 20 entries.
+             */
+            declarations: components["schemas"]["BattleDeclaration"][];
         };
         /**
          * BattleStartedEvent
@@ -3599,6 +3840,29 @@ export interface components {
             arrived_round: {
                 [key: string]: number;
             };
+            /**
+             * Hiding
+             * @description The members who are hiding, keyed by member id, each with whether their hide in shadows roll passed.
+             *
+             *     A member enters it when their `hide` declaration resolves, and leaves it when the attempt ends, as
+             *     `BattleDeclaration.back_stab` lists. A second
+             *     `hide` replaces the value with the new roll's. The value is the referee's secret. The players see
+             *     only who is hiding, in `EncounterView.hiding`, and learn
+             *     how the attempt went from the back-stab's
+             *     `AttackRolledEvent.back_stab`.
+             *
+             *     A member whose value is true has hidden unseen. The built-in policies pass them over while they can
+             *     pick another member, and a policy of your own reads this to do the same. A member whose value is
+             *     false has been noticed, and the monsters can pick them. Under the ruleset's
+             *     `back_stab_needs_both_skills` flag off,
+             *     such a member can still back-stab if the move silently roll passes. Both rolls draw from the
+             *     `COMBAT_STREAM`. The field starts empty with each battle, and a
+             *     save from before it existed loads with nobody hiding.
+             * @default {}
+             */
+            hiding: {
+                [key: string]: boolean;
+            };
         };
         /**
          * CastSpell
@@ -3612,7 +3876,9 @@ export interface components {
          *     `EngageBattle` and declare a `cast`
          *     `BattleDeclaration` in the round.
          *
-         *     **Modes:** `town`, `exploring`
+         *     Modes:
+         *
+         *     `town`, `exploring`
          *
          *     **Rejections:**
          *
@@ -4241,7 +4507,7 @@ export interface components {
          * ClassDefinition
          * @description A character class, like the fighter or the elf: its rules, and its values at every level.
          *
-         *     Get one from `load_classes``().get(class_id)`. For the ids, iterate
+         *     Get one from `load_classes().get(class_id)`. For the ids, iterate
          *     `load_classes().classes` or see [the class id
          *     index](https://mmacy.github.io/osrlib-python/reference/content-ids/classes/). A
          *     `Character` stores only the class id, and
@@ -4443,7 +4709,9 @@ export interface components {
          *     because a door the party opened swings shut by itself once the party walks away from it,
          *     unless it's wedged.
          *
-         *     **Modes:** `exploring`
+         *     Modes:
+         *
+         *     `exploring`
          *
          *     **Rejections:**
          *
@@ -4670,11 +4938,12 @@ export interface components {
             /**
              * Command Type
              * @description The name that identifies the command class in serialized data. Each command class fixes
-             *     it to a distinct snake_case string, like `"move_party"` or `"open_door"`, and constructing
-             *     the class sets it, so you never pass it yourself.
+             *     it to a distinct snake_case string, like `"move_party"` or `"open_door"`. In Python,
+             *     constructing the class sets it, so you don't pass it.
              *     `parse_command` and the
              *     `AnyCommand` union use it to rebuild the right class
-             *     from a serialized mapping. A class's value never changes between releases.
+             *     from a serialized mapping, so a mapping you pass to either one has to include it, like
+             *     the JSON body of a request. A class's value never changes between releases.
              */
             command_type: string;
             /**
@@ -4764,7 +5033,7 @@ export interface components {
              * @description Ordered events emitted by the command and any triggered adventure logic, filtered to the
              *     requested `visibility` (`player` by default).
              */
-            events: (components["schemas"]["InitiativeRolledEvent"] | components["schemas"]["AttackRolledEvent"] | components["schemas"]["DamageDealtEvent"] | components["schemas"]["DamageAbsorbedEvent"] | components["schemas"]["SavingThrowRolledEvent"] | components["schemas"]["MoraleCheckedEvent"] | components["schemas"]["ReactionRolledEvent"] | components["schemas"]["ConditionGainedEvent"] | components["schemas"]["ConditionRemovedEvent"] | components["schemas"]["EffectAttachedEvent"] | components["schemas"]["EffectTickedEvent"] | components["schemas"]["EffectExpiredEvent"] | components["schemas"]["EffectReleasedEvent"] | components["schemas"]["HealingAppliedEvent"] | components["schemas"]["DeathEvent"] | components["schemas"]["EquipmentDestroyedEvent"] | components["schemas"]["LevelDrainedEvent"] | components["schemas"]["MonsterRevivedEvent"] | components["schemas"]["HitPointsReportedEvent"] | components["schemas"]["TargetsSelectedEvent"] | components["schemas"]["SpellsMemorizedEvent"] | components["schemas"]["SpellCastEvent"] | components["schemas"]["SpellDisruptedEvent"] | components["schemas"]["DeclarationFizzledEvent"] | components["schemas"]["SpellForgottenEvent"] | components["schemas"]["SpellBookUpdatedEvent"] | components["schemas"]["UndeadTurnedEvent"] | components["schemas"]["MagicDispelledEvent"] | components["schemas"]["PartyMovedEvent"] | components["schemas"]["PartyReorderedEvent"] | components["schemas"]["LocationEnteredEvent"] | components["schemas"]["DoorEvent"] | components["schemas"]["ListenedEvent"] | components["schemas"]["DetectionRolledEvent"] | components["schemas"]["SearchCompletedEvent"] | components["schemas"]["TrapEvent"] | components["schemas"]["ItemAcquiredEvent"] | components["schemas"]["ItemConsumedEvent"] | components["schemas"]["ItemsDroppedEvent"] | components["schemas"]["ItemsLeftBehindEvent"] | components["schemas"]["ItemsGivenEvent"] | components["schemas"]["LightEvent"] | components["schemas"]["RestedEvent"] | components["schemas"]["FatigueEvent"] | components["schemas"]["ProvisionsEvent"] | components["schemas"]["WanderingCheckEvent"] | components["schemas"]["EncounterStartedEvent"] | components["schemas"]["EncounterGroupJoinedEvent"] | components["schemas"]["SurpriseRolledEvent"] | components["schemas"]["StanceChangedEvent"] | components["schemas"]["EvasionEvent"] | components["schemas"]["PursuitEvent"] | components["schemas"]["ExhaustionEvent"] | components["schemas"]["LootDroppedEvent"] | components["schemas"]["EncounterEndedEvent"] | components["schemas"]["BattleStartedEvent"] | components["schemas"]["BattleRoundEvent"] | components["schemas"]["SpellDeclaredEvent"] | components["schemas"]["GroupMovedEvent"] | components["schemas"]["MemberMovedEvent"] | components["schemas"]["MemberWithdrewEvent"] | components["schemas"]["MonsterFledEvent"] | components["schemas"]["MonstersLeftBehindEvent"] | components["schemas"]["MonsterDefeatedEvent"] | components["schemas"]["BattleEndedEvent"] | components["schemas"]["HoardGeneratedEvent"] | components["schemas"]["ItemUsedEvent"] | components["schemas"]["ItemIdentifiedEvent"] | components["schemas"]["CurseRevealedEvent"] | components["schemas"]["NpcPartySpawnedEvent"] | components["schemas"]["AdventureXpAwardEvent"] | components["schemas"]["TreasureSoldEvent"] | components["schemas"]["HealingPurchasedEvent"] | components["schemas"]["FlagSetEvent"] | components["schemas"]["MonstersSpawnedEvent"] | components["schemas"]["XpAwardedEvent"] | components["schemas"]["CharacterLeveledUpEvent"] | components["schemas"]["TimeAdvancedEvent"] | components["schemas"]["GameOverEvent"] | components["schemas"]["DiceRolledEvent"] | components["schemas"]["TriggerFiredEvent"] | components["schemas"]["JournalEntryAddedEvent"] | components["schemas"]["NoteRecordedEvent"] | components["schemas"]["QuestActivatedEvent"] | components["schemas"]["ObjectiveRevealedEvent"] | components["schemas"]["ObjectiveCompletedEvent"] | components["schemas"]["QuestCompletedEvent"] | components["schemas"]["AdventureCompletedEvent"] | components["schemas"]["ItemsRemovedEvent"] | components["schemas"]["MemberAddedEvent"] | components["schemas"]["MemberRemovedEvent"])[];
+            events: (components["schemas"]["InitiativeRolledEvent"] | components["schemas"]["AttackRolledEvent"] | components["schemas"]["DamageDealtEvent"] | components["schemas"]["DamageAbsorbedEvent"] | components["schemas"]["SavingThrowRolledEvent"] | components["schemas"]["MoraleCheckedEvent"] | components["schemas"]["ReactionRolledEvent"] | components["schemas"]["ConditionGainedEvent"] | components["schemas"]["ConditionRemovedEvent"] | components["schemas"]["EffectAttachedEvent"] | components["schemas"]["EffectTickedEvent"] | components["schemas"]["EffectExpiredEvent"] | components["schemas"]["EffectReleasedEvent"] | components["schemas"]["HealingAppliedEvent"] | components["schemas"]["DeathEvent"] | components["schemas"]["EquipmentDestroyedEvent"] | components["schemas"]["LevelDrainedEvent"] | components["schemas"]["MonsterRevivedEvent"] | components["schemas"]["HitPointsReportedEvent"] | components["schemas"]["TargetsSelectedEvent"] | components["schemas"]["SpellsMemorizedEvent"] | components["schemas"]["SpellCastEvent"] | components["schemas"]["SpellDisruptedEvent"] | components["schemas"]["DeclarationFizzledEvent"] | components["schemas"]["SpellForgottenEvent"] | components["schemas"]["SpellBookUpdatedEvent"] | components["schemas"]["UndeadTurnedEvent"] | components["schemas"]["MagicDispelledEvent"] | components["schemas"]["PartyMovedEvent"] | components["schemas"]["PartyReorderedEvent"] | components["schemas"]["LocationEnteredEvent"] | components["schemas"]["DoorEvent"] | components["schemas"]["ListenedEvent"] | components["schemas"]["DetectionRolledEvent"] | components["schemas"]["SearchCompletedEvent"] | components["schemas"]["TrapEvent"] | components["schemas"]["ItemAcquiredEvent"] | components["schemas"]["ItemConsumedEvent"] | components["schemas"]["ItemsDroppedEvent"] | components["schemas"]["ItemsLeftBehindEvent"] | components["schemas"]["ItemsGivenEvent"] | components["schemas"]["LightEvent"] | components["schemas"]["RestedEvent"] | components["schemas"]["FatigueEvent"] | components["schemas"]["ProvisionsEvent"] | components["schemas"]["WanderingCheckEvent"] | components["schemas"]["EncounterStartedEvent"] | components["schemas"]["EncounterGroupJoinedEvent"] | components["schemas"]["SurpriseRolledEvent"] | components["schemas"]["StanceChangedEvent"] | components["schemas"]["EvasionEvent"] | components["schemas"]["PursuitEvent"] | components["schemas"]["ExhaustionEvent"] | components["schemas"]["LootDroppedEvent"] | components["schemas"]["EncounterEndedEvent"] | components["schemas"]["BattleStartedEvent"] | components["schemas"]["BattleRoundEvent"] | components["schemas"]["SpellDeclaredEvent"] | components["schemas"]["GroupMovedEvent"] | components["schemas"]["MemberMovedEvent"] | components["schemas"]["MemberWithdrewEvent"] | components["schemas"]["HideAttemptedEvent"] | components["schemas"]["MonsterFledEvent"] | components["schemas"]["MonsterEscapedEvent"] | components["schemas"]["MonstersLeftBehindEvent"] | components["schemas"]["MonsterDefeatedEvent"] | components["schemas"]["BattleEndedEvent"] | components["schemas"]["HoardGeneratedEvent"] | components["schemas"]["ItemUsedEvent"] | components["schemas"]["ItemIdentifiedEvent"] | components["schemas"]["CurseRevealedEvent"] | components["schemas"]["NpcPartySpawnedEvent"] | components["schemas"]["AdventureXpAwardEvent"] | components["schemas"]["TreasureSoldEvent"] | components["schemas"]["HealingPurchasedEvent"] | components["schemas"]["FlagSetEvent"] | components["schemas"]["MonstersSpawnedEvent"] | components["schemas"]["XpAwardedEvent"] | components["schemas"]["CharacterLeveledUpEvent"] | components["schemas"]["TimeAdvancedEvent"] | components["schemas"]["GameOverEvent"] | components["schemas"]["DiceRolledEvent"] | components["schemas"]["TriggerFiredEvent"] | components["schemas"]["JournalEntryAddedEvent"] | components["schemas"]["NoteRecordedEvent"] | components["schemas"]["QuestActivatedEvent"] | components["schemas"]["ObjectiveRevealedEvent"] | components["schemas"]["ObjectiveCompletedEvent"] | components["schemas"]["QuestCompletedEvent"] | components["schemas"]["AdventureCompletedEvent"] | components["schemas"]["ItemsRemovedEvent"] | components["schemas"]["MemberAddedEvent"] | components["schemas"]["MemberRemovedEvent"])[];
             /**
              * Messages
              * @description Human-readable English summary line for each entry in `events`, in matching order, formatted
@@ -4785,8 +5054,9 @@ export interface components {
             revision: number;
             /**
              * View
-             * @description Updated `PlayerView` at `revision` (matching `GET /v1/sessions/{session_id}/view`), included
-             *     only when the request passes `include=view`.
+             * @description Updated `PlayerView` at `revision` (matching `GET /v1/sessions/{session_id}/view`), with
+             *     known map features and encounter member IDs, included only when the request passes
+             *     `include=view`.
              */
             view?: components["schemas"]["PlayerView"];
         };
@@ -4832,7 +5102,9 @@ export interface components {
          *     `JournalEntryAddedEvent` follows.
          *     This command is legal in every mode, `game_over` and `victory` included.
          *
-         *     **Modes:** `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
+         *     Modes:
+         *
+         *     `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
          *
          *     **Rejections:**
          *
@@ -4900,7 +5172,9 @@ export interface components {
          *     the session emits no `AdventureCompletedEvent`. This command is legal in every mode,
          *     `game_over` and `victory` included.
          *
-         *     **Modes:** `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
+         *     Modes:
+         *
+         *     `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
          *
          *     **Rejections:**
          *
@@ -5416,16 +5690,22 @@ export interface components {
         };
         /**
          * DeclarationFizzledEvent
-         * @description A declared wand, staff, or rod use, a declared turning, or a declared melee attack failed before it took effect.
+         * @description A declared item use, hand-over, turning, or melee attack failed before it took effect.
          *
          *     A `GameSession` reports it during a battle round. At the start of each
          *     round, every party member declares an action in a
          *     `BattleDeclaration`. A turning is a cleric's attempt to turn undead.
-         *     Device uses and turnings resolve in the round's magic phase, the step in which the party's spells, item uses,
-         *     and turnings take effect. A staff's strike is the exception, described below. Just before
-         *     each one resolves, the session checks it again. If a check the declaration passed at the start of the round
-         *     now fails, the declaration fizzles. Something earlier in the round caused the failure. For example, the group a
-         *     wand was aimed at left the battle.
+         *     Device uses, potions, hand-overs, and turnings resolve in the round's magic phase, the step in which the
+         *     party's spells, item uses, and turnings take effect. A device is a wand, a staff, or a rod. A staff's strike
+         *     is the exception, described below. Just before each one resolves, the session checks it again. If a check the
+         *     declaration passed at the start of the round now fails, the declaration fizzles. Something earlier in the
+         *     round caused the failure. For example, the group a wand was aimed at left the battle.
+         *
+         *     A potion that one member gives another to drink fizzles with the code `magic.potion.fizzled` when the drinker
+         *     died or turned to stone, or the two members no longer stand within 5' of each other. A potion the carrier
+         *     drinks never fizzles. A `give_item` hand-over fizzles with the code `battle.give.fizzled` when the recipient
+         *     can no longer act, or the two members no longer stand within 5' of each other. Either event has the item in
+         *     `item_id` and the member it was for in `target_id`.
          *
          *     A melee attack fizzles when the party's melee step comes and the attack has nothing left to strike, or the
          *     member stands in the wrong place. The session judges a melee attack before the round starts, as if every move the
@@ -5445,19 +5725,22 @@ export interface components {
          *     strike's group ran out of the battle, or a quicker member killed the last monster in it that the member could
          *     see.
          *
-         *     The event's `actor_id` is the member who declared the action, `item_id` is the device, `group_id` is the group a
-         *     melee attack was aimed at, and `reason` is the rejection code of the check that failed.
+         *     The event's `actor_id` is the member who declared the action, `item_id` is the device, the potion, or the item
+         *     handed over, `target_id` is the member a potion or a hand-over was for, `group_id` is the group a melee attack
+         *     was aimed at, and `reason` is the rejection code of the check that failed.
          *
-         *     A fizzled declaration spends nothing. The device wasn't used, so it keeps its charge and isn't identified. Tell
-         *     the player the action failed, and that the device still has its charge. A fizzled melee attack makes no attack
-         *     roll, so tell the player why the member didn't swing. When a cast or a scroll read fizzles,
-         *     the session reports a `SpellDisruptedEvent` instead, because the
-         *     spell is lost.
+         *     A fizzled declaration spends nothing and draws nothing. The device wasn't used, so it keeps its charge and isn't
+         *     identified. Tell the player the action failed, and that the device still has its charge. A potion that fizzles
+         *     stays with the member who carries it and isn't identified, and an item that wasn't handed over stays with the
+         *     giver. A fizzled melee attack makes no attack roll, so tell the player why the member didn't swing. When a cast
+         *     or a scroll read fizzles, the session reports a `SpellDisruptedEvent`
+         *     instead, because the spell is lost.
          */
         DeclarationFizzledEvent: {
             /**
              * Code
-             * @description Which declaration fizzled: `magic.device.fizzled`, `magic.turning.fizzled`, or `battle.melee.fizzled`.
+             * @description Which declaration fizzled: `magic.device.fizzled`, `magic.potion.fizzled`, `magic.turning.fizzled`,
+             *     `battle.give.fizzled`, or `battle.melee.fizzled`.
              */
             code: string;
             /**
@@ -5472,17 +5755,26 @@ export interface components {
             event_type: "declaration_fizzled";
             /**
              * Actor Id
-             * @description The entity id of the member who declared the device use, the turning, or the melee attack.
+             * @description The entity id of the member who declared the device use, the potion, the hand-over, the turning, or the
+             *     melee attack.
              */
             actor_id: string;
             /**
              * Item Id
-             * @description On a `magic.device.fizzled` event, the device's instance id, as the declaration's `item_id` gave it.
+             * @description The item the declaration's `item_id` gave, on a `magic.device.fizzled`, a `magic.potion.fizzled`, or a
+             *     `battle.give.fizzled` event: a device's or a potion's instance id, or the id of the item a hand-over moves.
              *
-             *     The player already used this id, so it reveals nothing about a device that isn't identified. It's `null` on a
+             *     The player already used this id, so it reveals nothing about an item that isn't identified. It's `null` on a
              *     `magic.turning.fizzled` or a `battle.melee.fizzled` event.
              */
             item_id?: string | null;
+            /**
+             * Target Id
+             * @description On a `magic.potion.fizzled` or a `battle.give.fizzled` event, the id of the member the potion or the item
+             *     was for, the one id in the declaration's `targets`. It's `null` on the other codes, and on an event from a log
+             *     written before the field existed.
+             */
+            target_id?: string | null;
             /**
              * Group Id
              * @description On a `battle.melee.fizzled` event, the id of the group the melee attack was aimed at, as the declaration's
@@ -5507,6 +5799,13 @@ export interface components {
              *       the member can see is left in the group a melee attack was aimed at, for example because the party's missiles
              *       or spells killed them earlier in the round. A melee attack gets this code wherever the member stands, whether
              *       or not the member closed, because the session checks for a target before it checks the member's position.
+             *     - `items.use.target_cannot_drink`: the member a potion was for died or turned to stone earlier in the round.
+             *     - `session.command.member_incapacitated`: the member a hand-over was for can no longer act, for example
+             *       because the member died or fell asleep earlier in the round.
+             *     - `battle.declaration.member_out_of_reach`: the two members of a potion, a hand-over, or a staff of healing's
+             *       touch no longer stand within 5' of each other.
+             *     - `items.use.target_cannot_be_healed` and `items.use.target_healed_today`: the creature a staff of healing
+             *       was to touch died or turned to stone, or the staff already healed it today.
              *
              *     Match on it as you match on the code of a `Rejection`.
              *     The rejection code reference explains each code.
@@ -5716,6 +6015,9 @@ export interface components {
          *     `InspectTreasure`, and
          *     `RemoveTreasureTrap`, ahead of any
          *     player-visible result, and whenever a trap gets its chance to spring.
+         *     `ResolveBattleRound` emits it for a thief's
+         *     hide in shadows roll when a `hide` resolves, and for the move silently roll when a
+         *     back-stab from hiding comes up.
          *
          *     The session rolls the die for a search or a listen whether or not there's anything to
          *     find, so a failed roll and an empty cell look the same to the players. That is why this
@@ -5748,15 +6050,17 @@ export interface components {
             /**
              * Kind
              * @description What was being checked: `"listening"`, one of the search kinds
-             *     (`"secret_doors"`, `"room_traps"`, `"construction"`), `"open_locks"`, `"treasure_traps"`, or
-             *     `"trap_spring"` for a trap's chance to fire.
+             *     (`"secret_doors"`, `"room_traps"`, `"construction"`), `"open_locks"`, `"treasure_traps"`,
+             *     `"hide_in_shadows"`, `"move_silently"`, or `"trap_spring"` for a trap's chance to fire.
              */
             kind: string;
             /**
              * Chance
              * @description The number the roll had to come in at or under. The listening, search, and trap-spring
-             *     kinds are X-in-6 chances rolled on a d6. The thief skills `open_locks` and `treasure_traps`
-             *     are percentages rolled on d100.
+             *     kinds are X-in-6 chances rolled on a d6. The thief skills `open_locks`, `treasure_traps`,
+             *     `hide_in_shadows`, and `move_silently` are percentages rolled on d100. The default message
+             *     from `format_message` gives a percentage as one, like
+             *     `38 vs 45%`, and an X-in-6 chance as one, like `1 vs 2-in-6`.
              */
             chance: number;
             /**
@@ -6123,7 +6427,9 @@ export interface components {
          *     landing in a pile, and can't be picked back up. Dropped coins tempt intelligent pursuers
          *     and dropped rations tempt unintelligent ones, which can end the pursuit.
          *
-         *     **Modes:** `exploring`, `encounter`
+         *     Modes:
+         *
+         *     `exploring`, `encounter`
          *
          *     **Rejections:**
          *
@@ -6294,6 +6600,24 @@ export interface components {
             name: string;
         };
         /**
+         * DungeonNameView
+         * @description The public identity of a dungeon the party has entered.
+         */
+        DungeonNameView: {
+            /**
+             * Id
+             * @description The dungeon id from the adventure.
+             * @default
+             */
+            id: string;
+            /**
+             * Name
+             * @description The dungeon's display name.
+             * @default
+             */
+            name: string;
+        };
+        /**
          * DungeonSpec
          * @description A dungeon: one or more levels joined by transitions.
          *
@@ -6306,10 +6630,6 @@ export interface components {
          *
          *     A dungeon has no field for its way in. One of its levels needs an `entrance`, and
          *     `validate_adventure` checks that one does.
-         *
-         *     **Validation:**
-         *
-         *     - Invalid when two levels have the same `number`.
          */
         DungeonSpec: {
             /**
@@ -6633,10 +6953,6 @@ export interface components {
          *     because an edge with no entry is a wall. Read an edge back with
          *     `LevelSpec.edge`, which returns a wall for an edge with no
          *     entry and for the level's boundary.
-         *
-         *     **Validation:**
-         *
-         *     - Invalid when `kind` is `door` and `door` is `null`, or `door` is set on any other kind.
          */
         Edge: {
             /** @description Whether the edge is open, a wall, or a door. */
@@ -7204,9 +7520,20 @@ export interface components {
             /**
              * Fled
              * @description True once the group has run past `FLEE_EXIT_FEET` and left
-             *     the fight, or when its morale score is 2 and it ran as it entered the battle. The session refuses
+             *     the fight, or when its morale score is 2 and it ran as it entered the battle. It also becomes true
+             *     when a battle ends with the group's living members all turned or afraid and the group past
+             *     `FLEE_EXIT_FEET` without a move of its own, so the group ends the encounter routed, as a group
+             *     that ran out does. The session refuses
              *     every battle declaration aimed at the group, whether an attack, a move to close, an item, or a
              *     spell, with `battle.declaration.unknown_group`.
+             *
+             *     The session emits a `MonsterEscapedEvent` for the
+             *     group in the command result in which this becomes true, and in no other result. For a group
+             *     that runs past `FLEE_EXIT_FEET`, the event comes right after the group's
+             *     `GroupMovedEvent`. For a group of morale 2, it comes
+             *     right after the group's `MonsterFledEvent`. For a group
+             *     marked fled as the battle ends, it comes right before the
+             *     `BattleEndedEvent`.
              * @default false
              */
             fled: boolean;
@@ -7289,7 +7616,7 @@ export interface components {
         };
         /**
          * EncounterGroupView
-         * @description A monster group as the players see it: what it is, how many, how far, how it looks.
+         * @description A monster or NPC group as the players see it: identity, roster, count, distance, and appearance.
          *
          *     You get these from `EncounterView.groups`. Hit
          *     points and other statistics never appear, because the players know only what they can see
@@ -7327,18 +7654,24 @@ export interface components {
              *
              *     The value is the same however the group came to be: from a keyed area, a wandering monster check, or
              *     a `SpawnMonsters`. So match on it, not on the words in
-             *     `label`. Pass it to `MonsterCatalog.family` to read
-             *     what the players' rulebook says about the creature.
+             *     `label`.
              *
-             *     It reveals no more than the label does. A family is the creature the players see, and it's shared
-             *     by every form the players can't tell apart, so a group of hellhounds is `"hellhound"` whatever their
-             *     Hit Dice.
+             *     The players see this value. A family is the creature the players see, and it's shared by
+             *     every form the players can't tell apart, so a group of hellhounds is `"hellhound"` whatever their
+             *     Hit Dice. For a template the adventure bundles in
+             *     `Adventure.monsters`, the value is the template's `id`
+             *     unless its author set `family_id`. An author who disguises a creature as another, like a
+             *     doppelganger the players see as a goblin, sets the template's `family_id` to the family the players
+             *     should see, `"goblin"`, as well as its `display_name`. The players also see the template's
+             *     `categories`. A group your code opens with
+             *     `start_encounter` under a label of its own still reports
+             *     its templates' family here.
              *
-             *     A group your code opens with `start_encounter` under a
-             *     label of its own still reports its templates' family here. To show the players a creature under
-             *     another name, give it a template of its own in
-             *     `Adventure.monsters`. That template is its own
-             *     family.
+             *     To read what the players' rulebook says about the creature, pass the value to
+             *     `MonsterCatalog.family` on
+             *     `load_monsters`. A family that only the adventure bundles has no entry
+             *     in the rulebook, so it isn't in `load_monsters()`, and `family` raises `ValueError` for it. A session
+             *     finds it in `GameSession.effective_monsters`.
              */
             family_id?: string | null;
             /**
@@ -7348,7 +7681,8 @@ export interface components {
              *     adventurers is `("person",)`, because *hold person* and *charm person* affect any character.
              *
              *     Use it to offer what works only against one kind of creature. Turning and holy water affect a group
-             *     with `"undead"`, and *hold person* affects a group with `"person"`.
+             *     with `"undead"`, and *hold person* affects a group with `"person"`. The players see these categories,
+             *     as they see `family_id`.
              * @default []
              */
             categories: string[];
@@ -7388,12 +7722,28 @@ export interface components {
              *     `EncounterGroup.fled`.
              *
              *     A fled group stays in `EncounterView.groups`, but the
-             *     session refuses every declaration aimed at it with `battle.declaration.unknown_group`. So don't
-             *     offer it as a target. A group that's running but hasn't got away yet isn't fled. You can still
-             *     close on it, shoot at it, or cast at it.
+             *     session refuses group-targeted declarations with `battle.declaration.unknown_group`. A spell or
+             *     scroll that names one of its members in `targets` gets `magic.cast.unknown_target`. Don't offer
+             *     the group or its members as targets. A group that's running but hasn't got away yet isn't fled.
+             *     You can still close on it, shoot at it, or cast at it.
+             *
+             *     The session emits a `MonsterEscapedEvent` for the
+             *     group in the command result in which `fled` becomes true, and in no other result. You can show
+             *     the group getting away from the event stream, and then drop it from your target lists.
              * @default false
              */
             fled: boolean;
+            /**
+             * Fleeing
+             * @description True once the group has failed a morale check and turned to run, as in
+             *     `EncounterGroup.fleeing`.
+             *
+             *     It stays true after the group gets away, when `fled` becomes true as well. A group that's
+             *     `fleeing` and not `fled` is running and still in the battle, so you can show it running and
+             *     still offer it as a target.
+             * @default false
+             */
+            fleeing: boolean;
             /**
              * Member Distance Feet
              * @description Each living party member's distance to this group, in feet, keyed by member id. Empty outside a
@@ -7473,6 +7823,44 @@ export interface components {
              * @default []
              */
             seen_by: string[];
+            /**
+             * Members
+             * @description Every member of this group in the group's existing order, including dead and fled members.
+             *
+             *     Each entry exposes only its session id and coarse status. Use an `"alive"` entry's id in
+             *     `BattleDeclaration.targets` for a spell or
+             *     scroll aimed at individual creatures. The spell's range, target count, and touch checks still
+             *     apply. The tuple defaults to empty when you parse a view written before rosters were available.
+             * @default []
+             */
+            members: components["schemas"]["EncounterMemberView"][];
+        };
+        /**
+         * EncounterMemberView
+         * @description One monster or NPC adventurer's public identity and coarse status.
+         *
+         *     Read these from `EncounterGroupView.members`.
+         *     Use `id` in `BattleDeclaration.targets` to
+         *     select an individual creature for a spell or scroll before any combat event names it. Hit
+         *     points, individual conditions, and other private statistics never appear.
+         */
+        EncounterMemberView: {
+            /**
+             * Id
+             * @description The creature's existing session id, such as `"monster-0001"` or `"npc-0001"`.
+             *
+             *     It matches the id in events and stays the same after save/load or a group split. Read the
+             *     current group to find where the creature is now.
+             */
+            id: string;
+            /**
+             * Status
+             * @description The creature's coarse status: `"defeated"` when dead, `"fled"` when alive in a group
+             *     that has left the encounter, and `"alive"` otherwise. A creature that's running but hasn't
+             *     left is still `"alive"`. This doesn't report whether the creature can act or is immune to a spell.
+             * @enum {string}
+             */
+            status: "alive" | "defeated" | "fled";
         };
         /**
          * EncounterStartedEvent
@@ -7487,11 +7875,16 @@ export interface components {
          *     `SpawnNpcParty`. The session mode becomes
          *     `encounter`, where the party can talk, run, wait, or fight.
          *
-         *     It contains only what the party can see: a name, a count, and a distance. The dice
-         *     behind the meeting are on the
+         *     It contains only what the party can see: a name and a count for each group, and a distance.
+         *     The dice behind the meeting are on the
          *     `SurpriseRolledEvent`s and the reaction
          *     roll's kernel event, both at referee visibility. The two surprise outcomes are here,
          *     because the party knows when it's caught off guard.
+         *
+         *     An encounter can open with more than one group, like goblins and the orcs they march with.
+         *     `monster_name` and `monster_name_plural` name the first group, and `count` counts the
+         *     creatures of every group. `group_labels`, `group_labels_plural`, and `group_counts` give
+         *     each group in the encounter's order, so a line like "2 goblins and 3 orcs" can name them all.
          */
         EncounterStartedEvent: {
             /**
@@ -7549,6 +7942,30 @@ export interface components {
              * @default false
              */
             monsters_surprised: boolean;
+            /**
+             * Group Labels
+             * @description The `label` of each group in the encounter, in
+             *     the order of `EncounterState.groups`. The first
+             *     entry is `monster_name`. `group_labels_plural` and `group_counts` line up with this tuple, and
+             *     the counts add up to `count`. The three tuples have the same length, and an event whose tuples
+             *     differ in length is refused when it's built or loaded. An event loaded from a save written before
+             *     the field existed has an empty tuple in all three.
+             * @default []
+             */
+            group_labels: string[];
+            /**
+             * Group Labels Plural
+             * @description Each group's `label_plural`, like
+             *     `"goblins"`, in the order of `group_labels`.
+             * @default []
+             */
+            group_labels_plural: string[];
+            /**
+             * Group Counts
+             * @description How many creatures each group has when the encounter opens, in the order of `group_labels`.
+             * @default []
+             */
+            group_counts: number[];
         };
         /**
          * EncounterState
@@ -7695,6 +8112,10 @@ export interface components {
          *     `select_encounter_individuals`. For an
          *     `NpcPartyEncounterEntry`, pass them to
          *     `generate_npc_party`.
+         *
+         *     A row creates at most 100 monsters or adventurers, so an adventure's own wandering monster
+         *     table can't spawn more at once than a
+         *     `SpawnMonsters` command can.
          */
         EncounterTableRow: {
             /**
@@ -7717,12 +8138,13 @@ export interface components {
              * @description A dice expression for how many appear, like `"1d6"`, or `null` when the row has a fixed number.
              *
              *     Roll it with `roll`. Use this count rather than the number appearing in the monster's
-             *     description, as the SRD's note on the dungeon tables says. Exactly one of this and `count_fixed` is set.
+             *     description, as the SRD's note on the dungeon tables says. Exactly one of this and `count_fixed` is set. The
+             *     expression's highest total must be at most 100, so `"1d100"` is legal and `"1d100+1"` isn't.
              */
             count_dice?: string | null;
             /**
              * Count Fixed
-             * @description A fixed number of individuals, or `null` when the row has a dice expression instead.
+             * @description A fixed number of individuals from 1 to 100, or `null` when the row has a dice expression instead.
              *
              *     Exactly one of this and `count_dice` is set.
              */
@@ -7778,8 +8200,9 @@ export interface components {
          *     each group in `groups` gives every member's distance to it and the members who can reach it in
          *     melee. Read those to draw the fight and to offer each member the moves and attacks they can make.
          *
-         *     The id tuples `declarers`, `immobile`, and `reloading` describe the battle round as the players
-         *     see it at the table: who is able to act, who is held fast, and who is still reloading a crossbow.
+         *     The id tuples `declarers`, `immobile`, `reloading`, `can_hide`, and `hiding` describe the battle
+         *     round as the players see it at the table: who is able to act, who is held fast, who is still
+         *     reloading a crossbow, who can hide, and who is hiding.
          *     Each group's `front_rank` says who can attack
          *     that group in melee this round. Each of these matches a rejection that would refuse the whole
          *     round, so if you read them, you offer only the declarations the session accepts. To check a
@@ -7864,6 +8287,38 @@ export interface components {
              */
             reloading: string[];
             /**
+             * Can Hide
+             * @description The declarers who can declare `hide` this round, in marching order: those whose class has
+             *     thief skills, as the thief's does, and who don't stand in the party's front rank, the first row
+             *     of the ranks toward any group that hasn't fled and has a living member. Empty outside a battle.
+             *
+             *     It reads the battle as it stands, as each group's `front_rank` does. The session judges a
+             *     `hide` where the members will stand once the round's declared moves are made, so a member in
+             *     this list who would end up in the front rank because of another member's move is refused with
+             *     `battle.declaration.hide_in_front_rank`. A member outside it gets
+             *     `battle.declaration.hide_not_a_thief` or `battle.declaration.hide_in_front_rank`.
+             * @default []
+             */
+            can_hide: string[];
+            /**
+             * Hiding
+             * @description The members who are hiding, in marching order: each has declared a `hide` that resolved, and
+             *     the attempt hasn't ended since. Empty outside a battle.
+             *
+             *     A member here can declare an `attack` with
+             *     `BattleDeclaration.back_stab` in any round
+             *     without a place in the front rank, as long as their class has the `back_stab` ability. The
+             *     back-stab still needs a melee weapon, or bare hands, and a group within 5' of the member, as
+             *     each group's `member_distance_feet`
+             *     shows, or a `close` that brings one within 5'. The list doesn't say
+             *     whether a hide worked: the session rolls the skills in secret, and the attack's
+             *     `AttackRolledEvent.back_stab` tells the players
+             *     whether it was a back-stab. A member leaves the list when the attempt ends, which
+             *     `BattleDeclaration.back_stab` describes.
+             * @default []
+             */
+            hiding: string[];
+            /**
              * Advance Feet
              * @description Each living member's place on the range track, keyed by member id, in feet forward of the party
              *     line. Empty outside a battle.
@@ -7906,8 +8361,9 @@ export interface components {
              * @description True in the round the party gets free after it surprised the monsters, while the monsters can't
              *     act. False in every other round, and outside a battle.
              *
-             *     It's the round in which a thief's back-stab is legal: an `attack` that sets
-             *     `BattleDeclaration.back_stab`. It's true while
+             *     It's the round in which any thief's back-stab is legal: an `attack` that sets
+             *     `BattleDeclaration.back_stab`. In other
+             *     rounds, only the members in `hiding` can back-stab. It's true while
              *     `BattleState.monsters_hold_rounds` is above
              *     zero.
              * @default false
@@ -7960,7 +8416,9 @@ export interface components {
          *     can close the encounter. For example, a trigger can close the encounter and resolve the
          *     area when a flag records that the party paid the toll.
          *
-         *     **Modes:** `encounter`, `battle`
+         *     Modes:
+         *
+         *     `encounter`, `battle`
          *
          *     **Rejections:**
          *
@@ -8050,7 +8508,9 @@ export interface components {
          *     started, send one `ResolveBattleRound` for
          *     each round.
          *
-         *     **Modes:** `encounter`
+         *     Modes:
+         *
+         *     `encounter`
          *
          *     **Rejections:**
          *
@@ -8061,11 +8521,12 @@ export interface components {
          *     **Events:**
          *
          *     `BattleStartedEvent`. A monster group
-         *     whose morale score is 2 flees at once
-         *     (`MonsterFledEvent`). When every group
-         *     flees, the battle ends at once, with a
-         *     `BattleEndedEvent` and the events of the
-         *     encounter's end.
+         *     whose morale score is 2 flees and gets away at once, with a
+         *     `MonsterFledEvent` followed right away by a
+         *     `MonsterEscapedEvent`. When every group
+         *     has got away, the battle ends at once, with a
+         *     `BattleEndedEvent` after the last
+         *     `MonsterEscapedEvent`, and the events of the encounter's end.
          */
         EngageBattle: {
             /**
@@ -8089,7 +8550,9 @@ export interface components {
          *     `exploring`. Leaving town also records what the party's treasure is worth. Under the
          *     on-return XP timing, the treasure XP awarded back in town is the gain over that value.
          *
-         *     **Modes:** `town`
+         *     Modes:
+         *
+         *     `town`
          *
          *     **Rejections:**
          *
@@ -8143,6 +8606,39 @@ export interface components {
             dungeon_id: string;
         };
         /**
+         * EnteredAreaView
+         * @description An authored area after the party has entered at least one of its cells.
+         */
+        EnteredAreaView: {
+            /**
+             * Id
+             * @description The area's authored id.
+             * @default
+             */
+            id: string;
+            /**
+             * Name
+             * @description The area's display name.
+             * @default
+             */
+            name: string;
+            /**
+             * Description
+             * @description The area's authored description.
+             * @default
+             */
+            description: string;
+            /**
+             * Cells
+             * @description Only the area cells the party has walked, in authored order.
+             * @default []
+             */
+            cells: [
+                number,
+                number
+            ][];
+        };
+        /**
          * EquipItem
          * @description Equip an item from a member's pack: wear armour or a ring, or wield a weapon (takes no game time).
          *
@@ -8154,7 +8650,9 @@ export interface components {
          *     [equipment id index](https://mmacy.github.io/osrlib-python/reference/content-ids/equipment/))
          *     or one the adventure bundles, which isn't in that index.
          *
-         *     **Modes:** `town`, `exploring`
+         *     Modes:
+         *
+         *     `town`, `exploring`
          *
          *     **Rejections:**
          *
@@ -8307,7 +8805,9 @@ export interface components {
          *     ones. Once battle has started, the party can't evade. The OSE SRD allows evasion only
          *     before combat.
          *
-         *     **Modes:** `encounter`
+         *     Modes:
+         *
+         *     `encounter`
          *
          *     **Rejections:**
          *
@@ -8443,7 +8943,7 @@ export interface components {
              * @description Events after the first `after` events of the requested `visibility`, oldest first. Events
              *     written by a newer osrlib version without a local model class appear as raw JSON objects.
              */
-            events: ((components["schemas"]["InitiativeRolledEvent"] | components["schemas"]["AttackRolledEvent"] | components["schemas"]["DamageDealtEvent"] | components["schemas"]["DamageAbsorbedEvent"] | components["schemas"]["SavingThrowRolledEvent"] | components["schemas"]["MoraleCheckedEvent"] | components["schemas"]["ReactionRolledEvent"] | components["schemas"]["ConditionGainedEvent"] | components["schemas"]["ConditionRemovedEvent"] | components["schemas"]["EffectAttachedEvent"] | components["schemas"]["EffectTickedEvent"] | components["schemas"]["EffectExpiredEvent"] | components["schemas"]["EffectReleasedEvent"] | components["schemas"]["HealingAppliedEvent"] | components["schemas"]["DeathEvent"] | components["schemas"]["EquipmentDestroyedEvent"] | components["schemas"]["LevelDrainedEvent"] | components["schemas"]["MonsterRevivedEvent"] | components["schemas"]["HitPointsReportedEvent"] | components["schemas"]["TargetsSelectedEvent"] | components["schemas"]["SpellsMemorizedEvent"] | components["schemas"]["SpellCastEvent"] | components["schemas"]["SpellDisruptedEvent"] | components["schemas"]["DeclarationFizzledEvent"] | components["schemas"]["SpellForgottenEvent"] | components["schemas"]["SpellBookUpdatedEvent"] | components["schemas"]["UndeadTurnedEvent"] | components["schemas"]["MagicDispelledEvent"] | components["schemas"]["PartyMovedEvent"] | components["schemas"]["PartyReorderedEvent"] | components["schemas"]["LocationEnteredEvent"] | components["schemas"]["DoorEvent"] | components["schemas"]["ListenedEvent"] | components["schemas"]["DetectionRolledEvent"] | components["schemas"]["SearchCompletedEvent"] | components["schemas"]["TrapEvent"] | components["schemas"]["ItemAcquiredEvent"] | components["schemas"]["ItemConsumedEvent"] | components["schemas"]["ItemsDroppedEvent"] | components["schemas"]["ItemsLeftBehindEvent"] | components["schemas"]["ItemsGivenEvent"] | components["schemas"]["LightEvent"] | components["schemas"]["RestedEvent"] | components["schemas"]["FatigueEvent"] | components["schemas"]["ProvisionsEvent"] | components["schemas"]["WanderingCheckEvent"] | components["schemas"]["EncounterStartedEvent"] | components["schemas"]["EncounterGroupJoinedEvent"] | components["schemas"]["SurpriseRolledEvent"] | components["schemas"]["StanceChangedEvent"] | components["schemas"]["EvasionEvent"] | components["schemas"]["PursuitEvent"] | components["schemas"]["ExhaustionEvent"] | components["schemas"]["LootDroppedEvent"] | components["schemas"]["EncounterEndedEvent"] | components["schemas"]["BattleStartedEvent"] | components["schemas"]["BattleRoundEvent"] | components["schemas"]["SpellDeclaredEvent"] | components["schemas"]["GroupMovedEvent"] | components["schemas"]["MemberMovedEvent"] | components["schemas"]["MemberWithdrewEvent"] | components["schemas"]["MonsterFledEvent"] | components["schemas"]["MonstersLeftBehindEvent"] | components["schemas"]["MonsterDefeatedEvent"] | components["schemas"]["BattleEndedEvent"] | components["schemas"]["HoardGeneratedEvent"] | components["schemas"]["ItemUsedEvent"] | components["schemas"]["ItemIdentifiedEvent"] | components["schemas"]["CurseRevealedEvent"] | components["schemas"]["NpcPartySpawnedEvent"] | components["schemas"]["AdventureXpAwardEvent"] | components["schemas"]["TreasureSoldEvent"] | components["schemas"]["HealingPurchasedEvent"] | components["schemas"]["FlagSetEvent"] | components["schemas"]["MonstersSpawnedEvent"] | components["schemas"]["XpAwardedEvent"] | components["schemas"]["CharacterLeveledUpEvent"] | components["schemas"]["TimeAdvancedEvent"] | components["schemas"]["GameOverEvent"] | components["schemas"]["DiceRolledEvent"] | components["schemas"]["TriggerFiredEvent"] | components["schemas"]["JournalEntryAddedEvent"] | components["schemas"]["NoteRecordedEvent"] | components["schemas"]["QuestActivatedEvent"] | components["schemas"]["ObjectiveRevealedEvent"] | components["schemas"]["ObjectiveCompletedEvent"] | components["schemas"]["QuestCompletedEvent"] | components["schemas"]["AdventureCompletedEvent"] | components["schemas"]["ItemsRemovedEvent"] | components["schemas"]["MemberAddedEvent"] | components["schemas"]["MemberRemovedEvent"]) | components["schemas"]["JsonObject"])[];
+            events: ((components["schemas"]["InitiativeRolledEvent"] | components["schemas"]["AttackRolledEvent"] | components["schemas"]["DamageDealtEvent"] | components["schemas"]["DamageAbsorbedEvent"] | components["schemas"]["SavingThrowRolledEvent"] | components["schemas"]["MoraleCheckedEvent"] | components["schemas"]["ReactionRolledEvent"] | components["schemas"]["ConditionGainedEvent"] | components["schemas"]["ConditionRemovedEvent"] | components["schemas"]["EffectAttachedEvent"] | components["schemas"]["EffectTickedEvent"] | components["schemas"]["EffectExpiredEvent"] | components["schemas"]["EffectReleasedEvent"] | components["schemas"]["HealingAppliedEvent"] | components["schemas"]["DeathEvent"] | components["schemas"]["EquipmentDestroyedEvent"] | components["schemas"]["LevelDrainedEvent"] | components["schemas"]["MonsterRevivedEvent"] | components["schemas"]["HitPointsReportedEvent"] | components["schemas"]["TargetsSelectedEvent"] | components["schemas"]["SpellsMemorizedEvent"] | components["schemas"]["SpellCastEvent"] | components["schemas"]["SpellDisruptedEvent"] | components["schemas"]["DeclarationFizzledEvent"] | components["schemas"]["SpellForgottenEvent"] | components["schemas"]["SpellBookUpdatedEvent"] | components["schemas"]["UndeadTurnedEvent"] | components["schemas"]["MagicDispelledEvent"] | components["schemas"]["PartyMovedEvent"] | components["schemas"]["PartyReorderedEvent"] | components["schemas"]["LocationEnteredEvent"] | components["schemas"]["DoorEvent"] | components["schemas"]["ListenedEvent"] | components["schemas"]["DetectionRolledEvent"] | components["schemas"]["SearchCompletedEvent"] | components["schemas"]["TrapEvent"] | components["schemas"]["ItemAcquiredEvent"] | components["schemas"]["ItemConsumedEvent"] | components["schemas"]["ItemsDroppedEvent"] | components["schemas"]["ItemsLeftBehindEvent"] | components["schemas"]["ItemsGivenEvent"] | components["schemas"]["LightEvent"] | components["schemas"]["RestedEvent"] | components["schemas"]["FatigueEvent"] | components["schemas"]["ProvisionsEvent"] | components["schemas"]["WanderingCheckEvent"] | components["schemas"]["EncounterStartedEvent"] | components["schemas"]["EncounterGroupJoinedEvent"] | components["schemas"]["SurpriseRolledEvent"] | components["schemas"]["StanceChangedEvent"] | components["schemas"]["EvasionEvent"] | components["schemas"]["PursuitEvent"] | components["schemas"]["ExhaustionEvent"] | components["schemas"]["LootDroppedEvent"] | components["schemas"]["EncounterEndedEvent"] | components["schemas"]["BattleStartedEvent"] | components["schemas"]["BattleRoundEvent"] | components["schemas"]["SpellDeclaredEvent"] | components["schemas"]["GroupMovedEvent"] | components["schemas"]["MemberMovedEvent"] | components["schemas"]["MemberWithdrewEvent"] | components["schemas"]["HideAttemptedEvent"] | components["schemas"]["MonsterFledEvent"] | components["schemas"]["MonsterEscapedEvent"] | components["schemas"]["MonstersLeftBehindEvent"] | components["schemas"]["MonsterDefeatedEvent"] | components["schemas"]["BattleEndedEvent"] | components["schemas"]["HoardGeneratedEvent"] | components["schemas"]["ItemUsedEvent"] | components["schemas"]["ItemIdentifiedEvent"] | components["schemas"]["CurseRevealedEvent"] | components["schemas"]["NpcPartySpawnedEvent"] | components["schemas"]["AdventureXpAwardEvent"] | components["schemas"]["TreasureSoldEvent"] | components["schemas"]["HealingPurchasedEvent"] | components["schemas"]["FlagSetEvent"] | components["schemas"]["MonstersSpawnedEvent"] | components["schemas"]["XpAwardedEvent"] | components["schemas"]["CharacterLeveledUpEvent"] | components["schemas"]["TimeAdvancedEvent"] | components["schemas"]["GameOverEvent"] | components["schemas"]["DiceRolledEvent"] | components["schemas"]["TriggerFiredEvent"] | components["schemas"]["JournalEntryAddedEvent"] | components["schemas"]["NoteRecordedEvent"] | components["schemas"]["QuestActivatedEvent"] | components["schemas"]["ObjectiveRevealedEvent"] | components["schemas"]["ObjectiveCompletedEvent"] | components["schemas"]["QuestCompletedEvent"] | components["schemas"]["AdventureCompletedEvent"] | components["schemas"]["ItemsRemovedEvent"] | components["schemas"]["MemberAddedEvent"] | components["schemas"]["MemberRemovedEvent"]) | components["schemas"]["JsonObject"])[];
             /**
              * Messages
              * @description Human-readable English line for each entry in `events` (or the event's `code` for unrecognized
@@ -8606,6 +9106,32 @@ export interface components {
             edges: {
                 [key: string]: components["schemas"]["EdgeView"];
             };
+            /**
+             * Areas
+             * @description The authored areas the party has entered, with only their walked cells.
+             * @default []
+             */
+            areas: components["schemas"]["EnteredAreaView"][];
+            /**
+             * Features
+             * @description The features the party can currently see or has discovered.
+             * @default []
+             */
+            features: components["schemas"]["MapFeatureView"][];
+            /**
+             * Transitions
+             * @description The transitions on known cells, without destinations or gates.
+             * @default []
+             */
+            transitions: components["schemas"]["TransitionView"][];
+            /**
+             * Entrance
+             * @description The level's entrance when the party knows that cell, otherwise `null`.
+             */
+            entrance?: [
+                number,
+                number
+            ] | null;
         };
         /**
          * ExtinguishSource
@@ -8616,7 +9142,9 @@ export interface components {
          *     `LightSource` burns a new flask. A light from a
          *     spell or a magic sword isn't affected.
          *
-         *     **Modes:** `town`, `exploring`
+         *     Modes:
+         *
+         *     `town`, `exploring`
          *
          *     **Rejections:**
          *
@@ -8710,19 +9238,17 @@ export interface components {
          *     or a passage that is an illusion. The party finds one with a
          *     `Search` for construction, and you describe what it does.
          *     osrlib does nothing with a `custom` feature.
-         *
-         *     **Validation:**
-         *
-         *     - Invalid when `trap` is not a treasure trap.
          */
         FeatureSpec: {
             /**
              * Id
              * @description The feature's id. It has to be unique across the level, counting the features on the level
-             *     and on all its areas together. You pass it to `TakeTreasure`
-             *     and the other feature commands. The id `"pile"` is reserved for the drop pile on a cell, and
-             *     `validate_adventure` reports a feature that uses
-             *     it.
+             *     and on all its areas together. A player client uses the opaque
+             *     `MapFeatureView.id` in feature commands. Current
+             *     callers can still pass this raw id when it is unambiguous. The id `"pile"` is reserved for
+             *     the drop pile on a cell, and
+             *     `validate_adventure` reports a feature that
+             *     uses it.
              */
             id: string;
             /**
@@ -8753,7 +9279,7 @@ export interface components {
             /**
              * Item Ids
              * @description Ordinary items in the cache, by template id, one item for each id. Use an id from
-             *     `load_equipment``()`, listed in
+             *     `load_equipment()`, listed in
              *     [the equipment id index](https://mmacy.github.io/osrlib-python/reference/content-ids/equipment/),
              *     or the id of an item in the adventure's `items`.
              * @default []
@@ -8762,7 +9288,7 @@ export interface components {
             /**
              * Magic Item Ids
              * @description Magic items in the cache, by template id. Use an id from
-             *     `load_magic_items``()`, listed in
+             *     `load_magic_items()`, listed in
              *     [the magic item id index](https://mmacy.github.io/osrlib-python/reference/content-ids/magic-items/).
              *     You can't bundle magic items in an adventure, so only built-in ids work here.
              * @default []
@@ -8936,7 +9462,9 @@ export interface components {
          *     it. The trap springs on the member who forced the door, or on the next member standing
          *     if an earlier spring killed them.
          *
-         *     **Modes:** `exploring`
+         *     Modes:
+         *
+         *     `exploring`
          *
          *     **Rejections:**
          *
@@ -9274,11 +9802,12 @@ export interface components {
          *     This is the other kind: treasure the session rolled for a keyed encounter's lair hoard or for an
          *     `AreaTreasureSpec`. The session puts it in
          *     `DungeonState.generated_caches` under a new
-         *     id like `"cache-0001"`, and reports the id in a
+         *     internal id like `"cache-0001"`, and reports that id in a
          *     `HoardGeneratedEvent`. When the party takes it with
-         *     `TakeTreasure` and that id, the session removes the cache.
-         *     Whatever the party can't carry goes into a `DropPile` on the
-         *     same cell.
+         *     `TakeTreasure`, the player view supplies an opaque
+         *     `MapFeatureView.id`. A current caller can still use an
+         *     unambiguous raw internal id for compatibility. The session removes a taken cache. Whatever the
+         *     party can't carry goes into a `DropPile` on the same cell.
          *
          *     The session never traps treasure it rolls, so the only trapped treasure is treasure you write.
          *     That choice is one of the entries in
@@ -9325,6 +9854,20 @@ export interface components {
              * @default []
              */
             magic_items: components["schemas"]["MagicItemInstance"][];
+            /**
+             * Origin
+             * @description How the cache was created. New area treasure uses `"area"`, a keyed encounter's hoard uses
+             *     `"lair"`, and a cache loaded from an old save without provenance uses `"legacy"`.
+             * @default legacy
+             * @enum {string}
+             */
+            origin: "legacy" | "area" | "lair";
+            /**
+             * Lair Area Ref
+             * @description The canonical area reference for a lair cache, or `null` for area treasure and legacy
+             *     caches.
+             */
+            lair_area_ref?: string | null;
         };
         /**
          * GeneratedCharacterResponse
@@ -9376,7 +9919,8 @@ export interface components {
             valuables: components["schemas"]["ValuableInstance"][];
             /**
              * Magic Items
-             * @description The magic items, already rolled up as instances. See `MagicItemInstance`.
+             * @description The magic items, already rolled up as instances.
+             *     See `MagicItemInstance`.
              * @default []
              */
             magic_items: components["schemas"]["MagicItemInstance"][];
@@ -9401,7 +9945,9 @@ export interface components {
          *     `BattleDeclaration` with
          *     `action="give_item"`. The session refuses this command in battle.
          *
-         *     **Modes:** `town`, `exploring`, `encounter`
+         *     Modes:
+         *
+         *     `town`, `exploring`, `encounter`
          *
          *     **Rejections:**
          *
@@ -9481,7 +10027,9 @@ export interface components {
          *     Use it to pay out a reward. This command is legal in every mode, `game_over` and
          *     `victory` included.
          *
-         *     **Modes:** `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
+         *     Modes:
+         *
+         *     `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
          *
          *     **Rejections:**
          *
@@ -9538,7 +10086,9 @@ export interface components {
          *     item's page leaves to chance, like a wand's charges, on
          *     `TREASURE_STREAM`. A mundane grant makes no draws.
          *
-         *     **Modes:** `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
+         *     Modes:
+         *
+         *     `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
          *
          *     **Rejections:**
          *
@@ -9588,11 +10138,12 @@ export interface components {
             item_id: string;
             /**
              * Quantity
-             * @description How many to place, counted as single items rather than as purchase lots.
+             * @description How many to place, from 1 to 1,000, counted as single items rather than as purchase lots.
              *     `quantity=6` grants six torches, the same number one lot of torches from
              *     `PurchaseEquipment` delivers. For a magic
              *     item, it's the number of separate magic items to create, each with its own instance id
-             *     and its own rolls. `quantity=2` of a bundle of arrows +1 grants two bundles.
+             *     and its own rolls. `quantity=2` of a bundle of arrows +1 grants two bundles. To grant more
+             *     than 1,000, send the command again.
              * @default 1
              */
             quantity: number;
@@ -9822,6 +10373,48 @@ export interface components {
             status: string;
         };
         /**
+         * HideAttemptedEvent
+         * @description A party member tried to hide in shadows during a battle.
+         *
+         *     Emitted by `ResolveBattleRound` in the party's
+         *     movement step, after the members' moves, once for each member whose `hide` declaration
+         *     resolves, in marching order. The member is then hiding, as
+         *     `EncounterView.hiding` shows.
+         *
+         *     The event says only that the member tried. The session rolls the member's hide in shadows
+         *     skill in secret, as the OSE SRD's "the thief does not immediately know if the attempt was
+         *     successful" says, and reports the roll to the referee in a
+         *     `DetectionRolledEvent` of kind
+         *     `"hide_in_shadows"`. That event comes right after this one, so each member who hides adds
+         *     the two events in this order, before the next member's. The players learn how it went from the
+         *     `AttackRolledEvent.back_stab` of the
+         *     member's back-stab from hiding.
+         */
+        HideAttemptedEvent: {
+            /**
+             * Code
+             * @description The message code, always `battle.hide.attempted`.
+             * @default battle.hide.attempted
+             */
+            code: string;
+            /**
+             * @description Player visibility: the party sees its own member slip into the shadows, but not whether the
+             *     monsters noticed.
+             * @default player
+             */
+            visibility: components["schemas"]["Visibility"];
+            /**
+             * @description The event type, `hide_attempted`, which identifies this class in serialized form. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            event_type: "hide_attempted";
+            /**
+             * Character Id
+             * @description The member who tried to hide, by party member id.
+             */
+            character_id: string;
+        };
+        /**
          * HitDice
          * @description A class's hit dice at one level: how many, of what size, and any flat bonus.
          *
@@ -9985,6 +10578,18 @@ export interface components {
              */
             coins_gp_value: number;
             /**
+             * @description The same coins by denomination, so a client can show the exact amount, and every
+             *     coin of a small amount that `coins_gp_value` rounds down to zero.
+             * @default {
+             *       "pp": 0,
+             *       "gp": 0,
+             *       "ep": 0,
+             *       "sp": 0,
+             *       "cp": 0
+             *     }
+             */
+            coins: components["schemas"]["Coins"];
+            /**
              * Valuable Ids
              * @description The session-scoped instance ids of the gems and jewellery in the hoard.
              * @default []
@@ -10038,7 +10643,9 @@ export interface components {
          *     bearer can't take it off until *remove curse*. An item that's already identified, with any
          *     curse already revealed, emits no event, and the command still succeeds.
          *
-         *     **Modes:** `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
+         *     Modes:
+         *
+         *     `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
          *
          *     **Rejections:**
          *
@@ -10168,9 +10775,12 @@ export interface components {
          *     `RemoveTreasureTrap`. Until then, finding
          *     the trap doesn't disarm it, and it still gets its chance to spring on every
          *     `TakeTreasure`. Only an authored cache can be
-         *     trapped. Inspecting a cache the engine generated always finds nothing.
+         *     trapped. Inspecting an available cache the engine generated always finds nothing. A
+         *     generated lair cache stays unknown until the party resolves the area's keyed encounter.
          *
-         *     **Modes:** `exploring`
+         *     Modes:
+         *
+         *     `exploring`
          *
          *     **Rejections:**
          *
@@ -10178,8 +10788,8 @@ export interface components {
          *     - `session.command.unknown_member` - `character_id` matches no party member.
          *     - `session.command.member_incapacitated` - the member cannot act.
          *     - `exploration.trap.not_a_thief` - the member has no thief skills.
-         *     - `exploration.feature.unknown` - `feature_id` matches no treasure cache on
-         *       this cell.
+         *     - `exploration.feature.unknown` - `feature_id` is malformed, stale, ambiguous,
+         *       or matches no available treasure cache on this cell.
          *     - `exploration.action.requires_light` - the party has no light. Infravision
          *       isn't enough to inspect a cache.
          *     - `exploration.search.already_tried` - this member already inspected
@@ -10213,13 +10823,10 @@ export interface components {
             character_id: string;
             /**
              * Feature Id
-             * @description Which cache to check for a trap. Name an authored cache by its
-             *     `FeatureSpec.id` in the adventure document. Name a
-             *     cache the engine generated by the
-             *     `HoardGeneratedEvent.cache_ref` the
-             *     session emitted when it generated the cache. That event has referee visibility, and the
-             *     player view doesn't list generated caches, so read the id from the events of the command
-             *     that generated it. The cache has to be on the party's cell.
+             * @description Which cache to check for a trap. Use a
+             *     `MapFeatureView.id` from the current player view.
+             *     For compatibility, an unambiguous raw authored id or generated cache id still works. The
+             *     cache has to be on the party's cell and available to the party.
              */
             feature_id: string;
         };
@@ -10312,7 +10919,8 @@ export interface components {
         Inventory: {
             /**
              * Items
-             * @description What is carried but not in use, in the order it was acquired. See `AnyInstance`.
+             * @description What is carried but not in use, in the order it was acquired.
+             *     See `AnyInstance`.
              * @default []
              */
             items: (components["schemas"]["ItemInstance"] | components["schemas"]["MagicItemInstance"])[];
@@ -10407,6 +11015,18 @@ export interface components {
              * @default 0
              */
             coins_gp_value: number;
+            /**
+             * @description The same coins by denomination, so a client can show the exact amount, and every
+             *     coin of a small amount that `coins_gp_value` rounds down to zero.
+             * @default {
+             *       "pp": 0,
+             *       "gp": 0,
+             *       "ep": 0,
+             *       "sp": 0,
+             *       "cp": 0
+             *     }
+             */
+            coins: components["schemas"]["Coins"];
             /**
              * Origin
              * @description Where the goods came from: `"treasure"` for a share of a haul taken with
@@ -10685,6 +11305,18 @@ export interface components {
              * @default 0
              */
             coins_gp_value: number;
+            /**
+             * @description The same coins by denomination, so a client can show the exact amount, and every
+             *     coin of a small amount that `coins_gp_value` rounds down to zero.
+             * @default {
+             *       "pp": 0,
+             *       "gp": 0,
+             *       "ep": 0,
+             *       "sp": 0,
+             *       "cp": 0
+             *     }
+             */
+            coins: components["schemas"]["Coins"];
         };
         /**
          * ItemsGivenEvent
@@ -10736,6 +11368,18 @@ export interface components {
              * @default 0
              */
             coins_gp_value: number;
+            /**
+             * @description The same coins by denomination, so a client can show the exact amount, and every
+             *     coin of a small amount that `coins_gp_value` rounds down to zero.
+             * @default {
+             *       "pp": 0,
+             *       "gp": 0,
+             *       "ep": 0,
+             *       "sp": 0,
+             *       "cp": 0
+             *     }
+             */
+            coins: components["schemas"]["Coins"];
         };
         /**
          * ItemsLeftBehindEvent
@@ -10778,6 +11422,18 @@ export interface components {
              * @default 0
              */
             coins_gp_value: number;
+            /**
+             * @description The same coins by denomination, so a client can show the exact amount, and every
+             *     coin of a small amount that `coins_gp_value` rounds down to zero.
+             * @default {
+             *       "pp": 0,
+             *       "gp": 0,
+             *       "ep": 0,
+             *       "sp": 0,
+             *       "cp": 0
+             *     }
+             */
+            coins: components["schemas"]["Coins"];
         };
         /**
          * ItemsRemovedEvent
@@ -10826,6 +11482,18 @@ export interface components {
              * @default 0
              */
             coins_gp_value: number;
+            /**
+             * @description The same coins by denomination, so a client can show the exact amount, and every
+             *     coin of a small amount that `coins_gp_value` rounds down to zero.
+             * @default {
+             *       "pp": 0,
+             *       "gp": 0,
+             *       "ep": 0,
+             *       "sp": 0,
+             *       "cp": 0
+             *     }
+             */
+            coins: components["schemas"]["Coins"];
         };
         /**
          * JournalEntry
@@ -10916,7 +11584,10 @@ export interface components {
             /**
              * Monsters
              * @description The monster lines in the encounter, at least one. See
-             *     `KeyedMonster`.
+             *     `KeyedMonster`. The lines create at most 100 monsters
+             *     together, counting each line at its `count_fixed` or at the highest total its `count_dice` can
+             *     roll, so a line of 60 goblins and a line of `"2d20"` hobgoblins is legal, and 60 goblins with
+             *     `"1d6x7"` hobgoblins isn't.
              */
             monsters: components["schemas"]["KeyedMonster"][];
             /**
@@ -10957,17 +11628,13 @@ export interface components {
          *
          *     A `KeyedEncounter` has a tuple of these, so a room with
          *     four orcs and their ogre bodyguard has two lines. Give each line either a fixed count or count
-         *     dice, not both.
-         *
-         *     **Validation:**
-         *
-         *     - Invalid when `count_dice` is not a valid dice expression.
-         *     - Invalid when both `count_dice` and `count_fixed` are given, or neither.
+         *     dice, not both. A line creates at most 100 monsters, the limit a
+         *     `SpawnMonsters` command has.
          */
         KeyedMonster: {
             /**
              * Template Id
-             * @description The monster's template id. Use an id from `load_monsters``()`,
+             * @description The monster's template id. Use an id from `load_monsters()`,
              *     listed in [the monster id index](https://mmacy.github.io/osrlib-python/reference/content-ids/monsters/),
              *     or the id of a monster in the adventure's `monsters`.
              */
@@ -10977,14 +11644,15 @@ export interface components {
              * @description How many appear, as a dice expression like `"2d4"`. The session rolls it on the
              *     `WANDERING_STREAM` when the monsters spawn, and a roll
              *     below 1 counts as 1. Set this or `count_fixed`, not both. The model checks the expression when
-             *     you construct it, so a malformed one fails then, not during play.
+             *     you construct it, so a malformed one fails then, not during play, and so does an expression that
+             *     can roll more than 100, like `"1d100+1"` or `"11d10"`.
              */
             count_dice?: string | null;
             /**
              * Count Fixed
-             * @description How many appear, as a fixed number. Set this or `count_dice`, not both. A printed adventure
-             *     usually gives a fixed number, and so does `stock_area` when
-             *     it rolls a room for you.
+             * @description How many appear, as a fixed number from 1 to 100. Set this or `count_dice`, not both. A
+             *     printed adventure usually gives a fixed number, and so does
+             *     `stock_area` when it rolls a room for you.
              */
             count_fixed?: number | null;
         };
@@ -11033,7 +11701,9 @@ export interface components {
          *     that level until they regain the slots. No game time passes. What the learning costs in
          *     the story, like a mentor's week or the price of copying a scroll, is up to you.
          *
-         *     **Modes:** `town`, `exploring`
+         *     Modes:
+         *
+         *     `town`, `exploring`
          *
          *     **Rejections:**
          *
@@ -11370,7 +12040,9 @@ export interface components {
          *     Lighting `oil_flask` sets fire to a flask already dropped on the party's cell, which
          *     makes a pool of burning oil there.
          *
-         *     **Modes:** `town`, `exploring`
+         *     Modes:
+         *
+         *     `town`, `exploring`
          *
          *     **Rejections:**
          *
@@ -11433,7 +12105,9 @@ export interface components {
          *     when it meets them there. Undead make no noise, so an area that contains only undead
          *     always sounds silent.
          *
-         *     **Modes:** `exploring`
+         *     Modes:
+         *
+         *     `exploring`
          *
          *     **Rejections:**
          *
@@ -11688,6 +12362,18 @@ export interface components {
              * @default 0
              */
             coins_gp_value: number;
+            /**
+             * @description The same coins by denomination, so a client can show the exact amount, and every
+             *     coin of a small amount that `coins_gp_value` rounds down to zero.
+             * @default {
+             *       "pp": 0,
+             *       "gp": 0,
+             *       "ep": 0,
+             *       "sp": 0,
+             *       "cp": 0
+             *     }
+             */
+            coins: components["schemas"]["Coins"];
         };
         /**
          * MagicAllotment
@@ -12246,6 +12932,50 @@ export interface components {
             rows: components["schemas"]["MagicItemTypeRow"][];
         };
         /**
+         * MapFeatureView
+         * @description One known actionable or descriptive feature on the player map.
+         */
+        MapFeatureView: {
+            /**
+             * Id
+             * @description An opaque `feature:` handle. Pass this value in a feature command's `feature_id`
+             *     instead of an internal authored or generated cache id.
+             * @default
+             */
+            id: string;
+            /**
+             * Kind
+             * @description The feature's public kind. Generated caches use `"generated_cache"`.
+             * @default custom
+             * @enum {string}
+             */
+            kind: "treasure_cache" | "construction_trick" | "custom" | "generated_cache";
+            /**
+             * Description
+             * @description The authored description, or an empty string for a generated cache.
+             * @default
+             */
+            description: string;
+            /**
+             * Cell
+             * @description The feature's cell, or `null` when an area feature applies to the whole entered area.
+             */
+            cell?: [
+                number,
+                number
+            ] | null;
+            /**
+             * Area Id
+             * @description The containing area's id after entry, otherwise `null`.
+             */
+            area_id?: string | null;
+            /**
+             * Trap State
+             * @description The party's known trap state, or `null` when the party knows no trap state.
+             */
+            trap_state?: ("found" | "sprung" | "removed") | null;
+        };
+        /**
          * MarkTriggerFired
          * @description Referee: record that a trigger has fired.
          *
@@ -12267,7 +12997,9 @@ export interface components {
          *     `ActivateQuest` and the other quest commands
          *     accept only the ids of quests the adventure defines.
          *
-         *     **Modes:** `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
+         *     Modes:
+         *
+         *     `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
          *
          *     **Rejections:**
          *
@@ -12389,7 +13121,10 @@ export interface components {
             /**
              * Kind
              * @description The effect kind, like `"light"` or `"fatigue"`. It's the same string an
-             *     `EffectActiveCondition` checks for.
+             *     `EffectActiveCondition` checks for. A spell's effect
+             *     has the spell's id as its kind unless the spell's data gives it a kind of its own, and
+             *     `PlayerView.spell_names` contains the name for a kind
+             *     that is a spell id.
              */
             kind: string;
             /**
@@ -12544,14 +13279,23 @@ export interface components {
          *     You get these from `PlayerView.party`, in marching
          *     order, and every party member has one, living or dead. The players know everything about
          *     their characters, so the view has every number on a B/X character sheet, and a client can draw
-         *     the sheet from it alone. The only thing missing is the identity of an unidentified magic item
-         *     in the pack.
+         *     the sheet from it alone. What the view keeps back is what the party hasn't learned about a magic
+         *     item yet: an unidentified item's name, its bonus, and its curse.
          *
          *     The numbers are the member's current ones, read from the live
          *     `Character`. They count what the member wears right now, like
-         *     armour, a shield, or a ring of protection. They don't count a timed effect from a spell or a
-         *     potion, like the *shield* spell. `PlayerView.effects`
-         *     lists the timed effects on each member.
+         *     armour, a shield, or a ring of protection, whether or not the party has identified it, because a
+         *     B/X magic item works when it's worn. So an unidentified item can change a number while
+         *     `inventory` still masks its name. They don't count a timed effect from a spell or a potion, like
+         *     the *shield* spell. `PlayerView.effects` lists the timed
+         *     effects on each member.
+         *
+         *     Cursed armour and shields are the one exception, because the OSE SRD says "All types of tests
+         *     indicate that a cursed shield or suit of armour is enchanted with a +1 bonus. It is only when the
+         *     armour is used in deadly combat that the curse is revealed." Until the session reveals the curse,
+         *     `armour_class` and `armour_class_ascending` count a worn cursed shield or suit of armour as the +1
+         *     item it tests as, while the monsters roll against the real armour class. `armour_class` says
+         *     when the real number appears.
          *
          *     A STR that an item sets counts too. A member who wears gauntlets of ogre power has the numbers
          *     for STR 18. Six rounds after a member puts on a ring of weakness, the ring's curse takes hold,
@@ -12575,10 +13319,18 @@ export interface components {
              * Class Id
              * @description The character class id, like `"fighter"`, as in
              *     `Character.class_id`. For a class your game wrote, it's
-             *     the id of the character's `custom_class`, so look
-             *     the class's name up in your own definitions.
+             *     the id of the character's `custom_class`. To show
+             *     the class, use `class_name`.
              */
             class_id: string;
+            /**
+             * Class Name
+             * @description The character class's name, like `"Fighter"`, read from
+             *     `Character.definition`, so it's right for a custom
+             *     class too.
+             * @default
+             */
+            class_name: string;
             /**
              * Level
              * @description The character's experience level.
@@ -12627,7 +13379,10 @@ export interface components {
              * Memorized Spells
              * @description The prepared spells, one dumped
              *     `MemorizedSpell` per copy, in memorization
-             *     order. Empty for a class that casts nothing.
+             *     order. Empty for a class that casts nothing. To show a copy's name, look its `spell_id` up in
+             *     `PlayerView.spell_names`, or in
+             *     `PlayerView.reversed_spell_names` for a copy
+             *     whose `reversed` is true.
              */
             memorized_spells: {
                 [key: string]: unknown;
@@ -12782,20 +13537,39 @@ export interface components {
             attack_bonus: number;
             /**
              * Armour Class
-             * @description The member's descending armour class, where lower is better, as
-             *     `Character.armour_class`.
+             * @description The member's descending armour class, where lower is better, as the players know it.
              *
-             *     It counts everything the member wears, unidentified magic items included, because it's the armour
-             *     class the monsters roll against. So the armour class can show that a shield is better than a plain
-             *     one while `inventory` still calls it `"a shield with a faint aura"`.
+             *     It counts everything the member wears, unidentified magic items included, because a magic item
+             *     works when it's worn. So it can show that a shield is better than a plain one while `inventory`
+             *     still calls it `"a shield with a faint aura"`. It's the number in
+             *     `Character.armour_class`, the one the monsters
+             *     roll against, with one exception.
+             *
+             *     The exception is a worn cursed shield or suit of armour that the party hasn't identified. The
+             *     OSE SRD says every test shows such an item as enchanted with a +1 bonus, so until the curse is
+             *     revealed, this number counts it as its base item with a +1 enchantment, and as setting no armour
+             *     class of its own. An unarmoured fighter with AC 9 reads 7 with an unidentified cursed shield -2,
+             *     as with a shield +1, while the monsters roll against the real 10. In cursed chainmail -2 the same
+             *     fighter reads 4, as in chainmail +1, while the real armour class is 7. Everything else the member
+             *     wears, and the DEX modifier, count as usual.
+             *
+             *     The session reveals the curse and identifies the item at the same moment: the first time the
+             *     member is attacked in a battle, or when a referee sends
+             *     `IdentifyItem`. From then on this is the real number. It
+             *     stays the real number after *remove curse* frees the member, because the item stays
+             *     identified.
              * @default 0
              */
             armour_class: number;
             /**
              * Armour Class Ascending
-             * @description The member's ascending armour class, where higher is better, as
-             *     `Character.armour_class_ascending`. It
-             *     counts the same items as `armour_class`.
+             * @description The member's ascending armour class, where higher is better, as the players know it. It
+             *     describes the same defense as `armour_class` and counts the same items the same way, so it's
+             *     `Character.armour_class_ascending`
+             *     except while the member wears a cursed shield or suit of armour that the party hasn't
+             *     identified. Then it counts that item as its base item with a +1 enchantment, so the fighter
+             *     with AC 9 [10] and an unidentified cursed shield -2 reads 12 here while the monsters roll
+             *     against the real 9.
              * @default 0
              */
             armour_class_ascending: number;
@@ -12830,7 +13604,8 @@ export interface components {
              * @description The ids of the spells in the member's spell book, as in
              *     `Character.spell_book`. They're the spells the member
              *     can choose from in a `PrepareSpells`. Empty for a class that
-             *     has no spell book.
+             *     has no spell book. To show a spell's name, look its id up in
+             *     `PlayerView.spell_names`.
              * @default []
              */
             spell_book: string[];
@@ -12921,7 +13696,7 @@ export interface components {
              * Spell Id
              * @description The spell's id, like `"magic_missile"`.
              *
-             *     For the built-in ids, iterate `load_spells``().spells` or see
+             *     For the built-in ids, iterate `load_spells().spells` or see
              *     [the spell id index](https://mmacy.github.io/osrlib-python/reference/content-ids/spells/).
              */
             spell_id: string;
@@ -12949,7 +13724,7 @@ export interface components {
             api_version: string;
             /**
              * Engine Version
-             * @description Installed osrlib rules engine version string, such as `"2.5.0"`.
+             * @description Installed osrlib rules engine version string, such as `"2.7.0"`.
              */
             engine_version: string;
             /**
@@ -13320,19 +14095,89 @@ export interface components {
             variant_dice?: string | null;
         };
         /**
+         * MonsterEscapedEvent
+         * @description A monster group got away and left the battle.
+         *
+         *     A group that's running leaves the battle once it stands farther than
+         *     `FLEE_EXIT_FEET` from every living party member. A group
+         *     runs when it fails its morale check, or when its living members are all turned or afraid. The
+         *     session emits this event in the round the group's move takes it that far, right after that
+         *     group's `GroupMovedEvent`. That's a round that
+         *     `ResolveBattleRound` resolves, or the monsters'
+         *     free first round, which the command that opens the battle resolves.
+         *
+         *     A group whose morale score is 2 never fights, so it gets away as it enters the battle, either
+         *     when the battle opens or when a `SpawnMonsters` adds it
+         *     to a battle that's already running. The command that brings the group into the battle then
+         *     emits this event right after that group's
+         *     `MonsterFledEvent`.
+         *
+         *     A group whose living members are all turned or afraid can also end up farther than
+         *     `FLEE_EXIT_FEET` from every living member without a move of its own: a group turned where it
+         *     stands 130' away, or a group the party leaves behind by falling back before the group's next
+         *     move. Such a group counts as gone, so once no other group is left fighting, the battle ends.
+         *     The session then marks each such group fled and emits this event for it right before the
+         *     `BattleEndedEvent`.
+         *
+         *     The session emits one of these events for a group in the same command result in which
+         *     `EncounterGroupView.fled` becomes true, and
+         *     never in any other result, so you can tell that the group got away from the event stream
+         *     alone. When the escape leaves no group fighting, the battle ends in the same result, and the
+         *     `BattleEndedEvent` comes after this event.
+         *
+         *     The group stays in `EncounterView.groups` with
+         *     `fled` true, and the session refuses every declaration aimed at it with
+         *     `battle.declaration.unknown_group`. When the encounter ends, its living members count as
+         *     defeated for the experience award, as `routed` in their
+         *     `MonsterDefeatedEvent`s.
+         */
+        MonsterEscapedEvent: {
+            /**
+             * Code
+             * @description The message code, always `battle.side.escaped`.
+             * @default battle.side.escaped
+             */
+            code: string;
+            /**
+             * @description Player visibility: the party sees the group get away.
+             * @default player
+             */
+            visibility: components["schemas"]["Visibility"];
+            /**
+             * @description The event type, `monster_escaped`, which identifies this class in serialized form. (enum property replaced by openapi-typescript)
+             * @enum {string}
+             */
+            event_type: "monster_escaped";
+            /**
+             * Group Id
+             * @description Which group got away, as its encounter group id.
+             */
+            group_id: string;
+        };
+        /**
          * MonsterFledEvent
-         * @description A monster group fled the battle.
+         * @description A monster group broke and ran.
          *
          *     Emitted by `ResolveBattleRound` when
-         *     a group fails its morale check and flees. When a battle opens, it's also emitted for a
-         *     group whose morale is so low that it never fights at all.
+         *     a group fails its morale check and flees. When a battle opens, or when a
+         *     `SpawnMonsters` adds a group to a running battle, it's
+         *     also emitted for a group whose morale is so low that it never fights at all. That group leaves
+         *     the battle at once, and a `MonsterEscapedEvent` for
+         *     it comes right after this event.
          *
          *     When a cleric turns only some of a group, the turned members leave the group and flee as
          *     a new group, and `group_id` is the new group's id.
          *
-         *     A fleeing group moves away each round. It has left the battle once it's more than
-         *     `FLEE_EXIT_FEET` from the party. Its members
-         *     still count as defeated for the experience award.
+         *     A group that fails its morale check is still in the battle when this event comes, and
+         *     `EncounterGroupView.fleeing` is true from
+         *     then on. It moves away each round, and it has left the battle once it's more than
+         *     `FLEE_EXIT_FEET` from the party, when
+         *     `EncounterGroupView.fled` becomes true. That
+         *     happens in the round its move takes it that far. A group that breaks far enough away gets away
+         *     in the round it breaks, and any other group in a later round. The result of the round in which
+         *     it gets away contains a `MonsterEscapedEvent` for the group right after the group's
+         *     `GroupMovedEvent`. Its members still count as defeated
+         *     for the experience award.
          */
         MonsterFledEvent: {
             /**
@@ -13639,7 +14484,7 @@ export interface components {
          * MonsterTemplate
          * @description A monster's stat block: everything true of every creature of that kind.
          *
-         *     Get one from `load_monsters``().get(monster_id)`.
+         *     Get one from `load_monsters().get(monster_id)`.
          *     [The monster id index](https://mmacy.github.io/osrlib-python/reference/content-ids/monsters/) lists the ids. Then
          *     call `spawn_monster` to put a creature into play.
          *     To write a monster of your own, construct one, and pass it to `spawn_monster` the same way.
@@ -13702,7 +14547,10 @@ export interface components {
              *     `MonsterCatalog.family` to get every form.
              *
              *     A creature with one form is a family of one, and its family id is its `id`. A template you write that
-             *     leaves this out gets its `id` too.
+             *     leaves this out gets its `id` too. The player view shows the family id to the players, so a template
+             *     that disguises one creature as another, like a doppelganger the players see as a goblin, sets this to
+             *     the family the players should see, `"goblin"`. The players also see the template's `display_name`
+             *     and its `categories`.
              * @default
              */
             family_id: string;
@@ -13751,7 +14599,8 @@ export interface components {
             hit_dice: components["schemas"]["MonsterHitDice"];
             /**
              * Attacks
-             * @description The sets of attacks it can make, one set per round. See `AttackRoutine`.
+             * @description The sets of attacks it can make, one set per round.
+             *     See `AttackRoutine`.
              * @default []
              */
             attacks: components["schemas"]["AttackRoutine"][];
@@ -13843,6 +14692,9 @@ export interface components {
              *
              *     Spells and turning check these. *Hold person* affects a monster only when it has `"person"`, and
              *     turning affects only `"undead"`.
+             *
+             *     The player view shows them to the players, in
+             *     `EncounterGroupView.categories`.
              * @default []
              */
             categories: string[];
@@ -13947,8 +14799,8 @@ export interface components {
          *     result. When no encounter is open, the events of the encounter's opening follow. When
          *     one is open, the monsters join it as a new group.
          *
-         *     It has referee visibility, and it contains ids rather than a description. The party
-         *     learns which monsters arrived from
+         *     It has referee visibility. It names the monsters by catalog id and by the template's display
+         *     name, and lists the session ids of the new instances. The party learns which monsters arrived from
          *     `EncounterStartedEvent` when the
          *     encounter opens, or from
          *     `EncounterGroupJoinedEvent` when the
@@ -13982,6 +14834,23 @@ export interface components {
              *     those creatures refers to them by these ids.
              */
             monster_ids: string[];
+            /**
+             * Display Name
+             * @description The template's `display_name`, like
+             *     `"giant centipede"` for `centipede_giant`, for a line about one monster. An event loaded from a
+             *     save written before the field existed has an empty string, and
+             *     `format_message` names the monsters by `template_id`.
+             * @default
+             */
+            display_name: string;
+            /**
+             * Display Name Plural
+             * @description The template's `display_name_plural`,
+             *     like `"giant centipedes"`, for a line about more than one. It's empty on an event loaded from a
+             *     save written before the field existed.
+             * @default
+             */
+            display_name_plural: string;
         };
         /**
          * MoraleAlternate
@@ -14113,7 +14982,9 @@ export interface components {
          *     instead of stopping at the wall there. The party arrives at the passage's destination,
          *     facing its `to_facing`, and the move costs what a step onto that destination cell costs.
          *
-         *     **Modes:** `exploring`
+         *     Modes:
+         *
+         *     `exploring`
          *
          *     **Rejections:**
          *
@@ -14404,7 +15275,7 @@ export interface components {
              * Class Id
              * @description The id of the class this result gives, like `"cleric"` or `"fighter"`.
              *
-             *     Look the class up with `load_classes``().get(class_id)`, or see
+             *     Look the class up with `load_classes().get(class_id)`, or see
              *     [the class id index](https://mmacy.github.io/osrlib-python/reference/content-ids/classes/).
              */
             class_id: string;
@@ -14893,7 +15764,9 @@ export interface components {
          *     Opening the door gives each such trap a 2-in-6 chance to spring on the first living
          *     member in marching order, unless the party has already found the trap.
          *
-         *     **Modes:** `exploring`
+         *     Modes:
+         *
+         *     `exploring`
          *
          *     **Rejections:**
          *
@@ -15271,7 +16144,9 @@ export interface components {
          *     any number of times. A result of `attacks` opens battle at once, and a `hostile` result
          *     can open battle when the round ends.
          *
-         *     **Modes:** `encounter`
+         *     Modes:
+         *
+         *     `encounter`
          *
          *     **Rejections:**
          *
@@ -15357,10 +16232,6 @@ export interface components {
          *     execute `PlaceParty`, which takes one of these.
          *
          *     A town location has none of the dungeon fields, and a dungeon location has all four.
-         *
-         *     **Validation:**
-         *
-         *     - Invalid when `kind` is `"dungeon"` and any dungeon field is missing, or if `kind` is `"town"` and any is set.
          */
         PartyLocation: {
             /**
@@ -15508,10 +16379,6 @@ export interface components {
          *     A published adventure states this on its cover or in its introduction, like "for 6 to 8
          *     characters of levels 1 to 3". osrlib never reads it. It's there so you can pick a party that
          *     suits the adventure, in a front end, a converter, or a playtest.
-         *
-         *     **Validation:**
-         *
-         *     - Invalid when `max_level` is below `min_level`, or `max_size` is below `min_size` when both are given.
          */
         PartySpec: {
             /**
@@ -15521,8 +16388,8 @@ export interface components {
             min_level: number;
             /**
              * Max Level
-             * @description The highest character level the adventure is written for. Equal to `min_level` for an
-             *     adventure written for one level.
+             * @description The highest character level the adventure is written for, `min_level` or more. Equal to
+             *     `min_level` for an adventure written for one level.
              */
             max_level: number;
             /**
@@ -15532,7 +16399,8 @@ export interface components {
             min_size?: number | null;
             /**
              * Max Size
-             * @description The most characters the adventure is written for, or `null` when it gives no number.
+             * @description The most characters the adventure is written for, or `null` when it gives no number. When
+             *     `min_size` is also given, it's `min_size` or more.
              */
             max_size?: number | null;
         };
@@ -15547,7 +16415,9 @@ export interface components {
          *     gain a level. A picked door is unlocked but still closed, so follow with
          *     `OpenDoor`.
          *
-         *     **Modes:** `exploring`
+         *     Modes:
+         *
+         *     `exploring`
          *
          *     **Rejections:**
          *
@@ -15618,6 +16488,17 @@ export interface components {
              * @description The pile's coins, as their value in whole gold pieces, rounded down.
              */
             coins_gp_value: number;
+            /**
+             * @description The pile's coins by denomination, so a pile of copper alone isn't mistaken for an empty one.
+             * @default {
+             *       "pp": 0,
+             *       "gp": 0,
+             *       "ep": 0,
+             *       "sp": 0,
+             *       "cp": 0
+             *     }
+             */
+            coins: components["schemas"]["Coins"];
         };
         /**
          * PlaceParty
@@ -15636,7 +16517,9 @@ export interface components {
          *     `game_over`, where it's the only way out: placing the dead party in town lets you buy
          *     *raise dead* with `PurchaseHealing`.
          *
-         *     **Modes:** `town`, `exploring`, `game_over`
+         *     Modes:
+         *
+         *     `town`, `exploring`, `game_over`
          *
          *     **Rejections:**
          *
@@ -15749,6 +16632,19 @@ export interface components {
              */
             explored: components["schemas"]["ExploredLevelView"][];
             /**
+             * Dungeons
+             * @description The dungeons the party has entered, in adventure order.
+             * @default []
+             */
+            dungeons: components["schemas"]["DungeonNameView"][];
+            /**
+             * Can Travel To Town
+             * @description Whether the exploring party can use
+             *     `TravelToTown` from its current position.
+             * @default false
+             */
+            can_travel_to_town: boolean;
+            /**
              * Piles
              * @description The dropped piles the party knows about, keyed by the cell reference
              *     `cell_ref` returns. A pile in a cell the party has
@@ -15761,6 +16657,11 @@ export interface components {
              * Emptied Caches
              * @description The treasure caches the party has already emptied, as `"{dungeon}:{level}:{id}"`
              *     references, so you can draw a looted cache as looted.
+             *
+             *     These established raw references are a post-use diagnostic for compatibility. New command
+             *     targets come from `MapFeatureView.id`. A raw authored
+             *     feature id can appear here only after the party has used it, not in the new `features` list
+             *     before use.
              */
             emptied_caches: string[];
             /**
@@ -15768,6 +16669,51 @@ export interface components {
              * @description The active effects on party members, in ledger order.
              */
             effects: components["schemas"]["MemberEffectView"][];
+            /**
+             * Spell Names
+             * @description The name of each spell whose id the view shows, keyed by spell id, like
+             *     `{"magic_missile": "Magic Missile"}`. Show these names, not the ids.
+             *
+             *     A spell id appears in three places in the view: in a member's
+             *     `spell_book`, as the `spell_id` of a copy in a member's
+             *     `memorized_spells`, and as the
+             *     `kind` of an effect in `effects`, because a spell's
+             *     effect has the spell's id as its kind unless the spell's data gives it a kind of its own. Every one
+             *     of those ids that the session's catalog,
+             *     `GameSession.effective_spells`, has is a key
+             *     here, with the spell's `name`. A spell the adventure
+             *     bundles has its name here too, which `load_spells` doesn't have. An
+             *     effect kind that isn't a spell id, like a torch's `"light"`, has no entry.
+             *
+             *     It names no spell whose id the view doesn't show, so the spells on a scroll stay hidden. A spell id
+             *     on a member that the session's catalog doesn't have, like one from a party made for another
+             *     adventure, has no entry either, and the session refuses to prepare or cast that spell. The name here
+             *     is always the spell's normal form. For a copy prepared reversed, show its name from
+             *     `reversed_spell_names`.
+             * @default {}
+             */
+            spell_names: {
+                [key: string]: string;
+            };
+            /**
+             * Reversed Spell Names
+             * @description The name of each spell's reverse, keyed by spell id, like `{"light_mu": "Darkness"}`, for every
+             *     spell in `spell_names` that has one.
+             *
+             *     Each value is the `name` of the spell's
+             *     `reversed_form`, read from the same catalog as
+             *     `spell_names`, so a spell the adventure bundles has the name its author gave the reverse. A spell
+             *     that doesn't reverse has no entry.
+             *
+             *     Show this name for an arcane caster's copy whose `reversed` is true in
+             *     `memorized_spells`. A divine caster prepares the
+             *     normal form and chooses the form when casting, so every memorized copy of a reversible spell can be
+             *     cast either way. To offer that choice, show both names.
+             * @default {}
+             */
+            reversed_spell_names: {
+                [key: string]: string;
+            };
             /**
              * Fatigued
              * @description Whether any member is fatigued.
@@ -15822,7 +16768,9 @@ export interface components {
          *     `BattleDeclaration` in one.
          *     The `CastSpell` example shows a caster resting, preparing, and casting.
          *
-         *     **Modes:** `town`, `exploring`
+         *     Modes:
+         *
+         *     `town`, `exploring`
          *
          *     **Rejections:**
          *
@@ -16167,7 +17115,9 @@ export interface components {
          *     An item the adventure bundles isn't for sale, even when the party has seen its id, and
          *     the session refuses it as not stocked rather than as unknown.
          *
-         *     **Modes:** `town`
+         *     Modes:
+         *
+         *     `town`
          *
          *     **Rejections:**
          *
@@ -16243,7 +17193,9 @@ export interface components {
          *     Because the party pays, a dead member can be raised even when that member's purse is
          *     empty, and the party doesn't have to move coins between purses first.
          *
-         *     **Modes:** `town`
+         *     Modes:
+         *
+         *     `town`
          *
          *     **Rejections:**
          *
@@ -16831,7 +17783,9 @@ export interface components {
          *     referee's notes. The trigger and quest interpreter issues it to record what it dropped
          *     and why. This command is legal in every mode, `game_over` and `victory` included.
          *
-         *     **Modes:** `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
+         *     Modes:
+         *
+         *     `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
          *
          *     **Rejections:**
          *
@@ -16862,7 +17816,7 @@ export interface components {
         };
         /**
          * RefereeView
-         * @description The full state of a session except the random streams, one typed field for each group of data in a save.
+         * @description The referee state in a save, except seeds, random streams, and the player-handle key.
          *
          *     Get one from `GameSession.view` with
          *     `Visibility.REFEREE`, or from `build_referee_view`. Use
@@ -16873,10 +17827,10 @@ export interface components {
          *     Each field is the session's model rather than a dict, so you read
          *     `view.monsters[0].current_hp` and `view.flags["key"]` with the types this reference documents, and
          *     each field's docstring links the model to read next. The fields are the groups
-         *     `session_state` writes, minus the master seed and the RNG stream
-         *     positions, so `view.model_dump(mode="json")` is that save payload without those two keys. The seed
-         *     and the stream positions live only in the save, because knowing them would let a player predict
-         *     every roll to come.
+         *     `session_state` writes, minus the master seed, the RNG stream
+         *     positions, and the player-handle key, so `view.model_dump(mode="json")` is that save payload
+         *     without those keys. The seed and stream positions let a player predict every roll to come.
+         *     The key lets someone reproduce and control the session's opaque feature handles.
          *
          *     The view is a snapshot of the moment it was built. The session's mutable state is copied into it,
          *     so later play leaves the view as it was, and editing what you find on a view changes nothing on
@@ -17131,7 +18085,9 @@ export interface components {
          *     command. This command is legal in every mode, `game_over` and `victory` included. It makes no draws
          *     and takes no time.
          *
-         *     **Modes:** `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
+         *     Modes:
+         *
+         *     `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
          *
          *     **Rejections:**
          *
@@ -17191,7 +18147,9 @@ export interface components {
          *     curse doesn't stop the removal, because a curse stops only the bearer from taking the item
          *     off. The command makes no draws and takes no time.
          *
-         *     **Modes:** `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
+         *     Modes:
+         *
+         *     `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
          *
          *     **Rejections:**
          *
@@ -17304,7 +18262,9 @@ export interface components {
          *     lost the game. To replace a player's last standing character, add the new character with
          *     `AddMember` first, and then remove the old one.
          *
-         *     **Modes:** `town`, `exploring`
+         *     Modes:
+         *
+         *     `town`, `exploring`
          *
          *     **Rejections:**
          *
@@ -17374,7 +18334,9 @@ export interface components {
          *     can try. Once the trap is removed,
          *     `TakeTreasure` empties the cache safely.
          *
-         *     **Modes:** `exploring`
+         *     Modes:
+         *
+         *     `exploring`
          *
          *     **Rejections:**
          *
@@ -17382,9 +18344,9 @@ export interface components {
          *     - `session.command.unknown_member` - `character_id` matches no party member.
          *     - `session.command.member_incapacitated` - the member cannot act.
          *     - `exploration.trap.not_a_thief` - the member has no thief skills.
-         *     - `exploration.feature.unknown` - `feature_id` matches no trapped cache on
-         *       this cell.
-         *     - `exploration.trap.not_found` - nobody has found the trap yet.
+         *     - `exploration.feature.unknown` - `feature_id` is malformed, stale, or
+         *       ambiguous, matches no available trapped cache on this cell, names a cache
+         *       with no trap, or names a trap the party hasn't found.
          *     - `exploration.trap.already_resolved` - the trap was already removed or has
          *       already sprung.
          *     - `exploration.action.requires_light` - the party has no light. Infravision
@@ -17431,11 +18393,10 @@ export interface components {
             character_id: string;
             /**
              * Feature Id
-             * @description Which trapped cache to disarm, by its
-             *     `FeatureSpec.id` in the adventure document. Only an
-             *     authored cache can be trapped, so the session refuses the id of a cache the engine generated
-             *     with `exploration.feature.unknown`. The trap has to have been found already, or the command
-             *     comes back with `exploration.trap.not_found`.
+             * @description Which trapped cache to disarm. Use a
+             *     `MapFeatureView.id` from the current player view, or
+             *     an unambiguous raw authored id. Only an authored cache can be trapped. A cache with no trap,
+             *     or with a trap nobody has found, gets the same `exploration.feature.unknown` rejection.
              */
             feature_id: string;
         };
@@ -17465,7 +18426,9 @@ export interface components {
          *     `BattleDeclaration.replacement_id`.
          *     The new order stays after the battle, until you send this command again.
          *
-         *     **Modes:** `town`, `exploring`
+         *     Modes:
+         *
+         *     `town`, `exploring`
          *
          *     **Rejections:**
          *
@@ -17525,7 +18488,9 @@ export interface components {
          *     `preview_battle_round`, which runs the same
          *     checks without playing the round.
          *
-         *     **Modes:** `battle`
+         *     Modes:
+         *
+         *     `battle`
          *
          *     **Rejections:**
          *
@@ -17538,18 +18503,21 @@ export interface components {
          *     - `battle.declaration.unknown_action` - an `action` the session doesn't
          *       recognize. Constructing a `BattleDeclaration` with one already fails validation.
          *
-         *     Each declaration, by its `action`:
+         *     Each declaration, by its `action`. Every rejection of a declaration has the declaring
+         *     member's id as its `character` param, including the kernel's `combat.attack.*` and
+         *     `magic.cast.*` checks, so a client with several players can tell whose declaration
+         *     to change:
          *
          *     - Any action: `battle.declaration.no_mirror` when the member declares a
-         *       `gaze_defense` of `mirror` and carries no mirror. The rejection has the member's
-         *       id as its `character` param.
+         *       `gaze_defense` of `mirror` and carries no mirror.
          *     - Move declarations: `battle.declaration.missing_move`,
          *       `battle.declaration.unknown_group`, and `battle.declaration.cannot_move`.
          *     - A `move` set on an action that can't take it: `battle.declaration.cast_cannot_move`
          *       on a `cast`, and `battle.declaration.move_not_combinable` on a `turn_undead`, a
-         *       `use_item`, a `give_item`, or a `hold`, and on an `attack` with a `fighting_withdrawal`
-         *       or a `retreat`. Each has the member's id as its `character` param. The session checks
-         *       for them after the back-stab checks and before the action's own checks.
+         *       `use_item`, a `give_item`, a `hide`, or a `hold`, and on an `attack` with a
+         *       `fighting_withdrawal` or a `retreat`. Each has the member's id as its `character` param.
+         *       The session checks for them after the back-stab checks and before the action's own
+         *       checks.
          *     - `battle.declaration.replacement_unavailable` when a member who makes a
          *       `fighting_withdrawal` or a `retreat` alone names a member in `replacement_id` who
          *       isn't a declarer, is the withdrawing member, is withdrawing too, or was named by a
@@ -17575,9 +18543,18 @@ export interface components {
          *       `battle.declaration.back_stab_target_aware` before the attack checks, and
          *       `battle.declaration.back_stab_not_melee` after the group and weapon checks and
          *       before the melee checks. A back-stab gets only the first of these that applies,
-         *       and each has the member's id as its `character` param.
+         *       and each has the member's id as its `character` param. A back-stab by a member who
+         *       is hiding doesn't get `battle.declaration.not_in_front_rank`.
          *       `BattleDeclaration.back_stab`
          *       gives the order in full.
+         *     - Hide declarations: `battle.declaration.hide_not_a_thief` when the member's class
+         *       has no thief skills, and `battle.declaration.hide_in_front_rank` when the member will
+         *       stand in the first row of the party's ranks toward a group still in the fight once
+         *       the round's moves are made. The session checks them in that order, after the
+         *       back-stab checks and the check of `move`, and each has the member's id as its
+         *       `character` param.
+         *       `EncounterView.can_hide` lists the
+         *       members who can hide.
          *     - Cast declarations: `battle.declaration.missing_spell`,
          *       `battle.declaration.unknown_group`,
          *       `battle.declaration.invisible_target`, and the cast checks
@@ -17611,13 +18588,19 @@ export interface components {
          *       `magic.cast.target_must_be_creature`, `magic.cast.out_of_range`,
          *       `magic.cast.caster_incapacitated`, `magic.cast.caster_restrained`,
          *       `magic.cast.anti_magic_shell`). A thrown item can also get the `validate_attack` checks
-         *       listed for attack declarations. A potion given to another member to drink gets
+         *       listed for attack declarations, and it gets `battle.declaration.item_unusable` for an
+         *       item the member doesn't carry or can't throw before `battle.declaration.unknown_group`.
+         *       A potion given to another member to drink gets
+         *       `battle.declaration.target_count` for more than one id in `targets`,
          *       `items.use.target_not_allowed`, `items.use.target_cannot_drink`, and
          *       `battle.declaration.member_out_of_reach`. A staff of healing's touch gets
-         *       `items.use.unknown_target`, `items.use.target_cannot_be_healed` on a creature that's dead
-         *       or turned to stone, and `battle.declaration.member_out_of_reach` on another member. On a
-         *       monster, it gets the checks of a touch spell on a monster.
-         *     - Hand-over declarations, `give_item`: `exploration.give.same_member`,
+         *       `battle.declaration.target_count`, `items.use.unknown_target`,
+         *       `items.use.target_cannot_be_healed` on a creature that's dead or turned to stone,
+         *       `items.use.target_healed_today` on a creature the staff already healed today, and
+         *       `battle.declaration.member_out_of_reach` on another member. On a monster, it gets the
+         *       checks of a touch spell on a monster.
+         *     - Hand-over declarations, `give_item`: `battle.declaration.target_count` for anything
+         *       but one id in `targets`, `exploration.give.same_member`,
          *       `session.command.unknown_member`, `session.command.member_incapacitated`,
          *       `items.curse.stuck`, `exploration.item.not_carried`, and
          *       `battle.declaration.member_out_of_reach`, in that order.
@@ -17637,7 +18620,12 @@ export interface components {
          *     who falls back alone trades places in the marching order with the member they named,
          *     and a `GroupMovedEvent` each time a group's
          *     distance from the party line changes, when monsters close or run, and when the whole
-         *     party moves in a formation move.
+         *     party moves in a formation move. After the moves, for each member who hides, in
+         *     marching order, a `HideAttemptedEvent`
+         *     followed by the referee's
+         *     `DetectionRolledEvent` of their hide in
+         *     shadows roll. A hiding member's back-stab adds the referee's `DetectionRolledEvent` of
+         *     their move silently roll before its first attack roll.
          *
          *     Missiles and melee:
          *     `AttackRolledEvent`,
@@ -17656,9 +18644,10 @@ export interface components {
          *     engine picks the spell's targets,
          *     `SpellDisruptedEvent`,
          *     `DeclarationFizzledEvent` when a
-         *     device use or a turning fails the check the session makes just before it resolves,
-         *     and at `battle.melee.fizzled` when a melee attack can't resolve when it comes up,
-         *     because its group has no monster left to strike or because of where the member stands,
+         *     device use, a potion given to another member, a hand-over, or a turning fails the
+         *     check the session makes just before it resolves, and at `battle.melee.fizzled` when
+         *     a melee attack can't resolve when it comes up, because its group has no monster left
+         *     to strike or because of where the member stands,
          *     `MagicDispelledEvent`,
          *     `UndeadTurnedEvent`, and the effects
          *     a spell leaves behind
@@ -17680,7 +18669,12 @@ export interface components {
          *     `MonsterFledEvent` for a group that
          *     fails its morale check and flees, and
          *     `MonstersLeftBehindEvent`
-         *     when a fleeing group leaves behind members who can't move.
+         *     when a fleeing group leaves behind members who can't move. A group that broke runs its
+         *     full rate each round, starting in the round it breaks. In the round its move takes it
+         *     farther than `FLEE_EXIT_FEET` from every living
+         *     member, which can be the round it breaks, a
+         *     `MonsterEscapedEvent` comes right after
+         *     that move's `GroupMovedEvent`. The group has then left the battle.
          *
          *     Closing the round: the clock advances one round, and these events report what
          *     that changes:
@@ -17691,16 +18685,19 @@ export interface components {
          *     `ProvisionsEvent`.
          *
          *     A round that ends the battle adds a
-         *     `BattleEndedEvent` and the events of the
-         *     encounter's end
+         *     `BattleEndedEvent`, after the
+         *     `MonsterEscapedEvent` when an escape ended it. A group whose living members are all
+         *     turned or afraid, and which stands past `FLEE_EXIT_FEET` without a move of its own,
+         *     gets away as the battle ends, and its `MonsterEscapedEvent` comes right before the
+         *     `BattleEndedEvent`. The events of the encounter's end follow
          *     (`EncounterEndedEvent`,
          *     `MonsterDefeatedEvent`s, a
          *     `LootDroppedEvent` when the slain leave
          *     anything on the floor, and, under the immediate XP timing,
          *     `XpAwardedEvent` and
-         *     `CharacterLeveledUpEvent`),
-         *     or `GameOverEvent` when every party member is
-         *     dead or turned to stone.
+         *     `CharacterLeveledUpEvent`). When every
+         *     party member is dead or turned to stone, a
+         *     `GameOverEvent` follows instead.
          */
         ResolveBattleRound: {
             /**
@@ -17750,7 +18747,9 @@ export interface components {
          *     counts toward the three turns of rest that clear exhaustion. A rest interrupted during
          *     its first turn clears nothing.
          *
-         *     **Modes:** `town`, `exploring`
+         *     Modes:
+         *
+         *     `town`, `exploring`
          *
          *     **Rejections:**
          *
@@ -17877,7 +18876,9 @@ export interface components {
          *     because the objective's event already includes the text. This command is legal in
          *     every mode, `game_over` and `victory` included.
          *
-         *     **Modes:** `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
+         *     Modes:
+         *
+         *     `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
          *
          *     **Rejections:**
          *
@@ -18002,7 +19003,9 @@ export interface components {
          *     `SpawnMonsters` does, so it never reaches the
          *     session and makes no random roll.
          *
-         *     **Modes:** `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
+         *     Modes:
+         *
+         *     `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
          *
          *     **Rejections:**
          *
@@ -18296,6 +19299,26 @@ export interface components {
              * @default true
              */
             failed_trap_removal_springs: boolean;
+            /**
+             * Back Stab Needs Both Skills
+             * @description Require both of a hiding thief's skill rolls for a back-stab. An adaptation, on by default.
+             *
+             *     A thief can hide during a battle with a `hide` declaration and then back-stab from hiding, as
+             *     `BattleDeclaration.back_stab` describes.
+             *     The session rolls the thief's hide in shadows skill when the hide resolves, and move silently
+             *     when the back-stab comes up. With the flag on, the attack is a back-stab only when both rolls
+             *     passed. Turn it off and either roll passing is enough. The session makes both rolls under
+             *     either setting, so the flag changes no draw. The monsters' choice of targets reads the hide in
+             *     shadows roll alone under either setting.
+             *
+             *     The SRD says hide in shadows "Requires the thief to be motionless—attacking or moving while
+             *     hiding is not possible", and that with move silently "A thief may attempt to sneak past
+             *     enemies unnoticed". Neither setting is the rules as written.
+             *     [The adaptations register](https://mmacy.github.io/osrlib-python/adaptations/) has the
+             *     reasoning.
+             * @default true
+             */
+            back_stab_needs_both_skills: boolean;
         };
         /**
          * SaveCategory
@@ -18543,7 +19566,9 @@ export interface components {
          *     attempts back the same way. Attempts of other kinds, and attempts on every other cell,
          *     stay used.
          *
-         *     **Modes:** `exploring`
+         *     Modes:
+         *
+         *     `exploring`
          *
          *     **Rejections:**
          *
@@ -18664,7 +19689,9 @@ export interface components {
          *     treasure but gives no rate at which a town buys it, so osrlib uses full value. The SRD
          *     gives magic items no fixed sale value, so the session refuses to sell them.
          *
-         *     **Modes:** `town`
+         *     Modes:
+         *
+         *     `town`
          *
          *     **Rejections:**
          *
@@ -18839,7 +19866,9 @@ export interface components {
          *     to be next to the party. This command is legal in every mode, `game_over` and
          *     `victory` included.
          *
-         *     **Modes:** `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
+         *     Modes:
+         *
+         *     `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
          *
          *     **Rejections:**
          *
@@ -18931,7 +19960,9 @@ export interface components {
          *     `FlagEqualsCondition`, like the condition on
          *     a door that opens once the lever has been pulled.
          *
-         *     **Modes:** `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
+         *     Modes:
+         *
+         *     `town`, `exploring`, `encounter`, `battle`, `game_over`, `victory`
          *
          *     **Rejections:**
          *
@@ -18989,7 +20020,9 @@ export interface components {
          *     - The session refuses the command during a pursuit, because a pursuit runs at the pace of
          *       its slowest group, and a new group could change that pace.
          *
-         *     **Modes:** `exploring`, `encounter`, `battle`
+         *     Modes:
+         *
+         *     `exploring`, `encounter`, `battle`
          *
          *     **Rejections:**
          *
@@ -19009,14 +20042,17 @@ export interface components {
          *     `EncounterStartedEvent`, the
          *     reaction roll, and a
          *     `StanceChangedEvent`. When the monsters'
-         *     reaction is to attack, battle opens at once.
+         *     reaction is to attack, battle opens at once. A group whose morale score is 2 then flees
+         *     and gets away as the battle opens, with a
+         *     `MonsterFledEvent` followed right away by a
+         *     `MonsterEscapedEvent`.
          *
          *     When the monsters join an open encounter, an `EffectAttachedEvent` for each monster
          *     that regenerates follows instead, then an
          *     `EncounterGroupJoinedEvent`, which
-         *     the players see. When the group joins a battle and its morale score is 2, a
-         *     `MonsterFledEvent` comes last, because a
-         *     monster with that score won't fight.
+         *     the players see. When the group joins a battle and its morale score is 2, it gets away
+         *     at once, because a monster with that score won't fight. A `MonsterFledEvent` and then
+         *     a `MonsterEscapedEvent` come last.
          */
         SpawnMonsters: {
             /**
@@ -19044,13 +20080,18 @@ export interface components {
              *     `ENCOUNTER_STREAM`. Use it when the number should
              *     depend on the seed, and use `count_fixed` when it shouldn't. Set exactly one of the two. A
              *     malformed expression fails validation when the command is constructed, so the session never
-             *     sees it. A roll below 1 counts as 1.
+             *     sees it, and so does an expression that can roll more than 100, like `"1d100+1"` or
+             *     `"11d10"`. A roll below 1 counts as 1. For more than 100 monsters, send the command again
+             *     while the encounter is open, and the new group joins it. The session refuses that second
+             *     command during a pursuit.
              */
             count_dice?: string | null;
             /**
              * Count Fixed
-             * @description How many to spawn, as an exact number. Use it when the author chose the number. Set
-             *     exactly one of this and `count_dice`.
+             * @description How many to spawn, as an exact number from 1 to 100. Use it when the author chose the
+             *     number. Set exactly one of this and `count_dice`. For more than 100 monsters, send the
+             *     command again while the encounter is open, and the new group joins it. The session refuses
+             *     that second command during a pursuit.
              */
             count_fixed?: number | null;
             /**
@@ -19076,7 +20117,9 @@ export interface components {
          *     Set `count_fixed` for a band of an exact size, `count_dice` to roll the size, or neither
          *     to roll the B/X number for `party_kind`. Setting both fails validation.
          *
-         *     **Modes:** `exploring`
+         *     Modes:
+         *
+         *     `exploring`
          *
          *     **Rejections:**
          *
@@ -19112,8 +20155,9 @@ export interface components {
              * Count Dice
              * @description How many adventurers, as a dice expression rolled on the session's
              *     `ENCOUNTER_STREAM`. A malformed expression fails
-             *     validation when the command is constructed. A roll below 1 counts as 1. Don't set it
-             *     together with `count_fixed`.
+             *     validation when the command is constructed, and so does an expression that can roll more
+             *     than 100, like `"1d100+1"`. A roll below 1 counts as 1. Don't set it together with
+             *     `count_fixed`.
              *
              *     When both this and `count_fixed` are `null`, the default, the engine rolls the B/X number
              *     for `party_kind`: 1d4+4 for `basic` and 1d6+3 for `expert`.
@@ -19121,9 +20165,11 @@ export interface components {
             count_dice?: string | null;
             /**
              * Count Fixed
-             * @description How many adventurers, as an exact number. Use it when the adventure's author chose the
-             *     size of the band. The session rolls nothing for the size. Don't set it together with
-             *     `count_dice`.
+             * @description How many adventurers, as an exact number from 1 to 100. Use it when the adventure's
+             *     author chose the size of the band. The session rolls nothing for the size. Don't set it
+             *     together with `count_dice`. A band has at most 100 adventurers, whether you set this or
+             *     `count_dice`. The command can't add adventurers to an open encounter, so a larger band
+             *     isn't possible.
              */
             count_fixed?: number | null;
             /**
@@ -19593,7 +20639,7 @@ export interface components {
              *     A few spells appear in the SRD as a cleric page and a magic-user page with different rules.
              *     Each such pair is two entries: the cleric one has the suffix `_c` and the magic-user one `_mu`,
              *     like `"light_c"` and `"light_mu"`. For the built-in ids, iterate
-             *     `load_spells``().spells` or see [the spell id
+             *     `load_spells().spells` or see [the spell id
              *     index](https://mmacy.github.io/osrlib-python/reference/content-ids/spells/).
              */
             id: string;
@@ -19674,7 +20720,7 @@ export interface components {
              * Conjured Monster Ids
              * @description Ids of monsters the spell summons that are in the monster catalog.
              *
-             *     Look them up with `load_monsters``().get(monster_id)`. *Conjure
+             *     Look them up with `load_monsters().get(monster_id)`. *Conjure
              *     elemental* lists its four elementals this way. Casting doesn't spawn them.
              * @default []
              */
@@ -20103,7 +21149,8 @@ export interface components {
             extraordinary_powers: string[];
             /**
              * Special Purpose
-             * @description What the sword was made to do, for example `"chaotic_creatures"`, or `null` for a sword with no special purpose.
+             * @description What the sword was made to do, for example `"chaotic_creatures"`, or `null` for a sword with no special
+             *     purpose.
              */
             special_purpose?: string | null;
         };
@@ -20149,7 +21196,9 @@ export interface components {
          *     reaches into the cache. A cache whose trap hasn't been removed gets its chance to spring
          *     on that member first.
          *
-         *     **Modes:** `exploring`
+         *     Modes:
+         *
+         *     `exploring`
          *
          *     **Rejections:**
          *
@@ -20157,8 +21206,9 @@ export interface components {
          *     - `session.command.no_living_members` - nobody is left alive to carry anything.
          *     - `session.command.unknown_member` - `recipient_id` matches no party member.
          *     - `session.command.member_incapacitated` - the recipient can't act.
-         *     - `exploration.feature.unknown` - no cache by that id is on this cell, or there's
-         *       no pile on it.
+         *     - `exploration.feature.unknown` - `feature_id` is malformed, stale, or
+         *       ambiguous, no available cache by that id is on this cell, or there's no
+         *       pile on it.
          *     - `exploration.feature.emptied` - the cache has already been emptied.
          *
          *     **Events:**
@@ -20189,12 +21239,10 @@ export interface components {
             source?: string | null;
             /**
              * Feature Id
-             * @description What to empty. Name an authored cache by its
-             *     `FeatureSpec.id`. Name a cache the engine generated
-             *     by the
-             *     `HoardGeneratedEvent.cache_ref` the
-             *     session emitted when it generated the cache. The literal `"pile"` means the goods dropped
-             *     on the party's cell, which
+             * @description What to empty. Use a
+             *     `MapFeatureView.id` from the current player view.
+             *     For compatibility, an unambiguous raw authored id or generated cache id still works. The
+             *     literal `"pile"` means the goods dropped on the party's cell, which
              *     `PlayerView.piles` lists by cell reference. The session
              *     refuses a cache that's already emptied with `exploration.feature.emptied`.
              */
@@ -20515,10 +21563,6 @@ export interface components {
          *     no grid, no rooms, and nothing to explore. It is where the rules that need a safe place apply.
          *     In town the party can rest, buy equipment, sell treasure, and pay a temple for healing. Under
          *     the default ruleset, the party earns the experience for a delve only once it is back in town.
-         *
-         *     **Validation:**
-         *
-         *     - Invalid when a travel time in `travel_turns` is negative, or `healing_prices` has a negative price or a name that isn't a temple service.
          */
         TownSpec: {
             /**
@@ -20606,10 +21650,6 @@ export interface components {
          *     passage. It stands on the first passage's destination cell, on the side opposite the first
          *     passage's `to_facing`. Its destination is the first passage's cell, and its `to_facing` is
          *     opposite the first passage's `side`.
-         *
-         *     **Validation:**
-         *
-         *     - Invalid when `kind` is `"passage"` and `side` is `null`, or if `side` is set on any other kind.
          */
         TransitionSpec: {
             /**
@@ -20677,6 +21717,33 @@ export interface components {
             requires?: components["schemas"]["GateSpec"] | null;
         };
         /**
+         * TransitionView
+         * @description A known level transition without its destination or gate.
+         */
+        TransitionView: {
+            /**
+             * Position
+             * @description The cell where the transition stands.
+             * @default [
+             *       0,
+             *       0
+             *     ]
+             */
+            position: [
+                number,
+                number
+            ];
+            /**
+             * Kind
+             * @description The visible transition kind.
+             * @default stairs_up
+             * @enum {string}
+             */
+            kind: "stairs_up" | "stairs_down" | "trapdoor" | "chute" | "passage";
+            /** @description The passage side, or `null` for every transition the party uses at the cell. */
+            side?: components["schemas"]["Direction"] | null;
+        };
+        /**
          * TrapEffect
          * @description What a trap does when it springs.
          *
@@ -20692,11 +21759,6 @@ export interface components {
          *     A passed save always spares the victim from `kills` and from `condition`, whatever the save's
          *     `on_save` is, because B/X has no half death or half blindness. `on_save` affects only
          *     the damage: `"negates"` spares the victim from all of it, and `"half"` halves it.
-         *
-         *     **Validation:**
-         *
-         *     - Invalid when `damage_dice`, `volley_dice`, or `condition_duration_dice` is not a valid dice expression.
-         *     - Invalid when a duration field is set without a `condition`, if the duration isn't whole, if `volley_dice` is set without `damage_dice`, or if `transition` has a gate. A whole duration is `condition_duration_unit` with exactly one of `condition_duration_dice` and `condition_duration_amount`.
          */
         TrapEffect: {
             /**
@@ -20889,10 +21951,6 @@ export interface components {
          *     trap.
          *
          *     The traps you write are the only traps in the game. Treasure the session rolls is never trapped.
-         *
-         *     **Validation:**
-         *
-         *     - Invalid when `kind` is `"treasure"` and `trigger` is not `"open"`.
          */
         TrapSpec: {
             /**
@@ -20942,7 +22000,9 @@ export interface components {
          *     doors the party opened on the level swing shut behind it. Under the on-return XP
          *     timing, the session awards the party's XP for the trip when it arrives in town.
          *
-         *     **Modes:** `exploring`
+         *     Modes:
+         *
+         *     `exploring`
          *
          *     **Rejections:**
          *
@@ -21059,7 +22119,7 @@ export interface components {
          *     the letters into lair, per-creature, and per-group treasure, and returns `extra_gp` and
          *     `multiplier` with them. Generate each letter in the plan with
          *     `generate_treasure`. Each letter is the `letter` of
-         *     one table in `load_treasure_tables``().treasure_types`, and
+         *     one table in `load_treasure_tables().treasure_types`, and
          *     [the treasure type index](https://mmacy.github.io/osrlib-python/reference/content-ids/treasure-types/) lists them.
          *
          *     Use the plan rather than passing each of `letters` to `generate_treasure` yourself. A loop over
@@ -21426,7 +22486,9 @@ export interface components {
          *     `EnterDungeon`). A turn never fails once the
          *     session is `exploring`.
          *
-         *     **Modes:** `exploring`
+         *     Modes:
+         *
+         *     `exploring`
          *
          *     **Rejections:**
          *
@@ -21476,7 +22538,9 @@ export interface components {
          *     destroyed, the monsters that weren't turned attack at once, and battle starts. In a group
          *     that was only partly turned, the turned monsters split off as a new group and flee.
          *
-         *     **Modes:** `encounter`
+         *     Modes:
+         *
+         *     `encounter`
          *
          *     **Rejections:**
          *
@@ -21670,7 +22734,9 @@ export interface components {
          *     can't be taken off until a *remove curse* lifts the curse, from a caster or from the
          *     temple's `PurchaseHealing`.
          *
-         *     **Modes:** `town`, `exploring`
+         *     Modes:
+         *
+         *     `town`, `exploring`
          *
          *     **Rejections:**
          *
@@ -21828,7 +22894,9 @@ export interface components {
          *     missile, so it takes one target, even when a 6th-level magic-user reads it. The session
          *     refuses a read before it uses up the scroll.
          *
-         *     **Modes:** `exploring`, `encounter`
+         *     Modes:
+         *
+         *     `exploring`, `encounter`
          *
          *     **Rejections:**
          *
@@ -21858,8 +22926,10 @@ export interface components {
          *     - Devices: `items.device.inert` (no charges left),
          *       `items.use.target_required` (an area device used in an encounter needs a
          *       `target_id`), `items.use.unknown_target`, `items.use.target_cannot_be_healed` (a
-         *       staff of healing used on a creature that's dead or turned to stone), and
-         *       `items.use.battle_only` (a staff whose only power is its strike, like the staff of
+         *       staff of healing used on a creature that's dead or turned to stone),
+         *       `items.use.target_healed_today` (a staff of healing used on a creature it already
+         *       healed today, because the OSE SRD's staff "Is effective on any individual at most once
+         *       per day"), and `items.use.battle_only` (a staff whose only power is its strike, like the staff of
          *       striking, works only as a battle declaration).
          *
          *     **Events:**
@@ -21916,7 +22986,8 @@ export interface components {
              *     group's `EncounterGroupView.id` for a device that
              *     covers an area. A healing device with `null` heals the member using it. The session refuses a
              *     healing device on a creature that's dead or turned to stone with
-             *     `items.use.target_cannot_be_healed`.
+             *     `items.use.target_cannot_be_healed`, and one on a creature it already healed today with
+             *     `items.use.target_healed_today`.
              */
             target_id?: string | null;
             /**
@@ -21955,7 +23026,9 @@ export interface components {
          *     `MoveParty`. On a cell with both a passage and
          *     stairs, this command takes the stairs.
          *
-         *     **Modes:** `exploring`
+         *     Modes:
+         *
+         *     `exploring`
          *
          *     **Rejections:**
          *
@@ -22176,7 +23249,9 @@ export interface components {
          *     and `hostile` monsters attack once their patience runs out. During a pursuit after an
          *     `Evade`, waiting runs one round of the pursuit instead.
          *
-         *     **Modes:** `encounter`
+         *     Modes:
+         *
+         *     `encounter`
          *
          *     **Rejections:**
          *
@@ -22331,7 +23406,7 @@ export interface components {
              * Weapon Ids
              * @description The weapon ids the policy lists, like `("long_bow", "two_handed_sword")` for the dwarf.
              *
-             *     Look each one up with `load_equipment``().get(item_id)`, or see
+             *     Look each one up with `load_equipment().get(item_id)`, or see
              *     [the equipment id index](https://mmacy.github.io/osrlib-python/reference/content-ids/equipment/). Empty when `kind`
              *     is `"any"`, and not empty otherwise.
              * @default []
@@ -22446,7 +23521,9 @@ export interface components {
          *     No play command removes the spike. Only the referee's
          *     `SetDoorState` with `wedged=False` does.
          *
-         *     **Modes:** `exploring`
+         *     Modes:
+         *
+         *     `exploring`
          *
          *     **Rejections:**
          *
@@ -22592,7 +23669,8 @@ export interface components {
              * Modified Award
              * @description The award after the class's prime-requisite adjustment, rounded down. The character gains
              *     this much, except when it would raise them two levels: one award raises a character at most one
-             *     level, so their total stops one point short of the level after next and the rest is lost.
+             *     level, so their total stops one point short of the level after next and the rest is lost. Then
+             *     `clamped` is true and `gained` says how much the character got.
              */
             modified_award: number;
             /**
@@ -22600,6 +23678,19 @@ export interface components {
              * @description The member's level once the award was applied.
              */
             level_after: number;
+            /**
+             * Gained
+             * @description The experience the character actually gained. It's less than `modified_award` when
+             *     `clamped` is true, and `null` in an event recorded before osrlib 2.7.0.
+             */
+            gained?: number | null;
+            /**
+             * Clamped
+             * @description Whether the one-level limit cut the award, so the character gained less than
+             *     `modified_award` and the rest was lost.
+             * @default false
+             */
+            clamped: boolean;
         };
         /**
          * XpNote
@@ -22697,6 +23788,8 @@ export type AwardXp = components['schemas']['AwardXP'];
 export type BattleDeclaration = components['schemas']['BattleDeclaration'];
 export type BattleEndedEvent = components['schemas']['BattleEndedEvent'];
 export type BattleRoundEvent = components['schemas']['BattleRoundEvent'];
+export type BattleRoundPreview = components['schemas']['BattleRoundPreview'];
+export type BattleRoundPreviewRequest = components['schemas']['BattleRoundPreviewRequest'];
 export type BattleStartedEvent = components['schemas']['BattleStartedEvent'];
 export type BattleState = components['schemas']['BattleState'];
 export type CastSpell = components['schemas']['CastSpell'];
@@ -22759,6 +23852,7 @@ export type DropPile = components['schemas']['DropPile'];
 export type DroppedItem = components['schemas']['DroppedItem'];
 export type DungeonEnteredPattern = components['schemas']['DungeonEnteredPattern'];
 export type DungeonInfo = components['schemas']['DungeonInfo'];
+export type DungeonNameView = components['schemas']['DungeonNameView'];
 export type DungeonSpec = components['schemas']['DungeonSpec'];
 export type DungeonState = components['schemas']['DungeonState'];
 export type DurationSpec = components['schemas']['DurationSpec'];
@@ -22777,6 +23871,7 @@ export type EncounterEndedEvent = components['schemas']['EncounterEndedEvent'];
 export type EncounterGroup = components['schemas']['EncounterGroup'];
 export type EncounterGroupJoinedEvent = components['schemas']['EncounterGroupJoinedEvent'];
 export type EncounterGroupView = components['schemas']['EncounterGroupView'];
+export type EncounterMemberView = components['schemas']['EncounterMemberView'];
 export type EncounterStartedEvent = components['schemas']['EncounterStartedEvent'];
 export type EncounterState = components['schemas']['EncounterState'];
 export type EncounterTable = components['schemas']['EncounterTable'];
@@ -22788,6 +23883,7 @@ export type EndEncounter = components['schemas']['EndEncounter'];
 export type EnergyDefense = components['schemas']['EnergyDefense'];
 export type EngageBattle = components['schemas']['EngageBattle'];
 export type EnterDungeon = components['schemas']['EnterDungeon'];
+export type EnteredAreaView = components['schemas']['EnteredAreaView'];
 export type EquipItem = components['schemas']['EquipItem'];
 export type EquipmentDestroyedEvent = components['schemas']['EquipmentDestroyedEvent'];
 export type EquipmentItem = components['schemas']['EquipmentItem'];
@@ -22824,6 +23920,7 @@ export type HasItemCondition = components['schemas']['HasItemCondition'];
 export type HealingAppliedEvent = components['schemas']['HealingAppliedEvent'];
 export type HealingPurchasedEvent = components['schemas']['HealingPurchasedEvent'];
 export type Health = components['schemas']['Health'];
+export type HideAttemptedEvent = components['schemas']['HideAttemptedEvent'];
 export type HitDice = components['schemas']['HitDice'];
 export type HitPointRoll = components['schemas']['HitPointRoll'];
 export type HitPointsReportedEvent = components['schemas']['HitPointsReportedEvent'];
@@ -22874,6 +23971,7 @@ export type MagicItemTemplate = components['schemas']['MagicItemTemplate'];
 export type MagicItemType = components['schemas']['MagicItemType'];
 export type MagicItemTypeRow = components['schemas']['MagicItemTypeRow'];
 export type MagicItemTypeTable = components['schemas']['MagicItemTypeTable'];
+export type MapFeatureView = components['schemas']['MapFeatureView'];
 export type MarkTriggerFired = components['schemas']['MarkTriggerFired'];
 export type Material = components['schemas']['Material'];
 export type MemberAddedEvent = components['schemas']['MemberAddedEvent'];
@@ -22891,6 +23989,7 @@ export type MonsterAttack = components['schemas']['MonsterAttack'];
 export type MonsterDefeatedEvent = components['schemas']['MonsterDefeatedEvent'];
 export type MonsterDefeatedPattern = components['schemas']['MonsterDefeatedPattern'];
 export type MonsterEncounterEntry = components['schemas']['MonsterEncounterEntry'];
+export type MonsterEscapedEvent = components['schemas']['MonsterEscapedEvent'];
 export type MonsterFledEvent = components['schemas']['MonsterFledEvent'];
 export type MonsterHitDice = components['schemas']['MonsterHitDice'];
 export type MonsterInstance = components['schemas']['MonsterInstance'];
@@ -23041,6 +24140,7 @@ export type TownEnteredPattern = components['schemas']['TownEnteredPattern'];
 export type TownInfo = components['schemas']['TownInfo'];
 export type TownSpec = components['schemas']['TownSpec'];
 export type TransitionSpec = components['schemas']['TransitionSpec'];
+export type TransitionView = components['schemas']['TransitionView'];
 export type TrapEffect = components['schemas']['TrapEffect'];
 export type TrapEvent = components['schemas']['TrapEvent'];
 export type TrapSpec = components['schemas']['TrapSpec'];
@@ -28605,7 +29705,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Command outcome (`accepted: false` with `rejections` when refused by the B/X rules). */
+            /** @description Command outcome, with the updated player-visible session view when `include=view` (`accepted: false` with `rejections` when refused by the B/X rules). */
             200: {
                 headers: {
                     "Idempotent-Replayed": components["headers"]["Idempotent-Replayed"];
@@ -28780,6 +29880,188 @@ export interface operations {
             };
         };
     };
+    preview_battle_round: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Client-chosen key (1 to 255 printable ASCII characters with no spaces, such as a UUID) that deduplicates retries of this `POST` for 24 hours. Resending the identical request with the same key returns the stored 2xx response with `Idempotent-Replayed: true` instead of running the operation again. */
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                /** @description Session `id` (`ses_` followed by 22 characters), from `POST /v1/sessions`, `POST /v1/saves/{save_id}/restore`, or `GET /v1/sessions`. */
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BattleRoundPreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description osrlib's `BattleRoundPreview`: each declaration's rejections, keyed by member ID, and where the members would stand. */
+            200: {
+                headers: {
+                    "Idempotent-Replayed": components["headers"]["Idempotent-Replayed"];
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BattleRoundPreview"];
+                };
+            };
+            /** @description - `bad_request`: The body doesn't decode as text, or contains a disallowed value: an integer with more than 4,300 digits, `NaN`, `Infinity`, a number too large for a 64-bit float, a string with half of a UTF-16 surrogate pair, or arrays and objects nested more than 100 levels deep. Check `detail` and send UTF-8 JSON without those values. Retrying the same body fails. */
+            400: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `unauthorized`: The request has no API key or has an unknown key. Send `Authorization: Bearer <key>` with a key configured on the server. Retrying the same request fails. */
+            401: {
+                headers: {
+                    /** @description `Bearer`, the authentication scheme the server accepts. */
+                    "WWW-Authenticate"?: string;
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `not_found`: Your client has no session with this id. `GET /v1/sessions` lists your sessions. */
+            404: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `request_timeout`: The full request body didn't arrive within `BXAPI_BODY_TIMEOUT_SECONDS` (30 seconds by default). Retry the request. */
+            408: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description - `not_in_battle`: The session isn't in `battle` mode (`mode` reports its mode). Read `GET /v1/sessions/{session_id}/view` and preview a round only while `mode` is `battle`.
+             *     - `session_busy`: The request waited more than 5 seconds for another request running on the session and made no changes. `revision` reports the session's current revision. Retry the request.
+             *     - `idempotency_key_in_progress`: The first request with this `Idempotency-Key` is still running. Wait the 1 second in the `Retry-After` header and retry.
+             *     - `idempotency_key_interrupted`: The server failed or stopped while handling the first request with this `Idempotency-Key` and has no record of whether it took effect. Inspect the target resource first. If the change didn't take effect, send the request again with a new key.
+             */
+            409: {
+                headers: {
+                    /** @description With `idempotency_key_in_progress`, whole seconds to wait before retrying: `1`. */
+                    "Retry-After"?: number;
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `content_too_large`: The request body exceeds 65,536 bytes (the limit for operations that take no document), or exceeds `BXAPI_MAX_BODY_BYTES` when set lower. Send a smaller body. Retrying the same body fails. */
+            413: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `unsupported_media_type`: The request includes a non-empty body without a JSON `Content-Type` header. Send `Content-Type: application/json`. */
+            415: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `misdirected_request`: The server runs without API keys, and the request's `Host` header isn't `localhost`, `127.0.0.1`, or `[::1]`. Call the server by one of those names, or configure API keys on the server. A server with API keys never returns this code. */
+            421: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description - `validation_error`: The request doesn't match the operation's schema. A required field is missing, a value has the wrong type or is out of range, or the body isn't valid JSON. `errors` lists the first 20 problems, and the `loc` of each is the path to the value. Fix the request before you send it again. More than 20 `declarations` returns this code too.
+             *     - `declaration_invalid`: A declaration names a member who isn't in `encounter.declarers`, or two declarations name the same member. Send at most one declaration for each member in `encounter.declarers`.
+             *     - `idempotency_key_reused`: Your client already sent this `Idempotency-Key` with a different method, path, query, body, or role. Generate a new key for each distinct request.
+             */
+            422: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `rate_limited`: Your client exceeded the per-minute request budget (`BXAPI_RATE_LIMIT_PER_MINUTE`, 600 by default). Wait the seconds in the `Retry-After` header and retry. Requests without a valid API key share a separate budget and receive 429 instead of 401 `unauthorized` when that budget is exhausted. */
+            429: {
+                headers: {
+                    /** @description Whole seconds to wait before retrying, at least `1`. */
+                    "Retry-After"?: number;
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description - `internal_error`: The server failed because of a bug. The response says nothing about the cause, and the server logs it. Report the request to the server's operator.
+             *     - `session_unreadable`: The server's osrlib can't load the session's stored state, for example because a server running another osrlib version wrote it. Report the session's id and `request_id` to the server's operator.
+             */
+            500: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `database_busy`: Another process held the SQLite write lock for more than 5 seconds. Wait the 1 second in the `Retry-After` header and retry. */
+            503: {
+                headers: {
+                    /** @description Whole seconds to wait before retrying: `1`. */
+                    "Retry-After"?: number;
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `storage_full`: Stored documents for your client have reached `BXAPI_MAX_CLIENT_BYTES` (1,073,741,824 bytes by default). `used_bytes` and `max_bytes` report your current usage and limit, and the request stored nothing. Delete unused sessions, saves, adventures, or characters, then retry. Stateless operations such as dice rolls return this code only when `Idempotency-Key` is set, because storing the replay response counts toward the limit. */
+            507: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     get_player_view: {
         parameters: {
             query?: never;
@@ -28795,7 +30077,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description osrlib's `PlayerView` of the session. */
+            /** @description osrlib's player-visible session state, including known map and encounter IDs. */
             200: {
                 headers: {
                     ETag: components["headers"]["ETag"];

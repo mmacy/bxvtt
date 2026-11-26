@@ -67,6 +67,22 @@ export function placeInSentence(name: string): string {
   return `the ${otherCapitals ? trimmed : lowerFirst(trimmed)}`;
 }
 
+/**
+ * A class name as it reads in the middle of a sentence, such as "a level 3 fighter". The class name's head is its
+ * words before a linking word such as "of", as in {@link placeInSentence}. When another word of the head is
+ * capitalized, the class name is a proper name and keeps its capitals: `Hollow Knight` stays `Hollow Knight`.
+ * Otherwise, only the first word reads in lower case, with each of its hyphenated parts: `Fighter` gives
+ * `fighter`, `Magic-User` gives `magic-user`, and `Warlock of Sarn` gives `warlock of Sarn`.
+ */
+export function classInSentence(name: string): string {
+  const words = name.trim().split(/\s+/);
+  const link = words.findIndex((word, index) => index > 0 && PLACE_LINKS.has(word.toLowerCase()));
+  const head = link < 0 ? words : words.slice(0, link);
+  if (head.slice(1).some((word) => /^\p{Lu}/u.test(word))) return words.join(' ');
+  const [first = '', ...rest] = words;
+  return [first.toLowerCase(), ...rest].join(' ');
+}
+
 /** Turn an ID or enum value such as `magic_user` or `jade-idol` into plain words such as `magic user`. */
 export function prettifyId(value: string): string {
   return value.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
@@ -238,6 +254,27 @@ export function formatCoins(coins: Coins, style: 'short' | 'long' = 'short'): st
     );
   }
   return parts.length === 0 ? (style === 'short' ? '0 gp' : 'no coins') : parts.join(', ');
+}
+
+/**
+ * The coins of a purse or an event as list items, highest denomination first, each with its full name:
+ * `{ gp: 3, sp: 4 }` gives `['3 gold pieces', '4 silver pieces']`. Coins of no denomination give an empty list.
+ * Join the items with other goods through `joinList`, so a list reads `a rope, 3 gold pieces, and 4 silver pieces`.
+ */
+export function coinParts(coins: Coins): string[] {
+  return COIN_ORDER.flatMap((denomination) => {
+    const amount = coins[denomination] ?? 0;
+    return amount === 0 ? [] : [`${formatInteger(amount)} ${coinName(denomination, amount)}`];
+  });
+}
+
+/**
+ * Describe coins in a sentence, highest denomination first: `39 copper pieces`, `3 gold pieces and 4 silver
+ * pieces`, or `no coins`.
+ */
+export function coinsPhrase(coins: Coins): string {
+  const parts = coinParts(coins);
+  return parts.length === 0 ? 'no coins' : joinList(parts);
 }
 
 /** Format a value in gold pieces: `120 gp`. */

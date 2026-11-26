@@ -70,10 +70,26 @@ export const EVENT_SAMPLES: Record<string, EventSample> = {
   },
   death: { base: { target_id: A } },
   declaration_fizzled: {
-    base: { actor_id: A, item_id: null, group_id: null, reason: 'battle.declaration.no_target' },
+    base: {
+      actor_id: A,
+      item_id: null,
+      target_id: null,
+      group_id: null,
+      reason: 'battle.declaration.no_target',
+    },
     codes: {
+      'battle.give.fizzled': {
+        item_id: 'rope',
+        target_id: B,
+        reason: 'session.command.member_incapacitated',
+      },
       'battle.melee.fizzled': { group_id: 'group-0001' },
       'magic.device.fizzled': { item_id: 'magic-item-0006', reason: 'battle.declaration.unknown_group' },
+      'magic.potion.fizzled': {
+        item_id: 'magic-item-0001',
+        target_id: B,
+        reason: 'items.use.target_cannot_drink',
+      },
       'magic.turning.fizzled': { reason: 'battle.declaration.no_target' },
     },
   },
@@ -115,6 +131,9 @@ export const EVENT_SAMPLES: Record<string, EventSample> = {
       distance_feet: 20,
       party_surprised: false,
       monsters_surprised: false,
+      group_labels: ['goblin'],
+      group_labels_plural: ['goblins'],
+      group_counts: [3],
     },
   },
   equipment_destroyed: { base: { target_id: A, item_names: ['Torches (6)', 'Sword'], saved_items: [] } },
@@ -125,6 +144,7 @@ export const EVENT_SAMPLES: Record<string, EventSample> = {
   game_over: { base: { reason: 'the party has fallen' } },
   group_moved: { base: { group_id: 'group-0001', distance_feet: 5 } },
   healing_applied: { base: { target_id: A, amount: 4, source: 'magical' } },
+  hide_attempted: { base: { character_id: A } },
   healing_purchased: {
     base: {
       character_id: B,
@@ -140,6 +160,7 @@ export const EVENT_SAMPLES: Record<string, EventSample> = {
       cache_ref: 'cache-0001',
       treasure_types: ['B'],
       coins_gp_value: 340,
+      coins: { pp: 0, gp: 300, ep: 0, sp: 400, cp: 0 },
       valuable_ids: [],
       magic_item_ids: ['magic-item-0001'],
     },
@@ -155,15 +176,25 @@ export const EVENT_SAMPLES: Record<string, EventSample> = {
     },
   },
   item_acquired: {
-    base: { character_id: A, item_ids: ['torch', 'torch', 'rope'], coins_gp_value: 30, origin: 'treasure' },
+    base: {
+      character_id: A,
+      item_ids: ['torch', 'torch', 'rope'],
+      coins_gp_value: 30,
+      coins: { pp: 0, gp: 30, ep: 0, sp: 4, cp: 0 },
+      origin: 'treasure',
+    },
   },
   item_consumed: { base: { character_id: A, item_id: 'iron_spikes' } },
   item_identified: { base: { instance_id: 'magic-item-0001', template_id: 'potion_of_healing' } },
   item_used: { base: { character_id: A, instance_id: 'magic-item-0001', manual: [], target_id: null } },
-  items_dropped: { base: { character_id: A, item_ids: ['rope'], coins_gp_value: 10 } },
-  items_given: { base: { character_id: A, recipient_id: B, item_ids: ['rope'], coins_gp_value: 5 } },
-  items_left_behind: { base: { item_ids: ['chainmail'], coins_gp_value: 200 } },
-  items_removed: { base: { character_id: A, item_ids: ['rope'], coins_gp_value: 0 } },
+  items_dropped: {
+    base: { character_id: A, item_ids: ['rope'], coins_gp_value: 10, coins: { gp: 10, sp: 0, cp: 0 } },
+  },
+  items_given: {
+    base: { character_id: A, recipient_id: B, item_ids: ['rope'], coins_gp_value: 5, coins: { gp: 5 } },
+  },
+  items_left_behind: { base: { item_ids: ['chainmail'], coins_gp_value: 200, coins: { gp: 200 } } },
+  items_removed: { base: { character_id: A, item_ids: ['rope'], coins_gp_value: 0, coins: { cp: 0 } } },
   journal_entry_added: { base: { text: 'The party found a rusted key.', rounds: 1200 } },
   level_drained: {
     base: { target_id: A, levels_lost: 1, new_level: 1, hp_lost: 4, xp_after: 1000, spawn_consequence: null },
@@ -181,7 +212,7 @@ export const EVENT_SAMPLES: Record<string, EventSample> = {
       transition_ref: null,
     },
   },
-  loot_dropped: { base: { item_ids: ['jade-idol'], coins_gp_value: 5 } },
+  loot_dropped: { base: { item_ids: ['jade-idol'], coins_gp_value: 0, coins: { cp: 39 } } },
   magic_dispelled: { base: { caster_id: B, released_effect_ids: ['effect-0001'], surviving_effect_ids: [] } },
   member_added: { base: { character_id: 'character-0005', name: 'Corwin', class_id: 'fighter', level: 1 } },
   member_moved: {
@@ -190,10 +221,18 @@ export const EVENT_SAMPLES: Record<string, EventSample> = {
   member_removed: { base: { character_id: 'character-0005', name: 'Corwin', given_to: A } },
   member_withdrew: { base: { character_id: A, replacement_id: B } },
   monster_defeated: { base: { monster_id: 'monster-0001', template_id: 'goblin', outcome: 'slain', xp: 5 } },
+  monster_escaped: { base: { group_id: 'group-0001' } },
   monster_fled: { base: { group_id: 'group-0001' } },
   monster_revived: { base: { target_id: 'monster-0001' } },
   monsters_left_behind: { base: { group_id: 'group-0002', source_group_id: 'group-0001', count: 2 } },
-  monsters_spawned: { base: { template_id: 'goblin', monster_ids: ['monster-0001', 'monster-0002'] } },
+  monsters_spawned: {
+    base: {
+      template_id: 'centipede_giant',
+      monster_ids: ['monster-0001', 'monster-0002'],
+      display_name: 'giant centipede',
+      display_name_plural: 'giant centipedes',
+    },
+  },
   morale_checked: {
     base: { subject: 'group-0001', score: 7, roll: 5, modifier: 0, held: true },
     codes: {
@@ -283,5 +322,14 @@ export const EVENT_SAMPLES: Record<string, EventSample> = {
     },
   },
   wandering_check: { base: { chance: 1, roll: 4, encounter: false }, codes: {} },
-  xp_awarded: { base: { character_id: A, award: 100, modified_award: 105, level_after: 1 } },
+  xp_awarded: {
+    base: {
+      character_id: A,
+      award: 100,
+      modified_award: 105,
+      level_after: 1,
+      gained: 105,
+      clamped: false,
+    },
+  },
 };

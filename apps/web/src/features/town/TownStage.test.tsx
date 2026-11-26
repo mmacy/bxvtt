@@ -161,6 +161,7 @@ describe('the outfitter', () => {
             character_id: 'character-0001',
             item_ids: ['sword', 'torch', 'torch'],
             coins_gp_value: 0,
+            coins: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 },
             origin: 'purchase',
           }),
         ],

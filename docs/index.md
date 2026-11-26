@@ -10,7 +10,7 @@ slug: /
 
 bxvtt is a browser-based virtual tabletop for the 1981 B/X (Basic and Expert) fantasy adventure rules. A referee and players connect from their browsers to share a dungeon map, marching order, chat feed, character sheets, and rules compendium.
 
-![A party of four exploring the first level of The Drowned Bell beside the marching order panel](images/explore.webp)
+![A party of four exploring the first level of The Drowned Bell, with the scene panel open on a treasure and the marching order beside the map](images/explore.webp)
 
 bxvtt pairs with [bxapi](https://github.com/mmacy/bxapi), a local HTTP rules server built on [osrlib](https://github.com/mmacy/osrlib-python). bxapi enforces the B/X rules, rolls every die, tracks time and light, and stores characters, adventures, active sessions, and saves. bxvtt manages the people at the table: browser identity, seats, real-time WebSocket sync, fog-of-war projections, battle declaration coordination, chat, map annotations, and referee tools.
 

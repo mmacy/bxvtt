@@ -141,11 +141,11 @@ export function Harness() {
       return fromRefereeView(level, world.state, { dungeonId, light: world.lit ? { radiusFeet: 30 } : null });
     }
     const view = world.view ?? playerViewFrom(level, world.state, dungeonId, world.lit);
-    // Stands in for the server's scene, which names the areas the party has entered. The map keeps the known cells.
+    // Stands in for the player view's entered areas, which the explore feature passes. The map keeps the known cells.
     const areas = areaNames
       ? level.areas.map((area) => ({ id: area.id, name: area.name, cells: area.cells }))
       : undefined;
-    // The scene also describes the features the party has found. The harness offers those on known cells.
+    // The player view also lists the features the party can see. The harness offers those on known cells.
     const known = new Set((view.explored[0]?.cells ?? []).map(([x, y]) => `${x},${y}`));
     const kinds = { treasure_cache: 'cache', construction_trick: 'trick', custom: 'custom' } as const;
     const features = areaNames

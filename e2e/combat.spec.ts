@@ -316,7 +316,7 @@ test.describe('battle', () => {
     );
     await expect(declarationRow(sam.page, 'Mazpar')).toContainText(/magic missile/i);
     await expect(declarationRow(sam.page, 'Mazpar')).toContainText('Goblin 2');
-    await expect(battleBoard(sam.page)).not.toContainText(/tgt_/);
+    await expect(battleBoard(sam.page)).not.toContainText(/monster-\d/);
     await shot(ann.page, 'battle-declaring');
 
     // The board opens the next undeclared member's choices for Ann: Clarence's.
@@ -393,12 +393,17 @@ test.describe('battle', () => {
     );
     await expect(battleBoard(sam.page)).toContainText('4 of 4 declared');
 
-    await battleBoard(sam.page).getByRole('button', { name: 'Resolve round' }).click();
-    // Both players see which declaration failed and why, on Flarg's row.
+    // The server previews the declarations, so both players see which action won't work and why, on Flarg's
+    // row, and the round can't resolve until Flarg's action changes.
     for (const actor of [sam, ann]) {
+      await expect(declarationRow(actor.page, 'Flarg')).toContainText(/Won't work: /);
       await expect(declarationRow(actor.page, 'Flarg')).toContainText(/too far for a melee attack/);
       await expect(battleBoard(actor.page).getByRole('heading', { name: 'Round 1' })).toBeVisible();
     }
+    await expect(battleBoard(sam.page).getByRole('button', { name: 'Resolve round' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
     await shot(ann.page, 'refused-declaration');
 
     // Sam changes Flarg's declaration to closing in, and the round resolves.
@@ -455,7 +460,9 @@ test.describe('battle', () => {
     await expect(feed).not.toContainText(/the Gashnak|Gashnak One-Ears|hobgoblin/i);
   });
 
-  test('the refusal names the member whose declaration bxapi refused', async ({ crew }) => {
+  test('the board names a refused declaration before the round resolves, and the round waits for it', async ({
+    crew,
+  }) => {
     const table = await combatTable(crew, { autoResolve: false });
     const { sam, tableId, memberId } = table;
     const game = await walkIntoGuardroom(sam.client, tableId);
@@ -466,11 +473,17 @@ test.describe('battle', () => {
       const client = name === 'Tinks' ? sam.client : table.ann.client;
       await client.declare(tableId, memberId(name), { action: 'hold' });
     }
+    // The server previews the declarations as they arrive, so the board names Flarg's before anyone resolves.
+    await openTable(sam.page, table.path);
+    await expect(declarationRow(sam.page, 'Flarg')).toContainText(/too far for a melee attack/);
+    // The board's button and the action bar's button both wait for Flarg.
+    const resolveButtons = sam.page.getByRole('button', { name: 'Resolve round' });
+    await expect(resolveButtons).toHaveCount(2);
+    for (const button of await resolveButtons.all())
+      await expect(button).toHaveAttribute('aria-disabled', 'true');
     const result = await sam.client.resolveRound(tableId);
     expect(result.accepted).toBe(false);
     expect(result.declarations?.refusals.map((refusal) => refusal.member_id)).toEqual([memberId('Flarg')]);
-    await openTable(sam.page, table.path);
-    await expect(declarationRow(sam.page, 'Flarg')).toContainText(/too far for a melee attack/);
   });
 
   test('a party member dies, and the board and the party panel show it', async ({ crew }) => {
@@ -574,10 +587,11 @@ test.describe('battle', () => {
       // The summary names what became of each goblin in words, such as "A goblin slain and a goblin routed".
       await expect(summary.getByRole('definition').first()).toContainText(/goblins? (slain|routed)/);
       await expect(summary.getByRole('term').filter({ hasText: 'Experience' })).toBeVisible();
-      // The summary counts experience in XP (D-307) and calls the coins dropped goods, as the scene does (D-308).
-      await expect(summary).toContainText(/worth \d+ XP/);
-      await expect(summary).toContainText('now among the dropped goods here');
-      await expect(summary.getByRole('button', { name: 'Pick up dropped goods' })).toBeVisible();
+      // The summary counts experience in experience points (D-307) and calls the coins dropped goods, as the
+      // scene does (D-308).
+      await expect(summary).toContainText(/worth \d+ experience points/);
+      await expect(summary).toContainText('Dropped goods lie here.');
+      await expect(summary.getByRole('button', { name: 'Pick up', exact: true })).toBeVisible();
       await expect(battleBoard(actor.page)).toHaveCount(0);
     }
     await shot(sam.page, 'aftermath-victory');

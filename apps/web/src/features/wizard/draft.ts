@@ -31,6 +31,13 @@ export interface Adjustment {
 }
 
 /**
+ * The ability roll a draft holds. `rolls`, the three d6 behind each score, is absent for a draft saved before
+ * bxapi returned the dice. The wizard then fetches the roll again, and the draft keeps its scores until the dice
+ * arrive.
+ */
+export type DraftRoll = Omit<AbilityRoll, 'rolls'> & { rolls?: AbilityRoll['rolls'] };
+
+/**
  * Everything the player chose so far. The draft holds no rolled hit points or gold: the server keeps which rolls
  * the player made, and the wizard reads them from it. A draft from an older version that has a `gold` member
  * reads the same way, without it.
@@ -38,7 +45,7 @@ export interface Adjustment {
 export interface WizardDraft {
   version: 1;
   step: StepId;
-  roll: AbilityRoll | null;
+  roll: DraftRoll | null;
   /** How many times the player rolled this session, to say so honestly on the roll step. */
   rolls: number;
   classId: string | null;
@@ -218,17 +225,47 @@ function abilityMap(value: unknown): Partial<Record<Ability, number>> {
   return result;
 }
 
-function readRoll(value: unknown): AbilityRoll | null {
+/** Reads the three d6 results of each ability from a stored roll, or `null` when one is missing or malformed. */
+function readDice(value: unknown): AbilityRoll['rolls']['rolls'] | null {
+  if (!isRecord(value)) return null;
+  const dice: AbilityRoll['rolls']['rolls'] = {};
+  for (const ability of ABILITIES) {
+    const faces = value[ability];
+    if (
+      !Array.isArray(faces) ||
+      faces.length !== 3 ||
+      !faces.every((face) => typeof face === 'number' && Number.isInteger(face) && face >= 1 && face <= 6)
+    ) {
+      return null;
+    }
+    dice[ability] = [faces[0] as number, faces[1] as number, faces[2] as number];
+  }
+  return dice;
+}
+
+/**
+ * Reads a stored ability roll. A roll saved before bxapi returned the dice has no `rolls` member, or a damaged
+ * one. The result then has no `rolls` and the wizard fetches the dice again.
+ */
+function readRoll(value: unknown): DraftRoll | null {
   if (!isRecord(value) || typeof value.id !== 'string') return null;
   const scores = readScores(isRecord(value.scores) ? (value.scores as Record<string, number>) : null);
   if (!scores) return null;
-  return {
+  const roll: DraftRoll = {
     id: value.id,
     scores,
     eligible_class_ids: stringList(value.eligible_class_ids),
     used: value.used === true,
     created_at: typeof value.created_at === 'string' ? value.created_at : '',
   };
+  if (isRecord(value.rolls)) {
+    const totals = readScores(
+      isRecord(value.rolls.scores) ? (value.rolls.scores as Record<string, number>) : null,
+    );
+    const dice = readDice(value.rolls.rolls);
+    if (totals && dice) roll.rolls = { scores: totals, rolls: dice };
+  }
+  return roll;
 }
 
 /**
