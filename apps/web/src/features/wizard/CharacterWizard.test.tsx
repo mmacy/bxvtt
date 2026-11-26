@@ -291,6 +291,25 @@ describe('CharacterWizard', () => {
       expect(saved.roll.rolls.rolls).toEqual(ABILITY_DICE);
     });
 
+    it('holds each die’s place with the loaded header while the dice load, then shows them without rolling', async () => {
+      const api = wizardApi();
+      let deliver: (roll: AbilityRoll) => void = () => {};
+      api.getAbilityRoll.mockReturnValue(new Promise<AbilityRoll>((resolve) => (deliver = resolve)));
+      const { container } = openWithoutDice(api);
+      await screen.findByRole('group', { name: /^Strength 15/ });
+      const busy = container.ownerDocument.querySelectorAll('[aria-busy="true"]');
+      expect(busy).toHaveLength(6);
+      const first = busy[0];
+      if (!(first instanceof HTMLElement)) throw new Error('No dice slot.');
+      expect(first).toHaveTextContent('Strength3d6');
+      expect(screen.queryByRole('group', { name: 'Strength roll' })).not.toBeInTheDocument();
+      deliver(ROLL);
+      const strength = await screen.findByRole('group', { name: 'Strength roll' });
+      expect(strength).toHaveAttribute('aria-busy', 'false');
+      expect(container.ownerDocument.querySelectorAll('[aria-busy="true"]')).toHaveLength(0);
+      expectDiceOnScreen();
+    });
+
     it('resumes the later steps while the dice are still on their way', async () => {
       const api = wizardApi();
       api.getAbilityRoll.mockReturnValue(new Promise(() => {}));

@@ -73,7 +73,7 @@ async function createWithWizard(actor: Actor, choices: WizardChoices): Promise<v
  */
 async function pinScene(page: Page): Promise<void> {
   const scene = page.getByRole('region', { name: 'Current location' });
-  const hide = scene.getByRole('button', { name: 'Hide description' });
+  const hide = scene.getByRole('button', { name: 'Collapse description' });
   // An open card that the player didn't open by hand folds by itself, so fold it first and open it again.
   if (await hide.isVisible()) await hide.click();
   await scene.getByRole('button', { name: 'Show description' }).click();
@@ -417,8 +417,7 @@ test('a referee and two players play The Toll at Crookback Bridge from table cre
 
   await test.step('the party takes the captain’s chest and finds the miller’s strongbox', async () => {
     const scene = sam.page.getByRole('region', { name: 'Current location' });
-    await scene.getByRole('button', { name: 'Treasure', exact: true }).click();
-    await sam.page.getByRole('menuitem', { name: 'Take treasure' }).click();
+    await scene.getByRole('button', { name: 'Take', exact: true }).click();
     await expect(await openFeed(ann.page)).toContainText("Miller Aske's strongbox", { timeout: 20_000 });
     const pickUp = scene.getByRole('button', { name: 'Pick up dropped goods' });
     if ((await pickUp.count()) > 0) await pickUp.click();

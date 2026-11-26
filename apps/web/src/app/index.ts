@@ -85,7 +85,7 @@ export {
   useShortcut,
 } from './shortcuts';
 export type { ActionDefinition, ShortcutDefinition } from './shortcuts';
-export { tokenClass } from './display';
+export { memberClassName, tokenClass } from './display';
 export { STORAGE_KEYS, readStored, scopedStorage, writeStored } from './storage';
 export type { ScopedStorage, StorageArea } from './storage';
 export { toParamMap } from './params';

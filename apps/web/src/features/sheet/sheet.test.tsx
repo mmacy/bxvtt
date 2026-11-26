@@ -12,7 +12,7 @@ import { createFakeApi, renderWithTable } from '@/app/testing/renderWithTable';
 import { CharacterSheet } from './CharacterSheet';
 import { entryRule } from './InventoryTab';
 import { effectLabel } from './actions';
-import { memberClassName, readInventory } from './model';
+import { readInventory } from './model';
 import { PartyPanel, moveTo } from './PartyPanel';
 import { spellDuration, withoutPointers } from './spellText';
 
@@ -429,11 +429,6 @@ describe('names the player view states', () => {
     party[0] = { ...brenna, class_id: 'hollow_knight', class_name: 'Hollow knight' };
     return { snapshot, brenna: party[0] };
   }
-
-  it('reads the class from the view, and from the catalog only when the view is silent', () => {
-    expect(memberClassName({ class_id: 'hollow_knight', class_name: 'Hollow knight' })).toBe('Hollow knight');
-    expect(memberClassName({ class_id: 'magic_user', class_name: '' })).toBe('Magic-User');
-  });
 
   it('shows a custom class on the sheet and in the party panel', async () => {
     const { snapshot, brenna } = customClassSnapshot();

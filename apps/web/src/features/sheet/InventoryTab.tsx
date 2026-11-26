@@ -346,7 +346,7 @@ export function InventoryTab({ member, model }: TabProps) {
                 icon="arrow-down"
                 disabled={!drop.permission.allowed}
                 disabledReason={drop.permission.reason}
-                tooltip="Leave items or coins in a pile on this square"
+                tooltip="Leave items or coins on this square"
                 onClick={() => setTransfer({ mode: 'drop', entryKey: null })}
               >
                 Drop
@@ -457,7 +457,7 @@ function TransferDialog({ mode, member, model, initialKey, onClose }: TransferPr
       description={
         mode === 'give'
           ? 'Choose items or coins to hand to another party member.'
-          : 'Dropped items stay in a pile on this square until someone picks them up.'
+          : 'Dropped goods stay on this square until someone picks them up.'
       }
       size="md"
       footer={

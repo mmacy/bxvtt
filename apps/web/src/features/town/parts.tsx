@@ -1,9 +1,8 @@
 /** Small pieces that several parts of the town share: seat owners, member choosers, and the purse line. */
 import type { MemberView } from '@bxvtt/shared/bxapi';
 import type { ReactNode } from 'react';
-import { tokenClass, useMembers, useSeats } from '@/app';
+import { memberClassName, tokenClass, useMembers, useSeats } from '@/app';
 import { Avatar, CoinPurse, Icon, TokenPortrait, cx, type IconName, type TokenSize } from '@/ui';
-import { memberClassName } from '../sheet/model';
 import { readPurse } from './inventory';
 import { memberStatus } from './members';
 import styles from './parts.module.css';

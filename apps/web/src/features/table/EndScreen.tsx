@@ -13,6 +13,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   describeProblem,
   getApi,
+  memberClassName,
   tokenClass,
   useApiAction,
   useFeed,
@@ -23,7 +24,6 @@ import {
   useTableUi,
 } from '@/app';
 import { Badge, Banner, Button, ConfirmDialog, HpBar, SectionLabel, Skeleton, TokenPortrait } from '@/ui';
-import { memberClassName } from '../sheet/model';
 import styles from './table.module.css';
 
 /** How many recent saves the end screen lists. The saves dialog lists every one. */

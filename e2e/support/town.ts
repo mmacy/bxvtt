@@ -62,7 +62,8 @@ export async function returnToTown(table: TownTable): Promise<void> {
   const altar = chapel.view.explored
     .flatMap((level) => level.features)
     .find((feature) => feature.kind === 'treasure_cache' && feature.area_id === 'chapel');
-  await send(sam.client, id, { command_type: 'take_treasure', feature_id: altar?.id });
+  if (!altar) throw new Error("The player view lists no treasure cache in the priory's chapel.");
+  await send(sam.client, id, { command_type: 'take_treasure', feature_id: altar.id });
   await at(8, 3, 'east');
   await send(sam.client, id, { command_type: 'open_door', direction: 'east' });
   await send(sam.client, id, { command_type: 'move_party', direction: 'east' });

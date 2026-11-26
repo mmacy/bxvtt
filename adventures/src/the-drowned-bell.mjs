@@ -216,7 +216,7 @@ level1
       {
         id: 'goblin_loot',
         kind: 'treasure_cache',
-        description: 'A greasy sack of coins taken from ferry passengers, most of it copper and silver.',
+        description: 'A greasy sack lies knotted shut in the deepest alcove. It clinks when you nudge it.',
         coins: { sp: 340, cp: 600 },
       },
     ],
@@ -234,8 +234,7 @@ level1
       {
         id: 'iron_chest',
         kind: 'treasure_cache',
-        description:
-          'An iron-bound chest with a heavy hasp stands at the foot of the bed, its lid scarred by blades.',
+        description: 'A heavy hasp holds the lid shut, and blade marks score the iron around it.',
         item_ids: ['priors_iron_key'],
         coins: { gp: 120, ep: 40 },
         valuables: [valuable('gem', 'Moonstone', 50)],
@@ -435,7 +434,7 @@ level2
       {
         id: 'abbots_coffin',
         kind: 'treasure_cache',
-        description: "The third stone coffin on the dais, carved with an abbot's crook.",
+        description: "The sealed coffin's lid is carved with an abbot's crook, and lead fills its seams.",
         coins: { gp: 60 },
         valuables: [valuable('jewellery', "Abbot's gold ring", 150)],
       },
@@ -695,8 +694,7 @@ level3
       {
         id: 'vestment_chest',
         kind: 'treasure_cache',
-        description:
-          'A tall chest of carved oak stands against the wall, its doors swollen in their frames and its hinges crusted green.',
+        description: "The chest's doors are swollen in their frames, and its hinges are crusted green.",
         coins: { gp: 100 },
         magic_item_ids: ['mace_plus_1'],
         valuables: [valuable('jewellery', 'Silver chalice', 250, 10)],

@@ -2,7 +2,7 @@ import type { AbilityTables, ClassSummary } from '@bxvtt/shared/bxapi';
 import { abilityLabel, classLabel } from '@bxvtt/shared/text';
 import { useEffect, useState } from 'react';
 import { useReduceMotion } from '@/app';
-import { Badge, Button, DiceRoll, Icon, StatBox, Tooltip, formatModifier } from '@/ui';
+import { Badge, Button, DiceRoll, Icon, Skeleton, StatBox, Tooltip, formatModifier } from '@/ui';
 import type { DraftRoll } from './draft';
 import { ABILITIES, headlineModifier, modifierLines, readScores, type Ability, type Scores } from './tables';
 import styles from './wizard.module.css';
@@ -61,12 +61,16 @@ function AbilityCell({
   tables: AbilityTables | null;
   onSettled?: () => void;
 }) {
-  const [settled, setSettled] = useState(!animate);
+  // A restored draft shows its scores before it has fetched the dice behind them. When the dice arrive, they
+  // appear where they landed instead of rolling again.
+  const [restored] = useState(shown && faces === undefined);
+  const play = animate && !restored;
+  const [settled, setSettled] = useState(!play);
   const modifier = tables ? headlineModifier(tables, ability, score) : undefined;
   const lines = tables ? modifierLines(tables, ability, score) : [];
   return (
     <div className={styles.abilityCell}>
-      <div className={styles.diceSlot}>
+      <div className={styles.diceSlot} aria-busy={shown && faces === undefined ? true : undefined}>
         {shown && faces ? (
           <DiceRoll
             dice={faces.map((value) => ({ sides: 6, value }))}
@@ -74,12 +78,24 @@ function AbilityCell({
             size={34}
             hideTotal
             highlightExtremes={false}
-            animate={animate}
+            animate={play}
             onSettled={() => {
               setSettled(true);
               onSettled?.();
             }}
           />
+        ) : shown ? (
+          <div className={styles.diceLoading} aria-hidden="true">
+            <div className={styles.diceLoadingHeader}>
+              <span className={styles.diceLoadingLabel}>{abilityLabel(ability)}</span>
+              <span className={styles.diceLoadingFormula}>3d6</span>
+            </div>
+            <div className={styles.diceLoadingDice}>
+              <Skeleton shape="block" width={34} height={34} />
+              <Skeleton shape="block" width={34} height={34} />
+              <Skeleton shape="block" width={34} height={34} />
+            </div>
+          </div>
         ) : (
           <span className={styles.diceWaiting} aria-hidden="true">
             {abilityLabel(ability)}

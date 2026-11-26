@@ -5,6 +5,9 @@ import { fixtureSnapshot } from '@/app/testing/fixtures';
 import type { MenuEntry } from '@/ui';
 import {
   cacheEntries,
+  cacheMoreEntries,
+  cacheSnippet,
+  cacheTakeEntry,
   doorEntries,
   doorLoreText,
   entryLabel,
@@ -159,7 +162,7 @@ describe('cacheEntries', () => {
 
   it('takes a reachable cache, and lets a thief check it for traps', () => {
     const { ctx, run } = context('player');
-    const entries = cacheEntries(ctx, cache, 'Treasure');
+    const entries = cacheEntries(ctx, cache);
     expect(entries.map(entryLabel)).toEqual([
       'Take treasure',
       'Give all to one member',
@@ -172,14 +175,41 @@ describe('cacheEntries', () => {
   it('offers to disarm a found trap instead of checking again', () => {
     const { ctx } = context('player');
     const trapped: HereFeature = { ...cache, trapState: 'found' };
-    expect(cacheEntries(ctx, trapped, 'Treasure').map(entryLabel)).toContain('Disarm trap: Wren');
+    expect(cacheEntries(ctx, trapped).map(entryLabel)).toContain('Disarm trap: Wren');
   });
 
   it('offers nothing to take from a cache out of reach', () => {
     const { ctx } = context('player');
-    expect(cacheEntries(ctx, { ...cache, reachable: false }, 'Treasure').map(entryLabel)).toEqual([
+    expect(cacheEntries(ctx, { ...cache, reachable: false }).map(entryLabel)).toEqual([
       'Check for traps: Wren',
     ]);
+  });
+
+  it('keeps taking apart from the other actions, which the scene panel puts under More', () => {
+    const { ctx } = context('player');
+    expect(cacheTakeEntry(ctx, cache)).toMatchObject({ label: 'Take treasure' });
+    expect(cacheTakeEntry(ctx, { ...cache, reachable: false })).toBeNull();
+    expect(cacheMoreEntries(ctx, cache).map(entryLabel)).toEqual([
+      'Give all to one member',
+      'Check for traps: Wren',
+    ]);
+  });
+
+  it('offers no trap action once the trap has sprung or been disarmed', () => {
+    const { ctx } = context('player');
+    expect(cacheMoreEntries(ctx, { ...cache, trapState: 'sprung' }).map(entryLabel)).toEqual([
+      'Give all to one member',
+    ]);
+  });
+});
+
+describe('cacheSnippet', () => {
+  it('names a treasure by the start of its description', () => {
+    expect(cacheSnippet({ description: 'An iron-bound chest.' })).toBe('An iron-bound chest.');
+    expect(cacheSnippet({ description: 'A casket of silver and crystal, its lid inlaid with pearl.' })).toBe(
+      'A casket of silver and crystal, its lid…',
+    );
+    expect(cacheSnippet({ description: '' })).toBeNull();
   });
 });
 
@@ -210,6 +240,27 @@ describe('treasureEntries', () => {
     here.caches = [{ ...chest, emptied: true }];
     expect(treasureEntries(ctx).map(entryLabel)).toEqual(['Pick up dropped goods']);
     expect(treasureMenuLabel(here)).toBe('Dropped goods');
+  });
+
+  it('names each treasure by its description when several lie here', () => {
+    const { ctx } = context('player');
+    const here = ctx.here;
+    if (!here) throw new Error('The party is in town.');
+    const chest: HereFeature = {
+      id: 'feature:chest',
+      kind: 'treasure_cache',
+      description: 'An iron-bound chest.',
+      cell: null,
+      areaId: null,
+      trapState: null,
+      reachable: true,
+      emptied: false,
+    };
+    here.caches = [chest, { ...chest, id: 'feature:satchel', description: 'A rotted satchel.' }];
+    here.pile = false;
+    const labels = treasureEntries(ctx).map(entryLabel);
+    expect(labels).toEqual(expect.arrayContaining(['An iron-bound chest.', 'A rotted satchel.']));
+    expect(labels.filter((label) => label.startsWith('Treasure'))).toEqual([]);
   });
 });
 
@@ -252,6 +303,7 @@ describe('transitions', () => {
   it('names the action and the transition from its kind', () => {
     expect(transitionAction({ kind: 'stairs_down' })).toBe('Go down the stairs');
     expect(transitionDescription({ kind: 'stairs_up' })).toBe('Stairs lead up.');
-    expect(transitionDescription({ kind: 'chute' })).toBe('There is a chute here.');
+    expect(transitionDescription({ kind: 'chute' })).toBe('A chute slopes down into the dark.');
+    expect(transitionDescription({ kind: 'trapdoor' })).toBe("There's a trapdoor here.");
   });
 });

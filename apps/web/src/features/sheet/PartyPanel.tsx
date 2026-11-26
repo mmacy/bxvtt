@@ -13,6 +13,7 @@ import {
   lightTimeLeft,
   usePartyLight,
   type MemberLight,
+  memberClassName,
   usePlayerView,
   useSeats,
   useSendCommand,
@@ -37,7 +38,6 @@ import {
   cx,
 } from '@/ui';
 import { effectLabel, effectRemaining } from './actions';
-import { memberClassName } from './model';
 import { conditionTone } from './SheetSections';
 import { useFullCatalog } from './catalogs';
 import { classMagic, spellSlotsAt } from '../wizard/tables';

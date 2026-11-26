@@ -91,7 +91,7 @@ level
       {
         id: 'toll_strongbox',
         kind: 'treasure_cache',
-        description: 'A strongbox bolted to the floor under the desk, its lid worn bright by daily use.',
+        description: 'A strongbox is bolted to the floor under the desk, its lid worn bright by daily use.',
         coins: { gp: 90, sp: 240 },
         trap: trap({ kind: 'treasure', trigger: 'open', damage_dice: '1d4', save: save('death') }),
       },

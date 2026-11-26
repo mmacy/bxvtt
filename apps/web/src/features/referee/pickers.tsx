@@ -17,6 +17,7 @@ import type { FullCatalog } from '@bxvtt/shared/protocol';
 import { useEffect, useMemo, useState } from 'react';
 import {
   getApi,
+  memberClassName,
   useEquipmentCatalog,
   useMagicItemCatalog,
   useMapBus,
@@ -28,7 +29,6 @@ import {
   type EdgePick,
 } from '@/app';
 import { Button, Combobox, Select, type ComboboxOption, type SelectOption } from '@/ui';
-import { memberClassName } from '../sheet/model';
 import { allLevels, type Adventure, type CharacterSheet } from './model/adventure';
 import { patternText, templateLabel } from './model/describe';
 

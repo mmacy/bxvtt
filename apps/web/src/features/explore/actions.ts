@@ -308,60 +308,78 @@ export function lightUnavailableReason(
   return none;
 }
 
-/** A name for a cache in a list of caches. */
-export function cacheLabel(cache: HereFeature, caches: readonly HereFeature[]): string {
-  if (caches.length <= 1) return 'Treasure';
-  return `Treasure ${caches.indexOf(cache) + 1}`;
+/** How many characters of a treasure's description name it in a menu. */
+const SNIPPET_LENGTH = 40;
+
+/**
+ * A short name for a treasure in a menu: the first 40 characters of its description, with an ellipsis when the
+ * description is longer, or `null` for a rolled treasure, which has no description.
+ */
+export function cacheSnippet(cache: Pick<HereFeature, 'description'>): string | null {
+  const text = cache.description.trim();
+  if (text === '') return null;
+  if (text.length <= SNIPPET_LENGTH) return text;
+  return `${text.slice(0, SNIPPET_LENGTH).trimEnd()}…`;
 }
 
-/** The actions for one cache the party can see. */
-export function cacheEntries(ctx: ActionContext, cache: HereFeature, label: string): MenuEntry[] {
+/** The take action for one treasure, or `null` when the party can't reach it or the viewer can't send it. */
+export function cacheTakeEntry(
+  ctx: ActionContext,
+  cache: HereFeature,
+): Extract<MenuEntry, { type?: 'item' }> | null {
+  if (!cache.reachable || !ctx.can('take_treasure')) return null;
+  return {
+    label: 'Take treasure',
+    icon: 'coins',
+    onSelect: () => ctx.run({ command_type: 'take_treasure', feature_id: cache.id }),
+  };
+}
+
+/** The actions for one treasure other than taking it: giving it all to one member, and checking or disarming. */
+export function cacheMoreEntries(ctx: ActionContext, cache: HereFeature): MenuEntry[] {
   const entries: MenuEntry[] = [];
   const living = livingMembers(ctx.view.party);
-  if (cache.reachable && ctx.can('take_treasure')) {
+  if (cache.reachable && ctx.can('take_treasure') && living.length > 1) {
     entries.push({
-      label: label === 'Treasure' ? 'Take treasure' : `Take ${label.toLowerCase()}`,
-      icon: 'coins',
-      onSelect: () => ctx.run({ command_type: 'take_treasure', feature_id: cache.id }),
+      type: 'submenu',
+      label: 'Give all to one member',
+      icon: 'user',
+      items: living.map((member) => ({
+        label: member.name,
+        onSelect: () =>
+          ctx.run({ command_type: 'take_treasure', feature_id: cache.id, recipient_id: member.id }),
+      })),
     });
-    if (living.length > 1) {
-      entries.push({
-        type: 'submenu',
-        label: 'Give all to one member',
-        icon: 'user',
-        items: living.map((member) => ({
-          label: member.name,
-          onSelect: () =>
-            ctx.run({ command_type: 'take_treasure', feature_id: cache.id, recipient_id: member.id }),
-        })),
-      });
-    }
   }
   const thieves = (command: string) =>
     actors(ctx, command, (member) => hasThiefSkill(member, 'find_remove_treasure_traps'));
-  if (cache.trapState === null || cache.trapState === 'found') {
-    if (cache.trapState === null) {
-      entries.push(
-        ...perMember(
-          ctx,
-          'Check for traps',
-          'trap',
-          thieves('inspect_treasure'),
-          (member) => ({ command_type: 'inspect_treasure', feature_id: cache.id, character_id: member.id }),
-          (member) => ({ nothingText: `${member.name} finds no trap.` }),
-        ),
-      );
-    } else {
-      entries.push(
-        ...perMember(ctx, 'Disarm trap', 'trap', thieves('remove_treasure_trap'), (member) => ({
-          command_type: 'remove_treasure_trap',
-          feature_id: cache.id,
-          character_id: member.id,
-        })),
-      );
-    }
+  if (cache.trapState === null) {
+    entries.push(
+      ...perMember(
+        ctx,
+        'Check for traps',
+        'trap',
+        thieves('inspect_treasure'),
+        (member) => ({ command_type: 'inspect_treasure', feature_id: cache.id, character_id: member.id }),
+        (member) => ({ nothingText: `${member.name} finds no trap.` }),
+      ),
+    );
+  } else if (cache.trapState === 'found') {
+    entries.push(
+      ...perMember(ctx, 'Disarm trap', 'trap', thieves('remove_treasure_trap'), (member) => ({
+        command_type: 'remove_treasure_trap',
+        feature_id: cache.id,
+        character_id: member.id,
+      })),
+    );
   }
   return entries;
+}
+
+/** Every action for one treasure the party can see, with taking it first. */
+export function cacheEntries(ctx: ActionContext, cache: HereFeature): MenuEntry[] {
+  const take = cacheTakeEntry(ctx, cache);
+  return [...(take ? [take] : []), ...cacheMoreEntries(ctx, cache)];
 }
 
 /** The actions for goods dropped on the party's cell. */
@@ -400,11 +418,11 @@ export function transitionDescription(transition: Pick<TransitionView, 'kind'>):
     case 'stairs_up':
       return 'Stairs lead up.';
     case 'trapdoor':
-      return 'There is a trapdoor here.';
+      return "There's a trapdoor here.";
     case 'chute':
-      return 'There is a chute here.';
+      return 'A chute slopes down into the dark.';
     case 'passage':
-      return 'There is a passage here.';
+      return "There's a passage here.";
   }
 }
 
@@ -450,10 +468,9 @@ export function treasureEntries(ctx: ActionContext): MenuEntry[] {
   const shown = cachesToTake(here);
   const caches: MenuEntry[] = [];
   for (const cache of shown) {
-    const label = cacheLabel(cache, shown);
-    const items = cacheEntries(ctx, cache, label);
+    const items = cacheEntries(ctx, cache);
     if (items.length === 0) continue;
-    if (shown.length > 1) caches.push({ type: 'label', label });
+    if (shown.length > 1) caches.push({ type: 'label', label: cacheSnippet(cache) ?? 'Treasure' });
     caches.push(...items);
   }
   const goods = here.pile ? pileEntries(ctx) : [];
