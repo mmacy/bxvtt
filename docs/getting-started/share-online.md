@@ -66,7 +66,7 @@ Each run of `npm run share` produces a new `https://*.trycloudflare.com` URL. Be
 2. Open [http://127.0.0.1:8660](http://127.0.0.1:8660) in your browser and select your table under **Your tables**.
 3. Send your players the full join link on the new tunnel URL: `https://<new-tunnel>.trycloudflare.com/join/<code>` (replacing `http://127.0.0.1:8660` in the copied invite link). Tell returning players to open that `/join/<code>` link directly rather than picking a new name on the root page.
 4. When a returning player opens that `/join/<code>` page, they see **I've played at this table before** listing the table's offline members. The player selects their name and keeps the waiting screen open.
-5. At the top of your lobby or play screen, a banner appears: **Someone is asking to come back in as** followed by the player's name. Confirm with the player over voice or chat that the request is theirs, then select **Let them in**.
+5. At the top of your lobby or play screen, a banner appears: **Someone asked to rejoin as** followed by the player's name. Confirm with the player over voice or chat that the request is theirs, then select **Approve**.
 
 As soon as the player's browser claims your approval, the server issues them a fresh token, retires their old token, and opens the table with all of their characters, seats, and permissions intact.
 

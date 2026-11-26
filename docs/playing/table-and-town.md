@@ -17,7 +17,7 @@ When the referee starts or restores a game, the play screen opens for everyone a
 - **Action bar (bottom):** Displays who the caller is alongside contextual actions for the current mode. On narrower screens, buttons condense to icons and excess items move into **More actions**.
 - **Dock (right):** Contains the **Party** (`Alt+1`), **Feed** (`Alt+2`), and **Journal** (`Alt+3`) tabs, plus **Referee** (`Alt+4`) for referees with the referee lens enabled.
 
-Open the **Table menu** in the top bar for **Save the game** (`Ctrl+S`, or `Cmd+S` on macOS), **Saves**, **Table settings**, **Copy invite link**, **Rules reference** (`B`), **Keyboard shortcuts** (`?`), **Command palette** (`Ctrl+K` or `Cmd+K`), **Your tables**, and **Leave table**. Referees also see **Seats and caller** (to assign who controls each character and who speaks for the party), **Return to lobby**, and **Delete table**. See [Leave or delete a table](../refereeing/lobby-and-setup.md#leave-or-delete-a-table) for what leaving and deleting do.
+Open the **Table menu** in the top bar for **Save game** (`Ctrl+S`, or `Cmd+S` on macOS), **Saves**, **Table settings**, **Copy invite link**, **Rules reference** (`B`), **Keyboard shortcuts** (`?`), **Command palette** (`Ctrl+K` or `Cmd+K`), **Your tables**, and **Leave table**. Referees also see **Seats and caller** (to assign who controls each character and who speaks for the party), **Return to lobby**, and **Delete table**. See [Leave or delete a table](../refereeing/lobby-and-setup.md#leave-or-delete-a-table) for what leaving and deleting do.
 
 ## Who controls what
 
@@ -43,18 +43,18 @@ Between trips into the dungeon, each player buys and equips gear for their chara
 1. Select **Outfitter** (`O`).
 2. Under **Shopping for**, select the character buying equipment. Each button displays that character's available gold.
 3. Search or filter items across **All**, **Weapons**, **Armour**, **Gear**, and **Ammunition** (prices are in gold pieces and weights are measured in coins, where 10 coins equal 1 pound). Select an item's name to inspect its stats, or select **Add** to place it in that character's cart.
-4. Optionally select **Same for everyone you shop for** to copy the current cart to your other living characters.
-5. Select **Buy for** that character (such as **Buy for Wren**, or **Buy every cart** when multiple characters have items queued). If a character lacks enough gold for their entire cart, `bxapi` refuses that purchase without spending anything. After buying weapons, armour, or a shield, select **Wear it now** or **Wield it now** on the confirmation card to equip them immediately.
+4. Optionally select **Copy to your other characters** to copy the current cart to your other living characters.
+5. Select **Buy for** that character (such as **Buy for Wren**, or **Buy all carts** when multiple characters have items queued). If a character lacks enough gold for their entire cart, `bxapi` rejects that purchase without spending anything. After buying weapons, armour, or a shield, use **Wear** or **Wield** followed by the item's name under **Equip now** on the confirmation card to equip it immediately.
 
-The **Ready for the dungeon?** card checks whether the party has prepared spells, a light source, a tinder box, rations, and rope, with **Find it** shortcuts that filter the shop. These reminders are advisory and never block departure.
+The **Ready for the dungeon?** card checks whether the party has prepared spells, a light source, a tinder box, rations, and rope, with shortcuts such as **Find rope at the outfitter** that filter the shop. These reminders are advisory and never block departure.
 
 ### Heal and recover at the temple
 
 1. Select **Temple** (`T`).
-2. Choose the patient under **Who needs the temple**.
+2. Choose a character under **Patient**.
 3. Select **Buy** beside a temple service: **Cure light wounds**, **Cure serious wounds**, **Cure disease**, **Neutralize poison**, **Remove curse**, or **Raise dead**.
 
-The entire party pools its coins for temple services: `bxapi` deducts the fee in whole gold pieces from the patient's purse first, then from the remaining party members in marching order. A fallen character with an empty purse can still be raised as long as the party has enough gold together. Referees also see an optional **Temple cleric's level** input when an adventure or house ruling calls for a higher-level caster.
+The entire party pools its coins for temple services: `bxapi` deducts the fee in whole gold pieces from the patient's purse first, then from the remaining party members in marching order. A fallen character with an empty purse can still be raised as long as the party has enough gold together. Referees also see an optional **Cleric level (optional)** input when an adventure or house ruling calls for a higher-level caster.
 
 ### Sell gems and jewellery
 
@@ -68,7 +68,7 @@ Select **Rest and prepare** (or press `Shift+R` for the quick rest menu) and cho
 - **Rest a night** (8 hours), required before spellcasters can memorize fresh spells.
 - **Rest a full day** (24 hours), which also restores hit points to living characters.
 
-Use the **Open spells** button for each caster on the same screen (or in the **Party** panel) to memorize spells after resting.
+Use the **Open** button for each caster's spells (such as **Open Mazpar's spells**) on the same screen (or in the **Party** panel) to memorize spells after resting.
 
 ### Leave for the dungeon
 
@@ -81,5 +81,5 @@ Select any character in the **Party** tab to open their character sheet in a sid
 ![Character sheet drawer for a level 1 thief showing hit points, saving throws, and thief skills](../images/sheet.webp)
 
 - **Sheet:** Displays hit points, armour class, THAC0 (To Hit Armour Class 0), attack bonus, movement speeds, XP toward the next level, active conditions and light, ability scores with modifiers, saving throws, thief or class skills, and spoken languages.
-- **Inventory:** Groups **Worn and wielded** items (each with **Unequip**), **Light** controls (**Light a torch**, **Light the lantern**, **Put out the torch or lantern**, and **Set fire to dropped oil**), **Pack** items, **Gems and jewellery**, and **Purse**. Select the three-dot **Actions for** menu on any pack row to **Equip**, **Use** (for magic items), **Give to…**, or **Drop…** directly from the sheet.
+- **Inventory:** Groups **Worn and wielded** items (each with **Unequip**), **Light** controls (**Light a torch**, **Light the lantern**, **Put out light**, and **Set fire to dropped oil**), **Pack** items, **Gems and jewellery**, and **Purse**. Select the three-dot **Actions for** menu on any pack row to **Equip**, **Use** (for magic items), **Give to…**, or **Drop…** directly from the sheet.
 - **Spells (casters only):** Under **Memorized spells**, select **Prepare spells** after an 8-hour rest to fill spell slots (memorizing takes 6 turns of game time), or select **Cast** on any memorized spell card to cast it outside battle. Arcane casters also have a **Spell book** section with **Learn a spell** to transcribe new spells.

@@ -13,8 +13,8 @@ You play bxvtt in any current desktop browser with a window at least 820 pixels 
 
 How you join depends on what your referee sent you:
 
-- **Direct invite link:** Open the link (ending in `/join/...`), enter your display name under **You're invited to a table** (or **I'm new here**), and select **Join the table**.
-- **Separate server URL and invite link or code (first-time players only):** Open the server URL, enter your display name under **Pick your name**, and select **Continue**. Paste the invite link or 20-character code into **Join a table** and select **Join** to open the table immediately.
+- **Direct invite link:** Open the link (ending in `/join/...`), enter your display name under **You're invited to a table** (or **I'm new here**), and select **Join table**.
+- **Separate server URL and invite link or code (first-time players only):** Open the server URL, enter your display name under **Choose your name**, and select **Continue**. Paste the invite link or 20-character code into **Join a table** and select **Join table** to open the table immediately.
 
 Your browser saves a secret user token for that server's web address (origin). Keep using the same browser on the same device so bxvtt recognizes you automatically.
 
@@ -26,8 +26,8 @@ Do not pick a name on the server's home page or under **I'm new here**, which cr
 
 1. Open the full `/join/...` invite link on the new server URL directly (before entering a name on the home page).
 2. Under **I've played at this table before**, select your previous name.
-3. Keep the **Waiting for a referee to let you in** page open and let your referee know by voice or chat. Your request remains active for up to 5 minutes while the page stays open, and **Stop waiting** cancels it immediately.
-4. Once a referee selects **Let them in**, your browser receives a new sign-in token and opens the table with all of your characters, seats, and permissions intact.
+3. Keep the **Waiting to rejoin as** page (followed by your name) open and let your referee know by voice or chat. Your request remains active for up to 5 minutes while the page stays open, and **Stop waiting** cancels it immediately.
+4. Once a referee selects **Approve**, your browser receives a new sign-in token and opens the table with all of your characters, seats, and permissions intact.
 
 Reclaiming your identity retires your previous browser's token. If you later open the older browser tab, bxvtt displays **You've signed in from another browser** so you know why that tab was disconnected.
 
@@ -66,7 +66,7 @@ Before play starts, everyone gathers in the lobby.
 
 ![The table lobby showing four party members in marching order](../images/lobby.webp)
 
-- **Party** displays the characters in marching order, where the top rows form the front rank. Select any character's name to inspect their sheet (and **Delete character** if you own them and want to remove them permanently). You can pull your own character off the roster with **Take out of the party** (for example, **Take Wren out of the party**), while the referee controls the final marching order.
+- **Party** displays the characters in marching order, where the top rows form the front rank. Select any character's name to inspect their sheet (and **Delete character** if you own them and want to remove them permanently). You can pull your own character off the roster with the remove button on the character's row (named, for example, **Remove Wren from party**), while the referee controls the final marching order.
 - **Your characters** lists any characters you created earlier (or removed from the roster) that are not currently in **Party**. Select **Add to party** if a character is waiting here.
 - **People at the table** shows everyone who joined, with a green indicator for members currently online.
 - **Invite players** provides a **Copy** button for the table's invite link.

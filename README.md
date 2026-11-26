@@ -69,7 +69,7 @@ bxvtt is a browser-based virtual tabletop for the 1981 B/X (Basic and Expert) fa
 3. Open [http://127.0.0.1:8660](http://127.0.0.1:8660) in your browser (not the `trycloudflare.com` URL, so your referee sign-in persists across tunnel restarts). Under **Create a table**, enter a table name and the **Host key**, then select **Create table**.
 4. In **Invite players**, select **Copy** and replace `http://127.0.0.1:8660` in the copied link with your `https://*.trycloudflare.com` URL (for example, `https://example-words-here.trycloudflare.com/join/ABCD1-EFGH2-JKLM3-NPQR4`). Send that link to your players; they open it, enter a name, and join without needing the host key.
 
-Press `Ctrl+C` to close the tunnel when the session ends. When the tunnel URL changes on your next session, send returning players the updated `https://<new-tunnel>.trycloudflare.com/join/<code>` link: they select **I've played at this table before** on that page, and a referee selects **Let them in** to restore their seats and characters. See [Play over the internet](docs/getting-started/share-online.md).
+Press `Ctrl+C` to close the tunnel when the session ends. When the tunnel URL changes on your next session, send returning players the updated `https://<new-tunnel>.trycloudflare.com/join/<code>` link: they select **I've played at this table before** on that page, and a referee selects **Approve** to restore their seats and characters. See [Play over the internet](docs/getting-started/share-online.md).
 
 ## Documentation
 

@@ -124,7 +124,7 @@ If storage reaches 100%, `bxapi` rejects writes and bxvtt returns HTTP 507 `bxap
 
 This version of bxvtt needs a `bxapi` built on `osrlib` 2.7 that has `POST /v1/sessions/{session_id}/battle-round/preview` and `POST /v1/ability-rolls/{roll_id}/preview` (`bxapi` `main` from its pull request 51 onward), so run the `git pull` in step 3 before you start the new bxvtt. With an older `bxapi`, the character wizard and the battle board fail.
 
-On startup, bxvtt migrates older SQLite schemas forward automatically and refuses to open a database created by a newer schema version. Schema version 7 drops the `target_handles` and `battle_refusals` tables, which bxvtt no longer uses. Keep your pre-update backup until you verify your next session.
+On startup, bxvtt migrates older SQLite schemas forward automatically and refuses to open a database created by a newer schema version. Schema version 7 drops the `target_handles` and `battle_refusals` tables, which bxvtt no longer uses, and clears stored battle declarations, so players redeclare in a round that was in progress. Keep your pre-update backup until you verify your next session.
 
 ## Troubleshoot common issues
 
@@ -148,7 +148,7 @@ Check these causes in order:
 
 1. **The player clicked a `127.0.0.1` link directly:** Loopback URLs work only on the host computer. Replace `http://127.0.0.1:8660` in the copied `/join/<code>` link with your public `https://...` URL and send that link to the player (works for both first-time and returning players).
 2. **The tunnel stopped:** If Cloudflare returns a tunnel error page, restart `npm run share` and share the new URL.
-3. **Invalid or rate-limited invite code:** Confirm the code, or select **Make a new link** in the lobby. Each IP address is limited to 20 invite attempts every 10 minutes.
+3. **Invalid or rate-limited invite code:** Confirm the code, or select **Replace invite link** in the lobby. Each IP address is limited to 20 invite attempts every 10 minutes.
 4. **"Connection lost. Reconnecting to the table." on a custom tunnel:** WebSocket handshakes verify the `Origin` header. When running your own tunnel instead of `npm run share`, set `BXVTT_PUBLIC_ORIGINS` to your public `https://...` origin and restart bxvtt.
 
 ### Host key rejected (`That host key isn't right`)
