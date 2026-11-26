@@ -24,3 +24,10 @@ export function withoutPointers(text: string): string {
 export function spellDuration(duration: string): string {
   return withoutPointers(duration);
 }
+
+/** The first sentence of a mode's prose, which tells two ways to cast a spell apart when they share a label. */
+export function firstSentence(text: string): string {
+  const line = withoutPointers(text).split('\n')[0] ?? '';
+  const match = /^(.*?[.!?])(\s|$)/.exec(line);
+  return (match?.[1] ?? line).trim();
+}

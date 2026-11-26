@@ -51,3 +51,20 @@ describe('BxvttClient errors', () => {
     expect((error as BxvttProblemError).problem.revision).toBe(12);
   });
 });
+
+describe('BxvttClient.getSessionSpell', () => {
+  it("reads the game's own spell template from the table's route", async () => {
+    const requested: string[] = [];
+    const fetchImpl: typeof fetch = async (input) => {
+      requested.push(String(input));
+      return new Response(JSON.stringify({ id: 'ember_dart', name: 'ember dart', level: 1 }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    };
+    const client = new BxvttClient({ baseUrl: 'http://127.0.0.1:1', fetch: fetchImpl });
+    const spell = await client.getSessionSpell('tbl_x', 'ember_dart');
+    expect(requested).toEqual(['http://127.0.0.1:1/api/tables/tbl_x/game/rules/spells/ember_dart']);
+    expect(spell.name).toBe('ember dart');
+  });
+});

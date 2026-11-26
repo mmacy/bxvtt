@@ -33,20 +33,16 @@ function game(events: unknown[], seq: number): FeedEntry {
 describe('a caster with nothing to cast', () => {
   it('sees the Cast tab disabled, the reason, and a link to the Spells tab', async () => {
     const api = createFakeApi();
-    api.rules.mockImplementation(async (path: string) => {
-      if (path === 'classes/magic_user')
-        return {
-          id: 'magic_user',
-          abilities: [{ tag: 'arcane_magic' }],
-          progression: [{ level: 1, spell_slots: [1, 0, 0, 0, 0, 0] }],
-        } as never;
-      return { id: path, abilities: [], progression: [] } as never;
-    });
+    api.rules.mockImplementation(
+      async (path: string) => ({ id: path, abilities: [], progression: [] }) as never,
+    );
     const snapshot = fixtureSnapshot('battle', 'player');
     const wren = snapshot.game?.view.party.find((m) => m.name === 'Wren');
     if (!wren) throw new Error('No Wren.');
     wren.class_id = 'magic_user';
-    wren.spell_book = ['sleep'] as never;
+    wren.spell_book = ['sleep'];
+    wren.spell_slots = [1, 0, 0, 0, 0, 0];
+    wren.preparable_spells = ['sleep'];
     wren.memorized_spells = [];
     const { user } = renderWithTable(<BattleBoard />, { snapshot, api });
     const row = screen.getAllByRole('listitem').find((li) => within(li).queryByText('Wren', { exact: true }));
@@ -69,5 +65,35 @@ describe('a caster with nothing to cast', () => {
     expect(castEverySpell([game([prepared], 1), game([cast], 2)], 'character-0004')).toBe(true);
     expect(castEverySpell([game([prepared], 1)], 'character-0004')).toBe(false);
     expect(castEverySpell([game([cast], 2)], 'character-0004')).toBe(false);
+  });
+
+  it("reads a bundled spell's details from the game on the Cast tab, and says when they didn't load", async () => {
+    const api = createFakeApi();
+    api.rules.mockImplementation(
+      async (path: string) => ({ id: path, abilities: [], progression: [] }) as never,
+    );
+    api.fullCatalog.mockResolvedValue({ catalog: 'spells', total: 0, items: [] } as never);
+    api.getSessionSpell.mockRejectedValue(new Error('offline'));
+    const snapshot = fixtureSnapshot('battle', 'player');
+    const view = snapshot.game?.view;
+    const wren = view?.party.find((m) => m.name === 'Wren');
+    if (!view || !wren) throw new Error('No Wren.');
+    Object.assign(wren, {
+      class_id: 'magic_user',
+      spell_book: ['ember_dart'],
+      spell_slots: [1, 0, 0, 0, 0, 0],
+      memorized_spells: [{ spell_id: 'ember_dart' }],
+    });
+    view.spell_names = { ...view.spell_names, ember_dart: 'Ember Dart' };
+    view.spell_levels = { ...view.spell_levels, ember_dart: 1 };
+    const { user, store } = renderWithTable(<BattleBoard />, { snapshot, api });
+    const row = screen.getAllByRole('listitem').find((li) => within(li).queryByText('Wren', { exact: true }));
+    if (!row) throw new Error('No row for Wren.');
+    await user.click(within(row).getByRole('button', { name: 'Actions' }));
+    await user.click(screen.getByRole('radio', { name: 'Cast' }));
+    expect(
+      await screen.findByText("This spell's details didn't load. Try again in a moment."),
+    ).toBeInTheDocument();
+    expect(api.getSessionSpell).toHaveBeenCalledWith(store.getState().tableId, 'ember_dart');
   });
 });

@@ -35,8 +35,8 @@ import {
   type IconName,
 } from '@/ui';
 import { showAftermath } from './Aftermath';
-import { useMemberCasts } from './casting';
-import { Composer, useClassAbilities } from './Composer';
+import { memberCasts } from './casting';
+import { Composer } from './Composer';
 import { previousDeclaration, recordSnapshot, rememberDeclarations, useCombatMemory } from './memory';
 import {
   declarationBody,
@@ -51,6 +51,7 @@ import {
   refusalTexts,
   repeatProblem,
   quickAttack,
+  stealthLists,
   type MemberGear,
 } from './model';
 import { useCombatPeople, type CombatPeople } from './people';
@@ -88,8 +89,8 @@ export interface QuickAction {
 }
 
 /**
- * The quick action for a member: a back-stab for a hiding member with the ability whose nearest group is in melee
- * reach, a melee attack for a member already in melee, a missile attack in range, the Cast tab for a member with a
+ * The quick action for a member: a back-stab for a member bxapi lists in `can_back_stab` whose nearest group is in
+ * melee reach, a melee attack for a member already in melee, a missile attack in range, the Cast tab for a member with a
  * spell ready, closing in only for a front-line fighter, and otherwise holding.
  */
 export function quickAction(
@@ -98,13 +99,12 @@ export function quickAction(
   gear: MemberGear,
   ctx: TextContext,
   facts: SuggestionFacts & {
-    /** Whether the member's class has the back-stab ability, from the class catalog. */
-    backStab?: boolean;
+    /** Whether bxapi lists the member in `can_back_stab` this round. */
+    canBackStab?: boolean;
   },
 ): QuickAction | null {
-  // A hiding member with the back-stab ability is offered a back-stab on the nearest group in melee reach.
-  // bxapi still judges whether it works, and the row shows its reason when it won't.
-  if (facts.backStab && encounter?.hiding.includes(member.id)) {
+  // A member bxapi lists as able to back-stab is offered one on the nearest group in melee reach.
+  if (facts.canBackStab && encounter) {
     const attack = quickAttack(member, encounter, gear);
     if (attack?.declaration && (attack.plan.kind === 'melee' || attack.plan.kind === 'close')) {
       const body: DeclarationBody = { ...attack.declaration, back_stab: true };
@@ -490,10 +490,13 @@ function MemberRow({
   const hp = shown ? shown.hp : member.current_hp;
   const dead = shown ? shown.down && shown.conditions.includes('dead') : member.conditions.includes('dead');
   const down = shown ? shown.down || shown.hp <= 0 : dead || member.current_hp <= 0;
-  const casts = useMemberCasts(member);
-  const { backStab } = useClassAbilities(member.class_id);
+  const casts = memberCasts(member);
+  const canBackStab = stealthLists(encounter, declarations?.projection).canBackStab.includes(member.id);
+  // While a round plays back, the row shows the beat on screen, so it offers nothing to declare yet.
   const suggestion =
-    canAct && !declaration ? quickAction(member, encounter, gear, ctx, { casts, backStab }) : null;
+    canAct && !declaration && !playing
+      ? quickAction(member, encounter, gear, ctx, { casts, canBackStab })
+      : null;
   const quick = mine ? suggestion : null;
   const again = mine && canAct && !declaration ? repeat.candidates([member.id])[0] : undefined;
   const [error, setError] = useState<string | null>(null);

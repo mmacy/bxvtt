@@ -8,7 +8,13 @@
  * resolves, and the board shows its refusal next to the declaration it names.
  */
 import type { BattleDeclaration, EncounterGroupView, EncounterView, MemberView } from '@bxvtt/shared/bxapi';
-import type { DeclarationBody, DeclarationRefusal, Member, Seat } from '@bxvtt/shared/protocol';
+import type {
+  DeclarationBody,
+  DeclarationRefusal,
+  Member,
+  RoundProjection,
+  Seat,
+} from '@bxvtt/shared/protocol';
 import {
   battleActionLabel,
   describeRejection,
@@ -444,16 +450,36 @@ export function suggestAction(
       return { kind: 'close', body, plan, reason: null };
     }
   }
-  const missile = gear.wielded.some((w) => w.missile);
-  const reason = !encounter.front_rank.includes(member.id)
-    ? `${member.name} is in the back rank with no missile weapon${missile ? ' in range' : ''}.`
-    : `${member.name} has no missile weapon${missile ? ' in range' : ''}. Open Actions to close in.`;
-  return { kind: 'hold', body: { action: 'hold' }, plan: null, reason };
+  return { kind: 'hold', body: { action: 'hold' }, plan: null, reason: 'No attack from here.' };
 }
 
 function hasArmour(member: MemberView): boolean {
   const inventory = asRecord(member.inventory);
   return asRecord(inventory?.worn_armour) !== null || asRecord(inventory?.shield) !== null;
+}
+
+// Hide and back-stab -------------------------------------------------------------------------------------------
+
+/** The members bxapi lets declare a hide or a back-stab this round. */
+export interface StealthLists {
+  canHide: readonly string[];
+  canBackStab: readonly string[];
+}
+
+/**
+ * Who can hide and who can back-stab this round: the preview's lists, judged beside the planned declarations, when
+ * the server has a projection, and otherwise the encounter's lists.
+ *
+ * @param encounter - The open encounter.
+ * @param projection - `DeclarationsState.projection`, or `null` when there is none.
+ */
+export function stealthLists(
+  encounter: EncounterView,
+  projection: RoundProjection | null | undefined,
+): StealthLists {
+  return projection
+    ? { canHide: projection.can_hide, canBackStab: projection.can_back_stab }
+    : { canHide: encounter.can_hide, canBackStab: encounter.can_back_stab };
 }
 
 // Words for declarations ---------------------------------------------------------------------------------------
@@ -553,7 +579,7 @@ export function describeDeclaration(
       text = d.action ? battleActionLabel(d.action) : 'An action';
   }
   if (d.gaze_defense === 'avert_eyes') text += ', averting eyes';
-  if (d.gaze_defense === 'mirror') text += ', watching in a mirror';
+  if (d.gaze_defense === 'mirror') text += ', using a mirror';
   return text;
 }
 

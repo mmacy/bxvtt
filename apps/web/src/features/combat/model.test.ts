@@ -1,4 +1,5 @@
 import type { EncounterGroupView, EncounterView, MemberView } from '@bxvtt/shared/bxapi';
+import type { DeclarationBody } from '@bxvtt/shared/protocol';
 import { emptyContext, contextFromPlayerView } from '@bxvtt/shared/text';
 import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
@@ -274,11 +275,11 @@ describe('refusals that name no member', () => {
 });
 
 describe('describeDeclaration for several monsters', () => {
-  const missiles = {
+  const missiles: DeclarationBody = {
     action: 'cast',
     spell_id: 'magic_missile',
     targets: ['monster-0001', 'monster-0002'],
-  } as const;
+  };
 
   it('names each monster the player view lists', () => {
     const { view } = battle();
@@ -361,13 +362,13 @@ describe('suggestAction', () => {
     expect(suggestAction(brenna, encounter, gear, { casts: true })?.kind).toBe('hold');
   });
 
-  it('holds a back-rank member with no missile weapon, and says why', () => {
+  it('holds a back-rank member with no missile weapon, without a rule about why', () => {
     const { encounter, party } = battle();
     const brenna = member(party, 'Brenna');
     const back = { ...encounter, front_rank: ['character-0002'] };
     const suggestion = suggestAction(brenna, back, memberGear(brenna, emptyContext()), facts);
     expect(suggestion).toMatchObject({ kind: 'hold', body: { action: 'hold' } });
-    expect(suggestion?.reason).toBe('Brenna is in the back rank with no missile weapon.');
+    expect(suggestion?.reason).toBe('No attack from here.');
   });
 });
 

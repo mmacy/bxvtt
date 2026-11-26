@@ -4,17 +4,16 @@
  * whether the party has slept since each last prepared, and offers the short path: rest for a night, then open
  * the caster's Spells tab.
  *
- * Who can cast comes from the class catalog (the class's magic ability and its slots at the member's level), and
- * whether a member has slept comes from the feed's rest and preparation events. Nothing here decides whether a
+ * Who has spells to prepare comes from the view (`preparable_spells`), and whether a member has slept comes from
+ * the feed's rest and preparation events. Nothing here decides whether a
  * preparation is legal. bxapi refuses one that isn't, and the sheet shows the reason.
  */
 import type { MemberView } from '@bxvtt/shared/bxapi';
 import type { FeedEntry } from '@bxvtt/shared/protocol';
 import { joinList } from '@bxvtt/shared/text';
-import { useEffect, useMemo, useState } from 'react';
-import { getApi, loadCatalog, useFeed, useParty, useTableUi, type ClassDetail } from '@/app';
+import { useMemo } from 'react';
+import { useFeed, useParty, useTableUi } from '@/app';
 import { Banner, Button } from '@/ui';
-import { classMagic, spellSlotsAt } from '../wizard/tables';
 import { usePartyAccess, useTownServices } from './hooks';
 import { memberStatus } from './members';
 import { useRest } from './RestAndPrepare';
@@ -25,13 +24,6 @@ export interface SpellAdvice {
   needRest: MemberView[];
   /** Casters with nothing memorized who may prepare now. */
   canPrepare: MemberView[];
-}
-
-const NONE: SpellAdvice = { needRest: [], canPrepare: [] };
-
-function bookSize(member: MemberView): number {
-  const book = (member as unknown as { spell_book?: unknown }).spell_book;
-  return Array.isArray(book) ? book.length : 0;
 }
 
 /**
@@ -62,27 +54,18 @@ export function hasSleptSincePreparing(feed: readonly FeedEntry[], memberId: str
 }
 
 /**
- * Finds the members who can cast, have spells to prepare, and have none memorized.
+ * Finds the living members who have nothing memorized and spells that bxapi would let them prepare. A 1st-level
+ * cleric and a magic-user with an empty book have none to prepare, so they're left out.
  *
  * @param party - The party in marching order.
- * @param classes - Class entries by ID.
  * @param feed - The feed entries, oldest first.
  */
-export function spellAdvice(
-  party: readonly MemberView[],
-  classes: Readonly<Record<string, ClassDetail>>,
-  feed: readonly FeedEntry[],
-): SpellAdvice {
+export function spellAdvice(party: readonly MemberView[], feed: readonly FeedEntry[]): SpellAdvice {
   const needRest: MemberView[] = [];
   const canPrepare: MemberView[] = [];
   for (const member of party) {
-    const detail = classes[member.class_id];
-    const magic = classMagic(detail);
-    if (magic === null || memberStatus(member).dead) continue;
-    if (!spellSlotsAt(detail, member.level).some((slots) => slots > 0)) continue;
-    if (member.memorized_spells.length > 0) continue;
-    // An arcane caster prepares from the spell book, so an empty book has nothing to prepare yet.
-    if (magic.kind === 'arcane' && bookSize(member) === 0) continue;
+    if (memberStatus(member).dead) continue;
+    if (member.memorized_spells.length > 0 || member.preparable_spells.length === 0) continue;
     (hasSleptSincePreparing(feed, member.id) ? canPrepare : needRest).push(member);
   }
   return { needRest, canPrepare };
@@ -93,13 +76,13 @@ export function hasSpellAdvice(advice: SpellAdvice): boolean {
   return advice.needRest.length + advice.canPrepare.length > 0;
 }
 
-/** The advice as sentences, such as "Tamsin has no spells memorized. Rest for a night, then prepare spells." */
+/** The advice as sentences, such as "Tamsin needs a night's rest before preparing spells." */
 export function spellAdviceText(advice: SpellAdvice): string {
   const sentences: string[] = [];
   if (advice.needRest.length > 0) {
     const names = joinList(advice.needRest.map((member) => member.name));
     sentences.push(
-      `${names} ${advice.needRest.length === 1 ? 'has' : 'have'} no spells memorized. Rest for a night, then prepare spells.`,
+      `${names} ${advice.needRest.length === 1 ? 'needs' : 'need'} a night's rest before preparing spells.`,
     );
   }
   if (advice.canPrepare.length > 0) {
@@ -108,18 +91,18 @@ export function spellAdviceText(advice: SpellAdvice): string {
   return sentences.join(' ');
 }
 
-/** What a screen reader hears after "Spells to prepare", such as "Tamsin has none memorized". */
+/** What a screen reader hears after "Spells to prepare", such as "Tamsin needs a night's rest". */
 export function spellAdviceStatus(advice: SpellAdvice): string {
   const parts: string[] = [];
   if (advice.needRest.length > 0) {
     parts.push(
-      `${joinList(advice.needRest.map((member) => member.name))} ${advice.needRest.length === 1 ? 'has' : 'have'} none memorized`,
+      `${joinList(advice.needRest.map((member) => member.name))} ${advice.needRest.length === 1 ? 'needs' : 'need'} a night's rest`,
     );
   }
   if (advice.canPrepare.length > 0) {
-    parts.push(`${joinList(advice.canPrepare.map((member) => member.name))} can prepare spells now`);
+    parts.push(`${joinList(advice.canPrepare.map((member) => member.name))} can prepare now`);
   }
-  return parts.join(', while ');
+  return parts.join(', and ');
 }
 
 /** The advice for the readiness card, or `undefined` when there is none. */
@@ -129,37 +112,11 @@ export function spellsForChecklist(advice: SpellAdvice): { detail: string; statu
     : undefined;
 }
 
-const CLASSES_KEY = 'full:classes';
-
-/** Every class entry by ID, from the bulk catalog. Empty until it loads. */
-function useClassEntries(): Record<string, ClassDetail> {
-  const [classes, setClasses] = useState<Record<string, ClassDetail>>({});
-  useEffect(() => {
-    let cancelled = false;
-    loadCatalog(CLASSES_KEY, () => getApi().fullCatalog('classes')).then(
-      (catalog) => {
-        if (!cancelled) setClasses(Object.fromEntries(catalog.items.map((entry) => [entry.id, entry])));
-      },
-      () => {
-        // Without the catalog the town can't tell who casts, so it gives no advice.
-      },
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-  return classes;
-}
-
 /** The spells-to-prepare advice for the open table. */
 export function useSpellAdvice(): SpellAdvice {
   const party = useParty();
   const feed = useFeed();
-  const classes = useClassEntries();
-  return useMemo(
-    () => (Object.keys(classes).length === 0 ? NONE : spellAdvice(party, classes, feed)),
-    [party, feed, classes],
-  );
+  return useMemo(() => spellAdvice(party, feed), [party, feed]);
 }
 
 /** The short path: a button that rests the party for a night, and a button that opens each caster's spells. */
@@ -203,7 +160,7 @@ export function SpellBanner() {
   const advice = useSpellAdvice();
   if (!hasSpellAdvice(advice)) return null;
   return (
-    <Banner tone="warning" title="Unprepared spells" actions={<SpellActions advice={advice} />}>
+    <Banner tone="warning" title="Spells to prepare" actions={<SpellActions advice={advice} />}>
       {spellAdviceText(advice)}
     </Banner>
   );

@@ -412,9 +412,8 @@
   color: var(--color-warning-strong);
 }
 
-.gazeText {
+.gazeField {
   flex: 1 1 200px;
-  font-size: var(--text-sm);
 }
 
 .noSpells {
@@ -1000,7 +999,7 @@
   color: var(--color-text-strong);
 }
 
-/* A treasure's description on one line, with the trap warning under it. */
+/* The dropped goods line, with the pile's contents under it. */
 .pickUpBlock {
   display: grid;
   flex: 1 1 200px;
@@ -1008,16 +1007,32 @@
   min-width: 0;
 }
 
+/* The pile's contents. The line wraps, so every entry stays readable. */
+.pickUpSub {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* A treasure's description on one line, with the "Trapped" badge after it. */
+.pickUpLineGroup {
+  display: flex;
+  flex: 1 1 200px;
+  align-items: center;
+  gap: var(--space-1-5);
+  min-width: 0;
+}
+
+.pickUpBadge {
+  flex: none;
+}
+
 .pickUpLine {
+  min-width: 0;
   overflow: hidden;
   font-size: var(--text-sm);
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--color-text-strong);
-}
-
-.pickUpWarning {
-  font-size: var(--text-sm);
 }
 
 /* The action bar. */

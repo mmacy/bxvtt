@@ -39,8 +39,6 @@ import {
 } from '@/ui';
 import { effectLabel, effectRemaining } from './actions';
 import { conditionTone } from './SheetSections';
-import { useFullCatalog } from './catalogs';
-import { classMagic, spellSlotsAt } from '../wizard/tables';
 import styles from './party.module.css';
 
 /**
@@ -91,14 +89,12 @@ export function PartyPanel() {
   const showLight = location?.kind === 'dungeon' && !ended;
   // The map's toolbar states the party's light. Each row shows the light its member carries, in a dungeon.
   const light = usePartyLight();
-  const classes = useFullCatalog('classes');
   const inTown = location?.kind === 'town' && !ended;
-  /** A caster whose class table gives slots at their level, with nothing memorized. */
+  /** A living caster with nothing memorized and spells bxapi would let them prepare. */
   const unprepared = (member: MemberView) =>
     member.memorized_spells.length === 0 &&
     member.conditions.indexOf('dead') === -1 &&
-    classMagic(classes.byId.get(member.class_id)) !== null &&
-    spellSlotsAt(classes.byId.get(member.class_id), member.level).some((n) => n > 0);
+    member.preparable_spells.length > 0;
   const seats = useSeats();
   const members = useMembers();
   const me = useTableUser();

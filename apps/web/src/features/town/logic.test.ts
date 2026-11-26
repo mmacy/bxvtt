@@ -9,8 +9,8 @@ import { serviceReason } from './hooks';
 import { classLine } from './parts';
 import { describeChanges } from './RestAndPrepare';
 import { summarizeEntry } from './Glance';
-import { hasSleptSincePreparing, spellAdvice, spellAdviceText } from './SpellAdvice';
-import { CLASSES, gameEntry, makeCaster } from './testKit';
+import { hasSleptSincePreparing, spellAdvice, spellAdviceStatus, spellAdviceText } from './SpellAdvice';
+import { gameEntry, makeCaster } from './testKit';
 import { readInventory } from './inventory';
 import { neediestFirst, memberStatus } from './members';
 import { buildCommand, missingRequired, readFields } from './schemaForm';
@@ -290,7 +290,6 @@ describe("the town's service lines", () => {
 });
 
 describe('spells to prepare', () => {
-  const classes = CLASSES as Parameters<typeof spellAdvice>[1];
   const night = gameEntry(10, 'rest', [
     { event_type: 'rested', code: 'exploration.rest.rested', kind: 'night' },
   ]);
@@ -307,11 +306,9 @@ describe('spells to prepare', () => {
 
   it('warns about a magic-user with a book and nothing memorized, by name', () => {
     const members = party((s) => makeCaster(s, 'Tamsin', 'magic_user', { book: 1 }));
-    const advice = spellAdvice(members, classes, []);
+    const advice = spellAdvice(members, []);
     expect(advice.needRest.map((m) => m.name)).toEqual(['Tamsin']);
-    expect(spellAdviceText(advice)).toBe(
-      'Tamsin has no spells memorized. Rest for a night, then prepare spells.',
-    );
+    expect(spellAdviceText(advice)).toBe("Tamsin needs a night's rest before preparing spells.");
   });
 
   it('says have for two casters and can prepare after a night', () => {
@@ -319,12 +316,10 @@ describe('spells to prepare', () => {
       makeCaster(s, 'Tamsin', 'magic_user', { book: 1 });
       makeCaster(s, 'Wren', 'magic_user', { book: 2 });
     });
-    expect(spellAdviceText(spellAdvice(members, classes, []))).toBe(
-      'Wren and Tamsin have no spells memorized. Rest for a night, then prepare spells.',
+    expect(spellAdviceText(spellAdvice(members, []))).toBe(
+      "Wren and Tamsin need a night's rest before preparing spells.",
     );
-    expect(spellAdviceText(spellAdvice(members, classes, [night]))).toBe(
-      'Wren and Tamsin can prepare spells now.',
-    );
+    expect(spellAdviceText(spellAdvice(members, [night]))).toBe('Wren and Tamsin can prepare spells now.');
   });
 
   it('needs a new night after each preparation', () => {
@@ -345,14 +340,12 @@ describe('spells to prepare', () => {
     expect(
       spellAdvice(
         party((s) => makeCaster(s, 'Osric', 'cleric')),
-        classes,
         [],
       ),
     ).toEqual({ needRest: [], canPrepare: [] });
     expect(
       spellAdvice(
         party((s) => makeCaster(s, 'Tamsin', 'magic_user', { book: 0 })),
-        classes,
         [],
       ),
     ).toEqual({ needRest: [], canPrepare: [] });
@@ -361,12 +354,37 @@ describe('spells to prepare', () => {
       const tamsin = s.game?.view.party.find((m) => m.name === 'Tamsin');
       if (tamsin) tamsin.memorized_spells = [{ spell_id: 'sleep' }];
     });
-    expect(spellAdvice(memorized, classes, [])).toEqual({ needRest: [], canPrepare: [] });
+    expect(spellAdvice(memorized, [])).toEqual({ needRest: [], canPrepare: [] });
   });
 
   it('warns about a second-level cleric, who has slots and no book', () => {
     const members = party((s) => makeCaster(s, 'Osric', 'cleric', { level: 2 }));
-    expect(spellAdvice(members, classes, []).needRest.map((m) => m.name)).toEqual(['Osric']);
+    expect(spellAdvice(members, []).needRest.map((m) => m.name)).toEqual(['Osric']);
+  });
+
+  it('includes a caster of a custom class from the view alone, beside a 1st-level cleric it leaves out', () => {
+    const members = party((s) => {
+      makeCaster(s, 'Tamsin', 'hedge_mage', {
+        level: 2,
+        book: 1,
+        slots: [2, 0, 0, 0, 0, 0],
+        className: 'Hedge Mage',
+      });
+      makeCaster(s, 'Osric', 'cleric');
+    });
+    const advice = spellAdvice(members, []);
+    expect(advice.needRest.map((m) => m.name)).toEqual(['Tamsin']);
+    expect(spellAdviceText(advice)).toBe("Tamsin needs a night's rest before preparing spells.");
+  });
+
+  it('reads both groups for a screen reader, joined with and', () => {
+    const members = party((s) => {
+      makeCaster(s, 'Tamsin', 'magic_user', { book: 1 });
+      makeCaster(s, 'Osric', 'cleric', { level: 2 });
+    });
+    // Osric prepared after the night, so he needs another, and Tamsin hasn't prepared since it.
+    const advice = spellAdvice(members, [night, prepared('character-0003')]);
+    expect(spellAdviceStatus(advice)).toBe("Osric needs a night's rest, and Tamsin can prepare now");
   });
 });
 

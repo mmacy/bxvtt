@@ -35,7 +35,7 @@ import {
   VitalsRow,
   XpProgress,
 } from './SheetSections';
-import { SpellsTab, useHasSpells } from './SpellsTab';
+import { SpellsTab, hasSpells as memberHasSpells } from './SpellsTab';
 import styles from './sheet.module.css';
 
 export interface CharacterSheetProps {
@@ -101,7 +101,7 @@ function SheetContent({ memberId, initialTab }: { memberId: string; initialTab: 
   const controller = useController(memberId);
   const [chosenTab, setTab] = useState<string>(initialTab);
   const model = useMemo(() => (member ? sheetFromMember(member, ctx) : null), [member, ctx]);
-  const hasSpells = useHasSpells(model);
+  const hasSpells = memberHasSpells(member);
   const tab = chosenTab === 'spells' && !hasSpells ? 'sheet' : chosenTab;
   if (!member || !model) return null;
   const effects = (view?.effects ?? []).filter((e) => e.character_id === memberId);
