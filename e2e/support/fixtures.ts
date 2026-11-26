@@ -214,7 +214,7 @@ async function newActor(browser: Browser, name: string, options: PersonOptions):
     newTab: () => context.newPage(),
     seedAbilityRolls: async (seeds) => {
       let index = 0;
-      await context.route('**/api/ability-rolls', async (route) => {
+      await context.route('**/api/tables/*/ability-rolls', async (route) => {
         const request = route.request();
         if (request.method() !== 'POST') return route.continue();
         const body = (request.postDataJSON() as Record<string, unknown> | null) ?? {};

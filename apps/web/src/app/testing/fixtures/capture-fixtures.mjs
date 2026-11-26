@@ -90,8 +90,17 @@ const characters = [
     },
   ],
 ];
-for (const [client, body] of characters) {
-  const character = await client.createCharacter(body);
+// Each character comes from an ability roll at the table, with its hit points and gold rolled before the
+// purchases, as the wizard makes one.
+for (const [client, { seed, ...body }] of characters) {
+  const roll = await client.rollAbilities(table.id, { seed });
+  const starting = {
+    class_id: body.class_id,
+    ...(body.starting_spell_ids === undefined ? {} : { starting_spell_ids: body.starting_spell_ids }),
+  };
+  await client.rollHitPoints(roll.id, starting);
+  await client.rollStartingGold(roll.id, starting);
+  const character = await client.createCharacter({ ...body, ability_roll_id: roll.id });
   await client.addToRoster(table.id, character.id);
 }
 await capture('lobby');

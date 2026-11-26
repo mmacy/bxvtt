@@ -3814,7 +3814,7 @@
      "generate"
     ],
     "summary": "Roll a character without storing it",
-    "description": "Roll an unstored first-level character with osrlib from the same choices `POST /v1/characters` accepts.\n\nosrlib rolls the six ability scores and applies your class, adjustment, spell, language, and equipment choices in\norder, returning the `character`, `derived` stats, and every individual die in `rolls` (`ability_rolls`,\n`hit_point_roll`, and `gold_roll`). Both `player` and `referee` keys may pass `seed` to reproduce a character, or\nomit it to draw a new seed.\n\nBecause the character isn't stored, it has `id` set to `null` and cannot be passed in `character_ids` to\n`POST /v1/sessions`. To store a character for play, call `POST /v1/characters` instead. This operation rolls new\nscores and takes no `ability_roll_id`. To see the character a stored ability roll would create, call\n`POST /v1/ability-rolls/{roll_id}/preview`.",
+    "description": "Roll an unstored first-level character with osrlib from the same choices `POST /v1/characters` accepts.\n\nosrlib rolls the six ability scores and applies your class, adjustment, spell, language, and equipment choices in\norder, returning the `character`, `derived` stats, and every individual die in `rolls` (`ability_rolls`,\n`hit_point_roll`, and `gold_roll`). The `ruleset` decides how osrlib rolls the scores and the hit points. Both\n`player` and `referee` keys may pass `seed` to reproduce a character, or omit it to draw a new seed.\n\nBecause the character isn't stored, it has `id` set to `null` and cannot be passed in `character_ids` to\n`POST /v1/sessions`. To store a character for play, call `POST /v1/characters` instead. This operation rolls new\nscores and takes no `ability_roll_id`. To see the character a stored ability roll would create, call\n`POST /v1/ability-rolls/{roll_id}/preview`.",
     "operationId": "generate_character",
     "requestBody": {
      "content": {
@@ -5129,7 +5129,7 @@
      "characters"
     ],
     "summary": "Roll ability scores",
-    "description": "Roll six 3d6 ability scores with osrlib, store the roll, and return the scores, their dice, and eligible classes.\n\nDisplay `scores` and `eligible_class_ids` to the player. A client that animates the dice shows `rolls.rolls`, the\nthree d6 osrlib rolled for each score. Then pass `id` as `ability_roll_id` to `POST /v1/characters` along with\nthe player's class, alignment, and equipment choices. The request body is optional: players send no body, whereas\na referee may pass `seed`.\n\nThe server stores the roll's seed privately and derives the character's hit points and starting gold from that\nsame seed when `POST /v1/characters` consumes the roll. Retrying `POST /v1/characters` after a 422\n`character_invalid` error therefore keeps the exact same rolls. To show the player those hit points and that gold\nbefore you create the character, call `POST /v1/ability-rolls/{roll_id}/preview`.\n\nAbility rolls cannot be deleted (each uses at most 55 bytes toward `storage.used_bytes`), and the server places\nno limit on how many rolls a client creates. To roll scores and create the character in one step, omit\n`ability_roll_id` on `POST /v1/characters`.",
+    "description": "Roll six ability scores with osrlib, store the roll, and return the scores, their dice, and eligible classes.\n\nDisplay `scores` and `eligible_class_ids` to the player. A client that animates the dice shows `rolls.rolls`, the\nthree d6 that count toward each score. Then pass `id` as `ability_roll_id` to `POST /v1/characters` along with\nthe player's class, alignment, and equipment choices. The request body is optional: with no body, osrlib rolls\n3d6 for each score from a seed the server draws. A referee may pass `seed`.\n\nTo roll under a table's house rules, pass the table's `ruleset`. With `ability_score_method` set to\n`4d6_drop_lowest`, osrlib rolls four d6 for each score and drops the lowest, and `rolls.dropped` has the dropped\ndie of each ability. The server stores the method with the roll and returns it as `ability_score_method`. Send\nthe same `ruleset` when you preview or create the character, because a request whose ruleset has another method\ngets 409 `ability_roll_ruleset_mismatch`.\n\n`rolls.sub_par` tells you whether the scores are sub-par under the B/X rules, which let a referee allow the\nplayer to discard such a character and roll again. osrlib only reports it, and the server accepts a sub-par roll\nlike any other.\n\nThe server stores the roll's seed privately and derives the character's hit points and starting gold from that\nsame seed when `POST /v1/characters` consumes the roll. Retrying `POST /v1/characters` after a 422\n`character_invalid` error therefore keeps the exact same rolls. To show the player those hit points and that gold\nbefore you create the character, call `POST /v1/ability-rolls/{roll_id}/preview`.\n\nAbility rolls cannot be deleted (each uses at most 55 bytes toward `storage.used_bytes`), and the server places\nno limit on how many rolls a client creates. To roll scores and create the character in one step, omit\n`ability_roll_id` on `POST /v1/characters`.",
     "operationId": "create_ability_roll",
     "requestBody": {
      "content": {
@@ -5406,7 +5406,7 @@
      "characters"
     ],
     "summary": "Get an ability roll",
-    "description": "Return a stored ability roll: its six `scores`, the dice in `rolls`, `eligible_class_ids`, and `used`.\n\nUse this endpoint to resume character creation after a page reload. When `used` is `false`, pass `id` as\n`ability_roll_id` to `POST /v1/characters`. When `used` is `true`, the roll has already created a character and\ncannot be used again.",
+    "description": "Return a stored ability roll: its six `scores`, the dice in `rolls`, `eligible_class_ids`, and `used`.\n\n`ability_score_method` is the method the roll was made with, and the dice in `rolls` are the ones the roll's\nfirst response showed.\n\nUse this endpoint to resume character creation after a page reload. When `used` is `false`, pass `id` as\n`ability_roll_id` to `POST /v1/characters`. When `used` is `true`, the roll has already created a character and\ncannot be used again.",
     "operationId": "get_ability_roll",
     "security": [
      {
@@ -5594,7 +5594,7 @@
      "characters"
     ],
     "summary": "Preview a character from an ability roll",
-    "description": "Return the character that `POST /v1/characters` would create from this ability roll and these choices.\n\nThe response has the `character`, its `derived` stats, and every die osrlib rolled for it in `rolls`: the dice\nbehind the roll's scores in `ability_rolls`, the hit point roll in `hit_point_roll`, and the starting gold roll in\n`gold_roll`. Use it to show a player their hit points and starting gold before they shop, and before the character\nexists. The roll stays unused. Without an `Idempotency-Key`, the server stores nothing and `storage.used_bytes`\ndoesn't change. With one, the server stores the response for the key, as it does for every `POST`.\n\nSend the choices `POST /v1/characters` accepts, without `ability_roll_id`, because the path names the roll, and\nwithout `seed`. The preview and the creation run the same steps on the roll's private seed, so:\n\n- Every preview of one roll with the same choices returns the same response.\n- `POST /v1/characters` with this roll and the same choices stores a character equal to `character`, with the\n  same hit points, gold, and inventory.\n- A choice that `POST /v1/characters` refuses gets the same 422 `character_invalid` here, with the same members,\n  and the roll stays unused.\n\nFor one roll, `hit_point_roll` and `gold_roll` change only when `class_id` or `hp_reroll_at_first_level` changes.\nThe `adjustment`, `starting_spell_ids`, `extra_languages`, `name`, `alignment`, `purchases`, and `equip_item_ids`\nchange neither roll. So once the player has chosen a class and the reroll option, you can show the hit points and\ngold and let the player make every other choice without the dice changing. A different class or reroll option can\nchange the gold as well as the hit points.\n\nThe response has no `seed`, because the roll's seed stays private, and no `id`, because the server stores no\ncharacter. `character.id` is `null`. A `player` key and a `referee` key can both call this operation.",
+    "description": "Return the character that `POST /v1/characters` would create from this ability roll and these choices.\n\nThe response has the `character`, its `derived` stats, and every die osrlib rolled for it in `rolls`: the dice\nbehind the roll's scores in `ability_rolls`, the hit point roll in `hit_point_roll`, and the starting gold roll in\n`gold_roll`. Use it to show a player their hit points and starting gold before they shop, and before the character\nexists. The roll stays unused. Without an `Idempotency-Key`, the server stores nothing and `storage.used_bytes`\ndoesn't change. With one, the server stores the response for the key, as it does for every `POST`.\n\nSend the choices `POST /v1/characters` accepts, without `ability_roll_id`, because the path names the roll, and\nwithout `seed`. The preview and the creation run the same steps on the roll's private seed, so:\n\n- Every preview of one roll with the same choices returns the same response.\n- `POST /v1/characters` with this roll and the same choices stores a character equal to `character`, with the\n  same hit points, gold, and inventory.\n- A choice that `POST /v1/characters` refuses gets the same 422 `character_invalid` here, with the same members,\n  and the roll stays unused.\n\nFor one roll, `gold_roll` changes only when `class_id` or the ruleset's `hp_reroll_at_first_level` changes, and\n`hit_point_roll` changes only with those two and the ruleset's `max_hp_at_first_level`. The `adjustment`,\n`starting_spell_ids`, `extra_languages`, `name`, `alignment`, `purchases`, and `equip_item_ids` change neither\nroll. So once the player has chosen a class under the table's ruleset, you can show the hit points and gold and\nlet the player make every other choice without the dice changing. A different class or reroll option can change\nthe gold as well as the hit points.\n\nSend the `ruleset` you sent to `POST /v1/ability-rolls` for this roll. A ruleset with another\n`ability_score_method` than the roll's gets 409 `ability_roll_ruleset_mismatch`, and so does a request with no\n`ruleset` for a roll made with `4d6_drop_lowest`.\n\nThe response has no `seed`, because the roll's seed stays private, and no `id`, because the server stores no\ncharacter. `character.id` is `null`. A `player` key and a `referee` key can both call this operation.",
     "operationId": "preview_character",
     "security": [
      {
@@ -5722,7 +5722,7 @@
       }
      },
      "409": {
-      "description": "- `ability_roll_used`: A character was already created from this roll, so `POST /v1/characters` would refuse it too. Create a new roll with `POST /v1/ability-rolls`.\n- `idempotency_key_in_progress`: The first request with this `Idempotency-Key` is still running. Wait the 1 second in the `Retry-After` header and retry.\n- `idempotency_key_interrupted`: The server failed or stopped while handling the first request with this `Idempotency-Key` and has no record of whether it took effect. Inspect the target resource first. If the change didn't take effect, send the request again with a new key.",
+      "description": "- `ability_roll_used`: A character was already created from this roll, so `POST /v1/characters` would refuse it too. Create a new roll with `POST /v1/ability-rolls`.\n- `ability_roll_ruleset_mismatch`: The `ability_score_method` of the request's `ruleset` isn't the method the roll was made with, which the problem's `ability_score_method` names. A request with no `ruleset` asks for `3d6`. Send the ruleset you sent to `POST /v1/ability-rolls` for this roll, or create a new roll. The roll stays unused.\n- `idempotency_key_in_progress`: The first request with this `Idempotency-Key` is still running. Wait the 1 second in the `Retry-After` header and retry.\n- `idempotency_key_interrupted`: The server failed or stopped while handling the first request with this `Idempotency-Key` and has no record of whether it took effect. Inspect the target resource first. If the change didn't take effect, send the request again with a new key.",
       "content": {
        "application/problem+json": {
         "schema": {
@@ -5883,7 +5883,7 @@
      "characters"
     ],
     "summary": "Create a character",
-    "description": "Create and store a first-level character from the player's choices.\n\nPass the returned `id` in `character_ids` to `POST /v1/sessions` to start a game. Sessions copy their party\nmembers at start, so play never mutates the stored character and one character can enter any number of sessions.\n\nWhen `ability_roll_id` (from `POST /v1/ability-rolls`) is provided, the character uses those scores, draws hit\npoints and starting gold from that roll's seed, and marks the roll `used` in the same transaction. Without\n`ability_roll_id`, the server rolls ability scores first. osrlib then validates and applies choices in order:\nclass requirements, ability `adjustment`, `starting_spell_ids`, hit point roll, `extra_languages`, starting gold\nroll, `purchases`, and `equip_item_ids`. Creation stops at the first invalid step with 422 `character_invalid`\nand stores nothing.\n\nLook up catalog ids via `GET /v1/rules/classes`, `GET /v1/rules/spells`, `GET /v1/rules/languages`, and\n`GET /v1/rules/equipment`. To show the player the hit points and starting gold of an ability roll before you\ncreate the character, call `POST /v1/ability-rolls/{roll_id}/preview` with the same choices. To roll a character\nfrom new scores without storing anything, call `POST /v1/generate/character`.",
+    "description": "Create and store a first-level character from the player's choices.\n\nPass the returned `id` in `character_ids` to `POST /v1/sessions` to start a game. Sessions copy their party\nmembers at start, so play never mutates the stored character and one character can enter any number of sessions.\n\nWhen `ability_roll_id` (from `POST /v1/ability-rolls`) is provided, the character uses those scores, draws hit\npoints and starting gold from that roll's seed, and marks the roll `used` in the same transaction. Without\n`ability_roll_id`, the server rolls ability scores first, with the `ability_score_method` of `ruleset`. The\nruleset's `hp_reroll_at_first_level` and `max_hp_at_first_level` decide the hit point roll either way. With an\n`ability_roll_id`, send the `ruleset` you sent for the roll, because another `ability_score_method` than the\nroll's gets 409 `ability_roll_ruleset_mismatch`. osrlib then validates and applies choices in order:\nclass requirements, ability `adjustment`, `starting_spell_ids`, hit point roll, `extra_languages`, starting gold\nroll, `purchases`, and `equip_item_ids`. Creation stops at the first invalid step with 422 `character_invalid`\nand stores nothing.\n\nLook up catalog ids via `GET /v1/rules/classes`, `GET /v1/rules/spells`, `GET /v1/rules/languages`, and\n`GET /v1/rules/equipment`. To show the player the hit points and starting gold of an ability roll before you\ncreate the character, call `POST /v1/ability-rolls/{roll_id}/preview` with the same choices. To roll a character\nfrom new scores without storing anything, call `POST /v1/generate/character`.",
     "operationId": "create_character",
     "security": [
      {
@@ -6001,7 +6001,7 @@
       }
      },
      "409": {
-      "description": "- `ability_roll_used`: A character was already created from `ability_roll_id`. Deleting that character doesn't reset the roll. Create a new roll with `POST /v1/ability-rolls`.\n- `idempotency_key_in_progress`: The first request with this `Idempotency-Key` is still running. Wait the 1 second in the `Retry-After` header and retry.\n- `idempotency_key_interrupted`: The server failed or stopped while handling the first request with this `Idempotency-Key` and has no record of whether it took effect. Inspect the target resource first. If the change didn't take effect, send the request again with a new key.",
+      "description": "- `ability_roll_used`: A character was already created from `ability_roll_id`. Deleting that character doesn't reset the roll. Create a new roll with `POST /v1/ability-rolls`.\n- `ability_roll_ruleset_mismatch`: The `ability_score_method` of the request's `ruleset` isn't the method the roll was made with, which the problem's `ability_score_method` names. A request with no `ruleset` asks for `3d6`. Send the ruleset you sent to `POST /v1/ability-rolls` for this roll, or create a new roll. The roll stays unused.\n- `idempotency_key_in_progress`: The first request with this `Idempotency-Key` is still running. Wait the 1 second in the `Retry-After` header and retry.\n- `idempotency_key_interrupted`: The server failed or stopped while handling the first request with this `Idempotency-Key` and has no record of whether it took effect. Inspect the target resource first. If the change didn't take effect, send the request again with a new key.",
       "content": {
        "application/problem+json": {
         "schema": {
@@ -10440,7 +10440,7 @@
      "sessions"
     ],
     "summary": "Get the player view",
-    "description": "Return osrlib's `PlayerView`: everything the players may see at the session's current revision.\n\nRender your game screen from this object (or pass `include=view` to `POST /v1/sessions/{session_id}/commands` to\nreceive `PlayerView` alongside `revision` in one response, because standalone `PlayerView` omits `revision`).\nAcquires the session lock so the snapshot always reflects state between commands. The view never includes\nunexplored cells, monster hit points, referee rolls, or the secret feature-handle key.\n\nKey fields for rendering a client UI:\n\n- `mode`: current session mode, which governs legal commands (`GET /v1/sessions/{session_id}/commands`).\n- `location`: `kind` is `\"town\"` in town, or `\"dungeon\"` with `dungeon_id`, `level_number`, `[x, y]` `position`,\n  and `facing`.\n- `party`: party members in marching order, with in-session `id` (such as `\"character-0001\"`, passed as\n  `character_id` to commands), hit points, conditions, inventory, `scores`, `armour_class`, `thac0`, `saves`,\n  `movement_rate_feet`, and `thief_skills`. Combat stats include bonuses and curses from worn unidentified magic\n  items while `inventory` masks unidentified names (such as `\"a shield with a faint aura\"`).\n- `dungeons`: IDs and names of dungeons the party has entered. `can_travel_to_town` states whether\n  `travel_to_town` is currently usable from the party's position.\n- `explored`: the party's known map for each level. Each entry includes mapped `cells` and `edges`, entered\n  `areas` with their names, descriptions, and walked cells, visible `features` with opaque `feature:` IDs,\n  known `transitions` without destinations or gates, and `entrance` when that cell is known. A feature's\n  `emptied` is `true` once the party has emptied that authored cache, and `trap_state` on a feature or an area\n  is the trap's state as the party knows it. Feature cache contents, hidden discoveries, and destinations that\n  the party hasn't learned stay omitted.\n- `features_here`: the feature IDs that `inspect_treasure`, `remove_treasure_trap`, and `take_treasure` accept as\n  `feature_id` from where the party stands. It's empty outside `exploring` mode.\n- `spell_names`, `reversed_spell_names`, and `spell_levels`: the name and level of every spell ID the view\n  shows. Each member's `spell_slots`, `preparable_spells`, and `learnable_spells` give what a `prepare_spells` or\n  `learn_spell` dialog offers that member.\n- `item_names` and `item_names_plural`: what to call each item ID the view shows, in a member's `inventory` or\n  in the `contents` of a pile in `piles`.\n- `encounter`: active encounter state, or `null`. Pass `declarers` to build `resolve_battle_round`, and pass a\n  group's `id` as `target_group_id` for attacks, `close`, thrown splash items, and `area` or `hd_budget` spells\n  (such as `fire_ball` and `sleep`). Each group also has `members` with individual `\"monster-NNNN\"` or\n  `\"npc-NNNN\"` IDs and coarse `status` values. Use an `\"alive\"` member's `id` in `targets` for a `single` or\n  `up_to_n` spell or scroll. To find catalog templates matching a group's `family_id`, search\n  `GET /v1/rules/monsters` with `q` and check `family_id` on `GET /v1/rules/monsters/{monster_id}`.\n- `journal` and `quests`: discovered journal entries and active or completed quests.\n- `town_healing_prices`: gold-piece prices for temple services accepted by `purchase_healing`.",
+    "description": "Return osrlib's `PlayerView`: everything the players may see at the session's current revision.\n\nRender your game screen from this object (or pass `include=view` to `POST /v1/sessions/{session_id}/commands` to\nreceive `PlayerView` alongside `revision` in one response, because standalone `PlayerView` omits `revision`).\nAcquires the session lock so the snapshot always reflects state between commands. The view never includes\nunexplored cells, monster hit points, referee rolls, or the secret feature-handle key.\n\nKey fields for rendering a client UI:\n\n- `mode`: current session mode, which governs legal commands (`GET /v1/sessions/{session_id}/commands`).\n- `location`: `kind` is `\"town\"` in town, or `\"dungeon\"` with `dungeon_id`, `level_number`, `[x, y]` `position`,\n  and `facing`.\n- `party`: party members in marching order, with in-session `id` (such as `\"character-0001\"`, passed as\n  `character_id` to commands), hit points, conditions, inventory, `scores`, `armour_class`, `thac0`, `saves`,\n  `movement_rate_feet`, and `thief_skills`. Combat stats include bonuses and curses from worn unidentified magic\n  items while `inventory` masks unidentified names (such as `\"a shield with a faint aura\"`).\n- `dungeons`: IDs and names of dungeons the party has entered. `can_travel_to_town` states whether\n  `travel_to_town` is currently usable from the party's position.\n- `explored`: the party's known map for each level. Each entry includes mapped `cells` and `edges`, entered\n  `areas` with their names, descriptions, and walked cells, visible `features` with opaque `feature:` IDs,\n  known `transitions` without destinations or gates, and `entrance` when that cell is known. A feature's\n  `emptied` is `true` once the party has emptied that authored cache, and `trap_state` on a feature or an area\n  is the trap's state as the party knows it. Feature cache contents, hidden discoveries, and destinations that\n  the party hasn't learned stay omitted.\n- `features_here`: the feature IDs that `inspect_treasure`, `remove_treasure_trap`, and `take_treasure` accept as\n  `feature_id` from where the party stands. It's empty outside `exploring` mode.\n- `spell_names`, `reversed_spell_names`, and `spell_levels`: the name and level of every spell ID the view\n  shows. Each member's `spell_slots`, `preparable_spells`, and `learnable_spells` give what a `prepare_spells` or\n  `learn_spell` dialog offers that member. A member's `can_prepare_now` says whether the session accepts a\n  `prepare_spells` from them now, `needs_sleep_to_prepare` says whether they have to sleep first, and\n  `reverses_at` says whether they choose a reversible spell's form at `\"memorize\"` or at `\"cast\"`.\n- `item_names` and `item_names_plural`: what to call each item ID the view shows, in a member's `inventory` or\n  in the `contents` of a pile in `piles`. `valuable_names` has the own name of each gem or piece of jewellery\n  that has one, keyed by its instance ID.\n- `encounter`: active encounter state, or `null`. Pass `declarers` to build `resolve_battle_round`, and pass a\n  group's `id` as `target_group_id` for attacks, `close`, thrown splash items, and `area` or `hd_budget` spells\n  (such as `fire_ball` and `sleep`). Each group also has `members` with individual `\"monster-NNNN\"` or\n  `\"npc-NNNN\"` IDs and coarse `status` values. Use an `\"alive\"` member's `id` in `targets` for a `single` or\n  `up_to_n` spell or scroll. To find catalog templates matching a group's `family_id`, search\n  `GET /v1/rules/monsters` with `q` and check `family_id` on `GET /v1/rules/monsters/{monster_id}`.\n- `journal` and `quests`: discovered journal entries and active or completed quests.\n- `town_healing_prices`: gold-piece prices for temple services accepted by `purchase_healing`.",
     "operationId": "get_player_view",
     "security": [
      {
@@ -10643,7 +10643,7 @@
      "sessions"
     ],
     "summary": "Get a spell the player view names",
-    "description": "Return osrlib's `SpellTemplate` for a spell that the session's player view names in `spell_names`.\n\nA session's adventure can add spells to the built-in catalog, and `GET /v1/rules/spells/{spell_id}` serves only\nthe built-in ones. This operation reads the session's own catalog, osrlib's `GameSession.effective_spells`, so\nit also answers for a spell the adventure adds. Use `level` and `spell_list` to place a spell from a member's\n`spell_book` in a `prepare_spells` dialog, and the `key` of each entry in `modes` as the `mode` of a `cast_spell`\ncommand.\n\nThe operation serves the spells in `spell_names` and no others: the ones in a member's `spell_book`,\n`memorized_spells`, `preparable_spells`, or `learnable_spells`, and the ones behind an effect on a member. So it\nanswers for a spell the adventure adds as soon as a member could prepare or learn it. A spell the view doesn't\nname gets 404 `not_found`, whether or not the session's catalog has it, so the response doesn't reveal a spell\non an unidentified scroll or a spell the adventure keeps for its monsters. A player and a referee get the same\nanswer.",
+    "description": "Return osrlib's `SpellTemplate` for a spell that the session's player view names in `spell_names`.\n\nA session's adventure can add spells to the built-in catalog, and `GET /v1/rules/spells/{spell_id}` serves only\nthe built-in ones. This operation reads the session's own catalog, osrlib's `GameSession.effective_spells`, so\nit also answers for a spell the adventure adds. Use `level` and `spell_list` to place a spell from a member's\n`spell_book` in a `prepare_spells` dialog, and the `key` of each entry in `modes` as the `mode` of a `cast_spell`\ncommand. Show a mode's `display_name` as its label.\n\nThe operation serves the spells in `spell_names` and no others: the ones in a member's `spell_book`,\n`memorized_spells`, `preparable_spells`, or `learnable_spells`, and the ones behind an effect on a member. So it\nanswers for a spell the adventure adds as soon as a member could prepare or learn it. A spell the view doesn't\nname gets 404 `not_found`, whether or not the session's catalog has it, so the response doesn't reveal a spell\non an unidentified scroll or a spell the adventure keeps for its monsters. A player and a referee get the same\nanswer.",
     "operationId": "get_session_spell",
     "security": [
      {
@@ -13455,9 +13455,18 @@
       "title": "Scores",
       "description": "Six rolled ability scores (`str`, `int`, `wis`, `dex`, `con`, `cha`), each from 3 to 18."
      },
+     "ability_score_method": {
+      "type": "string",
+      "enum": [
+       "3d6",
+       "4d6_drop_lowest"
+      ],
+      "title": "Ability Score Method",
+      "description": "How osrlib rolled the scores: `\"3d6\"` or `\"4d6_drop_lowest\"`, from the `ability_score_method` of the\n`ruleset` that `POST /v1/ability-rolls` received. A preview or a creation from this roll needs a `ruleset`\nwith the same method."
+     },
      "rolls": {
       "$ref": "#/components/schemas/AbilityScoreRolls",
-      "description": "osrlib's `AbilityScoreRolls` behind `scores`: each score's total and its three d6 results in the order\nosrlib rolled them, the same as `rolls.ability_rolls` on `POST /v1/ability-rolls/{roll_id}/preview`."
+      "description": "osrlib's `AbilityScoreRolls` behind `scores`, the same as `rolls.ability_rolls` on\n`POST /v1/ability-rolls/{roll_id}/preview`. `rolls.rolls` has the three d6 that count toward each score, in\nthe order osrlib rolled them. `rolls.dropped` has the die that a `4d6_drop_lowest` roll dropped for each\nability, and it's empty for a `3d6` roll. `rolls.sub_par` is `true` when the scores are sub-par under the B/X\nrule that lets a referee allow a new roll: every score is 8 or less, or two or more scores are 5 or less."
      },
      "eligible_class_ids": {
       "items": {
@@ -13482,6 +13491,7 @@
     "required": [
      "id",
      "scores",
+     "ability_score_method",
      "rolls",
      "eligible_class_ids",
      "used",
@@ -13506,6 +13516,17 @@
       ],
       "title": "Seed",
       "description": "Referee only. Seed (0 to 2^53 - 1) that determines the six ability scores as well as the hit\npoint and gold rolls of the character created from this roll. The server never returns `seed`.\nOmit `seed` (or send no body) to let the server draw one."
+     },
+     "ruleset": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/Ruleset"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Optional rules for the roll, as osrlib's `Ruleset`. Send the ruleset of the table the\ncharacter is for, the one you pass to `POST /v1/sessions`. The roll reads one field,\n`ability_score_method`: `\"3d6\"` (the default) rolls three d6 for each score, and\n`\"4d6_drop_lowest\"` rolls four and drops the lowest. The server stores the method with the roll.\nSend the same ruleset when you preview or create the character from the roll. Omit or set to\n`null` for the rules as written."
      }
     },
     "additionalProperties": false,
@@ -13537,7 +13558,7 @@
       },
       "type": "object",
       "title": "Scores",
-      "description": "The total of each ability's three dice, keyed by `AbilityScore`. All six\nabilities are present, each from 3 to 18."
+      "description": "The total of each ability's three counted dice, keyed by `AbilityScore`.\nAll six abilities are present, each from 3 to 18."
      },
      "rolls": {
       "additionalProperties": {
@@ -13561,16 +13582,35 @@
       },
       "type": "object",
       "title": "Rolls",
-      "description": "The three d6 results behind each score, keyed the same way, in the order they were rolled."
+      "description": "The three d6 results that count towards each score, keyed the same way, in the order they were thrown.\n\nEach score is the sum of its three dice. With the `\"4d6_drop_lowest\"` method, the die dropped\nfrom an ability's four is in `dropped` instead, and the other three keep their order here."
+     },
+     "dropped": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "propertyNames": {
+       "$ref": "#/components/schemas/AbilityScore"
+      },
+      "type": "object",
+      "title": "Dropped",
+      "description": "The die that didn't count towards each score, keyed the same way.\n\nA `\"4d6_drop_lowest\"` roll has an entry for all six abilities: the lowest of the four dice, or the\nfirst of them thrown when two or more tie for lowest. A `\"3d6\"` roll drops nothing, so this is\nempty, and so is a roll that osrlib 2.8.0 or earlier recorded. Read an ability with no entry as one\nwith no die dropped. To show all four dice of an ability, show its three `rolls` and this die.",
+      "default": {}
+     },
+     "sub_par": {
+      "type": "boolean",
+      "title": "Sub Par",
+      "description": "Whether `scores` are sub-par, so that a referee may let the player discard the character and start again.\n\nThe SRD's \"Sub-Par Characters\" rule says: \"If you roll a character with very poor ability scores—for example an\n8 or less in every score or an extremely low rating in more than one ability—the referee may allow you to\ndiscard the character and start again.\" It's true when every score is 8 or less, or when two or more scores\nare 5 or less, as `scores_are_sub_par` decides.\n\nThe value is computed from `scores` each time you read it, so it's right for a roll that osrlib 2.8.0 or\nearlier recorded too. It's in `model_dump()` and in the JSON, so a client that receives the roll as a document\ncan read it there. When you parse a document, a `sub_par` key in it is ignored.\n\nIt answers for the scores as rolled, before the adjustment step, so the `ability_rolls` of a\n`CharacterCreationResult` says whether the character was\nsub-par as rolled, whatever the adjustment changed afterwards. With the `\"4d6_drop_lowest\"` method, it's\ndecided by the three dice that count. osrlib only reports it. Whether the referee allows the discard is your\ngame's choice, so `Ruleset` has no flag for it, and\n`create_character` never refuses or rerolls sub-par scores.",
+      "readOnly": true
      }
     },
     "type": "object",
     "required": [
      "scores",
-     "rolls"
+     "rolls",
+     "sub_par"
     ],
     "title": "AbilityScoreRolls",
-    "description": "The six rolled ability scores, with the dice behind each, so you can show them.\n\n`roll_ability_scores` returns one, and\n`create_character` includes one in its result. Pass\n`scores` to `validate_class_choice`. Frozen."
+    "description": "The six rolled ability scores, with the dice behind each, so you can show them.\n\n`roll_ability_scores` returns one, and\n`create_character` includes one in its result. Pass\n`scores` to `validate_class_choice`, and read\n`sub_par` to find out whether a referee may let the player start again. Frozen."
    },
    "AbilityTables": {
     "properties": {
@@ -15768,7 +15808,7 @@
       },
       "type": "array",
       "title": "Purchases",
-      "description": "Starting equipment bought in list order from rolled starting gold (3d6 x 10 gp). To show the\nplayer their gold before they shop, call `POST /v1/ability-rolls/{roll_id}/preview` with the\nsame roll, class, and `hp_reroll_at_first_level`, and read `rolls.gold_roll.total`. The\npurchases don't change the gold roll.",
+      "description": "Starting equipment bought in list order from rolled starting gold (3d6 x 10 gp). To show the\nplayer their gold before they shop, call `POST /v1/ability-rolls/{roll_id}/preview` with the\nsame roll, class, and `ruleset`, and read `rolls.gold_roll.total`. The purchases don't change\nthe gold roll.",
       "default": []
      },
      "equip_item_ids": {
@@ -15780,11 +15820,16 @@
       "description": "Purchased item `id` values to wear or wield, applied in list order. Each entry equips one\npurchased stack from `purchases` and must be permitted for `class_id`.",
       "default": []
      },
-     "hp_reroll_at_first_level": {
-      "type": "boolean",
-      "title": "Hp Reroll At First Level",
-      "description": "Whether to reroll a first-level hit die result of 1 or 2. Defaults to `false`.",
-      "default": false
+     "ruleset": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/Ruleset"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Optional rules for the creation rolls, as osrlib's `Ruleset`. Send the ruleset of the table\nthe character is for, the one you pass to `POST /v1/sessions`. Creation reads three of its\nfields, and the others change nothing here:\n\n- `ability_score_method`: `\"3d6\"` (the default) or `\"4d6_drop_lowest\"`. With an ability roll,\n  it must be the method the roll was made with, or the request gets 409\n  `ability_roll_ruleset_mismatch`.\n- `hp_reroll_at_first_level`: reroll a first-level hit die that shows 1 or 2.\n- `max_hp_at_first_level`: count the first-level hit die as its maximum.\n\nOmit or set to `null` for the rules as written."
      }
     },
     "additionalProperties": false,
@@ -15851,7 +15896,7 @@
       },
       "type": "array",
       "title": "Purchases",
-      "description": "Starting equipment bought in list order from rolled starting gold (3d6 x 10 gp). To show the\nplayer their gold before they shop, call `POST /v1/ability-rolls/{roll_id}/preview` with the\nsame roll, class, and `hp_reroll_at_first_level`, and read `rolls.gold_roll.total`. The\npurchases don't change the gold roll.",
+      "description": "Starting equipment bought in list order from rolled starting gold (3d6 x 10 gp). To show the\nplayer their gold before they shop, call `POST /v1/ability-rolls/{roll_id}/preview` with the\nsame roll, class, and `ruleset`, and read `rolls.gold_roll.total`. The purchases don't change\nthe gold roll.",
       "default": []
      },
      "equip_item_ids": {
@@ -15863,11 +15908,16 @@
       "description": "Purchased item `id` values to wear or wield, applied in list order. Each entry equips one\npurchased stack from `purchases` and must be permitted for `class_id`.",
       "default": []
      },
-     "hp_reroll_at_first_level": {
-      "type": "boolean",
-      "title": "Hp Reroll At First Level",
-      "description": "Whether to reroll a first-level hit die result of 1 or 2. Defaults to `false`.",
-      "default": false
+     "ruleset": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/Ruleset"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Optional rules for the creation rolls, as osrlib's `Ruleset`. Send the ruleset of the table\nthe character is for, the one you pass to `POST /v1/sessions`. Creation reads three of its\nfields, and the others change nothing here:\n\n- `ability_score_method`: `\"3d6\"` (the default) or `\"4d6_drop_lowest\"`. With an ability roll,\n  it must be the method the roll was made with, or the request gets 409\n  `ability_roll_ruleset_mismatch`.\n- `hp_reroll_at_first_level`: reroll a first-level hit die that shows 1 or 2.\n- `max_hp_at_first_level`: count the first-level hit die as its maximum.\n\nOmit or set to `null` for the rules as written."
      },
      "ability_roll_id": {
       "anyOf": [
@@ -17431,11 +17481,11 @@
     "properties": {
      "ability_rolls": {
       "$ref": "#/components/schemas/AbilityScoreRolls",
-      "description": "Six ability scores as rolled (3d6 each) before any `adjustment`, with the three dice for each."
+      "description": "Six ability scores as rolled, before any `adjustment`, with the three dice that count toward\neach in `rolls`. With the `4d6_drop_lowest` method, `dropped` has the fourth die of each\nability, and it's empty for a `3d6` roll. `sub_par` is `true` when the scores as rolled are\nsub-par under the B/X rule that lets a referee allow a new roll."
      },
      "hit_point_roll": {
       "$ref": "#/components/schemas/HitPointRoll",
-      "description": "First-level hit point roll, including any rerolled dice and the Constitution modifier."
+      "description": "First-level hit point roll, including any rerolled dice and the Constitution modifier.\n`maximized` is `true` when the ruleset's `max_hp_at_first_level` set the hit points to the hit\ndie's size plus the modifier, and `rolls` still lists every die thrown."
      },
      "gold_roll": {
       "$ref": "#/components/schemas/RollResult",
@@ -22015,7 +22065,7 @@
       },
       "type": "array",
       "title": "Purchases",
-      "description": "Starting equipment bought in list order from rolled starting gold (3d6 x 10 gp). To show the\nplayer their gold before they shop, call `POST /v1/ability-rolls/{roll_id}/preview` with the\nsame roll, class, and `hp_reroll_at_first_level`, and read `rolls.gold_roll.total`. The\npurchases don't change the gold roll.",
+      "description": "Starting equipment bought in list order from rolled starting gold (3d6 x 10 gp). To show the\nplayer their gold before they shop, call `POST /v1/ability-rolls/{roll_id}/preview` with the\nsame roll, class, and `ruleset`, and read `rolls.gold_roll.total`. The purchases don't change\nthe gold roll.",
       "default": []
      },
      "equip_item_ids": {
@@ -22027,11 +22077,16 @@
       "description": "Purchased item `id` values to wear or wield, applied in list order. Each entry equips one\npurchased stack from `purchases` and must be permitted for `class_id`.",
       "default": []
      },
-     "hp_reroll_at_first_level": {
-      "type": "boolean",
-      "title": "Hp Reroll At First Level",
-      "description": "Whether to reroll a first-level hit die result of 1 or 2. Defaults to `false`.",
-      "default": false
+     "ruleset": {
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/Ruleset"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "description": "Optional rules for the creation rolls, as osrlib's `Ruleset`. Send the ruleset of the table\nthe character is for, the one you pass to `POST /v1/sessions`. Creation reads three of its\nfields, and the others change nothing here:\n\n- `ability_score_method`: `\"3d6\"` (the default) or `\"4d6_drop_lowest\"`. With an ability roll,\n  it must be the method the roll was made with, or the request gets 409\n  `ability_roll_ruleset_mismatch`.\n- `hp_reroll_at_first_level`: reroll a first-level hit die that shows 1 or 2.\n- `max_hp_at_first_level`: count the first-level hit die as its maximum.\n\nOmit or set to `null` for the rules as written."
      },
      "seed": {
       "anyOf": [
@@ -22618,13 +22673,19 @@
       },
       "type": "array",
       "title": "Rolls",
-      "description": "Every die result, before the CON modifier, in the order thrown.\n\nWith the `hp_reroll_at_first_level` option of `Ruleset` on, the 1s and 2s that were\nthrown again are here too, and the last entry is the die that counts. Otherwise there's one entry."
+      "description": "Every die result, before the CON modifier, in the order thrown.\n\nWith the `hp_reroll_at_first_level` option of `Ruleset` on, the 1s and 2s that were\nthrown again are here too, and the last entry is the die that counts. Otherwise there's one entry. The\n`max_hp_at_first_level` option doesn't change what's thrown, so with both options on, the 1s and 2s set aside and\nthe last die are all here, and `maximized` says the hit points come from the die's size instead."
      },
      "hit_points": {
       "type": "integer",
       "minimum": 1,
       "title": "Hit Points",
-      "description": "The hit points the character starts with: the last die plus the CON modifier, and at least 1."
+      "description": "The hit points the character starts with, and at least 1.\n\nThey're the last die plus the CON modifier, or with `maximized` true, the hit die's size plus the CON modifier."
+     },
+     "maximized": {
+      "type": "boolean",
+      "title": "Maximized",
+      "description": "Whether the hit die counted as its maximum, because `max_hp_at_first_level` was on in the ruleset.\n\nWhen it's true, `hit_points` is the die's size plus the CON modifier, whatever the last entry of `rolls` shows, so\na client can say why. It's false for a roll that osrlib 2.8.0 or earlier recorded.",
+      "default": false
      }
     },
     "type": "object",
@@ -25842,6 +25903,34 @@
       "description": "The ids of the spells the member may write into their spell book with\n`LearnSpell`, in the order of the session's catalog,\n`GameSession.effective_spells`. Build a learn\ndialog from it.\n\nThey're the spells on the class's spell list that aren't in `spell_book`, at each spell level\nwhere the book has room. The room at a spell level is the member's count there in `spell_slots`,\nless the spells the book already has at that level. The spells the adventure bundles for that list\nare among them. The list is empty for a divine caster and for a class that casts nothing,\nbecause neither keeps a spell book. It's also empty while the book has a spell that the session's\ncatalog doesn't have, because the session can't tell that spell's level, and so can't tell how\nmuch room the book has left.\n\nA spell id is here exactly when a `LearnSpell` for it is refused with none of these codes, which\nbelong to the spell and the member: `magic.book.not_arcane`, `magic.book.unknown_spell`,\n`magic.book.wrong_list`, `magic.book.duplicate`, and `magic.book.capacity_exceeded`. The list\ndoesn't depend on the moment, so it's the same during an encounter or a battle\n(`session.command.wrong_mode`) and while the member can't act\n(`session.command.member_incapacitated`). Learning one spell can fill the book at that spell's\nlevel, so read the view again after each `LearnSpell`. To show a spell's name, look its id up in\n`PlayerView.spell_names`.",
       "default": []
      },
+     "reverses_at": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "memorize",
+         "cast"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Reverses At",
+      "description": "When the member chooses the form of a spell that reverses: `\"memorize\"`, `\"cast\"`, or `null` for a\nclass that casts nothing.\n\nIt comes from the kind of caster the class is, as\n`caster_profile` reads it from\n`Character.definition`, so it's right for a custom class\ntoo, whatever its spell list and whether or not the member has a spell book. The OSE SRD says of arcane\ncasters that \"The normal or reversed form of a spell must be selected when the spell is memorized\", and\nof divine casters that they \"can cast the reversed version of a spell by speaking the words and\nperforming the gestures backwards when it is cast.\"\n\n- `\"memorize\"`, for an arcane caster: a `PrepareSpells` may\n  select the reversed form of a spell that has an entry in\n  `PlayerView.reversed_spell_names`, and each\n  memorized copy is cast in the form its `reversed` in `memorized_spells` gives.\n- `\"cast\"`, for a divine caster: the session refuses a reversed selection with\n  `magic.memorize.divine_reverses_at_cast`, and every memorized copy of a spell that reverses can be cast\n  in either form, with the `reversed` of `CastSpell` or of a `cast`\n  `BattleDeclaration`.\n\nSo offer a reversed copy in a prepare dialog only when it's `\"memorize\"`, and offer both forms of a\nmemorized copy in a cast dialog only when it's `\"cast\"`."
+     },
+     "can_prepare_now": {
+      "type": "boolean",
+      "title": "Can Prepare Now",
+      "description": "Whether the session accepts a `PrepareSpells` from the member\nnow, with selections that fit `preparable_spells` and `spell_slots`. Read it to offer or withhold a\nprepare dialog.\n\nIt's false exactly when one of the refusals that belong to the moment applies to the member:\n\n- `session.command.wrong_mode`: the session isn't in town or exploring.\n- `session.command.member_incapacitated`: the member can't act.\n- `magic.memorize.needs_sleep`: the party hasn't slept since the member last prepared, which\n  `needs_sleep_to_prepare` gives by itself.\n\nIt's also false for a class that casts nothing, which the session refuses with\n`magic.memorize.not_a_caster`. It doesn't depend on the slots, so it's true for a 1st-level cleric who\nhas slept, whose `preparable_spells` is empty and who can prepare only an empty selection.\n\nThe session reads the moment from its own state, never from the event log, so the field is right in a\nsession restored from a save. A `Rest`, a `PrepareSpells`, an encounter,\nor a condition can change it, so read the view again after each command.",
+      "default": false
+     },
+     "needs_sleep_to_prepare": {
+      "type": "boolean",
+      "title": "Needs Sleep To Prepare",
+      "description": "Whether the member has to sleep before they can prepare spells again. Read it to tell the table which\ncasters need a night's rest.\n\nIt's true exactly when the party hasn't slept since the member last prepared, the rule by which the\nsession refuses a `PrepareSpells` with\n`magic.memorize.needs_sleep`. So it's true for every caster in a new session, before the party's first\nsleep, and for a caster who has prepared, until the party sleeps again. A `night` or `day`\n`Rest` that a wandering encounter doesn't interrupt is sleep. The OSE SRD\nsays \"A spell caster can memorize new spells once a day, after an uninterrupted night’s sleep.\"\n\nIt reads the party's sleeps and the member's last preparation alone. During an encounter or a battle,\nand while the member can't act, the session refuses the command with `session.command.wrong_mode` or\n`session.command.member_incapacitated` before it checks the sleep, and this field still says whether the\nmember will need to sleep. It's false for a class that casts nothing, which the session refuses with\n`magic.memorize.not_a_caster` whether or not the party has slept.",
+      "default": false
+     },
      "thief_skills": {
       "additionalProperties": {
        "type": "integer"
@@ -25938,7 +26027,7 @@
      "engine_version": {
       "type": "string",
       "title": "Engine Version",
-      "description": "Installed osrlib rules engine version string, such as `\"2.8.0\"`."
+      "description": "Installed osrlib rules engine version string, such as `\"2.9.0\"`."
      },
      "schema_version": {
       "type": "integer",
@@ -28746,7 +28835,7 @@
      "item_id"
     ],
     "title": "PileItemView",
-    "description": "One thing in a dropped pile, by the id the events name it by, with its count.\n\nYou get these from `PileView.contents`. Look `item_id` up\nin `PlayerView.item_names` and\n`PlayerView.item_names_plural` to name it."
+    "description": "One thing in a dropped pile, by the id the events name it by, with its count.\n\nYou get these from `PileView.contents`. Look `item_id` up\nin `PlayerView.item_names` and\n`PlayerView.item_names_plural` to name it. A gem or\npiece of jewellery that has a name of its own has it in\n`PlayerView.valuable_names` too. Show that name as\nwritten, with no article."
    },
    "PileView": {
     "properties": {
@@ -28976,7 +29065,7 @@
       },
       "type": "object",
       "title": "Item Names",
-      "description": "What to call one of each item whose id the view shows, keyed by that id, like\n`{\"torch\": \"torch\", \"holy_water\": \"vial of holy water\", \"magic-item-0003\": \"potion\"}`. Show these\nnames, not the ids, and put a number or an article in front of one: \"a torch\". To word a count,\nlike \"6 torches\", use `item_names_plural`.\n\nAn item id appears in the view in four forms, and each is a key here:\n\n- The catalog id of a mundane stack, like `\"holy_water\"`, in a member's\n  `inventory` and in a pile's\n  `contents`. For a stack a member carries, its name is\n  the `display_name` of the template the stack\n  embeds, which the session gives the display names of the template its catalog,\n  `GameSession.effective_equipment`, has\n  under that id, as `ItemInstance.template` says. So a\n  stack from a save or a party document that osrlib 2.7.0 wrote is named as the catalog names it,\n  and the name here matches the stack's template in `inventory`. A bundled id can't shadow a\n  built-in one, because a session refuses an adventure whose bundled id collides with a built-in\n  id. A carried stack whose id the catalog doesn't have, like an item another adventure bundled,\n  keeps the names its template has. For a pile, the name comes from the catalog, and a pile's\n  catalog id that the catalog doesn't have has no entry.\n- The instance id of a magic item, like `\"magic-item-0003\"`, in an inventory and in a pile.\n  Until the party identifies the item, its name is the masked name the inventory shows, without\n  the article: `\"potion\"`, `\"curious device\"`, or `\"shield with a faint aura\"`. So a cursed item\n  and the item it passes for have the same name, and the name tells nothing the inventory\n  doesn't. Once the item is identified, its name is the\n  `display_name` of its template in the magic\n  item catalog, like `\"potion of healing\"`.\n- The template id of an identified magic item, like `\"potion_of_healing\"`, which the inventory\n  shows once the item is identified, with the same name. A pile shows a magic item by its\n  instance id alone, identified or not, so an identified item's template id is a key only while\n  a member carries it. An unidentified item's template id is never a key.\n- The instance id of a gem or a piece of jewellery, like `\"valuable-0007\"`. Its name is its kind,\n  `\"gem\"` or `\"piece of jewellery\"`. The players see everything else about it from the moment\n  they take it, its own name and its value in gold pieces included, in the inventory's\n  `valuables`.\n\nIt names no item whose id the view doesn't show. The player-visible item events, like\n`ItemAcquiredEvent`, name items by the same ids. An\nitem the command left in a member's pack or in a pile the view shows is a key in the view you\nbuild after the command. An item the command used up, sold, or left behind on a trail is a key\nin the view from before it. An item that is identified and used up in the same command, like a\npotion drunk before the party knew it, has its true name on the\n`ItemIdentifiedEvent`.",
+      "description": "What to call one of each item whose id the view shows, keyed by that id, like\n`{\"torch\": \"torch\", \"holy_water\": \"vial of holy water\", \"magic-item-0003\": \"potion\"}`. Show these\nnames, not the ids, and put a number or an article in front of one: \"a torch\". To word a count,\nlike \"6 torches\", use `item_names_plural`.\n\nAn item id appears in the view in four forms, and each is a key here:\n\n- The catalog id of a mundane stack, like `\"holy_water\"`, in a member's\n  `inventory` and in a pile's\n  `contents`. For a stack a member carries, its name is\n  the `display_name` of the template the stack\n  embeds, which the session gives the display names of the template its catalog,\n  `GameSession.effective_equipment`, has\n  under that id, as `ItemInstance.template` says. So a\n  stack from a save or a party document that osrlib 2.7.0 wrote is named as the catalog names it,\n  and the name here matches the stack's template in `inventory`. A bundled id can't shadow a\n  built-in one, because a session refuses an adventure whose bundled id collides with a built-in\n  id. A carried stack whose id the catalog doesn't have, like an item another adventure bundled,\n  keeps the names its template has. For a pile, the name comes from the catalog, and a pile's\n  catalog id that the catalog doesn't have has no entry.\n- The instance id of a magic item, like `\"magic-item-0003\"`, in an inventory and in a pile.\n  Until the party identifies the item, its name is the masked name the inventory shows, without\n  the article: `\"potion\"`, `\"curious device\"`, or `\"shield with a faint aura\"`. So a cursed item\n  and the item it passes for have the same name, and the name tells nothing the inventory\n  doesn't. Once the item is identified, its name is the\n  `display_name` of its template in the magic\n  item catalog, like `\"potion of healing\"`.\n- The template id of an identified magic item, like `\"potion_of_healing\"`, which the inventory\n  shows once the item is identified, with the same name. A pile shows a magic item by its\n  instance id alone, identified or not, so an identified item's template id is a key only while\n  a member carries it. An unidentified item's template id is never a key.\n- The instance id of a gem or a piece of jewellery, like `\"valuable-0007\"`. Its name is its kind,\n  `\"gem\"` or `\"piece of jewellery\"`. The players see everything else about it from the moment\n  they take it, its own name and its value in gold pieces included, in the inventory's\n  `valuables`. A piece that has a name of its own, like `\"Prior's chain of office\"`, has it in\n  `valuable_names` under the same id. Show that name as written, with no article, in place of\n  the kind.\n\nIt names no item whose id the view doesn't show. The player-visible item events, like\n`ItemAcquiredEvent`, name items by the same ids. An\nitem the command left in a member's pack or in a pile the view shows is a key in the view you\nbuild after the command. An item the command used up, sold, or left behind on a trail is a key\nin the view from before it. An item that is identified and used up in the same command, like a\npotion drunk before the party knew it, has its true name on the\n`ItemIdentifiedEvent`.",
       "default": {}
      },
      "item_names_plural": {
@@ -28986,6 +29075,15 @@
       "type": "object",
       "title": "Item Names Plural",
       "description": "What to call two or more of each item in `item_names`, with the same keys, like\n`{\"torch\": \"torches\", \"holy_water\": \"vials of holy water\", \"magic-item-0003\": \"potions\"}`.\n\nEach value is the plural of the name in `item_names`: the template's\n`display_name_plural`, the plural of a\nmasked name, like `\"shields with a faint aura\"`, or `\"gems\"` or `\"pieces of jewellery\"`. Use it\nwith a count from a pile's `contents`, an inventory\nentry's `quantity`, or the ids an event repeats, one per unit: \"2 vials of holy water\".",
+      "default": {}
+     },
+     "valuable_names": {
+      "additionalProperties": {
+       "type": "string"
+      },
+      "type": "object",
+      "title": "Valuable Names",
+      "description": "The own name of each gem and piece of jewellery that has one, keyed by its instance id, like\n`{\"valuable-0007\": \"Prior's chain of office\"}`. Show it as written, with no article: \"Sam takes\nPrior's chain of office.\" For an id that isn't a key, use the kind in `item_names`, with an\narticle: \"Sam takes a gem.\"\n\nA piece has a name of its own when its `name` is neither empty nor the plain name that treasure\ngeneration gives its kind, `\"Gem\"` or `\"Jewellery\"`. So a piece an adventure places in a cache\nwith a named `ValuableSpec` is a key, and neither a piece\nthe session rolls on the treasure tables nor a placed piece whose `name` is empty is a key.\n\nThe keys are the instance ids of those pieces in the members'\n`inventory` `valuables` and in the\n`contents` of the known piles. Each value is the name that\nthe inventory's `valuables` give the piece, and the string at the same place in the pile's\n`items`. A piece in a pile the party doesn't know, or in a\ncache the party hasn't emptied, isn't a key, as it isn't one in `item_names`. Every key here is\nalso a key in `item_names`.",
       "default": {}
      },
      "fatigued": {
@@ -29103,7 +29201,7 @@
      "command_type"
     ],
     "title": "PrepareSpells",
-    "description": "Choose the spells a caster memorizes, replacing what they had memorized (six turns).\n\nIt's legal in town and while exploring. The caster must have slept since their last\npreparation: a `night` or `day` `Rest` that a\nwandering encounter didn't interrupt. In a new session the party hasn't slept yet, so a\ncaster's first preparation comes after a rest. The selections replace the memorized list rather\nthan adding to it. Cast what the caster memorized with\n`CastSpell` outside battle, or with a `cast`\n`BattleDeclaration` in one.\nThe `CastSpell` example shows a caster resting, preparing, and casting.\n\nModes:\n\n`town`, `exploring`\n\n**Rejections:**\n\n- `session.command.wrong_mode` - an encounter or battle is underway, or the\n  session has ended.\n- `session.command.unknown_member` - `character_id` matches no party member.\n- `session.command.member_incapacitated` - the member can't act.\n- `magic.memorize.needs_sleep` - the party hasn't slept since this caster's last\n  preparation.\n- `magic.memorize.not_a_caster` - the member's class casts no spells.\n- `magic.memorize.unknown_spell` - a selection matches no spell in the session's\n  catalog.\n- `magic.memorize.wrong_list` - a selection isn't on the caster's spell list.\n- `magic.memorize.divine_reverses_at_cast` - a selection for a divine caster is\n  reversed. A divine caster chooses the reversed form when casting instead.\n- `magic.memorize.not_in_book` - an arcane caster's selection isn't in their\n  spell book.\n- `magic.memorize.not_reversible` - a reversed selection has no reversed\n  form.\n- `magic.memorize.slots_exceeded` - the selections at some spell level outnumber\n  the caster's slots at that level.\n\n**Events:**\n\n`SpellsMemorizedEvent` with the\nmemorized list. Six turns pass, with each turn's usual events."
+    "description": "Choose the spells a caster memorizes, replacing what they had memorized (six turns).\n\nIt's legal in town and while exploring. The caster must have slept since their last\npreparation: a `night` or `day` `Rest` that a\nwandering encounter didn't interrupt. In a new session the party hasn't slept yet, so a\ncaster's first preparation comes after a rest. The selections replace the memorized list rather\nthan adding to it. Cast what the caster memorized with\n`CastSpell` outside battle, or with a `cast`\n`BattleDeclaration` in one.\nThe `CastSpell` example shows a caster resting, preparing, and casting.\n\nModes:\n\n`town`, `exploring`\n\n**Rejections:**\n\n- `session.command.wrong_mode` - an encounter or battle is underway, or the\n  session has ended.\n- `session.command.unknown_member` - `character_id` matches no party member.\n- `session.command.member_incapacitated` - the member can't act.\n- `magic.memorize.not_a_caster` - the member's class casts no spells.\n- `magic.memorize.needs_sleep` - the party hasn't slept since this caster's last\n  preparation.\n- `magic.memorize.unknown_spell` - a selection matches no spell in the session's\n  catalog.\n- `magic.memorize.wrong_list` - a selection isn't on the caster's spell list.\n- `magic.memorize.divine_reverses_at_cast` - a selection for a divine caster is\n  reversed. A divine caster chooses the reversed form when casting instead.\n- `magic.memorize.not_in_book` - an arcane caster's selection isn't in their\n  spell book.\n- `magic.memorize.not_reversible` - a reversed selection has no reversed\n  form.\n- `magic.memorize.slots_exceeded` - the selections at some spell level outnumber\n  the caster's slots at that level.\n\n**Events:**\n\n`SpellsMemorizedEvent` with the\nmemorized list. Six turns pass, with each turn's usual events."
    },
    "PreparedSpell": {
     "properties": {
@@ -30820,7 +30918,7 @@
      "prose": {
       "type": "string",
       "title": "Prose",
-      "description": "The SRD text for the reverse.",
+      "description": "The SRD text for the reverse, all of it.\n\nEach of the reverse's `modes` has the part of this text that covers that mode as its own\n`prose`.",
       "default": ""
      },
      "modes": {
@@ -31017,6 +31115,22 @@
       "description": "Reroll a first-level hit die that comes up 1 or 2. An optional rule, off by default.\n\nTurn it on and osrlib rerolls the raw die until it shows 3 or more, before the CON\nmodifier is added, so a first-level character starts with at least 3 hit points before\nthat modifier.",
       "default": false
      },
+     "max_hp_at_first_level": {
+      "type": "boolean",
+      "title": "Max Hp At First Level",
+      "description": "Count a first-level character's hit die as its maximum. A house rule, off by default.\n\nThe SRD doesn't print this rule. Its character creation has you roll the class's hit die. Turn\nthe flag on and a first-level character's hit points are the hit die's size plus the CON\nmodifier, and at least 1, so a fighter with CON 7 starts with 8 - 1 = 7.\n`roll_hit_points` still throws the dice it throws with\nthe flag off, so the creation stream ends in the same place and the starting gold roll after it is\nthe same. With `hp_reroll_at_first_level` also on, a die showing 1 or 2 is still thrown again and\n`HitPointRoll.rolls` lists every die, but the\nreroll can't change the hit points. The flag affects only the hit points rolled at character\ncreation. `level_up` rolls each later level's hit die as usual.",
+      "default": false
+     },
+     "ability_score_method": {
+      "type": "string",
+      "enum": [
+       "3d6",
+       "4d6_drop_lowest"
+      ],
+      "title": "Ability Score Method",
+      "description": "How a new character's ability scores are rolled. `\"3d6\"` by default, the SRD's method.\n\n`\"4d6_drop_lowest\"` is a house rule, not an SRD rule. With it, each ability throws four d6 and\nthe lowest die doesn't count, so the score is the sum of the other three, from 3 to 18.\n`create_character` passes the method to\n`roll_ability_scores`, and the result lists the\ndropped die of each ability in\n`AbilityScoreRolls.dropped`. The method\naffects only the characters you create. The NPC adventurers that encounters generate always\nroll 3d6.",
+      "default": "3d6"
+     },
      "encumbrance": {
       "$ref": "#/components/schemas/EncumbranceMode",
       "description": "Which system tracks carried weight and sets movement rate. Basic by default.\n\nSee `EncumbranceMode` for what each mode\ncounts, and `osrlib.core.items` for the weights and rates it\nreads.",
@@ -31097,7 +31211,7 @@
     "additionalProperties": false,
     "type": "object",
     "title": "Ruleset",
-    "description": "The rules for a game: one flag per decision osrlib lets you make.\n\nBuild one at the start of a game and pass it to\n`GameSession.new`, or to each kernel function\nthat takes a `ruleset` argument. `Ruleset()` gives you the SRD rules as written, so pass\nonly the flags you want to change. The model is frozen, so you can't change a ruleset\nmid-game. Saves and replays contain it, so a resumed game uses the rules it started with. An\nunknown field name raises a pydantic `ValidationError`, so a misspelled flag fails\ninstead of doing nothing.\n\nEach flag is one of two kinds. An optional rule is an alternative the SRD prints\nbeside its standard procedure, and osrlib's default is the book's. An adaptation is a\ndefault osrlib supplies where the tabletop game leaves the decision to a human\nreferee. [The adaptations register](https://mmacy.github.io/osrlib-python/adaptations/)\ngives the reasoning behind each one."
+    "description": "The rules for a game: one flag per decision osrlib lets you make.\n\nBuild one at the start of a game and pass it to\n`GameSession.new`, or to each kernel function\nthat takes a `ruleset` argument. `Ruleset()` gives you the SRD rules as written, so pass\nonly the flags you want to change. The model is frozen, so you can't change a ruleset\nmid-game. Saves and replays contain it, so a resumed game uses the rules it started with. An\nunknown field name raises a pydantic `ValidationError`, so a misspelled flag fails\ninstead of doing nothing.\n\nEach flag is one of three kinds. An optional rule is an alternative the SRD prints\nbeside its standard procedure, and osrlib's default is the book's. An adaptation is a\ndefault osrlib supplies where the tabletop game leaves the decision to a human\nreferee. A house rule is a change the SRD doesn't print, and its default is the SRD's\nprocedure. [The adaptations register](https://mmacy.github.io/osrlib-python/adaptations/)\ngives the reasoning behind each one."
    },
    "SaveCategory": {
     "type": "string",
@@ -32271,7 +32385,13 @@
       "type": "string",
       "minLength": 1,
       "title": "Key",
-      "description": "The mode's name, like `\"heal\"`. No two modes of the same form have the same key.\n\nPass it as `mode` to `cast_spell` and\n`validate_cast`. A spell with a single usage still has a\nmode, like *fire ball*'s `\"damage\"`."
+      "description": "The mode's name, like `\"heal\"`. No two modes of the same form have the same key.\n\nPass it as `mode` to `cast_spell` and\n`validate_cast`. A spell with a single usage still has a\nmode, like *fire ball*'s `\"damage\"`. To show a mode to a player, use `display_name`."
+     },
+     "display_name": {
+      "type": "string",
+      "title": "Display Name",
+      "description": "A short label for the mode, like `\"Blind a creature\"`. Show it where a player chooses one of a form's modes.\n\nThe label says what the caster does, as an instruction in sentence case with no closing punctuation:\n`\"Conjure light\"`, `\"Cancel darkness\"`, and `\"Hold a group\"`. In the built-in catalog, no two modes of one\nform have the same label, in the normal form or in the reverse, so a cast dialog can list a form's\nmodes by label alone. A built-in label comes from the lead-in that the OSE SRD prints before the\nusage, like \"Blinding a creature:\". A mode whose page prints no lead-in, or a lead-in that names a\nsituation rather than an action, like *bless*'s \"Battle:\", has a label written for it from the\npage's words, like `\"Bless allies in battle\"` and the reverse of *light*'s `\"Conjure darkness\"`.\n\nWhen you write a mode and leave the label out, or give one that is empty or only spaces, the\nmode gets a label made from its key: each run of underscores becomes one space, the spaces at\neither end are dropped, and the first letter becomes a capital, so `\"darken\"` is labelled\n`\"Darken\"` and `\"kill_green_slime\"` is labelled `\"Kill green slime\"`. A key made only of\nunderscores is its own label, so a label is never empty. A spell you wrote for an earlier osrlib\nloads this way, with a label on every mode. A spell with a single mode has nothing to choose\nbetween, so the built-in catalog gives that mode the label from its key too, like *fire ball*'s\n`\"Damage\"`. For a form with one mode, show the spell's name and not the mode's label.",
+      "default": ""
      },
      "targeting": {
       "anyOf": [
@@ -32315,7 +32435,7 @@
      "prose": {
       "type": "string",
       "title": "Prose",
-      "description": "The SRD text for this usage.\n\nShow it to the player. For a manual mode, it's all the information osrlib has about the result.",
+      "description": "The SRD text for this usage.\n\nShow it to the player. For a manual mode, it's all the information osrlib has about the result.\nIn the built-in catalog, no two modes of one form have the same prose. Where the page describes\nseveral usages in one passage, like the reverse of *light*, each mode's prose is the part of\nthe passage that covers that usage, and the whole passage is the form's own prose, such as\n`ReversedForm.prose`.",
       "default": ""
      }
     },

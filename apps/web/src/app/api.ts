@@ -122,6 +122,16 @@ const FIXED: Record<string, { title: string; detail: string }> = {
     detail:
       'You rolled hit points for these ability scores, which fixed your class and the reroll option. To play another class, roll new ability scores.',
   },
+  // TODO(table-ruleset): the two problem codes of the table reroll limit, with the content design spec's text
+  // (A-01 and A-02).
+  ability_rerolls_used: {
+    title: "You've used all your rerolls",
+    detail: 'Continue with the ability scores you rolled last, or ask the referee to allow another reroll.',
+  },
+  ability_roll_superseded: {
+    title: 'You rolled newer ability scores',
+    detail: 'Only your newest ability scores count, so continue with those.',
+  },
   hit_points_not_rolled: {
     title: 'Roll your hit points first',
     detail: 'You roll your starting gold after your hit points.',

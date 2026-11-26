@@ -25,6 +25,7 @@ import { Hub } from './hub';
 import { registerNotesRoutes } from './notes';
 import { registerRejoinRoutes, RejoinService } from './rejoin';
 import { registerRulesRoutes, RulesCache } from './rules';
+import { registerRulesetRoutes } from './rulesets';
 import { registerTableRoutes, TableStore } from './tables';
 import { registerUserRoutes, UserStore } from './users';
 import { RateLimiter } from './util';
@@ -222,6 +223,7 @@ export async function createServer(config: Config): Promise<Server> {
   registerTableRoutes(app, ctx);
   registerCharacterRoutes(app, ctx);
   registerRulesRoutes(app, ctx);
+  registerRulesetRoutes(app, ctx);
   registerCatalogRoutes(app, ctx);
   registerAdventureRoutes(app, ctx);
   registerGameRoutes(app, ctx);

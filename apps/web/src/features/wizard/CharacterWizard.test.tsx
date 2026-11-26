@@ -3,6 +3,7 @@ import type {
   AbilityRoll,
   CharacterCheckRequest,
   CharacterRequest,
+  CreationRules,
   Problem,
   StartingRolls,
   StartingRollsStatus,
@@ -31,18 +32,32 @@ const ABILITY_DICE = {
 
 const SCORES = { str: 15, int: 9, wis: 10, dex: 12, con: 11, cha: 8 };
 
+/** The rules recorded on the test roll. */
+// TODO(table-ruleset): starting rolls carry the roll's recorded rules instead of a re-roll option.
+const RULES = {
+  ability_score_method: '3d6',
+  hp_reroll_at_first_level: false,
+  max_hp_at_first_level: false,
+  ability_score_rerolls: null,
+  sub_par_restart: false,
+} satisfies CreationRules;
+
 const ROLL: AbilityRoll = {
   id: 'rol_test',
   scores: SCORES,
-  rolls: { scores: SCORES, rolls: ABILITY_DICE },
+  ability_score_method: '3d6',
+  rolls: { scores: SCORES, rolls: ABILITY_DICE, dropped: {}, sub_par: false },
   eligible_class_ids: ['fighter', 'dwarf', 'magic_user'],
   used: false,
   created_at: '2026-11-21T00:00:00Z',
+  table_id: 'tbl_test',
+  rules: RULES,
+  rerolls_left: null,
 };
 
 /** The dice the fake server rolls: a 6 on the hit die, and 4, 6, and 1 for gold. */
 const DICE = {
-  hit_point_roll: { rolls: [6], hit_points: 6 },
+  hit_point_roll: { rolls: [6], hit_points: 6, maximized: false },
   gold_roll: { rolls: [4, 6, 1], modifier: 0, multiplier: 10, total: 110 },
 };
 
@@ -117,14 +132,14 @@ function wizardApi(options: { refusal?: BxvttProblemError; rolls?: ServerRolls }
   const server: StartingRollsStatus = {
     used: false,
     class_id: null,
-    hp_reroll_at_first_level: null,
+    rules: RULES,
     gold_rolled: false,
     ...options.rolls?.status,
   };
   const hitPoints = options.rolls?.hitPoints ?? DICE.hit_point_roll;
   const answer = (): StartingRolls => ({
     class_id: server.class_id ?? '',
-    hp_reroll_at_first_level: server.hp_reroll_at_first_level === true,
+    rules: server.rules,
     hit_point_roll: hitPoints,
     gold_roll: server.gold_rolled ? DICE.gold_roll : null,
   });
@@ -132,7 +147,6 @@ function wizardApi(options: { refusal?: BxvttProblemError; rolls?: ServerRolls }
   api.rollHitPoints.mockImplementation(async (_rollId, body) => {
     if (server.class_id === null) {
       server.class_id = body.class_id;
-      server.hp_reroll_at_first_level = body.hp_reroll_at_first_level === true;
     }
     return answer();
   });
@@ -346,7 +360,7 @@ describe('CharacterWizard', () => {
           { code: 'items.equip.armour_not_allowed', params: { class: 'magic_user', item: 'leather' } },
         ],
       }),
-      rolls: { status: { class_id: 'fighter', hp_reroll_at_first_level: false, gold_rolled: true } },
+      rolls: { status: { class_id: 'fighter', gold_rolled: true } },
     });
     const { user } = openOn({ step: 'review' }, api);
     await user.click(await screen.findByRole('button', { name: 'Create character' }));
@@ -412,7 +426,7 @@ describe('the hit points and gold step', () => {
 
   it('after a reload, shows the rolls the server kept and offers neither roll again', async () => {
     const api = wizardApi({
-      rolls: { status: { class_id: 'fighter', hp_reroll_at_first_level: false, gold_rolled: true } },
+      rolls: { status: { class_id: 'fighter', gold_rolled: true } },
     });
     openOn({ step: 'hp_gold' }, api);
     expect(
@@ -428,8 +442,12 @@ describe('the hit points and gold step', () => {
   it('shows the dice the first-level reroll set aside', async () => {
     const api = wizardApi({
       rolls: {
-        status: { class_id: 'fighter', hp_reroll_at_first_level: true, gold_rolled: false },
-        hitPoints: { rolls: [1, 2, 5], hit_points: 5 },
+        status: {
+          class_id: 'fighter',
+          rules: { ...RULES, hp_reroll_at_first_level: true },
+          gold_rolled: false,
+        },
+        hitPoints: { rolls: [1, 2, 5], hit_points: 5, maximized: false },
       },
     });
     openOn({ step: 'hp_gold', hpReroll: true }, api);
@@ -440,10 +458,7 @@ describe('the hit points and gold step', () => {
       screen.getByText('The reroll option set aside 1 and 2 and rolled again. You start with 5 hit points.'),
     ).toBeInTheDocument();
     expect(screen.getByText('On')).toBeInTheDocument();
-    expect(api.rollHitPoints).toHaveBeenCalledWith('rol_test', {
-      class_id: 'fighter',
-      hp_reroll_at_first_level: true,
-    });
+    expect(api.rollHitPoints).toHaveBeenCalledWith('rol_test', { class_id: 'fighter' });
   });
 
   it('sends a draft from the version that counted gold back to the rolls before the shop', async () => {
@@ -456,7 +471,13 @@ describe('the hit points and gold step', () => {
 describe('the class step after the hit points are rolled', () => {
   it('shows the class as fixed and says how to play another', async () => {
     const api = wizardApi({
-      rolls: { status: { class_id: 'dwarf', hp_reroll_at_first_level: true, gold_rolled: false } },
+      rolls: {
+        status: {
+          class_id: 'dwarf',
+          rules: { ...RULES, hp_reroll_at_first_level: true },
+          gold_rolled: false,
+        },
+      },
     });
     openOn({ step: 'class', classId: 'fighter', hpReroll: false }, api);
     expect(await screen.findByText('Your class is fixed as a dwarf')).toBeInTheDocument();

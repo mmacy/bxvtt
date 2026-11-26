@@ -10,6 +10,7 @@ import type {
   CharacterCheckRequest,
   CharacterList,
   CharacterPreview,
+  CharacterPreviewRequest,
   CharacterRequest,
   Command,
   CommandResult,
@@ -53,6 +54,7 @@ import type {
   StartingRollRequest,
   StartingRolls,
   StartingRollsStatus,
+  StartingRulesetList,
   StoredCharacter,
   TableDetail,
   TableList,
@@ -452,48 +454,73 @@ export class BxvttClient {
   // Characters.
 
   /**
-   * Rolls ability scores for a new character.
+   * Rolls ability scores for a new character at a table, under the table's ruleset. Any member may roll. The roll
+   * keeps the table's rules as they are now, in `rules`, and `rerolls_left` says how many more rolls the table's
+   * reroll limit allows.
    *
+   * ```ts
+   * const roll = await client.rollAbilities(tableId);
+   * if (roll.rerolls_left === 0) disableRollAgain();
+   * ```
+   *
+   * @param tableId - The table ID.
    * @param body - An optional seed, when the server allows one.
+   * @throws BxvttProblemError `ability_rerolls_used` when the user has as many open rolls at the table as the
+   *   reroll limit allows, with the newest one's `roll_id`, `not_found` for a table the user isn't a member of, and `forbidden` for a seed on a
+   *   server that doesn't allow one.
    */
-  rollAbilities(body: AbilityRollRequest = {}): Promise<AbilityRoll> {
-    return this.request('POST', '/api/ability-rolls', { body });
+  rollAbilities(tableId: string, body: AbilityRollRequest = {}): Promise<AbilityRoll> {
+    return this.request('POST', `/api/tables/${enc(tableId)}/ability-rolls`, { body });
   }
 
   /**
-   * Reads one of the user's ability rolls.
+   * Reads the user's newest open ability roll at a table: the roll a character can be made from. A wizard that lost
+   * its draft uses it to get back to the roll.
+   *
+   * @param tableId - The table ID.
+   * @throws BxvttProblemError `not_found` when the user has no open roll at the table, or isn't a member.
+   */
+  getCurrentAbilityRoll(tableId: string): Promise<AbilityRoll> {
+    return this.request('GET', `/api/tables/${enc(tableId)}/ability-rolls/current`);
+  }
+
+  /**
+   * Reads one of the user's ability rolls, with its table, its recorded rules, and the rerolls left at its table.
    *
    * @param rollId - The roll ID.
+   * @throws BxvttProblemError `not_found` for a roll the user doesn't have, a roll from a table the user left, and
+   *   a roll from before rolls belonged to tables.
    */
   getAbilityRoll(rollId: string): Promise<AbilityRoll> {
     return this.request('GET', `/api/ability-rolls/${enc(rollId)}`);
   }
 
   /**
-   * Previews a character from a set of choices, storing nothing.
+   * Previews a character from a set of choices without a roll, storing nothing.
    *
-   * @param body - The character choices.
+   * @param body - The character choices, with an optional ruleset and seed.
    */
-  previewCharacter(body: CharacterRequest): Promise<CharacterPreview> {
+  previewCharacter(body: CharacterPreviewRequest): Promise<CharacterPreview> {
     return this.request('POST', '/api/characters/preview', { body });
   }
 
   /**
    * Reads which starting rolls the player has made from one of the user's ability rolls: whether the hit points
-   * are rolled, with the class and reroll option they fixed, and whether the gold is rolled. Call it when a
-   * character wizard opens, so it never offers a roll the player already made.
+   * are rolled, with the class they fixed, whether the gold is rolled, and the rules recorded on the roll. Call it
+   * when a character wizard opens, so it never offers a roll the player already made.
    *
    * @param rollId - The ability roll ID.
-   * @throws BxvttProblemError `not_found` for a roll the user doesn't own.
+   * @throws BxvttProblemError `not_found` for a roll the user doesn't have.
    */
   getStartingRolls(rollId: string): Promise<StartingRollsStatus> {
     return this.request('GET', `/api/ability-rolls/${enc(rollId)}/starting-rolls`);
   }
 
   /**
-   * Rolls the hit points of a character made from one of the user's ability rolls, and fixes the class and the
-   * reroll option for that ability roll. Once the hit points are rolled, the same request returns the same dice,
-   * with the gold roll when the gold is rolled too, so call it again to show the rolls after a reload.
+   * Rolls the hit points of a character made from the user's newest ability roll at a table, under the roll's
+   * recorded rules, and fixes the class for that ability roll. Once the hit points are rolled, the same request
+   * returns the same dice, with the gold roll when the gold is rolled too, so call it again to show the rolls
+   * after a reload.
    *
    * ```ts
    * const rolls = await client.rollHitPoints(roll.id, { class_id: 'fighter' });
@@ -501,33 +528,33 @@ export class BxvttClient {
    * ```
    *
    * @param rollId - The ability roll ID.
-   * @param body - The class, the reroll option, and an arcane caster's first spell.
-   * @throws BxvttProblemError `ability_roll_locked` when the hit points were rolled for another class or reroll
-   *   option, `character_invalid` when the class or the spells break a rule, `ability_roll_used`, `not_found`,
-   *   and `rate_limited`.
+   * @param body - The class, and an arcane caster's first spell.
+   * @throws BxvttProblemError `ability_roll_superseded` for a roll that isn't the user's newest open roll,
+   *   `ability_roll_locked` when the hit points were rolled for another class, `character_invalid` when the class
+   *   or the spells break a rule, `ability_roll_used`, `not_found`, and `rate_limited`.
    */
   rollHitPoints(rollId: string, body: StartingRollRequest): Promise<StartingRolls> {
     return this.request('POST', `/api/ability-rolls/${enc(rollId)}/hit-points`, { body });
   }
 
   /**
-   * Rolls the starting gold of a character made from one of the user's ability rolls, after its hit points.
-   * Repeating the request returns the same dice.
+   * Rolls the starting gold of a character made from the user's newest ability roll at a table, after its hit
+   * points. Repeating the request returns the same dice.
    *
    * @param rollId - The ability roll ID.
-   * @param body - The class and reroll option the hit points were rolled with, and an arcane caster's first spell.
-   * @throws BxvttProblemError `hit_points_not_rolled`, `ability_roll_locked`, `character_invalid`,
-   *   `ability_roll_used`, `not_found`, and `rate_limited`.
+   * @param body - The class the hit points were rolled for, and an arcane caster's first spell.
+   * @throws BxvttProblemError `hit_points_not_rolled`, `ability_roll_superseded`, `ability_roll_locked`,
+   *   `character_invalid`, `ability_roll_used`, `not_found`, and `rate_limited`.
    */
   rollStartingGold(rollId: string, body: StartingRollRequest): Promise<StartingRolls> {
     return this.request('POST', `/api/ability-rolls/${enc(rollId)}/gold`, { body });
   }
 
   /**
-   * Checks a set of choices against one of the user's ability rolls, storing nothing and leaving the roll
-   * unused. Use it to check each step of a character wizard. The answer never reveals the hit points or the gold,
-   * so a check with purchases or equipped items needs the gold rolled first, and a check after the hit points are
-   * rolled needs their class and reroll option.
+   * Checks a set of choices against the user's newest ability roll at a table and its recorded rules, storing
+   * nothing and leaving the roll unused. Use it to check each step of a character wizard. The answer never
+   * reveals the hit points or the gold, so a check with purchases or equipped items needs the gold rolled first,
+   * and a check after the hit points are rolled needs their class.
    *
    * ```ts
    * const check = await client.checkCharacter({ ...choices, ability_roll_id: roll.id });
@@ -535,24 +562,35 @@ export class BxvttClient {
    * ```
    *
    * @param body - The character choices, with `ability_roll_id`.
-   * @throws BxvttProblemError `not_found` for a roll the user doesn't own, `ability_roll_used` for a roll that
-   *   already made a character, `ability_roll_locked`, `gold_not_rolled`, and `rate_limited` after too many
-   *   checks.
+   * @throws BxvttProblemError `not_found` for a roll the user doesn't have, `ability_roll_used` for a roll that
+   *   already made a character, `ability_roll_superseded`, `ability_roll_locked`, `gold_not_rolled`, and
+   *   `rate_limited` after too many checks.
    */
   checkCharacter(body: CharacterCheckRequest): Promise<CharacterCheck> {
     return this.request('POST', '/api/characters/check', { body });
   }
 
   /**
-   * Creates and stores a character that the user owns.
+   * Creates and stores a character that the user owns, from the user's newest ability roll at a table, under the
+   * rules recorded on the roll. The character records those rules, and the user's other open rolls at the table
+   * close.
    *
-   * @param body - The character choices.
-   * @throws BxvttProblemError `ability_roll_locked` when the hit points of `ability_roll_id` were rolled for
-   *   another class or reroll option, `gold_not_rolled` for purchases or equipped items from an ability roll whose
-   *   gold isn't rolled, and `character_invalid` when a choice breaks a rule.
+   * @param body - The character choices, with `ability_roll_id`.
+   * @throws BxvttProblemError `ability_roll_superseded` for a roll that isn't the user's newest open roll,
+   *   `ability_roll_locked` when the hit points of `ability_roll_id` were rolled for another class,
+   *   `gold_not_rolled` for purchases or equipped items from an ability roll whose gold isn't rolled,
+   *   `ability_roll_used`, and `character_invalid` when a choice breaks a rule.
    */
   createCharacter(body: CharacterRequest): Promise<StoredCharacter> {
     return this.request('POST', '/api/characters', { body });
+  }
+
+  /**
+   * Lists the starting rulesets a referee picks from: `standard` and `creation_house_rules`, each a whole
+   * `Ruleset`. Apply one with `updateTable(tableId, { settings: { ruleset } })`.
+   */
+  listRulesets(): Promise<StartingRulesetList> {
+    return this.request('GET', '/api/rulesets');
   }
 
   /** Lists the user's characters. */
@@ -706,7 +744,7 @@ export class BxvttClient {
    * Starts a game from the roster. Referee only.
    *
    * @param tableId - The table ID.
-   * @param body - The adventure, and optional name, ruleset, and seed.
+   * @param body - The adventure, and an optional name and seed. The game plays by the table's stored ruleset.
    */
   startGame(tableId: string, body: StartGameRequest): Promise<GameState> {
     return this.request('POST', `/api/tables/${enc(tableId)}/game`, { body });

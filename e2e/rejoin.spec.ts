@@ -37,7 +37,7 @@ async function joinedTable(crew: Crew): Promise<RejoinTable> {
   const ruth = await crew.person('Ruth');
   const sam = await crew.person('Sam', { signedIn: false });
   const table = await ruth.client.createTable({ name: 'The bell tolls' });
-  const clarence = await createCharacter(ruth.client, { name: 'Clarence', classId: 'cleric' });
+  const clarence = await createCharacter(ruth.client, { name: 'Clarence', classId: 'cleric' }, table.id);
   await ruth.client.addToRoster(table.id, clarence.id);
   const path = `/tables/${table.id}`;
   await openTable(ruth.page, path);
@@ -53,7 +53,7 @@ async function joinedTable(crew: Crew): Promise<RejoinTable> {
 
   const { token, user } = await storedIdentity(sam.page);
   const client = sdkClient(token);
-  const flarg = await createCharacter(client, { name: 'Flarg', classId: 'fighter' });
+  const flarg = await createCharacter(client, { name: 'Flarg', classId: 'fighter' }, table.id);
   await client.addToRoster(table.id, flarg.id);
   await ruth.client.startGame(table.id, { adventure_id: 'sample:the-drowned-bell', seed: 1981 });
   await expect(sam.page.getByRole('heading', { name: 'Hollin Ferry', level: 2 })).toBeVisible({
@@ -198,7 +198,7 @@ test.describe('rejoining a table', () => {
     const sam = await crew.person('Sam');
     const table = await ruth.client.createTable({ name: 'Round trip' });
     await sam.client.joinTable(table.invite_code);
-    const flarg = await createCharacter(sam.client, { name: 'Flarg', classId: 'fighter' });
+    const flarg = await createCharacter(sam.client, { name: 'Flarg', classId: 'fighter' }, table.id);
     await sam.client.addToRoster(table.id, flarg.id);
     waitingTables.push({ referee: ruth, tableId: table.id });
     const path = `/tables/${table.id}`;

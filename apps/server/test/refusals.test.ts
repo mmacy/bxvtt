@@ -7,6 +7,7 @@ import type { TestConnection, TestServer, TestUser } from './helpers';
 import {
   connect,
   createCharacter,
+  createFromRoll,
   createTable,
   createUser,
   findRefereeData,
@@ -56,13 +57,16 @@ describe('previewing the declarations of a battle round', () => {
     tableId = (await createTable(referee, [alice])).id;
     const tess = await createCharacter(alice, 'Tess', 'thief', 60);
     const brenna = await createCharacter(alice, 'Brenna', 'fighter', 61);
-    const mira = await alice.client.createCharacter({
-      name: 'Mira',
-      class_id: 'magic_user',
-      alignment: 'neutral',
-      starting_spell_ids: ['magic_missile'],
-      seed: 12,
-    });
+    const mira = await createFromRoll(
+      alice,
+      {
+        name: 'Mira',
+        class_id: 'magic_user',
+        alignment: 'neutral',
+        starting_spell_ids: ['magic_missile'],
+      },
+      12,
+    );
     for (const character of [tess, brenna, mira]) await alice.client.addToRoster(tableId, character.id);
     aliceWs = await connect(server, alice, tableId);
     await referee.client.startGame(tableId, { adventure_id: 'sample:the-drowned-bell', seed: 7 });

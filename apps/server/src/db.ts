@@ -3,12 +3,13 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import type { SQLInputValue, StatementSync } from 'node:sqlite';
 import { RETIRED_USER_COLORS, USER_COLORS } from '@bxvtt/shared/protocol';
+import { standardRuleset } from './rulesets';
 
 /**
  * The version of the table layout. The server upgrades a database of an older version at startup with the
  * steps in {@link MIGRATIONS}, and refuses one of a newer version.
  */
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 /** The table of monster target handles, which layout version 2 added and version 7 dropped. */
 const TARGET_HANDLES = `
@@ -72,6 +73,37 @@ DROP TABLE IF EXISTS battle_refusals;
 DELETE FROM declarations;
 `;
 
+/** A string as an SQL literal. */
+const sqlText = (text: string): string => `'${text.replaceAll("'", "''")}'`;
+
+/**
+ * The table rules and the table ability rolls, which layout version 8 added.
+ *
+ * - `tables` gains the table's whole ruleset (`ruleset_json`), its ability score reroll limit
+ *   (`ability_score_rerolls`, `NULL` for no limit), and its sub-par restart rule (`sub_par_restart`). An existing
+ *   table gets the `standard` starting ruleset, a limit of 0, and no sub-par restart, as a new table does.
+ * - `ability_rolls` gains the table it belongs to (`table_id`), the rules recorded when it was made
+ *   (`rules_json`), whether bxapi reported its scores as sub-par (`sub_par`), the character made from it
+ *   (`character_id`), and when it was closed without making one (`closed_at`). A roll from before version 8 has no
+ *   table, and the server treats it as one the user doesn't have, so the player rolls again. Version 6's
+ *   `hp_reroll` column stays but goes unused, because the recorded rules hold the re-roll rule now.
+ * - `characters` gains the creation rules it was built under (`creation_rules_json`), `NULL` for a character from
+ *   before version 8.
+ */
+const VERSION_8 = `
+ALTER TABLE tables ADD COLUMN ruleset_json TEXT;
+ALTER TABLE tables ADD COLUMN ability_score_rerolls INTEGER DEFAULT 0;
+ALTER TABLE tables ADD COLUMN sub_par_restart INTEGER NOT NULL DEFAULT 0;
+UPDATE tables SET ruleset_json = ${sqlText(JSON.stringify(standardRuleset()))};
+ALTER TABLE ability_rolls ADD COLUMN table_id TEXT REFERENCES tables(id) ON DELETE CASCADE;
+ALTER TABLE ability_rolls ADD COLUMN rules_json TEXT;
+ALTER TABLE ability_rolls ADD COLUMN sub_par INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE ability_rolls ADD COLUMN character_id TEXT;
+ALTER TABLE ability_rolls ADD COLUMN closed_at TEXT;
+CREATE INDEX ability_rolls_by_table ON ability_rolls(table_id, owner_user_id);
+ALTER TABLE characters ADD COLUMN creation_rules_json TEXT;
+`;
+
 /** The SQL that upgrades a database from the version before each key to that version. */
 const MIGRATIONS: Record<number, string> = {
   2: TARGET_HANDLES,
@@ -85,6 +117,7 @@ const MIGRATIONS: Record<number, string> = {
   5: BXAPI_GARBAGE,
   6: STARTING_ROLLS,
   7: VERSION_7,
+  8: VERSION_8,
 };
 
 const SCHEMA = `
@@ -229,7 +262,7 @@ CREATE TABLE samples (
   uploaded_at TEXT NOT NULL,
   PRIMARY KEY (file_name, content_hash)
 );
-${RETIRED_TOKENS}${BXAPI_GARBAGE}${STARTING_ROLLS}`;
+${RETIRED_TOKENS}${BXAPI_GARBAGE}${STARTING_ROLLS}${VERSION_8}`;
 
 /** A row as `node:sqlite` returns it. */
 export type Row = Record<string, SQLInputValue>;

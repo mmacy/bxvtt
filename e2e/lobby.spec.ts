@@ -173,9 +173,9 @@ test.describe('first run and lobby', () => {
     const sam = await crew.person('Sam');
     const table = await ruth.client.createTable({ name: 'Marching order' });
     await sam.client.joinTable(table.invite_code);
-    await createCharacter(sam.client, { name: 'Flarg', classId: 'fighter' });
-    await createCharacter(sam.client, { name: 'Tinks', classId: 'thief' });
-    await createCharacter(ruth.client, { name: 'Clarence', classId: 'cleric' });
+    await createCharacter(sam.client, { name: 'Flarg', classId: 'fighter' }, table.id);
+    await createCharacter(sam.client, { name: 'Tinks', classId: 'thief' }, table.id);
+    await createCharacter(ruth.client, { name: 'Clarence', classId: 'cleric' }, table.id);
 
     await ruth.page.goto(`/tables/${table.id}`);
     await sam.page.goto(`/tables/${table.id}`);
@@ -224,7 +224,7 @@ test.describe('first run and lobby', () => {
     const sam = await crew.person('Sam');
     const table = await ruth.client.createTable({ name: 'Farewell' });
     await sam.client.joinTable(table.invite_code);
-    const flarg = await createCharacter(sam.client, { name: 'Flarg', classId: 'fighter' });
+    const flarg = await createCharacter(sam.client, { name: 'Flarg', classId: 'fighter' }, table.id);
     await sam.client.addToRoster(table.id, flarg.id);
     const solo = await sam.client.createTable({ name: 'Sam alone' });
     await openTable(ruth.page, `/tables/${table.id}`);
@@ -305,8 +305,8 @@ test.describe('first run and lobby', () => {
     const sam = await crew.person('Sam');
     const table = await ruth.client.createTable({ name: 'Start' });
     await sam.client.joinTable(table.invite_code);
-    const flarg = await createCharacter(sam.client, { name: 'Flarg', classId: 'fighter' });
-    const clarence = await createCharacter(ruth.client, { name: 'Clarence', classId: 'cleric' });
+    const flarg = await createCharacter(sam.client, { name: 'Flarg', classId: 'fighter' }, table.id);
+    const clarence = await createCharacter(ruth.client, { name: 'Clarence', classId: 'cleric' }, table.id);
     await sam.client.addToRoster(table.id, flarg.id);
     await ruth.client.addToRoster(table.id, clarence.id);
     await ruth.seedGameStart(1981);

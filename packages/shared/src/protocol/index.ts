@@ -16,6 +16,7 @@ export * from './notes';
 export * from './problems';
 export * from './rejoin';
 export * from './rules';
+export * from './rulesets';
 export * from './saves';
 export * from './tables';
 export * from './users';

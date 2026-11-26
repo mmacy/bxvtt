@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { CharacterId, LIMITS, Role, TableId, Timestamp, UserColor, UserId, displayString } from './common';
+import type { Ruleset } from './rulesets';
+import { AbilityScoreRerolls, CreationRules, RulesetPatch } from './rulesets';
 
 /**
  * Who may send party commands such as `move_party`. With `caller`, a referee or the caller. With `anyone`, a
@@ -19,6 +21,22 @@ export const TableSettings = z.object({
   auto_resolve: z.boolean(),
   /** Whether the server saves the game by itself at meaningful moments. */
   autosave: z.boolean(),
+  /**
+   * The table's osrlib `Ruleset`, with every field. The server rolls ability scores, creates characters, and starts
+   * games with it. A new table, and a table from before the ruleset setting, starts with the `standard` starting
+   * ruleset from `GET /api/rulesets`.
+   */
+  ruleset: z.custom<Ruleset>(),
+  /**
+   * How many times a player may roll new ability scores at the table after the first roll, or `null` for no
+   * limit. Defaults to 0.
+   */
+  ability_score_rerolls: AbilityScoreRerolls,
+  /**
+   * Whether a player may discard a roll that bxapi reports as sub-par and roll again without using a reroll.
+   * Defaults to `false`.
+   */
+  sub_par_restart: z.boolean(),
 });
 /** A table's settings. */
 export type TableSettings = z.infer<typeof TableSettings>;
@@ -43,6 +61,12 @@ export const RosterEntry = z.object({
   class_id: z.string(),
   level: z.number().int(),
   added_at: Timestamp,
+  /**
+   * The creation rules the character was built under, recorded from its ability roll. `null` for a character
+   * created before the server recorded them. A client compares them with the table's settings to see whether the
+   * character was built under other rules.
+   */
+  creation_rules: CreationRules.nullable(),
 });
 /** One character on the lobby roster. */
 export type RosterEntry = z.infer<typeof RosterEntry>;
@@ -119,7 +143,12 @@ export const CreateTableRequest = z.strictObject({
 /** Body of `POST /api/tables`. */
 export type CreateTableRequest = z.infer<typeof CreateTableRequest>;
 
-/** Body of `PATCH /api/tables/{table_id}`: rename the table, change settings, or both. Referee only. */
+/**
+ * Body of `PATCH /api/tables/{table_id}`: rename the table, change settings, or both. Referee only. `ruleset` holds
+ * only the rules to change, which the server merges into the table's ruleset. Each key must be a `Ruleset` field
+ * and each value one that bxapi's `Ruleset` schema allows, or the server answers 422 `validation_error`. A change
+ * of rules applies to the next ability roll and the next game. An ability roll keeps the rules it was made under.
+ */
 export const UpdateTableRequest = z.strictObject({
   name: displayString(LIMITS.tableName).optional(),
   settings: z
@@ -128,6 +157,9 @@ export const UpdateTableRequest = z.strictObject({
       caller_user_id: UserId.nullable().optional(),
       auto_resolve: z.boolean().optional(),
       autosave: z.boolean().optional(),
+      ruleset: RulesetPatch.optional(),
+      ability_score_rerolls: AbilityScoreRerolls.optional(),
+      sub_par_restart: z.boolean().optional(),
     })
     .optional(),
 });

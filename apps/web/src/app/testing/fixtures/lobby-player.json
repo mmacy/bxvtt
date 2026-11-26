@@ -16,7 +16,27 @@
       "party_control": "caller",
       "caller_user_id": null,
       "auto_resolve": true,
-      "autosave": true
+      "autosave": true,
+      "ruleset": {
+        "hp_reroll_at_first_level": true,
+        "max_hp_at_first_level": false,
+        "ability_score_method": "3d6",
+        "encumbrance": "basic",
+        "variable_weapon_damage": true,
+        "individual_initiative": false,
+        "thac0_arithmetic": false,
+        "weapon_reload": false,
+        "hd5_counts_as_magical": false,
+        "magic_item_death_save": true,
+        "xp_award_timing": "on_return",
+        "deprivation_penalties": false,
+        "aoe_friendly_fire": true,
+        "formation_width_limit": true,
+        "failed_trap_removal_springs": true,
+        "back_stab_needs_both_skills": true
+      },
+      "ability_score_rerolls": 0,
+      "sub_par_restart": false
     },
     "members": [
       {
@@ -42,7 +62,8 @@
         "name": "Brenna",
         "class_id": "fighter",
         "level": 1,
-        "added_at": "2026-11-26T09:06:55Z"
+        "added_at": "2026-11-26T09:06:55Z",
+        "creation_rules": null
       },
       {
         "id": "ros_aAmPJ44di01YRLi8rfj7CQ",
@@ -51,7 +72,8 @@
         "name": "Wren",
         "class_id": "thief",
         "level": 1,
-        "added_at": "2026-11-26T09:06:55Z"
+        "added_at": "2026-11-26T09:06:55Z",
+        "creation_rules": null
       },
       {
         "id": "ros_578ujxA--kIyRLoBAtVpOg",
@@ -60,7 +82,8 @@
         "name": "Osric",
         "class_id": "cleric",
         "level": 1,
-        "added_at": "2026-11-26T09:06:55Z"
+        "added_at": "2026-11-26T09:06:55Z",
+        "creation_rules": null
       },
       {
         "id": "ros_HchkjIIflwaIIyVueCpldA",
@@ -69,7 +92,8 @@
         "name": "Tamsin",
         "class_id": "fighter",
         "level": 1,
-        "added_at": "2026-11-26T09:06:55Z"
+        "added_at": "2026-11-26T09:06:55Z",
+        "creation_rules": null
       }
     ],
     "game": null,

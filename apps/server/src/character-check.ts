@@ -5,8 +5,8 @@ import { problemBody } from './errors';
 import type { StartingRollKeeper } from './starting-rolls';
 
 /**
- * Checks character choices against a stored ability roll without creating the character, with one bxapi
- * preview. The preview stores nothing and leaves the roll unused, and the check returns only whether the choices
+ * Checks character choices against a stored ability roll and its recorded rules without creating the character,
+ * with one bxapi preview. The preview stores nothing and leaves the roll unused, and the check returns only whether the choices
  * pass, so it never reveals the hit points or the gold. The starting rolls decide which checks the server accepts:
  * see {@link StartingRollKeeper.guard}.
  */
@@ -22,14 +22,14 @@ export class CharacterChecker {
    * @param user - The user, who owns the roll.
    * @param body - The choices, with `ability_roll_id`.
    * @param requestId - The request ID, for bxapi's log.
-   * @throws ApiError `not_found`, `ability_roll_locked`, `gold_not_rolled`, `ability_roll_used`,
-   *   `validation_error`, or a bxapi failure.
+   * @throws ApiError `not_found`, `ability_roll_superseded`, `ability_roll_locked`, `gold_not_rolled`,
+   *   `ability_roll_used`, `validation_error`, or a bxapi failure.
    */
   async check(user: User, body: CharacterCheckRequest, requestId: string): Promise<CharacterCheck> {
     const { ability_roll_id: rollId, ...choices } = body;
-    this.rolls.guard(rollId, user.id, body);
+    const record = this.rolls.guard(rollId, user.id, body);
     try {
-      await this.rolls.preview(rollId, choices, requestId);
+      await this.rolls.preview(record, choices, requestId);
       return { valid: true, problem: null };
     } catch (error) {
       if (error instanceof BxapiProblem && error.code === 'character_invalid') {

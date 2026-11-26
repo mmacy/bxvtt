@@ -1,6 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type {
+  CreationRules,
   GameSummary,
   Member,
   Role,
@@ -13,6 +14,8 @@ import type {
 } from '@bxvtt/shared/protocol';
 import {
   AddRosterEntryRequest,
+  CreationRules as CreationRulesSchema,
+  completeRuleset,
   CreateTableRequest,
   JoinTableRequest,
   ReorderRosterRequest,
@@ -22,6 +25,7 @@ import {
 import type { Context } from './context';
 import type { Row } from './db';
 import { json, num, str, strOrNull } from './db';
+import { standardRuleset } from './rulesets';
 import { ApiError, notFound, parseBody } from './errors';
 import { newId, newInviteCode, normalizeInviteCode, now, secretsEqual } from './ids';
 import { rateLimited } from './auth';
@@ -36,6 +40,19 @@ export interface GameRecord {
   ended: boolean;
   /** Dungeon names by dungeon ID, for autosave labels. */
   dungeon_names: Record<string, string>;
+}
+
+/**
+ * Reads a character's recorded creation rules, or `null` for a character from before the server recorded them or
+ * whose record no longer parses.
+ *
+ * @param row - The character row, with `creation_rules_json`.
+ */
+function creationRulesOf(row: Row): CreationRules | null {
+  const text = strOrNull(row, 'creation_rules_json');
+  if (text === null) return null;
+  const parsed = CreationRulesSchema.safeParse(JSON.parse(text));
+  return parsed.success ? parsed.data : null;
 }
 
 /** The path parameters of a table route. */
@@ -121,6 +138,9 @@ export class TableStore {
       caller_user_id: strOrNull(row, 'caller_user_id'),
       auto_resolve: num(row, 'auto_resolve') === 1,
       autosave: num(row, 'autosave') === 1,
+      ruleset: completeRuleset(row.ruleset_json === null ? null : json<unknown>(row, 'ruleset_json')),
+      ability_score_rerolls: row.ability_score_rerolls === null ? null : num(row, 'ability_score_rerolls'),
+      sub_par_restart: num(row, 'sub_par_restart') === 1,
     };
   }
 
@@ -153,7 +173,7 @@ export class TableStore {
   roster(tableId: string): RosterEntry[] {
     return this.db
       .all(
-        `SELECT r.id, r.character_id, r.owner_user_id, r.added_at, c.name, c.class_id, c.level
+        `SELECT r.id, r.character_id, r.owner_user_id, r.added_at, c.name, c.class_id, c.level, c.creation_rules_json
          FROM roster r JOIN characters c ON c.id = r.character_id WHERE r.table_id = ? ORDER BY r.position, r.added_at`,
         tableId,
       )
@@ -165,6 +185,7 @@ export class TableStore {
         class_id: str(row, 'class_id'),
         level: num(row, 'level'),
         added_at: str(row, 'added_at'),
+        creation_rules: creationRulesOf(row),
       }));
   }
 
@@ -308,12 +329,14 @@ export class TableStore {
     this.db.transaction(() => {
       this.db.run(
         `INSERT INTO tables (id, name, invite_code, created_by, created_at, party_control, caller_user_id,
-         auto_resolve, autosave) VALUES (?, ?, ?, ?, ?, 'caller', NULL, 1, 1)`,
+         auto_resolve, autosave, ruleset_json, ability_score_rerolls, sub_par_restart)
+         VALUES (?, ?, ?, ?, ?, 'caller', NULL, 1, 1, ?, 0, 0)`,
         id,
         name,
         newInviteCode(),
         user.id,
         created,
+        JSON.stringify(standardRuleset()),
       );
       this.db.run(
         "INSERT INTO members (table_id, user_id, role, joined_at) VALUES (?, ?, 'referee', ?)",
@@ -498,6 +521,26 @@ export function registerTableRoutes(app: FastifyInstance, ctx: Context): void {
     }
     if (settings.autosave !== undefined) {
       ctx.db.run('UPDATE tables SET autosave = ? WHERE id = ?', settings.autosave ? 1 : 0, tableId);
+    }
+    // The table's ruleset applies to the next ability roll and the next game. A roll keeps the rules it was made
+    // under, and a game keeps the ruleset it started with.
+    if (settings.ruleset !== undefined) {
+      const ruleset = { ...before.ruleset, ...settings.ruleset };
+      ctx.db.run('UPDATE tables SET ruleset_json = ? WHERE id = ?', JSON.stringify(ruleset), tableId);
+    }
+    if (settings.ability_score_rerolls !== undefined) {
+      ctx.db.run(
+        'UPDATE tables SET ability_score_rerolls = ? WHERE id = ?',
+        settings.ability_score_rerolls,
+        tableId,
+      );
+    }
+    if (settings.sub_par_restart !== undefined) {
+      ctx.db.run(
+        'UPDATE tables SET sub_par_restart = ? WHERE id = ?',
+        settings.sub_par_restart ? 1 : 0,
+        tableId,
+      );
     }
     const after = tables.settings(tableId);
     if (after.caller_user_id !== before.caller_user_id) {

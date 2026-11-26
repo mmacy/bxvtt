@@ -38,17 +38,17 @@ async function healthFor(server: TestServer, user: TestUser): Promise<Health> {
 }
 
 describe('comparing engine versions', () => {
-  it('passes 2.8.0 and every later version, and fails older or unreadable ones', () => {
-    for (const version of ['2.8.0', '2.8', '2.8.1', '2.10.0', '3.0.0', '10.0.0']) {
+  it('passes 2.9.0 and every later version, and fails older or unreadable ones', () => {
+    for (const version of ['2.9.0', '2.9', '2.9.1', '2.10.0', '3.0.0', '10.0.0']) {
       expect(versionAtLeast(version, MIN_ENGINE_VERSION), version).toBe(true);
     }
-    for (const version of ['2.7.0', '2.7.99', '1.9.9', '2.8.0rc1', 'v2.8.0', '', 'unknown']) {
+    for (const version of ['2.8.0', '2.8.99', '1.9.9', '2.9.0rc1', 'v2.9.0', '', 'unknown']) {
       expect(versionAtLeast(version, MIN_ENGINE_VERSION), version).toBe(false);
     }
   });
 });
 
-describe('a bxapi whose engine is older than 2.8.0', () => {
+describe('a bxapi whose engine is older than 2.9.0', () => {
   let server: TestServer;
   let setEngine: (version: string | null) => void;
   let referee: TestUser;
@@ -71,8 +71,8 @@ describe('a bxapi whose engine is older than 2.8.0', () => {
     await server.close();
   });
 
-  it('passes the health check for 2.8.0, 2.10.0, and 3.0.0', async () => {
-    for (const version of ['2.8.0', '2.10.0', '3.0.0']) {
+  it('passes the health check for 2.9.0, 2.10.0, and 3.0.0', async () => {
+    for (const version of ['2.9.0', '2.10.0', '3.0.0']) {
       setEngine(version);
       const health = await healthFor(server, alice);
       expect(health, version).toMatchObject({
@@ -85,13 +85,13 @@ describe('a bxapi whose engine is older than 2.8.0', () => {
   });
 
   it('reports an older engine as degraded, with the cause for a signed-in user only', async () => {
-    setEngine('2.7.0');
+    setEngine('2.8.0');
     const health = await healthFor(server, alice);
     expect(health.status).toBe('degraded');
     expect(health.bxapi.reachable).toBe(true);
     expect(health.bxapi.outdated).toBe(true);
     expect(health.bxapi.error).toBe(
-      'bxapi runs osrlib 2.7.0, and bxvtt needs 2.8.0 or later. If you host this server, update bxapi and restart it. Otherwise, ask the server host to update it.',
+      'bxapi runs osrlib 2.8.0, and bxvtt needs 2.9.0 or later. If you host this server, update bxapi and restart it. Otherwise, ask the server host to update it.',
     );
     const anonymous = await new BxvttClient({ baseUrl: server.url }).health();
     expect(anonymous.status).toBe('degraded');
@@ -104,7 +104,7 @@ describe('a bxapi whose engine is older than 2.8.0', () => {
   });
 
   it('refuses a command and a declaration with bxapi_outdated, and sends bxapi nothing', async () => {
-    setEngine('2.7.0');
+    setEngine('2.8.0');
     await healthFor(server, alice);
     const recorder = recordBxapi(server);
     try {
@@ -142,7 +142,7 @@ describe('a bxapi whose engine is older than 2.8.0', () => {
   });
 
   it('serves games again once the health check finds a new enough engine', async () => {
-    setEngine('2.8.0');
+    setEngine('2.9.0');
     await healthFor(server, alice);
     const sent = await alice.client.sendCommand(tableId, { command_type: 'rest', kind: 'night' });
     expect(sent.accepted).toBe(true);

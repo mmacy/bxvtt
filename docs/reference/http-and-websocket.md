@@ -23,10 +23,15 @@ const player = new BxvttClient({ baseUrl: 'http://127.0.0.1:8660' });
 await player.createUser('Alice');
 await player.joinTable(table.invite_code);
 
+// A character comes from an ability roll at the table, under the table's rules.
+const roll = await player.rollAbilities(table.id);
+await player.rollHitPoints(roll.id, { class_id: 'fighter' });
+await player.rollStartingGold(roll.id, { class_id: 'fighter' });
 const brenna = await player.createCharacter({
   name: 'Brenna',
   class_id: 'fighter',
   alignment: 'lawful',
+  ability_roll_id: roll.id,
   purchases: [{ item_id: 'leather' }, { item_id: 'sword' }],
   equip_item_ids: ['leather', 'sword'],
 });
@@ -66,7 +71,7 @@ All paths below sit under `/api` (for example, `GET /api/health`), and `{t}` den
 
 | Method and path | `BxvttClient` method | Authorization | Response |
 | --- | --- | --- | --- |
-| `GET /health` | `health()` | Public (`bxapi` details require a user token) | `Health`. Anyone gets `status`, `version`, `host_key_required`, `bxapi.reachable`, and `bxapi.outdated` (bxapi answers but runs an `osrlib` older than 2.8.0, so no game runs). A user token adds `bxapi.meta` and the cause in `bxapi.error`. |
+| `GET /health` | `health()` | Public (`bxapi` details require a user token) | `Health`. Anyone gets `status`, `version`, `host_key_required`, `bxapi.reachable`, and `bxapi.outdated` (bxapi answers but runs an `osrlib` older than 2.9.0, so no game runs). A user token adds `bxapi.meta` and the cause in `bxapi.error`. |
 | `POST /users` | `createUser(name)` | Public (rate-limited) | `CreateUserResponse` (includes `token`) |
 | `GET /users/me` | `me()` | User | `User` |
 | `PATCH /users/me` | `updateMe(body)` | User | `User` |
@@ -97,7 +102,7 @@ All paths below sit under `/api` (for example, `GET /api/health`), and `{t}` den
 | `GET /tables` | `listTables()` | User | `TableList` (includes `online_count`) |
 | `POST /tables` | `createTable(body)` | User (`host_key` required when configured) | `TableDetail` |
 | `GET /tables/{t}` | `getTable(tableId)` | Table member | `TableDetail` |
-| `PATCH /tables/{t}` | `updateTable(tableId, body)` | Referee | `TableDetail` |
+| `PATCH /tables/{t}` | `updateTable(tableId, body)` | Referee | `TableDetail`. See [Table rules](#table-rules) for the ruleset settings. |
 | `DELETE /tables/{t}` | `deleteTable(tableId)` | Referee | `204` |
 | `POST /tables/{t}/invite-code` | `regenerateInviteCode(tableId)` | Referee | `TableDetail` |
 | `POST /join` | `joinTable(code)` | User (rate-limited) | `TableDetail` |
@@ -107,14 +112,16 @@ All paths below sit under `/api` (for example, `GET /api/health`), and `{t}` den
 | `POST /tables/{t}/roster` | `addToRoster(tableId, characterId)` | Character owner (in lobby) | `TableDetail` |
 | `PUT /tables/{t}/roster` | `reorderRoster(tableId, entryIds)` | Referee (in lobby) | `TableDetail` |
 | `DELETE /tables/{t}/roster/{entry_id}` | `removeFromRoster(tableId, entryId)` | Character owner or referee | `TableDetail` |
-| `POST /ability-rolls` | `rollAbilities(body?)` | User | `bxapi` `AbilityRoll`, whose `rolls` hold the three six-sided dice behind each score |
-| `GET /ability-rolls/{roll_id}` | `getAbilityRoll(rollId)` | Roll owner | `bxapi` `AbilityRoll`, with the same `rolls` |
+| `GET /rulesets` | `listRulesets()` | User | `StartingRulesetList`: the `standard` and `creation_house_rules` starting rulesets |
+| `POST /tables/{t}/ability-rolls` | `rollAbilities(tableId, body?)` | Table member, in any phase | `201` `AbilityRoll`: `bxapi`'s roll, whose `rolls` hold the dice behind each score, with `table_id`, the recorded `rules`, and `rerolls_left` |
+| `GET /tables/{t}/ability-rolls/current` | `getCurrentAbilityRoll(tableId)` | Table member | `AbilityRoll`: the user's newest open roll at the table, or `404 not_found` when there is none |
+| `GET /ability-rolls/{roll_id}` | `getAbilityRoll(rollId)` | Roll owner, still a member of the roll's table | `AbilityRoll` |
 | `GET /ability-rolls/{roll_id}/starting-rolls` | `getStartingRolls(rollId)` | Roll owner | `StartingRollsStatus` |
 | `POST /ability-rolls/{roll_id}/hit-points` | `rollHitPoints(rollId, body)` | Roll owner (rate-limited) | `StartingRolls` |
 | `POST /ability-rolls/{roll_id}/gold` | `rollStartingGold(rollId, body)` | Roll owner (rate-limited) | `StartingRolls` |
-| `POST /characters/preview` | `previewCharacter(body)` | User | `bxapi` generated character |
+| `POST /characters/preview` | `previewCharacter(body)` | User | `bxapi` generated character, from a `CharacterPreviewRequest` with an optional `ruleset` and `seed` and no roll |
 | `POST /characters/check` | `checkCharacter(body)` | Roll owner (rate-limited) | `CharacterCheck` |
-| `POST /characters` | `createCharacter(body)` | User | `bxapi` `StoredCharacter` |
+| `POST /characters` | `createCharacter(body)` | Roll owner | `bxapi` `StoredCharacter`. The body needs `ability_roll_id`. |
 | `GET /characters` | `listCharacters()` | User | Stored character list |
 | `GET /characters/{id}` | `getCharacter(id)` | Owner, or referee of a table rostering the character | `bxapi` `StoredCharacter` |
 | `DELETE /characters/{id}` | `deleteCharacter(id)` | Owner | `204` |
@@ -131,7 +138,7 @@ All paths below sit under `/api` (for example, `GET /api/health`), and `{t}` den
 | `POST /tables/{t}/adventures/validate` | `validateAdventure(tableId, doc)` | Referee | `AdventureValidation` |
 | `POST /tables/{t}/adventures` | `uploadAdventure(tableId, doc)` | Referee | `AdventureListing` |
 | `DELETE /tables/{t}/adventures/{id}` | `deleteAdventure(tableId, id)` | Referee | `204` |
-| `POST /tables/{t}/game` | `startGame(tableId, body)` | Referee | `GameState` |
+| `POST /tables/{t}/game` | `startGame(tableId, body)` | Referee | `GameState`. The game plays by the table's `settings.ruleset`, and the body takes no `ruleset`. |
 | `GET /tables/{t}/game` | `getGame(tableId)` | Table member | `GameState` |
 | `DELETE /tables/{t}/game` | `endGame(tableId)` | Referee | `204` |
 | `POST /tables/{t}/game/commands` | `sendCommand(tableId, cmd, expectedRevision?)` | Command permission class | `CommandResult` |
@@ -209,14 +216,14 @@ Every HTTP error returns an RFC 9457 `application/problem+json` object containin
 - **403:** `forbidden`, `referee_required`, `host_key_required`, `referee_command`, `adventure_read_only`
 - **404:** `not_found`, `invite_invalid`
 - **405:** `method_not_allowed`
-- **409:** `last_referee`, `game_active`, `no_game`, `duplicate_character`, `roster_empty`, `revision_conflict` (includes `revision`), `stale_version`, `not_in_battle`, `not_a_declarer`, `declarations_incomplete`, `use_declarations`, `ability_roll_used`, `ability_roll_locked` (includes `class_id` and `hp_reroll_at_first_level`), `hit_points_not_rolled`, `gold_not_rolled`, `version_unsupported`, `session_busy`, `rejoin_member_online`, `rejoin_pending`, `rejoin_not_pending`, `rejoin_no_approver`
+- **409:** `last_referee`, `game_active`, `no_game`, `duplicate_character`, `roster_empty`, `revision_conflict` (includes `revision`), `stale_version`, `not_in_battle`, `not_a_declarer`, `declarations_incomplete`, `use_declarations`, `ability_roll_used` (also for a roll that a later character or a sub-par restart closed), `ability_roll_locked` (includes `class_id`), `ability_rerolls_used` (includes `ability_score_rerolls` and `roll_id`), `ability_roll_superseded` (includes `roll_id`), `hit_points_not_rolled`, `gold_not_rolled`, `version_unsupported`, `session_busy`, `rejoin_member_online`, `rejoin_pending`, `rejoin_not_pending`, `rejoin_no_approver`
 - **413:** `content_too_large`
 - **415:** `unsupported_media_type`
 - **422:** `validation_error` (includes `errors`), `unknown_command`, `content_invalid`, `character_invalid` (includes `rejections` or `field`/`index`/`id`), `party_invalid`
 - **429:** `rate_limited` (with `Retry-After`)
 - **500:** `internal_error`
 - **502:** `bxapi_error`, `save_unreadable` (`bxapi` can't read the save to restore, because its rules engine was updated after the save was made), `invalid_response` (synthesized by SDK when a 2xx body is not JSON)
-- **503:** `bxapi_unavailable` (the server can't reach `bxapi`), `bxapi_outdated` (`bxapi` runs an `osrlib` older than 2.8.0, so the server serves no game until the host updates it; the WebSocket `error` message uses the same code), `server_unavailable` (synthesized by SDK when a proxy/tunnel returns non-JSON 502/503/504)
+- **503:** `bxapi_unavailable` (the server can't reach `bxapi`), `bxapi_outdated` (`bxapi` runs an `osrlib` older than 2.9.0, so the server serves no game until the host updates it; the WebSocket `error` message uses the same code), `server_unavailable` (synthesized by SDK when a proxy/tunnel returns non-JSON 502/503/504)
 - **507:** `bxapi_storage_full` (includes `used_bytes` and `max_bytes`)
 
 ## Key server protocols
@@ -250,19 +257,48 @@ The server asks `bxapi` to preview the stored declarations (`POST /v1/sessions/{
 - **A refused round:** when `bxapi` still refuses `resolve_battle_round`, `accepted` is `false`, the declarations stay, and `declarations.refusals` lists each rejection with the member in `params.character`. A rejection of the whole round, such as `battle.declaration.roster_mismatch`, has `member_id: null`.
 - **Hide and back-stab:** `declaration.action` accepts `hide`. A hiding member appears in `view.encounter.hiding`, and the view never says whether a hide worked. Offer a hide or a back-stab to the members in `projection.can_hide` and `projection.can_back_stab` when `projection` isn't `null`, and to the members in `view.encounter.can_hide` and `view.encounter.can_back_stab` otherwise.
 
+### Table rules
+
+Each table stores one whole osrlib `Ruleset` and two creation settings in `TableDetail.settings`. Every member can read them, and only a referee can change them with `PATCH /api/tables/{t}`.
+
+- **`ruleset`:** the table's `Ruleset`, with every field. In `PATCH`, `settings.ruleset` holds only the rules to change, and the server merges them into the stored ruleset. Each key must be a field of `bxapi`'s OpenAPI `Ruleset` schema, and each value must be that field's type or one of its values, or the server answers `422 validation_error` with the field's path. The server starts every game with this ruleset.
+- **`ability_score_rerolls`:** how many times a member may roll new ability scores at the table after the first roll, from 0 to 99, or `null` for no limit.
+- **`sub_par_restart`:** whether a member may discard a roll that `bxapi` reports as sub-par (`rolls.sub_par`) and roll again without using a reroll.
+
+A new table, and a table from before these settings, has the `standard` starting ruleset, `ability_score_rerolls: 0`, and `sub_par_restart: false`. `GET /api/rulesets` returns both starting rulesets as whole `Ruleset` objects, with no prose:
+
+- **`standard`:** osrlib's defaults, the `default` of each field of `bxapi`'s `Ruleset` schema, with `hp_reroll_at_first_level` on.
+- **`creation_house_rules`:** osrlib's example ruleset `examples/rulesets/creation_house_rules.json` at tag v2.9.0, which turns on `4d6_drop_lowest` and `max_hp_at_first_level`, with `hp_reroll_at_first_level` on.
+
+A client finds the starting ruleset that a table's ruleset matches, if any, by comparing every `Ruleset` field.
+
+### Ability rolls at a table
+
+An ability roll belongs to a table. `POST /api/tables/{t}/ability-rolls` sends the table's ruleset to `bxapi`, which rolls with its `ability_score_method`, and records the table's rules on the roll as they are at that moment. The response's `rules` is a `CreationRules` object: `ability_score_method`, `hp_reroll_at_first_level`, `max_hp_at_first_level`, `ability_score_rerolls`, and `sub_par_restart`. The server sends the roll's recorded ruleset to `bxapi` for its hit points, gold, checks, and creation, so a later change to the table's settings never changes a roll. It ignores any `ruleset`, `seed`, or `hp_reroll_at_first_level` that a client sends with a check or a creation.
+
+A user's open rolls at a table are the rolls that made no character and weren't closed. The table's reroll limit, read when the user rolls, allows `1 + ability_score_rerolls` open rolls:
+
+- A roll beyond the limit gets `409 ability_rerolls_used`, with the limit and the `roll_id` of the user's newest open roll. `rerolls_left` on a roll says how many more rolls the user may make now, or `null` without a limit.
+- Only the user's newest open roll can roll starting rolls, be checked, or make a character. An older open roll gets `409 ability_roll_superseded`, with the newest roll's `roll_id`.
+- Creating a character closes the user's other open rolls at the table. A closed roll, and a roll that made a character, gets `409 ability_roll_used`.
+- When the user's newest open roll is sub-par and its recorded rules have `sub_par_restart` on, the next roll closes it and doesn't count it against the limit.
+- `GET /api/tables/{t}/ability-rolls/current` returns the user's newest open roll, so a wizard that lost its draft can continue it.
+
+A roll from before rolls belonged to tables, and a roll at a table the user has left, answers `404 not_found` on every route, so the player rolls again. Each new character records its roll's `CreationRules`, which its `RosterEntry.creation_rules` shows. A character from before the server recorded them has `creation_rules: null`.
+
 ### Starting rolls and character checks
 
-The character wizard checks choices at every step and shows the player their hit points and starting gold before the character exists, without using up the user's ability roll. Both rely on `bxapi`'s `POST /v1/ability-rolls/{roll_id}/preview`, which returns the character that creation would store from the roll and the choices, stores nothing, and returns the same dice for the same class and reroll option every time.
+The character wizard checks choices at every step and shows the player their hit points and starting gold before the character exists, without using up the user's ability roll. Both rely on `bxapi`'s `POST /v1/ability-rolls/{roll_id}/preview`, which returns the character that creation would store from the roll and the choices, stores nothing, and returns the same dice for the same class and ruleset every time.
 
 - **`POST /api/characters/check`** sends the choices to the preview and returns `{ valid, problem }`, where `problem` is `bxapi`'s `character_invalid` problem with its `rejections` or `field`, `index`, and `id`. The response never contains the previewed character, hit points, or gold.
-- **`POST /api/ability-rolls/{roll_id}/hit-points`** takes `class_id`, an optional `hp_reroll_at_first_level`, and an arcane caster's `starting_spell_ids` (because `bxapi` checks the first spell before it rolls hit points). It returns `StartingRolls`: `class_id`, `hp_reroll_at_first_level`, `bxapi`'s `hit_point_roll` (every die in the order thrown, the last one counting, and `hit_points`), and `gold_roll` (`null` until the gold is rolled). The first request fixes the class and the reroll option for the ability roll. A repeat with the same choices returns the same dice, so the wizard sends it again to show the rolls after a reload.
+- **`POST /api/ability-rolls/{roll_id}/hit-points`** takes `class_id` and an arcane caster's `starting_spell_ids` (because `bxapi` checks the first spell before it rolls hit points). It returns `StartingRolls`: `class_id`, the roll's recorded `rules`, `bxapi`'s `hit_point_roll` (every die in the order thrown, the last one counting, `hit_points`, and `maximized` when the maximum hit points house rule set them), and `gold_roll` (`null` until the gold is rolled). The first request fixes the class for the ability roll. A repeat with the same class returns the same dice, so the wizard sends it again to show the rolls after a reload.
 - **`POST /api/ability-rolls/{roll_id}/gold`** takes the same body after the hit points are rolled and returns `StartingRolls` with `bxapi`'s `gold_roll` (`rolls`, `modifier`, `multiplier`, and `total`).
-- **`GET /api/ability-rolls/{roll_id}/starting-rolls`** returns `StartingRollsStatus`: `used`, the fixed `class_id` and `hp_reroll_at_first_level` (`null` before the hit points are rolled), and `gold_rolled`. It contains no dice.
+- **`GET /api/ability-rolls/{roll_id}/starting-rolls`** returns `StartingRollsStatus`: `used`, the fixed `class_id` (`null` before the hit points are rolled), the recorded `rules`, and `gold_rolled`. It contains no dice.
 
-The server stores only the fixed class, the reroll option, and whether the gold is rolled, on its row for the ability roll. It refuses any request that would reveal a roll the player hasn't made:
+The server stores only the fixed class and whether the gold is rolled, on its row for the ability roll. It refuses any request that would reveal a roll the player hasn't made:
 
-- A check, a roll, or a creation from the ability roll with another class or reroll option than the hit points were rolled with gets `409 ability_roll_locked`, with the fixed `class_id` and `hp_reroll_at_first_level`.
+- A check, a roll, or a creation from the ability roll with another class than the hit points were rolled for gets `409 ability_roll_locked`, with the fixed `class_id`.
 - A check or a creation with `purchases` or `equip_item_ids` before the gold is rolled gets `409 gold_not_rolled`, because a refused purchase leaves the roll unused and reveals the gold.
 - Rolling the gold before the hit points gets `409 hit_points_not_rolled`.
 
-Creating a character from an ability roll in one request, with no purchases, needs no starting rolls. Two requests that roll hit points at once fix the choices once: the server asks `bxapi` first and records the choices only when none are recorded, so the second request either matches the first or gets `ability_roll_locked`. Checks and starting rolls share the per-user limit for character checks.
+Creating a character from an ability roll in one request, with no purchases, needs no starting rolls. Two requests that roll hit points at once fix the class once: the server asks `bxapi` first and records the class only when none is recorded, so the second request either matches the first or gets `ability_roll_locked`. Checks and starting rolls share the per-user limit for character checks.

@@ -2,25 +2,38 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { isProblem } from '@bxvtt/shared/client';
 import type { BxvttProblemError } from '@bxvtt/shared/client';
 import type { TestServer, TestUser } from './helpers';
-import { createCharacter, createUser, startServer } from './helpers';
+import { createCharacter, createTable, createUser, startServer } from './helpers';
 
 describe('characters', () => {
   let server: TestServer;
   let alice: TestUser;
   let bob: TestUser;
+  let tableId: string;
 
   beforeAll(async () => {
     server = await startServer();
     alice = await createUser(server, 'Alice');
     bob = await createUser(server, 'Bob');
+    tableId = (await createTable(alice, [bob])).id;
+    // These tests roll many times, so the table allows any number of rerolls.
+    await alice.client.updateTable(tableId, { settings: { ability_score_rerolls: null } });
   });
+
+  /** Rolls ability scores at the table, and rolls the hit points and the gold for a class. */
+  async function rollFor(user: TestUser, seed: number, classId = 'fighter') {
+    const roll = await user.client.rollAbilities(tableId, { seed });
+    await user.client.rollHitPoints(roll.id, { class_id: classId });
+    await user.client.rollStartingGold(roll.id, { class_id: classId });
+    return roll;
+  }
 
   afterAll(async () => {
     await server.close();
   });
 
   it('returns the three dice behind each ability score from both ability roll routes', async () => {
-    const posted = await alice.client.rollAbilities({ seed: 99 });
+    const posted = await alice.client.rollAbilities(tableId, { seed: 99 });
+    expect(posted).toMatchObject({ table_id: tableId, rerolls_left: null });
     const fetched = await alice.client.getAbilityRoll(posted.id);
     for (const roll of [posted, fetched]) {
       expect(Object.keys(roll.rolls.rolls).sort()).toEqual(['cha', 'con', 'dex', 'int', 'str', 'wis']);
@@ -44,7 +57,7 @@ describe('characters', () => {
   });
 
   it('rolls abilities and creates a character from the roll', async () => {
-    const roll = await alice.client.rollAbilities({ seed: 99 });
+    const roll = await alice.client.rollAbilities(tableId, { seed: 99 });
     expect(roll.eligible_class_ids.length).toBeGreaterThan(0);
     expect((await alice.client.getAbilityRoll(roll.id)).used).toBe(false);
     await expect(bob.client.getAbilityRoll(roll.id)).rejects.toSatisfy((error) =>
@@ -92,11 +105,13 @@ describe('characters', () => {
   });
 
   it('passes bxapi character_invalid problems through intact', async () => {
+    const roll = await rollFor(alice, 7);
     const unknownItem = await alice.client
       .createCharacter({
         name: 'X',
         class_id: 'fighter',
         alignment: 'lawful',
+        ability_roll_id: roll.id,
         purchases: [{ item_id: 'nope' }],
       })
       .catch((error: BxvttProblemError) => error);
@@ -106,8 +121,9 @@ describe('characters', () => {
       index: 0,
       id: 'nope',
     });
+    const fresh = await alice.client.rollAbilities(tableId, { seed: 8 });
     const unknownClass = await alice.client
-      .createCharacter({ name: 'X', class_id: 'wizardz', alignment: 'lawful' })
+      .createCharacter({ name: 'X', class_id: 'wizardz', alignment: 'lawful', ability_roll_id: fresh.id })
       .catch((error: BxvttProblemError) => error);
     expect((unknownClass as BxvttProblemError).problem).toMatchObject({
       code: 'character_invalid',
@@ -126,8 +142,42 @@ describe('characters', () => {
     expect((broke as BxvttProblemError).problem.code).toBe('character_invalid');
     expect((broke as BxvttProblemError).problem.rejections?.[0]?.code).toMatch(/^items\.purchase\./);
     await expect(
-      alice.client.createCharacter({ name: 'X', class_id: 'fighter', alignment: 'evil' as 'lawful' }),
+      alice.client.createCharacter({
+        name: 'X',
+        class_id: 'fighter',
+        alignment: 'evil' as 'lawful',
+        ability_roll_id: fresh.id,
+      }),
     ).rejects.toSatisfy((error) => isProblem(error, 'validation_error'));
+  });
+
+  it('refuses a character without an ability roll, so every character follows its table rules', async () => {
+    const body = { name: 'Rogue', class_id: 'fighter', alignment: 'lawful', seed: 3 };
+    const response = await fetch(`${server.url}/api/characters`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${alice.token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    expect(response.status).toBe(422);
+    expect(await response.json()).toMatchObject({
+      code: 'validation_error',
+      errors: [{ path: ['ability_roll_id'] }],
+    });
+  });
+
+  it('answers a roll from before rolls belonged to tables as one the user does not have', async () => {
+    const roll = await alice.client.rollAbilities(tableId, { seed: 9 });
+    // A roll that layout version 8 migrated has no table and no recorded rules.
+    server.server.ctx.db.run(
+      'UPDATE ability_rolls SET table_id = NULL, rules_json = NULL WHERE id = ?',
+      roll.id,
+    );
+    await expect(alice.client.getAbilityRoll(roll.id)).rejects.toSatisfy((error) =>
+      isProblem(error, 'not_found'),
+    );
+    await expect(alice.client.rollHitPoints(roll.id, { class_id: 'fighter' })).rejects.toSatisfy((error) =>
+      isProblem(error, 'not_found'),
+    );
   });
 
   it('shows and deletes only your own characters', async () => {
@@ -167,12 +217,10 @@ describe('characters', () => {
     const strict = await startServer({ allowCharacterSeeds: false });
     try {
       const user = await createUser(strict, 'Strict');
-      await expect(user.client.rollAbilities({ seed: 1 })).rejects.toSatisfy((error) =>
+      const table = await user.client.createTable({ name: 'Strict table' });
+      await expect(user.client.rollAbilities(table.id, { seed: 1 })).rejects.toSatisfy((error) =>
         isProblem(error, 'forbidden'),
       );
-      await expect(
-        user.client.createCharacter({ name: 'S', class_id: 'fighter', alignment: 'lawful', seed: 1 }),
-      ).rejects.toSatisfy((error) => isProblem(error, 'forbidden'));
     } finally {
       await strict.close();
     }

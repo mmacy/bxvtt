@@ -5,6 +5,25 @@ import { DatabaseSync } from 'node:sqlite';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { USER_COLORS } from '@bxvtt/shared/protocol';
 import { Database, SCHEMA_VERSION } from './db';
+import { standardRuleset } from './rulesets';
+
+/** Takes a new database back to layout version 7, before the table rules. */
+const UNDO_VERSION_8 = `
+  ALTER TABLE tables DROP COLUMN ruleset_json;
+  ALTER TABLE tables DROP COLUMN ability_score_rerolls;
+  ALTER TABLE tables DROP COLUMN sub_par_restart;
+  ALTER TABLE characters DROP COLUMN creation_rules_json;
+  DROP TABLE ability_rolls;
+  CREATE TABLE ability_rolls (
+    id TEXT PRIMARY KEY,
+    owner_user_id TEXT NOT NULL REFERENCES users(id),
+    created_at TEXT NOT NULL,
+    hp_class_id TEXT,
+    hp_reroll INTEGER,
+    hp_rolled_at TEXT,
+    gold_rolled_at TEXT
+  );
+`;
 
 describe('the database layout', () => {
   let dir: string;
@@ -20,7 +39,7 @@ describe('the database layout', () => {
   it('upgrades a version 1 database and keeps its rows', () => {
     new Database(dir).close();
     const raw = new DatabaseSync(join(dir, 'bxvtt.db'));
-    raw.exec(`DROP TABLE retired_tokens; DROP TABLE bxapi_garbage; PRAGMA user_version = 1;
+    raw.exec(`${UNDO_VERSION_8} DROP TABLE retired_tokens; DROP TABLE bxapi_garbage; PRAGMA user_version = 1;
       DROP TABLE ability_rolls;
       CREATE TABLE ability_rolls (
         id TEXT PRIMARY KEY,
@@ -53,7 +72,7 @@ describe('the database layout', () => {
   it('drops the target handles, battle refusals, and declarations of a version 6 database and keeps its other rows', () => {
     new Database(dir).close();
     const raw = new DatabaseSync(join(dir, 'bxvtt.db'));
-    raw.exec(`CREATE TABLE target_handles (
+    raw.exec(`${UNDO_VERSION_8} CREATE TABLE target_handles (
         table_id TEXT NOT NULL REFERENCES tables(id) ON DELETE CASCADE,
         session_id TEXT NOT NULL,
         encounter_key TEXT NOT NULL,
@@ -91,6 +110,46 @@ describe('the database layout', () => {
     // A declaration from before version 7 names a monster by a handle that no longer exists.
     expect(db.get('SELECT count(*) AS n FROM declarations')).toEqual({ n: 0 });
     expect(db.get("SELECT name FROM tables WHERE id = 'tbl_1'")).toEqual({ name: 'T' });
+    db.close();
+  });
+
+  it('gives the tables of a version 7 database the standard ruleset, and leaves its rolls and characters without rules', () => {
+    new Database(dir).close();
+    const raw = new DatabaseSync(join(dir, 'bxvtt.db'));
+    raw.exec(`${UNDO_VERSION_8}
+      INSERT INTO users (id, name, color, token_hash, created_at) VALUES ('usr_1', 'Rhea', '#e69f00', 'h', 'now');
+      INSERT INTO tables (id, name, invite_code, party_control, auto_resolve, autosave, created_by, created_at)
+        VALUES ('tbl_1', 'T', 'code', 'caller', 1, 1, 'usr_1', 'now');
+      INSERT INTO ability_rolls (id, owner_user_id, created_at, hp_class_id, hp_reroll)
+        VALUES ('rol_1', 'usr_1', 'now', 'fighter', 1);
+      INSERT INTO characters (id, owner_user_id, name, class_id, level, max_hp, created_at)
+        VALUES ('chr_1', 'usr_1', 'Brenna', 'fighter', 1, 8, 'now');
+      PRAGMA user_version = 7;`);
+    raw.close();
+    const db = new Database(dir);
+    expect(db.get('PRAGMA user_version')).toEqual({ user_version: SCHEMA_VERSION });
+    const table = db.get(
+      "SELECT ruleset_json, ability_score_rerolls, sub_par_restart FROM tables WHERE id = 'tbl_1'",
+    );
+    expect(table).toMatchObject({ ability_score_rerolls: 0, sub_par_restart: 0 });
+    expect(JSON.parse(String(table?.ruleset_json))).toEqual(standardRuleset());
+    expect(standardRuleset().hp_reroll_at_first_level).toBe(true);
+    expect(
+      db.get(
+        "SELECT owner_user_id, hp_class_id, table_id, rules_json, sub_par, character_id, closed_at FROM ability_rolls WHERE id = 'rol_1'",
+      ),
+    ).toEqual({
+      owner_user_id: 'usr_1',
+      hp_class_id: 'fighter',
+      table_id: null,
+      rules_json: null,
+      sub_par: 0,
+      character_id: null,
+      closed_at: null,
+    });
+    expect(db.get("SELECT creation_rules_json FROM characters WHERE id = 'chr_1'")).toEqual({
+      creation_rules_json: null,
+    });
     db.close();
   });
 

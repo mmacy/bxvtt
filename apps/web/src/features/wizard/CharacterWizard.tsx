@@ -18,6 +18,7 @@ import {
   useLanguageCatalog,
   useRuleTable,
   useSpellCatalog,
+  useTableDetail,
 } from '@/app';
 import { Banner, Button, ConfirmDialog, Dialog, Stepper, type StepperStep } from '@/ui';
 import { RuleLinksContext } from '../sheet/RuleLink';
@@ -172,6 +173,8 @@ export function CharacterWizard({ open, onClose, onCreated }: CharacterWizardPro
 function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>) {
   const user = useCurrentUser();
   const userId = user?.id ?? null;
+  // TODO(table-ruleset): ability rolls belong to a table, so the wizard rolls at the open table.
+  const tableId = useTableDetail()?.id ?? '';
   const [initial] = useState(() => loadDraft(userId));
   const [draft, setDraft] = useState<WizardDraft>(() => initial ?? emptyDraft());
   const [restored, setRestored] = useState(initial !== null);
@@ -456,13 +459,14 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
     setRolling(true);
     setProblem(null);
     try {
-      const result = await getApi().rollAbilities();
+      const result = await getApi().rollAbilities(tableId);
       setFreshRollId(result.id);
       setRestored(false);
       // A new roll has no starting rolls yet, so the wizard needn't ask.
       setRecorded({
         rollId: result.id,
-        status: { used: false, class_id: null, hp_reroll_at_first_level: null, gold_rolled: false },
+        // TODO(table-ruleset): the roll states the rules recorded on it.
+        status: { used: false, class_id: null, rules: result.rules, gold_rolled: false },
       });
       setDraft((d) => ({
         ...emptyDraft(),
@@ -497,7 +501,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
         status: {
           ...status,
           class_id: value.class_id,
-          hp_reroll_at_first_level: value.hp_reroll_at_first_level,
+          rules: value.rules, // TODO(table-ruleset): the recorded rules replace the re-roll option.
           gold_rolled: value.gold_roll !== null,
         },
       });

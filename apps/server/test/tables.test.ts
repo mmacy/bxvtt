@@ -28,6 +28,9 @@ describe('tables and roles', () => {
       caller_user_id: null,
       auto_resolve: true,
       autosave: true,
+      ruleset: (await referee.client.listRulesets()).items[0]?.ruleset,
+      ability_score_rerolls: 0,
+      sub_par_restart: false,
     });
     expect(table.phase).toBe('lobby');
     const list = await referee.client.listTables();
@@ -49,7 +52,7 @@ describe('tables and roles', () => {
       settings: { party_control: 'anyone', caller_user_id: player.id, auto_resolve: false, autosave: false },
     });
     expect(updated.name).toBe('New name');
-    expect(updated.settings).toEqual({
+    expect(updated.settings).toMatchObject({
       party_control: 'anyone',
       caller_user_id: player.id,
       auto_resolve: false,

@@ -53,14 +53,30 @@ export const PROBLEM_CODES = {
   declarations_incomplete: 409,
   /** 409: `resolve_battle_round` goes through the declarations routes, not the command route. */
   use_declarations: 409,
-  /** 409 (from bxapi): a character was already created from that ability roll. */
+  /**
+   * 409: a character was already created from that ability roll, or the roll was closed: the user created a
+   * character from another roll at the table, or discarded this sub-par roll with a sub-par restart. bxapi returns
+   * the same code for a roll it has used.
+   */
   ability_roll_used: 409,
   /**
-   * 409: the player rolled hit points from this ability roll for another class or reroll option, which fixes both
-   * for the roll. Extra members: `class_id` and `hp_reroll_at_first_level`, the choices the hit points were rolled
-   * with. Use them, or roll new ability scores.
+   * 409: the player rolled hit points from this ability roll for another class, which fixes the class for the
+   * roll. Extra member: `class_id`, the class the hit points were rolled for. Use it, or roll new ability scores.
    */
   ability_roll_locked: 409,
+  /**
+   * 409: the user already has as many open ability rolls at the table as its reroll limit allows (one roll, plus
+   * `ability_score_rerolls` rerolls). Create a character from the newest roll. Extra members:
+   * `ability_score_rerolls`, the table's limit, and `roll_id`, the user's newest open roll at the table, which
+   * `GET /api/ability-rolls/{roll_id}` reads.
+   */
+  ability_rerolls_used: 409,
+  /**
+   * 409: the ability roll is open but isn't the user's newest open roll at its table, because the user rolled
+   * again since. Only the newest open roll can make a character. Extra member: `roll_id`, the user's newest open
+   * roll at the table.
+   */
+  ability_roll_superseded: 409,
   /** 409: the request needs the hit points rolled first, such as rolling the starting gold. */
   hit_points_not_rolled: 409,
   /**
@@ -183,7 +199,8 @@ export const Problem = z.looseObject({
   field: z.string().optional(),
   index: z.number().int().optional(),
   class_id: z.string().optional(),
-  hp_reroll_at_first_level: z.boolean().optional(),
+  ability_score_rerolls: z.number().int().optional(),
+  roll_id: z.string().nullable().optional(),
 });
 /** An RFC 9457 problem document. */
 export type Problem = z.infer<typeof Problem>;

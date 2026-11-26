@@ -56,22 +56,34 @@ export interface MemberSpec {
 }
 
 /**
- * Creates a stored character with a fixed seed.
+ * Creates a stored character with a fixed seed, the way the wizard does: an ability roll at a table, the hit
+ * points and the gold, then the character from the roll. bxapi derives every roll from the seed.
  *
  * @param client - The owner's SDK client.
  * @param spec - The name, class, and optional overrides.
+ * @param tableId - The table to roll at. Defaults to the owner's newest table.
  */
 export async function createCharacter(
   client: BxvttClient,
   spec: Omit<MemberSpec, 'owner'>,
+  tableId?: string,
 ): Promise<StoredCharacter> {
   const kit = CLASSES[spec.classId];
   const spells = spec.spells ?? ('spells' in kit ? [...kit.spells] : undefined);
+  const table = tableId ?? (await client.listTables()).items[0]?.id;
+  if (table === undefined) throw new Error(`The owner of ${spec.name} has no table to roll at.`);
+  const roll = await client.rollAbilities(table, { seed: spec.seed ?? kit.seed });
+  const starting = {
+    class_id: spec.classId,
+    ...(spells === undefined ? {} : { starting_spell_ids: spells }),
+  };
+  await client.rollHitPoints(roll.id, starting);
+  await client.rollStartingGold(roll.id, starting);
   return client.createCharacter({
     name: spec.name,
     class_id: spec.classId,
     alignment: 'lawful',
-    seed: spec.seed ?? kit.seed,
+    ability_roll_id: roll.id,
     purchases: (spec.buy ?? kit.buy).map((item_id) => ({ item_id })),
     equip_item_ids: [...(spec.equip ?? kit.equip)],
     ...(spells === undefined ? {} : { starting_spell_ids: spells }),
@@ -117,7 +129,7 @@ export async function setupTable(setup: TableSetup): Promise<SetupResult> {
   }
   const characters: StoredCharacter[] = [];
   for (const member of setup.party ?? []) {
-    const character = await createCharacter(member.owner.client, member);
+    const character = await createCharacter(member.owner.client, member, created.id);
     characters.push(character);
     await member.owner.client.addToRoster(created.id, character.id);
   }

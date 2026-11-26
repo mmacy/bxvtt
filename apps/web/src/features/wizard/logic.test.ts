@@ -1,6 +1,6 @@
 import type { AbilityTables, EquipmentSummary } from '@bxvtt/shared/bxapi';
 import { BxvttProblemError } from '@bxvtt/shared/client';
-import type { CharacterRequest, Problem } from '@bxvtt/shared/protocol';
+import type { CharacterRequest, CreationRules, Problem } from '@bxvtt/shared/protocol';
 import { describe, expect, it } from 'vitest';
 import type { ClassDetail, EquipmentDetail } from '@/app';
 import { createFakeApi } from '@/app/testing/renderWithTable';
@@ -131,14 +131,22 @@ describe('parseDraft', () => {
 });
 
 describe('reconcileDraft', () => {
-  const none = { used: false, class_id: null, hp_reroll_at_first_level: null, gold_rolled: false };
+  // TODO(table-ruleset): the roll's recorded rules replace the re-roll option.
+  const rules: CreationRules = {
+    ability_score_method: '3d6',
+    hp_reroll_at_first_level: false,
+    max_hp_at_first_level: false,
+    ability_score_rerolls: 0,
+    sub_par_restart: false,
+  };
+  const none = { used: false, class_id: null, rules, gold_rolled: false };
 
   it("takes the class and reroll option the server fixed, and clears the class's choices on a change", () => {
     const draft = draftWith({ classId: 'dwarf', spells: ['sleep'], languages: ['elvish'], hpReroll: false });
     const fixed = reconcileDraft(draft, {
       ...none,
       class_id: 'fighter',
-      hp_reroll_at_first_level: true,
+      rules: { ...rules, hp_reroll_at_first_level: true },
       gold_rolled: true,
     });
     expect(fixed).toMatchObject({ classId: 'fighter', hpReroll: true, spells: [], languages: [] });
@@ -147,7 +155,7 @@ describe('reconcileDraft', () => {
       reconcileDraft(same, {
         ...none,
         class_id: 'fighter',
-        hp_reroll_at_first_level: true,
+        rules: { ...rules, hp_reroll_at_first_level: true },
         gold_rolled: true,
       }),
     ).toBe(same);
@@ -159,7 +167,6 @@ describe('reconcileDraft', () => {
       reconcileDraft(draftWith({ step: 'review' }), {
         ...none,
         class_id: 'fighter',
-        hp_reroll_at_first_level: false,
       }).step,
     ).toBe('hp_gold');
     const early = draftWith({ step: 'identity' });
@@ -170,12 +177,12 @@ describe('reconcileDraft', () => {
     const draft = draftWith({ classId: 'dwarf', hpReroll: true, spells: ['sleep'] });
     expect(startingRollRequest(draft)).toEqual({
       class_id: 'dwarf',
-      hp_reroll_at_first_level: true,
       starting_spell_ids: ['sleep'],
     });
-    expect(
-      startingRollRequest(draft, { ...none, class_id: 'fighter', hp_reroll_at_first_level: false }),
-    ).toEqual({ class_id: 'fighter', starting_spell_ids: ['sleep'] });
+    expect(startingRollRequest(draft, { ...none, class_id: 'fighter' })).toEqual({
+      class_id: 'fighter',
+      starting_spell_ids: ['sleep'],
+    });
   });
 });
 

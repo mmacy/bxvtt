@@ -64,8 +64,8 @@ test.describe('resilience', () => {
     await expect(sam.page.getByRole('heading', { name: 'Party', level: 2 })).toBeVisible();
 
     // Town.
-    const flarg = await createCharacter(sam.client, { name: 'Flarg', classId: 'fighter' });
-    const clarence = await createCharacter(ruth.client, { name: 'Clarence', classId: 'cleric' });
+    const flarg = await createCharacter(sam.client, { name: 'Flarg', classId: 'fighter' }, tableId);
+    const clarence = await createCharacter(ruth.client, { name: 'Clarence', classId: 'cleric' }, tableId);
     await sam.client.addToRoster(tableId, flarg.id);
     await ruth.client.addToRoster(tableId, clarence.id);
     await ruth.client.startGame(tableId, { adventure_id: 'sample:the-drowned-bell', seed: 1981 });

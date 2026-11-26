@@ -64,7 +64,7 @@ async function createWithWizard(actor: Actor, choices: WizardChoices): Promise<v
       .getByRole('listitem')
       .filter({ hasText: choices.name }),
   ).toBeVisible();
-  await page.context().unroute('**/api/ability-rolls');
+  await page.context().unroute('**/api/tables/*/ability-rolls');
 }
 
 /**

@@ -40,6 +40,8 @@ export function playerView(fields: Partial<PlayerView> = {}): PlayerView {
     spell_levels: {},
     item_names: {},
     item_names_plural: {},
+    // TODO(table-ruleset): bxapi on osrlib 2.9 added `valuable_names` to the player view.
+    valuable_names: {},
     fatigued: false,
     exhausted: false,
     deprivation: {},

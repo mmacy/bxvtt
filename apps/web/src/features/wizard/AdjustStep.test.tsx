@@ -247,7 +247,14 @@ function tradeApi(answer?: (request: CharacterCheckRequest) => Promise<void>): F
   api.getStartingRolls.mockResolvedValue({
     used: false,
     class_id: null,
-    hp_reroll_at_first_level: null,
+    // TODO(table-ruleset): the roll's recorded rules replace the re-roll option.
+    rules: {
+      ability_score_method: '3d6',
+      hp_reroll_at_first_level: false,
+      max_hp_at_first_level: false,
+      ability_score_rerolls: 0,
+      sub_par_restart: false,
+    },
     gold_rolled: false,
   });
   return api;

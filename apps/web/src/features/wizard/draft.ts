@@ -35,7 +35,14 @@ export interface Adjustment {
  * bxapi returned the dice. The wizard then fetches the roll again, and the draft keeps its scores until the dice
  * arrive.
  */
-export type DraftRoll = Omit<AbilityRoll, 'rolls'> & { rolls?: AbilityRoll['rolls'] };
+// TODO(table-ruleset): the protocol's AbilityRoll gained `table_id`, `rules`, `rerolls_left`, and bxapi's
+// `ability_score_method`, `rolls.dropped`, and `rolls.sub_par`. A stored draft keeps only what it kept before.
+export type DraftRoll = Omit<
+  AbilityRoll,
+  'rolls' | 'table_id' | 'rules' | 'rerolls_left' | 'ability_score_method'
+> & {
+  rolls?: Pick<AbilityRoll['rolls'], 'scores' | 'rolls'>;
+};
 
 /**
  * Everything the player chose so far. The draft holds no rolled hit points or gold: the server keeps which rolls
@@ -128,8 +135,9 @@ export function requestFromDraft(draft: WizardDraft, options: RequestOptions = {
     name: name === '' && options.placeholderIdentity ? 'Adventurer' : name,
     class_id: draft.classId ?? '',
     alignment: draft.alignment ?? 'neutral',
+    // TODO(table-ruleset): `POST /api/characters` requires `ability_roll_id` now.
+    ability_roll_id: draft.roll?.id ?? '',
   };
-  if (draft.roll) body.ability_roll_id = draft.roll.id;
   if (hasAdjustment(draft.adjustment)) {
     body.adjustment = {
       lowered: cleanMap(draft.adjustment.lowered),
@@ -166,9 +174,8 @@ export function startingRollRequest(
   status: StartingRollsStatus | null = null,
 ): StartingRollRequest {
   const fixed = status?.class_id ?? null;
-  const reroll = fixed === null ? draft.hpReroll : status?.hp_reroll_at_first_level === true;
+  // TODO(table-ruleset): the roll's recorded rules decide the re-roll, so the body no longer carries it.
   const body: StartingRollRequest = { class_id: fixed ?? draft.classId ?? '' };
-  if (reroll) body.hp_reroll_at_first_level = true;
   if (draft.spells.length > 0) body.starting_spell_ids = [...draft.spells];
   return body;
 }
@@ -186,7 +193,8 @@ export function startingRollRequest(
 export function reconcileDraft(draft: WizardDraft, status: StartingRollsStatus): WizardDraft {
   let next = draft;
   const fixed = status.class_id;
-  const reroll = status.hp_reroll_at_first_level === true;
+  // TODO(table-ruleset): the re-roll is one of the roll's recorded rules now.
+  const reroll = status.rules.hp_reroll_at_first_level;
   if (fixed !== null && (draft.classId !== fixed || draft.hpReroll !== reroll)) {
     next = { ...next, classId: fixed, hpReroll: reroll };
     if (draft.classId !== fixed) {
