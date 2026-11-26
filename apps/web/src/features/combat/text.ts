@@ -7,16 +7,8 @@ import { creatureNames, type CreatureName } from '@bxvtt/shared/text';
 import { useMemo } from 'react';
 import { useEncounter } from '@/app';
 
-/** The parts of an encounter that {@link encounterCreatures} reads. A bxapi `EncounterView` fits it. */
-type EncounterLike = { groups: Parameters<typeof creatureNames>[0] } | null | undefined;
-
-/** Every creature of the open encounter, with its name, or an empty list outside an encounter. */
-export function encounterCreatures(encounter: EncounterLike): CreatureName[] {
-  return creatureNames(encounter?.groups);
-}
-
-/** The creatures of the open encounter, with their names. */
+/** The creatures of the open encounter, with their names, or an empty list outside an encounter. */
 export function useEncounterCreatures(): CreatureName[] {
   const encounter = useEncounter();
-  return useMemo(() => encounterCreatures(encounter), [encounter]);
+  return useMemo(() => creatureNames(encounter?.groups), [encounter]);
 }

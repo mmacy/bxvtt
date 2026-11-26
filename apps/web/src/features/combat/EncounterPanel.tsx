@@ -234,7 +234,7 @@ function GroupCard({ group }: { group: EncounterGroupView }) {
           )}
         </span>
         <span className={styles.groupMeta}>
-          {group.fled ? 'Fled' : `${formatFeet(group.distance_feet)} away`}
+          {group.fled ? 'Escaped' : `${formatFeet(group.distance_feet)} away`}
           {group.categories.length > 0 && ` · ${group.categories.map(capitalize).join(', ')}`}
         </span>
         {conditions.length > 0 && (

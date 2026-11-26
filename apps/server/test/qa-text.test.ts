@@ -163,7 +163,7 @@ describe('text from the QA pass', () => {
     if (entry === undefined) throw new Error('no entry');
     const text = narrate(entry, awarded.game.scene).join(' ');
     expect(text).toContain(
-      `gains ${(gained ?? 0).toLocaleString('en-US')} experience points. One award raises`,
+      `gains ${(gained ?? 0).toLocaleString('en-US')} of the 5,000 experience points awarded.`,
     );
   });
 

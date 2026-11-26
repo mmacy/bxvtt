@@ -141,21 +141,15 @@ describe('BattleBoard', () => {
     expect(screen.queryByRole('button', { name: 'Resolve now' })).not.toBeInTheDocument();
   });
 
-  it('says in the composer that choosing declares, and marks the saved choice', async () => {
+  it('marks the saved choice in the composer, and leaves the row to say what is declared', async () => {
     const api = createFakeApi();
     stubRules(api);
     const { user } = renderWithTable(<BattleBoard />, { snapshot: fixtureSnapshot('battle', 'player'), api });
-    await user.click(within(row('Wren')).getByRole('button', { name: 'Actions' }));
-    const wren = screen.getByRole('region', { name: 'Declare for Wren' });
-    expect(wren).toHaveTextContent(
-      'Choosing an action declares it for Wren this round. You can change it until the round resolves.',
-    );
-    await user.click(within(wren).getByRole('button', { name: "Close Wren's actions" }));
     await user.click(within(row('Brenna')).getByRole('button', { name: 'Change' }));
     const brenna = screen.getByRole('region', { name: 'Declare for Brenna' });
-    expect(brenna).toHaveTextContent(
-      'Brenna has declared: Attack the goblins, closing in. Choose another action to change it before the round resolves.',
-    );
+    // The row already says "Declared:" and offers Change, so the composer doesn't repeat it.
+    expect(brenna).not.toHaveTextContent(/has declared/);
+    expect(within(row('Brenna')).getByText(/Declared:/)).toBeInTheDocument();
     expect(
       within(brenna).getByRole('button', { name: /^(Attack|Close in and attack): the goblins/ }),
     ).toHaveAttribute('aria-pressed', 'true');
@@ -221,10 +215,76 @@ describe('BattleBoard', () => {
     renderWithTable(<BattleBoard />, { snapshot, api });
     const resolve = screen.getByRole('button', { name: 'Resolve round' });
     expect(resolve).toHaveAttribute('aria-disabled', 'true');
-    expect(resolve).toHaveAccessibleDescription('Brenna has to choose another action first.');
-    expect(footer()).toHaveTextContent(
-      'The round waits for Brenna to choose another action, because the session would refuse that declaration.',
+    expect(resolve).toHaveAccessibleDescription('Brenna needs a different action first.');
+    expect(footer()).toHaveTextContent('Brenna needs a different action before the round can resolve.');
+  });
+
+  it("marks a refused member's row as won't work, with the reason as the Change button's description", () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('battle', 'player');
+    const declarations = snapshot.declarations as DeclarationsState;
+    declarations.refusals = [
+      {
+        member_id: 'character-0001',
+        code: 'battle.declaration.not_in_front_rank',
+        params: { character: 'character-0001' },
+      },
+    ];
+    renderWithTable(<BattleBoard />, { snapshot, api });
+    const brenna = row('Brenna');
+    expect(brenna).toHaveTextContent(/Won't work: Attack the goblins/);
+    expect(within(brenna).queryByText(/Declared:/)).not.toBeInTheDocument();
+    const change = within(brenna).getByRole('button', { name: 'Change' });
+    expect(change).toHaveAccessibleDescription(/Brenna isn't in the front rank/);
+    // The note that the round waits sits in the footer's polite live region, not in an alert on the row.
+    expect(within(brenna).queryByRole('alert')).not.toBeInTheDocument();
+    const note = within(footer()).getByText('Brenna needs a different action before the round can resolve.');
+    expect(note.closest('[aria-live="polite"]')).not.toBeNull();
+  });
+
+  it('lets the round resolve when a refusal names a member who can no longer act', () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = everyoneDeclared('player', false);
+    const declarations = snapshot.declarations as DeclarationsState;
+    // Tamsin fell, so she isn't a declarer any more, and a stale refusal still names her.
+    declarations.declarers = declarations.declarers.filter((id) => id !== 'character-0004');
+    declarations.declared = [...declarations.declarers];
+    declarations.refusals = [
+      {
+        member_id: 'character-0004',
+        code: 'combat.attack.out_of_reach',
+        params: { character: 'character-0004', distance_feet: 40 },
+      },
+    ];
+    renderWithTable(<BattleBoard />, { snapshot, api });
+    const resolve = screen.getByRole('button', { name: 'Resolve round' });
+    expect(resolve).not.toHaveAttribute('aria-disabled');
+    expect(footer()).not.toHaveTextContent(/needs a different action/);
+  });
+
+  it("says when the actions can't be checked, as a polite status, and keeps Resolve round available", () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = everyoneDeclared('player', false);
+    (snapshot.declarations as DeclarationsState).preview_unavailable = true;
+    renderWithTable(<BattleBoard />, { snapshot, api });
+    const line = within(footer()).getByRole('status');
+    expect(line).toHaveTextContent(
+      "Actions can't be checked right now. If one won't work, you'll find out when the round resolves.",
     );
+    expect(within(footer()).queryByRole('alert')).not.toBeInTheDocument();
+    const resolve = screen.getByRole('button', { name: 'Resolve round' });
+    expect(resolve).not.toHaveAttribute('aria-disabled');
+    expect(resolve).not.toHaveAccessibleDescription();
+  });
+
+  it('says nothing about checking while the actions can be checked', () => {
+    const api = createFakeApi();
+    stubRules(api);
+    renderWithTable(<BattleBoard />, { snapshot: everyoneDeclared('player', false), api });
+    expect(within(footer()).queryByText(/can't be checked/)).not.toBeInTheDocument();
   });
 
   it("marks a hiding member without saying whether the hide worked, and offers the hide to the view's list", async () => {
@@ -269,9 +329,11 @@ describe('BattleBoard', () => {
       },
     ];
     act(() => store.getState().receive({ type: 'declarations', declarations }));
+    // The row names the hide as the button did, not as "An action".
+    await waitFor(() => expect(row('Wren')).toHaveTextContent(/Won't work: Hide in shadows/));
     await waitFor(() =>
       expect(
-        within(row('Wren')).getAllByText(/Wren will stand in the front rank this round, so they can't hide/)
+        within(row('Wren')).getAllByText(/Wren will be in the front rank this round and can't hide there/)
           .length,
       ).toBeGreaterThan(0),
     );
@@ -304,6 +366,69 @@ describe('BattleBoard', () => {
     expect(within(composer).getByRole('checkbox', { name: /Back-stab/ })).toBeInTheDocument();
   });
 
+  it('offers a hiding thief a back-stab as the quick action, and starts the Back-stab box checked', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const rules = api.rules.getMockImplementation();
+    api.rules.mockImplementation(async (path: string) =>
+      path === 'classes/thief'
+        ? ({ id: 'thief', abilities: [{ tag: 'back_stab' }] } as never)
+        : (rules?.(path) as never),
+    );
+    const snapshot = fixtureSnapshot('battle', 'player');
+    const encounter = snapshot.game?.view.encounter;
+    if (!encounter) throw new Error('No encounter in the fixture.');
+    encounter.hiding = ['character-0002'];
+    api.declare.mockResolvedValue(snapshot.declarations as DeclarationsState);
+    const { user, store } = renderWithTable(<BattleBoard />, { snapshot, api });
+    // The goblins stand 30 feet off, within Wren's move, so she closes in to strike.
+    const quick = await within(row('Wren')).findByRole('button', {
+      name: 'Back-stab the goblins, closing in',
+    });
+    await user.click(quick);
+    expect(api.declare).toHaveBeenCalledWith(
+      store.getState().tableId,
+      'character-0002',
+      expect.objectContaining({ action: 'attack', target_group_id: 'group-0001', back_stab: true }),
+    );
+    await user.click(within(row('Wren')).getByRole('button', { name: 'Actions' }));
+    const composer = screen.getByRole('region', { name: 'Declare for Wren' });
+    await user.click(within(composer).getByRole('radio', { name: 'Attack' }));
+    const box = within(composer).getByRole('checkbox', { name: 'Back-stab' });
+    expect(box).toBeChecked();
+    expect(box).toHaveAccessibleDescription("Strike a monster that hasn't noticed Wren.");
+  });
+
+  it('offers a thief who is not hiding the usual quick action, not a back-stab', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const rules = api.rules.getMockImplementation();
+    api.rules.mockImplementation(async (path: string) =>
+      path === 'classes/thief'
+        ? ({ id: 'thief', abilities: [{ tag: 'back_stab' }] } as never)
+        : (rules?.(path) as never),
+    );
+    renderWithTable(<BattleBoard />, { snapshot: fixtureSnapshot('battle', 'player'), api });
+    await waitFor(() => expect(api.rules).toHaveBeenCalledWith('classes/thief'));
+    expect(within(row('Wren')).queryByRole('button', { name: /^Back-stab/ })).not.toBeInTheDocument();
+  });
+
+  it('gives the Hide tab one line that sets up the back-stab, without restating who may hide', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('battle', 'player');
+    const { user } = renderWithTable(<BattleBoard />, { snapshot, api });
+    await user.click(within(row('Wren')).getByRole('button', { name: 'Actions' }));
+    const composer = screen.getByRole('region', { name: 'Declare for Wren' });
+    await user.click(within(composer).getByRole('radio', { name: 'Hide' }));
+    expect(
+      within(composer).getByText(
+        'Wren slips into the shadows to set up a back-stab. The referee rolls in secret.',
+      ),
+    ).toBeInTheDocument();
+    expect(composer).not.toHaveTextContent(/front rank/);
+  });
+
   it('marks where a member will stand after the declared moves', () => {
     const api = createFakeApi();
     stubRules(api);
@@ -314,8 +439,10 @@ describe('BattleBoard', () => {
       front_rank: { 'group-0001': ['character-0001'] },
     };
     renderWithTable(<BattleBoard />, { snapshot, api });
-    expect(screen.getAllByText(/^Brenna, .*moves to 35 feet forward this round/).length).toBeGreaterThan(0);
-    expect(screen.queryByText(/^Wren, .*this round/)).not.toBeInTheDocument();
+    expect(
+      screen.getAllByText(/^Brenna, .*will move to 35 feet past the party line$/).length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByText(/^Wren, .*will (move|fall back)/)).not.toBeInTheDocument();
   });
 
   it('lets the referee resolve early after a confirmation, holding for the rest', async () => {
@@ -381,6 +508,37 @@ describe('BattleBoard', () => {
     // Skip lands on the summary of the newest round.
     await user.click(screen.getByRole('button', { name: 'Skip' }));
     expect(await screen.findByText('Round 3 result')).toBeInTheDocument();
+  });
+
+  it('takes the rows and the footer out of play while a round plays back, and holds the live Hiding badge', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('battle', 'player');
+    const encounter = snapshot.game?.view.encounter;
+    if (!encounter) throw new Error('No encounter in the fixture.');
+    encounter.hiding = ['character-0001'];
+    const { store, user } = renderWithTable(<BattleBoard />, {
+      snapshot,
+      api,
+      preferences: { motion: 'full', playbackSpeed: 'slow' },
+    });
+    const list = screen.getByRole('list', { name: 'Actions this round' });
+    expect(within(row('Brenna')).getByText('Hiding')).toBeInTheDocument();
+    // A keyboard user is on Brenna's Change button when the round resolves.
+    within(row('Brenna')).getByRole('button', { name: 'Change' }).focus();
+    act(() => store.getState().receive({ type: 'feed', entry: roundEntry(snapshot, 1, 2) }));
+    expect(await screen.findByText('Round 2 begins.')).toBeInTheDocument();
+    expect(list).toHaveAttribute('inert');
+    expect(footer()).toHaveAttribute('inert');
+    // The live view already lists the hide, but the round that sets it up hasn't played yet.
+    expect(within(row('Brenna')).queryByText('Hiding')).not.toBeInTheDocument();
+    // Focus moves to the strip instead of falling to the page.
+    expect(screen.getByRole('button', { name: 'Pause playback' })).toHaveFocus();
+    await user.click(screen.getByRole('button', { name: 'Skip' }));
+    expect(await screen.findByText('Round 2 result')).toBeInTheDocument();
+    expect(list).not.toHaveAttribute('inert');
+    expect(footer()).not.toHaveAttribute('inert');
+    expect(within(row('Brenna')).getByText('Hiding')).toBeInTheDocument();
   });
 
   it('remembers the speed each viewer chooses', async () => {

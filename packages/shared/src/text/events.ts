@@ -909,7 +909,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
         const potion = event.item_id ? itemName(event.item_id, ctx) : 'the potion';
         const drinker = event.target_id ? memberName(event.target_id, ctx) : 'another party member';
         return {
-          text: `${actor} can't give ${drinker} ${potion} to drink and keeps it.`,
+          text: `${actor} can't get ${potion} to ${drinker} and keeps it.`,
           detail,
           category: 'item',
           tone: party ? 'bad' : 'good',
@@ -1582,8 +1582,8 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
       // The players see the member slip away, but not whether the monsters noticed. The roll is the referee's.
       const who = memberName(event.character_id, ctx);
       return {
-        text: `${who} slips into the shadows and tries to hide.`,
-        detail: "The referee rolls in secret, so the party doesn't know yet whether the hide worked.",
+        text: `${who} slips into the shadows to hide.`,
+        detail: 'The referee rolls for the hide in secret.',
         category: 'battle',
         tone: 'info',
         icon: 'step',
@@ -1601,7 +1601,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
       };
     case 'monster_escaped':
       return {
-        text: `${capitalizeFirst(groupName(event.group_id, ctx))} ${groupIsPlural(event.group_id, ctx) ? 'escape' : 'escapes'} the battle.`,
+        text: `${capitalizeFirst(groupName(event.group_id, ctx))} ${groupIsPlural(event.group_id, ctx) ? 'escape' : 'escapes'}.`,
         category: 'battle',
         tone: 'info',
         icon: 'run',
@@ -1678,7 +1678,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
           : []),
       ];
       return {
-        text: `Treasure is rolled for ${cacheName(event.cache_ref)}: ${bits.length === 0 ? 'nothing' : joinList(bits)}.`,
+        text: `${rolledFor(event.cache_ref)}: ${bits.length === 0 ? 'nothing' : joinList(bits)}.`,
         detail: details.length > 0 ? details.join(' ') : undefined,
         category: 'treasure',
         tone: 'info',
@@ -1844,17 +1844,17 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
       // reports the adjusted award.
       const gained = typeof event.gained === 'number' ? event.gained : event.modified_award;
       const clamped = typeof event.gained === 'number' && event.clamped === true;
-      const adjusted =
-        event.award !== event.modified_award
-          ? `Base award ${formatInteger(event.award)}, adjusted to ${formatInteger(event.modified_award)}.`
-          : clamped
-            ? `The award was ${formatInteger(event.modified_award)}.`
-            : undefined;
+      const parts = [
+        ...(event.award !== event.modified_award
+          ? [`Base award ${formatInteger(event.award)}, adjusted to ${formatInteger(event.modified_award)}.`]
+          : []),
+        ...(clamped ? [LEVEL_LIMIT] : []),
+      ];
       return {
         text: clamped
-          ? `${who} gains ${formatInteger(gained)} experience points. One award raises a character only one level, so the rest is lost.`
+          ? `${who} gains ${formatInteger(gained)} of the ${formatInteger(event.modified_award)} experience points awarded.`
           : `${who} gains ${formatInteger(gained)} experience points.`,
-        detail: adjusted,
+        detail: parts.length > 0 ? parts.join(' ') : undefined,
         category: 'xp',
         tone: 'good',
         icon: 'star',
@@ -2065,8 +2065,9 @@ function normalizeUnit(unit: string): 'round' | 'turn' | 'day' {
   return unit === 'turn' || unit === 'day' ? unit : 'round';
 }
 
-function cacheName(ref: string): string {
-  return /^cache-\d+$/.test(ref) ? 'a treasure cache' : `the ${prettifyId(ref)} cache`;
+/** The start of a rolled-treasure line, such as "Treasure is rolled for the chapel altar". */
+function rolledFor(ref: string): string {
+  return /^cache-\d+$/.test(ref) ? 'Treasure is rolled' : `Treasure is rolled for the ${prettifyId(ref)}`;
 }
 
 function templateName(templateId: string, ctx: TextContext): string {
@@ -2498,6 +2499,9 @@ export function describeGameEntry(
   );
 }
 
+/** Why a member gained less than the award, as bxapi's `clamped` field defines it. */
+const LEVEL_LIMIT = 'One award can raise a character only one level.';
+
 /**
  * Tells what a member kept of an award that osrlib capped: one award raises a character at most one level, and
  * the rest is lost. osrlib's event states the award before the cap, and the entry's `xp_gained` what the member
@@ -2516,7 +2520,8 @@ function cappedAwards(lines: EventLine[], entry: GameEntryLike, ctx: TextContext
     if (kept === undefined || line.amount === undefined || kept >= line.amount) return line;
     return {
       ...line,
-      text: `${memberName(memberId, ctx)} gains ${formatInteger(kept)} experience points. One award raises a character only one level, so the rest is lost.`,
+      text: `${memberName(memberId, ctx)} gains ${formatInteger(kept)} of the ${formatInteger(line.amount)} experience points awarded.`,
+      detail: line.detail ? `${line.detail} ${LEVEL_LIMIT}` : LEVEL_LIMIT,
       amount: kept,
     };
   });

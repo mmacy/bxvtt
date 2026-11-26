@@ -249,7 +249,7 @@ describe('CombatActions', () => {
     expect(screen.queryByRole('button', { name: /^Declare for/ })).not.toBeInTheDocument();
   });
 
-  it('keeps Resolve round unavailable while the session would refuse a declaration', async () => {
+  it("keeps Resolve round unavailable while a declared action won't work", async () => {
     const api = createFakeApi();
     stubRules(api);
     const snapshot = fixtureSnapshot('battle', 'player');
@@ -274,9 +274,38 @@ describe('CombatActions', () => {
     );
     const resolve = screen.getByRole('button', { name: 'Resolve round' });
     expect(resolve).toHaveAttribute('aria-disabled', 'true');
-    expect(resolve).toHaveAccessibleDescription(/Brenna has to choose another action first\./);
+    expect(resolve).toHaveAccessibleDescription(/Brenna needs a different action first\./);
     await user.click(resolve);
     expect(api.resolveRound).not.toHaveBeenCalled();
+  });
+
+  it('offers Resolve round when a refusal names a member who can no longer act', () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('battle', 'player');
+    if (snapshot.table) snapshot.table.settings.auto_resolve = false;
+    const declarations = snapshot.declarations;
+    if (!declarations) throw new Error('No declarations in the fixture.');
+    // Tamsin fell, so she isn't a declarer any more, and a stale refusal still names her. The board agrees.
+    declarations.declarers = declarations.declarers.filter((id) => id !== 'character-0004');
+    declarations.declared = [...declarations.declarers];
+    for (const id of declarations.declarers)
+      declarations.declarations[id] ??= { action: 'hold', character_id: id } as never;
+    declarations.refusals = [
+      {
+        member_id: 'character-0004',
+        code: 'combat.attack.out_of_reach',
+        params: { character: 'character-0004', distance_feet: 30 },
+      },
+    ];
+    renderWithTable(
+      <ActionBar aria-label="Party actions">
+        <CombatActions />
+      </ActionBar>,
+      { snapshot, api },
+    );
+    const resolve = screen.getByRole('button', { name: 'Resolve round' });
+    expect(resolve).not.toHaveAttribute('aria-disabled');
   });
 });
 
@@ -291,7 +320,16 @@ describe('resolveRoundReason', () => {
     );
   });
 
-  it('names who has to change a declaration that the session would refuse', () => {
+  it("names who needs a different action when one won't work", () => {
+    expect(
+      resolveRoundReason({
+        canResolve: allowed,
+        canResolveEarly: early,
+        auto: false,
+        waiting: [],
+        refused: ['Brenna'],
+      }),
+    ).toBe('Brenna needs a different action first.');
     expect(
       resolveRoundReason({
         canResolve: allowed,
@@ -300,7 +338,7 @@ describe('resolveRoundReason', () => {
         waiting: [],
         refused: ['Brenna', 'Wren'],
       }),
-    ).toBe('Brenna and Wren have to choose another action first.');
+    ).toBe('Brenna and Wren need different actions first.');
   });
 
   it('says the round resolves by itself with automatic resolution on', () => {

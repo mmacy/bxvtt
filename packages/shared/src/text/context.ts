@@ -1071,7 +1071,7 @@ export function entityName(id: string | null | undefined, ctx: TextContext): str
     case 'valuable':
       return itemName(id, ctx);
     case 'cache':
-      return 'a treasure cache';
+      return 'a treasure';
     case 'temple':
       return 'the temple cleric';
     case 'side':

@@ -145,7 +145,7 @@ describe('rejections', () => {
     [
       'combat.attack.out_of_reach',
       { distance_feet: 20 },
-      'The target is 20 feet away, too far for a melee attack. Close in first, or use a missile weapon or spell.',
+      'The target is 20 feet away, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
     ],
     [
       'combat.attack.attacker_incapacitated',
@@ -155,7 +155,7 @@ describe('rejections', () => {
     [
       'battle.declaration.roster_mismatch',
       { expected: ['character-0001', 'character-0002', 'character-0003'], declared: ['character-0001'] },
-      'Declare an action for Brenna, Tomas, and Wren this round. You sent declarations for Brenna.',
+      'Declare an action for Brenna, Tomas, and Wren this round. You declared for Brenna.',
     ],
     [
       'creation.class.requirements_not_met',
@@ -218,7 +218,7 @@ describe('rejections', () => {
         ctx,
       ),
     ).toEqual([
-      'The target is 20 feet away, too far for a melee attack. Close in first, or use a missile weapon or spell.',
+      'The target is 20 feet away, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
     ]);
   });
 });

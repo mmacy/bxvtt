@@ -3,6 +3,8 @@ import { emptyContext, contextFromPlayerView } from '@bxvtt/shared/text';
 import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import {
+  blockedReason,
+  blockingMembers,
   describeDeclaration,
   memberGear,
   membersInReach,
@@ -130,6 +132,16 @@ describe('quickAttack', () => {
 });
 
 describe('describeDeclaration', () => {
+  it('names a hide as the button the player pressed', () => {
+    const ctx = contextFromPlayerView(battle().view);
+    expect(describeDeclaration({ action: 'hide' }, ctx)).toBe('Hide in shadows');
+  });
+
+  it('names an action it has no phrase for by its label, never as "An action"', () => {
+    const ctx = contextFromPlayerView(battle().view);
+    expect(describeDeclaration({ action: 'some_new_action' } as never, ctx)).not.toBe('An action');
+  });
+
   it('names the group and the move', () => {
     const { view } = battle();
     const ctx = contextFromPlayerView(view);
@@ -184,7 +196,7 @@ describe('repeatProblem', () => {
         memberGear(brenna, ctx),
         ctx,
       ),
-    ).toBe('The goblins have fled.');
+    ).toBe('The goblins have escaped.');
     expect(repeatProblem({ action: 'hold' }, brenna, fled, memberGear(brenna, ctx), ctx)).toBeNull();
   });
 });
@@ -217,6 +229,35 @@ describe('refusalTexts', () => {
     );
     expect(texts.byMember['character-0002']?.[0]).toMatch(/Wren/);
     expect(texts.general).toHaveLength(1);
+  });
+});
+
+describe('blockingMembers', () => {
+  it('blocks the round for each current declarer that a refusal names, in declarer order', () => {
+    const refusals = [
+      { member_id: 'character-0002', code: 'battle.declaration.not_in_front_rank', params: {} },
+      { member_id: 'character-0001', code: 'combat.attack.out_of_reach', params: {} },
+    ];
+    expect(blockingMembers(refusals, ['character-0001', 'character-0002'])).toEqual([
+      'character-0001',
+      'character-0002',
+    ]);
+  });
+
+  it('ignores a refusal that names a member who is no longer a declarer, or no member', () => {
+    const refusals = [
+      { member_id: 'character-0004', code: 'combat.attack.out_of_reach', params: {} },
+      { member_id: null, code: 'combat.attack.out_of_reach', params: {} },
+    ];
+    expect(blockingMembers(refusals, ['character-0001', 'character-0002'])).toEqual([]);
+  });
+});
+
+describe('blockedReason', () => {
+  it('agrees in number with the names', () => {
+    expect(blockedReason([])).toBeNull();
+    expect(blockedReason(['Brenna'])).toBe('Brenna needs a different action first.');
+    expect(blockedReason(['Brenna', 'Wren'])).toBe('Brenna and Wren need different actions first.');
   });
 });
 

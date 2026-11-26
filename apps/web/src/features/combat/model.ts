@@ -10,6 +10,7 @@
 import type { BattleDeclaration, EncounterGroupView, EncounterView, MemberView } from '@bxvtt/shared/bxapi';
 import type { DeclarationBody, DeclarationRefusal, Member, Seat } from '@bxvtt/shared/protocol';
 import {
+  battleActionLabel,
   describeRejection,
   formatFeet,
   groupName,
@@ -545,8 +546,11 @@ export function describeDeclaration(
     case 'hold':
       text = 'Hold';
       break;
+    case 'hide':
+      text = 'Hide in shadows';
+      break;
     default:
-      text = 'An action';
+      text = d.action ? battleActionLabel(d.action) : 'An action';
   }
   if (d.gaze_defense === 'avert_eyes') text += ', averting eyes';
   if (d.gaze_defense === 'mirror') text += ', watching in a mirror';
@@ -574,7 +578,7 @@ export function repeatProblem(
   if (d.target_group_id) {
     const group = encounter?.groups.find((g) => g.id === d.target_group_id);
     if (!group || group.fled || group.count === 0) {
-      return `${capitalize(groupName(d.target_group_id, ctx))} ${group?.fled ? 'have fled' : 'are gone'}.`;
+      return `${capitalize(groupName(d.target_group_id, ctx))} ${group?.fled ? 'have escaped' : 'are gone'}.`;
     }
   }
   // An attack only repeats as it was: from where the member stands now, it must still be the same kind of attack.
@@ -651,6 +655,26 @@ export function refusalTexts(
     byMember[refusal.member_id] = list;
   }
   return { byMember, general };
+}
+
+/**
+ * The members whose stored declarations hold up the round, in the order of `declarers`: each current declarer
+ * that a refusal names. A refusal that names a member who can no longer act blocks nothing, because that member
+ * has no action left to change. The board's Resolve buttons and the action bar's read the same list.
+ */
+export function blockingMembers(
+  refusals: readonly DeclarationRefusal[],
+  declarers: readonly string[],
+): string[] {
+  return declarers.filter((id) => refusals.some((refusal) => refusal.member_id === id));
+}
+
+/** Why Resolve round is unavailable while the named members' actions won't work, or `null` for no names. */
+export function blockedReason(names: readonly string[]): string | null {
+  if (names.length === 0) return null;
+  return names.length === 1
+    ? `${joinList(names)} needs a different action first.`
+    : `${joinList(names)} need different actions first.`;
 }
 
 // Spells -------------------------------------------------------------------------------------------------------

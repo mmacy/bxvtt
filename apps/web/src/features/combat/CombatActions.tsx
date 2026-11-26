@@ -16,7 +16,8 @@ import {
 import { ActionBarDivider, ActionBarItem, Button } from '@/ui';
 import { QUICK_ICONS, quickAction, quickTooltip, repeatTooltip, useRepeatLastRound } from './BattleBoard';
 import { useMemberCasts } from './casting';
-import { memberGear } from './model';
+import { useClassAbilities } from './Composer';
+import { blockedReason, blockingMembers, memberGear } from './model';
 import { useCombatPeople } from './people';
 import { useCombatUi } from './state';
 import { useEncounterCommands } from './useEncounterCommands';
@@ -81,7 +82,7 @@ function ActionButton({
  * @param facts.canResolveEarly - Whether the user may resolve it sooner, which only a referee may.
  * @param facts.auto - Whether the table resolves each round by itself once everyone has declared.
  * @param facts.waiting - The characters who haven't declared yet.
- * @param facts.refused - The names of the characters whose declarations the session would refuse.
+ * @param facts.refused - The names of the characters whose actions won't work, from {@link blockingMembers}.
  */
 export function resolveRoundReason(facts: {
   canResolve: { allowed: boolean; reason: string | null };
@@ -92,8 +93,7 @@ export function resolveRoundReason(facts: {
 }): string | null {
   const { canResolve, canResolveEarly, auto, waiting, refused = [] } = facts;
   if (!canResolve.allowed) return canResolve.reason;
-  if (refused.length > 0)
-    return `${joinList(refused)} ${refused.length === 1 ? 'has' : 'have'} to choose another action first.`;
+  if (refused.length > 0) return blockedReason(refused);
   if (auto) return 'The round resolves by itself once everyone has declared.';
   if (waiting.length === 0) return null;
   if (!canResolveEarly.allowed) return canResolveEarly.reason;
@@ -248,19 +248,20 @@ function BattleActions() {
   const next = mine.find((id) => !declared.includes(id)) ?? null;
   const nextMember = party.find((m) => m.id === next) ?? null;
   const casts = useMemberCasts(nextMember);
+  const { backStab } = useClassAbilities(nextMember?.class_id ?? null);
   const quick = useMemo(
     () =>
-      nextMember ? quickAction(nextMember, encounter, memberGear(nextMember, ctx), ctx, { casts }) : null,
-    [nextMember, encounter, ctx, casts],
+      nextMember
+        ? quickAction(nextMember, encounter, memberGear(nextMember, ctx), ctx, { casts, backStab })
+        : null,
+    [nextMember, encounter, ctx, casts, backStab],
   );
   const repeatable = repeat.candidates(mine.filter((id) => !declared.includes(id)));
   const everyone = declarers.length > 0 && declarers.every((id) => declared.includes(id));
   const waiting = declarers.filter((id) => !declared.includes(id));
   const auto = settings?.auto_resolve ?? true;
   const showResolve = canResolve.allowed && !auto;
-  const refused = [
-    ...new Set((declarations?.refusals ?? []).flatMap((refusal) => refusal.member_id ?? [])),
-  ].map((id) => memberName(id, ctx));
+  const refused = blockingMembers(declarations?.refusals ?? [], declarers).map((id) => memberName(id, ctx));
   const resolveReason = resolveRoundReason({
     canResolve,
     canResolveEarly,
@@ -278,8 +279,8 @@ function BattleActions() {
   const again = () => {
     if (repeatable.length > 0) void repeat.run(mine);
   };
-  // The round can't resolve while the session would refuse a declaration, so the bar's button and the command
-  // palette's action are unavailable then, with the reason, like the board's button.
+  // The round can't resolve while a declared action won't work, so the bar's button and the command palette's
+  // action are unavailable then, with the reason, like the board's button.
   const resolvable = showResolve && everyone && refused.length === 0;
   const resolveRound = () => {
     if (resolvable) void resolve();

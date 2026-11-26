@@ -253,6 +253,11 @@
   opacity: 0.7;
 }
 
+/* The rows and the footer while a resolved round plays back. They are inert until it ends. */
+.dimmedForPlayback {
+  opacity: 0.4;
+}
+
 .memberMain {
   display: flex;
   flex-wrap: wrap;
@@ -309,6 +314,18 @@
   color: var(--color-success);
 }
 
+.statusRefused {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-text);
+}
+
+.statusRefused > svg {
+  flex: none;
+  color: var(--color-warning);
+}
+
 .declaredLabel {
   color: var(--color-text-muted);
 }
@@ -363,21 +380,6 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-}
-
-/* What a choice does, above the choices. */
-.composerHint {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-1-5);
-  margin: 0;
-  font-size: var(--text-sm);
-  color: var(--color-text-muted);
-}
-
-.composerHint > svg {
-  flex: none;
-  margin-top: var(--space-0-5);
 }
 
 .composerBody {
@@ -602,6 +604,23 @@
 .progressNote {
   font-size: var(--text-xs);
   color: var(--color-text-subtle);
+}
+
+.progressLive {
+  display: grid;
+  gap: var(--space-0-5);
+}
+
+/* The line that says the actions can't be checked now, with its icon. */
+.uncheckedNote {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.uncheckedNote > svg {
+  flex: none;
 }
 
 .footActions {
@@ -965,6 +984,26 @@
   flex: 1 1 200px;
   font-size: var(--text-sm);
   color: var(--color-text-strong);
+}
+
+/* A treasure's description on one line, with the trap warning under it. */
+.pickUpBlock {
+  display: grid;
+  flex: 1 1 200px;
+  gap: var(--space-0-5);
+  min-width: 0;
+}
+
+.pickUpLine {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-strong);
+}
+
+.pickUpWarning {
+  font-size: var(--text-sm);
 }
 
 /* The action bar. */

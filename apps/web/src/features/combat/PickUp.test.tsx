@@ -26,15 +26,32 @@ function withChest(trapState: 'found' | 'sprung' | 'removed' | null) {
 }
 
 describe('the aftermath pick-up', () => {
-  it('holds back Take treasure while the party knows of an unsprung trap on the cache', () => {
+  it('names a found trap and lets the party take the treasure anyway', () => {
     renderWithTable(<PickUp />, { snapshot: withChest('found') });
-    expect(screen.getByText(/the party knows it is trapped/)).toBeInTheDocument();
+    expect(
+      screen.getByText('The party found a trap on this. Taking it may spring the trap.'),
+    ).toBeInTheDocument();
+    const take = screen.getByRole('button', { name: 'Take anyway' });
+    // The visible description may be cut off, so the button's description is the full text.
+    expect(take).toHaveAccessibleDescription('An iron-bound chest.');
     expect(screen.queryByRole('button', { name: 'Take treasure' })).toBeNull();
   });
 
   it.each(['sprung', 'removed', null] as const)('offers Take treasure when the trap state is %s', (state) => {
     renderWithTable(<PickUp />, { snapshot: withChest(state) });
-    expect(screen.getByRole('button', { name: 'Take treasure' })).toBeInTheDocument();
-    expect(screen.queryByText(/the party knows it is trapped/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Take treasure' })).toHaveAccessibleDescription(
+      'An iron-bound chest.',
+    );
+    expect(screen.queryByText(/found a trap/)).toBeNull();
+  });
+
+  it('says treasure lies here for a rolled treasure with no description', () => {
+    const snapshot = withChest(null);
+    const chest = snapshot.game?.view.explored[0]?.features.find((f) => f.id === 'feature:chest');
+    if (chest) chest.description = '';
+    renderWithTable(<PickUp />, { snapshot });
+    expect(screen.getByRole('button', { name: 'Take treasure' })).toHaveAccessibleDescription(
+      'Treasure lies here.',
+    );
   });
 });

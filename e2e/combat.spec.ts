@@ -393,9 +393,10 @@ test.describe('battle', () => {
     );
     await expect(battleBoard(sam.page)).toContainText('4 of 4 declared');
 
-    // The server previews the declarations, so both players see which one the session would refuse and why, on
-    // Flarg's row, and the round can't resolve until Flarg's declaration changes.
+    // The server previews the declarations, so both players see which action won't work and why, on Flarg's
+    // row, and the round can't resolve until Flarg's action changes.
     for (const actor of [sam, ann]) {
+      await expect(declarationRow(actor.page, 'Flarg')).toContainText(/Won't work: /);
       await expect(declarationRow(actor.page, 'Flarg')).toContainText(/too far for a melee attack/);
       await expect(battleBoard(actor.page).getByRole('heading', { name: 'Round 1' })).toBeVisible();
     }
@@ -586,10 +587,11 @@ test.describe('battle', () => {
       // The summary names what became of each goblin in words, such as "A goblin slain and a goblin routed".
       await expect(summary.getByRole('definition').first()).toContainText(/goblins? (slain|routed)/);
       await expect(summary.getByRole('term').filter({ hasText: 'Experience' })).toBeVisible();
-      // The summary counts experience in XP (D-307) and calls the coins dropped goods, as the scene does (D-308).
-      await expect(summary).toContainText(/worth \d+ XP/);
-      await expect(summary).toContainText('now among the dropped goods here');
-      await expect(summary.getByRole('button', { name: 'Pick up dropped goods' })).toBeVisible();
+      // The summary counts experience in experience points (D-307) and calls the coins dropped goods, as the
+      // scene does (D-308).
+      await expect(summary).toContainText(/worth \d+ experience points/);
+      await expect(summary).toContainText('Dropped goods lie here.');
+      await expect(summary.getByRole('button', { name: 'Pick up', exact: true })).toBeVisible();
       await expect(battleBoard(actor.page)).toHaveCount(0);
     }
     await shot(sam.page, 'aftermath-victory');

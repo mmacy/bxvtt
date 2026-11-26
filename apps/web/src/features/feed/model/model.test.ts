@@ -560,7 +560,7 @@ describe('entries without player events', () => {
       },
     ]);
     expect(narrateEntry(award, ctx, { lens: false }).text).toContain(
-      'Brenna gains 2,399 experience points. One award raises a character only one level, so the rest is lost.',
+      'Brenna gains 2,399 of the 5,000 experience points awarded.',
     );
   });
 
@@ -577,7 +577,7 @@ describe('entries without player events', () => {
     ]);
     award.xp_gained = { 'character-0001': 2399 };
     expect(narrateEntry(award, ctx, { lens: false }).text).toContain(
-      'Brenna gains 2,399 experience points. One award raises a character only one level, so the rest is lost.',
+      'Brenna gains 2,399 of the 5,000 experience points awarded.',
     );
   });
 });

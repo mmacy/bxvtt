@@ -1,7 +1,7 @@
 import type { EncounterView, MemberView } from '@bxvtt/shared/bxapi';
 import type { DeclarationBody, DeclarationsState, GameEntry } from '@bxvtt/shared/protocol';
 import { conditionLabel, groupName, joinList, memberName, type TextContext } from '@bxvtt/shared/text';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
 import {
   battleRound,
   tokenClass,
@@ -36,7 +36,7 @@ import {
 } from '@/ui';
 import { showAftermath } from './Aftermath';
 import { useMemberCasts } from './casting';
-import { Composer } from './Composer';
+import { Composer, useClassAbilities } from './Composer';
 import { previousDeclaration, recordSnapshot, rememberDeclarations, useCombatMemory } from './memory';
 import {
   declarationBody,
@@ -45,8 +45,11 @@ import {
   suggestAction,
   type Suggestion,
   type SuggestionFacts,
+  blockedReason,
+  blockingMembers,
   refusalTexts,
   repeatProblem,
+  quickAttack,
   type MemberGear,
 } from './model';
 import { useCombatPeople, type CombatPeople } from './people';
@@ -84,16 +87,30 @@ export interface QuickAction {
 }
 
 /**
- * The quick action for a member: a melee attack for a member already in melee, a missile attack in range, the
- * Cast tab for a member with a spell ready, closing in only for a front-line fighter, and otherwise holding.
+ * The quick action for a member: a back-stab for a hiding member with the ability whose nearest group is in melee
+ * reach, a melee attack for a member already in melee, a missile attack in range, the Cast tab for a member with a
+ * spell ready, closing in only for a front-line fighter, and otherwise holding.
  */
 export function quickAction(
   member: MemberView,
   encounter: EncounterView | null,
   gear: MemberGear,
   ctx: TextContext,
-  facts: SuggestionFacts,
+  facts: SuggestionFacts & {
+    /** Whether the member's class has the back-stab ability, from the class catalog. */
+    backStab?: boolean;
+  },
 ): QuickAction | null {
+  // A hiding member with the back-stab ability is offered a back-stab on the nearest group in melee reach.
+  // bxapi still judges whether it works, and the row shows its reason when it won't.
+  if (facts.backStab && encounter?.hiding.includes(member.id)) {
+    const attack = quickAttack(member, encounter, gear);
+    if (attack?.declaration && (attack.plan.kind === 'melee' || attack.plan.kind === 'close')) {
+      const body: DeclarationBody = { ...attack.declaration, back_stab: true };
+      const label = `Back-stab ${groupName(attack.plan.group.id, ctx)}${body.move === 'close' ? ', closing in' : ''}`;
+      return { kind: 'melee', label, body, reason: null };
+    }
+  }
   const suggestion = suggestAction(member, encounter, gear, facts);
   if (suggestion === null) return null;
   if (suggestion.kind === 'cast') return { kind: 'cast', label: 'Choose a spell', body: null, reason: null };
@@ -279,7 +296,7 @@ export function BattleBoard() {
             aria-expanded={refereeOpen}
             tooltip={
               refereeOpen
-                ? "Hide the monsters' hit points and the referee tools"
+                ? "Collapse the monsters' hit points and the referee tools"
                 : "Show the monsters' hit points and the referee tools"
             }
             onClick={() => setRefereeOpen(!refereeOpen)}
@@ -289,7 +306,7 @@ export function BattleBoard() {
         )}
         <IconButton
           icon={collapsed ? 'chevron-up' : 'chevron-down'}
-          label={collapsed ? 'Show declarations' : 'Hide declarations'}
+          label={collapsed ? 'Expand the battle board' : 'Collapse the battle board'}
           size="sm"
           variant="ghost"
           onClick={() => setCollapsed(!collapsed)}
@@ -316,15 +333,21 @@ export function BattleBoard() {
             composing !== null
               ? null
               : mine.length > 0
-                ? 'Choose an action for each of your characters. Each choice is saved as you make it. Resolved rounds play back here.'
-                : 'Waiting for the party to declare. Resolved rounds play back here.'
+                ? 'Declare an action for each of your characters.'
+                : 'Waiting for the party to declare.'
           }
         />
       )}
 
       {!collapsed && !holding && (
         <>
-          <ul className={styles.memberList} aria-label="Declarations this round">
+          {/* While a round plays back, the rows and the footer already show the next round, so they dim and
+              leave the tab order until playback ends. The strip's controls stay live. */}
+          <ul
+            className={cx(styles.memberList, playback.playing && styles.dimmedForPlayback)}
+            aria-label="Actions this round"
+            inert={playback.playing}
+          >
             {party.map((member) => (
               <MemberRow
                 key={member.id}
@@ -336,6 +359,7 @@ export function BattleBoard() {
                 ctx={ctx}
                 refusals={refusals.byMember[member.id] ?? []}
                 shown={playback.track?.members[member.id] ?? null}
+                playing={playback.track !== null}
                 composing={composing === member.id}
                 onCompose={(open) => setComposing(open ? member.id : null)}
                 onDeclared={() => setComposing(nextUndeclared(member.id))}
@@ -358,9 +382,11 @@ export function BattleBoard() {
           declared={declared}
           mine={mine}
           general={refusals.general}
-          refused={declarers.filter((id) => (refusals.byMember[id]?.length ?? 0) > 0)}
+          refused={blockingMembers(declarations?.refusals ?? [], declarers)}
+          unchecked={declarations?.preview_unavailable === true}
           ctx={ctx}
           waiting={<WaitingSummary waiting={waiting} people={people} ctx={ctx} />}
+          playing={playback.playing}
         />
       )}
     </div>
@@ -388,7 +414,8 @@ function WaitingSummary({
   people: CombatPeople;
   ctx: TextContext;
 }) {
-  if (waiting.length === 0) return <span className={styles.waiting}>Everyone has declared</span>;
+  // The note under the progress line says when everyone has declared.
+  if (waiting.length === 0) return null;
   // Group the members still to declare by the person in their seat.
   const byOwner = new Map<string, { name: string; color: string; members: string[] }>();
   for (const id of waiting) {
@@ -422,6 +449,8 @@ interface MemberRowProps {
   member: MemberView;
   /** The member as the playback shows them now, or `null` outside playback. */
   shown: TrackMember | null;
+  /** Whether a resolved round is playing back, so live state that the beats haven't reached yet waits. */
+  playing: boolean;
   encounter: EncounterView;
   declarations: DeclarationsState | null;
   gear: MemberGear;
@@ -436,6 +465,7 @@ interface MemberRowProps {
 function MemberRow({
   member,
   shown,
+  playing,
   encounter,
   declarations,
   gear,
@@ -459,10 +489,14 @@ function MemberRow({
   const dead = shown ? shown.down && shown.conditions.includes('dead') : member.conditions.includes('dead');
   const down = shown ? shown.down || shown.hp <= 0 : dead || member.current_hp <= 0;
   const casts = useMemberCasts(member);
-  const suggestion = canAct && !declaration ? quickAction(member, encounter, gear, ctx, { casts }) : null;
+  const { backStab } = useClassAbilities(member.class_id);
+  const suggestion =
+    canAct && !declaration ? quickAction(member, encounter, gear, ctx, { casts, backStab }) : null;
   const quick = mine ? suggestion : null;
   const again = mine && canAct && !declaration ? repeat.candidates([member.id])[0] : undefined;
   const [error, setError] = useState<string | null>(null);
+  const reasonId = useId();
+  const showReason = refusals.length > 0 && !composing;
 
   const send = async (body: DeclarationBody) => {
     setError(null);
@@ -476,6 +510,17 @@ function MemberRow({
     // A member who falls this round shows as standing until the beat where they fall.
     status =
       shown && !shown.down ? null : <span className={styles.statusMuted}>{outOfActionText(member)}</span>;
+  } else if (declaration && refusals.length > 0) {
+    // The words carry the state, and the reason follows in the line below, in reading order.
+    status = (
+      <span className={styles.statusRefused}>
+        <Icon name="warning" size={14} />
+        <span>
+          <span className={styles.declaredLabel}>Won't work: </span>
+          {describeDeclaration(declaration, ctx, gear)}
+        </span>
+      </span>
+    );
   } else if (declaration) {
     status = (
       <span className={styles.statusDeclared}>
@@ -531,8 +576,9 @@ function MemberRow({
           <span className={styles.memberName}>
             {member.name}
             {!mine && owner && <span className={styles.memberOwner}>{owner.name}</span>}
-            {/* The view lists who is hiding, never whether the hide worked, and so does the board. */}
-            {encounter.hiding.includes(member.id) && (
+            {/* The view lists who is hiding, never whether the hide worked, and so does the board. During
+                playback the badge waits, so it never shows before the hide plays. */}
+            {!playing && encounter.hiding.includes(member.id) && (
               <Badge tone="neutral" icon="eye-off">
                 Hiding
               </Badge>
@@ -552,8 +598,10 @@ function MemberRow({
           )}
         >
           {status}
-          {refusals.length > 0 && !composing && (
-            <span className={styles.refusalLine}>{refusals.join(' ')}</span>
+          {showReason && (
+            <span id={reasonId} className={styles.refusalLine}>
+              {refusals.join(' ')}
+            </span>
           )}
           {error && <span className={styles.refusalLine}>{error}</span>}
         </div>
@@ -585,9 +633,10 @@ function MemberRow({
               variant={composing ? 'secondary' : 'ghost'}
               iconEnd={composing ? 'chevron-up' : 'chevron-down'}
               aria-expanded={composing}
+              aria-describedby={showReason && declaration ? reasonId : undefined}
               tooltip={
                 composing
-                  ? `Hide ${member.name}'s choices`
+                  ? `Close ${member.name}'s actions`
                   : declaration
                     ? `Choose another action for ${member.name}`
                     : mine
@@ -604,7 +653,7 @@ function MemberRow({
               icon="close"
               size="sm"
               variant="ghost"
-              label={`Clear ${member.name}'s declaration`}
+              label={`Clear ${member.name}'s action`}
               loading={pending}
               onClick={() => void clear(member.id)}
             />
@@ -637,8 +686,8 @@ export function roundStartNote(facts: {
   auto: boolean;
   everyone: boolean;
   /**
-   * The names of the members whose declarations the session would refuse, so the round waits for them to
-   * change, or `true` when bxapi refused the round as a whole.
+   * The names of the members whose actions won't work, so the round waits for them to change, or `true` when
+   * bxapi refused the round as a whole.
    */
   refused: readonly string[] | boolean;
   /** Whether this user may resolve the round once everyone has declared. */
@@ -653,9 +702,12 @@ export function roundStartNote(facts: {
   let note: string;
   const names = Array.isArray(refused) ? refused : [];
   if (names.length > 0)
-    note = `The round waits for ${joinList(names)} to choose another action, because the session would refuse ${names.length === 1 ? 'that declaration' : 'those declarations'}.`;
+    note =
+      names.length === 1
+        ? `${joinList(names)} needs a different action before the round can resolve.`
+        : `${joinList(names)} need different actions before the round can resolve.`;
   else if (everyone && refused === true)
-    note = 'Everyone has declared, but the round waits for a changed declaration.';
+    note = "Everyone has declared, but one action won't work. Change it to go on.";
   else if (auto)
     note = everyone
       ? 'Everyone has declared, so the round resolves now.'
@@ -680,8 +732,10 @@ function RoundFooter({
   mine,
   general,
   refused,
+  unchecked,
   ctx,
   waiting,
+  playing,
 }: {
   /** The round being declared. */
   round: number;
@@ -689,10 +743,14 @@ function RoundFooter({
   declared: string[];
   mine: string[];
   general: string[];
-  /** The members whose stored declarations the session would refuse. */
+  /** The members whose actions won't work, from {@link blockingMembers}. */
   refused: string[];
+  /** Whether the server couldn't check the declared actions with bxapi, so a refusal may come only on resolve. */
+  unchecked: boolean;
   ctx: TextContext;
   waiting: React.ReactNode;
+  /** Whether a resolved round is playing back, which dims the footer and takes it out of the tab order. */
+  playing: boolean;
 }) {
   const settings = useTableSettings();
   const canResolve = useCanResolveRound();
@@ -707,41 +765,53 @@ function RoundFooter({
   const repeatable = repeat.candidates(mine.filter((id) => !declared.includes(id)));
   const early = !everyone && canResolveEarly.allowed && declarers.length > 0;
   const refusedNames = refused.map((id) => memberName(id, ctx));
-  // The round can't resolve while the session would refuse a stored declaration. A hold for the members who
-  // haven't declared never replaces one.
-  const blocked =
-    refusedNames.length > 0
-      ? `${joinList(refusedNames)} ${refusedNames.length === 1 ? 'has' : 'have'} to choose another action first.`
-      : null;
+  // The round can't resolve while a declared action won't work. A hold for the members who haven't declared
+  // never replaces one.
+  const blocked = blockedReason(refusedNames);
 
   return (
-    <footer className={styles.boardFoot}>
+    <footer className={cx(styles.boardFoot, playing && styles.dimmedForPlayback)} inert={playing}>
       {general.length > 0 && (
-        <Banner tone="danger" title="Cannot resolve round" className={styles.footBanner}>
-          {general.join(' ')} Change a declaration to try again.
+        <Banner tone="danger" title="The round can't resolve" className={styles.footBanner}>
+          {general.join(' ')} Change an action and try again.
         </Banner>
       )}
       <div className={styles.footRow}>
         <div className={styles.progressBlock}>
-          <div className={styles.progressLine} aria-live="polite">
-            <span className={styles.progress}>
-              <span className={styles.progressCount}>
-                {declared.length} of {declarers.length}
-              </span>{' '}
-              declared for round {round}
+          {/* A status, not an alert: nothing is wrong yet, and the round can still resolve. It stays mounted
+              while the flag holds, so it is announced once. */}
+          {unchecked && (
+            <p role="status" className={cx(styles.progressNote, styles.uncheckedNote)}>
+              <Icon name="info" size={14} />
+              <span>
+                Actions can't be checked right now. If one won't work, you'll find out when the round
+                resolves.
+              </span>
+            </p>
+          )}
+          {/* The count and the note share one polite live region, so a new count or a blocked round is
+              announced once, without interrupting anyone. */}
+          <div className={styles.progressLive} aria-live="polite">
+            <div className={styles.progressLine}>
+              <span className={styles.progress}>
+                <span className={styles.progressCount}>
+                  {declared.length} of {declarers.length}
+                </span>{' '}
+                declared for round {round}
+              </span>
+              {waiting}
+            </div>
+            <span className={styles.progressNote}>
+              {roundStartNote({
+                auto,
+                everyone,
+                refused: refusedNames.length > 0 ? refusedNames : general.length > 0,
+                canResolve: canResolve.allowed,
+                early,
+                caller: caller.isMe ? null : (caller.member?.name ?? null),
+              })}
             </span>
-            {waiting}
           </div>
-          <span className={styles.progressNote}>
-            {roundStartNote({
-              auto,
-              everyone,
-              refused: refusedNames.length > 0 ? refusedNames : general.length > 0,
-              canResolve: canResolve.allowed,
-              early,
-              caller: caller.isMe ? null : (caller.member?.name ?? null),
-            })}
-          </span>
         </div>
         <div className={styles.footActions}>
           {repeatable.length > 1 && (

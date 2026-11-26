@@ -51,7 +51,7 @@ function num(event: AnyEvent, key: string): number | null {
 
 const DEFEAT_VERB: Record<string, string> = {
   slain: 'slain',
-  fled: 'fled',
+  fled: 'escaped',
   turned: 'turned',
   destroyed: 'destroyed',
   routed: 'routed',
@@ -266,6 +266,7 @@ export function xpSentence(summary: FightSummary): string | null {
     const parts = summary.awards.map((a) => `${a.name} ${a.xp} XP`);
     return `Experience awarded: ${joinList(parts)}.`;
   }
-  if (summary.xpTotal > 0) return `The defeated monsters are worth ${summary.xpTotal} XP to the party.`;
+  if (summary.xpTotal > 0)
+    return `The defeated monsters are worth ${summary.xpTotal} experience points to the party.`;
   return null;
 }

@@ -1262,9 +1262,7 @@ describe('the last QA run (F-102, F-103, F-204, F-208)', () => {
       { command_type: 'award_xp', events: [award] as never, xp_gained: { 'character-0002': 2399 } },
       party,
     );
-    expect(lines[0]?.text).toBe(
-      'Wren gains 2,399 experience points. One award raises a character only one level, so the rest is lost.',
-    );
+    expect(lines[0]?.text).toBe('Wren gains 2,399 of the 2,600 experience points awarded.');
     const whole = describeGameEntry(
       { command_type: 'award_xp', events: [award] as never, xp_gained: { 'character-0002': 2600 } },
       party,

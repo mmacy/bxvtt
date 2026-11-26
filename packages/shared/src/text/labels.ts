@@ -524,8 +524,7 @@ const BATTLE_ACTIONS: Record<string, { label: string; description: string }> = {
   turn_undead: { label: 'Turn undead', description: 'Present a holy symbol to drive off undead monsters.' },
   hide: {
     label: 'Hide',
-    description:
-      "Slip into the shadows to set up a back-stab. Only a character with thief skills who isn't in the front rank can hide, and the referee rolls in secret.",
+    description: 'Slip into the shadows to set up a back-stab. The referee rolls in secret.',
   },
   hold: { label: 'Hold', description: 'Stay where you are and do nothing this round.' },
 };
@@ -708,7 +707,7 @@ export function healingServiceDescription(service: string): string {
 
 const ENCOUNTER_OUTCOMES: Record<string, { label: string; sentence: string }> = {
   victory: { label: 'Victory', sentence: 'The monsters are beaten.' },
-  evaded: { label: 'Evaded', sentence: 'The party got away.' },
+  evaded: { label: 'Evaded', sentence: 'The party evaded the monsters.' },
   escaped: { label: 'Escaped', sentence: 'The party escaped the chase.' },
   turned: { label: 'Turned', sentence: 'The undead were driven off.' },
   parley: { label: 'Parley', sentence: 'The party and the monsters came to terms.' },

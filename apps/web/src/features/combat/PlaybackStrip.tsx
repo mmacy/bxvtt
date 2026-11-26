@@ -58,7 +58,7 @@ export function digestChips(
   }
   for (const groupId of digest.escaped) {
     const name = ctx.groups[groupId] ? groupName(groupId, ctx) : 'the monsters';
-    chips.push({ text: `${capitalizeFirst(name)} got away`, tone: 'good' });
+    chips.push({ text: `${capitalizeFirst(name)} escaped`, tone: 'neutral' });
   }
   return chips;
 }
@@ -288,7 +288,10 @@ function PlaybackControls({ playback, focus }: { playback: PlaybackView; focus: 
   const pause = useRef<HTMLButtonElement>(null);
   const { leave, claim } = focus;
   useLayoutEffect(() => {
-    if (claim('pause')) pause.current?.focus();
+    // The battle board's rows and footer go inert while a round plays back. Focus that was on one of them, such
+    // as the Resolve round button, moves here instead of falling to the page.
+    const stranded = document.activeElement?.closest('[inert]') != null;
+    if (claim('pause') || stranded) pause.current?.focus();
     const node = container.current;
     return () => leave(node, 'replay');
   }, [leave, claim]);

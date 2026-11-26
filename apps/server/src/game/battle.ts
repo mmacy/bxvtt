@@ -256,11 +256,10 @@ export class BattleService {
           ? null
           : unlistedTarget(declaration, TARGET_FIELD_NAMES, live.view, live.creatures);
       if (unlisted !== null) {
-        throw new ApiError(
-          'target_unknown',
-          "That target isn't in the party or the encounter. Choose a target from the encounter.",
-          { field: `declaration.${unlisted.field}`, id: unlisted.id },
-        );
+        throw new ApiError('target_unknown', "That target isn't in this fight. Choose another target.", {
+          field: `declaration.${unlisted.field}`,
+          id: unlisted.id,
+        });
       }
       const stored = { ...declaration, character_id: memberId };
       this.ctx.db.run(

@@ -65,10 +65,8 @@ describe('hiding thieves', () => {
       event('hide_attempted', 'battle.hide.attempted', { character_id: 'character-0002' }),
       ctx,
     );
-    expect(line.text).toBe('Wren slips into the shadows and tries to hide.');
-    expect(line.detail).toBe(
-      "The referee rolls in secret, so the party doesn't know yet whether the hide worked.",
-    );
+    expect(line.text).toBe('Wren slips into the shadows to hide.');
+    expect(line.detail).toBe('The referee rolls for the hide in secret.');
     expect(line.visibility).toBe('player');
     expect(line.actorIds).toEqual(['character-0002']);
   });
@@ -106,7 +104,10 @@ describe('hiding thieves', () => {
   it('labels the hide action', async () => {
     const { battleActionLabel, battleActionDescription } = await import('./labels');
     expect(battleActionLabel('hide')).toBe('Hide');
-    expect(battleActionDescription('hide')).toMatch(/thief skills/);
+    // The description sets up the back-stab and keeps the secret roll, without restating who may hide.
+    expect(battleActionDescription('hide')).toBe(
+      'Slip into the shadows to set up a back-stab. The referee rolls in secret.',
+    );
   });
 
   it('refuses a hide by the declaring member, by name', () => {
@@ -116,17 +117,34 @@ describe('hiding thieves', () => {
         { code: 'battle.declaration.hide_not_a_thief', params: { character: 'character-0001' } },
         ctx,
       ),
-    ).toBe(
-      "Brenna can't hide in shadows. Only a character with thief skills, such as a thief, can hide in battle.",
-    );
+    ).toBe("Brenna can't hide in shadows. Only a character with thief skills can.");
     expect(
       describeRejection(
         { code: 'battle.declaration.hide_in_front_rank', params: { character: 'character-0002' } },
         ctx,
       ),
-    ).toBe(
-      "Wren will stand in the front rank this round, so they can't hide. Hide from a rank behind the front, or choose another action.",
+    ).toBe("Wren will be in the front rank this round and can't hide there. Choose another action.");
+  });
+
+  it('offers hiding as a way to back-stab alert monsters', () => {
+    // A back-stab works from hiding as well as after surprise, so the refusal no longer says surprise is the only way.
+    const text = describeRejection(
+      { code: 'battle.declaration.back_stab_target_aware', params: { character: 'character-0002' } },
+      ctx,
     );
+    expect(text).toBe(
+      "The monsters have noticed Wren, so a back-stab won't work. Attack normally, or hide first.",
+    );
+    expect(text).not.toMatch(/surprise/);
+  });
+});
+
+describe('an unknown treasure', () => {
+  it('says the same thing for a take, a check, and a disarm, and never mentions a trap', () => {
+    // One code covers all three, so a take refusal can't hint that the treasure is trapped.
+    const text = describeRejection({ code: 'exploration.feature.unknown', params: {} }, ctx);
+    expect(text).toBe("The party can't reach that from here, or hasn't found it yet.");
+    expect(text).not.toMatch(/trap/i);
   });
 });
 
@@ -144,16 +162,16 @@ describe('monsters that break, run, and get away', () => {
     // Captured: two turned skeletons get away in the round after the turning.
     expect(
       describeEvent(event('monster_escaped', 'battle.side.escaped', { group_id: 'group-0001' }), ctx).text,
-    ).toBe('The goblins escape the battle.');
+    ).toBe('The goblins escape.');
     expect(
       describeEvent(event('monster_escaped', 'battle.side.escaped', { group_id: 'group-0002' }), ctx).text,
-    ).toBe('Mag Corrie escapes the battle.');
+    ).toBe('Mag Corrie escapes.');
     expect(
       describeEvent(
         event('monster_escaped', 'battle.side.escaped', { group_id: 'group-0009' }),
         emptyContext(),
       ).text,
-    ).toBe('The monsters escape the battle.');
+    ).toBe('The monsters escape.');
   });
 
   it("never names an adventure's own undead template in a turning's detail", () => {
@@ -188,7 +206,7 @@ describe('declarations that fizzle', () => {
       }),
       ctx,
     );
-    expect(line.text).toBe("Tomas can't give Brenna a potion of healing to drink and keeps it.");
+    expect(line.text).toBe("Tomas can't get a potion of healing to Brenna and keeps it.");
     expect(line.detail).toBe("Brenna can't act right now and can't drink a potion of healing.");
     expect(line.actorIds).toEqual(['character-0003', 'character-0001']);
   });
@@ -352,9 +370,7 @@ describe('coins by denomination', () => {
       }),
       ctx,
     );
-    expect(hoard.text).toBe(
-      'Treasure is rolled for a treasure cache: 300 gold pieces and 400 silver pieces.',
-    );
+    expect(hoard.text).toBe('Treasure is rolled: 300 gold pieces and 400 silver pieces.');
     expect(hoard.detail).toBe('Treasure types: C. The coins are worth 340 gp.');
   });
 });
@@ -372,10 +388,10 @@ describe('experience awards', () => {
 
   it('reports the experience gained, and says when the one-level limit cut the award', () => {
     const line = describeEvent(capped, ctx);
-    expect(line.text).toBe(
-      'Brenna gains 3,999 experience points. One award raises a character only one level, so the rest is lost.',
+    expect(line.text).toBe('Brenna gains 3,999 of the 4,500 experience points awarded.');
+    expect(line.detail).toBe(
+      'Base award 5,000, adjusted to 4,500. One award can raise a character only one level.',
     );
-    expect(line.detail).toBe('Base award 5,000, adjusted to 4,500.');
     expect(line.amount).toBe(3999);
   });
 
@@ -417,7 +433,7 @@ describe('experience awards', () => {
       ctx,
     );
     expect(lines.map((line) => line.text)).toEqual([
-      'Brenna gains 3,999 experience points. One award raises a character only one level, so the rest is lost.',
+      'Brenna gains 3,999 of the 4,500 experience points awarded.',
     ]);
   });
 });
@@ -607,7 +623,7 @@ describe('refusals of a battle declaration', () => {
 
   it("names the declaring member in the kernel's checks", () => {
     expect(rej('combat.attack.out_of_reach', { character: 'character-0002', distance_feet: 20 })).toBe(
-      'Wren is 20 feet from the target, too far for a melee attack. Close in first, or use a missile weapon or spell.',
+      'Wren is 20 feet from the target, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
     );
     expect(
       rej('combat.attack.out_of_reach', {
@@ -616,13 +632,13 @@ describe('refusals of a battle declaration', () => {
         target: 'monster-0002',
       }),
     ).toBe(
-      'Tomas is 5 feet from Goblin 2, too far to reach in melee. Close in first, or use a missile weapon or spell.',
+      'Tomas is 5 feet from Goblin 2, too far to reach in melee. Close in first, or use a missile weapon or a spell.',
     );
     expect(
       rej('magic.cast.target_count', { character: 'character-0003', expected: 1, supplied: 3, mode: 'x' }),
     ).toBe("Tomas' spell takes 1 target in this mode, but you chose 3.");
     expect(rej('magic.cast.unknown_target', { character: 'character-0003', target: 'monster-0002' })).toBe(
-      "The target Tomas chose has fallen or fled, or it isn't in this encounter. Choose another target.",
+      "Tomas' target has fallen, fled, or isn't here. Choose another target.",
     );
     expect(rej('battle.declaration.no_target', { character: 'character-0002', group: 'group-0001' })).toBe(
       'No targets remain in the goblins for Wren to strike. Choose another group.',
@@ -636,9 +652,7 @@ describe('refusals of a battle declaration', () => {
     // Captured.
     expect(
       rej('battle.declaration.target_count', { character: 'character-0002', expected: 1, supplied: 2 }),
-    ).toBe(
-      "Wren's action needs 1 target, but you chose 2. Choose who drinks the potion, takes the item, or is touched by the staff.",
-    );
+    ).toBe("Wren's action needs 1 target, but you chose 2.");
     expect(
       rej('session.command.member_incapacitated', { character: 'character-0002', target: 'character-0001' }),
     ).toBe("Brenna can't act right now, so Wren can't hand them anything.");
@@ -654,17 +668,15 @@ describe('refusals of a battle declaration', () => {
         item: 'staff_of_healing',
         target: 'character-0001',
       }),
-    ).toBe(
-      'A staff of healing has already healed Brenna today. A staff of healing can heal each creature only once a day.',
-    );
+    ).toBe('A staff of healing has already healed Brenna today. Choose someone else.');
   });
 
   it('reads well without the member', () => {
     expect(describeRejection({ code: 'combat.attack.out_of_reach', params: { distance_feet: 20 } })).toBe(
-      'The target is 20 feet away, too far for a melee attack. Close in first, or use a missile weapon or spell.',
+      'The target is 20 feet away, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
     );
     expect(describeRejection({ code: 'battle.declaration.target_count', params: {} })).toBe(
-      'That action needs exactly one target. Choose who drinks the potion, takes the item, or is touched by the staff.',
+      'Choose one target for that action.',
     );
   });
 });

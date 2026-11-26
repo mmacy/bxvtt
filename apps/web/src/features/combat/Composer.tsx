@@ -25,7 +25,6 @@ import { Banner, Button, Card, Checkbox, cx, Icon, SegmentedControl, Select, typ
 import {
   attackDeclaration,
   carries,
-  describeDeclaration,
   liveGroups,
   memberDistance,
   memberGap,
@@ -57,8 +56,8 @@ const TAB_LABELS: Record<ComposerTab, { label: string; icon: IconName }> = {
 };
 
 /** The class abilities that offer a choice in battle, read from the class catalog. */
-export function useClassAbilities(classId: string): { turnUndead: boolean; backStab: boolean } {
-  const entry = useRulesEntry<ClassDetail>(`classes/${classId}`);
+export function useClassAbilities(classId: string | null): { turnUndead: boolean; backStab: boolean } {
+  const entry = useRulesEntry<ClassDetail>(classId === null ? null : `classes/${classId}`);
   return useMemo(() => {
     const tags = new Set((entry.data?.abilities ?? []).map((ability) => ability.tag));
     return { turnUndead: tags.has('turn_undead'), backStab: tags.has('back_stab') };
@@ -217,15 +216,6 @@ export function Composer({
         </Button>
       </div>
 
-      <p className={styles.composerHint}>
-        <Icon name="info" size={14} />
-        <span>
-          {current
-            ? `${member.name} has declared: ${describeDeclaration(current, ctx, gear)}. Choose another action to change it before the round resolves.`
-            : `Choosing an action declares it for ${member.name} this round. You can change it until the round resolves.`}
-        </span>
-      </p>
-
       {casting.reason && (
         <div className={styles.noSpells}>
           <Icon name="spell" size={14} />
@@ -266,11 +256,7 @@ export function Composer({
         </div>
       )}
 
-      {refusals.length > 0 && (
-        <Banner tone="danger" title="Declaration refused">
-          {refusals.join(' ')}
-        </Banner>
-      )}
+      {refusals.length > 0 && <Banner tone="warning">{refusals.join(' ')}</Banner>}
       {error && <Banner tone="danger">{error}</Banner>}
 
       <div className={styles.composerBody}>
@@ -324,10 +310,7 @@ export function Composer({
         {tab === 'hide' && (
           <div className={styles.choiceRow}>
             <p className={styles.choiceHint}>
-              {member.name} slips into the shadows instead of acting. {member.name} can't hide in the front
-              rank, and the board says at once if the declared moves would leave {member.name} there. The
-              referee rolls in secret, so you won't know whether the hide worked. While hiding, {member.name}{' '}
-              can back-stab from outside the front rank.
+              {member.name} slips into the shadows to set up a back-stab. The referee rolls in secret.
             </p>
             <Button
               size="sm"
@@ -477,10 +460,12 @@ function AttackChoices({
   onSubmit,
 }: ChoiceProps & { gear: MemberGear; backStab: boolean; current: DeclarationBody | null }) {
   const [weaponId, setWeaponId] = useState<string>('auto');
-  const [stab, setStab] = useState(false);
   // The class catalog says who has the back-stab ability, and the view lists who is hiding. Whether a back-stab
-  // works this round is the session's to say, and the preview refuses one that won't.
-  const canStab = backStab || encounter.hiding.includes(member.id);
+  // works this round is bxapi's to say, and the board shows its reason when one won't.
+  const hiding = encounter.hiding.includes(member.id);
+  const canStab = backStab || hiding;
+  // A hiding member starts on a back-stab, the reason to hide, and a saved back-stab starts checked.
+  const [stab, setStab] = useState(hiding || current?.back_stab === true);
   // A back-stab is a melee attack, so it takes the wielded melee weapon unless the player chose one.
   const melee = gear.wielded.find((w) => w.melee)?.id ?? null;
   const chosen = weaponId !== 'auto' ? weaponId : stab && canStab ? melee : null;
@@ -507,7 +492,7 @@ function AttackChoices({
           {canStab && (
             <Checkbox
               label="Back-stab"
-              description="A melee attack on monsters unaware of the attacker: +4 to hit and double damage."
+              description={`Strike a monster that hasn't noticed ${member.name}.`}
               checked={stab}
               onCheckedChange={setStab}
             />

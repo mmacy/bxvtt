@@ -29,21 +29,21 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   'battle.declaration.back_stab_not_melee':
     "{character|member} can't back-stab with a missile weapon. Switch to a melee weapon or turn off back-stab.",
   'battle.declaration.back_stab_target_aware':
-    "The monsters are alert, so {character|member} can't back-stab them. You can back-stab only when the party surprises the monsters.",
+    "The monsters have noticed {character|member}, so a back-stab won't work. Attack normally, or hide first.",
   'battle.declaration.cannot_move':
     "{character|member} can't move this round. Attack in place or choose Hold.",
   'battle.declaration.cast_cannot_move':
     "{character|member} can't move and cast a spell in the same round. Clear the move or choose another action.",
   'battle.declaration.hide_in_front_rank':
-    "{character|member} will stand in the front rank this round, so they can't hide. Hide from a rank behind the front, or choose another action.",
+    "{character|member} will be in the front rank this round and can't hide there. Choose another action.",
   'battle.declaration.hide_not_a_thief':
-    "{character|member} can't hide in shadows. Only a character with thief skills, such as a thief, can hide in battle.",
+    "{character|member} can't hide in shadows. Only a character with thief skills can.",
   'battle.declaration.invisible_target': [
     {
       when: ['character', 'target'],
       text: "{target|entity} is invisible, so {character|member} can't target it. Choose another target.",
     },
-    { when: ['target'], text: "{target|entity} is invisible and can't be targeted." },
+    { when: ['target'], text: '{target|entity} is invisible. Choose another target.' },
     {
       when: ['character'],
       text: "That target is invisible, so {character|member} can't target it. Choose another target.",
@@ -88,18 +88,16 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   'battle.declaration.roster_mismatch': [
     {
       when: ['expected', 'declared'],
-      text: 'Declare an action for {expected|members} this round. You sent declarations for {declared|members}.',
+      text: 'Declare an action for {expected|members} this round. You declared for {declared|members}.',
     },
     { text: 'Declare an action for each party member who can act this round.' },
   ],
   'battle.declaration.target_count': [
     {
       when: ['character', 'expected'],
-      text: '{character|possessive} action needs {expected|count:target}, but you chose {supplied|number}. Choose who drinks the potion, takes the item, or is touched by the staff.',
+      text: '{character|possessive} action needs {expected|count:target}, but you chose {supplied|number}.',
     },
-    {
-      text: 'That action needs exactly one target. Choose who drinks the potion, takes the item, or is touched by the staff.',
-    },
+    { text: 'Choose one target for that action.' },
   ],
   'battle.declaration.unknown_action': [
     {
@@ -136,26 +134,26 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   'combat.attack.out_of_reach': [
     {
       when: ['attacker', 'distance_feet'],
-      text: '{attacker|entity} is {distance_feet|feet} from the target, too far for a melee attack. Close in first, or use a missile weapon or spell.',
+      text: '{attacker|entity} is {distance_feet|feet} from the target, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
     },
     {
       when: ['character', 'target', 'distance_feet'],
-      text: '{character|member} is {distance_feet|feet} from {target|entity}, too far to reach in melee. Close in first, or use a missile weapon or spell.',
+      text: '{character|member} is {distance_feet|feet} from {target|entity}, too far to reach in melee. Close in first, or use a missile weapon or a spell.',
     },
     {
       when: ['character', 'distance_feet'],
-      text: '{character|member} is {distance_feet|feet} from the target, too far for a melee attack. Close in first, or use a missile weapon or spell.',
+      text: '{character|member} is {distance_feet|feet} from the target, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
     },
     {
       when: ['target', 'distance_feet'],
-      text: '{target|entity} is {distance_feet|feet} away, too far for a melee attack. Close in first, or use a missile weapon or spell.',
+      text: '{target|entity} is {distance_feet|feet} away, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
     },
     {
       when: ['distance_feet'],
-      text: 'The target is {distance_feet|feet} away, too far for a melee attack. Close in first, or use a missile weapon or spell.',
+      text: 'The target is {distance_feet|feet} away, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
     },
     {
-      text: 'The target is too far away for a melee attack. Close in first, or use a missile weapon or spell.',
+      text: 'The target is too far away for a melee attack. Close in first, or use a missile weapon or a spell.',
     },
   ],
   'combat.attack.reload': '{attacker|entity} fired last round and must reload this round.',
@@ -228,8 +226,7 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
     "The door is already wedged with an iron spike, so you can't close or wedge it again.",
   'exploration.feature.emptied': 'That treasure has already been taken.',
   // Taking, inspecting, and disarming treasure all get this code, so it never says whether a trap exists.
-  'exploration.feature.unknown':
-    "The party can't reach that here, or hasn't found it. Move to where the treasure lies, and find a trap before you try to remove it.",
+  'exploration.feature.unknown': "The party can't reach that from here, or hasn't found it yet.",
   'exploration.give.same_member':
     "{character|member} can't give items to themselves. Choose another party member.",
   'exploration.item.not_carried': [
@@ -323,11 +320,9 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   'items.use.target_healed_today': [
     {
       when: ['target'],
-      text: '{item|itemcap} has already healed {target|entity} today. A staff of healing can heal each creature only once a day.',
+      text: '{item|itemcap} has already healed {target|entity} today. Choose someone else.',
     },
-    {
-      text: '{item|itemcap} has already healed that creature today. A staff of healing can heal each creature only once a day.',
-    },
+    { text: '{item|itemcap} has already healed them today. Choose someone else.' },
   ],
   'items.use.target_not_allowed': [
     {
@@ -340,9 +335,9 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   'items.use.unknown_target': [
     {
       when: ['character'],
-      text: "The target {character|member} chose isn't in the party or the encounter. Choose another target.",
+      text: "{character|possessive} target isn't here anymore. Choose another target.",
     },
-    { text: "That target isn't in the party or the encounter." },
+    { text: "That target isn't here anymore. Choose another target." },
   ],
 
   // Magic ------------------------------------------------------------------------------------------------------
@@ -395,10 +390,10 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   'magic.cast.unknown_target': [
     {
       when: ['character'],
-      text: "The target {character|member} chose has fallen or fled, or it isn't in this encounter. Choose another target.",
+      text: "{character|possessive} target has fallen, fled, or isn't here. Choose another target.",
     },
     {
-      text: "That target isn't in the party or the encounter, or it has fallen or fled. Choose another target.",
+      text: "That target has fallen, fled, or isn't here. Choose another target.",
     },
   ],
   'magic.memorize.divine_reverses_at_cast':
@@ -417,9 +412,9 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
 
   // Party changes ----------------------------------------------------------------------------------------------
   'party.add.carries_instances':
-    "{name|raw} can't join the party while carrying {item|item} from another session. Remove that item first.",
+    "{name|raw} can't join the party while carrying {item|item} from another game. Remove that item first.",
   'party.add.id_assigned':
-    "That character is already part of a session. Add a fresh character who hasn't joined a game yet.",
+    "That character is already in another game. Add a fresh character who hasn't joined a game yet.",
   'party.add.under_effects':
     "{name|raw} is under an active spell or condition and can't join the party until it ends.",
   'party.remove.carries_quest_item':

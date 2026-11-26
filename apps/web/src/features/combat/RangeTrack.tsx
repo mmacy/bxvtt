@@ -70,15 +70,17 @@ function memberLabel(
   if (planned !== null)
     parts.push(
       planned === 0
-        ? 'moves to the party line this round'
-        : `moves to ${formatFeet(Math.abs(planned))} ${planned > 0 ? 'forward' : 'back'} this round`,
+        ? 'will move to the party line'
+        : planned > 0
+          ? `will move to ${formatFeet(planned)} past the party line`
+          : `will fall back to ${formatFeet(-planned)} behind the party line`,
     );
   return parts.join(', ');
 }
 
 function groupLabel(group: TrackGroup, nearest: number | null): string {
   const parts = [countedGroup(trackLabels(group))];
-  if (group.fled) parts.push('fled');
+  if (group.fled) parts.push('escaped');
   else if (nearest !== null) parts.push(`${formatFeet(nearest)} from the nearest party member`);
   if (group.fleeing && !group.fled) parts.push('fleeing');
   for (const [condition, count] of Object.entries(group.conditions))
@@ -190,12 +192,14 @@ export function RangeTrack({
   const popsFor = (id: string) => pops.filter((p) => p.tokenId === id);
   const focusSet = new Set(focus);
 
-  const memberStyle = (member: TrackMember, index: number, count: number): CSSProperties => {
+  const memberLeft = (member: TrackMember, index: number): string =>
+    at(member.advance ?? 0, -(TOKEN + Math.floor(index / rows) * (TOKEN + 4)));
+  const memberStyle = (member: TrackMember, index: number, count: number): { left: string; top: string } => {
     const column = Math.floor(index / rows);
     const row = index % rows;
     const inColumn = Math.min(rows, count - column * rows);
     return {
-      left: at(member.advance ?? 0, -(TOKEN + column * (TOKEN + 4))),
+      left: memberLeft(member, index),
       top: `calc(var(--center) + ${(row - (inColumn - 1) / 2) * ROW - TOKEN / 2}px)`,
     };
   };
@@ -268,13 +272,37 @@ export function RangeTrack({
             const place = plannedFor(member);
             if (place === null) return [];
             const style = memberStyle(member, index, stack.length);
+            const live = memberLeft(member, index);
+            const target = at(place, -TOKEN);
+            const color = colors[member.id];
+            // A dashed line joins the token to its planned place, centre to centre, so each marker reads as one
+            // member's move.
             return [
+              <span
+                key={`${member.id}-path`}
+                className={styles.plannedPath}
+                style={{
+                  top: `calc(${style.top} + ${TOKEN / 2}px)`,
+                  left: `calc(min(${live}, ${target}) + ${TOKEN / 2}px)`,
+                  width: `calc(max(${live}, ${target}) - min(${live}, ${target}))`,
+                  borderTopColor: color,
+                }}
+                aria-hidden="true"
+              />,
               <span
                 key={`${member.id}-planned`}
                 className={styles.planned}
-                style={{ ...style, left: at(place, -TOKEN), borderColor: colors[member.id] }}
+                style={{ ...style, left: target, borderColor: color }}
                 aria-hidden="true"
-              />,
+              >
+                <TokenPortrait
+                  name={member.name}
+                  characterClass={tokenClass(member.classId)}
+                  color={color}
+                  size={TOKEN}
+                  decorative
+                />
+              </span>,
             ];
           }),
         )}
@@ -340,7 +368,7 @@ export function RangeTrack({
                 <span className="visually-hidden">
                   {group.count === 0
                     ? `${capitalizeFirst(theGroup({ ...trackLabels(group), count: peaks[group.id] ?? 2 }))}, slain`
-                    : `${capitalizeFirst(theGroup(trackLabels(group)))}, fled`}
+                    : `${capitalizeFirst(theGroup(trackLabels(group)))}, escaped`}
                 </span>
                 <TokenPortrait
                   name={groupHeading(trackLabels(group))}
@@ -363,7 +391,7 @@ export function RangeTrack({
         </span>
         {gone.length > 0 && (
           <span className={styles.labelEnd}>
-            {gone.every((g) => g.count === 0) ? 'Slain' : gone.every((g) => g.fled) ? 'Fled' : 'Gone'}
+            {gone.every((g) => g.count === 0) ? 'Slain' : gone.every((g) => g.fled) ? 'Escaped' : 'Gone'}
           </span>
         )}
       </div>

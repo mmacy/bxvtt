@@ -98,15 +98,32 @@
   width: 32px;
 }
 
+/* Where a member will stand after the round's declared moves: a faded copy of the token in a dashed ring, in
+   the member's color, outside the box so the copy lines up with the live token. */
 .planned {
   position: absolute;
+  box-sizing: content-box;
+  display: grid;
   width: 32px;
   height: 32px;
+  margin: calc(-1 * var(--border-thick));
   border: var(--border-thick) dashed var(--color-border-strong);
   border-radius: var(--radius-pill);
-  opacity: 0.8;
+  opacity: 0.45;
   pointer-events: none;
   transition: left var(--duration-slower) var(--ease-out);
+}
+
+/* The dashed line from the live token to its planned place. */
+.plannedPath {
+  position: absolute;
+  height: 0;
+  border-top: var(--border-hair) dashed var(--color-border-strong);
+  opacity: 0.6;
+  pointer-events: none;
+  transition:
+    left var(--duration-slower) var(--ease-out),
+    width var(--duration-slower) var(--ease-out);
 }
 
 .group {
@@ -306,8 +323,20 @@
 .still .member,
 .still .group,
 .still .gap,
+.still .planned,
+.still .plannedPath,
 .still .memberHp > span {
   transition: none;
+}
+
+:root[data-motion='reduce'] :is(.planned, .plannedPath) {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='full']) :is(.planned, .plannedPath) {
+    transition: none;
+  }
 }
 
 .still .pop {

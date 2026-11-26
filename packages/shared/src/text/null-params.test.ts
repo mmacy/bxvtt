@@ -19,7 +19,7 @@ describe('a param that bxapi or the server sends as null', () => {
         ctx,
       ),
     ).toBe(
-      'Wren is 30 feet from the target, too far for a melee attack. Close in first, or use a missile weapon or spell.',
+      'Wren is 30 feet from the target, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
     );
     expect(
       describeRejection(
@@ -35,9 +35,7 @@ describe('a param that bxapi or the server sends as null', () => {
         { code: 'items.use.target_healed_today', params: { item: 'magic-item-0001', target: null } },
         ctx,
       ),
-    ).toBe(
-      'A staff of healing has already healed that creature today. A staff of healing can heal each creature only once a day.',
-    );
+    ).toBe('A staff of healing has already healed them today. Choose someone else.');
   });
 
   it('still names a target that is there', () => {

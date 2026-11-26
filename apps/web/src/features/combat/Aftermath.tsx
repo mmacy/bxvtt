@@ -1,6 +1,6 @@
 import type { GameEntry } from '@bxvtt/shared/protocol';
 import { coinParts, describeEvents, joinList, type Coins, type TextContext } from '@bxvtt/shared/text';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import {
   cachesToTake,
   useCanSend,
@@ -119,7 +119,7 @@ export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
             {summary.loot.length > 0 && (
               <div className={styles.fact}>
                 <dt>Left behind</dt>
-                <dd>{capitalize(joinList(summary.loot))}, now among the dropped goods here.</dd>
+                <dd>{capitalize(joinList(summary.loot))}.</dd>
               </div>
             )}
             {summary.fallen.length > 0 && (
@@ -184,7 +184,7 @@ export function PickUp() {
       {pile && (
         <div className={styles.pickUpRow}>
           <Icon name="coins" size={16} />
-          <span className={styles.pickUpText}>There are dropped goods here.</span>
+          <span className={styles.pickUpText}>Dropped goods lie here.</span>
           <Button
             size="sm"
             variant="secondary"
@@ -193,32 +193,73 @@ export function PickUp() {
             disabledReason={canTake.reason}
             onClick={() => void take('pile')}
           >
-            Pick up dropped goods
+            Pick up
           </Button>
         </div>
       )}
       {caches.map((cache) => (
-        <div key={cache.id} className={styles.pickUpRow}>
-          <Icon name="chest" size={16} />
-          <span className={styles.pickUpText}>
-            {cache.trapState === 'found'
-              ? 'There is treasure here, but the party knows it is trapped. Disarm the trap from the current location card or the Treasure menu first.'
-              : 'There is treasure here.'}
-          </span>
-          {cache.trapState !== 'found' && (
-            <Button
-              size="sm"
-              variant="secondary"
-              loading={busy}
-              disabled={!canTake.allowed}
-              disabledReason={canTake.reason}
-              onClick={() => void take(cache.id)}
-            >
-              Take treasure
-            </Button>
-          )}
-        </div>
+        <CacheRow
+          key={cache.id}
+          description={cache.description}
+          trapFound={cache.trapState === 'found'}
+          busy={busy}
+          canTake={canTake}
+          onTake={() => void take(cache.id)}
+        />
       ))}
+    </div>
+  );
+}
+
+/**
+ * One treasure the party can take where it stands: its description on one line, and the take button. When the
+ * party has found a trap on it, a warning line says what's at risk and the button reads "Take anyway", so the
+ * player decides. The client never says whether a trap exists before the party finds it.
+ */
+function CacheRow({
+  description,
+  trapFound,
+  busy,
+  canTake,
+  onTake,
+}: {
+  /** The author's description, or an empty string for a rolled cache. */
+  description: string;
+  trapFound: boolean;
+  busy: boolean;
+  canTake: { allowed: boolean; reason: string | null };
+  onTake: () => void;
+}) {
+  const fullId = useId();
+  const text = description.trim() || 'Treasure lies here.';
+  return (
+    <div className={styles.pickUpRow}>
+      <Icon name="chest" size={16} />
+      <span className={styles.pickUpBlock}>
+        <span className={styles.pickUpLine} aria-hidden="true">
+          {text}
+        </span>
+        {/* The visible line may be cut off, so the button's description is the full text. */}
+        <span id={fullId} className="visually-hidden">
+          {text}
+        </span>
+        {trapFound && (
+          <span className={cx(styles.pickUpWarning, styles.toneBad)}>
+            The party found a trap on this. Taking it may spring the trap.
+          </span>
+        )}
+      </span>
+      <Button
+        size="sm"
+        variant="secondary"
+        loading={busy}
+        disabled={!canTake.allowed}
+        disabledReason={canTake.reason}
+        aria-describedby={fullId}
+        onClick={onTake}
+      >
+        {trapFound ? 'Take anyway' : 'Take treasure'}
+      </Button>
     </div>
   );
 }
