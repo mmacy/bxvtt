@@ -16,13 +16,53 @@ export const SERVER_VERSION = (
 ).version;
 
 /**
- * Checks bxapi and reports the server's health.
+ * The oldest osrlib that bxapi may run for bxvtt. Since osrlib 2.8, bxapi refuses a command's target when the
+ * player view doesn't list it, so bxvtt forwards a player's targets without a check of its own. With an older
+ * engine, a player could aim a spell or an item at any creature of the session outside a battle. The client also
+ * reads view fields that osrlib 2.8 added, such as `item_names`, `features_here`, and `MapFeatureView.emptied`.
+ */
+export const MIN_ENGINE_VERSION = '2.8.0';
+
+/**
+ * Whether a dotted numeric version, such as `2.10.0`, is at least another. Missing parts count as zero, so `2.8`
+ * equals `2.8.0`. A version that isn't dotted numbers, such as `2.8.0rc1` or an empty string, counts as too old.
+ *
+ * @param version - The version to check.
+ * @param minimum - The oldest version that passes.
+ */
+export function versionAtLeast(version: string, minimum: string): boolean {
+  const parse = (text: string): number[] | null =>
+    /^\d+(?:\.\d+)*$/.test(text) ? text.split('.').map(Number) : null;
+  const have = parse(version.trim());
+  const need = parse(minimum);
+  if (have === null || need === null) return false;
+  for (let index = 0; index < Math.max(have.length, need.length); index += 1) {
+    const a = have[index] ?? 0;
+    const b = need[index] ?? 0;
+    if (a !== b) return a > b;
+  }
+  return true;
+}
+
+/**
+ * The message for the server host when bxapi's engine is older than bxvtt needs, or `null` when it is new enough.
+ *
+ * @param engineVersion - bxapi's `engine_version`.
+ */
+export function engineTooOldMessage(engineVersion: string): string | null {
+  if (versionAtLeast(engineVersion, MIN_ENGINE_VERSION)) return null;
+  return `bxapi runs osrlib ${engineVersion}, and bxvtt needs ${MIN_ENGINE_VERSION} or later, so games can't run. If you host this server, update bxapi and restart it. Otherwise, ask the server host to update it.`;
+}
+
+/**
+ * Checks bxapi and reports the server's health. It also records bxapi's engine version in `ctx.engine`, so the
+ * game service can refuse games on an engine that is too old without asking bxapi on every command.
  *
  * @param ctx - The server's services.
  */
 export async function checkHealth(ctx: Context): Promise<Health> {
   let meta: Health['bxapi']['meta'] = null;
-  let error: string | null = null;
+  let error: string | null;
   try {
     const found = await ctx.bxapi.get<Meta>('/v1/meta');
     meta = {
@@ -33,7 +73,13 @@ export async function checkHealth(ctx: Context): Promise<Health> {
       role: found.role,
       storage: { used_bytes: found.storage.used_bytes, max_bytes: found.storage.max_bytes ?? null },
     };
+    ctx.engine = {
+      checked: true,
+      version: found.engine_version,
+      tooOld: !versionAtLeast(found.engine_version, MIN_ENGINE_VERSION),
+    };
     if (found.role !== 'referee') error = 'The bxapi key has the player role. bxvtt needs a referee key.';
+    else error = engineTooOldMessage(found.engine_version);
   } catch (caught) {
     error =
       caught instanceof BxapiProblem
@@ -64,7 +110,9 @@ export function publicHealth(health: Health): Health {
       error:
         health.bxapi.error === null
           ? null
-          : "The server can't reach the game service right now. Ask the server host to check it.",
+          : health.bxapi.reachable
+            ? "The game service isn't set up for this server, so games can't run. Ask the server host to check it."
+            : "The server can't reach the game service right now. Ask the server host to check it.",
     },
   };
 }

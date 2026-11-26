@@ -134,6 +134,7 @@ export async function createServer(config: Config): Promise<Server> {
     },
     rules: new RulesCache(bxapi, config.quotas.rulesCacheBytes),
     startedAt: Date.now(),
+    engine: { checked: false, version: null, tooOld: false },
   };
   // The services refer to each other through the context, so they are created against the same object.
   const ctx = partial as Context;

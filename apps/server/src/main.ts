@@ -8,7 +8,12 @@ async function main(): Promise<void> {
   const { app, ctx } = await createServer(config);
   await app.listen({ host: config.host, port: config.port });
   const health = await checkHealth(ctx);
-  if (health.bxapi.reachable) {
+  if (ctx.engine.tooOld) {
+    app.log.error(
+      { bxapi: config.bxapiUrl, engine: ctx.engine.version },
+      health.bxapi.error ?? 'bxapi runs an osrlib that is too old',
+    );
+  } else if (health.bxapi.reachable) {
     app.log.info({ bxapi: config.bxapiUrl, engine: health.bxapi.meta?.engine_version }, 'bxapi is reachable');
   } else {
     app.log.warn({ bxapi: config.bxapiUrl }, health.bxapi.error ?? 'bxapi is unreachable');

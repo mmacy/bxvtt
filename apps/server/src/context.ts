@@ -49,4 +49,9 @@ export interface Context {
     rejoinPolls: RateLimiter;
   };
   startedAt: number;
+  /**
+   * What the server last learned of bxapi's rules engine from `/v1/meta`: whether it has read the version yet,
+   * the version, and whether it is older than `MIN_ENGINE_VERSION`. `checkHealth` updates it.
+   */
+  engine: { checked: boolean; version: string | null; tooOld: boolean };
 }

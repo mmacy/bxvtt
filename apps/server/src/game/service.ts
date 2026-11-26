@@ -20,6 +20,7 @@ import { BxapiProblem, BxapiUnreachable, callBxapi, toApiError } from '../bxapi'
 import type { Context } from '../context';
 import { str } from '../db';
 import { ApiError } from '../errors';
+import { checkHealth } from '../health';
 import { now } from '../ids';
 import type { GameRecord } from '../tables';
 import { KeyedMutex, sleep } from '../util';
@@ -162,9 +163,28 @@ export class GameService {
       this.live.delete(tableId);
       return null;
     }
+    await this.requireEngine();
     const cached = this.live.get(tableId);
     if (cached !== undefined && cached.sessionId === game.sessionId) return cached;
     return this.load(tableId, game.sessionId);
+  }
+
+  /**
+   * Refuses game work while bxapi's engine is older than `MIN_ENGINE_VERSION`, as the server refuses it while
+   * bxapi is unreachable: with `bxapi_unavailable`, so no command, declaration, or game state goes through. The
+   * server reads the version at startup and whenever it checks its health. Until a check succeeds, this asks
+   * bxapi once, so a command doesn't cost a call of its own after that.
+   *
+   * @throws ApiError `bxapi_unavailable` when the engine is too old.
+   */
+  async requireEngine(): Promise<void> {
+    if (!this.ctx.engine.checked) await checkHealth(this.ctx);
+    if (this.ctx.engine.tooOld) {
+      throw new ApiError(
+        'bxapi_unavailable',
+        "The game service is out of date, so games can't run. Ask the server host to update it.",
+      );
+    }
   }
 
   /**
@@ -345,6 +365,7 @@ export class GameService {
   async start(tableId: string, user: User, request: StartGameRequest): Promise<GameState> {
     return this.locked(tableId, async () => {
       this.ctx.tables.requireLobby(tableId);
+      await this.requireEngine();
       const roster = this.ctx.tables.roster(tableId);
       if (roster.length === 0)
         throw new ApiError('roster_empty', 'Add at least one character to the party roster before starting.');
