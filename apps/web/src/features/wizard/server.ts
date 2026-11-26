@@ -4,7 +4,7 @@
  * creates the character.
  */
 import { isProblem, type BxvttClient } from '@bxvtt/shared/client';
-import type { CharacterCheck, CharacterRequest, Problem } from '@bxvtt/shared/protocol';
+import type { AbilityRoll, CharacterCheck, CharacterRequest, Problem } from '@bxvtt/shared/protocol';
 import {
   classLabel,
   describeRejections,
@@ -27,6 +27,18 @@ import type { StepId } from './draft';
 export function checkChoices(api: BxvttClient, body: CharacterRequest): Promise<CharacterCheck> {
   const { ability_roll_id: rollId, ...rest } = body;
   return api.checkCharacter({ ...rest, ability_roll_id: rollId ?? '' });
+}
+
+/**
+ * Fetches one of the user's ability rolls again. bxapi rolls the same dice from the roll's seed each time, so a
+ * draft saved without its dice gets them back here.
+ *
+ * @param api - The API client.
+ * @param rollId - The roll's ID.
+ * @throws `not_found` for a roll the user doesn't have.
+ */
+export function fetchRoll(api: BxvttClient, rollId: string): Promise<AbilityRoll> {
+  return api.getAbilityRoll(rollId);
 }
 
 /** A refusal explained for the player, with the step that fixes it. */

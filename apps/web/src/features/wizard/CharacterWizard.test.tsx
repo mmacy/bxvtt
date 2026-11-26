@@ -1,5 +1,6 @@
 import { BxvttProblemError } from '@bxvtt/shared/client';
 import type {
+  AbilityRoll,
   CharacterCheckRequest,
   CharacterRequest,
   Problem,
@@ -18,9 +19,22 @@ import { AdjustStep } from './AdjustStep';
 import { CharacterWizard } from './CharacterWizard';
 import { draftKey, emptyDraft, type WizardDraft } from './draft';
 
-const ROLL = {
+/** The dice bxapi rolled for each ability. Each split differs from an even spread, so a test can tell them apart. */
+const ABILITY_DICE = {
+  str: [6, 6, 3],
+  int: [2, 3, 4],
+  wis: [1, 4, 5],
+  dex: [5, 5, 2],
+  con: [3, 2, 6],
+  cha: [1, 1, 6],
+} satisfies Record<string, [number, number, number]>;
+
+const SCORES = { str: 15, int: 9, wis: 10, dex: 12, con: 11, cha: 8 };
+
+const ROLL: AbilityRoll = {
   id: 'rol_test',
-  scores: { str: 15, int: 9, wis: 10, dex: 12, con: 11, cha: 8 },
+  scores: SCORES,
+  rolls: { scores: SCORES, rolls: ABILITY_DICE },
   eligible_class_ids: ['fighter', 'dwarf', 'magic_user'],
   used: false,
   created_at: '2026-11-21T00:00:00Z',
@@ -133,6 +147,28 @@ function wizardApi(options: { refusal?: BxvttProblemError; rolls?: ServerRolls }
   return api;
 }
 
+const ABILITY_NAMES = {
+  str: 'Strength',
+  int: 'Intelligence',
+  wis: 'Wisdom',
+  dex: 'Dexterity',
+  con: 'Constitution',
+  cha: 'Charisma',
+};
+
+/** Checks that each ability's dice show the faces in the roll, in the order bxapi rolled them. */
+function expectDiceOnScreen() {
+  for (const [ability, faces] of Object.entries(ABILITY_DICE)) {
+    const group = screen.getByRole('group', {
+      name: `${ABILITY_NAMES[ability as keyof typeof ABILITY_NAMES]} roll`,
+    });
+    const shown = Array.from(group.querySelectorAll('[data-value]')).map((el) =>
+      Number(el.getAttribute('data-value')),
+    );
+    expect(shown).toEqual(faces);
+  }
+}
+
 /** Opens the wizard on a stored draft. */
 function openOn(draft: Partial<WizardDraft> & Record<string, unknown>, api: FakeApi) {
   localStorage.setItem(
@@ -214,6 +250,74 @@ describe('CharacterWizard', () => {
     expect(api.rollHitPoints).toHaveBeenCalledWith('rol_test', { class_id: 'fighter' });
     expect(await screen.findByText('Wren is ready')).toBeInTheDocument();
     expect(localStorage.getItem(draftKey(null))).toBeNull();
+  });
+
+  it('shows the dice bxapi rolled for each ability, not a split of the score', async () => {
+    const { user } = renderWithTable(<CharacterWizard open onClose={() => {}} onCreated={() => {}} />, {
+      api: wizardApi(),
+      snapshot: fixtureSnapshot('lobby', 'player'),
+      preferences: { motion: 'reduce' },
+    });
+    await user.click(await screen.findByRole('button', { name: 'Roll ability scores' }));
+    await screen.findByRole('group', { name: /^Strength 15/ });
+    expectDiceOnScreen();
+  });
+
+  it('shows the same dice when it restores a roll from an earlier visit', async () => {
+    openOn({ step: 'roll' }, wizardApi());
+    await screen.findByRole('group', { name: /^Strength 15/ });
+    expectDiceOnScreen();
+  });
+
+  describe('a draft saved before bxapi returned the dice', () => {
+    const { rolls: _dice, ...withoutDice } = ROLL;
+
+    function openWithoutDice(api: FakeApi, draft: Partial<WizardDraft> = {}) {
+      return openOn({ step: 'roll', roll: withoutDice as unknown as AbilityRoll, ...draft }, api);
+    }
+
+    it('keeps the draft, fetches the roll again, shows its dice, and saves them', async () => {
+      const api = wizardApi();
+      api.getAbilityRoll.mockResolvedValue(ROLL);
+      openWithoutDice(api);
+      await screen.findByRole('group', { name: /^Strength 15/ });
+      await waitFor(() => expectDiceOnScreen());
+      expect(api.getAbilityRoll).toHaveBeenCalledWith('rol_test');
+      const saved = JSON.parse(localStorage.getItem(draftKey(null)) ?? '{}') as {
+        name: string;
+        roll: AbilityRoll;
+      };
+      expect(saved.name).toBe('Wren');
+      expect(saved.roll.rolls.rolls).toEqual(ABILITY_DICE);
+    });
+
+    it('resumes the later steps while the dice are still on their way', async () => {
+      const api = wizardApi();
+      api.getAbilityRoll.mockReturnValue(new Promise(() => {}));
+      openWithoutDice(api, { step: 'identity' });
+      expect(await screen.findByText('Resumed your unfinished character')).toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: /Name/ })).toHaveValue('Wren');
+    });
+
+    it('keeps the scores and the draft when the fetch fails for another reason', async () => {
+      const api = wizardApi();
+      api.getAbilityRoll.mockRejectedValue(new Error('offline'));
+      openWithoutDice(api);
+      await screen.findByRole('group', { name: /^Strength 15/ });
+      await waitFor(() => expect(api.getAbilityRoll).toHaveBeenCalled());
+      expect(screen.queryByRole('group', { name: 'Strength roll' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Roll ability scores' })).not.toBeInTheDocument();
+      const saved = JSON.parse(localStorage.getItem(draftKey(null)) ?? '{}') as { name: string };
+      expect(saved.name).toBe('Wren');
+    });
+
+    it('starts again from new scores when the roll is gone', async () => {
+      const api = wizardApi();
+      api.getAbilityRoll.mockRejectedValue(invalid({ code: 'not_found', status: 404 }));
+      openWithoutDice(api);
+      expect(await screen.findByText('Your ability roll expired')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Roll ability scores' })).toBeInTheDocument();
+    });
   });
 
   it('takes the player to the step a refusal belongs to', async () => {
