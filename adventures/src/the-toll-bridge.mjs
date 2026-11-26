@@ -68,6 +68,8 @@ level
       {
         id: 'sea_chest',
         kind: 'treasure_cache',
+        referee_notes:
+          "The coins are the bandits' pooled winnings from a month of dice. The crossbow is a good one.",
         description:
           'The battered sea chest under the window has a lid ringed with cup marks and nicked by knives.',
         coins: { sp: 180, cp: 300 },
@@ -91,6 +93,7 @@ level
       {
         id: 'toll_strongbox',
         kind: 'treasure_cache',
+        referee_notes: "The coins are the week's takings.",
         description: 'A strongbox is bolted to the floor under the desk, its lid worn bright by daily use.',
         coins: { gp: 90, sp: 240 },
         trap: trap({ kind: 'treasure', trigger: 'open', damage_dice: '1d4', save: save('death') }),
@@ -113,6 +116,8 @@ level
       {
         id: 'captains_chest',
         kind: 'treasure_cache',
+        referee_notes:
+          "The coins are Mag Corrie's share of the tolls. The sword is well made. The small iron box has a miller's mark on the lid.",
         description: 'A brass-cornered chest stands on the stolen carpet at the foot of the curtained bed.',
         coins: { gp: 220 },
         item_ids: ['millers_strongbox'],
@@ -150,6 +155,8 @@ level
       {
         id: 'hidden_bundle',
         kind: 'treasure_cache',
+        referee_notes:
+          'A small crossbow mechanism is fixed to the shelf behind the bundle, pointing out. It is the trap.',
         description:
           'An oilcloth bundle sits on the shelf, tied with wire that runs back into a crack in the stone.',
         coins: { gp: 75 },

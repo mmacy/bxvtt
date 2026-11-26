@@ -2494,6 +2494,7 @@
                     "id": "fallen_statue",
                     "kind": "custom",
                     "description": "The statue is Saint Corvane, holding up a lantern. Someone has chipped the glass out of the lantern to see whether there was silver inside it.",
+                    "referee_notes": "",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [],
@@ -2710,6 +2711,7 @@
                     "id": "relief_map",
                     "kind": "custom",
                     "description": "Part of the frieze is a map of the Holm carved in relief: the cloister, a tall bell tower at its west end, and under them a second, smaller cloister marked with crosses for the dead. Below that, the carver cut only wavy lines.",
+                    "referee_notes": "",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [],
@@ -2819,6 +2821,7 @@
                     "id": "chapel_altar",
                     "kind": "treasure_cache",
                     "description": "Two silver candlesticks stand on the altar beside two small stoppered flasks and a clay bottle wrapped in an altar cloth.",
+                    "referee_notes": "The clay bottle wrapped in the altar cloth holds the potion of healing.",
                     "cell": null,
                     "item_ids": [
                       "holy_water",
@@ -3196,6 +3199,7 @@
                     "id": "wine_casks",
                     "kind": "custom",
                     "description": "One cask near the back still sloshes when you rock it. The wine inside has turned to vinegar.",
+                    "referee_notes": "",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [],
@@ -3360,6 +3364,7 @@
                     "id": "goblin_loot",
                     "kind": "treasure_cache",
                     "description": "A greasy sack lies knotted shut in the deepest alcove. It clinks when you nudge it.",
+                    "referee_notes": "",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [],
@@ -3486,6 +3491,7 @@
                     "id": "iron_chest",
                     "kind": "treasure_cache",
                     "description": "A heavy hasp holds the lid shut, and blade marks score the iron around it.",
+                    "referee_notes": "The iron key's bow is shaped like a bell.",
                     "cell": null,
                     "item_ids": [
                       "priors_iron_key"
@@ -3633,6 +3639,7 @@
                     "id": "gilt_psalter",
                     "kind": "treasure_cache",
                     "description": "Under a fallen desk lies a psalter with covers of gilded silver. The pages are ruined, but the covers are worth something.",
+                    "referee_notes": "",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [],
@@ -3738,6 +3745,7 @@
                     "id": "stirge_nest",
                     "kind": "treasure_cache",
                     "description": "In a crack above the well, among bones and feathers, lies a polished bloodstone.",
+                    "referee_notes": "",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [],
@@ -3964,6 +3972,7 @@
                     "id": "lost_satchel",
                     "kind": "treasure_cache",
                     "description": "A satchel of oiled leather lies on the ledge beyond the crack, its flap buckled shut.",
+                    "referee_notes": "The scroll is rolled inside a bone case.",
                     "cell": [
                       1,
                       7
@@ -4137,6 +4146,7 @@
                 "id": "votive_niche",
                 "kind": "custom",
                 "description": "A niche in the wall of the cloister walk holds a hundred stubs of votive candles, melted into one grey lump.",
+                "referee_notes": "",
                 "cell": [
                   8,
                   12
@@ -6740,6 +6750,7 @@
                     "id": "abbots_coffin",
                     "kind": "treasure_cache",
                     "description": "The sealed coffin's lid is carved with an abbot's crook, and lead fills its seams.",
+                    "referee_notes": "Inside the sealed coffin, a skeleton in rotted vestments wears the gold ring. A purse of old coins lies under its folded hands.",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [],
@@ -6812,6 +6823,7 @@
                     "id": "priors_desk",
                     "kind": "treasure_cache",
                     "description": "The prior's writing desk has a row of narrow drawers with tarnished brass pulls.",
+                    "referee_notes": "The coins are the prior's household money. The potion is a stoppered bottle of healing draught.",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [
@@ -6831,6 +6843,7 @@
                     "id": "unsent_letter",
                     "kind": "custom",
                     "description": "The letter is addressed to the bishop. 'The water rises every day. I have hung Mercy in the low tower, where no thief can reach her, and the Hand lies in the vault beneath this room. I will not leave them.' It is signed Hadric Vole, Prior.",
+                    "referee_notes": "",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [],
@@ -6908,6 +6921,7 @@
                     "id": "reliquary_casket",
                     "kind": "treasure_cache",
                     "description": "A casket of silver and crystal sits on the marble shelf. A thin pipe runs from its base into the shelf.",
+                    "referee_notes": "",
                     "cell": null,
                     "item_ids": [
                       "hand_of_saint_corvane"
@@ -6948,6 +6962,7 @@
                     "id": "offering_chest",
                     "kind": "treasure_cache",
                     "description": "A heavy oak chest bound with brass stands below the shelf, its lid stamped with the priory's lantern.",
+                    "referee_notes": "The coins are pilgrims' offerings. The scroll is sealed with the priory's lantern seal.",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [
@@ -7223,6 +7238,7 @@
                     "id": "drowned_purse",
                     "kind": "treasure_cache",
                     "description": "A purse lies on the bottom of the cistern, its strings still knotted.",
+                    "referee_notes": "",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [],
@@ -7509,6 +7525,7 @@
                     "id": "gnawed_bones",
                     "kind": "treasure_cache",
                     "description": "Among the bones: scattered gold, a sapphire, and a dagger whose blade hasn't rusted.",
+                    "referee_notes": "",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [
@@ -7667,6 +7684,7 @@
                     "id": "bone_wheel",
                     "kind": "custom",
                     "description": "One wheel of skulls is newer than the rest. The skulls are small, and each one has a single coin pressed into its mouth.",
+                    "referee_notes": "",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [],
@@ -7782,6 +7800,7 @@
                     "id": "sloping_floor",
                     "kind": "construction_trick",
                     "description": "The whole floor tilts down toward the west, so gently that only a careful eye notices. Everything loose has crept toward the crack, and the crack goes down a long way.",
+                    "referee_notes": "",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [],
@@ -7805,6 +7824,7 @@
                 "id": "goblin_pouch",
                 "kind": "treasure_cache",
                 "description": "A dead goblin lies curled in the passage with a pouch still tied at its belt.",
+                "referee_notes": "",
                 "cell": [
                   22,
                   8
@@ -9837,6 +9857,7 @@
                     "id": "vestment_chest",
                     "kind": "treasure_cache",
                     "description": "The chest's doors are swollen in their frames, and its hinges are crusted green.",
+                    "referee_notes": "The contents lie under folded altar linen. The gold is in a bag, and the mace is flanged and wrapped in oilcloth.",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [
@@ -9960,6 +9981,7 @@
                     "id": "brothers_strongbox",
                     "kind": "treasure_cache",
                     "description": "A small iron strongbox stands under the bench, its lid dull with damp.",
+                    "referee_notes": "The gems are the ones the brothers saved from the treasury.",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [],
@@ -10072,6 +10094,7 @@
                     "id": "key_stone",
                     "kind": "construction_trick",
                     "description": "The ramp of fallen masonry rests on one wedged block. Pull that block out and the whole ramp comes down, sealing the gap to the crypts.",
+                    "referee_notes": "",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [],
@@ -10430,6 +10453,7 @@
                     "id": "inside_the_bell",
                     "kind": "treasure_cache",
                     "description": "The tongue of the bell, an iron clapper as long as a man's arm, hangs from a rusted staple. It comes free with a hard pull.",
+                    "referee_notes": "",
                     "cell": null,
                     "item_ids": [
                       "tongue_of_mercy"
@@ -10448,7 +10472,8 @@
                   {
                     "id": "priors_hoard",
                     "kind": "treasure_cache",
-                    "description": "The prior's treasure, sunk in the pool at his feet: coins in rotten bags, a shield with a lantern boss, and his silver chain of office.",
+                    "description": "Rotten bags lie in the black water at the drowned prior's feet, and a round shield shows under the surface.",
+                    "referee_notes": "The coins are in rotten bags, and the shield has a lantern boss. The chain of office is the one the drowned prior wears, so the party takes it from his body.",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [
@@ -10475,6 +10500,7 @@
                     "id": "mercy",
                     "kind": "custom",
                     "description": "Letters run around the lip of the bell: I CALL THE FAITHFUL HOME.",
+                    "referee_notes": "",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [],

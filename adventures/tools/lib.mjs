@@ -103,6 +103,7 @@ export function feature(spec) {
     id: spec.id,
     kind: spec.kind,
     description: spec.description ?? '',
+    referee_notes: spec.referee_notes ?? '',
     cell: spec.cell ?? null,
     item_ids: spec.item_ids ?? [],
     magic_item_ids: spec.magic_item_ids ?? [],

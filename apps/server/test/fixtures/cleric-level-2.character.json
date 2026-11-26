@@ -1,0 +1,47 @@
+{
+  "kind": "character",
+  "schema_version": 4,
+  "engine_version": "2.8.0",
+  "payload": {
+    "id": null,
+    "name": "Sister Maud",
+    "class_id": "cleric",
+    "custom_class": null,
+    "race": "human",
+    "level": 2,
+    "xp": 1500,
+    "scores": {
+      "str": 7,
+      "int": 11,
+      "wis": 9,
+      "dex": 8,
+      "con": 17,
+      "cha": 14
+    },
+    "alignment": "lawful",
+    "extra_languages": [],
+    "max_hp": 11,
+    "current_hp": 11,
+    "nonregen_damage": 0,
+    "inventory": {
+      "items": [],
+      "purse": {
+        "pp": 0,
+        "gp": 90,
+        "ep": 0,
+        "sp": 0,
+        "cp": 0
+      },
+      "valuables": [],
+      "worn_armour": null,
+      "shield": null,
+      "wielded": [],
+      "rings": []
+    },
+    "carrying_treasure": false,
+    "conditions": [],
+    "stat_modifiers": [],
+    "spell_book": [],
+    "memorized_spells": []
+  }
+}

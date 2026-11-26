@@ -166,6 +166,7 @@ level1
       {
         id: 'chapel_altar',
         kind: 'treasure_cache',
+        referee_notes: 'The clay bottle wrapped in the altar cloth holds the potion of healing.',
         description:
           'Two silver candlesticks stand on the altar beside two small stoppered flasks and a clay bottle wrapped in an altar cloth.',
         item_ids: ['holy_water', 'holy_water'],
@@ -234,6 +235,7 @@ level1
       {
         id: 'iron_chest',
         kind: 'treasure_cache',
+        referee_notes: "The iron key's bow is shaped like a bell.",
         description: 'A heavy hasp holds the lid shut, and blade marks score the iron around it.',
         item_ids: ['priors_iron_key'],
         coins: { gp: 120, ep: 40 },
@@ -310,6 +312,7 @@ level1
       {
         id: 'lost_satchel',
         kind: 'treasure_cache',
+        referee_notes: 'The scroll is rolled inside a bone case.',
         description: 'A satchel of oiled leather lies on the ledge beyond the crack, its flap buckled shut.',
         cell: [1, 7],
         item_ids: ['rope'],
@@ -434,6 +437,8 @@ level2
       {
         id: 'abbots_coffin',
         kind: 'treasure_cache',
+        referee_notes:
+          'Inside the sealed coffin, a skeleton in rotted vestments wears the gold ring. A purse of old coins lies under its folded hands.',
         description: "The sealed coffin's lid is carved with an abbot's crook, and lead fills its seams.",
         coins: { gp: 60 },
         valuables: [valuable('jewellery', "Abbot's gold ring", 150)],
@@ -449,6 +454,8 @@ level2
       {
         id: 'priors_desk',
         kind: 'treasure_cache',
+        referee_notes:
+          "The coins are the prior's household money. The potion is a stoppered bottle of healing draught.",
         description: "The prior's writing desk has a row of narrow drawers with tarnished brass pulls.",
         coins: { gp: 80 },
         magic_item_ids: ['potion_of_healing'],
@@ -479,6 +486,8 @@ level2
       {
         id: 'offering_chest',
         kind: 'treasure_cache',
+        referee_notes:
+          "The coins are pilgrims' offerings. The scroll is sealed with the priory's lantern seal.",
         description:
           "A heavy oak chest bound with brass stands below the shelf, its lid stamped with the priory's lantern.",
         coins: { gp: 200 },
@@ -694,6 +703,8 @@ level3
       {
         id: 'vestment_chest',
         kind: 'treasure_cache',
+        referee_notes:
+          'The contents lie under folded altar linen. The gold is in a bag, and the mace is flanged and wrapped in oilcloth.',
         description: "The chest's doors are swollen in their frames, and its hinges are crusted green.",
         coins: { gp: 100 },
         magic_item_ids: ['mace_plus_1'],
@@ -719,6 +730,7 @@ level3
       {
         id: 'brothers_strongbox',
         kind: 'treasure_cache',
+        referee_notes: 'The gems are the ones the brothers saved from the treasury.',
         description: 'A small iron strongbox stands under the bench, its lid dull with damp.',
         coins: { pp: 20 },
         valuables: [
@@ -778,8 +790,10 @@ level3
       {
         id: 'priors_hoard',
         kind: 'treasure_cache',
+        referee_notes:
+          'The coins are in rotten bags, and the shield has a lantern boss. The chain of office is the one the drowned prior wears, so the party takes it from his body.',
         description:
-          "The prior's treasure, sunk in the pool at his feet: coins in rotten bags, a shield with a lantern boss, and his silver chain of office.",
+          "Rotten bags lie in the black water at the drowned prior's feet, and a round shield shows under the surface.",
         coins: { gp: 600, sp: 1000 },
         magic_item_ids: ['shield_plus_1'],
         valuables: [valuable('jewellery', "Prior's chain of office", 400, 20)],
