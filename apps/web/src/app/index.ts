@@ -57,6 +57,8 @@ export type {
   SkipReason,
 } from './commands';
 export { useTextContext } from './text';
+export { cachesToTake, partyHere } from './here';
+export type { Cell, Here, HereFeature } from './here';
 export * from './rules';
 export { resetMyCharacters, useMyCharacters, useStoredCharacter } from './characters';
 export { useMapBus } from './mapBus';

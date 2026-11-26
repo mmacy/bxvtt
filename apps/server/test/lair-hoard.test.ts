@@ -3,7 +3,14 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { GameState, RefereeState } from '@bxvtt/shared/protocol';
 import { findRepoRoot } from '../src/config';
 import type { TestServer, TestUser } from './helpers';
-import { createCharacter, createTable, createUser, findRefereeData, startServer } from './helpers';
+import { createCharacter, createTable, createUser, findRefereeData, startServer, viewHere } from './helpers';
+
+/** The rolled caches the player view shows on every level. */
+function shownHoards(game: GameState) {
+  return game.view.explored.flatMap((level) =>
+    level.features.filter((feature) => feature.kind === 'generated_cache'),
+  );
+}
 
 /** The drain warren's keyed encounter: 6 kobolds with a lair hoard, rolled on the area's first cell, (24, 2). */
 const WARREN = 'priory:1:drain_warren';
@@ -44,8 +51,8 @@ describe('the lair hoard of the drain warren', () => {
     });
     const met = await alice.client.sendCommand(tableId, { command_type: 'move_party', direction: 'east' });
     expect(met.game.mode).toBe('encounter');
-    // While the kobolds stand in their warren, the scene shows no hoard.
-    expect(met.game.scene.here?.caches).toEqual([]);
+    // While the kobolds stand in their warren, the view shows no hoard.
+    expect(shownHoards(met.game)).toEqual([]);
     return { tableId, game: met.game };
   }
 
@@ -94,22 +101,17 @@ describe('the lair hoard of the drain warren', () => {
     expect(outcomes).toEqual(['slain', 'slain', 'slain', 'slain', 'slain', 'slain']);
     expect(state.dungeon_state.resolved_encounters).toContain(WARREN);
     const [hoard] = hoardsIn(state);
-    expect(after.scene.here?.caches).toEqual([
-      {
-        id: hoard,
-        source: 'generated',
-        area_id: 'drain_warren',
-        position: [24, 2],
-        reachable: true,
-        trap: null,
-      },
+    expect(hoard).toBeDefined();
+    const shown = viewHere(after)?.features.filter((feature) => feature.kind === 'generated_cache') ?? [];
+    expect(shown).toEqual([
+      expect.objectContaining({ cell: [24, 2], id: expect.stringMatching(/^feature:/) }),
     ]);
     const taken = await alice.client.sendCommand(tableId, {
       command_type: 'take_treasure',
-      feature_id: hoard,
+      feature_id: shown[0]?.id,
     });
     expect(taken.accepted).toBe(true);
-    expect(taken.game.scene.here?.caches).toEqual([]);
+    expect(shownHoards(taken.game)).toEqual([]);
   });
 
   it('shows the hoard once some kobolds are slain and the rest routed, and the routed never come back', async () => {
@@ -120,16 +122,17 @@ describe('the lair hoard of the drain warren', () => {
     expect(outcomes).toContain('slain');
     expect(outcomes).toContain('routed');
     expect(state.dungeon_state.resolved_encounters).toContain(WARREN);
-    const [hoard] = hoardsIn(state);
-    expect(after.scene.here?.caches.map((cache) => cache.id)).toEqual([hoard]);
+    expect(hoardsIn(state)).toHaveLength(1);
+    const [shown] = shownHoards(after);
+    expect(shown?.cell).toEqual([24, 2]);
     // A resolved keyed encounter never spawns again, so stepping out and back in meets no kobolds.
     await alice.client.sendCommand(tableId, { command_type: 'move_party', direction: 'west' });
     const back = await alice.client.sendCommand(tableId, { command_type: 'move_party', direction: 'east' });
     expect(back.game.mode).toBe('exploring');
-    expect(back.game.scene.here?.caches.map((cache) => cache.id)).toEqual([hoard]);
+    expect(shownHoards(back.game).map((feature) => feature.id)).toEqual([shown?.id]);
     const taken = await alice.client.sendCommand(tableId, {
       command_type: 'take_treasure',
-      feature_id: hoard,
+      feature_id: shown?.id,
     });
     expect(taken.accepted).toBe(true);
   });
@@ -139,14 +142,20 @@ describe('the lair hoard of the drain warren', () => {
     const evaded = await alice.client.sendCommand(tableId, { command_type: 'evade' });
     expect(evaded.accepted).toBe(true);
     expect(evaded.game.mode).toBe('exploring');
-    expect(evaded.game.scene.here?.position).toEqual([24, 2]);
+    expect(evaded.game.view.location.position).toEqual([24, 2]);
     const { state } = await refereeFacts(tableId);
     const [hoard] = hoardsIn(state);
     expect(hoard).toBeDefined();
     expect(state.dungeon_state.resolved_encounters ?? []).not.toContain(WARREN);
-    expect(evaded.game.scene.here?.caches).toEqual([]);
-    expect(evaded.game.scene.levels.flatMap((level) => level.caches)).toEqual([]);
-    // bxapi would hand it over, because the party stands on its cell, so the server refuses a player.
+    expect(shownHoards(evaded.game)).toEqual([]);
+    // osrlib refuses the hoard by its raw ID too, though the party stands on its cell. The referee sends the raw
+    // ID, because the server refuses a raw ID from a player before bxapi sees it.
+    const raw = await referee.client.sendCommand(tableId, {
+      command_type: 'take_treasure',
+      feature_id: hoard,
+    });
+    expect(raw.accepted).toBe(false);
+    expect(raw.rejections.map((rejection) => rejection.code)).toEqual(['exploration.feature.unknown']);
     const grab = await alice.client.sendCommand(tableId, {
       command_type: 'take_treasure',
       feature_id: hoard,
@@ -157,7 +166,7 @@ describe('the lair hoard of the drain warren', () => {
     await alice.client.sendCommand(tableId, { command_type: 'move_party', direction: 'west' });
     const back = await alice.client.sendCommand(tableId, { command_type: 'move_party', direction: 'east' });
     expect(back.game.mode).toBe('encounter');
-    expect(back.game.scene.here?.caches).toEqual([]);
+    expect(shownHoards(back.game)).toEqual([]);
   });
 
   it('shows no cache when the hoard roll came up empty, and the dropped coins lie in a pile', async () => {
@@ -170,15 +179,15 @@ describe('the lair hoard of the drain warren', () => {
     expect(state.dungeon_state.generated_lair_hoards).toContain(WARREN);
     expect(state.dungeon_state.resolved_encounters).toContain(WARREN);
     expect(hoardsIn(state)).toEqual([]);
-    expect(after.scene.here?.caches).toEqual([]);
+    expect(shownHoards(after)).toEqual([]);
     // What the slain kobolds carried is in the pile, which `take_treasure` takes as `pile`.
-    expect(after.scene.here?.pile).toBe(true);
+    expect(Object.keys(after.view.piles)).toContain('cell:priory:1:24,2');
     const taken = await alice.client.sendCommand(tableId, {
       command_type: 'take_treasure',
       feature_id: 'pile',
     });
     expect(taken.accepted).toBe(true);
-    expect(taken.game.scene.here?.pile).toBe(false);
+    expect(Object.keys(taken.game.view.piles)).not.toContain('cell:priory:1:24,2');
   });
 
   it('sends a player no referee data along the way', () => {

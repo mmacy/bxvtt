@@ -42,6 +42,7 @@ function trapLine(trap: MapTrap): string {
         : trap.state === 'sprung'
           ? 'sprung'
           : 'disarmed';
+  if (trap.trigger === null) return `Trap (${state}): ${trap.summary}`;
   const trigger = trap.trigger === 'enter' ? 'springs on entry' : 'springs on opening';
   return `Trap (${state}): ${trap.summary}, ${trigger}`;
 }

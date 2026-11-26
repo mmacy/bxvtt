@@ -250,9 +250,24 @@ export class SaveService {
     return this.game.locked(tableId, async () => {
       const save = this.row(tableId, saveId);
       const previous = this.ctx.tables.game(tableId);
-      const session = await callBxapi(() =>
-        this.ctx.bxapi.post<SessionInfo>(`/v1/saves/${encodeURIComponent(saveId)}/restore`, {}),
-      );
+      const session = await callBxapi(async () => {
+        try {
+          return await this.ctx.bxapi.post<SessionInfo>(
+            `/v1/saves/${encodeURIComponent(saveId)}/restore`,
+            {},
+          );
+        } catch (error) {
+          // bxapi can't load a save that an older release wrote when the newer rules engine refuses its adventure,
+          // and trying again doesn't help.
+          if (error instanceof BxapiProblem && error.code === 'session_unreadable') {
+            throw new ApiError(
+              'content_invalid',
+              "This save can't be restored, because the game service was updated after the save was made and can't read it. Restore a newer save, or start a new game from the lobby.",
+            );
+          }
+          throw error;
+        }
+      });
       let view: PlayerView;
       try {
         view = await callBxapi(() =>

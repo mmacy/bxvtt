@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { BxvttClient, TableConnection } from '@bxvtt/shared/client';
-import type { ServerMessage, StoredCharacter, TableDetail } from '@bxvtt/shared/protocol';
+import type { GameState, ServerMessage, StoredCharacter, TableDetail } from '@bxvtt/shared/protocol';
 import { createServer } from '../src/app';
 import type { Server } from '../src/app';
 import type { Config } from '../src/config';
@@ -355,4 +355,34 @@ export async function received<T extends ServerMessage['type']>(
   const match = find();
   if (match === undefined) throw new Error(`No ${type} message arrived.`);
   return match;
+}
+
+/**
+ * Reads where the party stands from a game's player view: the level, the entered area that covers the party's
+ * cell, and the features the party can reach there. A feature on a cell is reachable from that cell, and an
+ * area-wide feature from anywhere in its area.
+ *
+ * @param game - The game state.
+ * @returns `null` in town.
+ */
+export function viewHere(game: GameState): {
+  level: GameState['view']['explored'][number];
+  area: GameState['view']['explored'][number]['areas'][number] | null;
+  features: GameState['view']['explored'][number]['features'];
+} | null {
+  const location = game.view.location;
+  if (location.kind !== 'dungeon' || location.position == null) return null;
+  const [x, y] = location.position;
+  const level = game.view.explored.find(
+    (entry) => entry.dungeon_id === location.dungeon_id && entry.level_number === location.level_number,
+  );
+  if (level === undefined) return null;
+  const area =
+    level.areas.find((entry) => entry.cells.some((cell) => cell[0] === x && cell[1] === y)) ?? null;
+  const features = level.features.filter((feature) =>
+    feature.cell != null
+      ? feature.cell[0] === x && feature.cell[1] === y
+      : feature.area_id != null && feature.area_id === area?.id,
+  );
+  return { level, area, features };
 }

@@ -2,14 +2,15 @@ import type { GameEntry } from '@bxvtt/shared/protocol';
 import { describeEvents, joinList, type TextContext } from '@bxvtt/shared/text';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  cachesToTake,
   useCanSend,
   useCombatStage,
   useFeed,
   useGameMode,
+  useHere,
   useReduceMotion,
   useRevision,
   useParty,
-  useScene,
   useSendCommand,
   type TableStore,
 } from '@/app';
@@ -152,14 +153,14 @@ export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
 
 /** Points the party at what it can pick up where it stands: dropped goods, or a treasure hoard. */
 function PickUp() {
-  const here = useScene()?.here ?? null;
+  const here = useHere();
   const canTake = useCanSend('take_treasure');
   const ctx = useCombatText();
   const { send, pendingType } = useSendCommand();
   const [outcome, setOutcome] = useState<{ tone: 'success' | 'info' | 'danger'; text: string } | null>(null);
-  const caches = here?.caches.filter((cache) => cache.reachable) ?? [];
+  const caches = cachesToTake(here).filter((cache) => cache.reachable);
   const pile = here?.pile === true;
-  // The answer stays on screen after the goods are gone from the scene.
+  // The answer stays on screen after the goods are gone.
   if (!pile && caches.length === 0 && outcome === null) return null;
   // Report what bxapi answered, including that there was nothing to take, so the button never fails silently.
   const take = async (featureId: string) => {
@@ -200,11 +201,11 @@ function PickUp() {
         <div key={cache.id} className={styles.pickUpRow}>
           <Icon name="chest" size={16} />
           <span className={styles.pickUpText}>
-            {cache.trap
+            {cache.trapState === 'found'
               ? 'There is treasure here, but the party knows it is trapped. Disarm the trap from the current location card or the Treasure menu first.'
               : 'There is treasure here.'}
           </span>
-          {!cache.trap && (
+          {cache.trapState !== 'found' && (
             <Button
               size="sm"
               variant="secondary"

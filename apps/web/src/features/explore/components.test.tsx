@@ -223,6 +223,18 @@ describe('MapStage for keyboard and screen reader users', () => {
   });
 });
 
+/** An authored cache on the party's cell, as the player view lists it. */
+function chestAt(position: readonly number[]) {
+  return {
+    id: 'feature:chest',
+    kind: 'treasure_cache' as const,
+    description: 'An iron-bound chest stands against the wall.',
+    cell: [position[0] ?? 0, position[1] ?? 0] as [number, number],
+    area_id: null,
+    trap_state: null,
+  };
+}
+
 describe('ScenePanel', () => {
   it('reads the area aloud: its name, its description, and what is here', () => {
     const { snapshot } = exploring();
@@ -234,19 +246,19 @@ describe('ScenePanel', () => {
 
   it('gives an unkeyed place a neutral name', () => {
     const { snapshot } = exploring();
-    if (snapshot.game?.scene.here) snapshot.game.scene.here.area = null;
+    const level = snapshot.game?.view.explored[0];
+    if (level) level.areas = [];
     renderWithTable(<ScenePanel />, { snapshot });
     expect(screen.getByRole('heading', { name: 'On the way' })).toBeInTheDocument();
   });
 
   it('takes stairs and treasure from the panel', async () => {
     const { snapshot, game } = exploring();
-    const here = game.scene.here;
-    if (!here) throw new Error('No scene here.');
-    here.transitions = [{ kind: 'stairs_down', position: here.position, side: null, leads: 'down' }];
-    here.caches = [
-      { id: 'chest', source: 'authored', area_id: null, position: null, reachable: true, trap: null },
-    ];
+    const level = game.view.explored[0];
+    const position = game.view.location.position;
+    if (!level || !position) throw new Error('The party is in town.');
+    level.transitions = [{ kind: 'stairs_down', position, side: null }];
+    level.features = [...level.features, chestAt(position)];
     const api = createFakeApi();
     api.sendCommand.mockResolvedValue(result(game, { events: [] }));
     const { user } = renderWithTable(<ScenePanel />, { snapshot, api });
@@ -259,17 +271,37 @@ describe('ScenePanel', () => {
       ),
     );
     expect(screen.getByText('Treasure is within reach.')).toBeInTheDocument();
+    expect(screen.getByText('An iron-bound chest stands against the wall.')).toBeInTheDocument();
+  });
+
+  it('leaves out a cache the party emptied', () => {
+    const { snapshot, game } = exploring();
+    const level = game.view.explored[0];
+    const position = game.view.location.position;
+    if (!level || !position) throw new Error('The party is in town.');
+    level.features = [...level.features, chestAt(position)];
+    game.scene.emptied_features = ['feature:chest'];
+    renderWithTable(<ScenePanel />, { snapshot });
+    expect(screen.queryByText('Treasure is within reach.')).toBeNull();
+  });
+
+  it('states a room trap the party knows about', () => {
+    const { snapshot, game } = exploring();
+    game.scene.room_traps = [
+      { dungeon_id: 'priory', level_number: 1, area_id: 'gatehouse_stair', state: 'found' },
+    ];
+    renderWithTable(<ScenePanel />, { snapshot });
+    expect(screen.getByText('You found a trap in this room.')).toBeInTheDocument();
   });
 
   it('folds to its title bar after the first read, and keeps actions one click away', () => {
     vi.useFakeTimers();
     try {
       const { snapshot, game } = exploring();
-      const here = game.scene.here;
-      if (!here) throw new Error('No scene here.');
-      here.caches = [
-        { id: 'chest', source: 'authored', area_id: null, position: null, reachable: true, trap: null },
-      ];
+      const level = game.view.explored[0];
+      const position = game.view.location.position;
+      if (!level || !position) throw new Error('The party is in town.');
+      level.features = [...level.features, chestAt(position)];
       renderWithTable(<ScenePanel />, { snapshot });
       expect(screen.getByText(/A flight of worn steps/)).toBeInTheDocument();
       act(() => {
@@ -342,14 +374,14 @@ describe('ExploreActions', () => {
     expect(within(menu).queryByRole('menuitem', { name: /Move the party/ })).toBeNull();
   });
 
-  it('offers the way back to town only where the scene says the party can travel', () => {
+  it('offers the way back to town only where the player view says the party can travel', () => {
     const { snapshot } = exploring();
-    if (snapshot.game) snapshot.game.scene.can_travel_to_town = false;
+    if (snapshot.game) snapshot.game.view.can_travel_to_town = false;
     const { unmount } = renderWithTable(<Bar />, { snapshot });
     expect(screen.queryByRole('button', { name: 'Return to town' })).toBeNull();
     unmount();
     const atEntrance = exploring().snapshot;
-    if (atEntrance.game) atEntrance.game.scene.can_travel_to_town = true;
+    if (atEntrance.game) atEntrance.game.view.can_travel_to_town = true;
     renderWithTable(<Bar />, { snapshot: atEntrance });
     expect(screen.getByRole('button', { name: 'Return to town' })).toBeInTheDocument();
   });

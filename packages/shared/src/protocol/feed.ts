@@ -83,8 +83,8 @@ export const EntryNames = z.object({
   /** Item display names by item ID, as in `scene.names`. */
   items: z.record(z.string(), z.string()),
   /**
-   * Dungeon names by dungeon ID, for the dungeons the events name that the party has entered, as in
-   * `scene.dungeon_names`. Optional in the type so that older fixtures still compile.
+   * Dungeon names by dungeon ID, for the dungeons the events name that the party has entered, as in the player
+   * view's `dungeons`. Optional in the type so that older fixtures still compile.
    */
   dungeons: z.record(z.string(), z.string()).optional(),
 });

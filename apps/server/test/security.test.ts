@@ -15,6 +15,7 @@ import {
   findRefereeData,
   received,
   startServer,
+  viewHere,
   waitFor,
 } from './helpers';
 
@@ -472,22 +473,26 @@ describe('treasure the party has not found', () => {
     expect(hoards.length).toBeGreaterThan(0);
     expect(refereeState.dungeon_state.resolved_encounters).not.toContain('barrow:1:guard_room');
     const playerGame = await player.client.getGame(tableId);
-    const shown = playerGame.scene.levels.flatMap((level) => level.caches.map((cache) => cache.id));
-    for (const id of hoards) expect(shown).not.toContain(id);
-    // Guessing the sequential cache ID doesn't help.
+    const shown = playerGame.view.explored.flatMap((level) =>
+      level.features.filter((feature) => feature.kind === 'generated_cache'),
+    );
+    expect(shown).toEqual([]);
+    // Guessing the sequential cache ID doesn't help a player, and osrlib refuses it from the referee too.
     for (const id of hoards) {
-      const taken = await player.client.sendCommand(tableId, {
-        command_type: 'take_treasure',
-        feature_id: id,
-      });
-      expect(taken.accepted).toBe(false);
-      expect(taken.rejections[0]?.code).toBe('exploration.feature.unknown');
+      for (const sender of [player, referee]) {
+        const taken = await sender.client.sendCommand(tableId, {
+          command_type: 'take_treasure',
+          feature_id: id,
+        });
+        expect(taken.accepted).toBe(false);
+        expect(taken.rejections[0]?.code).toBe('exploration.feature.unknown');
+      }
     }
     const after = (await referee.client.getRefereeState(tableId)) as unknown as typeof refereeState;
     expect(Object.keys(after.dungeon_state.generated_caches)).toEqual(hoards);
   });
 
-  it("doesn't reveal whether a cache is trapped when a thief tries to remove a trap nobody found", async () => {
+  it('answers the same whether or not a cache is trapped when a thief tries to remove a trap nobody found', async () => {
     const { referee, player, tableId, game } = await startBarrow(server, { classes: ['thief'], seed: 2 });
     await player.client.sendCommand(
       tableId,
@@ -499,17 +504,65 @@ describe('treasure the party has not found', () => {
       location: { kind: 'dungeon', dungeon_id: 'barrow', level_number: 1, position: [4, 0], facing: 'east' },
     });
     expect(placed.accepted).toBe(true);
-    const here = (await player.client.getGame(tableId)).scene.here;
-    expect(here?.caches.map((cache) => cache.id)).toContain('idol_shrine');
-    expect(here?.caches.find((cache) => cache.id === 'idol_shrine')?.trap).toBeNull();
-    // The idol isn't trapped. A trapped cache whose trap nobody found answers trap.not_found, so this must too.
+    const idol = viewHere(await player.client.getGame(tableId))?.features.find(
+      (feature) => feature.kind === 'treasure_cache',
+    );
+    expect(idol?.trap_state ?? null).toBeNull();
+    // The idol isn't trapped. osrlib answers a trapped cache whose trap nobody found the same way.
     const tried = await player.client.sendCommand(tableId, {
       command_type: 'remove_treasure_trap',
       character_id: 'character-0001',
-      feature_id: 'idol_shrine',
+      feature_id: idol?.id,
     });
     expect(tried.accepted).toBe(false);
-    expect(tried.rejections.map((rejection) => rejection.code)).toEqual(['exploration.trap.not_found']);
+    expect(tried.rejections.map((rejection) => rejection.code)).toEqual(['exploration.feature.unknown']);
+  });
+
+  it("refuses a player's raw feature ID without sending it to bxapi", async () => {
+    const { referee, player, tableId, game } = await startBarrow(server, { classes: ['thief'], seed: 3 });
+    await player.client.sendCommand(
+      tableId,
+      { command_type: 'enter_dungeon', dungeon_id: 'barrow' },
+      game.revision,
+    );
+    await referee.client.sendCommand(tableId, {
+      command_type: 'place_party',
+      location: { kind: 'dungeon', dungeon_id: 'barrow', level_number: 1, position: [4, 0], facing: 'east' },
+    });
+    const before = await player.client.getGame(tableId);
+    const bxapi = server.server.ctx.bxapi;
+    const sent: string[] = [];
+    const originalPost = bxapi.post.bind(bxapi);
+    bxapi.post = async <T>(path: string, body: unknown, options = {}) => {
+      if (path.endsWith('/commands')) sent.push(JSON.stringify(body));
+      return originalPost<T>(path, body, options);
+    };
+    try {
+      for (const command of ['take_treasure', 'inspect_treasure', 'remove_treasure_trap']) {
+        const refused = await player.client.sendCommand(tableId, {
+          command_type: command,
+          character_id: 'character-0001',
+          feature_id: 'idol_shrine',
+        });
+        expect(refused.accepted).toBe(false);
+        expect(refused.rejections).toEqual([
+          { code: 'exploration.feature.unknown', params: { feature: 'idol_shrine' } },
+        ]);
+        expect(refused.revision).toBe(before.revision);
+      }
+      expect(sent).toEqual([]);
+    } finally {
+      bxapi.post = originalPost;
+    }
+    // A referee may still name the cache by its raw ID.
+    const inspected = await referee.client.sendCommand(tableId, {
+      command_type: 'inspect_treasure',
+      character_id: 'character-0001',
+      feature_id: 'idol_shrine',
+    });
+    expect(inspected.rejections.map((rejection) => rejection.code)).not.toContain(
+      'exploration.feature.unknown',
+    );
   });
 });
 

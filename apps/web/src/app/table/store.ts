@@ -26,7 +26,6 @@ import type {
 import {
   contextFromPlayerView,
   emptyContext,
-  extendContextWithCatalog,
   extendContextWithNames,
   type TextContext,
 } from '@bxvtt/shared/text';
@@ -187,24 +186,15 @@ export function newerGame(current: GameState | null, incoming: GameState | null)
 }
 
 /**
- * Builds the player-visible text context for a game state: names from the player view, the area names of the
- * scene, and the scene's item names, on top of the previous context. Every name goes through the text layer's own
- * functions, which keep its curated nouns: the scene names `Torches (6)` for a torch, and the context still says
- * "a torch".
+ * Builds the player-visible text context for a game state: names from the player view (party, spells, dungeons,
+ * and entered areas) and the scene's item names, on top of the previous context. Every name goes through the text
+ * layer's own functions, which keep its curated nouns: the scene names `Torches (6)` for a torch, and the context
+ * still says "a torch".
  */
 export function buildBaseTextContext(previous: TextContext, game: GameState | null): TextContext {
   if (game === null) return previous;
-  let ctx = contextFromPlayerView(game.view, previous);
-  const areas: { id: string; name: string }[] = [];
-  for (const level of game.scene.levels) {
-    for (const area of level.areas) {
-      areas.push({ id: area.id, name: area.name });
-      areas.push({ id: `${level.dungeon_id}:${level.level_number}:${area.id}`, name: area.name });
-    }
-  }
-  if (areas.length > 0) ctx = extendContextWithCatalog(ctx, { areas });
-  if (Object.keys(game.scene.names).length > 0) ctx = extendContextWithNames(ctx, game.scene.names);
-  return ctx;
+  const ctx = contextFromPlayerView(game.view, previous);
+  return Object.keys(game.scene.names).length > 0 ? extendContextWithNames(ctx, game.scene.names) : ctx;
 }
 
 function exploredKeys(game: GameState | null): Set<string> {

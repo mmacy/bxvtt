@@ -620,7 +620,9 @@
           ]
         }
       ],
-      "encounter": null
+      "encounter": null,
+      "dungeons": [],
+      "can_travel_to_town": false
     },
     "commands": [
       {
@@ -732,8 +734,6 @@
     ],
     "caller_user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
     "scene": {
-      "levels": [],
-      "here": null,
       "names": {
         "leather": "Leather",
         "mace": "Mace",
@@ -741,7 +741,9 @@
         "spear": "Spear",
         "sword": "Sword",
         "torch": "Torches (6)"
-      }
+      },
+      "room_traps": [],
+      "emptied_features": []
     },
     "referee": null
   },

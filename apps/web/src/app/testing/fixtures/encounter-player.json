@@ -613,7 +613,30 @@
               "door_open": null,
               "door_wedged": null
             }
-          }
+          },
+          "areas": [
+            {
+              "id": "gatehouse_stair",
+              "name": "Gatehouse stair",
+              "description": "A flight of worn steps runs down from the roofless gatehouse into the undercroft of the priory. A stone statue of a hooded monk lies face down across the bottom steps, broken at the knees. Lake water drips from the vault, and the air smells of reeds and old smoke. A wide archway opens to the north.",
+              "cells": [
+                [14, 22],
+                [14, 23]
+              ]
+            }
+          ],
+          "features": [
+            {
+              "id": "feature:fallen_statue",
+              "kind": "custom",
+              "description": "The statue is Saint Corvane, holding up a lantern. Someone has chipped the glass out of the lantern to see whether there was silver inside it.",
+              "cell": null,
+              "area_id": "gatehouse_stair",
+              "trap_state": null
+            }
+          ],
+          "transitions": [],
+          "entrance": [14, 23]
         }
       ],
       "piles": {},
@@ -723,7 +746,14 @@
         "advance_feet": {},
         "formation_width": 6,
         "party_free_round": false
-      }
+      },
+      "dungeons": [
+        {
+          "id": "priory",
+          "name": "The priory on Corvane's Holm"
+        }
+      ],
+      "can_travel_to_town": false
     },
     "commands": [
       {
@@ -799,63 +829,6 @@
     ],
     "caller_user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
     "scene": {
-      "levels": [
-        {
-          "dungeon_id": "priory",
-          "level_number": 1,
-          "areas": [
-            {
-              "id": "gatehouse_stair",
-              "name": "Gatehouse stair",
-              "description": "A flight of worn steps runs down from the roofless gatehouse into the undercroft of the priory. A stone statue of a hooded monk lies face down across the bottom steps, broken at the knees. Lake water drips from the vault, and the air smells of reeds and old smoke. A wide archway opens to the north.",
-              "cells": [
-                [14, 22],
-                [14, 23]
-              ]
-            }
-          ],
-          "transitions": [],
-          "traps": [],
-          "caches": [],
-          "features": [
-            {
-              "id": "fallen_statue",
-              "kind": "custom",
-              "description": "The statue is Saint Corvane, holding up a lantern. Someone has chipped the glass out of the lantern to see whether there was silver inside it.",
-              "area_id": "gatehouse_stair",
-              "position": null
-            }
-          ],
-          "piles": []
-        }
-      ],
-      "here": {
-        "dungeon_id": "priory",
-        "level_number": 1,
-        "position": [14, 22],
-        "area": {
-          "id": "gatehouse_stair",
-          "name": "Gatehouse stair",
-          "description": "A flight of worn steps runs down from the roofless gatehouse into the undercroft of the priory. A stone statue of a hooded monk lies face down across the bottom steps, broken at the knees. Lake water drips from the vault, and the air smells of reeds and old smoke. A wide archway opens to the north.",
-          "cells": [
-            [14, 22],
-            [14, 23]
-          ]
-        },
-        "caches": [],
-        "features": [
-          {
-            "id": "fallen_statue",
-            "kind": "custom",
-            "description": "The statue is Saint Corvane, holding up a lantern. Someone has chipped the glass out of the lantern to see whether there was silver inside it.",
-            "area_id": "gatehouse_stair",
-            "position": null
-          }
-        ],
-        "transitions": [],
-        "traps": [],
-        "pile": false
-      },
       "names": {
         "leather": "Leather",
         "mace": "Mace",
@@ -863,7 +836,9 @@
         "spear": "Spear",
         "sword": "Sword",
         "torch": "Torches (6)"
-      }
+      },
+      "room_traps": [],
+      "emptied_features": []
     },
     "referee": null
   },

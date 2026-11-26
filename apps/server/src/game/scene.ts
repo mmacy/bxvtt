@@ -1,28 +1,7 @@
-import type {
-  Adventure,
-  AreaSpec,
-  DungeonState,
-  FeatureSpec,
-  LevelSpec,
-  TransitionSpec,
-} from '@bxvtt/shared/bxapi';
-import type {
-  GameEvent,
-  PlayerView,
-  Scene,
-  SceneArea,
-  SceneCache,
-  SceneFeature,
-  SceneHere,
-  SceneLevel,
-  SceneTransition,
-  SceneTrap,
-} from '@bxvtt/shared/protocol';
+import type { Adventure, DungeonState, FeatureSpec } from '@bxvtt/shared/bxapi';
+import type { GameEvent, PlayerView, Scene, SceneRoomTrap } from '@bxvtt/shared/protocol';
 
-/** A cell position. */
-type Position = [number, number];
-
-/** What the scene builder reads: the referee view's adventure and dungeon overlay, and the session mode. */
+/** What the scene builder reads: the referee view's adventure and dungeon overlay. */
 export interface SceneSource {
   adventure: Adventure;
   dungeonState: DungeonState;
@@ -34,42 +13,13 @@ const ITEM_FIELDS = ['item_id', 'item_ids', 'valuable_ids', 'magic_item_ids', 'w
 /** An instance ID that the session allocated, such as `magic-item-0001` or `valuable-0002`. */
 const INSTANCE_ID = /-\d{4,}$/;
 
-/** The key of a level in the dungeon overlay, `"{dungeon}:{level}"`. */
-function levelKey(dungeonId: string, levelNumber: number): string {
-  return `${dungeonId}:${levelNumber}`;
-}
-
-/** The key of a cell, for set lookups. */
-function cellKey(position: readonly number[]): string {
-  return `${position[0]},${position[1]}`;
-}
-
-/** The cell reference bxapi uses for a cell, `"cell:{dungeon}:{level}:{x},{y}"`. */
-function cellRef(dungeonId: string, levelNumber: number, position: readonly number[]): string {
-  return `cell:${dungeonId}:${levelNumber}:${cellKey(position)}`;
-}
-
-/** The area that covers a cell: the first area of the level that lists it, as osrlib's `area_at` decides. */
-function areaAt(level: LevelSpec, position: readonly number[]): AreaSpec | null {
-  const key = cellKey(position);
-  return level.areas?.find((area) => area.cells.some((cell) => cellKey(cell) === key)) ?? null;
-}
-
-/** Which way a transition leads from a level. */
-function leads(transition: TransitionSpec, dungeonId: string, levelNumber: number): SceneTransition['leads'] {
-  if (transition.to_dungeon_id !== dungeonId) return 'elsewhere';
-  if (transition.to_level_number > levelNumber) return 'down';
-  if (transition.to_level_number < levelNumber) return 'up';
-  return 'same_level';
-}
-
 /**
  * The trap state the party knows for a trap reference, or `null` when the party doesn't know about the trap.
  *
  * @param state - The dungeon overlay.
  * @param ref - An area or feature reference, `"{dungeon}:{level}:{id}"`.
  */
-function knownTrapState(state: DungeonState, ref: string): SceneTrap['state'] | null {
+function knownTrapState(state: DungeonState, ref: string): SceneRoomTrap['state'] | null {
   if (state.removed_traps?.includes(ref)) return 'removed';
   if (state.sprung_traps?.includes(ref)) return 'sprung';
   if (state.found_traps?.includes(ref)) return 'found';
@@ -154,229 +104,111 @@ export function templateNames(
 }
 
 /**
- * The names of the dungeons the party has entered: those on its map, and the one it stands in.
+ * The names of the dungeons the party has entered, by dungeon ID, from the player view.
  *
  * @param view - The player view.
- * @param adventure - The adventure.
  */
-export function enteredDungeonNames(view: PlayerView, adventure: Adventure): Record<string, string> {
-  const ids = new Set(view.explored.map((known) => known.dungeon_id));
-  if (view.location.kind === 'dungeon' && view.location.dungeon_id != null) ids.add(view.location.dungeon_id);
+export function dungeonNames(view: PlayerView): Record<string, string> {
   const names: Record<string, string> = {};
-  for (const dungeon of adventure.dungeons) {
-    if (ids.has(dungeon.id) && dungeon.name) names[dungeon.id] = dungeon.name;
-  }
+  for (const dungeon of view.dungeons) if (dungeon.name) names[dungeon.id] = dungeon.name;
   return names;
 }
 
 /**
- * Builds the scene for a game from the player view and the referee view's adventure and dungeon overlay. See
- * the protocol's `Scene` for the rules. The function errs toward hiding: it reveals only what osrlib marks as
- * known to the party, and leaves the rest for the referee to describe.
+ * Lists the room traps the party knows about, in the areas the player view lists as entered.
+ *
+ * @param view - The player view.
+ * @param source - The adventure and the dungeon overlay from the referee view.
+ */
+export function knownRoomTraps(view: PlayerView, source: SceneSource): SceneRoomTrap[] {
+  const traps: SceneRoomTrap[] = [];
+  for (const known of view.explored) {
+    const level = source.adventure.dungeons
+      .find((dungeon) => dungeon.id === known.dungeon_id)
+      ?.levels.find((candidate) => candidate.number === known.level_number);
+    if (level === undefined) continue;
+    for (const entered of known.areas) {
+      const area = level.areas?.find((candidate) => candidate.id === entered.id);
+      if (area?.trap == null) continue;
+      const state = knownTrapState(
+        source.dungeonState,
+        `${known.dungeon_id}:${known.level_number}:${area.id}`,
+      );
+      if (state !== null) {
+        traps.push({
+          dungeon_id: known.dungeon_id,
+          level_number: known.level_number,
+          area_id: area.id,
+          state,
+        });
+      }
+    }
+  }
+  return traps;
+}
+
+/** Whether two optional cells name the same cell, or are both missing. */
+function sameCell(a: readonly number[] | null | undefined, b: readonly number[] | null | undefined): boolean {
+  if (a == null || b == null) return a == null && b == null;
+  return a[0] === b[0] && a[1] === b[1];
+}
+
+/**
+ * Lists the `feature:` handles of the authored caches in the player view that the party has emptied.
+ *
+ * The player view keeps an emptied authored cache in `explored[].features` without marking it, and it lists
+ * emptied caches by raw reference in `emptied_caches`. The handle can't be computed from a raw reference, so
+ * this matches each view cache to the adventure's caches on its level that have the same cell (or none), the
+ * same description, and the same area when the view states one. The handle is listed when at least one cache
+ * matches and every match is emptied, so two identical caches count as emptied only once both are.
+ *
+ * @param view - The player view.
+ * @param adventure - The adventure from the referee view.
+ */
+export function emptiedFeatureHandles(view: PlayerView, adventure: Adventure): string[] {
+  const emptied = new Set(view.emptied_caches);
+  const handles: string[] = [];
+  for (const known of view.explored) {
+    const level = adventure.dungeons
+      .find((dungeon) => dungeon.id === known.dungeon_id)
+      ?.levels.find((candidate) => candidate.number === known.level_number);
+    if (level === undefined) continue;
+    const authored: { areaId: string | null; feature: FeatureSpec }[] = [
+      ...(level.features ?? []).map((feature) => ({ areaId: null, feature })),
+      ...(level.areas ?? []).flatMap((area) =>
+        (area.features ?? []).map((feature) => ({ areaId: area.id, feature })),
+      ),
+    ];
+    for (const shown of known.features) {
+      if (shown.kind !== 'treasure_cache') continue;
+      const matches = authored.filter(
+        ({ areaId, feature }) =>
+          feature.kind === 'treasure_cache' &&
+          (feature.description ?? '') === shown.description &&
+          sameCell(feature.cell, shown.cell) &&
+          (shown.area_id == null || shown.area_id === areaId),
+      );
+      const ref = (id: string) => `${known.dungeon_id}:${known.level_number}:${id}`;
+      if (matches.length > 0 && matches.every(({ feature }) => emptied.has(ref(feature.id)))) {
+        handles.push(shown.id);
+      }
+    }
+  }
+  return handles;
+}
+
+/**
+ * Builds the scene for a game: item names, the room traps the party knows, and the emptied caches. See the
+ * protocol's `Scene`. Everything else a player needs is in the player view.
  *
  * @param view - The player view.
  * @param source - The adventure and the dungeon overlay from the referee view.
  * @param names - Display names to send.
  */
 export function buildScene(view: PlayerView, source: SceneSource, names: Map<string, string>): Scene {
-  const state = source.dungeonState;
-  const encounterOpen = view.mode === 'encounter' || view.mode === 'battle';
-  const location = view.location;
-  const levels: SceneLevel[] = [];
-  let here: SceneHere | null = null;
-
-  for (const known of view.explored) {
-    const dungeon = source.adventure.dungeons.find((candidate) => candidate.id === known.dungeon_id);
-    const level = dungeon?.levels.find((candidate) => candidate.number === known.level_number);
-    if (level === undefined) continue;
-    const dungeonId = known.dungeon_id;
-    const levelNumber = known.level_number;
-    const knownCells = new Set(known.cells.map(cellKey));
-    const walked = new Set((state.explored?.[levelKey(dungeonId, levelNumber)] ?? []).map(cellKey));
-    const ref = (id: string) => `${dungeonId}:${levelNumber}:${id}`;
-    const partyHere =
-      location.kind === 'dungeon' &&
-      location.dungeon_id === dungeonId &&
-      location.level_number === levelNumber
-        ? (location.position as Position | null | undefined)
-        : null;
-    const partyArea = partyHere == null ? null : areaAt(level, partyHere);
-    const entered = new Set<string>();
-    for (const cell of walked) {
-      const [x, y] = cell.split(',').map(Number);
-      const area = areaAt(level, [x ?? 0, y ?? 0]);
-      if (area !== null) entered.add(area.id);
-    }
-
-    const areas: SceneArea[] = (level.areas ?? [])
-      .filter((area) => entered.has(area.id))
-      .map((area) => ({
-        id: area.id,
-        name: area.name ?? '',
-        description: area.description ?? '',
-        cells: area.cells.filter((cell) => knownCells.has(cellKey(cell))).map((cell) => [cell[0], cell[1]]),
-      }));
-
-    const traps: SceneTrap[] = [];
-    const cacheTrap = (areaId: string | null, feature: FeatureSpec): SceneTrap | null => {
-      if (feature.trap == null) return null;
-      const known = knownTrapState(state, ref(feature.id));
-      return known === null
-        ? null
-        : {
-            kind: 'treasure',
-            trigger: feature.trap.trigger,
-            state: known,
-            area_id: areaId,
-            feature_id: feature.id,
-          };
-    };
-    for (const area of level.areas ?? []) {
-      if (area.trap == null) continue;
-      const known = knownTrapState(state, ref(area.id));
-      if (known !== null) {
-        traps.push({
-          kind: 'room',
-          trigger: area.trap.trigger,
-          state: known,
-          area_id: area.id,
-          feature_id: null,
-        });
-      }
-    }
-
-    // Authored features: those of entered areas, and those of the level on a cell the party walked.
-    const caches: SceneCache[] = [];
-    const features: SceneFeature[] = [];
-    const placed: { areaId: string | null; feature: FeatureSpec }[] = [];
-    for (const area of level.areas ?? []) {
-      if (!entered.has(area.id)) continue;
-      for (const feature of area.features ?? []) placed.push({ areaId: area.id, feature });
-    }
-    for (const feature of level.features ?? []) {
-      if (feature.cell != null && walked.has(cellKey(feature.cell))) placed.push({ areaId: null, feature });
-    }
-    for (const { areaId, feature } of placed) {
-      const position: Position | null = feature.cell == null ? null : [feature.cell[0], feature.cell[1]];
-      // A feature on a cell the party hasn't seen would give the cell away.
-      if (position !== null && !knownCells.has(cellKey(position))) continue;
-      if (feature.kind === 'treasure_cache') {
-        if (state.emptied_caches?.includes(ref(feature.id))) continue;
-        const trap = cacheTrap(areaId, feature);
-        if (trap !== null) traps.push(trap);
-        if (encounterOpen && areaId !== null && areaId === partyArea?.id) continue;
-        const reachable =
-          partyHere != null &&
-          (position === null
-            ? areaId !== null && partyArea?.id === areaId
-            : cellKey(position) === cellKey(partyHere));
-        caches.push({
-          id: feature.id,
-          source: 'authored',
-          area_id: areaId,
-          position,
-          reachable,
-          trap,
-        });
-      } else if (feature.kind === 'custom' || state.found_tricks?.includes(ref(feature.id))) {
-        features.push({
-          id: feature.id,
-          kind: feature.kind === 'custom' ? 'custom' : 'construction_trick',
-          description: feature.description ?? '',
-          area_id: areaId,
-          position,
-        });
-      }
-    }
-
-    // Generated caches: treasure the session rolled, on a cell the party walked or in an area it entered.
-    for (const [cacheId, cache] of Object.entries(state.generated_caches ?? {})) {
-      const prefix = `cell:${dungeonId}:${levelNumber}:`;
-      if (!cache.cell_ref.startsWith(prefix)) continue;
-      const [x, y] = cache.cell_ref.slice(prefix.length).split(',').map(Number);
-      const position: Position = [x ?? 0, y ?? 0];
-      const area = areaAt(level, position);
-      if (!walked.has(cellKey(position)) && (area === null || !entered.has(area.id))) continue;
-      if (!knownCells.has(cellKey(position))) continue;
-      if (encounterOpen && area !== null && area.id === partyArea?.id) continue;
-      // A lair hoard belongs to monsters that are still there until the party slays or routs them. After the
-      // party evades them or the encounter ends another way, they return, and the hoard stays out of sight.
-      if (area?.encounter?.hoard === true && !(state.resolved_encounters ?? []).includes(ref(area.id)))
-        continue;
-      caches.push({
-        id: cacheId,
-        source: 'generated',
-        area_id: area?.id ?? null,
-        position,
-        reachable: partyHere != null && cellKey(position) === cellKey(partyHere),
-        trap: null,
-      });
-    }
-
-    const transitions: SceneTransition[] = (level.transitions ?? [])
-      .filter((transition) => knownCells.has(cellKey(transition.position)))
-      .map((transition) => ({
-        kind: transition.kind,
-        position: [transition.position[0], transition.position[1]],
-        side: transition.side ?? null,
-        leads: leads(transition, dungeonId, levelNumber),
-      }));
-
-    const piles: Position[] = [];
-    for (const key of Object.keys(view.piles)) {
-      const prefix = `cell:${dungeonId}:${levelNumber}:`;
-      if (!key.startsWith(prefix)) continue;
-      const [x, y] = key.slice(prefix.length).split(',').map(Number);
-      piles.push([x ?? 0, y ?? 0]);
-    }
-
-    // osrlib's travel_to_town works on the level's entrance cell. The cell is part of the map once the party has
-    // seen it, so the scene shows it then.
-    const entranceCell = level.entrance == null ? null : (level.entrance as readonly number[]);
-    const entrance: Position | null =
-      entranceCell !== null && knownCells.has(cellKey(entranceCell))
-        ? [entranceCell[0] ?? 0, entranceCell[1] ?? 0]
-        : null;
-
-    levels.push({
-      dungeon_id: dungeonId,
-      level_number: levelNumber,
-      areas,
-      transitions,
-      traps,
-      caches,
-      features,
-      piles,
-      entrance,
-    });
-
-    if (partyHere != null) {
-      const hereKey = cellKey(partyHere);
-      const area =
-        partyArea === null ? null : (areas.find((candidate) => candidate.id === partyArea.id) ?? null);
-      const inPlace = (areaId: string | null, position: Position | null) =>
-        (position !== null && cellKey(position) === hereKey) || (areaId !== null && areaId === partyArea?.id);
-      here = {
-        dungeon_id: dungeonId,
-        level_number: levelNumber,
-        position: [partyHere[0], partyHere[1]],
-        area,
-        caches: caches.filter((cache) => inPlace(cache.area_id, cache.position)),
-        features: features.filter((feature) => inPlace(feature.area_id, feature.position)),
-        transitions: transitions.filter((transition) => cellKey(transition.position) === hereKey),
-        traps: traps.filter((trap) => trap.area_id !== null && trap.area_id === partyArea?.id),
-        pile: cellRef(dungeonId, levelNumber, partyHere) in view.piles,
-        at_entrance: entranceCell !== null && cellKey(entranceCell) === hereKey,
-      };
-    }
-  }
-
   return {
-    levels,
-    here,
     names: Object.fromEntries([...names].sort(([a], [b]) => a.localeCompare(b))),
-    // The condition of osrlib's `_handle_travel_to_town`, in a mode where the command is allowed.
-    can_travel_to_town: view.mode === 'exploring' && here?.at_entrance === true,
-    dungeon_names: enteredDungeonNames(view, source.adventure),
+    room_traps: knownRoomTraps(view, source),
+    emptied_features: emptiedFeatureHandles(view, source.adventure),
   };
 }

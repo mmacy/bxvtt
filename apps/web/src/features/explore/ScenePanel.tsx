@@ -1,7 +1,15 @@
-import type { GameEvent, SceneHere, SceneTrap } from '@bxvtt/shared/protocol';
+import type { GameEvent } from '@bxvtt/shared/protocol';
 import { describeEvent, directionLabel, type TextContext } from '@bxvtt/shared/text';
 import { useEffect, useId, useState, type ReactNode } from 'react';
-import { UNKEYED_PLACE_TITLE, scopedStorage, usePlayerView, useScene, useTextContext } from '@/app';
+import {
+  UNKEYED_PLACE_TITLE,
+  cachesToTake,
+  scopedStorage,
+  useHere,
+  usePlayerView,
+  useTextContext,
+  type Here,
+} from '@/app';
 import { Button, DropdownMenu, Icon, IconButton, Parchment, cx, type IconName, type MenuEntry } from '@/ui';
 import {
   cacheEntries,
@@ -23,15 +31,19 @@ import styles from './explore.module.css';
 /**
  * The sentence the feed uses for entering an area, such as "The party enters the kitchen.", from the text layer.
  */
-export function enteredText(areaId: string, here: SceneHere, ctx: TextContext): string {
+export function enteredText(
+  areaId: string,
+  here: Pick<Here, 'dungeonId' | 'levelNumber'>,
+  ctx: TextContext,
+): string {
   const event = {
     event_type: 'location_entered',
     code: 'exploration.location.entered',
     visibility: 'player',
     location_kind: 'area',
     location_id: areaId,
-    level_number: here.level_number,
-    dungeon_id: here.dungeon_id,
+    level_number: here.levelNumber,
+    dungeon_id: here.dungeonId,
     narrative: null,
     via: null,
     transition_ref: null,
@@ -55,13 +67,14 @@ export function thingsHere(count: number): string {
 }
 
 /** What a known trap means to the party, in one sentence. */
-export function trapSentence(trap: Pick<SceneTrap, 'kind' | 'trigger' | 'state'>): string {
+export function trapSentence(trap: {
+  kind: 'room' | 'treasure';
+  state: 'found' | 'sprung' | 'removed';
+}): string {
   const prep = trap.kind === 'treasure' ? 'on the treasure' : 'in this room';
   switch (trap.state) {
     case 'found':
-      return trap.trigger === 'enter'
-        ? `You found a trap ${prep}. The trap springs when someone enters.`
-        : `You found a trap ${prep}. The trap springs when opened.`;
+      return `You found a trap ${prep}.`;
     case 'sprung':
       return `A trap ${prep} has already sprung.`;
     case 'removed':
@@ -123,7 +136,7 @@ function Actions({ entries, label }: { entries: MenuEntry[]; label: keyof typeof
  * In a corridor it says so. It announces a new area to screen readers without moving focus.
  */
 export function ScenePanel() {
-  const scene = useScene();
+  const here = useHere();
   const view = usePlayerView();
   const ctx = useActionContext();
   const ctxText = useTextContext();
@@ -133,7 +146,6 @@ export function ScenePanel() {
   const [fresh, setFresh] = useState(false);
   const [announcement, setAnnouncement] = useState('');
   const bodyId = useId();
-  const here = scene?.here ?? null;
   const area = here?.area ?? null;
   const areaId = area?.id ?? null;
   const cell = here ? here.position.join(',') : null;
@@ -181,9 +193,10 @@ export function ScenePanel() {
 
   if (here === null || view === null || ctx === null) return null;
   const facing = view.location.kind === 'dungeon' ? view.location.facing : null;
-  const key = levelKey(here.dungeon_id, here.level_number);
+  const key = levelKey(here.dungeonId, here.levelNumber);
   const [x, y] = here.position;
-  const stairs = stairsHere(scene);
+  const stairs = stairsHere(here);
+  const caches = cachesToTake(here);
   const passages = here.transitions.filter(
     (transition): transition is typeof transition & { side: 'north' | 'east' | 'south' | 'west' } =>
       transition.kind === 'passage' &&
@@ -193,12 +206,12 @@ export function ScenePanel() {
         transition.side === 'west'),
   );
   const doors = doorsHere(view);
-  const traps = here.traps.filter((trap) => trap.kind === 'room');
+  const traps = here.roomTrap ? [here.roomTrap] : [];
   const title = area?.name ?? UNNAMED_PLACE;
   const count =
     stairs.length +
     passages.length +
-    here.caches.length +
+    caches.length +
     (here.pile ? 1 : 0) +
     doors.length +
     here.features.length +
@@ -207,7 +220,7 @@ export function ScenePanel() {
     stairs.length > 0 && ctx.can('use_stairs')
       ? [
           {
-            label: transitionAction(stairs[0] ?? { kind: 'stairs_down', leads: 'down' }),
+            label: transitionAction(stairs[0] ?? { kind: 'stairs_down' }),
             icon: 'stairs' as const,
             onSelect: () => ctx.run({ command_type: 'use_stairs' }),
           },
@@ -327,8 +340,8 @@ export function ScenePanel() {
                 {`A passage leads through the ${directionLabel(passage.side).toLowerCase()} wall.`}
               </Row>
             ))}
-            {here.caches.map((cache) => {
-              const label = cacheLabel(cache, here.caches);
+            {caches.map((cache) => {
+              const label = cacheLabel(cache, caches);
               return (
                 <Row
                   key={cache.id}
@@ -337,12 +350,17 @@ export function ScenePanel() {
                 >
                   <span>
                     {cache.reachable
-                      ? here.caches.length > 1
+                      ? caches.length > 1
                         ? `${label} is within reach.`
                         : 'Treasure is within reach.'
                       : `${label} lies elsewhere in this room.`}
                   </span>
-                  {cache.trap && <span className={styles.sceneSub}>{trapSentence(cache.trap)}</span>}
+                  {cache.description && <span className={styles.sceneSub}>{cache.description}</span>}
+                  {cache.trapState && (
+                    <span className={styles.sceneSub}>
+                      {trapSentence({ kind: 'treasure', state: cache.trapState })}
+                    </span>
+                  )}
                 </Row>
               );
             })}
@@ -388,9 +406,13 @@ export function ScenePanel() {
                 {feature.description}
               </Row>
             ))}
-            {traps.map((trap, index) => (
-              <Row key={`trap-${index}`} icon="trap" tone={trap.state === 'found' ? 'warning' : undefined}>
-                {trapSentence(trap)}
+            {traps.map((trap) => (
+              <Row
+                key={`trap-${trap.area_id}`}
+                icon="trap"
+                tone={trap.state === 'found' ? 'warning' : undefined}
+              >
+                {trapSentence({ kind: 'room', state: trap.state })}
               </Row>
             ))}
           </ul>

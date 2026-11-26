@@ -5,9 +5,9 @@ import { useMemo, useState, type ReactNode } from 'react';
 import {
   useCanControlMember,
   useEncounter,
+  useHere,
   useParty,
   usePlayerView,
-  useScene,
   useSendCommand,
   useSpellCatalog,
   useTextContext,
@@ -120,7 +120,7 @@ export function InventoryTab({ member, model }: TabProps) {
   const light = useMemberCommand('light_source', member.id);
   const extinguish = useMemberCommand('extinguish_source', member.id);
   const view = usePlayerView();
-  const scene = useScene();
+  const here = useHere();
   const [transfer, setTransfer] = useState<{ mode: 'give' | 'drop'; entryKey: string | null } | null>(null);
   const [using, setUsing] = useState<InventoryEntry | null>(null);
 
@@ -301,7 +301,7 @@ export function InventoryTab({ member, model }: TabProps) {
                 Put out light
               </Button>
             )}
-            {light.legal && scene?.here?.pile && (
+            {light.legal && here?.pile && (
               <Button
                 size="sm"
                 variant="ghost"

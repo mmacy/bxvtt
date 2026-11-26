@@ -2,6 +2,7 @@ import { gunzipSync } from 'node:zlib';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { BxvttClient, isProblem } from '@bxvtt/shared/client';
 import type { FullCatalog, GameEntry, GameState } from '@bxvtt/shared/protocol';
+import { BxapiProblem } from '../src/bxapi';
 import type { TestConnection, TestServer, TestUser } from './helpers';
 import {
   connect,
@@ -46,25 +47,23 @@ describe('the game clock on feed entries, the entrance, and presence', () => {
   });
 
   it('offers travel to town only on the entrance cell, and shows the entrance once seen', async () => {
-    expect(game.scene.can_travel_to_town).toBe(false);
+    expect(game.view.can_travel_to_town).toBe(false);
     const entered = await alice.client.sendCommand(
       tableId,
       { command_type: 'enter_dungeon', dungeon_id: 'barrow' },
       game.revision,
     );
-    const here = entered.game.scene.here;
-    expect(here?.at_entrance).toBe(true);
-    expect(entered.game.scene.can_travel_to_town).toBe(true);
-    const level = entered.game.scene.levels.find((candidate) => candidate.dungeon_id === 'barrow');
-    expect(level?.entrance).toEqual(here?.position);
+    expect(entered.game.view.can_travel_to_town).toBe(true);
+    const start = entered.game.view.location.position;
+    const level = entered.game.view.explored.find((candidate) => candidate.dungeon_id === 'barrow');
+    expect(level?.entrance).toEqual(start);
     const moved = await alice.client.sendCommand(
       tableId,
       { command_type: 'move_party', direction: 'east' },
       entered.revision,
     );
-    expect(moved.game.scene.here?.at_entrance).toBe(false);
-    expect(moved.game.scene.can_travel_to_town).toBe(false);
-    expect(moved.game.scene.levels[0]?.entrance).toEqual(here?.position);
+    expect(moved.game.view.can_travel_to_town).toBe(false);
+    expect(moved.game.view.explored[0]?.entrance).toEqual(start);
     // osrlib agrees: away from the entrance, travel_to_town is refused.
     const refused = await alice.client.sendCommand(
       tableId,
@@ -205,5 +204,53 @@ describe('whole rules catalogs', () => {
     await expect(plain.fullCatalog('languages' as 'classes')).rejects.toSatisfy((error) =>
       isProblem(error, 'not_found'),
     );
+  });
+});
+
+describe('restoring a save the game service cannot read', () => {
+  let server: TestServer;
+
+  beforeAll(async () => {
+    server = await startServer();
+  });
+
+  afterAll(async () => {
+    await server.close();
+  });
+
+  it('tells the referee why, and leaves the game as it was', async () => {
+    const referee = await createUser(server, 'Rhea');
+    const table = await referee.client.createTable({ name: 'Old saves' });
+    await referee.client.addToRoster(table.id, (await createCharacter(referee, 'Solo')).id);
+    const started = await referee.client.startGame(table.id, { adventure_id: 'builtin-barrow' });
+    const save = await referee.client.createSave(table.id, 'Before the update');
+    const bxapi = server.server.ctx.bxapi;
+    const originalPost = bxapi.post.bind(bxapi);
+    // bxapi answers 500 `session_unreadable` for a save whose stored state its osrlib can't load.
+    bxapi.post = async <T>(path: string, body: unknown, options = {}) => {
+      if (path.endsWith('/restore')) {
+        throw new BxapiProblem(
+          500,
+          {
+            code: 'session_unreadable',
+            detail: "The server can't load this save's stored state.",
+            status: 500,
+          },
+          null,
+        );
+      }
+      return originalPost<T>(path, body, options);
+    };
+    try {
+      const failure = await referee.client.restoreSave(table.id, save.id).catch((error: unknown) => error);
+      expect(isProblem(failure, 'content_invalid')).toBe(true);
+      if (!isProblem(failure)) throw new Error('expected a problem');
+      expect(failure.problem.detail).toMatch(
+        /^This save can't be restored, because the game service was updated/,
+      );
+    } finally {
+      bxapi.post = originalPost;
+    }
+    expect((await referee.client.getGame(table.id)).session_id).toBe(started.session_id);
   });
 });

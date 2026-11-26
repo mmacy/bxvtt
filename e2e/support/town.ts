@@ -57,8 +57,12 @@ export async function returnToTown(table: TownTable): Promise<void> {
   const at = (x: number, y: number, facing: 'north' | 'east' = 'north') =>
     placeParty(ruth.client, id, { dungeon: 'priory', level: 1, x, y, facing });
   await send(sam.client, id, { command_type: 'enter_dungeon', dungeon_id: 'priory' });
-  await at(17, 12, 'east');
-  await send(sam.client, id, { command_type: 'take_treasure', feature_id: 'chapel_altar' });
+  const chapel = await at(17, 12, 'east');
+  // A player names a cache by the handle in the player view, not by its ID in the adventure.
+  const altar = chapel.view.explored
+    .flatMap((level) => level.features)
+    .find((feature) => feature.kind === 'treasure_cache' && feature.area_id === 'chapel');
+  await send(sam.client, id, { command_type: 'take_treasure', feature_id: altar?.id });
   await at(8, 3, 'east');
   await send(sam.client, id, { command_type: 'open_door', direction: 'east' });
   await send(sam.client, id, { command_type: 'move_party', direction: 'east' });

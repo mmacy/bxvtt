@@ -1,7 +1,6 @@
-import type { SceneCache } from '@bxvtt/shared/protocol';
 import { emptyContext } from '@bxvtt/shared/text';
 import { describe, expect, it, vi } from 'vitest';
-import { canSendCommand, type PermissionContext } from '@/app';
+import { canSendCommand, partyHere, type HereFeature, type PermissionContext } from '@/app';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import type { MenuEntry } from '@/ui';
 import {
@@ -34,7 +33,7 @@ function context(role: 'player' | 'referee') {
   const run = vi.fn();
   const ctx: ActionContext = {
     view: game.view,
-    scene: game.scene,
+    here: partyHere(game.view, game.scene),
     can: (type, member) => canSendCommand(permissions, type, member).allowed,
     run,
     text: emptyContext(),
@@ -147,13 +146,15 @@ describe('searchEntries', () => {
 });
 
 describe('cacheEntries', () => {
-  const cache: SceneCache = {
-    id: 'chest',
-    source: 'authored',
-    area_id: 'hall',
-    position: null,
+  const cache: HereFeature = {
+    id: 'feature:chest',
+    kind: 'treasure_cache',
+    description: 'An iron-bound chest.',
+    cell: null,
+    areaId: 'hall',
+    trapState: null,
     reachable: true,
-    trap: null,
+    emptied: false,
   };
 
   it('takes a reachable cache, and lets a thief check it for traps', () => {
@@ -165,15 +166,12 @@ describe('cacheEntries', () => {
       'Check for traps: Wren',
     ]);
     select(entries, 'Take treasure');
-    expect(run).toHaveBeenCalledWith({ command_type: 'take_treasure', feature_id: 'chest' });
+    expect(run).toHaveBeenCalledWith({ command_type: 'take_treasure', feature_id: 'feature:chest' });
   });
 
   it('offers to disarm a found trap instead of checking again', () => {
     const { ctx } = context('player');
-    const trapped: SceneCache = {
-      ...cache,
-      trap: { kind: 'treasure', trigger: 'open', state: 'found', area_id: 'hall', feature_id: 'chest' },
-    };
+    const trapped: HereFeature = { ...cache, trapState: 'found' };
     expect(cacheEntries(ctx, trapped, 'Treasure').map(entryLabel)).toContain('Disarm trap: Wren');
   });
 
@@ -188,20 +186,30 @@ describe('cacheEntries', () => {
 describe('treasureEntries', () => {
   it('names the treasure and the dropped goods when both lie here, with the scene panel’s verbs', () => {
     const { ctx } = context('player');
-    const here = ctx.scene?.here;
-    if (!here) throw new Error('No scene here.');
-    here.caches = [
-      { id: 'chest', source: 'authored', area_id: null, position: null, reachable: true, trap: null },
-    ];
+    const here = ctx.here;
+    if (!here) throw new Error('The party is in town.');
+    const chest: HereFeature = {
+      id: 'feature:chest',
+      kind: 'treasure_cache',
+      description: '',
+      cell: null,
+      areaId: null,
+      trapState: null,
+      reachable: true,
+      emptied: false,
+    };
+    here.caches = [chest, { ...chest, id: 'feature:emptied', emptied: true }];
     here.pile = true;
     const labels = treasureEntries(ctx).map(entryLabel);
     expect(labels).toEqual(
       expect.arrayContaining(['Treasure', 'Take treasure', 'Dropped goods', 'Pick up dropped goods']),
     );
-    expect(treasureMenuLabel(ctx.scene)).toBe('Treasure and dropped goods');
-    here.caches = [];
+    // The emptied cache offers nothing, so the one left needs no number.
+    expect(labels).not.toContain('Treasure 2');
+    expect(treasureMenuLabel(here)).toBe('Treasure and dropped goods');
+    here.caches = [{ ...chest, emptied: true }];
     expect(treasureEntries(ctx).map(entryLabel)).toEqual(['Pick up dropped goods']);
-    expect(treasureMenuLabel(ctx.scene)).toBe('Dropped goods');
+    expect(treasureMenuLabel(here)).toBe('Dropped goods');
   });
 });
 
@@ -241,9 +249,9 @@ describe('lightUnavailableReason', () => {
 });
 
 describe('transitions', () => {
-  it('names the action and the way a transition leads', () => {
-    expect(transitionAction({ kind: 'stairs_down', leads: 'down' })).toBe('Go down the stairs');
-    expect(transitionDescription({ kind: 'stairs_up', leads: 'up' })).toBe('Stairs lead up.');
-    expect(transitionDescription({ kind: 'chute', leads: 'down' })).toBe('A chute leads down.');
+  it('names the action and the transition from its kind', () => {
+    expect(transitionAction({ kind: 'stairs_down' })).toBe('Go down the stairs');
+    expect(transitionDescription({ kind: 'stairs_up' })).toBe('Stairs lead up.');
+    expect(transitionDescription({ kind: 'chute' })).toBe('There is a chute here.');
   });
 });
