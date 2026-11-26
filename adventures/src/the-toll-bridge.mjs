@@ -159,7 +159,7 @@ level
         description:
           'An oilcloth bundle sits on the shelf, tied with wire that runs back into a crack in the stone.',
         coins: { gp: 75 },
-        valuables: [valuable('gem', 'Amber', 100)],
+        valuables: [valuable('gem', 'Piece of amber', 100)],
         magic_item_ids: ['potion_of_healing'],
         trap: trap({ kind: 'treasure', trigger: 'open', damage_dice: '1d3', volley_dice: '1d4' }),
       },

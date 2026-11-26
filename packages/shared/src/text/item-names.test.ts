@@ -215,7 +215,7 @@ describe("a valuable's own name", () => {
     const names: Record<string, string> = {
       'Silver altar candlestick': 'a silver altar candlestick',
       Moonstone: 'a moonstone',
-      'Gilt psalter covers': 'a gilt psalter covers',
+      'Pair of gilt psalter covers': 'a pair of gilt psalter covers',
       Bloodstone: 'a bloodstone',
       "Abbot's gold ring": "the abbot's gold ring",
       Sapphire: 'a sapphire',
@@ -224,10 +224,10 @@ describe("a valuable's own name", () => {
       Topaz: 'a topaz',
       "Prior's chain of office": "the prior's chain of office",
       'Silver brooch': 'a silver brooch',
-      Amber: 'an amber',
+      'Piece of amber': 'a piece of amber',
       "Prior's iron key": "the prior's iron key",
       'Hand of Saint Corvane': 'the Hand of Saint Corvane',
-      'Tongue of the bell Mercy': 'a tongue of the bell Mercy',
+      'Tongue of Mercy': 'the Tongue of Mercy',
       "Miller Aske's strongbox": "Miller Aske's strongbox",
     };
     for (const [name, phrase] of Object.entries(names)) {

@@ -258,7 +258,7 @@ level1
         kind: 'treasure_cache',
         description:
           'Under a fallen desk lies a psalter with covers of gilded silver. The pages are ruined, but the covers are worth something.',
-        valuables: [valuable('jewellery', 'Gilt psalter covers', 80, 30)],
+        valuables: [valuable('jewellery', 'Pair of gilt psalter covers', 80, 30)],
       },
     ],
   })
@@ -1045,7 +1045,7 @@ const payload = {
   items: [
     gear('priors_iron_key', "Prior's iron key"),
     gear('hand_of_saint_corvane', 'Hand of Saint Corvane'),
-    gear('tongue_of_mercy', 'Tongue of the bell Mercy'),
+    gear('tongue_of_mercy', 'Tongue of Mercy'),
   ],
   spells: [],
   triggers: [

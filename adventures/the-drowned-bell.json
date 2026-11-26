@@ -3653,7 +3653,7 @@
                     "valuables": [
                       {
                         "kind": "jewellery",
-                        "name": "Gilt psalter covers",
+                        "name": "Pair of gilt psalter covers",
                         "value_gp": 80,
                         "weight_coins": 30
                       }
@@ -11093,7 +11093,7 @@
       {
         "item_type": "gear",
         "id": "tongue_of_mercy",
-        "name": "Tongue of the bell Mercy",
+        "name": "Tongue of Mercy",
         "cost_gp": 0,
         "lot_size": 1,
         "capacity_coins": null,

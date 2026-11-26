@@ -27,7 +27,7 @@ import {
 const HIDDEN = [
   'Moonstone',
   'priors_iron_key',
-  'Gilt psalter covers',
+  'Pair of gilt psalter covers',
   'Bloodstone',
   "Abbot's gold ring",
   "Prior's chain of office",
