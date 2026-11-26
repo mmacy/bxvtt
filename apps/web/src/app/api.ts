@@ -190,8 +190,8 @@ const FIXED: Record<string, { title: string; detail: string }> = {
     detail: 'Reload the page. If it keeps happening, check that this address points to your bxvtt server.',
   },
   target_unknown: {
-    title: 'That target is no longer there',
-    detail: 'Choose a target again.',
+    title: "That target isn't in the encounter",
+    detail: 'Choose a target from the encounter.',
   },
   character_invalid: {
     title: "Those character choices aren't valid",

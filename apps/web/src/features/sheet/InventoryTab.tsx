@@ -1,4 +1,5 @@
 import type { MemberView } from '@bxvtt/shared/bxapi';
+import { creatureNames } from '@bxvtt/shared/protocol';
 import { capitalizeFirst, count, groupName } from '@bxvtt/shared/text';
 import { useMemo, useState, type ReactNode } from 'react';
 import {
@@ -585,7 +586,14 @@ function UseItemDialog({
     ...party.filter((m) => m.id !== member.id).map((m) => ({ value: m.id, label: m.name })),
     ...(encounter?.groups ?? []).map((g) => ({ value: g.id, label: capitalizeFirst(groupName(g.id, ctx)) })),
   ];
-  const creatureOptions = targetOptions.filter((o) => o.value !== 'self');
+  // A scroll's spell goes at creatures by ID, as `cast_spell.targets` does: party members, and the living
+  // creatures the player view lists in the encounter.
+  const creatureOptions = [
+    ...party.map((m) => ({ value: m.id, label: m.name })),
+    ...creatureNames(encounter?.groups)
+      .filter((creature) => creature.status === 'alive')
+      .map((creature) => ({ value: creature.id, label: creature.name })),
+  ];
 
   const submit = async () => {
     setError(null);

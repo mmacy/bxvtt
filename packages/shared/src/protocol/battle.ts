@@ -10,7 +10,7 @@ export type { BattleDeclaration };
  * which the route names. bxapi checks the fields when the round resolves.
  */
 export const DeclarationBody = z.looseObject({
-  action: z.enum(['attack', 'cast', 'turn_undead', 'move', 'use_item', 'give_item', 'hold']),
+  action: z.enum(['attack', 'cast', 'turn_undead', 'move', 'use_item', 'give_item', 'hide', 'hold']),
   character_id: z.string().max(64).optional(),
 });
 /** A declaration for one member, as a client sends it. */

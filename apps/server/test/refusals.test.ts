@@ -3,7 +3,14 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { DeclarationBody, GameState } from '@bxvtt/shared/protocol';
 import { findRepoRoot } from '../src/config';
 import type { TestConnection, TestServer, TestUser } from './helpers';
-import { connect, createCharacter, createTable, createUser, findMonsterIds, startServer } from './helpers';
+import {
+  connect,
+  createCharacter,
+  createTable,
+  createUser,
+  findUnshownCreatureIds,
+  startServer,
+} from './helpers';
 
 /**
  * D-302: a refused battle round says whose declaration bxapi refused, even when osrlib's rejection names nobody.
@@ -74,14 +81,14 @@ describe('attributing the refusals of a battle round', () => {
   });
 
   const group = () => game.view.encounter?.groups[0]?.id ?? '';
-  const handles = () => (game.scene.targets ?? []).map((target) => target.handle);
+  const goblins = () => (game.view.encounter?.groups[0]?.members ?? []).map((member) => member.id);
   const hold: DeclarationBody = { action: 'hold' };
   const attack = (): DeclarationBody => ({ action: 'attack', target_group_id: group() });
   const missiles = (): DeclarationBody => ({
     action: 'cast',
     spell_id: 'magic_missile',
     spell_mode: 'missiles',
-    targets: handles(),
+    targets: goblins(),
   });
 
   /** Declares for the three members, resolves, and returns the refusals and the bxapi command calls it took. */
@@ -107,22 +114,23 @@ describe('attributing the refusals of a battle round', () => {
   });
 
   it('names the caster of a spell with too many targets', async () => {
-    expect(handles().length).toBeGreaterThanOrEqual(2);
+    expect(goblins().length).toBeGreaterThanOrEqual(2);
     const { refusals } = await refuse([hold, missiles(), hold]);
     expect(refusals.map((refusal) => [refusal.member_id, refusal.code])).toEqual([
       ['character-0002', 'magic.cast.target_count'],
     ]);
   });
 
-  it('tells two bad declarations from different members apart with one probe', async () => {
+  it('tells two bad declarations from different members apart without a probe', async () => {
     const { refusals, calls } = await refuse([attack(), missiles(), hold]);
     expect(refusals.map((refusal) => [refusal.member_id, refusal.code])).toEqual([
       ['character-0001', 'combat.attack.out_of_reach'],
       ['character-0002', 'magic.cast.target_count'],
     ]);
     expect(refusals.every((refusal) => refusal.candidates === undefined)).toBe(true);
-    // The round, then one probe that swaps Brenna's declaration for one osrlib always refuses.
-    expect(calls).toBe(2);
+    // Since osrlib 2.7, every rejection of a declaration names its member in `character`, so the round alone
+    // tells the two apart.
+    expect(calls).toBe(1);
   });
 
   it('tells apart two members refused for the same reason by the order of the declarations', async () => {
@@ -132,7 +140,7 @@ describe('attributing the refusals of a battle round', () => {
     expect(refusals.map((refusal) => refusal.member_id)).toEqual(['character-0001', 'character-0003']);
   });
 
-  it('leaves no trace of the probes: no feed entry, no new revision, and no monster ID for the player', async () => {
+  it('leaves no trace of the probes: no feed entry, no new revision, and no unshown monster ID for the player', async () => {
     const now = await alice.client.getGame(tableId);
     expect(now.revision).toBe(game.revision);
     expect(now.mode).toBe('battle');
@@ -144,8 +152,15 @@ describe('attributing the refusals of a battle round', () => {
       aliceWs.messages.some((message) => message.type === 'notice' && message.code === 'table_changed'),
     ).toBe(false);
     const referee_ = await referee.client.getRefereeState(tableId);
-    const ids = (referee_.encounter?.groups ?? []).flatMap((candidate) => candidate.monster_ids);
-    const texts = [...alice.received, ...aliceWs.messages.map((message) => JSON.stringify(message))];
-    expect(findMonsterIds(texts, ids)).toEqual([]);
+    const ids = referee_.monsters.map((monster) => monster.id);
+    expect(ids.length).toBeGreaterThan(0);
+    // The refusals name the goblins that Mira aimed at, which the player view lists, and nothing more.
+    expect(findUnshownCreatureIds(alice.received, ids)).toEqual([]);
+    expect(
+      findUnshownCreatureIds(
+        aliceWs.messages.map((message) => JSON.stringify(message)),
+        ids,
+      ),
+    ).toEqual([]);
   });
 });

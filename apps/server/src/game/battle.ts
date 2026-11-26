@@ -16,7 +16,7 @@ import { now } from '../ids';
 import { RESOLVE_ROUND } from './classify';
 import { readSeats } from './seats';
 import { attributeRefusals } from './refusals';
-import { resolveHandles, TARGET_FIELD_NAMES, toHandles, withoutMonsterIds } from './targets';
+import { TARGET_FIELD_NAMES, unlistedTarget, withoutUnlistedCreatures } from './targets';
 import type { GameService, LiveGame } from './service';
 
 /** The path parameters of a declaration route. */
@@ -51,9 +51,8 @@ export class BattleService {
   ) {}
 
   /**
-   * Builds the declarations state of a game for one role, or `null` outside a battle. The server stores a
-   * declaration's monster targets as target handles. A player's copy names no monster by ID, even when a
-   * referee aimed at a monster that has no handle.
+   * Builds the declarations state of a game for one role, or `null` outside a battle. A player's copy names only
+   * the monsters that the player view lists, even when a referee aimed at one the party can't see.
    *
    * @param live - The game.
    * @param role - The reader's role.
@@ -61,7 +60,7 @@ export class BattleService {
   state(live: LiveGame, role: Role = 'player'): DeclarationsState | null {
     const state = this.refereeState(live);
     if (state === null || role === 'referee') return state;
-    return withoutMonsterIds(state, live.targets);
+    return withoutUnlistedCreatures(state, live.view, live.creatures);
   }
 
   /** Builds the declarations state as stored, which a referee reads. */
@@ -157,10 +156,20 @@ export class BattleService {
     return this.game.locked(tableId, async () => {
       const live = await this.requireBattle(tableId);
       this.checkMember(live, user, role, memberId);
-      // Refuse a target handle the scene doesn't list now, and store monster IDs as handles, because everyone at
-      // the table reads the declarations.
-      resolveHandles(declaration, TARGET_FIELD_NAMES, live.targets, 'declaration');
-      const stored = { ...toHandles(declaration, live.targets), character_id: memberId };
+      // A player aims only at the creatures the player view lists, because everyone at the table reads the
+      // declarations.
+      const unlisted =
+        role === 'referee'
+          ? null
+          : unlistedTarget(declaration, TARGET_FIELD_NAMES, live.view, live.creatures);
+      if (unlisted !== null) {
+        throw new ApiError(
+          'target_unknown',
+          "That target isn't in the party or the encounter. Choose a target from the encounter.",
+          { field: `declaration.${unlisted.field}`, id: unlisted.id },
+        );
+      }
+      const stored = { ...declaration, character_id: memberId };
       this.ctx.db.run(
         `INSERT OR REPLACE INTO declarations (table_id, session_id, member_id, round, declaration_json, user_id, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -288,8 +297,7 @@ export class BattleService {
     }
     const declarations = state.declarers.map((memberId) => {
       const declaration = state.declarations[memberId];
-      if (declaration === undefined) return { character_id: memberId, action: 'hold' };
-      return resolveHandles(declaration, TARGET_FIELD_NAMES, live.targets, `declarations.${memberId}`);
+      return declaration ?? { character_id: memberId, action: 'hold' };
     });
     const command = { command_type: RESOLVE_ROUND, declarations };
     const outcome = await this.game.executeLocked(live, command, requestId, userId);
@@ -317,16 +325,12 @@ export class BattleService {
     // osrlib refuses every probe, but if bxapi ever accepted one, the round has resolved and these refusals no
     // longer apply.
     if (live.revision !== revision) return true;
-    const refusals: DeclarationRefusal[] = attributed.map((refusal) => ({
-      ...refusal,
-      params: toHandles(refusal.params, live.targets),
-    }));
     this.ctx.db.run(
       'INSERT OR REPLACE INTO battle_refusals (table_id, session_id, revision, refusals_json) VALUES (?, ?, ?, ?)',
       live.tableId,
       live.sessionId,
       live.revision,
-      JSON.stringify(refusals),
+      JSON.stringify(attributed),
     );
     await this.pushLocked(live.tableId);
     return false;

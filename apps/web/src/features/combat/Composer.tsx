@@ -37,7 +37,7 @@ import {
   type MemberGear,
 } from './model';
 import styles from './combat.module.css';
-import { targetLabel, useCombatText, useSceneTargets } from './text';
+import { useCombatText, useEncounterCreatures } from './text';
 import { useCasting } from './casting';
 import { countBadge, groupHeading, theGroup, viewLabels } from './names';
 
@@ -571,7 +571,7 @@ function SpellTargets({
   onSubmit,
 }: ChoiceProps & { spellId: string; memorizedReversed: boolean; ctx: TextContext }) {
   const entry = useRulesEntry<SpellDetail>(`spells/${spellId}`);
-  const sceneTargets = useSceneTargets();
+  const creatures = useEncounterCreatures();
   const spell = entry.data;
   const modes = spell?.modes ?? [];
   const [modeKey, setModeKey] = useState<string | null>(null);
@@ -606,11 +606,10 @@ function SpellTargets({
 
   const living = encounter.declarers;
   const groupsById = new Map(liveGroups(encounter).map((g) => [g.id, g]));
-  // Every monster the party can single out, by the handle the scene gives it. The server swaps the handle for
-  // the monster when the round resolves.
-  const monsters = sceneTargets.flatMap((target) => {
-    const group = groupsById.get(target.group_id);
-    return group && !target.defeated && !target.fled ? [{ target, group }] : [];
+  // Every living monster the player view lists, by its ID.
+  const monsters = creatures.flatMap((creature) => {
+    const group = groupsById.get(creature.group_id);
+    return group && creature.status === 'alive' ? [{ creature, group }] : [];
   });
 
   return (
@@ -713,13 +712,13 @@ function SpellTargets({
           {atMonsters && monsters.length > 0 && (
             <div className={styles.chipGroup} role="group" aria-label="Monsters">
               <span className={styles.chipLabel}>Monsters</span>
-              {monsters.map(({ target, group }) => {
+              {monsters.map(({ creature, group }) => {
                 const distance = memberDistance(group, member.id);
                 const tooFar = range !== null && distance > range;
-                const chosen = targets.includes(target.handle);
+                const chosen = targets.includes(creature.id);
                 return (
                   <Button
-                    key={target.handle}
+                    key={creature.id}
                     size="sm"
                     variant={chosen ? 'primary' : 'ghost'}
                     aria-pressed={chosen}
@@ -729,9 +728,9 @@ function SpellTargets({
                         ? `Out of range: ${formatFeet(distance)} away, but ${name} only reaches ${formatFeet(range)}.`
                         : null
                     }
-                    onClick={() => toggle(target.handle)}
+                    onClick={() => toggle(creature.id)}
                   >
-                    {targetLabel(target, sceneTargets, group.label)}
+                    {creature.name}
                   </Button>
                 );
               })}

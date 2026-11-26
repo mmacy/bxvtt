@@ -377,7 +377,6 @@ export function buildScene(view: PlayerView, source: SceneSource, names: Map<str
     names: Object.fromEntries([...names].sort(([a], [b]) => a.localeCompare(b))),
     // The condition of osrlib's `_handle_travel_to_town`, in a mode where the command is allowed.
     can_travel_to_town: view.mode === 'exploring' && here?.at_entrance === true,
-    targets: [],
     dungeon_names: enteredDungeonNames(view, source.adventure),
   };
 }

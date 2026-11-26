@@ -103,9 +103,10 @@ export const PROBLEM_CODES = {
   /** 422 (from bxapi): the roster's characters can't form a party. */
   party_invalid: 422,
   /**
-   * 422: a command or declaration names a target handle (`tgt_...`) that isn't one of the handles in
-   * `game.scene.targets`, for example a handle from an encounter that has ended. Extra members: `field`, the
-   * field that holds it, and `id`, the handle. Read the scene again and pick a target from it.
+   * 422: a player's battle declaration names a monster or an NPC adventurer that the player view doesn't list in
+   * `view.encounter.groups[].members`, for example one from an encounter that has ended. Extra members: `field`,
+   * the field that names it, such as `declaration.targets`, and `id`, the ID as sent. Pick a target from the
+   * player view's encounter.
    */
   target_unknown: 422,
   /** 429: too many requests from this address. The `Retry-After` header and the `retry_after` member give the seconds to wait. */

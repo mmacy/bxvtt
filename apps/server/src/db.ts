@@ -8,9 +8,9 @@ import { RETIRED_USER_COLORS, USER_COLORS } from '@bxvtt/shared/protocol';
  * The version of the table layout. The server upgrades a database of an older version at startup with the
  * steps in {@link MIGRATIONS}, and refuses one of a newer version.
  */
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
-/** The table of monster target handles, which layout version 2 added. */
+/** The table of monster target handles, which layout version 2 added and version 7 dropped. */
 const TARGET_HANDLES = `
 CREATE TABLE target_handles (
   table_id TEXT NOT NULL REFERENCES tables(id) ON DELETE CASCADE,
@@ -56,6 +56,14 @@ ALTER TABLE ability_rolls ADD COLUMN hp_rolled_at TEXT;
 ALTER TABLE ability_rolls ADD COLUMN gold_rolled_at TEXT;
 `;
 
+/**
+ * Drops the monster target handles, which layout version 7 retired. Players name a monster by the ID that
+ * bxapi's player view lists, so the server no longer stores a handle for each monster.
+ */
+const DROP_TARGET_HANDLES = `
+DROP TABLE target_handles;
+`;
+
 /** The SQL that upgrades a database from the version before each key to that version. */
 const MIGRATIONS: Record<number, string> = {
   2: TARGET_HANDLES,
@@ -68,6 +76,7 @@ const MIGRATIONS: Record<number, string> = {
   ).join('\n'),
   5: BXAPI_GARBAGE,
   6: STARTING_ROLLS,
+  7: DROP_TARGET_HANDLES,
 };
 
 const SCHEMA = `
@@ -218,7 +227,7 @@ CREATE TABLE samples (
   uploaded_at TEXT NOT NULL,
   PRIMARY KEY (file_name, content_hash)
 );
-${TARGET_HANDLES}${RETIRED_TOKENS}${BXAPI_GARBAGE}${STARTING_ROLLS}`;
+${RETIRED_TOKENS}${BXAPI_GARBAGE}${STARTING_ROLLS}`;
 
 /** A row as `node:sqlite` returns it. */
 export type Row = Record<string, SQLInputValue>;

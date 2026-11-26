@@ -10,7 +10,7 @@ export interface CommandInfo {
   class: CommandClass;
   /** The field that names the acting member of a `member` command, or `null`. */
   memberField: string | null;
-  /** The fields that can name a monster target, such as `targets`, which the server reads target handles in. */
+  /** The fields that can name a monster target, such as `targets`, which the server checks against the player view. */
   targetFields: string[];
 }
 

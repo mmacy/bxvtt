@@ -316,7 +316,7 @@ test.describe('battle', () => {
     );
     await expect(declarationRow(sam.page, 'Mazpar')).toContainText(/magic missile/i);
     await expect(declarationRow(sam.page, 'Mazpar')).toContainText('Goblin 2');
-    await expect(battleBoard(sam.page)).not.toContainText(/tgt_/);
+    await expect(battleBoard(sam.page)).not.toContainText(/monster-\d/);
     await shot(ann.page, 'battle-declaring');
 
     // The board opens the next undeclared member's choices for Ann: Clarence's.

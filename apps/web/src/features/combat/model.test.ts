@@ -14,7 +14,7 @@ import {
   repeatProblem,
   usableItems,
 } from './model';
-import { withTargetLabels } from './text';
+import { encounterCreatures, withCreatureNames } from './text';
 
 function battle() {
   const snapshot = fixtureSnapshot('battle', 'player');
@@ -263,24 +263,18 @@ describe('describeDeclaration for monsters a player can’t tell apart', () => {
   });
 });
 
-describe('monster targets by handle', () => {
-  it('names a declared target by its label', () => {
-    const { view } = battle();
-    const ctx = withTargetLabels(contextFromPlayerView(view), [
-      {
-        handle: 'tgt_aaaaaaaaaaaaaaaa',
-        group_id: 'group-0001',
-        label: 'Goblin 2',
-        number: 2,
-        defeated: false,
-        fled: false,
-      },
-    ]);
+describe('monster targets by ID', () => {
+  it('names a declared target as the encounter numbers it', () => {
+    const { view, encounter } = battle();
+    const roster = withGroup(encounter, {
+      members: [
+        { id: 'monster-0001', status: 'defeated' },
+        { id: 'monster-0002', status: 'alive' },
+      ],
+    });
+    const ctx = withCreatureNames(contextFromPlayerView(view), encounterCreatures(roster));
     expect(
-      describeDeclaration(
-        { action: 'cast', spell_id: 'magic_missile', targets: ['tgt_aaaaaaaaaaaaaaaa'] },
-        ctx,
-      ),
+      describeDeclaration({ action: 'cast', spell_id: 'magic_missile', targets: ['monster-0002'] }, ctx),
     ).toBe('Cast Magic Missile at Goblin 2');
   });
 });

@@ -53,6 +53,11 @@ export const EntryLabel = z.object({
   count: z.number().int().optional(),
   /** For a group, the most it has had alive, so a group whose last member fell still reads as one or several. */
   size: z.number().int().optional(),
+  /**
+   * For a monster, its name in the encounter where the entry was written, such as `Goblin 2` or `Ogre`, from
+   * `creatureNames`. Missing for a group, and for a monster that the player view no longer listed.
+   */
+  name: z.string().optional(),
 });
 /** What players called one monster group or monster. */
 export type EntryLabel = z.infer<typeof EntryLabel>;

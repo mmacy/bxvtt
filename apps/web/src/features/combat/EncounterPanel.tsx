@@ -52,7 +52,7 @@ import {
 } from './useEncounterCommands';
 import { ACCEPT_ALL, usePlayback } from './usePlayback';
 import styles from './combat.module.css';
-import { targetLabel, useCombatText, useSceneTargets } from './text';
+import { useCombatText, useEncounterCreatures } from './text';
 import { countBadge, countedGroup, groupHeading, theGroup, viewLabels } from './names';
 
 /** What each bearing means for the party's choices, from the `wait` and `parley` command documentation. */
@@ -566,7 +566,7 @@ function UseItemPopover({
   encounter: EncounterView;
   ctx: TextContext;
 }) {
-  const sceneTargets = useSceneTargets();
+  const creatures = useEncounterCreatures();
   const { send, pending } = useSendCommand();
   const [open, setOpen] = useState(false);
   const [memberId, setMemberId] = useState(members[0]?.id ?? '');
@@ -587,12 +587,9 @@ function UseItemPopover({
           ...encounter.groups
             .filter((g) => !g.fled && g.count > 0)
             .map((g) => ({ value: g.id, label: `At ${theGroup(viewLabels(g))}` })),
-          ...sceneTargets
-            .filter((t) => !t.defeated && !t.fled)
-            .map((t) => ({
-              value: t.handle,
-              label: `At ${targetLabel(t, sceneTargets, encounter.groups.find((g) => g.id === t.group_id)?.label)}`,
-            })),
+          ...creatures
+            .filter((creature) => creature.status === 'alive')
+            .map((creature) => ({ value: creature.id, label: `At ${creature.name}` })),
           ...encounter.declarers.map((id) => ({ value: id, label: `On ${memberName(id, ctx)}` })),
         ];
   const use = async () => {

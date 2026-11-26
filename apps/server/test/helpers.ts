@@ -269,35 +269,49 @@ export function findRefereeData(texts: string[], extraMarkers: string[] = []): s
 }
 
 /**
- * Finds monster IDs in what a player received, outside bxapi's own player events and messages, which may name a
- * monster by ID. The server names a monster to a player only by its target handle, except in a feed entry's
- * `names`, which may hold labels for the monster IDs of that entry's own events.
+ * Finds monster and NPC IDs in what a player received that bxapi's player projection hadn't shown the player. A
+ * player may receive a creature's ID only once the player view listed it in `encounter.groups[].members`, or a
+ * player-visibility event named it, in that message or an earlier one. Every event a player receives must have
+ * player visibility.
  *
- * @param texts - The player's HTTP bodies and WebSocket messages, as text.
- * @param monsterIds - The monster IDs of the session, from the referee state.
- * @returns Each ID found, with a little context.
+ * Pass one stream at a time, in the order the player received it, such as the HTTP bodies or the WebSocket
+ * messages, so an ID counts as shown only after the message that showed it.
+ *
+ * @param texts - The player's HTTP bodies or WebSocket messages, as text, in order.
+ * @param creatureIds - The monster and NPC IDs of the session, from the referee state.
+ * @returns Each ID found before the player could know it, and each event without player visibility, with a
+ *   little context.
  */
-export function findMonsterIds(texts: string[], monsterIds: string[]): string[] {
-  // A feed entry's `names` may name the monster IDs of its own events, and nothing more.
-  const namesOnlyFromEvents = (record: Record<string, unknown>): boolean => {
-    const names = record.names as { monsters?: Record<string, unknown> } | undefined;
-    if (!Array.isArray(record.events) || names === undefined) return false;
-    const events = JSON.stringify(record.events);
-    return Object.keys(names.monsters ?? {}).every((id) => events.includes(`"${id}"`));
-  };
-  const withoutEvents = (value: unknown): unknown => {
-    if (Array.isArray(value)) return value.map(withoutEvents);
-    if (typeof value !== 'object' || value === null) return value;
-    const record = value as Record<string, unknown>;
-    const dropNames = namesOnlyFromEvents(record);
-    return Object.fromEntries(
-      Object.entries(record)
-        .filter(([key, entry]) => !((key === 'events' || key === 'messages') && Array.isArray(entry)))
-        .filter(([key]) => !(key === 'names' && dropNames))
-        .map(([key, entry]) => [key, withoutEvents(entry)]),
-    );
-  };
+export function findUnshownCreatureIds(texts: string[], creatureIds: string[]): string[] {
+  const shown = new Set<string>();
   const found: string[] = [];
+  const learn = (value: unknown): void => {
+    if (Array.isArray(value)) {
+      value.forEach(learn);
+      return;
+    }
+    if (typeof value !== 'object' || value === null) return;
+    const record = value as Record<string, unknown>;
+    if (Array.isArray(record.members) && typeof record.label === 'string') {
+      // An encounter group of the player view.
+      for (const member of record.members as { id?: unknown }[]) {
+        if (typeof member.id === 'string') shown.add(member.id);
+      }
+    }
+    if (Array.isArray(record.events)) {
+      for (const event of record.events as Record<string, unknown>[]) {
+        if (event.visibility !== 'player') {
+          found.push(
+            `an event with ${String(event.visibility)} visibility: ${JSON.stringify(event).slice(0, 160)}`,
+          );
+          continue;
+        }
+        const text = JSON.stringify(event);
+        for (const id of creatureIds) if (text.includes(`"${id}"`)) shown.add(id);
+      }
+    }
+    Object.values(record).forEach(learn);
+  };
   for (const text of texts) {
     let parsed: unknown;
     try {
@@ -305,10 +319,12 @@ export function findMonsterIds(texts: string[], monsterIds: string[]): string[] 
     } catch {
       continue;
     }
-    const rest = JSON.stringify(withoutEvents(parsed));
-    for (const id of monsterIds) {
-      const index = rest.indexOf(`"${id}"`);
-      if (index >= 0) found.push(`${id}: …${rest.slice(Math.max(0, index - 80), index + 80)}…`);
+    learn(parsed);
+    for (const id of creatureIds) {
+      const index = text.indexOf(`"${id}"`);
+      if (index >= 0 && !shown.has(id)) {
+        found.push(`${id}: …${text.slice(Math.max(0, index - 80), index + 80)}…`);
+      }
     }
   }
   return found;

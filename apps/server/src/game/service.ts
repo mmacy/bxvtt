@@ -32,8 +32,7 @@ import { buildScene, eventItemIds, inventoryNames, templateNames } from './scene
 import { readSeats, reconcileSeats, seatsFromRoster, writeSeats } from './seats';
 import type { LabelBook } from './labels';
 import { entryNames, learnLabels, newLabelBook } from './labels';
-import type { TargetBook } from './targets';
-import { emptyTargetBook, resolveHandles, syncTargets, toHandles } from './targets';
+import { unlistedTarget, withoutUnlistedCreatures } from './targets';
 
 /** What the server holds in memory about a table's game, at one revision. */
 export interface LiveGame {
@@ -52,8 +51,11 @@ export interface LiveGame {
   scene: Scene;
   /** Display names for item IDs that the party has seen, kept across revisions of the session. */
   names: Map<string, string>;
-  /** The monster target handles of the session, and the ones the scene lists at `revision`. */
-  targets: TargetBook;
+  /**
+   * The monster and NPC IDs of the session, from the referee view. The server refuses a player's target among
+   * them that the player view doesn't list, and removes such an ID from what a player receives.
+   */
+  creatures: Set<string>;
   /** What the players of the session have called each member, group, and monster, for feed entries. */
   labels: LabelBook;
 }
@@ -127,6 +129,24 @@ function unseenTreasure(live: LiveGame, command: Command): Rejection | null {
   if (here === null) return null;
   if (here.caches.some((cache) => cache.id === featureId)) return null;
   return { code: 'exploration.feature.unknown', params: { feature: featureId } };
+}
+
+/**
+ * Refuses a player's command that aims at a monster or an NPC adventurer the player view doesn't list. bxapi
+ * accepts any creature of the session in an out-of-battle `cast_spell` or `use_item`, even one from an encounter
+ * that has ended, so without this a player could hit a monster the party can't see. The rejection is the one
+ * osrlib gives a target that doesn't exist.
+ *
+ * @param live - The game.
+ * @param info - The command's class, with the fields that can name a target.
+ * @param command - The command.
+ * @returns The rejection, or `null` to send the command to bxapi.
+ */
+function unlistedCreature(live: LiveGame, info: CommandInfo, command: Command): Rejection | null {
+  const unlisted = unlistedTarget(command, info.targetFields, live.view, live.creatures);
+  if (unlisted === null) return null;
+  const code = unlisted.field === 'target_id' ? 'items.use.unknown_target' : 'magic.cast.unknown_target';
+  return { code, params: { target: unlisted.id } };
 }
 
 /**
@@ -229,7 +249,7 @@ export class GameService {
     );
     const previous = this.live.get(tableId);
     const names = previous?.sessionId === sessionId ? previous.names : new Map<string, string>();
-    const labels = previous?.sessionId === sessionId ? previous.labels : newLabelBook(this.ctx.db, sessionId);
+    const labels = previous?.sessionId === sessionId ? previous.labels : newLabelBook();
     const live: LiveGame = {
       tableId,
       sessionId,
@@ -240,9 +260,9 @@ export class GameService {
       legal: commands.commands,
       referee: null,
       refereeRevision: -1,
-      scene: { levels: [], here: null, names: {}, can_travel_to_town: false, targets: [] },
+      scene: { levels: [], here: null, names: {}, can_travel_to_town: false },
       names,
-      targets: emptyTargetBook(),
+      creatures: new Set(),
       labels,
     };
     if (info.revision === commands.revision) {
@@ -280,16 +300,16 @@ export class GameService {
       refereeView.adventure,
       this.equipment ?? new Map(),
     );
-    live.targets = syncTargets(this.ctx.db, live.tableId, live.sessionId, live.view, refereeView);
-    learnLabels(live.labels, live.view, refereeView);
-    live.scene = {
-      ...buildScene(
-        live.view,
-        { adventure: refereeView.adventure, dungeonState: refereeView.dungeon_state },
-        live.names,
-      ),
-      targets: live.targets.targets,
-    };
+    live.creatures = new Set([
+      ...refereeView.monsters.map((monster) => monster.id),
+      ...refereeView.npcs.flatMap((npc) => (typeof npc.id === 'string' ? [npc.id] : [])),
+    ]);
+    learnLabels(live.labels, live.view);
+    live.scene = buildScene(
+      live.view,
+      { adventure: refereeView.adventure, dungeonState: refereeView.dungeon_state },
+      live.names,
+    );
   }
 
   /**
@@ -623,8 +643,8 @@ export class GameService {
         );
       }
       this.checkPermission(live, user, role, info, command);
-      const resolved = resolveHandles(command, info.targetFields, live.targets, 'command');
-      const unseen = role === 'referee' ? null : unseenTreasure(live, command);
+      const unseen =
+        role === 'referee' ? null : (unseenTreasure(live, command) ?? unlistedCreature(live, info, command));
       if (unseen !== null) {
         return {
           accepted: false,
@@ -637,7 +657,7 @@ export class GameService {
           game: await this.project(live, role),
         };
       }
-      const outcome = await this.executeLocked(live, resolved, requestId, user.id);
+      const outcome = await this.executeLocked(live, command, requestId, user.id);
       if (role !== 'referee' && !outcome.accepted) maskTrapRejections(command, outcome);
       if (outcome.accepted) {
         const actor = command[info.memberField ?? 'character_id'];
@@ -656,8 +676,11 @@ export class GameService {
           : playerEvents(outcome.events, outcome.messages);
       return {
         accepted: outcome.accepted,
-        // A player names a monster by its target handle, so a rejection names it the same way.
-        rejections: role === 'referee' ? outcome.rejections : toHandles(outcome.rejections, live.targets),
+        // A player's copy names only the creatures that the player view lists.
+        rejections:
+          role === 'referee'
+            ? outcome.rejections
+            : withoutUnlistedCreatures(outcome.rejections, live.view, live.creatures),
         events: projected.events,
         messages: projected.messages,
         mode: outcome.mode,

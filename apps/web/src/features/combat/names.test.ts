@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { emptyContext } from '@bxvtt/shared/text';
 import { countBadge, countedGroup, groupHeading, theGroup } from './names';
-import { targetLabel } from './text';
+import { encounterCreatures, withCreatureNames } from './text';
 
 describe('group labels', () => {
   const goblins = { label: 'goblin', plural: 'goblins', count: 3 };
@@ -25,22 +26,32 @@ describe('group labels', () => {
   });
 });
 
-describe('target labels', () => {
-  const target = (handle: string, label: string, group: string) => ({
-    handle,
-    group_id: group,
-    label,
-    number: Number(label.split(' ').at(-1)),
-    defeated: false,
-    fled: false,
+describe('creature names in the combat text', () => {
+  const ctx = {
+    ...emptyContext(),
+    groups: { 'group-0001': { label: 'goblin', labelPlural: 'goblins' } },
+    monsters: { 'npc-0001': { label: 'adventurer', name: 'Mag Corrie' } },
+  };
+  const creatures = encounterCreatures({
+    groups: [
+      {
+        id: 'group-0001',
+        label: 'goblin',
+        members: [
+          { id: 'monster-0001', status: 'alive' },
+          { id: 'npc-0001', status: 'alive' },
+        ],
+      },
+    ],
   });
 
-  it('drop the number of a named individual who is the only one of that name', () => {
-    const targets = [
-      target('tgt_aaaaaaaaaaaaaaaa', 'Mag Corrie 1', 'group-0001'),
-      target('tgt_bbbbbbbbbbbbbbbb', 'Goblin 1', 'group-0002'),
-    ];
-    expect(targetLabel(targets[0]!, targets, 'Mag Corrie')).toBe('Mag Corrie');
-    expect(targetLabel(targets[1]!, targets, 'goblin')).toBe('Goblin 1');
+  it('name each creature by its number, and keep a name the context already has', () => {
+    const named = withCreatureNames(ctx, creatures);
+    expect(named.monsters['monster-0001']).toEqual({
+      label: 'goblin',
+      labelPlural: 'goblins',
+      name: 'Goblin 1',
+    });
+    expect(named.monsters['npc-0001']?.name).toBe('Mag Corrie');
   });
 });
