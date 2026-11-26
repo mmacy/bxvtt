@@ -17,7 +17,7 @@ import { openTable, placeParty, send, setupTable, waitForGame } from './support/
 const NOTES_MARKER = 'Private plan: the prior waits in the bell pit with two drowned brothers.';
 const PIN_MARKER = 'Referee pin: a crossbow trap behind this wall.';
 const ROLL_MARKER = 'whether the goblins hear the marker party';
-const CHAPEL_NOTE = 'The clay bottle wrapped in the altar cloth holds the potion of healing.';
+const CHAPEL_NOTE = 'The clay bottle in the altar cloth holds the potion of healing.';
 
 test('a player receives no referee data through a whole game of The Drowned Bell', async ({ crew }) => {
   test.slow();

@@ -129,7 +129,7 @@ test.describe('referee tools', () => {
     crew,
   }) => {
     const { ruth, sam, tableId } = await bellTable(crew);
-    const note = 'The clay bottle wrapped in the altar cloth holds the potion of healing.';
+    const note = 'The clay bottle in the altar cloth holds the potion of healing.';
     const description = 'Two silver candlesticks stand on the altar beside two small stoppered flasks';
     await placeParty(ruth.client, tableId, { dungeon: 'priory', level: 1, x: 17, y: 12 });
 
@@ -154,7 +154,7 @@ test.describe('referee tools', () => {
     await expect(scene.getByRole('heading', { name: 'Chapel of Saint Corvane' })).toBeVisible();
     await expect(scene.getByText(new RegExp(description))).toBeVisible();
     await expect(sam.page.getByText(note)).toHaveCount(0);
-    expect(await sam.page.content()).not.toContain('clay bottle wrapped in the altar cloth holds');
+    expect(await sam.page.content()).not.toContain('clay bottle in the altar cloth holds');
     await screenshot(ruth.page, 'referee-notes');
   });
 

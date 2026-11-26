@@ -166,7 +166,8 @@ level1
       {
         id: 'chapel_altar',
         kind: 'treasure_cache',
-        referee_notes: 'The clay bottle wrapped in the altar cloth holds the potion of healing.',
+        referee_notes:
+          'The two stoppered flasks hold holy water. The clay bottle in the altar cloth holds the potion of healing.',
         description:
           'Two silver candlesticks stand on the altar beside two small stoppered flasks and a clay bottle wrapped in an altar cloth.',
         item_ids: ['holy_water', 'holy_water'],
@@ -235,7 +236,8 @@ level1
       {
         id: 'iron_chest',
         kind: 'treasure_cache',
-        referee_notes: "The iron key's bow is shaped like a bell.",
+        referee_notes:
+          "The key's bow is shaped like a bell. It opens the heavy oak door banded with iron, with the bell-shaped keyhole, on level 2.",
         description: 'A heavy hasp holds the lid shut, and blade marks score the iron around it.',
         item_ids: ['priors_iron_key'],
         coins: { gp: 120, ep: 40 },
@@ -454,8 +456,7 @@ level2
       {
         id: 'priors_desk',
         kind: 'treasure_cache',
-        referee_notes:
-          "The coins are the prior's household money. The potion is a stoppered bottle of healing draught.",
+        referee_notes: "The coins are the prior's household money.",
         description: "The prior's writing desk has a row of narrow drawers with tarnished brass pulls.",
         coins: { gp: 80 },
         magic_item_ids: ['potion_of_healing'],
@@ -791,7 +792,7 @@ level3
         id: 'priors_hoard',
         kind: 'treasure_cache',
         referee_notes:
-          'The coins are in rotten bags, and the shield has a lantern boss. The chain of office is the one the drowned prior wears, so the party takes it from his body.',
+          'The shield has a lantern boss. The chain of office is the one the drowned prior wears.',
         description:
           "Rotten bags lie in the black water at the drowned prior's feet, and a round shield shows under the surface.",
         coins: { gp: 600, sp: 1000 },
