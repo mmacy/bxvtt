@@ -75,7 +75,10 @@ describe('a bxapi whose engine is older than 2.8.0', () => {
     for (const version of ['2.8.0', '2.10.0', '3.0.0']) {
       setEngine(version);
       const health = await healthFor(server, alice);
-      expect(health, version).toMatchObject({ status: 'ok', bxapi: { reachable: true, error: null } });
+      expect(health, version).toMatchObject({
+        status: 'ok',
+        bxapi: { reachable: true, outdated: false, error: null },
+      });
       const sent = await alice.client.sendCommand(tableId, { command_type: 'rest', kind: 'night' });
       expect(sent.accepted, version).toBe(true);
     }
@@ -86,12 +89,15 @@ describe('a bxapi whose engine is older than 2.8.0', () => {
     const health = await healthFor(server, alice);
     expect(health.status).toBe('degraded');
     expect(health.bxapi.reachable).toBe(true);
+    expect(health.bxapi.outdated).toBe(true);
     expect(health.bxapi.error).toBe(
       'bxapi runs osrlib 2.7.0, and bxvtt needs 2.8.0 or later. If you host this server, update bxapi and restart it. Otherwise, ask the server host to update it.',
     );
     const anonymous = await new BxvttClient({ baseUrl: server.url }).health();
     expect(anonymous.status).toBe('degraded');
     expect(anonymous.bxapi.meta).toBeNull();
+    // The flag reveals no version, so an anonymous reader gets it too.
+    expect(anonymous.bxapi.outdated).toBe(true);
     expect(anonymous.bxapi.error).toBe(
       "The game service isn't set up correctly. Ask the server host to fix it.",
     );

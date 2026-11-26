@@ -8,19 +8,23 @@ type HealthState =
   | { kind: 'ok' }
   | { kind: 'no-bxapi' }
   | { kind: 'no-server' }
-  /** bxapi answers, but the server can't run games with it. `detail` is the server's sentence for the cause. */
+  /** bxapi answers, but the server can't run games with it. `detail` is the banner's body. */
   | { kind: 'misconfigured'; outdated: boolean; detail: string };
 
+/** What an anonymous reader learns about a game service that is out of date, without its versions. */
+const OUTDATED_PUBLIC = "Games can't run until it's updated. Ask the server host to update the game service.";
+
 /**
- * What the health says. For a reachable bxapi, the server states one of two causes: a key with the player role,
- * or an engine older than bxvtt needs. A signed-in user's health has `meta`, so a referee key with an error means
- * the engine is out of date. An anonymous reader's health has no `meta` and a general sentence.
+ * What the health says. A signed-in user's health has `meta` and the server's sentence for the cause, which names
+ * the versions for an engine that is out of date. An anonymous reader's health has no `meta` and a general
+ * sentence, so an out-of-date service reads in the banner's own words.
  */
 export function classify(health: Health): HealthState {
-  const { reachable, meta, error } = health.bxapi;
+  const { reachable, outdated, meta, error } = health.bxapi;
   if (!reachable) return { kind: 'no-bxapi' };
-  if (error === null) return { kind: 'ok' };
-  return { kind: 'misconfigured', outdated: meta !== null && meta.role === 'referee', detail: error };
+  if (error === null && !outdated) return { kind: 'ok' };
+  const detail = outdated && meta === null ? OUTDATED_PUBLIC : (error ?? OUTDATED_PUBLIC);
+  return { kind: 'misconfigured', outdated, detail };
 }
 
 /**

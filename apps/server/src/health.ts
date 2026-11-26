@@ -63,6 +63,7 @@ export function engineTooOldMessage(engineVersion: string): string | null {
 export async function checkHealth(ctx: Context): Promise<Health> {
   let meta: Health['bxapi']['meta'] = null;
   let error: string | null;
+  let outdated = false;
   try {
     const found = await ctx.bxapi.get<Meta>('/v1/meta');
     meta = {
@@ -78,6 +79,7 @@ export async function checkHealth(ctx: Context): Promise<Health> {
       version: found.engine_version,
       tooOld: !versionAtLeast(found.engine_version, MIN_ENGINE_VERSION),
     };
+    outdated = ctx.engine.tooOld;
     if (found.role !== 'referee') error = 'The bxapi key has the player role. bxvtt needs a referee key.';
     else error = engineTooOldMessage(found.engine_version);
   } catch (caught) {
@@ -91,13 +93,13 @@ export async function checkHealth(ctx: Context): Promise<Health> {
     version: SERVER_VERSION,
     host_key_required: ctx.config.hostKey !== null,
     uptime_seconds: Math.round((Date.now() - ctx.startedAt) / 1000),
-    bxapi: { reachable: meta !== null, meta, error },
+    bxapi: { reachable: meta !== null, outdated, meta, error },
   };
 }
 
 /**
  * The part of the health that anyone may read: the status, the version, whether a host key is needed, and
- * whether bxapi is reachable. bxapi's versions and storage, and the cause of a failure, go only to a user.
+ * whether bxapi is reachable and up to date. bxapi's versions and storage, and the cause of a failure, go only to a user.
  *
  * @param health - The full health.
  */
@@ -106,6 +108,7 @@ export function publicHealth(health: Health): Health {
     ...health,
     bxapi: {
       reachable: health.bxapi.reachable,
+      outdated: health.bxapi.outdated,
       meta: null,
       error:
         health.bxapi.error === null

@@ -20,7 +20,7 @@ npm run dev -w @bxvtt/server      # terminal 2: Fastify watch server on http://1
 curl -s http://127.0.0.1:8660/api/health
 ```
 
-Unauthenticated callers receive `"status": "ok"`, `bxapi.reachable: true`, and `host_key_required`; authenticated callers also receive `bxapi` engine metadata and storage counts from `GET /v1/meta`. When `bxapi` is offline, `/api/health` and `bxapi`-backed routes return HTTP 503 (`bxapi_unavailable`).
+Unauthenticated callers receive `"status": "ok"`, `bxapi.reachable: true`, `bxapi.outdated` (whether bxapi's engine is older than bxvtt needs), and `host_key_required`; authenticated callers also receive `bxapi` engine metadata and storage counts from `GET /v1/meta`. When `bxapi` is offline, `/api/health` and `bxapi`-backed routes return HTTP 503 (`bxapi_unavailable`).
 
 To run the production server, build both workspaces first. When `apps/web/dist/index.html` exists, the server pre-compresses text assets (`>= 1024` bytes) in memory with Brotli and gzip, serves hashed files under `assets/` with `Cache-Control: public, max-age=31536000, immutable`, and serves `index.html` with `Cache-Control: no-cache`:
 

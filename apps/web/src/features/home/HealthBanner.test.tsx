@@ -34,7 +34,9 @@ function renderWith(answer: Health | Error) {
 
 describe('HealthBanner', () => {
   it('shows nothing while everything works', async () => {
-    renderWith(health({ reachable: true, meta: { ...META, engine_version: '2.8.0' }, error: null }));
+    renderWith(
+      health({ reachable: true, outdated: false, meta: { ...META, engine_version: '2.8.0' }, error: null }),
+    );
     await Promise.resolve();
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.queryByText(/game service/)).toBeNull();
@@ -43,22 +45,47 @@ describe('HealthBanner', () => {
   it('tells a signed-in user that the game service is out of date, in the server’s words', async () => {
     const detail =
       'bxapi runs osrlib 2.7.0, and bxvtt needs 2.8.0 or later. If you host this server, update bxapi and restart it. Otherwise, ask the server host to update it.';
-    renderWith(health({ reachable: true, meta: META, error: detail }));
+    renderWith(health({ reachable: true, outdated: true, meta: META, error: detail }));
     expect(await screen.findByText('The game service is out of date')).toBeInTheDocument();
     expect(screen.getByText(detail)).toBeInTheDocument();
   });
 
-  it('tells an anonymous reader that games can’t run, with the server’s general sentence', async () => {
+  it('tells an anonymous reader that the game service is out of date, without its versions', async () => {
+    renderWith(
+      health({
+        reachable: true,
+        outdated: true,
+        meta: null,
+        error: "The game service isn't set up correctly. Ask the server host to fix it.",
+      }),
+    );
+    expect(await screen.findByText('The game service is out of date')).toBeInTheDocument();
+    expect(
+      screen.getByText("Games can't run until it's updated. Ask the server host to update the game service."),
+    ).toBeInTheDocument();
+  });
+
+  it('tells an anonymous reader that games can’t run for another cause, with the server’s general sentence', async () => {
     const detail = "The game service isn't set up correctly. Ask the server host to fix it.";
-    renderWith(health({ reachable: true, meta: null, error: detail }));
+    renderWith(health({ reachable: true, outdated: false, meta: null, error: detail }));
     expect(await screen.findByText("Games can't run on this server")).toBeInTheDocument();
     expect(screen.getByText(detail)).toBeInTheDocument();
   });
 
   it('gives a signed-in user another cause of a reachable bxapi under the general title', async () => {
     const detail = 'The bxapi key has the player role. bxvtt needs a referee key.';
-    renderWith(health({ reachable: true, meta: { ...META, role: 'player' }, error: detail }));
+    renderWith(
+      health({ reachable: true, outdated: false, meta: { ...META, role: 'player' }, error: detail }),
+    );
     expect(await screen.findByText("Games can't run on this server")).toBeInTheDocument();
+    expect(screen.getByText(detail)).toBeInTheDocument();
+  });
+
+  it('reads out of date from the flag alone, never from the key’s role', async () => {
+    const detail = 'Something else is wrong with the game service.';
+    renderWith(health({ reachable: true, outdated: false, meta: META, error: detail }));
+    expect(await screen.findByText("Games can't run on this server")).toBeInTheDocument();
+    expect(screen.queryByText('The game service is out of date')).toBeNull();
     expect(screen.getByText(detail)).toBeInTheDocument();
   });
 

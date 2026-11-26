@@ -153,7 +153,7 @@ export function ModeBadge({ mode }: { mode: GameMode }) {
   const info = modeInfo[mode];
   return (
     <Badge tone={info.tone} icon={info.icon}>
-      {info.label}
+      <span className={styles.modeLabel}>{info.label}</span>
     </Badge>
   );
 }
