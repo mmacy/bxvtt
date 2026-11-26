@@ -11,7 +11,7 @@
 import type { MemberView } from '@bxvtt/shared/bxapi';
 import { joinList } from '@bxvtt/shared/text';
 import { useMemo } from 'react';
-import { useParty, useTableUi } from '@/app';
+import { useControllableMembers, useParty, useTableUi } from '@/app';
 import { Banner, Button } from '@/ui';
 import { usePartyAccess, useTownServices } from './hooks';
 import { memberStatus } from './members';
@@ -92,9 +92,14 @@ export function useSpellAdvice(): SpellAdvice {
   return useMemo(() => spellAdvice(party), [party]);
 }
 
-/** The short path: a button that rests the party for a night, and a button that opens each caster's spells. */
+/**
+ * The short path: a button that rests the party for a night, and a button that opens each caster's spells. The
+ * sentence names every caster, but a player gets a spells button only for the characters they play, because only
+ * they can prepare those spells. A referee gets one for every caster.
+ */
 export function SpellActions({ advice }: { advice: SpellAdvice }) {
   const { rest, pending } = useRest();
+  const controllable = useControllableMembers();
   const access = usePartyAccess('rest');
   const services = useTownServices();
   const openSheet = useTableUi((s) => s.openCharacterSheet);
@@ -113,27 +118,29 @@ export function SpellActions({ advice }: { advice: SpellAdvice }) {
           Rest for a night
         </Button>
       )}
-      {advice.canPrepare.map((member) => (
-        <Button
-          key={member.id}
-          size="sm"
-          variant="secondary"
-          icon="spell"
-          onClick={() => openSheet(member.id, 'spells')}
-        >
-          {`Open ${member.name}'s spells`}
-        </Button>
-      ))}
+      {advice.canPrepare
+        .filter((member) => controllable.includes(member.id))
+        .map((member) => (
+          <Button
+            key={member.id}
+            size="sm"
+            variant="secondary"
+            icon="spell"
+            onClick={() => openSheet(member.id, 'spells')}
+          >
+            {`Open ${member.name}'s spells`}
+          </Button>
+        ))}
     </>
   );
 }
 
-/** A warning at the top of the town square while a caster has spells to prepare. */
+/** A reminder at the top of the town square while a caster has spells to prepare. */
 export function SpellBanner() {
   const advice = useSpellAdvice();
   if (!hasSpellAdvice(advice)) return null;
   return (
-    <Banner tone="warning" title="Spells to prepare" actions={<SpellActions advice={advice} />}>
+    <Banner tone="info" title="Spells to prepare" actions={<SpellActions advice={advice} />}>
       {spellAdviceText(advice)}
     </Banner>
   );

@@ -204,6 +204,24 @@ describe('the table ruleset', () => {
     }
   });
 
+  it('reports a roll a character closed, and the roll it was made from, as used', async () => {
+    const table = await referee.client.createTable({ name: 'Closed rolls' });
+    await alice.client.joinTable(table.invite_code);
+    await referee.client.updateTable(table.id, { settings: { ability_score_rerolls: 1 } });
+    const older = await alice.client.rollAbilities(table.id, { seed: 31 });
+    const newer = await alice.client.rollAbilities(table.id, { seed: 32 });
+    expect((await alice.client.getStartingRolls(older.id)).used).toBe(false);
+    await alice.client.createCharacter({
+      name: 'Closer',
+      alignment: 'lawful',
+      class_id: newer.eligible_class_ids[0] ?? '',
+      ability_roll_id: newer.id,
+    });
+    // bxapi never saw the older roll make a character, but the server closed it.
+    expect((await alice.client.getStartingRolls(older.id)).used).toBe(true);
+    expect((await alice.client.getStartingRolls(newer.id)).used).toBe(true);
+  });
+
   it('admits one of several rolls sent at once when the table allows no rerolls', async () => {
     const table = await referee.client.createTable({ name: 'At once' });
     await alice.client.joinTable(table.invite_code);

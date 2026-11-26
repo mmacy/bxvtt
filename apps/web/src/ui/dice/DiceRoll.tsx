@@ -56,6 +56,8 @@ export interface DiceRollProps {
   /** Called once when every die has landed, or at once when the roll does not animate. */
   onSettled?: () => void;
   className?: string;
+  /** A class for the row of dice, such as one that sets them in a grid on a narrow screen. */
+  diceClassName?: string;
 }
 
 type Phase = 'rolling' | 'settled';
@@ -112,6 +114,7 @@ export function DiceRoll({
   reducedMotion: reducedMotionProp,
   onSettled,
   className,
+  diceClassName,
 }: DiceRollProps) {
   const kitReducedMotion = useKitReducedMotion();
   const reducedMotion = reducedMotionProp ?? kitReducedMotion;
@@ -197,7 +200,7 @@ export function DiceRoll({
       )}
       <div className={styles.body}>
         <div
-          className={styles.dice}
+          className={cx(styles.dice, diceClassName)}
           onClick={skip}
           aria-hidden="true"
           style={{ '--roll-duration': `${LAND_BASE}ms` } as CSSProperties}

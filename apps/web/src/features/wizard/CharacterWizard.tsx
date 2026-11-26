@@ -30,7 +30,6 @@ import { ClassStep } from './ClassStep';
 import {
   STEP_IDS,
   adjustedScores,
-  canRollNewScores,
   emptyDraft,
   hasAdjustment,
   loadDraft,
@@ -169,8 +168,8 @@ export interface ContinueFacts {
   eligible: readonly string[];
   /** Whether the dice of a fresh roll are still landing. */
   revealing: boolean;
-  /** Whether the table lets the player roll new ability scores now. */
-  canReroll: boolean;
+  /** How the roll step lets the player get new ability scores now, from [`rerollOffer`][rerollOffer]. */
+  newScores: 'roll_again' | 'start_again' | 'none';
   classId: string | null;
   adjust: AdjustCheckState['status'];
   /** Whether the starting gold is rolled. */
@@ -191,9 +190,12 @@ export function continueBlock(facts: ContinueFacts): { reason: string | null } |
       if (facts.revealing) return wait;
       if (facts.eligible.length === 0)
         return {
-          reason: facts.canReroll
-            ? "These ability scores don't qualify for any class. Roll again."
-            : "These ability scores don't qualify for any class. Ask the referee to allow another reroll.",
+          reason:
+            facts.newScores === 'start_again'
+              ? "These ability scores don't qualify for any class. Start again."
+              : facts.newScores === 'roll_again'
+                ? "These ability scores don't qualify for any class. Roll again."
+                : "These ability scores don't qualify for any class. Ask the referee to allow another reroll.",
         };
       return null;
     case 'class':
@@ -267,17 +269,32 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
 
   const rollId = draft.roll?.id ?? null;
   const currentRollId = useRef(rollId);
-  // The table counts the rolls, so whether the player can roll new scores comes from the server's answer.
-  const canStartOver = canRollNewScores(draft.roll);
+  // The table counts the rolls and bxapi judges a sub-par roll, so whether the player can roll new scores comes
+  // from their answers: rerolls left, no limit, or a sub-par roll the table lets the player discard.
+  const offer = draft.roll === null ? null : rerollOffer(draft.roll);
+  const canStartOver = offer !== null && offersNewScores(offer);
   // A refusal read in an effect words its advice by this, without reading the dice again when it changes.
   const canStartOverNow = useRef(canStartOver);
+  const rerollLimit = table?.settings.ability_score_rerolls;
+  const rerollLimitNow = useRef(rerollLimit);
   useEffect(() => {
     currentRollId.current = rollId;
     canStartOverNow.current = canStartOver;
+    rerollLimitNow.current = rerollLimit;
+  });
+  // The step heading takes focus after a new roll, because the button that rolled may leave the screen.
+  const stepHeading = useRef<HTMLHeadingElement>(null);
+  const focusHeading = useRef(false);
+  useEffect(() => {
+    if (!focusHeading.current) return;
+    focusHeading.current = false;
+    stepHeading.current?.focus();
   });
 
   // What the server recorded about the draft's roll: its starting rolls, and the class the hit points fixed.
   const [recorded, setRecorded] = useState<Recorded | null>(null);
+  // The roll and reroll limit the wizard last read the roll's `rerolls_left` under.
+  const [readRoll, setReadRoll] = useState<string | null>(null);
 
   /** Takes a roll the server answered as the draft's roll, keeping only the identity. */
   const takeRoll = useCallback((roll: AbilityRoll, fresh: boolean) => {
@@ -290,6 +307,9 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
         status: { used: false, class_id: null, rules: roll.rules, gold_rolled: false },
       });
     }
+    // The server's answer states the rerolls left under the limit now, so the wizard needn't read the roll again
+    // until the referee changes the limit.
+    setReadRoll(`${roll.id}:${String(rerollLimitNow.current)}`);
     setDraft((d) => withRoll(d, roll));
   }, []);
 
@@ -372,7 +392,9 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
 
   // A wizard that opens without a roll, such as in another browser, picks up the player's newest open roll at the
   // table. Only that roll can make a character, and the table may allow no more.
+  // Until the server answers, Roll ability scores waits, so a click can't spend a reroll the player already used.
   const [lookForCurrent] = useState(opening.draft?.roll == null);
+  const [lookedForCurrent, setLookedForCurrent] = useState(!lookForCurrent);
   useEffect(() => {
     if (!lookForCurrent || tableId === '') return;
     let cancelled = false;
@@ -380,12 +402,23 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
       .getCurrentAbilityRoll(tableId)
       .then(
         (roll) => {
-          if (!cancelled && currentRollId.current === null) takeRoll(roll, false);
+          if (cancelled || currentRollId.current !== null) return;
+          takeRoll(roll, false);
+          // Scores the player didn't see this wizard roll would look like a roll made for them.
+          setProblem({
+            step: 'roll',
+            tone: 'info',
+            title: 'Your latest ability scores',
+            sentences: ['These are the ability scores you rolled last.'],
+          });
         },
         () => {
           // No open roll, or the server can't say: the player rolls as usual.
         },
-      );
+      )
+      .finally(() => {
+        if (!cancelled) setLookedForCurrent(true);
+      });
     return () => {
       cancelled = true;
     };
@@ -437,10 +470,8 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
   // A restored roll is read again from the server, which states the rerolls the table allows now and fills in
   // dice a damaged draft lost. The roll step shows placeholders until the dice arrive. The wizard reads it again
   // when the referee changes the reroll limit, so the reroll row follows the table.
-  const rerollLimit = table?.settings.ability_score_rerolls;
-  const [readRoll, setReadRoll] = useState<string | null>(null);
   const readKey = rollId === null ? null : `${rollId}:${String(rerollLimit)}`;
-  const readFor = readKey !== null && readKey !== readRoll && rollId !== freshRollId ? rollId : null;
+  const readFor = readKey !== null && readKey !== readRoll ? rollId : null;
   useEffect(() => {
     if (readFor === null || readKey === null) return;
     let cancelled = false;
@@ -642,6 +673,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
     setProblem(null);
     try {
       takeRoll(await getApi().rollAbilities(tableId), true);
+      focusHeading.current = true;
     } catch (error) {
       if (!handleRollRefusal(error)) setProblem({ ...explainCreationError(error), step: 'roll' });
     } finally {
@@ -823,7 +855,12 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
     rolled: draft.roll !== null,
     eligible,
     revealing: draft.roll !== null && draft.roll.id === freshRollId && revealedRollId !== draft.roll.id,
-    canReroll: draft.roll !== null && offersNewScores(rerollOffer(draft.roll)),
+    newScores:
+      offer?.kind === 'sub_par'
+        ? 'start_again'
+        : offer !== null && offersNewScores(offer)
+          ? 'roll_again'
+          : 'none',
     classId: draft.classId,
     adjust: adjustCheck.status,
     goldRolled: rolls?.gold_roll != null,
@@ -916,7 +953,9 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
           className={styles.stepper}
         />
         <div className={styles.stepHeading}>
-          <h3 className={styles.stepTitle}>{STEP_LABELS[step]}</h3>
+          <h3 ref={stepHeading} tabIndex={-1} className={styles.stepTitle}>
+            {STEP_LABELS[step]}
+          </h3>
           <p className={styles.stepDescription}>{stepDescription(step)}</p>
         </div>
         {restored && step !== 'roll' && (
@@ -1074,6 +1113,16 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
           Back
         </Button>
       )}
+      {draft.step === 'roll' && draft.roll === null && (
+        <Button
+          variant="primary"
+          icon="dice"
+          loading={rolling || !lookedForCurrent}
+          onClick={() => void roll()}
+        >
+          Roll ability scores
+        </Button>
+      )}
       {draft.step === 'review' ? (
         <Button variant="primary" icon="check" loading={busy} onClick={() => void next()}>
           Create character
@@ -1120,7 +1169,8 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
         onOpenChange={setConfirmReset}
         title="Start over?"
         description={
-          draft.roll?.rerolls_left === null
+          // Discarding a sub-par roll uses no reroll, so it reads as the unlimited case does.
+          draft.roll?.rerolls_left === null || offer?.kind === 'sub_par'
             ? 'This clears your ability scores and every choice so you can roll a new character.'
             : 'This clears your ability scores and every choice. Rolling new scores uses one of your rerolls.'
         }

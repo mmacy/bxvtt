@@ -9,7 +9,7 @@ import type {
   StartingRollsStatus,
   StoredCharacter,
 } from '@bxvtt/shared/protocol';
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { createFakeApi, renderWithTable, type FakeApi } from '@/app/testing/renderWithTable';
@@ -400,7 +400,7 @@ describe('the hit points and gold step', () => {
     openOn({ step: 'hp_gold' }, wizardApi());
     const roll = await screen.findByRole('button', { name: 'Roll hit points' });
     expect(roll).toHaveAccessibleDescription(
-      'Rolling hit points fixes your class as a fighter, but you can still change your ability trade, identity, and equipment. To play another class after you roll, start over with new ability scores.',
+      'Rolling hit points fixes your class as a fighter, but you can still change your ability trade, identity, and equipment. To play another class afterward, start over with new ability scores.',
     );
     const gold = screen.getByRole('button', { name: 'Roll starting gold' });
     expect(gold).toHaveAttribute('aria-disabled', 'true');
@@ -603,6 +603,64 @@ describe("the table's reroll limit", () => {
     });
     expect(await screen.findByRole('group', { name: /^Strength 15/ })).toBeInTheDocument();
     expect(api.getCurrentAbilityRoll).toHaveBeenCalledWith(TABLE_ID);
+    // Scores the player didn't see this wizard roll say where they came from.
+    expect(screen.getByText('Your latest ability scores')).toBeInTheDocument();
+    expect(screen.getByText('These are the ability scores you rolled last.')).toBeInTheDocument();
+  });
+
+  it('holds Roll ability scores until the server says whether an open roll exists', async () => {
+    const api = wizardApi();
+    let answer: (error: unknown) => void = () => {};
+    api.getCurrentAbilityRoll.mockReturnValue(new Promise((_resolve, reject) => (answer = reject)));
+    const { user } = renderWithTable(<CharacterWizard open onClose={() => {}} onCreated={() => {}} />, {
+      api,
+      snapshot: fixtureSnapshot('lobby', 'player'),
+      preferences: { motion: 'reduce' },
+    });
+    const button = await screen.findByRole('button', { name: 'Roll ability scores' });
+    expect(button).toHaveAttribute('aria-busy', 'true');
+    await user.click(button);
+    expect(api.rollAbilities).not.toHaveBeenCalled();
+    answer(refusal('not_found'));
+    await waitFor(() => expect(button).not.toHaveAttribute('aria-busy'));
+    await user.click(button);
+    expect(api.rollAbilities).toHaveBeenCalledWith(TABLE_ID);
+  });
+
+  it('moves focus to the step heading after a roll, because the button that rolled goes away', async () => {
+    const { user } = renderWithTable(<CharacterWizard open onClose={() => {}} onCreated={() => {}} />, {
+      api: wizardApi(),
+      snapshot: fixtureSnapshot('lobby', 'player'),
+      preferences: { motion: 'reduce' },
+    });
+    const button = await screen.findByRole('button', { name: 'Roll ability scores' });
+    await waitFor(() => expect(button).not.toHaveAttribute('aria-busy'));
+    await user.click(button);
+    await waitFor(() =>
+      expect(screen.getByRole('heading', { name: 'Roll abilities', level: 3 })).toHaveFocus(),
+    );
+  });
+
+  it('brings Roll again back to a roll made in this wizard when the referee raises the limit', async () => {
+    const api = wizardApi();
+    api.rollAbilities.mockResolvedValue(rollWith(0, 0));
+    const { user, store } = renderWithTable(
+      <CharacterWizard open onClose={() => {}} onCreated={() => {}} />,
+      { api, snapshot: fixtureSnapshot('lobby', 'player'), preferences: { motion: 'reduce' } },
+    );
+    const button = await screen.findByRole('button', { name: 'Roll ability scores' });
+    await waitFor(() => expect(button).not.toHaveAttribute('aria-busy'));
+    await user.click(button);
+    await screen.findByRole('group', { name: /^Strength 15/ });
+    expect(screen.queryByRole('button', { name: 'Roll again' })).toBeNull();
+    expect(api.getAbilityRoll).not.toHaveBeenCalled();
+    api.getAbilityRoll.mockResolvedValue(rollWith(0, 2));
+    const table = store.getState().table;
+    if (table === null) throw new Error('No table.');
+    act(() =>
+      store.getState().receiveTable({ ...table, settings: { ...table.settings, ability_score_rerolls: 2 } }),
+    );
+    expect(await screen.findByRole('button', { name: 'Roll again' })).toHaveAccessibleDescription('2 left');
   });
 
   it('starts over from a draft whose roll was made before rolls belonged to a table', async () => {
@@ -661,9 +719,13 @@ describe('the creation house rules', () => {
     const { user } = openOn({ step: 'hp_gold', roll: { ...ROLL, rules: FOUR_D6 } }, api);
     const take = await screen.findByRole('button', { name: 'Take the maximum' });
     expect(screen.getByText('Maximum hit points')).toBeInTheDocument();
+    // The house rule takes no roll, so its button shows no dice.
+    expect(take.querySelector('svg')).toBeNull();
     await user.click(take);
     const maximum = await screen.findByRole('group', { name: 'Maximum hit die' });
     expect(within(maximum).getByRole('img', { name: 'd8 showing 8' })).toBeInTheDocument();
+    // The total sits beside the die, as a rolled die's does. Constitution 11 adds nothing.
+    expect(maximum).toHaveTextContent('Maximum8=8');
     expect(screen.getByText('You start with 8 hit points.')).toBeInTheDocument();
   });
 
@@ -681,6 +743,23 @@ describe('the creation house rules', () => {
     expect(screen.queryByRole('button', { name: 'Roll again' })).toBeNull();
     await user.click(again);
     expect(api.rollAbilities).toHaveBeenCalledWith(TABLE_ID);
+  });
+
+  it('lets a player start over from a sub-par roll with no rerolls left, at no cost', async () => {
+    const roll: AbilityRoll = {
+      ...rollWith(0, 0),
+      rules: { ...RULES, ability_score_rerolls: 0, sub_par_restart: true },
+      rolls: { ...ROLL.rolls, sub_par: true },
+    };
+    const api = wizardApi();
+    api.getAbilityRoll.mockResolvedValue(roll);
+    const { user } = openOn({ step: 'class', roll }, api);
+    await user.click(await screen.findByRole('button', { name: 'Start over' }));
+    expect(
+      await screen.findByText(
+        'This clears your ability scores and every choice so you can roll a new character.',
+      ),
+    ).toBeInTheDocument();
   });
 });
 

@@ -31,6 +31,7 @@ import {
   cx,
   Field,
   Icon,
+  RadioGroup,
   SegmentedControl,
   Select,
   Skeleton,
@@ -54,6 +55,7 @@ import {
   type CarriedItem,
   type MemberGear,
 } from './model';
+import { withoutPointers } from '../sheet/spellText';
 import styles from './combat.module.css';
 import { useEncounterCreatures } from './text';
 import { useCasting } from './casting';
@@ -667,13 +669,14 @@ function SpellTargets({
     <div className={styles.choiceStack}>
       <p className={styles.choiceHint}>
         {spellRangeText(spell)}
-        {form?.duration ? ` · ${form.duration}` : ''} · {firstSentence(mode.prose || spell.intro)}
+        {form?.duration ? ` · ${form.duration}` : ''} ·{' '}
+        {withoutPointers(firstSentence(mode.prose || spell.intro))}
       </p>
       {(modes.length > 1 || choosesForm) && (
         <div className={styles.optionRow}>
           {modes.length > 1 && (
-            <SegmentedControl
-              size="sm"
+            // A vertical list keeps every mode's full label on screen, however long bxapi words it.
+            <RadioGroup
               aria-label={`How to cast ${name}`}
               value={mode.key}
               onValueChange={(value) => {

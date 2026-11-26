@@ -120,7 +120,9 @@ export class StartingRollKeeper {
       { passNotFound: true },
     );
     return {
-      used: roll.used,
+      // A roll is used when bxapi made a character from it, when the server recorded one, or when the server
+      // closed it because the user made a character from another roll or discarded it as sub-par.
+      used: roll.used || record.closed || record.characterId !== null,
       class_id: record.classId,
       rules: creationRulesOf(record.rules),
       gold_rolled: record.goldRolled,

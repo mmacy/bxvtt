@@ -43,9 +43,9 @@ const STARTING: StartingRuleset[] = [
   },
 ];
 
-/** The Rules panel's toggle, not the rules reference. */
+/** The Rules panel's toggle, not the rules reference or a roster mark. */
 function rulesToggle() {
-  return screen.getByRole('button', { name: /^Rules(?! reference)/ });
+  return screen.getByRole('button', { name: /^Rules$/ });
 }
 
 const TABLE_RULES: CreationRules = {
@@ -220,10 +220,21 @@ describe('LobbyPage', () => {
     expect(await screen.findByText('Standard B/X')).toBeInTheDocument();
     await user.click(rulesToggle());
     expect(screen.getByText('Only a referee can change the rules.')).toBeInTheDocument();
-    expect(screen.getByRole('switch', { name: /Hit die reroll/ })).toBeDisabled();
-    expect(screen.getByRole('switch', { name: /Back-stab from hiding/ })).toBeDisabled();
-    expect(screen.getByRole('checkbox', { name: 'Unlimited' })).toBeDisabled();
+    // The switches are read-only, not disabled, so their labels stay at full contrast and a click changes nothing.
+    const reroll = screen.getByRole('switch', { name: /Hit die reroll/ });
+    expect(reroll).toHaveAttribute('aria-readonly', 'true');
+    expect(reroll).toBeChecked();
+    await user.click(reroll);
+    expect(reroll).toBeChecked();
+    expect(fake.updateTable).not.toHaveBeenCalled();
+    expect(screen.getByRole('switch', { name: /Back-stab from hiding/ })).toHaveAttribute(
+      'aria-readonly',
+      'true',
+    );
+    expect(screen.getByRole('checkbox', { name: 'Unlimited' })).toHaveAttribute('aria-readonly', 'true');
     expect(screen.getByRole('combobox', { name: 'Starting rules' })).toBeDisabled();
+    // A player has nothing to choose, so the field has no hint about choosing.
+    expect(screen.queryByText(/Choosing one changes every rule/)).toBeNull();
     expect(screen.queryByText(/Rules unknown|Other table|Different rules/)).toBeNull();
   });
 
@@ -245,11 +256,21 @@ describe('LobbyPage', () => {
       api: fake,
     });
     api.updateTable.mockResolvedValue(snapshot.table);
-    expect(screen.getByText('Rules unknown')).toBeInTheDocument();
+    // A tap on the mark shows the reason, so a referee on a touch screen reads it too.
+    await user.click(screen.getByRole('button', { name: 'Rules unknown: show why' }));
+    expect(await screen.findByRole('dialog', { name: 'Rules unknown' })).toHaveTextContent(
+      `No creation rules were recorded for ${first?.name ?? ''}.`,
+    );
+    await user.keyboard('{Escape}');
     await user.click(rulesToggle());
     await user.click(await screen.findByRole('combobox', { name: 'Starting rules' }));
     await user.click(await screen.findByRole('option', { name: 'Creation house rules' }));
     expect(await screen.findByText('Use creation house rules?')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'This changes every rule to creation house rules and discards the changes you made. Sub-par characters and ability score rerolls stay as they are.',
+      ),
+    ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Use creation house rules' }));
     await waitFor(() =>
       expect(api.updateTable).toHaveBeenCalledWith(custom.id, {
@@ -304,5 +325,44 @@ describe('LobbyPage', () => {
     api.addToRoster.mockResolvedValue(snapshot.table);
     await user.click(await screen.findByRole('button', { name: 'Add to party' }));
     expect(api.addToRoster).toHaveBeenCalledWith(store.getState().tableId, 'chr_nnnnnnnnnnnnnnnnnnnnnn');
+  });
+  it('keeps a newer rerolls number on screen while an older one saves, and saves a number left waiting', async () => {
+    const snapshot = fixtureSnapshot('lobby', 'referee');
+    const fake = createFakeApi();
+    fake.listRulesets.mockResolvedValue({ items: STARTING });
+    fake.listAdventures.mockResolvedValue({ items: [] });
+    fake.listCharacters.mockResolvedValue({ items: [] });
+    const answers: Array<() => void> = [];
+    fake.updateTable.mockImplementation(
+      (_id, body) =>
+        new Promise((resolve) => {
+          answers.push(() =>
+            resolve({
+              ...snapshot.table,
+              settings: {
+                ...snapshot.table.settings,
+                ability_score_rerolls: body.settings?.ability_score_rerolls ?? 0,
+              },
+            }),
+          );
+        }),
+    );
+    const { user, unmount } = renderWithTable(<LobbyPage />, { snapshot, api: fake });
+    await user.click(rulesToggle());
+    const rerolls = screen.getByRole('spinbutton', { name: 'Ability score rerolls' });
+    await user.clear(rerolls);
+    await user.type(rerolls, '5{Enter}');
+    await user.clear(rerolls);
+    await user.type(rerolls, '6{Enter}');
+    // The table stores 5 first. The 6 the referee chose since stays on screen until it's stored too.
+    answers[0]?.();
+    await waitFor(() => expect(fake.updateTable).toHaveBeenCalledTimes(2));
+    expect(rerolls).toHaveValue('6');
+    // A step waits a moment before it's sent. Closing the form sends it at once.
+    await user.keyboard('{ArrowUp}');
+    unmount();
+    expect(fake.updateTable).toHaveBeenLastCalledWith(snapshot.table.id, {
+      settings: { ability_score_rerolls: 7 },
+    });
   });
 });

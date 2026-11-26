@@ -19,6 +19,8 @@ export interface NumberInputProps {
   id?: string;
   /** Accessible name when the input is not inside a Field. */
   'aria-label'?: string;
+  /** IDs of elements that describe the input, such as a hint beside it, when it isn't inside a Field. */
+  'aria-describedby'?: string;
   /**
    * Accessible names for the step buttons. By default they name the field: "Decrease Strength" from a Field
    * labelled "Strength", or from `aria-label` outside a Field.
@@ -62,6 +64,7 @@ export function NumberInput({
   invalid,
   id,
   'aria-label': ariaLabel,
+  'aria-describedby': describedBy,
   decrementLabel,
   incrementLabel,
   minReason,
@@ -179,7 +182,7 @@ export function NumberInput({
         aria-valuemin={min}
         aria-valuemax={max}
         aria-invalid={isInvalid || undefined}
-        aria-describedby={joinIds(field?.describedBy, limits.length > 0 ? limitId : undefined)}
+        aria-describedby={joinIds(field?.describedBy, describedBy, limits.length > 0 ? limitId : undefined)}
         onChange={(event) => {
           const text = event.target.value;
           if (/^-?\d*$/.test(text)) setDraft(text);

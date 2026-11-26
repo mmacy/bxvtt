@@ -393,14 +393,3 @@ export function saveDraft(
     // Storage is full or blocked. The draft lives in memory while the page is open.
   }
 }
-
-/**
- * Whether the player can roll new ability scores at the table now: the roll's table has rerolls left, or no
- * limit. The server counts the rolls and states the result as `rerolls_left`.
- *
- * @param roll - The draft's roll.
- */
-export function canRollNewScores(roll: DraftRoll | null): boolean {
-  if (roll === null) return true;
-  return roll.rerolls_left === null || (roll.rerolls_left !== undefined && roll.rerolls_left >= 1);
-}

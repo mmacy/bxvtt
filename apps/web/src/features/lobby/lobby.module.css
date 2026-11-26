@@ -550,11 +550,6 @@
 }
 
 /* The referee's mark on a roster character built under other rules */
-.markFocus {
-  display: inline-flex;
-  border-radius: var(--radius-sm);
-}
-
 .markLines {
   display: grid;
   gap: var(--space-0-5);
@@ -566,4 +561,9 @@
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-1);
+}
+
+/* The rerolls row: the number and Unlimited sit where the other rows put their Select. */
+.ruleNumber > :last-child {
+  width: auto;
 }

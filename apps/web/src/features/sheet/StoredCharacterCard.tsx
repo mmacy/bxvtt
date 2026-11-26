@@ -16,10 +16,21 @@ export interface StoredCharacterCardProps {
   owner?: { name: string; color: string } | null;
   /** Controls the lobby puts on the card, such as reorder and remove buttons. */
   actions?: ReactNode;
+  /**
+   * A line under the level and class, such as the referee's mark on a character built under other rules. It sits
+   * in the text column, so it never squeezes the name on a narrow screen.
+   */
+  status?: ReactNode;
 }
 
 /** A stored character in the lobby: on the roster, or in the user's list of characters to add. */
-export function StoredCharacterCard({ characterId, summary, owner, actions }: StoredCharacterCardProps) {
+export function StoredCharacterCard({
+  characterId,
+  summary,
+  owner,
+  actions,
+  status,
+}: StoredCharacterCardProps) {
   const [open, setOpen] = useState(false);
   return (
     <Card padding="sm" className={styles.card}>
@@ -48,6 +59,7 @@ export function StoredCharacterCard({ characterId, summary, owner, actions }: St
             </span>
           ) : null}
         </p>
+        {status && <div className={styles.status}>{status}</div>}
       </div>
       <div className={styles.actions}>{actions}</div>
       <StoredSheetDrawer

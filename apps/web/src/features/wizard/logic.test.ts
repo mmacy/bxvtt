@@ -8,7 +8,6 @@ import catalog from './__fixtures__/catalog.json';
 import { continueBlock, type ContinueFacts } from './CharacterWizard';
 import { autoEquip } from './OutfitStep';
 import {
-  canRollNewScores,
   draftKey,
   emptyDraft,
   legacyDraftKey,
@@ -213,10 +212,10 @@ describe('the reroll row', () => {
     expect(offersNewScores(rerollOffer(subPar))).toBe(false);
   });
 
-  it('lets the player start over only with rerolls left or no limit', () => {
-    expect(canRollNewScores(roll)).toBe(true);
-    expect(canRollNewScores({ ...roll, rerolls_left: 0 })).toBe(false);
-    expect(canRollNewScores({ ...roll, rerolls_left: null })).toBe(true);
+  it('lets the player roll new scores with rerolls left, no limit, or a sub-par roll to discard', () => {
+    expect(offersNewScores(rerollOffer(roll))).toBe(true);
+    expect(offersNewScores(rerollOffer({ ...roll, rerolls_left: 0 }))).toBe(false);
+    expect(offersNewScores(rerollOffer({ ...roll, rerolls_left: null }))).toBe(true);
   });
 
   it('shows the dropped die bxapi named after the three that count', () => {
@@ -423,7 +422,7 @@ describe('continueBlock', () => {
     rolled: true,
     eligible: ['fighter'],
     revealing: false,
-    canReroll: true,
+    newScores: 'roll_again',
     classId: 'fighter',
     adjust: 'idle',
     goldRolled: true,
@@ -435,8 +434,11 @@ describe('continueBlock', () => {
     expect(continueBlock({ ...facts, eligible: [] })).toEqual({
       reason: "These ability scores don't qualify for any class. Roll again.",
     });
-    expect(continueBlock({ ...facts, eligible: [], canReroll: false })).toEqual({
+    expect(continueBlock({ ...facts, eligible: [], newScores: 'none' })).toEqual({
       reason: "These ability scores don't qualify for any class. Ask the referee to allow another reroll.",
+    });
+    expect(continueBlock({ ...facts, eligible: [], newScores: 'start_again' })).toEqual({
+      reason: "These ability scores don't qualify for any class. Start again.",
     });
     expect(continueBlock({ ...facts, eligible: [], revealing: true })).toEqual({ reason: null });
     expect(continueBlock({ ...facts, step: 'class', classId: null })).toEqual({

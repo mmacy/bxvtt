@@ -25,6 +25,11 @@ export interface SelectProps {
   defaultValue?: string;
   onValueChange?: (value: string) => void;
   placeholder?: string;
+  /**
+   * How the placeholder reads. `hint` (the default) dims it, as an empty field. `value` sets it in the normal text
+   * colour, for a placeholder that names a state rather than asking for a choice, such as "Custom".
+   */
+  placeholderTone?: 'hint' | 'value';
   size?: InputSize;
   disabled?: boolean;
   invalid?: boolean;
@@ -45,6 +50,7 @@ export function Select({
   defaultValue,
   onValueChange,
   placeholder = 'Choose',
+  placeholderTone = 'hint',
   size = 'md',
   disabled,
   invalid,
@@ -88,7 +94,13 @@ export function Select({
         aria-describedby={field?.describedBy}
         className={cx(styles.trigger, styles[size], isInvalid && styles.invalid, className)}
       >
-        <SelectPrimitive.Value placeholder={<span className={styles.placeholder}>{placeholder}</span>} />
+        <SelectPrimitive.Value
+          placeholder={
+            <span className={placeholderTone === 'value' ? undefined : styles.placeholder}>
+              {placeholder}
+            </span>
+          }
+        />
         <SelectPrimitive.Icon className={styles.chevron}>
           <Icon name="chevrons-up-down" size={14} />
         </SelectPrimitive.Icon>

@@ -129,7 +129,8 @@ export function TableSettingsForm({ showName = false }: { showName?: boolean }) 
         label="Resolve rounds automatically"
         description="A battle round resolves as soon as every character who can act has declared, instead of waiting for the caller or referee."
         checked={settings.auto_resolve}
-        disabled={readOnly || pending}
+        // A player reads the switches at full contrast. A referee's hold while a change is on its way.
+        readOnly={readOnly || pending}
         labelPosition="start"
         onCheckedChange={(checked) => void update({ settings: { auto_resolve: checked } })}
       />
@@ -137,7 +138,8 @@ export function TableSettingsForm({ showName = false }: { showName?: boolean }) 
         label="Save automatically"
         description={`The game saves when the party enters a dungeon, changes levels, encounters monsters, or returns to town, and keeps the newest ${LIMITS.autosaves}.`}
         checked={settings.autosave}
-        disabled={readOnly || pending}
+        // A player reads the switches at full contrast. A referee's hold while a change is on its way.
+        readOnly={readOnly || pending}
         labelPosition="start"
         onCheckedChange={(checked) => void update({ settings: { autosave: checked } })}
       />

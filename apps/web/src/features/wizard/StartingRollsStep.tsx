@@ -148,13 +148,14 @@ export function StartingRollsStep({
                 {maxRule
                   ? `Taking the maximum fixes your class as ${article}, but you can still change your ability trade, identity, and equipment.`
                   : `Rolling hit points fixes your class as ${article}, but you can still change your ability trade, identity, and equipment.`}
-                {canStartOver && ' To play another class after you roll, start over with new ability scores.'}
+                {canStartOver && ' To play another class afterward, start over with new ability scores.'}
               </span>
             </p>
             <div>
               <Button
                 variant="primary"
-                icon="dice"
+                // The house rule exists so the die isn't rolled, so the button shows no dice.
+                icon={maxRule ? undefined : 'dice'}
                 loading={rolling === 'hit_points'}
                 aria-describedby={HIT_POINT_LOCK_NOTE_ID}
                 onClick={onRollHitPoints}
@@ -193,8 +194,18 @@ export function StartingRollsStep({
                   <span className={styles.setAsideLabel} aria-hidden="true">
                     Maximum
                   </span>
-                  {/* The face of the hit die's maximum is the die's size. */}
-                  <Die sides={sides} value={sides} size={44} />
+                  <span className={styles.maxRow}>
+                    {/* The face of the hit die's maximum is the die's size. */}
+                    <Die sides={sides} value={sides} size={44} />
+                    {/* The total, as a rolled die shows it, so the Constitution modifier is next to the die. */}
+                    <span className={styles.maxTotal} aria-hidden="true">
+                      {conModifier !== undefined && conModifier !== 0 && (
+                        <span className={styles.maxEquals}>{formatModifier(conModifier)}</span>
+                      )}
+                      <span className={styles.maxEquals}>=</span>
+                      <span className={styles.maxTotalValue}>{hp.hit_points}</span>
+                    </span>
+                  </span>
                 </div>
               )
             ) : sides !== null && kept !== null ? (

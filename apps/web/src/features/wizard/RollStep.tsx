@@ -3,7 +3,18 @@ import type { CreationRules } from '@bxvtt/shared/protocol';
 import { abilityLabel, classLabel } from '@bxvtt/shared/text';
 import { useEffect, useState } from 'react';
 import { useReduceMotion } from '@/app';
-import { Badge, Button, DiceRoll, Skeleton, StatBox, Tooltip, formatModifier, type RolledDie } from '@/ui';
+import {
+  Badge,
+  Button,
+  DiceRoll,
+  Skeleton,
+  StatBox,
+  Tooltip,
+  cx,
+  formatDiceFormula,
+  formatModifier,
+  type RolledDie,
+} from '@/ui';
 import type { DraftRoll } from './draft';
 import { ABILITIES, headlineModifier, modifierLines, readScores, type Ability, type Scores } from './tables';
 import styles from './wizard.module.css';
@@ -131,19 +142,31 @@ function AbilityCell({
     <div className={styles.abilityCell}>
       <div className={styles.diceSlot} aria-busy={shown && faces === undefined ? true : undefined}>
         {shown && faces ? (
-          <DiceRoll
-            dice={abilityDice(faces, dropped)}
-            label={abilityLabel(ability)}
-            // Four dice share the cell that three fill under 3d6, so each is smaller.
-            size={dropped === undefined ? 34 : 26}
-            hideTotal
-            highlightExtremes={false}
-            animate={play}
-            onSettled={() => {
-              setSettled(true);
-              onSettled?.();
-            }}
-          />
+          <div className={styles.diceLoading}>
+            {/* The cell names the roll itself, so on a phone the formula can sit under the ability's name. */}
+            <div className={styles.diceLoadingHeader} aria-hidden="true">
+              <span className={styles.diceLoadingLabel}>{abilityLabel(ability)}</span>
+              <span className={styles.diceLoadingFormula}>
+                {formatDiceFormula(abilityDice(faces, dropped))}
+              </span>
+            </div>
+            <DiceRoll
+              dice={abilityDice(faces, dropped)}
+              label={abilityLabel(ability)}
+              // Four dice share the cell that three fill under 3d6, so each is smaller.
+              size={dropped === undefined ? 34 : 26}
+              hideTotal
+              hideHeader
+              highlightExtremes={false}
+              animate={play}
+              // On a phone, four dice sit in two rows of two, so the dropped die is always last, bottom right.
+              diceClassName={dropped === undefined ? undefined : styles.fourDice}
+              onSettled={() => {
+                setSettled(true);
+                onSettled?.();
+              }}
+            />
+          </div>
         ) : shown ? (
           <div className={styles.diceLoading} aria-hidden="true">
             <div className={styles.diceLoadingHeader}>
@@ -152,7 +175,7 @@ function AbilityCell({
                 {method === '4d6_drop_lowest' ? '4d6' : '3d6'}
               </span>
             </div>
-            <div className={styles.diceLoadingDice}>
+            <div className={cx(styles.diceLoadingDice, method === '4d6_drop_lowest' && styles.fourDice)}>
               {Array.from({ length: method === '4d6_drop_lowest' ? 4 : 3 }, (_, index) => (
                 <Skeleton
                   key={index}
@@ -294,6 +317,12 @@ export function RollStep({
   if (!roll) {
     return (
       <div className={styles.stepBody}>
+        {/* The footer holds Roll ability scores, so it's on screen at every width. */}
+        <p className={styles.lead}>
+          {method === '4d6_drop_lowest'
+            ? 'You roll 4d6 for each ability in order from Strength to Charisma, and keep the highest three. Each score stays where it falls, and you choose from the classes you qualify for.'
+            : 'You roll 3d6 in order from Strength to Charisma. Under B/X rules, you keep each score where it falls and choose from the classes you qualify for.'}
+        </p>
         <AbilityRow
           scores={null}
           dice={null}
@@ -303,16 +332,6 @@ export function RollStep({
           tables={tables}
           waiting
         />
-        <div className={styles.rollCall}>
-          <p className={styles.lead}>
-            {method === '4d6_drop_lowest'
-              ? 'You roll 4d6 for each ability in order from Strength to Charisma, and keep the highest three. You keep each score where it falls and choose from the classes you qualify for.'
-              : 'You roll 3d6 in order from Strength to Charisma. Under B/X rules, you keep each score where it falls and choose from the classes you qualify for.'}
-          </p>
-          <Button variant="primary" icon="dice" size="lg" loading={rolling} onClick={onRoll}>
-            Roll ability scores
-          </Button>
-        </div>
       </div>
     );
   }

@@ -153,12 +153,13 @@ export function RosterPanel() {
                     owner={
                       owner ? { name: mine ? `${owner.name} (you)` : owner.name, color: owner.color } : null
                     }
+                    status={
+                      referee ? <CreationRulesMark entry={entry} settings={table.settings} /> : undefined
+                    }
                     actions={
-                      // The actions wrap on a narrow screen, so the referee's mark never widens the page.
                       <div className={styles.rosterActions}>
                         {referee && (
                           <>
-                            <CreationRulesMark entry={entry} settings={table.settings} />
                             <IconButton
                               icon="arrow-up"
                               label={`Move ${entry.name} forward`}

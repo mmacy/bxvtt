@@ -19,6 +19,12 @@ export interface CheckboxProps {
   defaultChecked?: boolean;
   onCheckedChange?: (checked: boolean) => void;
   disabled?: boolean;
+  /**
+   * Shows the value without letting anyone change it, such as a setting only a referee can change. Only the box
+   * dims: the label and description stay at full contrast, so the value stays easy to read. The box stays in the
+   * tab order and reports `aria-readonly`.
+   */
+  readOnly?: boolean;
   id?: string;
   className?: string;
 }
@@ -31,6 +37,7 @@ export function Checkbox({
   defaultChecked,
   onCheckedChange,
   disabled,
+  readOnly = false,
   id,
   className,
 }: CheckboxProps) {
@@ -38,14 +45,15 @@ export function Checkbox({
   const controlId = id ?? autoId;
   const descriptionId = description ? `${controlId}-description` : undefined;
   return (
-    <div className={cx(styles.choice, disabled && styles.disabled, className)}>
+    <div className={cx(styles.choice, disabled && styles.disabled, readOnly && styles.readOnly, className)}>
       <CheckboxPrimitive.Root
         id={controlId}
         className={styles.checkbox}
-        checked={checked}
-        defaultChecked={defaultChecked}
-        onCheckedChange={(next) => onCheckedChange?.(next === true)}
+        checked={readOnly ? (checked ?? defaultChecked ?? false) : checked}
+        defaultChecked={readOnly ? undefined : defaultChecked}
+        onCheckedChange={readOnly ? undefined : (next) => onCheckedChange?.(next === true)}
         disabled={disabled}
+        aria-readonly={readOnly || undefined}
         aria-describedby={descriptionId}
       >
         <CheckboxPrimitive.Indicator className={styles.checkIndicator}>
@@ -73,6 +81,12 @@ export interface SwitchProps {
   defaultChecked?: boolean;
   onCheckedChange?: (checked: boolean) => void;
   disabled?: boolean;
+  /**
+   * Shows the value without letting anyone change it, such as a setting only a referee can change. Only the track
+   * dims: the label and description stay at full contrast, so the value stays easy to read. The switch stays in the
+   * tab order and reports `aria-readonly`.
+   */
+  readOnly?: boolean;
   /** Puts the label before the switch, for settings lists. */
   labelPosition?: 'start' | 'end';
   id?: string;
@@ -87,6 +101,7 @@ export function Switch({
   defaultChecked,
   onCheckedChange,
   disabled,
+  readOnly = false,
   labelPosition = 'end',
   id,
   className,
@@ -100,16 +115,18 @@ export function Switch({
         styles.choice,
         labelPosition === 'start' && styles.labelStart,
         disabled && styles.disabled,
+        readOnly && styles.readOnly,
         className,
       )}
     >
       <SwitchPrimitive.Root
         id={controlId}
         className={styles.switch}
-        checked={checked}
-        defaultChecked={defaultChecked}
-        onCheckedChange={onCheckedChange}
+        checked={readOnly ? (checked ?? defaultChecked ?? false) : checked}
+        defaultChecked={readOnly ? undefined : defaultChecked}
+        onCheckedChange={readOnly ? undefined : onCheckedChange}
         disabled={disabled}
+        aria-readonly={readOnly || undefined}
         aria-describedby={descriptionId}
       >
         <SwitchPrimitive.Thumb className={styles.thumb} />

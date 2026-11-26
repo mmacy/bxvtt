@@ -19,10 +19,11 @@ export function TableSettingsDialog() {
           : 'Only a referee can change these settings.'
       }
       size="lg"
+      className={styles.settingsDialog}
     >
       {open && (
         <Tabs defaultValue="table">
-          <TabsList aria-label="Table settings">
+          <TabsList aria-label="Table settings" className={styles.settingsTabs}>
             <TabsTrigger value="table">Table</TabsTrigger>
             <TabsTrigger value="rules">Rules</TabsTrigger>
           </TabsList>

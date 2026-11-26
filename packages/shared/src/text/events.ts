@@ -269,7 +269,6 @@ function goodsText(
   return parts.length === 0 ? 'a few coins' : joinList(parts);
 }
 
-/** Phrase for how a weapon is named in an attack: ` with a sword`, ` with its claw`, or nothing. */
 /**
  * The label of the mode a spell was cast in, from osrlib's `SpellMode.display_name` in the built-in catalog, such
  * as `Blind a creature` for the reverse of light. A form with a single mode has nothing to tell apart, so it has
@@ -282,6 +281,7 @@ function spellModeName(spellId: string, reversed: boolean, mode: string): string
   return modes[mode];
 }
 
+/** Phrase for how a weapon is named in an attack: ` with a sword`, ` with its claw`, or nothing. */
 function attackWeapon(attackName: string, attackerId: string, ctx: TextContext): string {
   const name = attackName.trim();
   if (name === '' || name.toLowerCase() === 'weapon') return '';

@@ -89,11 +89,6 @@ export function LobbyPage({ banner }: { banner?: ReactNode }) {
       : matched === null
         ? 'Custom'
         : STARTING_RULESET_NAMES[matched];
-  const rulesPanel = (
-    <Panel title="Rules" meta={rulesMeta} collapsible open={rulesOpen} onOpenChange={setRulesOpen}>
-      <TableRulesForm showNote />
-    </Panel>
-  );
 
   return (
     <PageLayout
@@ -150,22 +145,21 @@ export function LobbyPage({ banner }: { banner?: ReactNode }) {
             <Panel title="Party" meta={`${table.roster.length} in marching order`}>
               <RosterPanel />
             </Panel>
-            {referee ? (
-              <>
-                <Panel title="Adventure" meta="Only referees see this until the game starts">
-                  <AdventurePicker
-                    tableId={table.id}
-                    adventures={adventures}
-                    error={adventureError}
-                    selectedId={selected}
-                    onSelect={setSelected}
-                    onChanged={loadAdventures}
-                  />
-                </Panel>
-                {rulesPanel}
-              </>
-            ) : (
-              rulesPanel
+            {/* Every member reads the rules early, and a referee sets them before the players create characters. */}
+            <Panel title="Rules" meta={rulesMeta} collapsible open={rulesOpen} onOpenChange={setRulesOpen}>
+              <TableRulesForm showNote />
+            </Panel>
+            {referee && (
+              <Panel title="Adventure" meta="Only referees see this until the game starts">
+                <AdventurePicker
+                  tableId={table.id}
+                  adventures={adventures}
+                  error={adventureError}
+                  selectedId={selected}
+                  onSelect={setSelected}
+                  onChanged={loadAdventures}
+                />
+              </Panel>
             )}
           </div>
 

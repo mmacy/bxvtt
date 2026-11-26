@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react';
 import { getApi, useApiAction, useIsReferee, useTableDetail, useTableStoreApi } from '@/app';
-import { Checkbox, ConfirmDialog, Field, NumberInput, Select, Skeleton, Switch, toast } from '@/ui';
+import { Checkbox, ConfirmDialog, Field, NumberInput, Select, Skeleton, Switch, cx, toast } from '@/ui';
 import {
   RULES_FOR_PLAY,
   STARTING_RULESET_CONFIRM,
@@ -36,13 +36,16 @@ function isStartingId(value: string): value is StartingRulesetId {
   return STARTING_IDS.some((id) => id === value);
 }
 
-/** Sends one change of the table's rules, and says so in a toast when the server refuses it. */
+/**
+ * Sends one change of the table's rules, and says so in a toast when the server refuses it. `saving` is true while
+ * a change is on its way, so the form can hold its switches until the server answers.
+ */
 function useRulesUpdate() {
   const table = useTableDetail();
   const store = useTableStoreApi();
-  const { run } = useApiAction();
+  const { run, pending } = useApiAction();
   const tableId = table?.id ?? null;
-  return async (settings: RulesChange): Promise<boolean> => {
+  const save = async (settings: RulesChange): Promise<boolean> => {
     if (tableId === null) return false;
     const result = await run(() => getApi().updateTable(tableId, { settings }), { display: 'inline' });
     if (result.ok) {
@@ -59,32 +62,45 @@ function useRulesUpdate() {
     });
     return false;
   };
+  return { save, saving: pending };
 }
 
 /**
  * The ability score rerolls house rule: a number from 0 to 99, or unlimited. The number goes to the server when the
- * field loses focus, when the referee presses Enter, and a moment after the last step, never on each keystroke.
+ * field loses focus, when the referee presses Enter, and a moment after the last step, never on each keystroke. A
+ * number still waiting when the form closes goes to the server then.
  */
 function RerollsField({
   stored,
   readOnly,
+  saving,
   onSave,
 }: {
   stored: number | null;
   readOnly: boolean;
+  /** Whether another rules change is on its way, which holds the Unlimited box. */
+  saving: boolean;
   onSave: (value: number | null) => Promise<boolean>;
 }) {
+  const inputId = useId();
+  const hintId = useId();
   // A number the referee chose that isn't stored yet. The field shows the stored number otherwise.
   const [local, setLocal] = useState<number | null>(null);
   // The last number the referee had, so unchecking Unlimited returns to it.
   const [remembered, setRemembered] = useState<number>(stored ?? 0);
   const pending = useRef<number | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveRef = useRef(onSave);
+  useEffect(() => {
+    saveRef.current = onSave;
+  });
   const shown = local ?? stored;
 
   useEffect(
     () => () => {
       if (timer.current !== null) clearTimeout(timer.current);
+      // A number the referee chose just before the form closed still reaches the table.
+      if (pending.current !== null) void saveRef.current(pending.current);
     },
     [],
   );
@@ -99,17 +115,22 @@ function RerollsField({
     const value = pending.current;
     cancel();
     if (value === null) return;
-    // Success shows the stored number, and a refusal shows the number the table still has.
-    void onSave(value).then(() => setLocal(null));
+    // Success shows the stored number, and a refusal shows the number the table still has. A newer number the
+    // referee chose meanwhile stays on screen until it's saved too.
+    void saveRef.current(value).then(() => setLocal((current) => (current === value ? null : current)));
   };
 
   const unlimited = stored === null;
   return (
-    <Field
-      label="Ability score rerolls"
-      hint="How many times each player can roll new ability scores for one character."
-      disabled={readOnly}
-    >
+    <div className={cx(styles.ruleSelect, styles.ruleNumber)}>
+      <div>
+        <label htmlFor={inputId} className={styles.ruleLabel}>
+          Ability score rerolls
+        </label>
+        <p id={hintId} className={styles.ruleDescription}>
+          How many times each player can roll new ability scores for one character.
+        </p>
+      </div>
       <div
         className={styles.rerollsRow}
         onBlur={(event: FocusEvent<HTMLDivElement>) => {
@@ -120,6 +141,8 @@ function RerollsField({
         }}
       >
         <NumberInput
+          id={inputId}
+          aria-describedby={hintId}
           value={unlimited ? null : shown}
           min={0}
           max={MAX_REROLLS}
@@ -144,7 +167,7 @@ function RerollsField({
         <Checkbox
           label="Unlimited"
           checked={unlimited}
-          disabled={readOnly}
+          readOnly={readOnly || saving}
           onCheckedChange={(checked) => {
             cancel();
             setLocal(null);
@@ -153,7 +176,7 @@ function RerollsField({
           }}
         />
       </div>
-    </Field>
+    </div>
   );
 }
 
@@ -186,12 +209,15 @@ export function TableRulesForm({ showNote = false }: { showNote?: boolean }) {
   const table = useTableDetail();
   const referee = useIsReferee();
   const starting = useStartingRulesets();
-  const save = useRulesUpdate();
+  const { save, saving } = useRulesUpdate();
   const [confirm, setConfirm] = useState<StartingRulesetId | null>(null);
   if (table === null) return null;
   const settings = table.settings;
   const ruleset = settings.ruleset;
   const readOnly = !referee;
+  // A player reads the switches at full contrast. A referee's switches hold while a change is on its way, so two
+  // quick toggles never send overlapping changes. Read-only keeps focus on the switch the referee just pressed.
+  const switchesReadOnly = readOnly || saving;
   const matched = starting.items === null ? null : matchStartingRuleset(ruleset, starting.items);
 
   const apply = (id: StartingRulesetId) => {
@@ -204,7 +230,11 @@ export function TableRulesForm({ showNote = false }: { showNote?: boolean }) {
       {showNote && readOnly && <p className={styles.note}>Only a referee can change the rules.</p>}
       <Field
         label="Starting rules"
-        hint="Choosing one sets every switch below to match it."
+        hint={
+          readOnly
+            ? undefined
+            : 'Choosing one changes every rule below to match it, except sub-par characters and ability score rerolls.'
+        }
         error={
           starting.failed ? "Couldn't load the starting rules. Reload the page to try again." : undefined
         }
@@ -216,6 +246,8 @@ export function TableRulesForm({ showNote = false }: { showNote?: boolean }) {
           <Select
             value={matched ?? ''}
             placeholder={starting.items === null ? undefined : 'Custom'}
+            // Custom is the table's state, not an empty choice, so it reads like a value.
+            placeholderTone="value"
             disabled={readOnly || starting.items === null}
             options={STARTING_IDS.map((id) => ({ value: id, label: STARTING_RULESET_NAMES[id] }))}
             onValueChange={(value) => {
@@ -234,7 +266,7 @@ export function TableRulesForm({ showNote = false }: { showNote?: boolean }) {
             label="Sub-par characters"
             description="A player whose ability scores are very poor can discard the character and start again."
             labelPosition="start"
-            disabled={readOnly}
+            readOnly={switchesReadOnly}
             checked={settings.sub_par_restart}
             onCheckedChange={(checked) => void save({ sub_par_restart: checked })}
           />
@@ -244,7 +276,7 @@ export function TableRulesForm({ showNote = false }: { showNote?: boolean }) {
             label="Hit die reroll"
             description="A first-level character rolls the hit die again whenever it comes up 1 or 2, before adding the Constitution modifier."
             labelPosition="start"
-            disabled={readOnly}
+            readOnly={switchesReadOnly}
             checked={ruleset.hp_reroll_at_first_level}
             onCheckedChange={(checked) => void save({ ruleset: { hp_reroll_at_first_level: checked } })}
           />
@@ -257,7 +289,7 @@ export function TableRulesForm({ showNote = false }: { showNote?: boolean }) {
             label="4d6 drop lowest"
             description="Each ability score is the total of the highest three of four d6, instead of 3d6."
             labelPosition="start"
-            disabled={readOnly}
+            readOnly={switchesReadOnly}
             checked={ruleset.ability_score_method === '4d6_drop_lowest'}
             onCheckedChange={(checked) =>
               void save({ ruleset: { ability_score_method: checked ? '4d6_drop_lowest' : '3d6' } })
@@ -268,6 +300,7 @@ export function TableRulesForm({ showNote = false }: { showNote?: boolean }) {
           <RerollsField
             stored={settings.ability_score_rerolls}
             readOnly={readOnly}
+            saving={saving}
             onSave={(value) => save({ ability_score_rerolls: value })}
           />
         </li>
@@ -276,7 +309,7 @@ export function TableRulesForm({ showNote = false }: { showNote?: boolean }) {
             label="Maximum hit points"
             description="A first-level character starts with the highest number on the hit die instead of rolling it."
             labelPosition="start"
-            disabled={readOnly}
+            readOnly={switchesReadOnly}
             checked={ruleset.max_hp_at_first_level}
             onCheckedChange={(checked) => void save({ ruleset: { max_hp_at_first_level: checked } })}
           />
@@ -294,7 +327,7 @@ export function TableRulesForm({ showNote = false }: { showNote?: boolean }) {
                 label={rule.label}
                 description={rule.description}
                 labelPosition="start"
-                disabled={readOnly}
+                readOnly={switchesReadOnly}
                 checked={ruleset[rule.key]}
                 onCheckedChange={(checked) => void save({ ruleset: booleanRulePatch(rule, checked) })}
               />
@@ -330,7 +363,7 @@ export function TableRulesForm({ showNote = false }: { showNote?: boolean }) {
             if (!open) setConfirm(null);
           }}
           title={STARTING_RULESET_CONFIRM[confirm].title}
-          description={`This sets every switch below to ${STARTING_RULESET_CONFIRM[confirm].inSentence} and discards the changes you made.`}
+          description={`This changes every rule to ${STARTING_RULESET_CONFIRM[confirm].inSentence} and discards the changes you made. Sub-par characters and ability score rerolls stay as they are.`}
           confirmLabel={STARTING_RULESET_CONFIRM[confirm].confirm}
           tone="danger"
           onConfirm={() => {

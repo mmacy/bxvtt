@@ -49,27 +49,16 @@ describe('a caster with nothing to cast', () => {
     const row = screen.getAllByRole('listitem').find((li) => within(li).queryByText('Wren', { exact: true }));
     if (!row) throw new Error('No row for Wren.');
     await user.click(within(row).getByRole('button', { name: 'Actions' }));
-    expect(
-      await screen.findByText(
-        "Wren has no spells memorized. Rest for a night, then prepare spells from the Spells tab on Wren's sheet.",
-      ),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Wren has no spells memorized.')).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'Cast' })).toBeDisabled();
     await user.click(screen.getByRole('button', { name: "Open Wren's spells" }));
     expect(useTableUi.getState().sheetMemberId).toBe(wren.id);
     expect(useTableUi.getState().sheetTab).toBe('spells');
   });
 
-  it('tells a caster to rest only when the view says they have to sleep before preparing', () => {
-    expect(noSpellsReason('Wren', true, true)).toBe(
-      'Wren has cast every memorized spell. Rest for a night to prepare spells again.',
-    );
-    expect(noSpellsReason('Wren', true, false)).toBe(
-      "Wren has cast every memorized spell. Prepare spells from the Spells tab on Wren's sheet.",
-    );
-    expect(noSpellsReason('Wren', false, false)).toBe(
-      "Wren has no spells memorized. Prepare spells from the Spells tab on Wren's sheet.",
-    );
+  it('states only the cause, because a caster can neither rest nor prepare during a battle', () => {
+    expect(noSpellsReason('Wren', true)).toBe('Wren has cast every memorized spell.');
+    expect(noSpellsReason('Wren', false)).toBe('Wren has no spells memorized.');
   });
 
   it('tells a caster who has cast every memorized spell from one who prepared nothing', () => {
@@ -272,5 +261,8 @@ describe('a caster with nothing to cast', () => {
     expect(
       within(modes).getByRole('radio', { name: 'Put creatures of 4 Hit Dice or lower to sleep' }),
     ).toBeInTheDocument();
+    // The hint drops osrlib's cross-reference, which the composer has nothing to open for.
+    expect(screen.getByText(/A single creature with 4\+1 Hit Dice\.$/)).toBeInTheDocument();
+    expect(screen.queryByText(/\(see Hit point modifiers\)/)).toBeNull();
   });
 });
