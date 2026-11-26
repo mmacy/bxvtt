@@ -103,7 +103,7 @@ describe('a bxapi whose engine is older than 2.9.0', () => {
     );
   });
 
-  it('refuses a command and a declaration with bxapi_outdated, and sends bxapi nothing', async () => {
+  it('refuses a command, a declaration, an ability roll, and a preview with bxapi_outdated, and sends bxapi nothing', async () => {
     setEngine('2.8.0');
     await healthFor(server, alice);
     const recorder = recordBxapi(server);
@@ -117,6 +117,12 @@ describe('a bxapi whose engine is older than 2.9.0', () => {
         .declare(tableId, 'character-0001', { action: 'hold' })
         .catch((error: BxvttProblemError) => error);
       expect(isProblem(declaration, 'bxapi_outdated')).toBe(true);
+      const roll = await alice.client.rollAbilities(tableId).catch((error: BxvttProblemError) => error);
+      expect(isProblem(roll, 'bxapi_outdated')).toBe(true);
+      const preview = await alice.client
+        .previewCharacter({ name: 'Wren', class_id: 'fighter', alignment: 'lawful', seed: 3 })
+        .catch((error: BxvttProblemError) => error);
+      expect(isProblem(preview, 'bxapi_outdated')).toBe(true);
       expect(recorder.calls.filter((call) => call.method === 'POST')).toEqual([]);
       // A browser that connects gets the same code, and no game state.
       const connection = new TableConnection({

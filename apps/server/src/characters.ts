@@ -138,6 +138,8 @@ export function registerCharacterRoutes(app: FastifyInstance, ctx: Context): voi
     const body = parseBody(CharacterPreviewRequest, request);
     // bxapi takes the first-level re-roll only inside `ruleset`, and it refuses the old top-level flag.
     const { ability_roll_id: _roll, hp_reroll_at_first_level: _reroll, ...choices } = body;
+    // An older engine refuses the ruleset fields that a preview can carry.
+    await ctx.game.requireEngine();
     return callBxapi(() => bxapi.post('/v1/generate/character', choices, { requestId: request.id }));
   });
 

@@ -223,7 +223,7 @@ Every HTTP error returns an RFC 9457 `application/problem+json` object containin
 - **429:** `rate_limited` (with `Retry-After`)
 - **500:** `internal_error`
 - **502:** `bxapi_error`, `save_unreadable` (`bxapi` can't read the save to restore, because its rules engine was updated after the save was made), `invalid_response` (synthesized by SDK when a 2xx body is not JSON)
-- **503:** `bxapi_unavailable` (the server can't reach `bxapi`), `bxapi_outdated` (`bxapi` runs an `osrlib` older than 2.9.0, so the server serves no game until the host updates it; the WebSocket `error` message uses the same code), `server_unavailable` (synthesized by SDK when a proxy/tunnel returns non-JSON 502/503/504)
+- **503:** `bxapi_unavailable` (the server can't reach `bxapi`), `bxapi_outdated` (`bxapi` runs an `osrlib` older than 2.9.0, so the server serves no game and rolls no ability scores until the host updates it; the WebSocket `error` message uses the same code), `server_unavailable` (synthesized by SDK when a proxy/tunnel returns non-JSON 502/503/504)
 - **507:** `bxapi_storage_full` (includes `used_bytes` and `max_bytes`)
 
 ## Key server protocols
@@ -278,13 +278,13 @@ An ability roll belongs to a table. `POST /api/tables/{t}/ability-rolls` sends t
 
 A user's open rolls at a table are the rolls that made no character and weren't closed. The table's reroll limit, read when the user rolls, allows `1 + ability_score_rerolls` open rolls:
 
-- A roll beyond the limit gets `409 ability_rerolls_used`, with the limit and the `roll_id` of the user's newest open roll. `rerolls_left` on a roll says how many more rolls the user may make now, or `null` without a limit.
+- A roll beyond the limit gets `409 ability_rerolls_used`, with the limit and the `roll_id` of the user's newest open roll. `rerolls_left` on a roll says how many more rolls the user may make now under the table's current limit, or `null` without a limit. It doesn't count the sub-par restart below, which allows one more roll when `rerolls_left` is 0.
 - Only the user's newest open roll can roll starting rolls, be checked, or make a character. An older open roll gets `409 ability_roll_superseded`, with the newest roll's `roll_id`.
 - Creating a character closes the user's other open rolls at the table. A closed roll, and a roll that made a character, gets `409 ability_roll_used`.
 - When the user's newest open roll is sub-par and its recorded rules have `sub_par_restart` on, the next roll closes it and doesn't count it against the limit.
 - `GET /api/tables/{t}/ability-rolls/current` returns the user's newest open roll, so a wizard that lost its draft can continue it.
 
-A roll from before rolls belonged to tables, and a roll at a table the user has left, answers `404 not_found` on every route, so the player rolls again. Each new character records its roll's `CreationRules`, which its `RosterEntry.creation_rules` shows. A character from before the server recorded them has `creation_rules: null`.
+A roll from before rolls belonged to tables, and a roll at a table the user has left, answers `404 not_found` on every route, so the player rolls again. Each new character records its roll's `CreationRules`, which its `RosterEntry.creation_rules` shows. A character from before the server recorded them has `creation_rules: null`. `RosterEntry.rolled_at_other_table` is `true` when the character's ability roll belongs to another table, and `false` when it belongs to this table, and also when the server can't tell, as for a character created before rolls belonged to tables. A client compares `creation_rules` with the table's settings to show a referee which characters were built under other rules.
 
 ### Starting rolls and character checks
 
