@@ -67,6 +67,12 @@ export const RosterEntry = z.object({
    * character was built under other rules.
    */
   creation_rules: CreationRules.nullable(),
+  /**
+   * Whether the character's ability scores were rolled at another table. `false` when they were rolled at this
+   * table, and also when the server doesn't know where: a character created before the server recorded it, or one
+   * whose table has since been deleted.
+   */
+  rolled_at_other_table: z.boolean(),
 });
 /** One character on the lobby roster. */
 export type RosterEntry = z.infer<typeof RosterEntry>;

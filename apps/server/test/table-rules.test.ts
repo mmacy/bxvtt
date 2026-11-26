@@ -313,6 +313,22 @@ describe('the table ruleset', () => {
     expect((await referee.client.getTable(table.id)).roster[0]?.creation_rules).toBeNull();
   });
 
+  it('says whether a roster character was rolled at another table', async () => {
+    const home = await referee.client.createTable({ name: 'Home table' });
+    const away = await referee.client.createTable({ name: 'Away table' });
+    await alice.client.joinTable(home.invite_code);
+    await alice.client.joinTable(away.invite_code);
+    const local = await createCharacter(alice, 'Local', 'fighter', 3, home.id);
+    const visitor = await createCharacter(alice, 'Visitor', 'fighter', 4, away.id);
+    await alice.client.addToRoster(home.id, local.id);
+    await alice.client.addToRoster(home.id, visitor.id);
+    const roster = (await referee.client.getTable(home.id)).roster;
+    expect(roster.map((entry) => [entry.name, entry.rolled_at_other_table])).toEqual([
+      ['Local', false],
+      ['Visitor', true],
+    ]);
+  });
+
   it('starts the game with the table ruleset', async () => {
     const table = await referee.client.createTable({ name: 'Game rules' });
     await alice.client.joinTable(table.invite_code);

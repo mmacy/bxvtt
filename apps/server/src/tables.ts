@@ -173,7 +173,8 @@ export class TableStore {
   roster(tableId: string): RosterEntry[] {
     return this.db
       .all(
-        `SELECT r.id, r.character_id, r.owner_user_id, r.added_at, c.name, c.class_id, c.level, c.creation_rules_json
+        `SELECT r.id, r.character_id, r.owner_user_id, r.added_at, c.name, c.class_id, c.level, c.creation_rules_json,
+           (SELECT a.table_id FROM ability_rolls a WHERE a.character_id = c.id LIMIT 1) AS rolled_at_table_id
          FROM roster r JOIN characters c ON c.id = r.character_id WHERE r.table_id = ? ORDER BY r.position, r.added_at`,
         tableId,
       )
@@ -186,6 +187,7 @@ export class TableStore {
         level: num(row, 'level'),
         added_at: str(row, 'added_at'),
         creation_rules: creationRulesOf(row),
+        rolled_at_other_table: (strOrNull(row, 'rolled_at_table_id') ?? tableId) !== tableId,
       }));
   }
 
