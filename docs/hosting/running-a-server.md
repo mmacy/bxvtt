@@ -49,7 +49,7 @@ Each server maintains a separate SQLite database:
 
 | Process | Default file path | Environment variable | Stored data |
 | --- | --- | --- | --- |
-| `bxvtt` | `.data/bxvtt.db` (created with mode `0700`) | `BXVTT_DATA_DIR` | Users, token hashes, tables, roles, seats, chat feed, notes, map annotations, target handles, and pending battle declarations. |
+| `bxvtt` | `.data/bxvtt.db` (created with mode `0700`) | `BXVTT_DATA_DIR` | Users, token hashes, tables, roles, seats, chat feed, notes, map annotations, and pending battle declarations. |
 | `bxapi` | `bxapi.db` (in the directory where `bxapi` starts) | `BXAPI_DATABASE` | Characters, uploaded adventures, active sessions, and saved games. |
 
 Because rows in `bxvtt.db` reference session, save, character, and adventure IDs in `bxapi.db`, always back up and restore both databases as a matched pair.
@@ -122,7 +122,9 @@ If storage reaches 100%, `bxapi` rejects writes and bxvtt returns HTTP 507 `bxap
 
 5. Start `bxapi`, then start `bxvtt`.
 
-On startup, bxvtt migrates older SQLite schemas forward automatically and refuses to open a database created by a newer schema version. Keep your pre-update backup until you verify your next session.
+This version of bxvtt needs a `bxapi` built on `osrlib` 2.7 that has `POST /v1/sessions/{session_id}/battle-round/preview` and `POST /v1/ability-rolls/{roll_id}/preview` (`bxapi` `main` from its pull request 51 onward), so run the `git pull` in step 3 before you start the new bxvtt. With an older `bxapi`, the character wizard and the battle board fail.
+
+On startup, bxvtt migrates older SQLite schemas forward automatically and refuses to open a database created by a newer schema version. Schema version 7 drops the `target_handles` and `battle_refusals` tables, which bxvtt no longer uses. Keep your pre-update backup until you verify your next session.
 
 ## Troubleshoot common issues
 

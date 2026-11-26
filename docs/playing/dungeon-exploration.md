@@ -18,7 +18,7 @@ Once the party enters a dungeon, the central stage displays the explored map in 
   - **Map themes:** Choose **Blueprint map**, **Torchlit map**, or **Parchment map**. Your choice applies only to your own browser.
   - **Pins:** Lists every note pin placed on the current level, with buttons to center on a pin, read it, or **Add a pin where the party stands**.
   - **Light status:** Shows remaining light duration (such as `6 turns`), **No light** (`The party has no light.`), or **Darkness** (`Magical darkness covers the party.`). Click this button at any time to light a torch or lantern or put out an active light.
-- **Scene panel (top-left, below toolbar):** Shows the name and description of the room the party occupies (or **Corridor** in unkeyed passages) alongside party facing and contextual prompts for doors or treasure. The description collapses automatically after 10 seconds or when you click the map; select **Show the description** or **Hide the description** to keep it expanded or tucked away.
+- **Scene panel (top-left, below toolbar):** Shows the name and description of the room the party occupies (or **Corridor** in unkeyed passages) alongside party facing and what the party perceives here: treasure caches with their descriptions, stairs, trapdoors, chutes, and passages, dropped goods, doors, and known traps, each with its action. A stairway says which way it leads, and a trapdoor, chute, or passage says what it is, but none says where it takes the party. A known trap says whether the party found it, it sprang, or a thief disarmed it, without saying what sets it off. The description collapses automatically after 10 seconds or when you click the map; select **Show description** or **Hide description** to keep it expanded or tucked away.
 - **Bottom-right camera controls and minimap:** Use **Zoom in**, **Zoom out**, **Show the whole map**, **Center on the party**, and **Follow the party** (which tracks the party automatically until you pan manually), plus the collapsible minimap and compass.
 
 ## Move, turn, and track time
@@ -50,19 +50,19 @@ Right-click any square, wall, or door on the map (or press `Shift+F10` with the 
 
 Stand next to a door and click it on the map, right-click it, or open the **Door** menu in the scene panel:
 
-- **Open it** or **Close it** for unlocked, unstuck doors.
-- **Force it open** to have a party member shoulder a stuck door (each member's `X in 6` chance is listed).
-- **Pick the lock** to have a thief attempt a locked door with thieves' tools.
-- **Listen at it** to spend a turn listening for monsters beyond.
-- **Wedge it shut with a spike** or **Wedge it open with a spike** using iron spikes.
+- **Open door** or **Close door** for unlocked, unstuck doors.
+- **Force door** to have a party member shoulder a stuck door (each member's `X in 6` chance is listed).
+- **Pick lock** to have a thief attempt a locked door with thieves' tools.
+- **Listen at door** to spend a turn listening for monsters beyond.
+- **Wedge shut with a spike** or **Wedge open with a spike** using iron spikes.
 
 ### Treasure and traps
 
-When the party discovers a treasure cache or stands over loot dropped by defeated monsters, open **Treasure** (`G`):
+A treasure cache appears in the scene panel with its description as soon as the party can see it, before anyone opens it, and stays listed after it's emptied. The description says what the cache looks like, not what it holds. When the party sees a cache or stands over loot dropped by defeated monsters, open **Treasure** (`G`):
 
-- **Take the treasure** divides coins and valuables across the party, whereas **Give it all to one member** assigns the cache to one character.
-- **Check it for traps** and **Disarm the trap** let a thief inspect a cache and attempt trap removal before anyone touches it.
-- **Pick up the dropped goods** collects coins and gear left behind on the floor after a fight.
+- **Take treasure** divides coins and valuables across the party, whereas **Give all to one member** assigns the cache to one character.
+- **Check for traps** lets a thief inspect a cache that has no known trap, and **Disarm trap** lets a thief attempt removal once the party has found one, before anyone touches the cache. The game never says whether a cache has a trap that the party hasn't found.
+- **Pick up dropped goods** collects coins and gear left behind on the floor after a fight.
 
 ## Collaborate with map tools
 

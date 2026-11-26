@@ -1,7 +1,7 @@
 ---
 title: HTTP API, WebSocket, and SDK
 sidebar_label: HTTP, WebSocket, and SDK
-description: Reference for BxvttClient, TableConnection, all 66 HTTP endpoints, WebSocket messages, problem codes, scene projection, target handles, and rejoin flows.
+description: Reference for BxvttClient, TableConnection, all 66 HTTP endpoints, WebSocket messages, problem codes, the scene, monster targets, battle round previews, and rejoin flows.
 sidebar_position: 1
 ---
 
@@ -107,8 +107,8 @@ All paths below sit under `/api` (for example, `GET /api/health`), and `{t}` den
 | `POST /tables/{t}/roster` | `addToRoster(tableId, characterId)` | Character owner (in lobby) | `TableDetail` |
 | `PUT /tables/{t}/roster` | `reorderRoster(tableId, entryIds)` | Referee (in lobby) | `TableDetail` |
 | `DELETE /tables/{t}/roster/{entry_id}` | `removeFromRoster(tableId, entryId)` | Character owner or referee | `TableDetail` |
-| `POST /ability-rolls` | `rollAbilities(body?)` | User | `bxapi` `AbilityRoll` |
-| `GET /ability-rolls/{roll_id}` | `getAbilityRoll(rollId)` | Roll owner | `bxapi` `AbilityRoll` |
+| `POST /ability-rolls` | `rollAbilities(body?)` | User | `bxapi` `AbilityRoll`, whose `rolls` hold the three six-sided dice behind each score |
+| `GET /ability-rolls/{roll_id}` | `getAbilityRoll(rollId)` | Roll owner | `bxapi` `AbilityRoll`, with the same `rolls` |
 | `GET /ability-rolls/{roll_id}/starting-rolls` | `getStartingRolls(rollId)` | Roll owner | `StartingRollsStatus` |
 | `POST /ability-rolls/{roll_id}/hit-points` | `rollHitPoints(rollId, body)` | Roll owner (rate-limited) | `StartingRolls` |
 | `POST /ability-rolls/{roll_id}/gold` | `rollStartingGold(rollId, body)` | Roll owner (rate-limited) | `StartingRolls` |
@@ -209,27 +209,44 @@ Every HTTP error returns an RFC 9457 `application/problem+json` object containin
 - **409:** `last_referee`, `game_active`, `no_game`, `duplicate_character`, `roster_empty`, `revision_conflict` (includes `revision`), `stale_version`, `not_in_battle`, `not_a_declarer`, `declarations_incomplete`, `use_declarations`, `ability_roll_used`, `ability_roll_locked` (includes `class_id` and `hp_reroll_at_first_level`), `hit_points_not_rolled`, `gold_not_rolled`, `version_unsupported`, `session_busy`, `rejoin_member_online`, `rejoin_pending`, `rejoin_not_pending`, `rejoin_no_approver`
 - **413:** `content_too_large`
 - **415:** `unsupported_media_type`
-- **422:** `validation_error` (includes `errors`), `unknown_command`, `content_invalid`, `character_invalid` (includes `rejections` or `field`/`index`/`id`), `party_invalid`, `target_unknown` (includes `field` and `id`)
+- **422:** `validation_error` (includes `errors`), `unknown_command`, `content_invalid`, `character_invalid` (includes `rejections` or `field`/`index`/`id`), `party_invalid`, `target_unknown` (a player's declaration names a monster or NPC adventurer that the player view doesn't list; includes `field` and `id`)
 - **429:** `rate_limited` (with `Retry-After`)
 - **500:** `internal_error`
-- **502:** `bxapi_error`, `invalid_response` (synthesized by SDK when a 2xx body is not JSON)
+- **502:** `bxapi_error`, `save_unreadable` (`bxapi` can't read the save to restore, because its rules engine was updated after the save was made), `invalid_response` (synthesized by SDK when a 2xx body is not JSON)
 - **503:** `bxapi_unavailable`, `server_unavailable` (synthesized by SDK when a proxy/tunnel returns non-JSON 502/503/504)
 - **507:** `bxapi_storage_full` (includes `used_bytes` and `max_bytes`)
 
 ## Key server protocols
 
-### `game.scene` and `tgt_` monster target handles
+### `game.scene`, treasure commands, and monster targets
 
-- **`game.scene`** supplements `PlayerView` with `here` (current area name/description, reachable caches, custom features, found tricks, cell transitions, known traps, and dropped `pile` presence), `levels` (mapped areas, stairs, traps, caches, and entrance coordinates), `names` (display names for item IDs, preserving masked names such as `a potion` for unidentified items), `dungeon_names`, `can_travel_to_town`, and `targets`.
-- **`scene.targets`** assigns each visible monster a persistent 96-bit handle (`tgt_` + 16 base64url characters), `group_id`, `label` (such as `Ogre` or `Goblin 2`), `number`, `defeated`, and `fled`. Invisible monsters receive no handle until revealed. When a player submits `targets` or `target_id` in `cast_spell`, `use_item`, or a battle declaration, the server swaps valid handles for `bxapi` monster IDs (or rejects stale handles with `422 target_unknown`) and rewrites outbound player rejections and declarations back to handles.
+The `osrlib` 2.6 player view (`game.view`) states what the party perceives: `explored[].areas` (name, description, and walked cells of each entered area), `explored[].features` (each visible feature with an opaque `feature:` handle in `id`, its `description`, and its `trap_state`), `explored[].transitions`, `explored[].entrance`, `dungeons`, and `can_travel_to_town`. A transition doesn't say where it leads, and a trap doesn't state its trigger. A client reads those fields from the view.
 
-### Battle refusal attribution
+`game.scene` adds the three things that the view doesn't state yet ([osrlib-python#316](https://github.com/mmacy/osrlib-python/issues/316)):
 
-When `bxapi` rejects `resolve_battle_round`, `osrlib` returns a flat list of rejections, some of which (such as `combat.attack.out_of_reach` or `magic.cast.too_many_targets`) omit the acting character's ID. The server attributes nameless rejections in three steps:
+- **`names`:** display names for the item IDs in the party's inventory and in player events, keeping masked names such as `a potion` for unidentified items.
+- **`room_traps`:** each room trap the party found, sprang, or saw removed, in an area the party entered, as `dungeon_id`, `level_number`, `area_id`, and `state` (`found`, `sprung`, or `removed`).
+- **`emptied_features`:** the `feature:` handles of the authored treasure caches that the party emptied. The view keeps an emptied cache in `explored[].features` without marking it.
 
-1. Match any rejection parameter naming a declarer (`character`, `caster`, `attacker`, or `member`).
-2. Eliminate plain `hold` declarations; if only one non-hold suspect remains, assign remaining rejections to that member.
-3. Probe each remaining non-moving declaration by re-submitting the round with that member's declaration replaced by `{ action: "hold", back_stab: true }`, which `osrlib` unconditionally rejects with `battle.declaration.back_stab_not_attack` without advancing the session. Any rejection that disappears in the probe belongs to that member. Unresolved movement ties return `member_id: null` with `candidates`.
+A player's `take_treasure`, `inspect_treasure`, or `remove_treasure_trap` names a `feature:` handle from `explored[].features` or `pile` in `feature_id`. For any other `feature_id` from a player, the server answers `accepted: false` with `exploration.feature.unknown` and doesn't call `bxapi`. A referee can name a cache by its authored ID. `osrlib` refuses a hidden, emptied, or guessed cache itself, and answers `remove_treasure_trap` with `exploration.feature.unknown` whether the cache has no trap or an unfound one.
+
+A player names a monster or NPC adventurer by the ID that the view lists in `view.encounter.groups[].members` (`{ id, status }`), in `targets` of `cast_spell`, `use_item`, and a battle declaration, and in `target_id` of `use_item`. Member IDs and cell references in the same lists need no check.
+
+- **Commands:** `bxapi` accepts any creature of the session in an out-of-battle `cast_spell` or `use_item` ([osrlib-python#317](https://github.com/mmacy/osrlib-python/issues/317)), so the server checks a player's targets against the view. A command aimed at a creature the view doesn't list returns `accepted: false` with `magic.cast.unknown_target` (`targets`) or `items.use.unknown_target` (`target_id`), and nothing reaches `bxapi`.
+- **Declarations:** `PUT /api/tables/{t}/game/declarations/{member_id}` answers a player's unlisted target with `422 target_unknown`, with `field` (such as `declaration.targets`) and `id`.
+- **What players receive:** The server removes unlisted creature IDs from the declarations state and the rejections that a player receives, including those from a referee's declaration. A referee isn't restricted.
+- **Names:** `creatureNames` in `@bxvtt/shared/text` builds names such as `Goblin 2` from the view's groups and numbers them by ID, so a number doesn't change when a group splits. A creature that is alone with its label reads by the label, such as `Ogre`. A feed entry records each monster's name in `names.monsters[id].name` (`EntryLabel.name`), so the entry reads the same after the encounter ends.
+
+### Battle round preview and refusals
+
+The server asks `bxapi` to preview the stored declarations (`POST /v1/sessions/{id}/battle-round/preview`) whenever it builds `DeclarationsState` with at least one stored declaration, once for each revision and set of declarations. A refused declaration stays stored, because another member's declared move can make it legal.
+
+- **`refusals`:** the preview's rejections, each with `member_id` (from `params.character`), `code`, and `params`. The list is empty when the session would accept the declarations.
+- **`projection`:** `RoundProjection | null`, with `advance_feet` by member (where each living member would stand, in feet forward of the party line) and `front_rank` by group (the members who would stand in its front rank), after the declared moves. It is `null` when nobody has declared or the preview failed.
+- **A failed preview:** `refusals` is empty and `projection` is `null`, and the server asks again after 5 seconds. Auto-resolve then goes ahead and leaves the judgment to `bxapi`.
+- **Resolving:** the server resolves a round automatically (with `auto_resolve` on) only when every declarer has declared and `refusals` is empty. `POST /api/tables/{t}/game/declarations/resolve` with `fill_with_hold: true` declares `hold` only for members who haven't declared and never replaces a stored declaration, so a round with a refused declaration stays refused until its member declares again.
+- **A refused round:** when `bxapi` still refuses `resolve_battle_round`, `accepted` is `false`, the declarations stay, and `declarations.refusals` lists each rejection with the member in `params.character`. A rejection of the whole round, such as `battle.declaration.roster_mismatch`, has `member_id: null`.
+- **Hide:** `declaration.action` accepts `hide`. A hiding member appears in `view.encounter.hiding`, and the view never says whether a hide worked.
 
 ### Starting rolls and character checks
 

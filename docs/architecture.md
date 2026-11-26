@@ -14,7 +14,7 @@ browser (apps/web)  <--HTTP /api, WebSocket /ws-->  bxvtt server (apps/server)  
 ```
 
 - **`bxapi`** enforces the 1981 B/X rules, rolls dice, and stores characters, adventures, sessions (active games), and saves. It has no user accounts, no WebSocket interface, and scopes data per API client rather than per person.
-- **The bxvtt server** stores everything about the people at a table and nothing about game mechanics: users, tables, memberships, seats, chat feed entries, notes, map annotations, monster target handles, pending battle declarations, and the owner of each ability roll. For an ability roll, it also records the class and reroll option that rolling hit points fixed and whether the player rolled the gold, but never the dice, which `bxapi` returns again on request. It calls `bxapi` as a `referee` (via `BXAPI_KEY` or loopback anonymous mode), verifies whether the requesting user has permission to send a command, and filters every response for each recipient's role.
+- **The bxvtt server** stores everything about the people at a table and nothing about game mechanics: users, tables, memberships, seats, chat feed entries, notes, map annotations, pending battle declarations, and the owner of each ability roll. For an ability roll, it also records the class and reroll option that rolling hit points fixed and whether the player rolled the gold, but never the dice, which `bxapi` returns again on request. It calls `bxapi` as a `referee` (via `BXAPI_KEY` or loopback anonymous mode), verifies whether the requesting user has permission to send a command, and filters every response for each recipient's role.
 - **The browser client** renders the table, map, sheets, and compendium, and submits user intent. It never evaluates a B/X rule and never contacts `bxapi`.
 
 In production, the bxvtt server also serves the pre-compressed client bundle (`apps/web/dist`), reducing deployment to one bxvtt process and one `bxapi` process on the same host.
@@ -61,19 +61,30 @@ Rules refusals from `bxapi` return HTTP 200 with `accepted: false` and structure
 
 `bxapi` resolves an entire B/X battle round in one atomic `resolve_battle_round` command containing one declaration per eligible member in `view.encounter.declarers`. bxvtt coordinates multi-player input around that single call:
 
-1. Each player submits declarations for their seated characters (`PUT /api/tables/{t}/game/declarations/{member_id}`). The server stores them and broadcasts updated `declarations` to the table so party members can plan together.
-2. Once every declarer has submitted, the server calls `resolve_battle_round` automatically when `auto_resolve` is enabled; otherwise the caller or a referee triggers resolution (`POST /api/tables/{t}/game/declarations/resolve`), and referees can resolve early with `fill_with_hold: true`.
-3. If `bxapi` refuses the round, declarations remain intact while the server attributes each rejection to its offending `member_id` (matching rejection parameters first, eliminating plain `hold` declarations second, and probing non-moving declarations with an intentionally invalid `hold` + `back_stab: true` sentinel that can never resolve the round).
-4. Once `bxapi` accepts the round, the server clears stored declarations and broadcasts the updated game state and round events.
+1. Each player submits declarations for their seated characters (`PUT /api/tables/{t}/game/declarations/{member_id}`). The server stores each one, even one that `bxapi` would refuse, because another member's declared move can make it legal. It broadcasts the updated `declarations` to the table so party members can plan together.
+2. Whenever the server builds the declarations state with at least one stored declaration, it asks `bxapi` to preview them (`POST /v1/sessions/{id}/battle-round/preview`) and caches the answer for each revision and set of declarations. The preview's rejections become `DeclarationsState.refusals`, each with the `member_id` from `params.character`, and its positions become `DeclarationsState.projection` (`advance_feet` by member and `front_rank` by group). If the preview fails, `refusals` is empty and `projection` is `null`, and the server asks again after 5 seconds.
+3. Once every declarer has a declaration and the preview refuses none of them, the server calls `resolve_battle_round` automatically when `auto_resolve` is enabled. Otherwise the caller or a referee triggers resolution (`POST /api/tables/{t}/game/declarations/resolve`). A referee can resolve early with `fill_with_hold: true`, which declares `hold` only for members who haven't declared and never replaces a stored declaration.
+4. If `bxapi` still refuses the round, the declarations stay and each rejection names its member in `params.character`. A rejection of the round as a whole has `member_id: null`.
+5. Once `bxapi` accepts the round, the server clears stored declarations and broadcasts the updated game state and round events.
 
-## Role-based projections, the scene, and target handles
+Players' copies of the declarations state leave out creature IDs that the player view doesn't list.
+
+## Role-based projections, the scene, and monster targets
 
 After every accepted command, bxvtt fetches the full outcome from `bxapi` and constructs separate projections:
 
-- **Players** receive `bxapi`'s `PlayerView`, player-visibility events, a server-derived `scene`, and opaque monster target handles (`tgt_` IDs).
+- **Players** receive `bxapi`'s `PlayerView`, player-visibility events, and the server's `scene`.
 - **Referees** also receive dynamic `RefereeState`, referee-visibility events, pending `rejoin_requests`, and HTTP access to the cached full adventure document and full event log.
 
-Because `bxapi`'s `PlayerView` provides explored cell geometry without room names, descriptions, visible treasure caches, stairs, or discovered traps, bxvtt derives `game.scene` from `osrlib`'s recorded party knowledge (`explored` cells, `found_traps`, `sprung_traps`, `removed_traps`, `found_tricks`, and `resolved_encounters`). Anything not confirmed as perceived by the party stays omitted. Similarly, because `PlayerView` hides individual monster IDs while single-target spells need them, bxvtt mints stable 96-bit `tgt_` handles (labeled `Goblin 1`, `Goblin 2`, and so on) for visible monsters and translates handles to monster IDs inside commands and declarations.
+Since `osrlib` 2.6, the `PlayerView` states what the party perceives: entered `areas` with their names, descriptions, and walked cells, visible `features` with opaque `feature:` handles and `trap_state`, known `transitions`, the `entrance`, `dungeons`, and `can_travel_to_town`. bxvtt reads those fields as they are. The `game.scene` adds only the three things that the player view doesn't state yet ([osrlib-python#316](https://github.com/mmacy/osrlib-python/issues/316)):
+
+- `names`: display names for the item IDs in the party's inventory and in player events.
+- `room_traps`: the room traps the party found, sprang, or saw removed, in areas the party entered.
+- `emptied_features`: the `feature:` handles of the authored treasure caches that the party emptied.
+
+A player's `take_treasure`, `inspect_treasure`, or `remove_treasure_trap` must name a `feature:` handle from the player view, or `pile` for dropped goods. The server answers any other `feature_id` from a player with `exploration.feature.unknown` and doesn't call `bxapi`. `osrlib` refuses a hidden, emptied, or guessed cache itself.
+
+A player names a monster or NPC adventurer by the ID that the player view lists in `view.encounter.groups[].members`, in `targets` or `target_id`. Because `bxapi` accepts any creature of the session in an out-of-battle `cast_spell` or `use_item` ([osrlib-python#317](https://github.com/mmacy/osrlib-python/issues/317)), the server refuses a player's command or declaration aimed at a creature the player view doesn't list: a command gets `accepted: false` with `magic.cast.unknown_target` or `items.use.unknown_target`, and a declaration gets `422 target_unknown`. The server also removes unlisted creature IDs from the declarations and rejections that players receive. Players read names such as `Goblin 2`, which `creatureNames` in `@bxvtt/shared/text` builds from the player view and numbers by ID, so a number doesn't change when a group splits.
 
 On a referee's browser, the **Referee lens** (`Shift+L`) switches rendering to the player projection locally so a referee who also plays a character can avoid spoilers.
 

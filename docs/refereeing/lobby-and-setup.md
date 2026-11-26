@@ -40,7 +40,7 @@ Under **Adventure** (visible only to referees until play starts), choose which m
 - **The Toll at Crookback Bridge** (`Sample`): For 4-6 characters of levels 1-2, playable in about an hour.
 - **The Barrow of the Forgotten King** (`Comes with bxapi`): Built-in barrow adventure included with `bxapi`.
 
-Selecting an adventure card expands its **Hooks** so you can read the setup to your players while they roll characters. To run your own module, select **Upload an adventure** and pick an `osrlib` JSON file up to 8 MB; `bxapi` validates the file before you select **Upload**. See [Included and custom adventures](../adventures/included-adventures.md).
+Selecting an adventure card expands its **Hooks** so you can read the setup to your players while they roll characters. To run your own module, select **Upload an adventure** and pick an `osrlib` JSON file up to 8 MB; `bxapi` validates the file before you select **Upload**. Players read each treasure cache's `description` as soon as the party sees the cache, so check that your own adventure's cache descriptions name no contents and no traps. See [Included and custom adventures](../adventures/included-adventures.md).
 
 ## Choose optional rules
 
@@ -68,7 +68,7 @@ Open **Table settings** in the lobby (or select **Table settings** in the **Tabl
 
 - **Who moves the party:** **The caller** (default, matching B/X procedure) or **Anyone with a character** (convenient for small or informal groups).
 - **Caller:** Pick a specific member or leave **No caller** (when a game starts with **No caller**, the owner of the first character in marching order becomes the caller automatically).
-- **Resolve battle rounds automatically:** On by default. Resolves each round as soon as every eligible character has declared. Turn off to have the caller or a referee trigger resolution manually.
+- **Resolve battle rounds automatically:** On by default. Resolves each round as soon as every eligible character has declared and the rules engine's preview shows that it would accept every declaration. If a declaration would be refused, the round waits for that player to choose another action. Turn off to have the caller or a referee trigger resolution manually.
 - **Save automatically:** On by default. Retains the 10 most recent autosaves across major transitions.
 
 When you start a game, bxvtt assigns each character's seat to the member who created that character, and you control any character whose seat is empty. During play, select **Seats and caller** in the **Table menu** to change the caller or reassign any character's seat (including **Empty seat (the referee plays)**).

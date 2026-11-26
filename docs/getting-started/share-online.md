@@ -25,7 +25,7 @@ Before exposing a server publicly, review the protections and limits in [Securit
    ```text
    Starting a tunnel with the cloudflared that npm installed with bxvtt...
    {"level":30,...,"msg":"Server listening at http://127.0.0.1:8660"}
-   {"level":30,...,"bxapi":"http://127.0.0.1:8640","engine":"2.5.0","msg":"bxapi is reachable"}
+   {"level":30,...,"bxapi":"http://127.0.0.1:8640","engine":"2.7.0","msg":"bxapi is reachable"}
 
      bxvtt is shared at https://example-words-here.trycloudflare.com
      Host key (needed to create a table): 3f9Xk2LmQ0aVb7TnR4sYw8Hd

@@ -38,6 +38,7 @@ See [`apps/web/src/ui/README.md`](https://github.com/mmacy/bxvtt/blob/main/apps/
 
 Feature components never call `fetch` or open sockets directly; they import hooks from `@/app`:
 
+- **What the party perceives:** The player view states the entered areas, visible features, known transitions, and the entrance, and `game.scene` adds item names, room traps, and emptied caches. `partyHere(view, scene)` and `useHere()` pick out what is at the party's cell (the area, caches, features, transitions, the known room trap, a dropped pile, and whether the party stands on the entrance), so a screen lists them without deriving them. Name a monster in a command by the ID in `view.encounter.groups[].members`, and show its name from `creatureNames` in `@bxvtt/shared/text`.
 - **State and permissions:** Narrow selectors (`useParty()`, `useScene()`, `useGameMode()`, `useShownMode()`, `useRefereeLens()`, `useMySeats()`, `useCaller()`) subscribe to slices of `TableProvider`, while `useCanSend(commandType, memberId?)`, `useCanControlMember`, `useCanActForParty`, and `useCanDeclare` return `{ allowed, reason }` matching server rules for disabled button tooltips.
 - **Deliberate vs. repeatable command queueing (`useSendCommand`):**
   - Default calls (`send(cmd)`) represent deliberate clicks or form submissions: up to 3 commands queue in order while a request is in flight, paced to 4 commands per second, deduplicating double-clicks and dropping stale queued moves with a toast if the mode or party square changed.
@@ -58,6 +59,6 @@ Feature components never call `fetch` or open sockets directly; they import hook
 
 `@bxvtt/shared/text` converts `bxapi` events, rejection codes, and command schemas into natural B/X sentences so players never see raw IDs (`character-0001`), catalog lot names (`Torches (6)`), or dotted codes (`combat.attack.out_of_reach`):
 
-- Build and carry forward a `TextContext` across revisions (`contextFromPlayerView`, `extendContextWithScene`, `extendContextWithCatalog`, and `extendContextWithReferee` when the referee lens is on) so names of consumed potions and defeated monster groups survive after leaving the live view.
+- Build and carry forward a `TextContext` across revisions (`contextFromPlayerView`, `extendContextWithScene`, `extendContextWithCatalog`, and `extendContextWithReferee` when the referee lens is on) so names of consumed potions and defeated monster groups survive after leaving the live view. The context also names each creature of the open encounter from the player view, such as `Goblin 2`, so a combat line reads "Brenna hits Goblin 2" and not "a goblin".
 - Call `describeEvents` / `describeGameEntry` for feed and playback lines (emitting `line.refereeDetail` separately for referee coordinates) and `describeRejections` for refused commands.
 - Unit tests in `packages/shared` verify 100% template coverage against `packages/shared/src/text/data/codes.json`, failing whenever `osrlib` introduces an unhandled event code, rejection code, command, or field. See [`packages/shared/src/text/README.md`](https://github.com/mmacy/bxvtt/blob/main/packages/shared/src/text/README.md).
