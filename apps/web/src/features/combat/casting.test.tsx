@@ -1,7 +1,6 @@
 import type { FeedEntry } from '@bxvtt/shared/protocol';
 import { screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { useTableUi } from '@/app';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { createFakeApi, renderWithTable } from '@/app/testing/renderWithTable';
 import { BattleBoard } from './BattleBoard';
@@ -31,7 +30,7 @@ function game(events: unknown[], seq: number): FeedEntry {
 }
 
 describe('a caster with nothing to cast', () => {
-  it('sees the Cast tab disabled, the reason, and a link to the Spells tab', async () => {
+  it('sees the Cast tab disabled and the reason, with no way to prepare spells during the battle', async () => {
     const api = createFakeApi();
     api.rules.mockImplementation(
       async (path: string) => ({ id: path, abilities: [], progression: [] }) as never,
@@ -51,9 +50,7 @@ describe('a caster with nothing to cast', () => {
     await user.click(within(row).getByRole('button', { name: 'Actions' }));
     expect(await screen.findByText('Wren has no spells memorized.')).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'Cast' })).toBeDisabled();
-    await user.click(screen.getByRole('button', { name: "Open Wren's spells" }));
-    expect(useTableUi.getState().sheetMemberId).toBe(wren.id);
-    expect(useTableUi.getState().sheetTab).toBe('spells');
+    expect(screen.queryByRole('button', { name: "Open Wren's spells" })).toBeNull();
   });
 
   it('states only the cause, because a caster can neither rest nor prepare during a battle', () => {
@@ -261,8 +258,8 @@ describe('a caster with nothing to cast', () => {
     expect(
       within(modes).getByRole('radio', { name: 'Put creatures of 4 Hit Dice or lower to sleep' }),
     ).toBeInTheDocument();
-    // The hint drops osrlib's cross-reference, which the composer has nothing to open for.
-    expect(screen.getByText(/A single creature with 4\+1 Hit Dice\.$/)).toBeInTheDocument();
-    expect(screen.queryByText(/\(see Hit point modifiers\)/)).toBeNull();
+    // Each radio names its mode, so the hint stops after the range and duration.
+    expect(screen.getByText('240’ · 4d4 turns')).toBeInTheDocument();
+    expect(screen.queryByText(/A single creature with 4\+1 Hit Dice/)).toBeNull();
   });
 });

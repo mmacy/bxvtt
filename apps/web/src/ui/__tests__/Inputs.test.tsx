@@ -7,6 +7,8 @@ import { BadgePopover } from '../components/Badge';
 import { Checkbox, Switch } from '../components/Choice';
 import { KitProvider } from '../components/KitProvider';
 import { LinkButton } from '../components/Link';
+import { NumberInput } from '../components/NumberInput';
+import { Select } from '../components/Select';
 import { Textarea } from '../components/TextInput';
 
 describe('Textarea', () => {
@@ -116,5 +118,47 @@ describe('BadgePopover', () => {
     expect(screen.queryByText('Rolled elsewhere.')).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Other table: show why' }));
     expect(await screen.findByRole('dialog', { name: 'Other table' })).toHaveTextContent('Rolled elsewhere.');
+  });
+});
+
+describe('read-only values', () => {
+  it('keep a select closed and its value unchanged', async () => {
+    const user = userEvent.setup();
+    const onValueChange = vi.fn();
+    render(
+      <Select
+        aria-label="Encumbrance"
+        value="basic"
+        readOnly
+        onValueChange={onValueChange}
+        options={[
+          { value: 'none', label: 'None' },
+          { value: 'basic', label: 'Basic' },
+        ]}
+      />,
+    );
+    const trigger = screen.getByRole('combobox', { name: 'Encumbrance' });
+    expect(trigger).toHaveAttribute('aria-readonly', 'true');
+    expect(trigger).toBeEnabled();
+    await user.click(trigger);
+    expect(screen.queryByRole('listbox')).toBeNull();
+    trigger.focus();
+    await user.keyboard('n');
+    await user.keyboard('{ArrowDown}');
+    expect(onValueChange).not.toHaveBeenCalled();
+    expect(trigger).toHaveTextContent('Basic');
+  });
+
+  it('keep a number field from stepping or taking typing', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<NumberInput aria-label="Rerolls" value={2} readOnly onChange={onChange} />);
+    const input = screen.getByRole('spinbutton', { name: 'Rerolls' });
+    expect(input).toHaveAttribute('aria-readonly', 'true');
+    await user.click(input);
+    await user.keyboard('{ArrowUp}5{Enter}');
+    expect(screen.getByRole('button', { name: 'Increase Rerolls' })).toBeDisabled();
+    expect(onChange).not.toHaveBeenCalled();
+    expect(input).toHaveValue('2');
   });
 });

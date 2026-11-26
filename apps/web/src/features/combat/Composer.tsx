@@ -19,7 +19,6 @@ import {
   useRulesEntry,
   useSendDeclaration,
   useSpellDetail,
-  useTableUi,
   useTextContext,
   type ClassDetail,
 } from '@/app';
@@ -201,7 +200,6 @@ export function Composer({
   const [tab, setTab] = useState<ComposerTab>(
     usableTabs.includes(initial) ? initial : (usableTabs[0] ?? 'hold'),
   );
-  const openSheet = useTableUi((s) => s.openCharacterSheet);
   const hasMirror = carries(gear, 'mirror');
   const [chosenGaze, setGaze] = useState<GazeChoice>(current?.gaze_defense ?? 'none');
   // A saved mirror guard reads as no guard once the member no longer carries a mirror, since the list has no
@@ -246,15 +244,8 @@ export function Composer({
       {casting.reason && (
         <div className={styles.noSpells}>
           <Icon name="spell" size={14} />
+          {/* The composer runs only in battle, where nobody can prepare spells, so it offers no way to. */}
           <span className={styles.noSpellsText}>{casting.reason}</span>
-          <Button
-            size="sm"
-            variant="ghost"
-            iconEnd="arrow-right"
-            onClick={() => openSheet(member.id, 'spells')}
-          >
-            Open {member.name}'s spells
-          </Button>
         </div>
       )}
 
@@ -669,8 +660,9 @@ function SpellTargets({
     <div className={styles.choiceStack}>
       <p className={styles.choiceHint}>
         {spellRangeText(spell)}
-        {form?.duration ? ` · ${form.duration}` : ''} ·{' '}
-        {withoutPointers(firstSentence(mode.prose || spell.intro))}
+        {form?.duration ? ` · ${form.duration}` : ''}
+        {/* With several modes, each radio below names its mode, so the hint stops at the range and duration. */}
+        {modes.length > 1 ? '' : ` · ${withoutPointers(firstSentence(mode.prose || spell.intro))}`}
       </p>
       {(modes.length > 1 || choosesForm) && (
         <div className={styles.optionRow}>

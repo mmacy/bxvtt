@@ -317,11 +317,11 @@ export function RollStep({
   if (!roll) {
     return (
       <div className={styles.stepBody}>
-        {/* The footer holds Roll ability scores, so it's on screen at every width. */}
+        {/* The step description above gives the dice, and the footer holds Roll ability scores at every width. */}
         <p className={styles.lead}>
           {method === '4d6_drop_lowest'
-            ? 'You roll 4d6 for each ability in order from Strength to Charisma, and keep the highest three. Each score stays where it falls, and you choose from the classes you qualify for.'
-            : 'You roll 3d6 in order from Strength to Charisma. Under B/X rules, you keep each score where it falls and choose from the classes you qualify for.'}
+            ? 'Each score stays where it falls, and you choose from the classes you qualify for.'
+            : 'Under B/X rules, you keep each score where it falls and choose from the classes you qualify for.'}
         </p>
         <AbilityRow
           scores={null}

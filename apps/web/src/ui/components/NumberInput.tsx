@@ -15,6 +15,12 @@ export interface NumberInputProps {
   step?: number;
   size?: InputSize;
   disabled?: boolean;
+  /**
+   * Shows the number without letting anyone change it, such as a setting only a referee can change. The number
+   * stays at the normal text colour and only the step buttons are muted. The field stays in the tab order and
+   * reports `aria-readonly`.
+   */
+  readOnly?: boolean;
   invalid?: boolean;
   id?: string;
   /** Accessible name when the input is not inside a Field. */
@@ -61,6 +67,7 @@ export function NumberInput({
   step = 1,
   size = 'md',
   disabled,
+  readOnly = false,
   invalid,
   id,
   'aria-label': ariaLabel,
@@ -98,7 +105,7 @@ export function NumberInput({
    * The buttons stay out of the tab order, because the arrow keys step the field.
    */
   const stepButton = (direction: 'decrease' | 'increase', atLimit: boolean, reason: string | undefined) => {
-    const explained = !isDisabled && atLimit && reason !== undefined && reason !== '';
+    const explained = !isDisabled && !readOnly && atLimit && reason !== undefined && reason !== '';
     const button: ReactElement = (
       <button
         type="button"
@@ -107,7 +114,7 @@ export function NumberInput({
         {...(direction === 'decrease'
           ? stepName('Decrease', decrementLabel, `${stepId}-decrease`)
           : stepName('Increase', incrementLabel, `${stepId}-increase`))}
-        disabled={isDisabled || (atLimit && !explained)}
+        disabled={isDisabled || readOnly || (atLimit && !explained)}
         aria-disabled={explained || undefined}
         data-unavailable={explained || undefined}
         onClick={() => {
@@ -137,6 +144,7 @@ export function NumberInput({
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (readOnly) return;
     const keys: Record<string, () => void> = {
       ArrowUp: () => stepBy(step),
       ArrowDown: () => stepBy(-step),
@@ -163,6 +171,7 @@ export function NumberInput({
         styles[size],
         isInvalid && styles.invalid,
         isDisabled && styles.disabled,
+        readOnly && styles.readOnly,
         className,
       )}
     >
@@ -177,6 +186,8 @@ export function NumberInput({
         style={{ width: `${width + 1}ch` }}
         value={shown}
         disabled={isDisabled}
+        readOnly={readOnly}
+        aria-readonly={readOnly || undefined}
         aria-label={ariaLabel}
         aria-valuenow={value ?? undefined}
         aria-valuemin={min}

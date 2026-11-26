@@ -146,7 +146,9 @@ function RerollsField({
           value={unlimited ? null : shown}
           min={0}
           max={MAX_REROLLS}
-          disabled={readOnly || unlimited}
+          // Unlimited leaves no number to read, so the field is off for everyone then.
+          disabled={unlimited}
+          readOnly={readOnly}
           decrementLabel="Fewer rerolls"
           incrementLabel="More rerolls"
           maxReason="For more than 99, choose Unlimited."
@@ -238,7 +240,6 @@ export function TableRulesForm({ showNote = false }: { showNote?: boolean }) {
         error={
           starting.failed ? "Couldn't load the starting rules. Reload the page to try again." : undefined
         }
-        disabled={readOnly}
       >
         {starting.items === null && !starting.failed ? (
           <Skeleton shape="block" height={36} />
@@ -248,7 +249,8 @@ export function TableRulesForm({ showNote = false }: { showNote?: boolean }) {
             placeholder={starting.items === null ? undefined : 'Custom'}
             // Custom is the table's state, not an empty choice, so it reads like a value.
             placeholderTone="value"
-            disabled={readOnly || starting.items === null}
+            disabled={starting.items === null}
+            readOnly={readOnly}
             options={STARTING_IDS.map((id) => ({ value: id, label: STARTING_RULESET_NAMES[id] }))}
             onValueChange={(value) => {
               if (!isStartingId(value) || value === matched) return;
@@ -342,7 +344,7 @@ export function TableRulesForm({ showNote = false }: { showNote?: boolean }) {
                 </div>
                 <Select
                   aria-label={rule.label}
-                  disabled={readOnly}
+                  readOnly={readOnly}
                   value={ruleset[rule.key]}
                   options={rule.options.map((option) => ({ value: option.value, label: option.label }))}
                   onValueChange={(value) => {

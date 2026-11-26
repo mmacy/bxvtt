@@ -232,7 +232,13 @@ describe('LobbyPage', () => {
       'true',
     );
     expect(screen.getByRole('checkbox', { name: 'Unlimited' })).toHaveAttribute('aria-readonly', 'true');
-    expect(screen.getByRole('combobox', { name: 'Starting rules' })).toBeDisabled();
+    // The selects and the number are read-only too, so the rules the table plays by stay easy to read.
+    const startingRules = screen.getByRole('combobox', { name: 'Starting rules' });
+    expect(startingRules).toHaveAttribute('aria-readonly', 'true');
+    await user.click(startingRules);
+    expect(screen.queryByRole('listbox')).toBeNull();
+    expect(screen.getByRole('combobox', { name: 'Encumbrance' })).toHaveAttribute('aria-readonly', 'true');
+    expect(screen.getByRole('spinbutton', { name: 'Ability score rerolls' })).toHaveAttribute('readonly');
     // A player has nothing to choose, so the field has no hint about choosing.
     expect(screen.queryByText(/Choosing one changes every rule/)).toBeNull();
     expect(screen.queryByText(/Rules unknown|Other table|Different rules/)).toBeNull();

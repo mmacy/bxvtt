@@ -426,10 +426,10 @@
   flex: 1 1 200px;
 }
 
+/* The icon and the reason share one line at every width. */
 .noSpells {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-2);
   padding: var(--space-1-5) var(--space-2);
   border-radius: var(--radius-sm);
@@ -437,8 +437,14 @@
   color: var(--color-text-muted);
 }
 
+.noSpells > svg {
+  flex: none;
+  margin-top: 2px;
+}
+
 .noSpellsText {
-  flex: 1 1 260px;
+  flex: 1;
+  min-width: 0;
   font-size: var(--text-sm);
   color: var(--color-text);
 }
