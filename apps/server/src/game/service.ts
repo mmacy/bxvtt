@@ -131,8 +131,8 @@ function rawFeatureId(command: Command): Rejection | null {
 /**
  * Refuses a player's command that aims at a monster or an NPC adventurer the player view doesn't list. bxapi
  * accepts any creature of the session in an out-of-battle `cast_spell` or `use_item`, even one from an encounter
- * that has ended, so without this a player could hit a monster the party can't see. The rejection is the one
- * osrlib gives a target that doesn't exist.
+ * that has ended (https://github.com/mmacy/osrlib-python/issues/317), so without this a player could hit a
+ * monster the party can't see. The rejection is the one osrlib gives a target that doesn't exist.
  *
  * @param live - The game.
  * @param info - The command's class, with the fields that can name a target.

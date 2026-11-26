@@ -167,6 +167,11 @@ const FIXED: Record<string, { title: string; detail: string }> = {
     title: 'The game server returned an unexpected response',
     detail: 'Try again. If it keeps happening, contact the server host.',
   },
+  save_unreadable: {
+    title: "This save can't be restored",
+    detail:
+      "The game service was updated after the save was made and can't read it. Restore a newer save, or start a new game from the lobby.",
+  },
   bxapi_unavailable: {
     title: "Can't reach the game service",
     detail:

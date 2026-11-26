@@ -626,29 +626,19 @@ export function extendContextWithEntryNames(
 export interface SceneNamesLike {
   /** Item, magic item, and valuable display names by ID. */
   names?: Readonly<Record<string, string>>;
-  /**
-   * Dungeon names by dungeon ID, from an older scene. The player view's `dungeons` now names them, and
-   * `contextFromPlayerView` reads it, so a scene without this field loses nothing.
-   */
-  dungeon_names?: Readonly<Record<string, string>>;
 }
 
 /**
  * Add the item names that a bxvtt scene states in `scene.names`, read as in
  * [`extendContextWithNames`][extendContextWithNames]. Dungeon and area names come from the player view, which
- * `contextFromPlayerView` reads. A scene from before the player view named dungeons may still state them in
- * `dungeon_names`, and this reads them too.
+ * `contextFromPlayerView` reads.
  *
  * ```ts
  * ctx = extendContextWithScene(contextFromPlayerView(game.view, ctx), game.scene);
  * ```
  */
 export function extendContextWithScene(ctx: TextContext, scene: SceneNamesLike): TextContext {
-  const next = extendContextWithNames(ctx, scene.names ?? {});
-  for (const [id, name] of Object.entries(scene.dungeon_names ?? {})) {
-    if (name.trim() !== '') next.dungeons[id] = name;
-  }
-  return next;
+  return extendContextWithNames(ctx, scene.names ?? {});
 }
 
 /** Shape of any event that the context can learn from. */

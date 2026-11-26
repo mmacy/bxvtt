@@ -243,11 +243,9 @@ describe('restoring a save the game service cannot read', () => {
     };
     try {
       const failure = await referee.client.restoreSave(table.id, save.id).catch((error: unknown) => error);
-      expect(isProblem(failure, 'content_invalid')).toBe(true);
+      expect(isProblem(failure, 'save_unreadable')).toBe(true);
       if (!isProblem(failure)) throw new Error('expected a problem');
-      expect(failure.problem.detail).toMatch(
-        /^This save can't be restored, because the game service was updated/,
-      );
+      expect(failure.problem.status).toBe(502);
     } finally {
       bxapi.post = originalPost;
     }

@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 /**
  * The scene contains the three things a player needs that bxapi's player view doesn't state yet
- * (https://github.com/mmacy/bxapi/issues/52). The player view itself decides what the party perceives: entered
+ * (https://github.com/mmacy/osrlib-python/issues/316). The player view itself decides what the party perceives: entered
  * areas, visible features with their `feature:` handles and known trap states, known transitions, the entrance,
  * the dungeons the party has entered, and `can_travel_to_town`. The server derives the scene from the referee view,
  * limits each field to what the party already knows, and sends it to every member in the `scene` of the game state:

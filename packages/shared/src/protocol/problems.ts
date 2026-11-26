@@ -115,6 +115,11 @@ export const PROBLEM_CODES = {
   internal_error: 500,
   /** 502: bxapi answered with an error that bxvtt didn't expect. */
   bxapi_error: 502,
+  /**
+   * 502: bxapi can't load the save to restore, because its rules engine was updated after the save was made and
+   * refuses the save's stored state. Trying again doesn't help. Restore a newer save, or start a new game.
+   */
+  save_unreadable: 502,
   /** 503: bxvtt can't reach bxapi. Start bxapi and try again. */
   bxapi_unavailable: 503,
   /**

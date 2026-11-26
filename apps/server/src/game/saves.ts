@@ -261,8 +261,8 @@ export class SaveService {
           // and trying again doesn't help.
           if (error instanceof BxapiProblem && error.code === 'session_unreadable') {
             throw new ApiError(
-              'content_invalid',
-              "This save can't be restored, because the game service was updated after the save was made and can't read it. Restore a newer save, or start a new game from the lobby.",
+              'save_unreadable',
+              "This save can't be restored. The game service was updated after the save was made and can't read it. Restore a newer save, or start a new game from the lobby.",
             );
           }
           throw error;

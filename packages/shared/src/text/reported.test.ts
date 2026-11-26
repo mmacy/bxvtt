@@ -16,7 +16,6 @@ import {
   emptyContext,
   extendContextWithCatalog,
   extendContextWithEntryNames,
-  extendContextWithScene,
   flagName,
   flagValueText,
   nameInSentence,
@@ -670,13 +669,10 @@ describe('dungeon names for players (D-210)', () => {
     transition_ref: null,
   } as unknown as Parameters<typeof describeEvent>[0];
 
-  it('names the dungeon from the scene, as the town and the referee do', () => {
+  it('names the dungeon from the player view, as the town and the referee do', () => {
     // Reported: a player's log read "The party is placed in the priory, level 1."
     expect(describeEvent(entered, emptyContext()).text).toBe('The party is placed in the priory, level 1.');
-    const ctx = extendContextWithScene(emptyContext(), {
-      names: {},
-      dungeon_names: { priory: "The priory on Corvane's Holm" },
-    });
+    const ctx = contextFromPlayerView({ dungeons: [{ id: 'priory', name: "The priory on Corvane's Holm" }] });
     expect(describeEvent(entered, ctx).text).toBe(
       "The party is placed in the priory on Corvane's Holm, level 1.",
     );
@@ -887,7 +883,7 @@ describe('The Toll at Crookback Bridge read-through', () => {
 
   it('gives a proper place name no added article', () => {
     // Reported: "The party is placed in the Crookback Bridge, level 1."
-    const ctx = extendContextWithScene(emptyContext(), { dungeon_names: { bridge: 'Crookback Bridge' } });
+    const ctx = contextFromPlayerView({ dungeons: [{ id: 'bridge', name: 'Crookback Bridge' }] });
     expect(describeEvent(placed('dungeon', 'bridge'), ctx).text).toBe(
       'The party is placed in Crookback Bridge, level 1.',
     );
