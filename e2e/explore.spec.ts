@@ -1,11 +1,12 @@
 /**
- * Exploration in The Drowned Bell: moving, doors, treasure, stairs, light, the map's tools, and a reload in the
- * middle of the dungeon. The referee moves the party between spots with `place_party` through the SDK, and the
- * player drives the thing under test through the interface. Each test fixes the session seed, because a door, a
- * search, and a trap each roll dice.
+ * Exploration in The Drowned Bell: moving, doors, treasure (emptied, out of reach, and dropped), a room trap, stairs,
+ * light, the map's tools, and a reload in the middle of the dungeon. The referee moves the party between spots with
+ * `place_party` through the SDK, and the player drives the thing under test through the interface. Each test fixes
+ * the session seed, because a door, a search, a trap, and a torch each roll dice.
  */
 import type { Page } from '@playwright/test';
 import { SCREENS_DIR } from './support/env';
+import { stepParty } from './support/combat';
 import { expect, expectNoRawText, readFeedLines, test } from './support/fixtures';
 import {
   clickSquare,
@@ -197,8 +198,16 @@ test.describe('exploration', () => {
     await expect(scene.getByText(/A heavy hasp holds the lid shut/)).toBeVisible();
     await expect(scene.getByText('Trapped', { exact: true })).toHaveCount(0);
     await expect(take).toHaveAccessibleDescription(/A heavy hasp holds the lid shut/);
+    const treasureMenu = partyActions(sam.page).getByRole('button', { name: /^Treasure/ });
+    await expect(treasureMenu).toBeVisible();
     await take.click();
+    // The emptied chest stays in the scene with an "Emptied" badge, and nothing offers to take it again.
+    const chest = scene.getByRole('listitem').filter({ hasText: 'A heavy hasp holds the lid shut' });
+    await expect(chest.getByText('Emptied', { exact: true })).toBeVisible();
     await expect(take).toHaveCount(0);
+    await expect(scene.getByRole('button', { name: 'Take anyway' })).toHaveCount(0);
+    await expect(chest.getByRole('button')).toHaveCount(0);
+    await expect(treasureMenu).toHaveCount(0);
     let lines = await feedLines(sam.page);
     expect(lines.join('\n')).toMatch(/trap/i);
     expect(lines.join('\n')).toMatch(/iron key/i);
@@ -216,9 +225,100 @@ test.describe('exploration', () => {
     await take.click();
     await expect(take).toHaveCount(0);
     lines = await feedLines(sam.page);
-    expect(lines.join('\n')).toMatch(/holy water/i);
-    expect(lines.join('\n')).toMatch(/candlestick/i);
+    expect(lines.join('\n')).toMatch(/2 vials of holy water/i);
+    // The player view names a gem or a piece of jewellery by its kind (`PlayerView.item_names`).
+    expect(lines.join('\n')).toMatch(/takes a piece of jewellery/);
+    // The potion isn't identified, so the feed uses its masked name and doesn't say what it is.
+    expect(lines.join('\n')).toMatch(/takes a potion\b/);
+    expect(lines.join('\n')).not.toMatch(/potion of healing/i);
     expectNoRawText(lines, "Sam's feed after the treasure");
+  });
+
+  test('a treasure out of reach says to step closer, and stepping onto it offers Take', async ({ crew }) => {
+    // With this seed, Flarg's torch lights and the step onto the ledge doesn't spring the broken stair's trap.
+    const setup = await dungeonTable(crew, { seed: 7 });
+    const { sam, table } = setup;
+    const scene = scenePanel(sam.page);
+    await send(sam.client, table.id, {
+      command_type: 'light_source',
+      character_id: 'character-0001',
+      item_id: 'torch',
+    });
+    await openScene(sam.page);
+
+    // The satchel lies on the ledge, one square west of the party, in the same room.
+    await placer(setup)(2, 7, 'west');
+    await expect(scene.getByRole('heading', { name: 'Broken stair' })).toBeVisible();
+    const satchel = scene.getByRole('listitem').filter({ hasText: 'A satchel of oiled leather' });
+    await expect(satchel).toBeVisible();
+    await expect(satchel.getByText('Step closer to reach it.')).toBeVisible();
+    await expect(satchel.getByRole('button')).toHaveCount(0);
+    await expect(partyActions(sam.page).getByRole('button', { name: /^Treasure/ })).toHaveCount(0);
+
+    await stepParty(sam.page, 'ArrowLeft', [1, 7]);
+    await expect(satchel.getByText('Step closer to reach it.')).toHaveCount(0);
+    await expect(satchel.getByRole('button', { name: 'Take', exact: true })).toBeVisible();
+    await expect(partyActions(sam.page).getByRole('button', { name: /^Treasure/ })).toBeVisible();
+  });
+
+  test('a room trap the party springs shows as a badge beside the room’s name', async ({ crew }) => {
+    const setup = await dungeonTable(crew, { seed: 1981 });
+    const { sam, table } = setup;
+    const scene = scenePanel(sam.page);
+    await openScene(sam.page);
+
+    // The corridor west of the scriptorium. Walking in brings down the loose blocks in its ceiling.
+    await placer(setup)(8, 3, 'east');
+    await send(sam.client, table.id, { command_type: 'open_door', direction: 'east' });
+    await expect(scene.getByText('Trap sprung', { exact: true })).toHaveCount(0);
+    await stepParty(sam.page, 'ArrowRight', [9, 3]);
+    await expect(scene.getByRole('heading', { name: 'Scriptorium' })).toBeVisible();
+    const badge = scene.getByText('Trap sprung', { exact: true });
+    await expect(badge).toBeVisible();
+    // The badge belongs to the room, not to a row of the list.
+    await expect(
+      scene.getByRole('list', { name: 'Things here' }).getByText('Trap sprung', { exact: true }),
+    ).toHaveCount(0);
+    await expect(scene.getByText(/trap in this room/i)).toHaveCount(0);
+    // It stays in the header when the description folds.
+    await scene.getByRole('button', { name: 'Collapse description' }).click();
+    await expect(scene.getByRole('button', { name: 'Show description' })).toBeVisible();
+    await expect(badge).toBeVisible();
+  });
+
+  test('dropped goods list what lies there by name, and Pick up takes them', async ({ crew }) => {
+    const setup = await dungeonTable(crew, { seed: 1981 });
+    const { sam, table } = setup;
+    const scene = scenePanel(sam.page);
+    await openScene(sam.page);
+
+    // Flarg and Tinks put down some of their gear in the corridor south of the chapter house.
+    await placer(setup)(12, 15, 'north');
+    await send(sam.client, table.id, {
+      command_type: 'drop_items',
+      character_id: 'character-0001',
+      item_ids: ['torch', 'torch', 'tinder_box'],
+      coins: { pp: 0, gp: 5, ep: 0, sp: 0, cp: 0 },
+    });
+    await send(sam.client, table.id, {
+      command_type: 'drop_items',
+      character_id: 'character-0002',
+      item_ids: ['thieves_tools'],
+    });
+    const pile = scene.getByRole('listitem').filter({ hasText: 'Dropped goods lie here.' });
+    const contents = '5 gold pieces, 2 torches, a tinder box, and a set of thieves’ tools.';
+    await expect(pile.getByText(contents, { exact: true })).toBeVisible();
+    const pickUp = pile.getByRole('button', { name: 'Pick up dropped goods' });
+    await expect(pickUp).toHaveText('Pick up');
+    await expect(pickUp).toHaveAccessibleDescription(contents);
+
+    await pickUp.click();
+    await expect(pile).toHaveCount(0);
+    await expect.poll(async () => Object.keys((await sam.client.getGame(table.id)).view.piles)).toEqual([]);
+    const lines = await feedLines(sam.page);
+    expect(lines.join('\n')).toMatch(/2 torches/);
+    expect(lines.join('\n')).toMatch(/thieves’ tools/);
+    expectNoRawText(lines, "Sam's feed after the pick-up");
   });
 
   test('stairs take the party to the next level, and a player can look back at the first', async ({

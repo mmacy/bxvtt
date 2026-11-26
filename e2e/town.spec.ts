@@ -63,7 +63,7 @@ test.describe('town', () => {
     await expect(
       alice.page
         .getByRole('tabpanel', { name: 'Town square' })
-        .getByText('Tinks buys a 50-foot rope and a tinder box.'),
+        .getByText('Tinks buys a 50’ coil of rope and a tinder box.'),
     ).toBeVisible();
 
     // Alice outfits Clarence. She can't shop for Sam's members.
@@ -158,7 +158,7 @@ test.describe('town', () => {
     const before = await clock(alice.page).textContent();
 
     await openTownTab(sam.page, 'Rest and prepare');
-    await sam.page.getByRole('button', { name: 'Rest a full day' }).click();
+    await sam.page.getByRole('button', { name: 'Rest for a full day' }).click();
     await expect(clock(alice.page)).not.toHaveText(before ?? '');
     // A full day of rest heals Flarg's wounds a little.
     await expect(marchingRow(alice.page, 'Flarg')).toHaveAccessibleDescription(/, (8|9|10) of 10 hit points/);
@@ -202,13 +202,21 @@ test.describe('town', () => {
   });
 
   test('a caster’s button on the rest page opens the sheet at its Spells tab', async ({ crew }) => {
-    // Mazpar is a magic-user with Sleep in her spell book. Clarence is a first-level cleric, who has no spells yet.
+    // Mazpar is a magic-user with Sleep in her spell book. Clarence is a first-level cleric: bxapi lists spell
+    // levels for him with no slots yet, so he counts as a caster. Flarg casts nothing.
     const staged = await stagedTable(crew, 'town');
     const { page } = staged.ruth;
     await openTable(page, staged.path);
     await openTownTab(page, 'Rest and prepare');
     const rest = page.getByRole('tabpanel', { name: 'Rest and prepare' });
-    await expect(rest.getByRole('button', { name: "Open Clarence's sheet" })).toBeVisible();
+    await expect(rest.getByRole('button', { name: "Open Flarg's sheet" })).toBeVisible();
+    await expect(rest.getByText('Magic-User 1, 1 in spell book, none memorized')).toBeVisible();
+    await rest.getByRole('button', { name: "Open Clarence's spells" }).click();
+    const clarence = page.getByRole('dialog', { name: 'Clarence' });
+    await expect(clarence.getByRole('tab', { name: 'Spells' })).toHaveAttribute('aria-selected', 'true');
+    await expect(clarence.getByRole('tabpanel', { name: 'Spells' })).toContainText('No spell slots yet');
+    await clarence.getByRole('button', { name: 'Close' }).click();
+    await expect(clarence).toHaveCount(0);
     await rest.getByRole('button', { name: "Open Mazpar's spells" }).click();
     const sheet = page.getByRole('dialog', { name: 'Mazpar' });
     await expect(sheet.getByRole('tab', { name: 'Spells' })).toHaveAttribute('aria-selected', 'true');

@@ -1,13 +1,15 @@
 /**
  * Privacy: a player's browser never receives referee data. The first test plays The Drowned Bell from town into
- * the dungeon and through two fights, while the referee writes private notes, places a referee-only pin, and
- * rolls in secret. It records every API response body and WebSocket frame the player's browser receives, and
- * scans them for markers of referee-only content. The second test does the same while a returning player asks
- * to come back in: the requests go to referees alone, and the visitor learns nothing but the table's name, the
- * offline members, and, once let in, their own new sign-in.
+ * the dungeon and through two fights, while the referee writes private notes, places a referee-only pin, rolls in
+ * secret, and reads a treasure's referee notes in the area key while the player stands in the same room. It
+ * records every API response body and WebSocket frame the player's browser receives, and scans them for markers
+ * of referee-only content, among them the referee notes of every sample adventure. It scans the referee's own
+ * traffic as the control, so a marker the scan can't find never passes for a guarded one. The second test does the
+ * same while a returning player asks to come back in: the requests go to referees alone, and the visitor learns
+ * nothing but the table's name, the offline members, and, once let in, their own new sign-in.
  */
 import { expect, sdkClient, test } from './support/fixtures';
-import { BELL_MARKERS, STRUCTURAL_MARKERS, findLeaks } from './support/privacy';
+import { BELL_MARKERS, SAMPLE_REFEREE_NOTES, STRUCTURAL_MARKERS, findLeaks } from './support/privacy';
 import { searchFor } from './support/party-actions';
 import { clickMapOffset, openRefereeSection } from './support/referee';
 import { openTable, placeParty, send, setupTable, waitForGame } from './support/table';
@@ -15,10 +17,12 @@ import { openTable, placeParty, send, setupTable, waitForGame } from './support/
 const NOTES_MARKER = 'Private plan: the prior waits in the bell pit with two drowned brothers.';
 const PIN_MARKER = 'Referee pin: a crossbow trap behind this wall.';
 const ROLL_MARKER = 'whether the goblins hear the marker party';
+const CHAPEL_NOTE = 'The clay bottle wrapped in the altar cloth holds the potion of healing.';
 
 test('a player receives no referee data through a whole game of The Drowned Bell', async ({ crew }) => {
   test.slow();
-  const ruth = await crew.person('Ruth');
+  // The referee's browser is recorded too, as the control: the scan has to find her referee data.
+  const ruth = await crew.person('Ruth', { record: true });
   const sam = await crew.person('Sam', { record: true });
   const { table, path } = await setupTable({
     referee: ruth,
@@ -78,6 +82,10 @@ test('a player receives no referee data through a whole game of The Drowned Bell
   await test.step('the party searches the chapel and meets the guardroom goblins', async () => {
     await placeParty(ruth.client, tableId, { dungeon: 'priory', level: 1, x: 17, y: 12 });
     await expect(sam.page.getByRole('region', { name: 'Current location' })).toContainText('Chapel');
+    // The referee reads the altar's referee notes in the area key while Sam stands at the altar.
+    const now = await openRefereeSection(ruth.page, 'now');
+    await expect(now.getByRole('region', { name: 'Referee notes' }).first()).toContainText(CHAPEL_NOTE);
+    await expect(sam.page.getByText(CHAPEL_NOTE)).toHaveCount(0);
     await searchFor(sam.page);
 
     // Placing the party starts no encounter, so it walks the last step into the guardroom.
@@ -153,14 +161,28 @@ test('a player receives no referee data through a whole game of The Drowned Bell
     'Gatehouse stair',
     'robed corpse',
   ]);
+  // The control: the same scan finds the referee notes, their field, and the referee view's feature handles in
+  // what the referee's browser received, so a leak of any of them to the player would fail this test.
+  expect(SAMPLE_REFEREE_NOTES, 'the sample adventures should have referee notes').toHaveLength(13);
+  const refereeData = findLeaks(ruth.received, ['"referee_notes"', '"feature_handles"', CHAPEL_NOTE]);
+  expect(refereeData.map((found) => found.marker)).toEqual([
+    '"referee_notes"',
+    '"feature_handles"',
+    CHAPEL_NOTE,
+    '"referee":{',
+  ]);
   const leaks = findLeaks(sam.received, [
     ...STRUCTURAL_MARKERS,
     ...BELL_MARKERS,
+    ...SAMPLE_REFEREE_NOTES,
     NOTES_MARKER,
     PIN_MARKER,
     ROLL_MARKER,
   ]);
   expect(leaks.map((leak) => `${leak.marker} … ${leak.context}`)).toEqual([]);
+  // The player's page shows none of the notes either.
+  const page = await sam.page.content();
+  expect(SAMPLE_REFEREE_NOTES.filter((note) => page.includes(note))).toEqual([]);
 });
 
 test('rejoin requests reach referees alone, and a visitor learns only what the join page needs', async ({
@@ -211,7 +233,12 @@ test('rejoin requests reach referees alone, and a visitor learns only what the j
 
   // The other player received no request, no request ID or secret, and neither of Sam's tokens.
   const rejoinMarkers = ['"rejoin_requests"', 'rjn_', 'rjs_', oldToken, newToken];
-  const patLeaks = findLeaks(pat.received, [...STRUCTURAL_MARKERS, ...BELL_MARKERS, ...rejoinMarkers]);
+  const patLeaks = findLeaks(pat.received, [
+    ...STRUCTURAL_MARKERS,
+    ...BELL_MARKERS,
+    ...SAMPLE_REFEREE_NOTES,
+    ...rejoinMarkers,
+  ]);
   expect(patLeaks.map((leak) => `${leak.marker} … ${leak.context}`)).toEqual([]);
   expect(pat.received.length, 'the recorder should have captured traffic').toBeGreaterThan(5);
 

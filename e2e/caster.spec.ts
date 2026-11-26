@@ -74,9 +74,7 @@ test.describe('a new caster', () => {
     const page = sam.page;
 
     // The town square warns by name before the party leaves.
-    const warning = page
-      .getByText('Mazpar has no spells memorized. Rest for a night, then prepare spells.')
-      .first();
+    const warning = page.getByText("Mazpar needs a night's rest before preparing spells.").first();
     await expect(warning).toBeVisible({ timeout: 20_000 });
     await page.screenshot({ path: `${SCREENS_DIR}/caster-town-warning.png` });
     await page.getByRole('button', { name: 'Rest for a night' }).first().click();
@@ -91,10 +89,15 @@ test.describe('a new caster', () => {
     await expect(sheet.getByRole('tab', { name: 'Spells' })).toHaveAttribute('aria-selected', 'true');
     await sheet.getByRole('button', { name: 'Prepare spells' }).click();
     const prepare = page.getByRole('dialog', { name: "Prepare Mazpar's spells" });
-    if (await prepare.getByText('Slots used: 0 of 1').isVisible()) {
-      await prepare.getByRole('button', { name: 'More copies of Sleep' }).click();
+    // The dialog lists the spells she can prepare under a heading for their level, with that level's count.
+    const firstLevel = prepare.getByRole('region', { name: '1st-level spells' });
+    await expect(firstLevel.getByRole('heading', { name: '1st-level spells' })).toBeVisible();
+    await expect(prepare.getByRole('region', { name: /-level spells$/ })).toHaveCount(1);
+    await expect(firstLevel.getByText('Sleep', { exact: true })).toBeVisible();
+    if (await firstLevel.getByText('0 of 1 slots chosen').isVisible()) {
+      await firstLevel.getByRole('button', { name: 'More copies of Sleep' }).click();
     }
-    await expect(prepare.getByText('Slots used: 1 of 1')).toBeVisible();
+    await expect(firstLevel.getByText('1 of 1 slots chosen')).toBeVisible();
     await prepare.getByRole('button', { name: 'Prepare spells' }).click();
     await expect(prepare).toHaveCount(0);
     await expect(sheet.getByRole('region', { name: 'Memorized spells' })).toContainText('Sleep');
