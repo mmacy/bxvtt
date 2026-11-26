@@ -19,6 +19,7 @@
         "id": "character-0001",
         "name": "Brenna",
         "class_id": "fighter",
+        "class_name": "Fighter",
         "level": 1,
         "current_hp": 5,
         "max_hp": 5,
@@ -184,6 +185,7 @@
         "id": "character-0002",
         "name": "Durin",
         "class_id": "dwarf",
+        "class_name": "Dwarf",
         "level": 1,
         "current_hp": 5,
         "max_hp": 5,
@@ -246,6 +248,7 @@
         "id": "character-0003",
         "name": "Elowen",
         "class_id": "elf",
+        "class_name": "Elf",
         "level": 1,
         "current_hp": 5,
         "max_hp": 5,
@@ -325,6 +328,7 @@
         "id": "character-0004",
         "name": "Wren",
         "class_id": "thief",
+        "class_name": "Thief",
         "level": 1,
         "current_hp": 3,
         "max_hp": 3,
@@ -540,9 +544,35 @@
             "door_open": null,
             "door_wedged": null
           }
-        }
+        },
+        "areas": [],
+        "features": [
+          {
+            "id": "feature:6d132f495864bb041f933c99a5ea26256839b75e1048fcb025bce817693f1c80",
+            "kind": "treasure_cache",
+            "description": "The idol rests in a hollow under the altar stone.",
+            "cell": [4, 0],
+            "area_id": null,
+            "trap_state": null
+          }
+        ],
+        "transitions": [
+          {
+            "position": [4, 0],
+            "kind": "stairs_down",
+            "side": null
+          }
+        ],
+        "entrance": [0, 0]
       }
     ],
+    "dungeons": [
+      {
+        "id": "barrow",
+        "name": "The Barrow"
+      }
+    ],
+    "can_travel_to_town": false,
     "piles": {},
     "emptied_caches": [],
     "effects": [
@@ -552,6 +582,10 @@
         "remaining_rounds": 359
       }
     ],
+    "spell_names": {
+      "sleep": "Sleep"
+    },
+    "reversed_spell_names": {},
     "fatigued": false,
     "exhausted": false,
     "deprivation": {},
@@ -733,8 +767,8 @@
                 }
               ],
               "wandering": {
-                "chance_in_six": 6,
-                "interval_turns": 1,
+                "chance_in_six": 1,
+                "interval_turns": 2,
                 "table": {
                   "id": "barrow_rivals",
                   "label": "Barrow halls",

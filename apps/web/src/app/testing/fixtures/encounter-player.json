@@ -1,94 +1,94 @@
 {
   "type": "snapshot",
   "user": {
-    "id": "usr_9w3ahkA7vgakA72hGmdhNg",
+    "id": "usr_27uu5K1E6usvnfFnEE4Z5w",
     "name": "Sam",
-    "color": "#8e7ff3",
-    "created_at": "2026-11-22T05:18:27Z"
+    "color": "#5c8de5",
+    "created_at": "2026-11-26T03:50:16Z"
   },
   "role": "player",
   "table": {
-    "id": "tbl_5qEk4DHN80IfFswxhZiI9w",
+    "id": "tbl_-ZP3TZvp486zli31J_fpEg",
     "name": "Thursday at the Drowned Bell",
-    "invite_code": "NP36E-A62JC-CA5M4-N7EH8",
+    "invite_code": "WP28K-H51F3-RNK1E-971Z2",
     "phase": "playing",
     "settings": {
       "party_control": "caller",
-      "caller_user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
+      "caller_user_id": "usr_27uu5K1E6usvnfFnEE4Z5w",
       "auto_resolve": true,
       "autosave": true
     },
     "members": [
       {
-        "user_id": "usr_yyi4I1GsY3UtjRmjiFUNRQ",
+        "user_id": "usr_egewOApmbWw9MocOHTy8BA",
         "name": "Ruth",
-        "color": "#5c8de5",
+        "color": "#3fa7d6",
         "role": "referee",
-        "joined_at": "2026-11-22T05:18:27Z"
+        "joined_at": "2026-11-26T03:50:16Z"
       },
       {
-        "user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
+        "user_id": "usr_27uu5K1E6usvnfFnEE4Z5w",
         "name": "Sam",
-        "color": "#8e7ff3",
+        "color": "#5c8de5",
         "role": "player",
-        "joined_at": "2026-11-22T05:18:27Z"
+        "joined_at": "2026-11-26T03:50:16Z"
       }
     ],
     "roster": [
       {
-        "id": "ros_f1QvLMo30JY91p1QlHyXbQ",
-        "character_id": "chr_rk5wfak0OsbJn7qFjVn8xA",
-        "owner_user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
+        "id": "ros_6rUc1c7DRBYuDjaBrKyg6w",
+        "character_id": "chr_kbZUbWT4xi4KafUy5knY-Q",
+        "owner_user_id": "usr_27uu5K1E6usvnfFnEE4Z5w",
         "name": "Brenna",
         "class_id": "fighter",
         "level": 1,
-        "added_at": "2026-11-22T05:18:27Z"
+        "added_at": "2026-11-26T03:50:16Z"
       },
       {
-        "id": "ros_HfOQGGMALyxZ1U_Vmfdlqw",
-        "character_id": "chr_wl8QukajXCXggNkY7nta3g",
-        "owner_user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
+        "id": "ros_8QA1tcCZ6gzmQvgZTr9rHQ",
+        "character_id": "chr_c8_ZZdyjmkVAy9uixkvsqQ",
+        "owner_user_id": "usr_27uu5K1E6usvnfFnEE4Z5w",
         "name": "Wren",
         "class_id": "thief",
         "level": 1,
-        "added_at": "2026-11-22T05:18:27Z"
+        "added_at": "2026-11-26T03:50:16Z"
       },
       {
-        "id": "ros_WwWuMureACugZKUauuUGJg",
-        "character_id": "chr_RAtgYKsftVHwxz20cUV9oA",
-        "owner_user_id": "usr_yyi4I1GsY3UtjRmjiFUNRQ",
+        "id": "ros_LnKn3lkCppPAF1aNRZCk5A",
+        "character_id": "chr_G9XlzUGM_mSbj2P1O_oV2Q",
+        "owner_user_id": "usr_egewOApmbWw9MocOHTy8BA",
         "name": "Osric",
         "class_id": "cleric",
         "level": 1,
-        "added_at": "2026-11-22T05:18:27Z"
+        "added_at": "2026-11-26T03:50:16Z"
       },
       {
-        "id": "ros_T4GRDiICG84isplH0VmJwg",
-        "character_id": "chr_Be1f3MigrYdWlDIgPWQifQ",
-        "owner_user_id": "usr_yyi4I1GsY3UtjRmjiFUNRQ",
+        "id": "ros_ugfTsy59UGVWhkqe1webZw",
+        "character_id": "chr_GSvjYBg8v1z0fa_m8g3FnQ",
+        "owner_user_id": "usr_egewOApmbWw9MocOHTy8BA",
         "name": "Tamsin",
         "class_id": "fighter",
         "level": 1,
-        "added_at": "2026-11-22T05:18:27Z"
+        "added_at": "2026-11-26T03:50:16Z"
       }
     ],
     "game": {
-      "session_id": "ses_5nMCFWdwzzy4PAVtuyn7tg",
+      "session_id": "ses_6XXMPT9DkFiHdydQWvUZGQ",
       "adventure_id": "sample:the-drowned-bell",
       "adventure_name": "The Drowned Bell",
       "mode": "encounter",
       "ended": false,
-      "started_at": "2026-11-22T05:18:27Z"
+      "started_at": "2026-11-26T03:50:16Z"
     },
-    "created_by": "usr_yyi4I1GsY3UtjRmjiFUNRQ",
-    "created_at": "2026-11-22T05:18:27Z"
+    "created_by": "usr_egewOApmbWw9MocOHTy8BA",
+    "created_at": "2026-11-26T03:50:16Z"
   },
   "presence": {
-    "online": ["usr_9w3ahkA7vgakA72hGmdhNg"]
+    "online": ["usr_27uu5K1E6usvnfFnEE4Z5w"]
   },
   "game": {
-    "table_id": "tbl_5qEk4DHN80IfFswxhZiI9w",
-    "session_id": "ses_5nMCFWdwzzy4PAVtuyn7tg",
+    "table_id": "tbl_-ZP3TZvp486zli31J_fpEg",
+    "session_id": "ses_6XXMPT9DkFiHdydQWvUZGQ",
     "adventure_id": "sample:the-drowned-bell",
     "adventure_name": "The Drowned Bell",
     "mode": "encounter",
@@ -118,6 +118,7 @@
           "id": "character-0001",
           "name": "Brenna",
           "class_id": "fighter",
+          "class_name": "Fighter",
           "level": 1,
           "current_hp": 5,
           "max_hp": 5,
@@ -236,6 +237,7 @@
           "id": "character-0002",
           "name": "Wren",
           "class_id": "thief",
+          "class_name": "Thief",
           "level": 1,
           "current_hp": 3,
           "max_hp": 3,
@@ -338,6 +340,7 @@
           "id": "character-0003",
           "name": "Osric",
           "class_id": "cleric",
+          "class_name": "Cleric",
           "level": 1,
           "current_hp": 4,
           "max_hp": 4,
@@ -432,6 +435,7 @@
           "id": "character-0004",
           "name": "Tamsin",
           "class_id": "fighter",
+          "class_name": "Fighter",
           "level": 1,
           "current_hp": 4,
           "max_hp": 4,
@@ -627,7 +631,7 @@
           ],
           "features": [
             {
-              "id": "feature:fallen_statue",
+              "id": "feature:dfd024cc83621a88c5d5bb6825f11606d0af6b161b43b98ee624d06c1a89f880",
               "kind": "custom",
               "description": "The statue is Saint Corvane, holding up a lantern. Someone has chipped the glass out of the lantern to see whether there was silver inside it.",
               "cell": null,
@@ -639,9 +643,18 @@
           "entrance": [14, 23]
         }
       ],
+      "dungeons": [
+        {
+          "id": "priory",
+          "name": "The priory on Corvane's Holm"
+        }
+      ],
+      "can_travel_to_town": false,
       "piles": {},
       "emptied_caches": [],
       "effects": [],
+      "spell_names": {},
+      "reversed_spell_names": {},
       "fatigued": false,
       "exhausted": false,
       "deprivation": {},
@@ -725,14 +738,29 @@
             "family_id": "goblin",
             "categories": ["person"],
             "count": 3,
-            "distance_feet": 40,
+            "distance_feet": 30,
             "visible_conditions": [],
             "condition_counts": {},
             "fled": false,
+            "fleeing": false,
             "member_distance_feet": {},
             "front_rank": [],
             "lit": null,
-            "seen_by": []
+            "seen_by": [],
+            "members": [
+              {
+                "id": "monster-0001",
+                "status": "alive"
+              },
+              {
+                "id": "monster-0002",
+                "status": "alive"
+              },
+              {
+                "id": "monster-0003",
+                "status": "alive"
+              }
+            ]
           }
         ],
         "stance": "indifferent",
@@ -743,17 +771,12 @@
         "front_rank": ["character-0001", "character-0002", "character-0003", "character-0004"],
         "immobile": [],
         "reloading": [],
+        "can_hide": [],
+        "hiding": [],
         "advance_feet": {},
         "formation_width": 6,
         "party_free_round": false
-      },
-      "dungeons": [
-        {
-          "id": "priory",
-          "name": "The priory on Corvane's Holm"
-        }
-      ],
-      "can_travel_to_town": false
+      }
     },
     "commands": [
       {
@@ -809,25 +832,25 @@
       {
         "member_id": "character-0001",
         "name": "Brenna",
-        "user_id": "usr_9w3ahkA7vgakA72hGmdhNg"
+        "user_id": "usr_27uu5K1E6usvnfFnEE4Z5w"
       },
       {
         "member_id": "character-0002",
         "name": "Wren",
-        "user_id": "usr_9w3ahkA7vgakA72hGmdhNg"
+        "user_id": "usr_27uu5K1E6usvnfFnEE4Z5w"
       },
       {
         "member_id": "character-0003",
         "name": "Osric",
-        "user_id": "usr_yyi4I1GsY3UtjRmjiFUNRQ"
+        "user_id": "usr_egewOApmbWw9MocOHTy8BA"
       },
       {
         "member_id": "character-0004",
         "name": "Tamsin",
-        "user_id": "usr_yyi4I1GsY3UtjRmjiFUNRQ"
+        "user_id": "usr_egewOApmbWw9MocOHTy8BA"
       }
     ],
-    "caller_user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
+    "caller_user_id": "usr_27uu5K1E6usvnfFnEE4Z5w",
     "scene": {
       "names": {
         "leather": "Leather",
@@ -846,40 +869,40 @@
   "feed": {
     "entries": [
       {
-        "seq": 5,
-        "created_at": "2026-11-22T05:18:27Z",
-        "user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
+        "seq": 25,
+        "created_at": "2026-11-26T03:50:16Z",
+        "user_id": "usr_27uu5K1E6usvnfFnEE4Z5w",
         "visibility": "everyone",
         "to": [],
         "kind": "system",
         "code": "member_joined",
         "params": {
-          "user_id": "usr_9w3ahkA7vgakA72hGmdhNg"
+          "user_id": "usr_27uu5K1E6usvnfFnEE4Z5w"
         }
       },
       {
-        "seq": 6,
-        "created_at": "2026-11-22T05:18:27Z",
-        "user_id": "usr_yyi4I1GsY3UtjRmjiFUNRQ",
+        "seq": 26,
+        "created_at": "2026-11-26T03:50:16Z",
+        "user_id": "usr_egewOApmbWw9MocOHTy8BA",
         "visibility": "everyone",
         "to": [],
         "kind": "system",
         "code": "game_started",
         "params": {
-          "session_id": "ses_5nMCFWdwzzy4PAVtuyn7tg",
+          "session_id": "ses_6XXMPT9DkFiHdydQWvUZGQ",
           "adventure_name": "The Drowned Bell"
         }
       },
       {
-        "seq": 7,
-        "created_at": "2026-11-22T05:18:28Z",
-        "user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
+        "seq": 27,
+        "created_at": "2026-11-26T03:50:16Z",
+        "user_id": "usr_27uu5K1E6usvnfFnEE4Z5w",
         "visibility": "everyone",
         "to": [],
         "kind": "game",
         "command_type": "enter_dungeon",
         "revision": 1,
-        "session_id": "ses_5nMCFWdwzzy4PAVtuyn7tg",
+        "session_id": "ses_6XXMPT9DkFiHdydQWvUZGQ",
         "events": [
           {
             "code": "exploration.location.entered",
@@ -926,32 +949,44 @@
           "The party enters area gatehouse_stair (level 1).",
           "Journal: The ferry grounds at the landing stage of Corvane's Holm. As you step ashore, a bell tolls once, somewhere beneath your feet.",
           "A new quest: The Hand of Saint Corvane. As the ferry grounds, the ferryman tells you about the priory's relic, the Hand of Saint Corvane, lost in the flood. The temple would pay well to have it back."
-        ]
+        ],
+        "clock_rounds": 180,
+        "names": {
+          "members": {},
+          "groups": {},
+          "monsters": {},
+          "items": {},
+          "dungeons": {
+            "priory": "The priory on Corvane's Holm"
+          }
+        },
+        "actor_id": null,
+        "xp_gained": {}
       },
       {
-        "seq": 8,
-        "created_at": "2026-11-22T05:18:28Z",
+        "seq": 28,
+        "created_at": "2026-11-26T03:50:16Z",
         "user_id": null,
         "visibility": "everyone",
         "to": [],
         "kind": "system",
         "code": "save_created",
         "params": {
-          "save_id": "sav_5SclM40vHF9GH6TPFGO4Yg",
-          "label": "Autosave: Entered The priory on Corvane's Holm",
+          "save_id": "sav_V0HpKnevwX8Umql-NpgpVg",
+          "label": "Autosave: Entered the priory on Corvane's Holm",
           "autosave": true
         }
       },
       {
-        "seq": 9,
-        "created_at": "2026-11-22T05:18:28Z",
-        "user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
+        "seq": 29,
+        "created_at": "2026-11-26T03:50:16Z",
+        "user_id": "usr_27uu5K1E6usvnfFnEE4Z5w",
         "visibility": "everyone",
         "to": [],
         "kind": "game",
         "command_type": "move_party",
         "revision": 2,
-        "session_id": "ses_5nMCFWdwzzy4PAVtuyn7tg",
+        "session_id": "ses_6XXMPT9DkFiHdydQWvUZGQ",
         "events": [
           {
             "code": "exploration.party.moved",
@@ -963,18 +998,28 @@
             "narrative": null
           }
         ],
-        "messages": ["The party moves to (14, 22), facing north."]
+        "messages": ["The party moves to (14, 22), facing north."],
+        "clock_rounds": 180,
+        "names": {
+          "members": {},
+          "groups": {},
+          "monsters": {},
+          "items": {},
+          "dungeons": {}
+        },
+        "actor_id": null,
+        "xp_gained": {}
       },
       {
-        "seq": 10,
-        "created_at": "2026-11-22T05:18:28Z",
-        "user_id": "usr_yyi4I1GsY3UtjRmjiFUNRQ",
+        "seq": 30,
+        "created_at": "2026-11-26T03:50:16Z",
+        "user_id": "usr_egewOApmbWw9MocOHTy8BA",
         "visibility": "everyone",
         "to": [],
         "kind": "game",
         "command_type": null,
         "revision": 3,
-        "session_id": "ses_5nMCFWdwzzy4PAVtuyn7tg",
+        "session_id": "ses_6XXMPT9DkFiHdydQWvUZGQ",
         "events": [
           {
             "code": "encounter.started",
@@ -983,9 +1028,12 @@
             "monster_name": "goblin",
             "monster_name_plural": "goblins",
             "count": 3,
-            "distance_feet": 40,
+            "distance_feet": 30,
             "party_surprised": false,
-            "monsters_surprised": false
+            "monsters_surprised": false,
+            "group_labels": ["goblin"],
+            "group_labels_plural": ["goblins"],
+            "group_counts": [3]
           },
           {
             "code": "encounter.stance.changed",
@@ -994,19 +1042,36 @@
             "stance": "indifferent"
           }
         ],
-        "messages": ["Encounter: 3 goblins at 40'.", "The monsters' bearing: indifferent."]
+        "messages": ["Encounter: 3 goblins at 30'.", "The monsters' bearing: indifferent."],
+        "clock_rounds": 180,
+        "names": {
+          "members": {},
+          "groups": {
+            "group-0001": {
+              "label": "goblin",
+              "label_plural": "goblins",
+              "count": 3,
+              "size": 3
+            }
+          },
+          "monsters": {},
+          "items": {},
+          "dungeons": {}
+        },
+        "actor_id": null,
+        "xp_gained": {}
       },
       {
-        "seq": 11,
-        "created_at": "2026-11-22T05:18:28Z",
+        "seq": 31,
+        "created_at": "2026-11-26T03:50:16Z",
         "user_id": null,
         "visibility": "everyone",
         "to": [],
         "kind": "system",
         "code": "save_created",
         "params": {
-          "save_id": "sav_DSEsteOI4k7MqFtd18Xdlw",
-          "label": "Autosave: Before the battle in The priory on Corvane's Holm, level 1",
+          "save_id": "sav_TR2Yt_2tygvgNQKbgqfaNA",
+          "label": "Autosave: Met 3 goblins in the priory on Corvane's Holm, level 1",
           "autosave": true
         }
       }
@@ -1028,5 +1093,5 @@
     },
     "referee": null
   },
-  "server_time": "2026-11-22T05:18:28Z"
+  "server_time": "2026-11-26T03:50:16Z"
 }

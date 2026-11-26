@@ -532,7 +532,7 @@ function MemberRow({
             {member.name}
             {!mine && owner && <span className={styles.memberOwner}>{owner.name}</span>}
             {/* The view lists who is hiding, never whether the hide worked, and so does the board. */}
-            {(encounter.hiding ?? []).includes(member.id) && (
+            {encounter.hiding.includes(member.id) && (
               <Badge tone="neutral" icon="eye-off">
                 Hiding
               </Badge>

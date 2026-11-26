@@ -91,7 +91,9 @@ export function EncounterPanel() {
   const store = useTableStoreApi();
   const opening = useEncounterOpening();
   const commands = useEncounterCommands();
-  const playback = usePlayback({ accept: ACCEPT_ALL });
+  // Entries since the encounter began on this client are news, so a result that arrives while the panel's code
+  // loads still plays (#29). `usePlayback` reads `afterSeq` once, when the panel mounts.
+  const playback = usePlayback({ accept: ACCEPT_ALL, afterSeq: store.getState().modeStartSeq });
 
   useEffect(() => {
     if (revision !== null) recordSnapshot({ tableId, revision, encounter, party });

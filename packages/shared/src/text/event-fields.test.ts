@@ -485,7 +485,13 @@ describe('names from the player view', () => {
   it("reads a custom class, a bundled spell and its reverse, a dungeon, and an area by the view's names", () => {
     const named = contextFromPlayerView({
       party: [
-        { id: 'character-0001', name: 'Sefa', class_id: 'class-0001', class_name: 'Bog Witch', level: 1 },
+        {
+          id: 'character-0001',
+          name: 'Sefa',
+          class_id: 'class-0001',
+          class_name: 'Warlock of Sarn',
+          level: 1,
+        },
       ],
       spell_names: { moon_bolt: 'Moon Bolt', light_mu: 'Light' },
       reversed_spell_names: { light_mu: 'Darkness' },
@@ -498,7 +504,7 @@ describe('names from the player view', () => {
         },
       ],
     });
-    expect(memberClass('character-0001', named)).toBe('bog witch');
+    expect(memberClass('character-0001', named)).toBe('warlock of Sarn');
     expect(
       describeEvent(
         event('member_added', 'session.member.added', {
@@ -509,7 +515,7 @@ describe('names from the player view', () => {
         }),
         named,
       ).text,
-    ).toBe('Sefa, a level 1 bog witch, joins the party.');
+    ).toBe('Sefa, a level 1 warlock of Sarn, joins the party.');
     const cast = (spell: string, reversed: boolean) =>
       describeEvent(
         event('spell_cast', 'magic.cast.cast', {

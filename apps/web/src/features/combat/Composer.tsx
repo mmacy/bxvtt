@@ -167,10 +167,8 @@ export function Composer({
   // Hide is offered to the members the view lists in `can_hide`, to a member who already declared a hide, and to
   // a member the view gives thief skills. `can_hide` reads the battle as it stands, so a thief in the front rank
   // isn't in it, though another member's declared move can make the hide work. The preview says when it won't.
-  // The `?? []` and `?? {}` cover test fixtures captured before osrlib 2.7.
-  const thiefSkills = Object.keys(member.thief_skills ?? {}).length > 0;
-  if ((encounter.can_hide ?? []).includes(member.id) || current?.action === 'hide' || thiefSkills)
-    tabs.push('hide');
+  const thiefSkills = Object.keys(member.thief_skills).length > 0;
+  if (encounter.can_hide.includes(member.id) || current?.action === 'hide' || thiefSkills) tabs.push('hide');
   tabs.push('hold');
 
   const usableTabs = tabs.filter((t) => t !== 'cast' || spells.length > 0);
@@ -482,7 +480,7 @@ function AttackChoices({
   const [stab, setStab] = useState(false);
   // The class catalog says who has the back-stab ability, and the view lists who is hiding. Whether a back-stab
   // works this round is the session's to say, and the preview refuses one that won't.
-  const canStab = backStab || (encounter.hiding ?? []).includes(member.id);
+  const canStab = backStab || encounter.hiding.includes(member.id);
   // A back-stab is a melee attack, so it takes the wielded melee weapon unless the player chose one.
   const melee = gear.wielded.find((w) => w.melee)?.id ?? null;
   const chosen = weaponId !== 'auto' ? weaponId : stab && canStab ? melee : null;

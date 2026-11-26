@@ -278,8 +278,11 @@ function BattleActions() {
   const again = () => {
     if (repeatable.length > 0) void repeat.run(mine);
   };
+  // The round can't resolve while the session would refuse a declaration, so the bar's button and the command
+  // palette's action are unavailable then, with the reason, like the board's button.
+  const resolvable = showResolve && everyone && refused.length === 0;
   const resolveRound = () => {
-    if (showResolve && everyone && refused.length === 0) void resolve();
+    if (resolvable) void resolve();
   };
   const group = 'Battle';
   useShortcut({
@@ -316,7 +319,7 @@ function BattleActions() {
     icon: 'play',
     shortcut: 'mod+enter',
     run: resolveRound,
-    disabled: !(showResolve && everyone),
+    disabled: !resolvable,
     disabledReason: resolveReason,
   });
 
@@ -373,7 +376,7 @@ function BattleActions() {
             icon="play"
             primary
             onClick={resolveRound}
-            disabled={!everyone || pending}
+            disabled={!resolvable || pending}
             reason={resolveReason}
           />
         </>

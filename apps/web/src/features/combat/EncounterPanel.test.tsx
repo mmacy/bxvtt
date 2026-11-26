@@ -1,5 +1,6 @@
 import type { CommandResult, GameState } from '@bxvtt/shared/protocol';
-import { fireEvent, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { useState } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ShortcutLayer } from '@/app';
 import { ActionBar } from '@/ui';
@@ -42,9 +43,43 @@ describe('EncounterPanel', () => {
     stubRules(api);
     renderWithTable(<EncounterPanel />, { snapshot: fixtureSnapshot('encounter', 'player'), api });
     expect(screen.getByRole('heading', { name: 'The party meets 3 goblins' })).toBeInTheDocument();
-    expect(screen.getByText(/40 feet away/)).toBeInTheDocument();
+    expect(screen.getByText(/30 feet away/)).toBeInTheDocument();
     expect(screen.getByText('Indifferent')).toBeInTheDocument();
     expect(screen.getByText(/Talk if you want to test their reaction/)).toBeInTheDocument();
+  });
+
+  it('says what a wait did when the result arrives before the panel mounts (#29)', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('encounter', 'player');
+    const game = snapshot.game as GameState;
+    /** The panel mounts on demand, as it does when its code loads after the snapshot. */
+    function Later() {
+      const [shown, setShown] = useState(false);
+      return shown ? <EncounterPanel /> : <button onClick={() => setShown(true)}>Show the panel</button>;
+    }
+    const { user, store } = renderWithTable(<Later />, { snapshot, api });
+    act(() => {
+      store.getState().receive({
+        type: 'feed',
+        entry: {
+          kind: 'game',
+          seq: (snapshot.feed.entries.at(-1)?.seq ?? 0) + 1,
+          created_at: '2026-11-22T05:20:00Z',
+          user_id: null,
+          visibility: 'everyone',
+          to: [],
+          command_type: 'wait',
+          revision: game.revision + 1,
+          session_id: game.session_id,
+          events: [],
+          messages: [],
+        },
+      });
+      store.getState().receive({ type: 'game', game: { ...game, revision: game.revision + 1 } });
+    });
+    await user.click(screen.getByRole('button', { name: 'Show the panel' }));
+    expect(await screen.findByText(/^The party waits\. \S/)).toBeInTheDocument();
   });
 
   it('starts a battle', async () => {
@@ -212,6 +247,36 @@ describe('CombatActions', () => {
     );
     expect(screen.getByText('Waiting for Osric and Tamsin to declare.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Declare for/ })).not.toBeInTheDocument();
+  });
+
+  it('keeps Resolve round unavailable while the session would refuse a declaration', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('battle', 'player');
+    if (snapshot.table) snapshot.table.settings.auto_resolve = false;
+    const declarations = snapshot.declarations;
+    if (!declarations) throw new Error('No declarations in the fixture.');
+    declarations.declared = [...declarations.declarers];
+    for (const id of declarations.declarers)
+      declarations.declarations[id] ??= { action: 'hold', character_id: id } as never;
+    declarations.refusals = [
+      {
+        member_id: 'character-0001',
+        code: 'combat.attack.out_of_reach',
+        params: { character: 'character-0001', distance_feet: 30 },
+      },
+    ];
+    const { user } = renderWithTable(
+      <ActionBar aria-label="Party actions">
+        <CombatActions />
+      </ActionBar>,
+      { snapshot, api },
+    );
+    const resolve = screen.getByRole('button', { name: 'Resolve round' });
+    expect(resolve).toHaveAttribute('aria-disabled', 'true');
+    expect(resolve).toHaveAccessibleDescription(/Brenna has to choose another action first\./);
+    await user.click(resolve);
+    expect(api.resolveRound).not.toHaveBeenCalled();
   });
 });
 

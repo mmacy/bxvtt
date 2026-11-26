@@ -393,12 +393,16 @@ test.describe('battle', () => {
     );
     await expect(battleBoard(sam.page)).toContainText('4 of 4 declared');
 
-    await battleBoard(sam.page).getByRole('button', { name: 'Resolve round' }).click();
-    // Both players see which declaration failed and why, on Flarg's row.
+    // The server previews the declarations, so both players see which one the session would refuse and why, on
+    // Flarg's row, and the round can't resolve until Flarg's declaration changes.
     for (const actor of [sam, ann]) {
       await expect(declarationRow(actor.page, 'Flarg')).toContainText(/too far for a melee attack/);
       await expect(battleBoard(actor.page).getByRole('heading', { name: 'Round 1' })).toBeVisible();
     }
+    await expect(battleBoard(sam.page).getByRole('button', { name: 'Resolve round' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
     await shot(ann.page, 'refused-declaration');
 
     // Sam changes Flarg's declaration to closing in, and the round resolves.
@@ -471,10 +475,11 @@ test.describe('battle', () => {
     // The server previews the declarations as they arrive, so the board names Flarg's before anyone resolves.
     await openTable(sam.page, table.path);
     await expect(declarationRow(sam.page, 'Flarg')).toContainText(/too far for a melee attack/);
-    await expect(sam.page.getByRole('button', { name: 'Resolve round' })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
+    // The board's button and the action bar's button both wait for Flarg.
+    const resolveButtons = sam.page.getByRole('button', { name: 'Resolve round' });
+    await expect(resolveButtons).toHaveCount(2);
+    for (const button of await resolveButtons.all())
+      await expect(button).toHaveAttribute('aria-disabled', 'true');
     const result = await sam.client.resolveRound(tableId);
     expect(result.accepted).toBe(false);
     expect(result.declarations?.refusals.map((refusal) => refusal.member_id)).toEqual([memberId('Flarg')]);

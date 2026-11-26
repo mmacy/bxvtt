@@ -21,7 +21,15 @@ import {
   type ItemNoun,
 } from './catalog';
 import { creatureNames } from './creatures';
-import { capitalizeFirst, lowerFirst, placeInSentence, pluralize, prettifyId, withArticle } from './format';
+import {
+  capitalizeFirst,
+  classInSentence,
+  lowerFirst,
+  placeInSentence,
+  pluralize,
+  prettifyId,
+  withArticle,
+} from './format';
 
 export interface MemberInfo {
   name: string;
@@ -817,14 +825,15 @@ export function memberName(id: string | null | undefined, ctx: TextContext): str
 }
 
 /**
- * The class of a member as a lower-case noun, when known: `thief`. The player view's class name comes first, so a
- * custom class reads by its own name.
+ * The class of a member as it reads in the middle of a sentence, when known: `thief`, or `warlock of Sarn`. The
+ * player view's class name comes first, so a custom class reads by its own name. {@link classInSentence} decides
+ * which letters read in lower case.
  */
 export function memberClass(id: string, ctx: TextContext): string | undefined {
   const known = ctx.members[id];
-  if (known?.className) return known.className.toLowerCase();
+  if (known?.className) return classInSentence(known.className);
   const classId = known?.classId;
-  return classId ? (classCatalogName(classId)?.toLowerCase() ?? prettifyId(classId)) : undefined;
+  return classId ? classInSentence(classCatalogName(classId) ?? prettifyId(classId)) : undefined;
 }
 
 function npcName(id: string, ctx: TextContext): string {

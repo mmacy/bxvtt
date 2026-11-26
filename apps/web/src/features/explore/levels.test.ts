@@ -88,7 +88,20 @@ describe('buildPlayerLevel', () => {
     expect(map?.layer).toBe('player');
     expect(map?.party).toEqual({ x: 14, y: 22, facing: 'north' });
     // The fallen statue is a feature of the whole area, so it sits at the area's middle.
-    expect(map?.features.map((feature) => feature.id)).toContain('feature:fallen_statue');
+    const statue = game.view.explored[0]?.features.find((feature) => feature.kind === 'custom');
+    const area = game.view.explored[0]?.areas.find((a) => a.id === statue?.area_id);
+    const middle = area ? areaCenterCell(area) : null;
+    expect(statue?.cell).toBeNull();
+    expect(middle).not.toBeNull();
+    expect(map?.features).toContainEqual(
+      expect.objectContaining({
+        id: statue?.id,
+        kind: 'custom',
+        x: middle?.[0],
+        y: middle?.[1],
+        description: expect.stringMatching(/Saint Corvane/),
+      }),
+    );
   });
 
   it('marks a door the table learned is locked', () => {

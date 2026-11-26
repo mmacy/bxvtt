@@ -20,6 +20,7 @@ import {
   flagValueText,
   nameInSentence,
   placeInSentence,
+  classInSentence,
   extendContextWithNames,
   extendContextWithReferee,
   humanizeMessage,
@@ -652,6 +653,17 @@ describe('names with a leading article (D-404, D-208)', () => {
     expect(placeInSentence("The priory on Corvane's Holm")).toBe("the priory on Corvane's Holm");
     expect(placeInSentence('Gatehouse stair')).toBe('the gatehouse stair');
     expect(placeInSentence('Drain Folk warren')).toBe('the Drain Folk warren');
+  });
+});
+
+describe('class names in the middle of a sentence', () => {
+  it('lowers a common class name and keeps the capitals of a proper name', () => {
+    expect(classInSentence('Fighter')).toBe('fighter');
+    expect(classInSentence('Magic-User')).toBe('magic-user');
+    expect(classInSentence('Hollow knight')).toBe('hollow knight');
+    expect(classInSentence('Warlock of Sarn')).toBe('warlock of Sarn');
+    expect(classInSentence('Knight of the Silver Hand')).toBe('knight of the Silver Hand');
+    expect(classInSentence('Hollow Knight')).toBe('Hollow Knight');
   });
 });
 

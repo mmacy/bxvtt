@@ -32,6 +32,7 @@ import {
 } from './context';
 import {
   capitalizeFirst,
+  classInSentence,
   coinParts,
   count,
   formatDice,
@@ -1981,7 +1982,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
       };
     case 'member_added':
       return {
-        text: `${event.name}, a level ${event.level} ${memberClass(event.character_id, ctx) ?? classLabel(event.class_id).toLowerCase()}, joins the party.`,
+        text: `${event.name}, a level ${event.level} ${memberClass(event.character_id, ctx) ?? classInSentence(classLabel(event.class_id))}, joins the party.`,
         category: 'system',
         tone: 'good',
         icon: 'party',

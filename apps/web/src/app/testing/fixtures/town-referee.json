@@ -1,94 +1,94 @@
 {
   "type": "snapshot",
   "user": {
-    "id": "usr_yyi4I1GsY3UtjRmjiFUNRQ",
+    "id": "usr_egewOApmbWw9MocOHTy8BA",
     "name": "Ruth",
-    "color": "#5c8de5",
-    "created_at": "2026-11-22T05:18:27Z"
+    "color": "#3fa7d6",
+    "created_at": "2026-11-26T03:50:16Z"
   },
   "role": "referee",
   "table": {
-    "id": "tbl_5qEk4DHN80IfFswxhZiI9w",
+    "id": "tbl_-ZP3TZvp486zli31J_fpEg",
     "name": "Thursday at the Drowned Bell",
-    "invite_code": "NP36E-A62JC-CA5M4-N7EH8",
+    "invite_code": "WP28K-H51F3-RNK1E-971Z2",
     "phase": "playing",
     "settings": {
       "party_control": "caller",
-      "caller_user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
+      "caller_user_id": "usr_27uu5K1E6usvnfFnEE4Z5w",
       "auto_resolve": true,
       "autosave": true
     },
     "members": [
       {
-        "user_id": "usr_yyi4I1GsY3UtjRmjiFUNRQ",
+        "user_id": "usr_egewOApmbWw9MocOHTy8BA",
         "name": "Ruth",
-        "color": "#5c8de5",
+        "color": "#3fa7d6",
         "role": "referee",
-        "joined_at": "2026-11-22T05:18:27Z"
+        "joined_at": "2026-11-26T03:50:16Z"
       },
       {
-        "user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
+        "user_id": "usr_27uu5K1E6usvnfFnEE4Z5w",
         "name": "Sam",
-        "color": "#8e7ff3",
+        "color": "#5c8de5",
         "role": "player",
-        "joined_at": "2026-11-22T05:18:27Z"
+        "joined_at": "2026-11-26T03:50:16Z"
       }
     ],
     "roster": [
       {
-        "id": "ros_f1QvLMo30JY91p1QlHyXbQ",
-        "character_id": "chr_rk5wfak0OsbJn7qFjVn8xA",
-        "owner_user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
+        "id": "ros_6rUc1c7DRBYuDjaBrKyg6w",
+        "character_id": "chr_kbZUbWT4xi4KafUy5knY-Q",
+        "owner_user_id": "usr_27uu5K1E6usvnfFnEE4Z5w",
         "name": "Brenna",
         "class_id": "fighter",
         "level": 1,
-        "added_at": "2026-11-22T05:18:27Z"
+        "added_at": "2026-11-26T03:50:16Z"
       },
       {
-        "id": "ros_HfOQGGMALyxZ1U_Vmfdlqw",
-        "character_id": "chr_wl8QukajXCXggNkY7nta3g",
-        "owner_user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
+        "id": "ros_8QA1tcCZ6gzmQvgZTr9rHQ",
+        "character_id": "chr_c8_ZZdyjmkVAy9uixkvsqQ",
+        "owner_user_id": "usr_27uu5K1E6usvnfFnEE4Z5w",
         "name": "Wren",
         "class_id": "thief",
         "level": 1,
-        "added_at": "2026-11-22T05:18:27Z"
+        "added_at": "2026-11-26T03:50:16Z"
       },
       {
-        "id": "ros_WwWuMureACugZKUauuUGJg",
-        "character_id": "chr_RAtgYKsftVHwxz20cUV9oA",
-        "owner_user_id": "usr_yyi4I1GsY3UtjRmjiFUNRQ",
+        "id": "ros_LnKn3lkCppPAF1aNRZCk5A",
+        "character_id": "chr_G9XlzUGM_mSbj2P1O_oV2Q",
+        "owner_user_id": "usr_egewOApmbWw9MocOHTy8BA",
         "name": "Osric",
         "class_id": "cleric",
         "level": 1,
-        "added_at": "2026-11-22T05:18:27Z"
+        "added_at": "2026-11-26T03:50:16Z"
       },
       {
-        "id": "ros_T4GRDiICG84isplH0VmJwg",
-        "character_id": "chr_Be1f3MigrYdWlDIgPWQifQ",
-        "owner_user_id": "usr_yyi4I1GsY3UtjRmjiFUNRQ",
+        "id": "ros_ugfTsy59UGVWhkqe1webZw",
+        "character_id": "chr_GSvjYBg8v1z0fa_m8g3FnQ",
+        "owner_user_id": "usr_egewOApmbWw9MocOHTy8BA",
         "name": "Tamsin",
         "class_id": "fighter",
         "level": 1,
-        "added_at": "2026-11-22T05:18:27Z"
+        "added_at": "2026-11-26T03:50:16Z"
       }
     ],
     "game": {
-      "session_id": "ses_5nMCFWdwzzy4PAVtuyn7tg",
+      "session_id": "ses_6XXMPT9DkFiHdydQWvUZGQ",
       "adventure_id": "sample:the-drowned-bell",
       "adventure_name": "The Drowned Bell",
       "mode": "town",
       "ended": false,
-      "started_at": "2026-11-22T05:18:27Z"
+      "started_at": "2026-11-26T03:50:16Z"
     },
-    "created_by": "usr_yyi4I1GsY3UtjRmjiFUNRQ",
-    "created_at": "2026-11-22T05:18:27Z"
+    "created_by": "usr_egewOApmbWw9MocOHTy8BA",
+    "created_at": "2026-11-26T03:50:16Z"
   },
   "presence": {
-    "online": ["usr_yyi4I1GsY3UtjRmjiFUNRQ"]
+    "online": ["usr_egewOApmbWw9MocOHTy8BA"]
   },
   "game": {
-    "table_id": "tbl_5qEk4DHN80IfFswxhZiI9w",
-    "session_id": "ses_5nMCFWdwzzy4PAVtuyn7tg",
+    "table_id": "tbl_-ZP3TZvp486zli31J_fpEg",
+    "session_id": "ses_6XXMPT9DkFiHdydQWvUZGQ",
     "adventure_id": "sample:the-drowned-bell",
     "adventure_name": "The Drowned Bell",
     "mode": "town",
@@ -118,6 +118,7 @@
           "id": "character-0001",
           "name": "Brenna",
           "class_id": "fighter",
+          "class_name": "Fighter",
           "level": 1,
           "current_hp": 5,
           "max_hp": 5,
@@ -236,6 +237,7 @@
           "id": "character-0002",
           "name": "Wren",
           "class_id": "thief",
+          "class_name": "Thief",
           "level": 1,
           "current_hp": 3,
           "max_hp": 3,
@@ -338,6 +340,7 @@
           "id": "character-0003",
           "name": "Osric",
           "class_id": "cleric",
+          "class_name": "Cleric",
           "level": 1,
           "current_hp": 4,
           "max_hp": 4,
@@ -432,6 +435,7 @@
           "id": "character-0004",
           "name": "Tamsin",
           "class_id": "fighter",
+          "class_name": "Fighter",
           "level": 1,
           "current_hp": 4,
           "max_hp": 4,
@@ -570,9 +574,13 @@
       "clock_rounds": 0,
       "mode": "town",
       "explored": [],
+      "dungeons": [],
+      "can_travel_to_town": false,
       "piles": {},
       "emptied_caches": [],
       "effects": [],
+      "spell_names": {},
+      "reversed_spell_names": {},
       "fatigued": false,
       "exhausted": false,
       "deprivation": {},
@@ -620,9 +628,7 @@
           ]
         }
       ],
-      "encounter": null,
-      "dungeons": [],
-      "can_travel_to_town": false
+      "encounter": null
     },
     "commands": [
       {
@@ -834,25 +840,25 @@
       {
         "member_id": "character-0001",
         "name": "Brenna",
-        "user_id": "usr_9w3ahkA7vgakA72hGmdhNg"
+        "user_id": "usr_27uu5K1E6usvnfFnEE4Z5w"
       },
       {
         "member_id": "character-0002",
         "name": "Wren",
-        "user_id": "usr_9w3ahkA7vgakA72hGmdhNg"
+        "user_id": "usr_27uu5K1E6usvnfFnEE4Z5w"
       },
       {
         "member_id": "character-0003",
         "name": "Osric",
-        "user_id": "usr_yyi4I1GsY3UtjRmjiFUNRQ"
+        "user_id": "usr_egewOApmbWw9MocOHTy8BA"
       },
       {
         "member_id": "character-0004",
         "name": "Tamsin",
-        "user_id": "usr_yyi4I1GsY3UtjRmjiFUNRQ"
+        "user_id": "usr_egewOApmbWw9MocOHTy8BA"
       }
     ],
-    "caller_user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
+    "caller_user_id": "usr_27uu5K1E6usvnfFnEE4Z5w",
     "scene": {
       "names": {
         "leather": "Leather",
@@ -879,7 +885,8 @@
         "deprivation_penalties": false,
         "aoe_friendly_fire": true,
         "formation_width_limit": true,
-        "failed_trap_removal_springs": true
+        "failed_trap_removal_springs": true,
+        "back_stab_needs_both_skills": true
       },
       "party": {
         "members": [
@@ -1355,27 +1362,27 @@
   "feed": {
     "entries": [
       {
-        "seq": 5,
-        "created_at": "2026-11-22T05:18:27Z",
-        "user_id": "usr_9w3ahkA7vgakA72hGmdhNg",
+        "seq": 25,
+        "created_at": "2026-11-26T03:50:16Z",
+        "user_id": "usr_27uu5K1E6usvnfFnEE4Z5w",
         "visibility": "everyone",
         "to": [],
         "kind": "system",
         "code": "member_joined",
         "params": {
-          "user_id": "usr_9w3ahkA7vgakA72hGmdhNg"
+          "user_id": "usr_27uu5K1E6usvnfFnEE4Z5w"
         }
       },
       {
-        "seq": 6,
-        "created_at": "2026-11-22T05:18:27Z",
-        "user_id": "usr_yyi4I1GsY3UtjRmjiFUNRQ",
+        "seq": 26,
+        "created_at": "2026-11-26T03:50:16Z",
+        "user_id": "usr_egewOApmbWw9MocOHTy8BA",
         "visibility": "everyone",
         "to": [],
         "kind": "system",
         "code": "game_started",
         "params": {
-          "session_id": "ses_5nMCFWdwzzy4PAVtuyn7tg",
+          "session_id": "ses_6XXMPT9DkFiHdydQWvUZGQ",
           "adventure_name": "The Drowned Bell"
         }
       }
@@ -1399,5 +1406,6 @@
       "updated_at": null
     }
   },
-  "server_time": "2026-11-22T05:18:28Z"
+  "server_time": "2026-11-26T03:50:16Z",
+  "rejoin_requests": []
 }

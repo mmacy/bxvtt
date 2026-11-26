@@ -1,5 +1,5 @@
 import type { MemberView } from '@bxvtt/shared/bxapi';
-import { conditionLabel } from '@bxvtt/shared/text';
+import { classInSentence, conditionLabel } from '@bxvtt/shared/text';
 import { useId, useMemo, useState, type DragEvent, type KeyboardEvent } from 'react';
 import {
   tokenClass,
@@ -371,7 +371,7 @@ function MemberRow({ member, rank, color, controller, light, effects, onOpen }: 
   const detailId = useId();
   const details = [
     controller ? controller.label : 'empty seat',
-    `level ${member.level} ${memberClassName(member).toLowerCase()}`,
+    `level ${member.level} ${classInSentence(memberClassName(member))}`,
     `${member.current_hp} of ${member.max_hp} hit points`,
     `armour class ${member.armour_class}`,
     ...(dead ? ['dead'] : []),
@@ -422,7 +422,7 @@ function MemberRow({ member, rank, color, controller, light, effects, onOpen }: 
             )}
           </span>
           <span className={styles.meta} aria-hidden="true">
-            Level {member.level} {memberClassName(member).toLowerCase()}
+            Level {member.level} {classInSentence(memberClassName(member))}
           </span>
           {light && (
             <span className={styles.lightLine} aria-hidden="true">

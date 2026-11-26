@@ -67,6 +67,22 @@ export function placeInSentence(name: string): string {
   return `the ${otherCapitals ? trimmed : lowerFirst(trimmed)}`;
 }
 
+/**
+ * A class name as it reads in the middle of a sentence, such as "a level 3 fighter". The class name's head is its
+ * words before a linking word such as "of", as in {@link placeInSentence}. When another word of the head is
+ * capitalized, the class name is a proper name and keeps its capitals: `Hollow Knight` stays `Hollow Knight`.
+ * Otherwise, only the first word reads in lower case, with each of its hyphenated parts: `Fighter` gives
+ * `fighter`, `Magic-User` gives `magic-user`, and `Warlock of Sarn` gives `warlock of Sarn`.
+ */
+export function classInSentence(name: string): string {
+  const words = name.trim().split(/\s+/);
+  const link = words.findIndex((word, index) => index > 0 && PLACE_LINKS.has(word.toLowerCase()));
+  const head = link < 0 ? words : words.slice(0, link);
+  if (head.slice(1).some((word) => /^\p{Lu}/u.test(word))) return words.join(' ');
+  const [first = '', ...rest] = words;
+  return [first.toLowerCase(), ...rest].join(' ');
+}
+
 /** Turn an ID or enum value such as `magic_user` or `jade-idol` into plain words such as `magic user`. */
 export function prettifyId(value: string): string {
   return value.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();

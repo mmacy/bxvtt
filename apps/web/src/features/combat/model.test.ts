@@ -69,7 +69,7 @@ describe('planAttack', () => {
     if (!group) throw new Error('No group.');
     const plan = planAttack(brenna, encounter, group, memberGear(brenna, emptyContext()));
     expect(plan.kind).toBe('out_of_reach');
-    expect(plan.reason).toBe('Out of reach: 40 feet away, while Brenna moves 20 feet per round.');
+    expect(plan.reason).toBe('Out of reach: 30 feet away, while Brenna moves 20 feet per round.');
   });
 
   it('attacks where the member stands when they are in the group’s front rank', () => {
@@ -232,16 +232,26 @@ describe('refusals that name no member', () => {
   });
 });
 
-describe('describeDeclaration for monsters a player can’t tell apart', () => {
-  it('counts them instead of listing each', () => {
+describe('describeDeclaration for several monsters', () => {
+  const missiles = {
+    action: 'cast',
+    spell_id: 'magic_missile',
+    targets: ['monster-0001', 'monster-0002'],
+  } as const;
+
+  it('names each monster the player view lists', () => {
     const { view } = battle();
-    const ctx = contextFromPlayerView(view);
-    expect(
-      describeDeclaration(
-        { action: 'cast', spell_id: 'magic_missile', targets: ['monster-0001', 'monster-0002'] },
-        ctx,
-      ),
-    ).toBe('Cast Magic Missile at 2 goblins');
+    expect(describeDeclaration(missiles, contextFromPlayerView(view))).toBe(
+      'Cast Magic Missile at Goblin 1 and Goblin 2',
+    );
+  });
+
+  it('counts monsters the player view doesn’t list, because a player can’t tell them apart', () => {
+    const { view, encounter } = battle();
+    const unlisted = withGroup(encounter, { members: [] });
+    expect(describeDeclaration(missiles, contextFromPlayerView({ ...view, encounter: unlisted }))).toBe(
+      'Cast Magic Missile at 2 goblins',
+    );
   });
 });
 

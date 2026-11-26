@@ -448,6 +448,17 @@ describe('names the player view states', () => {
     expect(row).toHaveAccessibleDescription(/level \d+ hollow knight/);
   });
 
+  it('keeps the capitals of a proper name inside a custom class name', () => {
+    const { snapshot } = customClassSnapshot();
+    const party = snapshot.game?.view.party ?? [];
+    const brenna = party[0];
+    if (!brenna) throw new Error('no Brenna');
+    party[0] = { ...brenna, class_name: 'Warlock of Sarn' };
+    renderWithTable(<PartyPanel />, { snapshot });
+    const row = screen.getAllByRole('button', { description: /Opens the character sheet/ })[0];
+    expect(row).toHaveAccessibleDescription(/level \d+ warlock of Sarn/);
+  });
+
   it('names a spell the adventure bundles, and the reverse of a spell, from the view', async () => {
     const snapshot = fixtureSnapshot('exploring', 'player');
     const view = snapshot.game?.view;

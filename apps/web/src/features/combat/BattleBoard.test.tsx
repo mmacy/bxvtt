@@ -154,7 +154,7 @@ describe('BattleBoard', () => {
     await user.click(within(row('Brenna')).getByRole('button', { name: 'Change' }));
     const brenna = screen.getByRole('region', { name: 'Declare for Brenna' });
     expect(brenna).toHaveTextContent(
-      'Brenna has declared: Attack the goblins. Choose another action to change it before the round resolves.',
+      'Brenna has declared: Attack the goblins, closing in. Choose another action to change it before the round resolves.',
     );
     expect(
       within(brenna).getByRole('button', { name: /^(Attack|Close in and attack): the goblins/ }),
