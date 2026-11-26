@@ -143,7 +143,7 @@ async function castSleep(page: Page, name: string, group: string) {
   await composer.getByRole('radio', { name: 'Cast' }).click();
   await composer
     .getByRole('radiogroup', { name: 'How to cast Sleep' })
-    .getByRole('radio', { name: 'By Hit Dice' })
+    .getByRole('radio', { name: /^A total of 2d8 Hit Dice/ })
     .click();
   await declaring(page, () => composer.getByRole('button', { name: `Cast sleep at ${group}` }).click());
 }
