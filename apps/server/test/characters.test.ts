@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { isProblem } from '@bxvtt/shared/client';
 import type { BxvttProblemError } from '@bxvtt/shared/client';
 import type { TestServer, TestUser } from './helpers';
-import { createCharacter, createTable, createUser, startServer } from './helpers';
+import { createCharacter, createTable, createUser, recordBxapi, startServer } from './helpers';
 
 describe('characters', () => {
   let server: TestServer;
@@ -102,6 +102,27 @@ describe('characters', () => {
     expect(preview.character.name).toBe('Maybe');
     expect(preview.seed).toBe(5);
     expect((await alice.client.listCharacters()).items.map((item) => item.name)).not.toContain('Maybe');
+  });
+
+  it('never sends bxapi the old top-level re-roll flag with a preview', async () => {
+    const recorder = recordBxapi(server);
+    try {
+      const preview = await alice.client.previewCharacter({
+        name: 'Maybe',
+        class_id: 'fighter',
+        alignment: 'lawful',
+        seed: 5,
+        hp_reroll_at_first_level: true,
+        ruleset: { hp_reroll_at_first_level: true },
+      });
+      expect(preview.character.name).toBe('Maybe');
+      const [sent] = recorder.posts('/v1/generate/character');
+      const body = JSON.parse(sent?.body ?? '{}') as Record<string, unknown>;
+      expect(body).not.toHaveProperty('hp_reroll_at_first_level');
+      expect(body.ruleset).toEqual({ hp_reroll_at_first_level: true });
+    } finally {
+      recorder.stop();
+    }
   });
 
   it('passes bxapi character_invalid problems through intact', async () => {

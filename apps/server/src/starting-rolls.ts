@@ -73,10 +73,12 @@ export class StartingRollKeeper {
    * @throws BxapiProblem `character_invalid`, `ability_roll_used`, or another bxapi failure.
    */
   preview(record: RollRecord, choices: PreviewChoices, requestId: string): Promise<CharacterPreview> {
-    return this.ctx.bxapi.post<CharacterPreview>(
-      `/v1/ability-rolls/${encodeURIComponent(record.id)}/preview`,
-      bxapiChoices(choices, record),
-      { requestId },
+    return this.rolls.closingIfUsed(record, () =>
+      this.ctx.bxapi.post<CharacterPreview>(
+        `/v1/ability-rolls/${encodeURIComponent(record.id)}/preview`,
+        bxapiChoices(choices, record),
+        { requestId },
+      ),
     );
   }
 

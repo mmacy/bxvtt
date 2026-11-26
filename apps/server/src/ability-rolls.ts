@@ -1,6 +1,6 @@
 import type { AbilityRoll as BxapiAbilityRoll } from '@bxvtt/shared/bxapi';
 import type { AbilityRoll, AbilityRollRequest, User } from '@bxvtt/shared/protocol';
-import { callBxapi } from './bxapi';
+import { BxapiProblem, callBxapi } from './bxapi';
 import type { Context } from './context';
 import type { Row } from './db';
 import { str, strOrNull } from './db';
@@ -263,6 +263,31 @@ export class AbilityRollStore {
       record.tableId,
       record.ownerUserId,
     );
+  }
+
+  /**
+   * Runs a bxapi call that uses a roll, and closes the roll when bxapi answers that the roll is used although the
+   * server recorded no character from it. That happens when bxapi created the character but the server never
+   * heard back, such as after a timeout. Without the close, the open roll would count against the limit forever
+   * and the player could neither use it nor roll again.
+   *
+   * @param record - The roll.
+   * @param call - The bxapi call.
+   * @throws The call's error, unchanged.
+   */
+  async closingIfUsed<T>(record: RollRecord, call: () => Promise<T>): Promise<T> {
+    try {
+      return await call();
+    } catch (error) {
+      if (error instanceof BxapiProblem && error.code === 'ability_roll_used') {
+        this.ctx.db.run(
+          'UPDATE ability_rolls SET closed_at = ? WHERE id = ? AND character_id IS NULL AND closed_at IS NULL',
+          now(),
+          record.id,
+        );
+      }
+      throw error;
+    }
   }
 
   private withRecord(roll: BxapiAbilityRoll, record: RollRecord): AbilityRoll {

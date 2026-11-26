@@ -204,6 +204,42 @@ describe('the table ruleset', () => {
     }
   });
 
+  it('admits one of several rolls sent at once when the table allows no rerolls', async () => {
+    const table = await referee.client.createTable({ name: 'At once' });
+    await alice.client.joinTable(table.invite_code);
+    const results = await Promise.allSettled(
+      [31, 32, 33, 34].map((seed) => alice.client.rollAbilities(table.id, { seed })),
+    );
+    expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+    for (const result of results) {
+      if (result.status === 'rejected') expect(isProblem(result.reason, 'ability_rerolls_used')).toBe(true);
+    }
+  });
+
+  it('closes a roll that bxapi used without the server hearing back, so the player can roll again', async () => {
+    const table = await referee.client.createTable({ name: 'Lost answer' });
+    await alice.client.joinTable(table.invite_code);
+    const roll = await alice.client.rollAbilities(table.id, { seed: 5 });
+    const choices = { name: 'Lost', class_id: 'fighter', alignment: 'lawful' as const };
+    // bxapi creates the character, as it does when the server times out before the answer comes back.
+    await server.server.ctx.bxapi.post('/v1/characters', { ...choices, ability_roll_id: roll.id });
+    await expect(alice.client.createCharacter({ ...choices, ability_roll_id: roll.id })).rejects.toSatisfy(
+      (error) => isProblem(error, 'ability_roll_used'),
+    );
+    const next = await alice.client.rollAbilities(table.id, { seed: 6 });
+    expect(next.rerolls_left).toBe(0);
+    await expect(alice.client.rollHitPoints(roll.id, { class_id: 'fighter' })).rejects.toSatisfy((error) =>
+      isProblem(error, 'ability_roll_used'),
+    );
+
+    // A preview that finds the roll used closes it too.
+    await server.server.ctx.bxapi.post('/v1/characters', { ...choices, ability_roll_id: next.id });
+    await expect(alice.client.rollHitPoints(next.id, { class_id: 'fighter' })).rejects.toSatisfy((error) =>
+      isProblem(error, 'ability_roll_used'),
+    );
+    expect((await alice.client.rollAbilities(table.id, { seed: 7 })).table_id).toBe(table.id);
+  });
+
   it('keeps the rules recorded on a roll after the referee changes the table rules', async () => {
     const table = await referee.client.createTable({ name: 'Recorded' });
     await alice.client.joinTable(table.invite_code);

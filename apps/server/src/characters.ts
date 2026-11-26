@@ -136,7 +136,8 @@ export function registerCharacterRoutes(app: FastifyInstance, ctx: Context): voi
   app.post('/api/characters/preview', async (request) => {
     ctx.auth.user(request);
     const body = parseBody(CharacterPreviewRequest, request);
-    const { ability_roll_id: _roll, ...choices } = body;
+    // bxapi takes the first-level re-roll only inside `ruleset`, and it refuses the old top-level flag.
+    const { ability_roll_id: _roll, hp_reroll_at_first_level: _reroll, ...choices } = body;
     return callBxapi(() => bxapi.post('/v1/generate/character', choices, { requestId: request.id }));
   });
 
@@ -199,10 +200,12 @@ export function registerCharacterRoutes(app: FastifyInstance, ctx: Context): voi
     // buying before the gold is rolled would reveal the gold.
     const record = startingRolls.guard(body.ability_roll_id, user.id, body);
     const character = await callBxapi(() =>
-      bxapi.post<StoredCharacter>(
-        '/v1/characters',
-        { ...bxapiChoices(body, record), ability_roll_id: record.id },
-        { requestId: request.id },
+      abilityRolls.closingIfUsed(record, () =>
+        bxapi.post<StoredCharacter>(
+          '/v1/characters',
+          { ...bxapiChoices(body, record), ability_roll_id: record.id },
+          { requestId: request.id },
+        ),
       ),
     );
     db.transaction(() => {
