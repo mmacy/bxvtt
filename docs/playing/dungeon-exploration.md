@@ -8,7 +8,7 @@ sidebar_position: 3
 
 Once the party enters a dungeon, the central stage displays the explored map in **Exploring** mode. Each grid square measures 10 feet across, and the map reveals only cells and doors the party has discovered.
 
-![Exploring the first level of The Drowned Bell in the blueprint map theme](../images/explore.webp)
+![Exploring the first level of The Drowned Bell in the blueprint map theme, with the scene panel listing a treasure, dropped goods, and a door](../images/explore.webp)
 
 ## Read the map and controls
 
@@ -68,7 +68,7 @@ Each row has a **Take** button and a **More for this treasure** menu (**More for
 - **Give all to one member** (in the **More** menu, when more than one character is alive) assigns the treasure to one character.
 - **Check for traps** lets a thief inspect a treasure that has no known trap, and **Disarm trap** lets a thief try to disarm one the party has found, before anyone touches the treasure.
 
-The **Treasure** menu on the action bar (`G`) lists the same actions for each treasure, with **Take treasure** first, and **Pick up dropped goods** collects coins and gear left on the floor after a fight. It appears when treasure or dropped goods are within reach.
+The **Treasure** menu on the action bar (`G`) lists the same actions for each treasure, with **Take treasure** first, and **Pick up dropped goods** collects coins and gear left on the floor after a fight. It appears when treasure or dropped goods are within reach. In the scene panel, dropped goods appear as their own row, "Dropped goods lie here.", with a **Pick up** button.
 
 ## Collaborate with map tools
 

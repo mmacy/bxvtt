@@ -114,18 +114,6 @@
   transition: left var(--duration-slower) var(--ease-out);
 }
 
-/* The dashed line from the live token to its planned place. */
-.plannedPath {
-  position: absolute;
-  height: 0;
-  border-top: var(--border-hair) dashed var(--color-border-strong);
-  opacity: 0.6;
-  pointer-events: none;
-  transition:
-    left var(--duration-slower) var(--ease-out),
-    width var(--duration-slower) var(--ease-out);
-}
-
 .group {
   top: calc(var(--center) - 16px);
   display: grid;
@@ -324,17 +312,16 @@
 .still .group,
 .still .gap,
 .still .planned,
-.still .plannedPath,
 .still .memberHp > span {
   transition: none;
 }
 
-:root[data-motion='reduce'] :is(.planned, .plannedPath) {
+:root[data-motion='reduce'] .planned {
   transition: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :root:not([data-motion='full']) :is(.planned, .plannedPath) {
+  :root:not([data-motion='full']) .planned {
     transition: none;
   }
 }

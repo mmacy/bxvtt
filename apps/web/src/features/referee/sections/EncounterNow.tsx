@@ -183,7 +183,7 @@ export function EncounterNow({
               </span>
               <span className={styles.secondary}>{formatFeet(group.distance_feet)} away</span>
               {group.fled ? (
-                <Badge tone="neutral">Fled</Badge>
+                <Badge tone="neutral">Escaped</Badge>
               ) : group.fleeing ? (
                 <Badge tone="warning">Fleeing</Badge>
               ) : null}

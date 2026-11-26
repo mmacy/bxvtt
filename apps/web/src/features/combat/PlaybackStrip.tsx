@@ -288,10 +288,7 @@ function PlaybackControls({ playback, focus }: { playback: PlaybackView; focus: 
   const pause = useRef<HTMLButtonElement>(null);
   const { leave, claim } = focus;
   useLayoutEffect(() => {
-    // The battle board's rows and footer go inert while a round plays back. Focus that was on one of them, such
-    // as the Resolve round button, moves here instead of falling to the page.
-    const stranded = document.activeElement?.closest('[inert]') != null;
-    if (claim('pause') || stranded) pause.current?.focus();
+    if (claim('pause')) pause.current?.focus();
     const node = container.current;
     return () => leave(node, 'replay');
   }, [leave, claim]);

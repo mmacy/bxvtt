@@ -265,6 +265,7 @@ export function BattleBoard() {
   const declared = declarations?.declared ?? [];
   const mine = declarers.filter((id) => people.isMine(id));
   const waiting = declarers.filter((id) => !declared.includes(id));
+  const mineToDeclare = mine.some((id) => !declared.includes(id));
   const track = playback.track ?? liveTrack;
   const nextUndeclared = (after: string) => {
     const order = mine.filter((id) => !declared.includes(id) && id !== after);
@@ -297,8 +298,8 @@ export function BattleBoard() {
             aria-expanded={refereeOpen}
             tooltip={
               refereeOpen
-                ? "Collapse the monsters' hit points and the referee tools"
-                : "Show the monsters' hit points and the referee tools"
+                ? 'Collapse the monster roster and referee tools'
+                : 'Show the monster roster and referee tools'
             }
             onClick={() => setRefereeOpen(!refereeOpen)}
           >
@@ -331,9 +332,10 @@ export function BattleBoard() {
           playback={playback}
           ctx={ctx}
           idle={
-            composing !== null
+            // When everyone has declared, the footer says so and what happens next.
+            composing !== null || waiting.length === 0
               ? null
-              : mine.length > 0
+              : mineToDeclare
                 ? 'Declare an action for each of your characters.'
                 : 'Waiting for the party to declare.'
           }
@@ -342,13 +344,9 @@ export function BattleBoard() {
 
       {!collapsed && !holding && (
         <>
-          {/* While a round plays back, the rows and the footer already show the next round, so they dim and
-              leave the tab order until playback ends. The strip's controls stay live. */}
-          <ul
-            className={cx(styles.memberList, playback.playing && styles.dimmedForPlayback)}
-            aria-label="Actions this round"
-            inert={playback.playing}
-          >
+          {/* While a round plays back, the rows and the footer already show the next round. They dim so the eye
+              goes to the playback, but a player can still declare for the next round. */}
+          <ul className={styles.memberList} aria-label="Actions this round">
             {party.map((member) => (
               <MemberRow
                 key={member.id}
@@ -450,7 +448,10 @@ interface MemberRowProps {
   member: MemberView;
   /** The member as the playback shows them now, or `null` outside playback. */
   shown: TrackMember | null;
-  /** Whether a resolved round is playing back, so live state that the beats haven't reached yet waits. */
+  /**
+   * Whether a resolved round is playing back, so live state that the beats haven't reached yet waits, and the row
+   * dims.
+   */
   playing: boolean;
   encounter: EncounterView;
   declarations: DeclarationsState | null;
@@ -561,6 +562,7 @@ function MemberRow({
         mine && styles.memberMine,
         refusals.length > 0 && styles.memberRefused,
         !declarer && styles.memberOut,
+        playing && styles.dimmedForPlayback,
       )}
     >
       <div className={styles.memberMain}>
@@ -747,7 +749,7 @@ function RoundFooter({
   unchecked: boolean;
   ctx: TextContext;
   waiting: React.ReactNode;
-  /** Whether a resolved round is playing back, which dims the footer and takes it out of the tab order. */
+  /** Whether a resolved round is playing back, which dims the footer. */
   playing: boolean;
 }) {
   const settings = useTableSettings();
@@ -768,7 +770,7 @@ function RoundFooter({
   const blocked = blockedReason(refusedNames);
 
   return (
-    <footer className={cx(styles.boardFoot, playing && styles.dimmedForPlayback)} inert={playing}>
+    <footer className={cx(styles.boardFoot, playing && styles.dimmedForPlayback)}>
       {general.length > 0 && (
         <Banner tone="danger" title="The round can't resolve" className={styles.footBanner}>
           {general.join(' ')} Change an action and try again.

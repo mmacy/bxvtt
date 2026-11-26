@@ -48,7 +48,7 @@ function trapLines(trap: MapTrap, referee: boolean): string[] {
   const lines = [TRAP_STATES[trap.state]];
   if (!referee) return lines;
   if (trap.trigger !== null)
-    lines.push(trap.trigger === 'enter' ? 'Trap, springs on entry' : 'Trap, springs on opening');
+    lines.push(trap.trigger === 'enter' ? 'Springs on entry' : 'Springs when opened');
   if (trap.summary && trap.summary !== 'Trap')
     lines.push(trap.summary.charAt(0).toUpperCase() + trap.summary.slice(1));
   return lines;

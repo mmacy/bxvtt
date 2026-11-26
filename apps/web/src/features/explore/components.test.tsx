@@ -283,6 +283,29 @@ describe('ScenePanel', () => {
     );
   });
 
+  it('picks up dropped goods with a short button whose name says what it picks up', async () => {
+    const { snapshot, game } = exploring();
+    const { location } = game.view;
+    const position = location.position;
+    if (location.kind !== 'dungeon' || !position) throw new Error('The party is in town.');
+    const cell = `cell:${location.dungeon_id}:${location.level_number}:${position[0]},${position[1]}`;
+    game.view.piles = { ...game.view.piles, [cell]: { items: [], coins_gp_value: 5 } } as never;
+    const api = createFakeApi();
+    api.sendCommand.mockResolvedValue(result(game, { events: [] }));
+    const { user } = renderWithTable(<ScenePanel />, { snapshot, api });
+    expect(screen.getByText('Dropped goods lie here.')).toBeInTheDocument();
+    const pickUp = screen.getByRole('button', { name: 'Pick up dropped goods' });
+    expect(pickUp).toHaveTextContent(/^Pick up$/);
+    await user.click(pickUp);
+    await waitFor(() =>
+      expect(api.sendCommand).toHaveBeenCalledWith(
+        expect.any(String),
+        { command_type: 'take_treasure', feature_id: 'pile' },
+        game.revision,
+      ),
+    );
+  });
+
   it('puts the other treasure actions under More, which the keyboard opens and closes', async () => {
     const { snapshot, game } = exploring();
     const level = game.view.explored[0];

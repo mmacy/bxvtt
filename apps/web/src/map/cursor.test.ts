@@ -127,4 +127,23 @@ describe('cursor announcements', () => {
     });
     expect(cellContents(scene, first.x, first.y)).toMatch(/Trap, not yet found\. 1d6 damage\./);
   });
+
+  it('tells a referee what springs a trap, after its state and before what it does', () => {
+    const [first, ...rest] = referee.map.features;
+    if (!first) throw new Error('no feature on the referee map');
+    const sceneWith = (trigger: 'enter' | 'open') =>
+      new Scene({
+        ...referee.map,
+        features: [
+          { ...first, kind: 'cache', trap: { state: 'hidden', trigger, summary: '1d6 damage' } },
+          ...rest,
+        ],
+      });
+    expect(cellContents(sceneWith('enter'), first.x, first.y)).toMatch(
+      /Trap, not yet found\. Springs on entry\. 1d6 damage\./,
+    );
+    expect(cellContents(sceneWith('open'), first.x, first.y)).toMatch(
+      /Trap, not yet found\. Springs when opened\. 1d6 damage\./,
+    );
+  });
 });

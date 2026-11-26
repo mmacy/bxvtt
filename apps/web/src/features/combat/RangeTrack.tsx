@@ -272,23 +272,9 @@ export function RangeTrack({
             const place = plannedFor(member);
             if (place === null) return [];
             const style = memberStyle(member, index, stack.length);
-            const live = memberLeft(member, index);
             const target = at(place, -TOKEN);
             const color = colors[member.id];
-            // A dashed line joins the token to its planned place, centre to centre, so each marker reads as one
-            // member's move.
             return [
-              <span
-                key={`${member.id}-path`}
-                className={styles.plannedPath}
-                style={{
-                  top: `calc(${style.top} + ${TOKEN / 2}px)`,
-                  left: `calc(min(${live}, ${target}) + ${TOKEN / 2}px)`,
-                  width: `calc(max(${live}, ${target}) - min(${live}, ${target}))`,
-                  borderTopColor: color,
-                }}
-                aria-hidden="true"
-              />,
               <span
                 key={`${member.id}-planned`}
                 className={styles.planned}

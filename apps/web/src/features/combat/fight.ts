@@ -29,7 +29,7 @@ export interface FightSummary {
   title: string;
   sentence: string;
   rounds: number;
-  /** "3 goblins slain", "2 skeletons fled", by kind and how each was defeated. */
+  /** "3 goblins slain", "2 skeletons escaped", by kind and how each was defeated. */
   defeated: Array<{ text: string; xp: number }>;
   xpTotal: number;
   /** Experience bxapi awarded each member now, when the ruleset awards it at once. */

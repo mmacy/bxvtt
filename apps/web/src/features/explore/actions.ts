@@ -382,16 +382,24 @@ export function cacheEntries(ctx: ActionContext, cache: HereFeature): MenuEntry[
   return [...(take ? [take] : []), ...cacheMoreEntries(ctx, cache)];
 }
 
+/**
+ * The pick-up action for goods dropped on the party's cell, or `null` when the viewer can't send it. The action
+ * bar's Treasure menu shows its label. The scene panel's row already names the goods, so its button reads "Pick up"
+ * and keeps the label as its accessible name.
+ */
+export function pileTakeEntry(ctx: ActionContext): Extract<MenuEntry, { type?: 'item' }> | null {
+  if (!ctx.can('take_treasure')) return null;
+  return {
+    label: 'Pick up dropped goods',
+    icon: 'coins',
+    onSelect: () => ctx.run({ command_type: 'take_treasure', feature_id: 'pile' }),
+  };
+}
+
 /** The actions for goods dropped on the party's cell. */
 export function pileEntries(ctx: ActionContext): MenuEntry[] {
-  if (!ctx.can('take_treasure')) return [];
-  return [
-    {
-      label: 'Pick up dropped goods',
-      icon: 'coins',
-      onSelect: () => ctx.run({ command_type: 'take_treasure', feature_id: 'pile' }),
-    },
-  ];
+  const take = pileTakeEntry(ctx);
+  return take ? [take] : [];
 }
 
 /** The button text for taking a transition. */

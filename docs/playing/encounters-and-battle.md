@@ -26,9 +26,9 @@ Individual players can also **Use an item**, **Give items**, or **Drop items** (
 
 B/X battles resolve simultaneously round by round. Each round, you choose an action for each of your characters. Your choice is saved the moment you pick it, and you can change it until the round resolves. The round resolves when everyone has declared (with automatic resolution on) or when the caller or the referee resolves it.
 
-A range track at the top of the battle board shows the distance from the party line to each monster group, and the list below it shows every character who can act this round. A group that breaks and runs stays on the track, marked as fleeing, and you can still aim at it until it escapes. A group that has escaped moves to the track's tray, labeled **Escaped** (or **Gone** when the tray also holds slain monsters). Once anyone has declared a move, the track shows a faded portrait where each moving character will stand, joined by a dotted line to the character's token. Party members see one another's actions in real time, so the group can coordinate targets, spells, and movement.
+A range track at the top of the battle board shows the distance from the party line to each monster group, and the list below it shows every character who can act this round. A group that breaks and runs stays on the track, marked as fleeing, and you can still aim at it until it escapes. A group that has escaped moves to the track's tray, labeled **Escaped** (or **Gone** when the tray also holds slain monsters). Once anyone has declared a move, the track shows a faded portrait in a dashed ring where each moving character will stand. Party members see one another's actions in real time, so the group can coordinate targets, spells, and movement.
 
-![Battle board showing round playback above party action declarations](../images/battle.webp)
+![The battle board in round 1, with faded portraits on the range track where Flarg and Tinks will stand, and Clarence's row saying his attack won't work](../images/battle.webp)
 
 ### Declare with the suggested action or the full choices
 
@@ -83,7 +83,7 @@ Playback runs separately in each browser, so pausing or slowing yours never hold
 - **Skip** (`Esc`) jumps to the end of the round, where the strip sums it up.
 - **Replay** on the summary plays the last round again. Pressing `,` at the summary steps back into the last beat of the last round.
 
-While a round plays back, whether it's running or paused, the character rows and the footer dim and stay unavailable, so the board never shows the next round's actions before the beat that causes them. Skip the round (`Esc`) to declare sooner. The playback strip's controls stay available. The heading of the board names the round that's playing, and the footer names the round being declared. If the next round resolves while your playback is paused, the strip moves to the start of the new round and stays paused, and stepping back reaches the round you were watching.
+While a round plays back, whether it's running or paused, the character rows and the footer dim so that your eye goes to the playback. A row returns to full brightness when you point at it or move keyboard focus into it. You can still declare for the next round while the last one plays back, or skip the playback (`Esc`). A **Hiding** badge appears only after the playback reaches the beat where the character hides. The heading of the board names the round that's playing, and the footer names the round being declared. If the next round resolves while your playback is paused, the strip moves to the start of the new round and stays paused, and stepping back reaches the round you were watching.
 
 If your operating system is set to reduce motion, rounds don't play back by themselves, and the strip shows each round's summary at once. **Replay** then starts paused on the first beat, so you can step through the round.
 

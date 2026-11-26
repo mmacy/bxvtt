@@ -253,9 +253,23 @@
   opacity: 0.7;
 }
 
-/* The rows and the footer while a resolved round plays back. They are inert until it ends. */
+/*
+ * The rows and the footer while a resolved round plays back. They dim so the eye goes to the playback, and they
+ * return to full opacity under the pointer or with focus inside, so they never look disabled.
+ */
 .dimmedForPlayback {
   opacity: 0.4;
+  transition: opacity var(--duration-base) var(--ease-out);
+}
+
+.dimmedForPlayback:hover,
+.dimmedForPlayback:focus-within {
+  opacity: 1;
+}
+
+.memberOut.dimmedForPlayback:hover,
+.memberOut.dimmedForPlayback:focus-within {
+  opacity: 0.7;
 }
 
 .memberMain {

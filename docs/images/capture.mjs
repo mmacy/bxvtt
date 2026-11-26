@@ -9,6 +9,12 @@
 // Bell with four named characters, drives a referee and three players in headless Chromium at 1440 by 900, and
 // writes one WebP file for each screen. It stops the server and deletes the data directory when it finishes.
 //
+// The browsers send only the commands that a screenshot shows, such as the town purchase. Every other game command,
+// declaration, and fight goes through the HTTP API in a fixed order, so the session's dice come out the same on
+// every run and each screenshot shows the same moment. The script fails when a page isn't in the mode its
+// screenshot needs, so a stray fight can't end up in a screenshot of exploring. If you change a command before a
+// screenshot, check every image after it.
+//
 // Settings (environment variables):
 //
 // - BXAPI_URL: where bxapi listens. Default: http://127.0.0.1:8651
@@ -167,30 +173,123 @@ async function snap(page, name, { settle = 700 } = {}) {
   console.log(`${name}.webp  ${Math.round(webp.length / 1024)} KiB`);
 }
 
-async function tableText(page) {
-  return page.locator('body').innerText();
+/** Calls the bxvtt API as one person at the capture's table. */
+function at(person, tableId) {
+  const game = () => person.call('GET', `/tables/${tableId}/game`);
+  return {
+    game,
+    /** Sends one game command and returns the result. Throws when bxapi refuses it, unless `refusable`. */
+    async send(command, { refusable = false } = {}) {
+      const { revision } = await game();
+      const result = await person.call('POST', `/tables/${tableId}/game/commands`, {
+        command,
+        expected_revision: revision,
+      });
+      if (!result.accepted && !refusable) {
+        throw new Error(`bxapi refused ${command.command_type}: ${JSON.stringify(result.rejections)}`);
+      }
+      return result;
+    },
+    declare: (memberId, declaration) =>
+      person.call('PUT', `/tables/${tableId}/game/declarations/${memberId}`, { declaration }),
+  };
 }
 
-/** The mode badge in the top bar: "In town", "Exploring", "Encounter", "Battle". */
-async function modeOf(page) {
-  const text = await tableText(page);
-  return text.split('\n')[1] ?? '';
-}
-
-/** Presses the quick declaration button for every character who has not declared, on a player's page. */
-async function declareAll(page) {
-  for (let guard = 0; guard < 6; guard += 1) {
-    const same = page.getByRole('button', { name: /^Declare same as last round/ }).first();
-    if ((await same.count()) > 0) {
-      await same.click().catch(() => {});
-      await sleep(500);
-      return;
-    }
-    const quick = page.getByRole('button', { name: /^(Attack|Close in on)/ }).first();
-    if ((await quick.count()) === 0) return;
-    await quick.click().catch(() => {});
-    await sleep(500);
+/** Waits until a condition on the game holds, polling as one person. */
+async function waitForGame(api, test, what, timeout = 30_000) {
+  const started = Date.now();
+  for (;;) {
+    const game = await api.game();
+    if (test(game)) return game;
+    if (Date.now() - started > timeout) throw new Error(`Timed out waiting for ${what}.`);
+    await sleep(250);
   }
+}
+
+/** The party member ID of a character, by name. */
+function memberId(game, name) {
+  const seat = game.seats.find((candidate) => candidate.name === name);
+  if (seat === undefined) throw new Error(`Nobody named ${name} is in the party.`);
+  return seat.member_id;
+}
+
+/** The first monster group still standing in the battle. */
+function firstGroup(game) {
+  return game.view.encounter?.groups.find((group) => !group.fled && group.count > 0);
+}
+
+/**
+ * Plays battle rounds through the API until the battle ends: each declarer closes in on the first group still
+ * standing, or attacks it once within 5 feet. Each player declares for their own characters, so the server
+ * resolves each round by itself. Waits `pause` milliseconds after each round so the pages can play it back.
+ * `opening` returns declarations by member ID that replace those for the first round. One that won't work
+ * becomes a hold.
+ */
+async function fightOut(apis, { pause = 0, maxRounds = 20, opening = () => ({}) } = {}) {
+  let game = await apis.ruth.game();
+  for (let round = 0; round < maxRounds && game.mode === 'battle'; round += 1) {
+    const group = firstGroup(game);
+    if (group === undefined) break;
+    const before = game.revision;
+    const chosen = round === 0 ? opening(game) : {};
+    const declarers = game.view.encounter.declarers;
+    // The chosen declarations go last, so the round resolves only after any that won't work become holds.
+    const order = [...declarers.filter((id) => !(id in chosen)), ...declarers.filter((id) => id in chosen)];
+    for (const id of order) {
+      const owner = game.seats.find((seat) => seat.member_id === id)?.user_id;
+      const api = apis.byUser.get(owner) ?? apis.ruth;
+      const distance = group.member_distance_feet?.[id] ?? group.distance_feet;
+      const state = await api.declare(
+        id,
+        chosen[id] ??
+          (distance > 5
+            ? { action: 'move', move: 'close', target_group_id: group.id }
+            : { action: 'attack', target_group_id: group.id }),
+      );
+      if (id in chosen && state?.refusals?.some((refusal) => refusal.member_id === id)) {
+        console.log(`The opening action for ${id} won't work, so that member holds.`);
+        await api.declare(id, { action: 'hold' });
+      }
+    }
+    game = await waitForGame(apis.ruth, (next) => next.revision > before, 'the round to resolve');
+    if (pause > 0) await sleep(pause);
+  }
+  if (game.mode === 'battle') throw new Error('The battle did not end.');
+  if (game.mode !== 'exploring') throw new Error(`The battle ended in ${game.mode}, not exploring.`);
+  return game;
+}
+
+/** Closes the aftermath card on a page, if it is open, once its playback has finished. */
+async function closeAftermath(page) {
+  const close = page.getByRole('button', { name: 'Close', exact: true });
+  await close
+    .first()
+    .waitFor({ timeout: 30_000 })
+    .catch(() => {});
+  await page
+    .getByRole('button', { name: 'Skip' })
+    .click({ timeout: 1000 })
+    .catch(() => {});
+  await close
+    .first()
+    .click({ timeout: 5000 })
+    .catch(() => {});
+  await sleep(600);
+}
+
+/** Opens the scene panel's description and keeps it open. */
+async function openScene(page) {
+  const scene = page.getByRole('region', { name: 'Current location' });
+  await scene.waitFor();
+  const hide = scene.getByRole('button', { name: 'Collapse description' });
+  if (await hide.isVisible()) await hide.click();
+  await scene.getByRole('button', { name: 'Show description' }).click();
+  await hide.waitFor();
+}
+
+/** Fails the capture when a page doesn't show the mode a screenshot needs. */
+async function expectMode(page, mode) {
+  await page.getByRole('banner').getByText(mode, { exact: true }).first().waitFor({ timeout: 30_000 });
 }
 
 async function main() {
@@ -241,7 +340,7 @@ async function main() {
     equip: ['chainmail', 'shield', 'mace'],
   });
 
-  // Theo makes Mazpar in the wizard.
+  // Theo makes Mazpar in the wizard. The ability dice animate, so the shot waits until they land.
   const theoPage = await newPage(theo, { seedRolls: 9 });
   await theoPage.goto(`${base}/tables/${tableId}`);
   await theoPage
@@ -256,7 +355,7 @@ async function main() {
       .click();
     await sleep(900);
   };
-  await wizard.getByRole('button', { name: 'Roll ability scores' }).click();
+  await wizard.getByRole('button', { name: /^Roll (ability scores|abilities)$/ }).click();
   await wizard.getByRole('region', { name: 'Classes this roll qualifies for' }).waitFor();
   await sleep(4500);
   await snap(theoPage, 'wizard-roll');
@@ -274,7 +373,7 @@ async function main() {
   await wizard.getByText(/You start with \d+ hit points?\./).waitFor();
   await wizard.getByRole('button', { name: 'Roll starting gold' }).click();
   await wizard.getByText(/You start with \d+ gold pieces?/).waitFor();
-  await sleep(1500);
+  await sleep(2500);
   await snap(theoPage, 'wizard-rolls');
   await next();
   await wizard.getByRole('button', { name: /^Add Dagger/ }).click();
@@ -306,6 +405,24 @@ async function main() {
   await samPage.getByRole('tab', { name: 'Outfitter' }).waitFor();
   await sleep(1500);
 
+  // From here on, every game command that no screenshot shows goes through the API in a fixed order, so the
+  // session's dice repeat from run to run.
+  const apis = {
+    ruth: at(ruth, tableId),
+    sam: at(sam, tableId),
+    priya: at(priya, tableId),
+    theo: at(theo, tableId),
+  };
+  apis.byUser = new Map([
+    [sam.user.id, apis.sam],
+    [priya.user.id, apis.priya],
+    [theo.user.id, apis.theo],
+  ]);
+  const start = await apis.ruth.game();
+  const ids = Object.fromEntries(
+    ['Flarg', 'Tinks', 'Clarence', 'Mazpar'].map((name) => [name, memberId(start, name)]),
+  );
+
   // Town: Sam shops for Tinks.
   await samPage.getByRole('tab', { name: 'Outfitter' }).click();
   await samPage
@@ -321,85 +438,67 @@ async function main() {
   await samPage.getByRole('button', { name: /^Buy for Tinks/ }).click();
   await sleep(1500);
 
-  // Set out, light a torch, and walk into the guardroom.
-  await samPage.getByRole('button', { name: 'Set out' }).first().click();
-  await samPage.getByRole('dialog').getByRole('button', { name: 'Set out' }).click();
-  await samPage
-    .getByRole('button', { name: 'Blueprint map' })
-    .click()
-    .catch(() => {});
-  await sleep(1500);
-  for (let attempt = 0; attempt < 8; attempt += 1) {
-    await samPage.getByRole('button', { name: 'Light', exact: true }).last().click();
-    await samPage.getByRole('menuitem', { name: /Tinks lights a torch/ }).click();
-    await sleep(1000);
-    if (!(await tableText(samPage)).includes('The party has no light.')) break;
-  }
-  await samPage.locator('h1').first().click();
-  for (let step = 0; step < 4 && (await modeOf(samPage)) === 'Exploring'; step += 1) {
-    await samPage.keyboard.press('ArrowUp');
-    await sleep(1300);
-  }
+  // The party rests a night in town, and Mazpar memorizes sleep.
+  await apis.sam.send({ command_type: 'rest', kind: 'night' });
+  await apis.theo.send({
+    command_type: 'prepare_spells',
+    character_id: ids.Mazpar,
+    selections: [{ spell_id: 'sleep' }],
+  });
 
-  // The fight. Priya and Theo declare first, so Sam's declaration resolves the round while Sam's page watches.
-  await samPage
-    .getByRole('button', { name: /^Fight/ })
-    .last()
-    .click();
-  await samPage.getByRole('button', { name: 'Actions', exact: true }).first().waitFor();
+  // Set out, light a torch, and walk north into the guardroom, where two goblins wait.
+  await apis.sam.send({ command_type: 'enter_dungeon', dungeon_id: 'priory' });
+  // A torch can fail to catch, so Tinks strikes until one burns.
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const result = await apis.sam.send(
+      { command_type: 'light_source', character_id: ids.Tinks, item_id: 'torch' },
+      { refusable: true },
+    );
+    if (result.game.view.effects.some((effect) => effect.kind === 'light')) break;
+  }
+  let game = await apis.sam.game();
+  for (let step = 0; step < 4 && game.mode === 'exploring'; step += 1) {
+    game = (await apis.sam.send({ command_type: 'move_party', direction: 'north' })).game;
+  }
+  if (game.mode !== 'encounter') throw new Error(`The party met no one in the guardroom (${game.mode}).`);
+  await apis.sam.send({ command_type: 'engage_battle' });
+
+  // The battle board, as Sam sees it: Flarg and Tinks close in, so the track marks where they will stand, and
+  // Clarence's attack can't reach the goblins 30 feet away, so his row says it won't work and the round waits.
   const theoPlay = theoPage;
   await theoPlay.goto(`${base}/tables/${tableId}`);
-  await theoPlay.getByRole('button', { name: 'Actions', exact: true }).first().waitFor();
-  await declareAll(priyaPage);
-  await declareAll(theoPlay);
-  await declareAll(samPage);
-  await sleep(1600);
-  await snap(samPage, 'battle', { settle: 0 });
-  for (let round = 0; round < 8; round += 1) {
-    await sleep(5000);
-    if ((await modeOf(samPage)) !== 'Battle') break;
-    for (const page of [priyaPage, theoPlay, samPage]) await declareAll(page);
+  for (const page of [samPage, priyaPage, theoPlay]) {
+    await page.getByRole('button', { name: 'Actions', exact: true }).first().waitFor();
   }
-  await sleep(4000);
+  game = await apis.ruth.game();
+  const goblins = firstGroup(game);
+  if (goblins === undefined) throw new Error('The battle has no monsters.');
+  await apis.sam.declare(ids.Flarg, { action: 'move', move: 'close', target_group_id: goblins.id });
+  await apis.sam.declare(ids.Tinks, { action: 'move', move: 'close', target_group_id: goblins.id });
+  await apis.priya.declare(ids.Clarence, { action: 'attack', target_group_id: goblins.id });
   await samPage
-    .getByRole('button', { name: 'Close', exact: true })
-    .click()
-    .catch(() => {});
-  await samPage
-    .getByRole('button', { name: /Pick up dropped goods/ })
+    .getByText(/^Won't work:/)
     .first()
-    .click()
-    .catch(() => {});
-  await sleep(1500);
-
-  // Explore a little further: open the north door and walk through it.
-  await samPage.locator('h1').first().click();
-  await samPage.keyboard.press('ArrowUp');
-  await sleep(1300);
-  await samPage.keyboard.press('ArrowUp');
-  await sleep(1300);
-  const scene = samPage.getByRole('region', { name: 'Current location' });
-  await scene
-    .getByRole('button', { name: 'Show description' })
-    .click({ timeout: 2000 })
-    .catch(() => {});
-  await scene
-    .getByRole('button', { name: 'Door', exact: true })
-    .click()
-    .catch(() => {});
-  await samPage
-    .getByRole('menuitem', { name: 'Open door' })
-    .click()
-    .catch(() => {});
+    .waitFor();
   await sleep(1200);
-  await samPage.locator('h1').first().click();
-  for (let step = 0; step < 3 && (await modeOf(samPage)) === 'Exploring'; step += 1) {
-    await samPage.keyboard.press('ArrowUp');
-    await sleep(1300);
-  }
-  for (let step = 0; step < 4 && (await modeOf(samPage)) === 'Exploring'; step += 1) {
-    await samPage.keyboard.press('ArrowLeft');
-    await sleep(1300);
+  await snap(samPage, 'battle');
+
+  // Clarence closes in instead, Mazpar holds, and the round resolves. Then the party fights it out.
+  await apis.priya.declare(ids.Clarence, { action: 'move', move: 'close', target_group_id: goblins.id });
+  await apis.theo.declare(ids.Mazpar, { action: 'hold' });
+  await waitForGame(apis.ruth, (next) => next.revision > game.revision, 'the first round to resolve');
+  await sleep(4000);
+  await fightOut(apis, { pause: 1500 });
+  await expectMode(samPage, 'Exploring');
+  await closeAftermath(samPage);
+
+  // Sam picks up what the goblins dropped, from the scene panel.
+  await openScene(samPage);
+  const scene = samPage.getByRole('region', { name: 'Current location' });
+  const pickUp = scene.getByRole('button', { name: 'Pick up dropped goods' });
+  if ((await pickUp.count()) > 0) {
+    await pickUp.click();
+    await sleep(1500);
   }
 
   // The table talks.
@@ -421,9 +520,59 @@ async function main() {
     .catch(() => {});
   await sleep(800);
   await snap(samPage, 'feed');
-
-  // The map, with the party tab beside it.
   await samPage.getByRole('tab', { name: 'Party' }).click();
+
+  // The warden's cell. Ruth places the party in the dorter, north of the cell's stuck door, as the referee's
+  // Place the party tool does. Flarg forces the door, and the party steps south into Gashnak and two goblins.
+  await apis.ruth.send({
+    command_type: 'place_party',
+    location: {
+      kind: 'dungeon',
+      dungeon_id: 'priory',
+      level_number: 1,
+      position: [26, 15],
+      facing: 'south',
+    },
+  });
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const result = await apis.sam.send(
+      { command_type: 'force_door', direction: 'south', character_id: ids.Flarg },
+      { refusable: true },
+    );
+    const level = result.game.view.explored.find((candidate) => candidate.level_number === 1);
+    if (level?.edges['26,16:north']?.door_open === true) break;
+  }
+  game = (await apis.sam.send({ command_type: 'move_party', direction: 'south' })).game;
+  if (game.mode !== 'encounter') throw new Error(`The party met no one in the warden's cell (${game.mode}).`);
+  await apis.sam.send({ command_type: 'engage_battle' });
+  await samPage.getByRole('button', { name: 'Actions', exact: true }).first().waitFor();
+  // Mazpar opens with sleep on the largest group.
+  await fightOut(apis, {
+    pause: 1500,
+    opening: (battle) => {
+      const groups = battle.view.encounter.groups.filter((group) => !group.fled && group.count > 0);
+      const largest = groups.reduce((most, group) => (group.count > most.count ? group : most), groups[0]);
+      return {
+        [ids.Mazpar]: {
+          action: 'cast',
+          spell_id: 'sleep',
+          spell_mode: 'hd_budget',
+          target_group_id: largest.id,
+        },
+      };
+    },
+  });
+  await expectMode(samPage, 'Exploring');
+  game = await apis.sam.game();
+  const fallen = game.view.party.filter((member) => member.current_hp <= 0).map((member) => member.name);
+  if (fallen.length > 0) throw new Error(`${fallen.join(' and ')} fell in the warden's cell.`);
+
+  await closeAftermath(samPage);
+
+  // The map while exploring, with the scene panel open on the chest.
+  await openScene(samPage);
+  await scene.getByText(/A heavy hasp holds the lid shut/).waitFor();
+  await expectMode(samPage, 'Exploring');
   await sleep(600);
   await snap(samPage, 'explore');
 
@@ -455,6 +604,7 @@ async function main() {
 
   // The referee panel.
   await ruthPage.reload();
+  await expectMode(ruthPage, 'Exploring');
   await ruthPage.getByRole('tab', { name: 'Referee', exact: true }).click();
   await ruthPage.getByRole('tab', { name: /^(Act|Quick actions)$/ }).click();
   await sleep(1200);

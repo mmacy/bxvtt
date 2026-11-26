@@ -30,7 +30,7 @@ import {
   doorEntries,
   doorsHere,
   joinGroups,
-  pileEntries,
+  pileTakeEntry,
   stairsHere,
   transitionAction,
   transitionDescription,
@@ -134,7 +134,6 @@ function Row({ icon, children, action, tone }: RowProps) {
 }
 
 const MENU_HELP = {
-  'Dropped goods': 'Choose what to do with the dropped goods',
   Door: 'Choose what to do with this door',
 } as const;
 
@@ -160,6 +159,17 @@ function Actions({ entries, label }: { entries: MenuEntry[]; label: keyof typeof
         </Button>
       }
     />
+  );
+}
+
+/** The dropped goods row's button. Its visible label is short, and its accessible name says what it picks up. */
+function PickUpButton({ ctx }: { ctx: ActionContext }) {
+  const take = pileTakeEntry(ctx);
+  if (!take) return null;
+  return (
+    <Button size="sm" variant="secondary" aria-label={take.label} onClick={() => take.onSelect?.()}>
+      Pick up
+    </Button>
   );
 }
 
@@ -425,7 +435,7 @@ export function ScenePanel() {
               <TreasureRow key={cache.id} cache={cache} count={caches.length} ctx={ctx} />
             ))}
             {here.pile && (
-              <Row icon="coins" action={<Actions entries={pileEntries(ctx)} label="Dropped goods" />}>
+              <Row icon="coins" action={<PickUpButton ctx={ctx} />}>
                 Dropped goods lie here.
               </Row>
             )}

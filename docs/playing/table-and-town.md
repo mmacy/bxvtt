@@ -36,7 +36,7 @@ Open the **Party** tab (`Alt+1`) to view all party members in marching order wit
 
 Between trips into the dungeon, each player buys and equips gear for their characters and prepares any spells, then the caller selects **Set out** (`G`) to travel to the dungeon. Navigate town services with the five stage tabs or the action bar shortcuts: **Town square**, **Outfitter** (`O`), **Temple** (`T`), **Treasure buyers** (`M`), and **Rest and prepare** (`Shift+R` opens the rest menu).
 
-![The town outfitter showing Wren's shopping cart beside the dungeon readiness checklist](../images/town.webp)
+![The town outfitter showing Tinks's shopping cart beside the dungeon readiness checklist](../images/town.webp)
 
 ### Buy gear at the outfitter
 
@@ -78,7 +78,7 @@ Select **Set out** (`G`), review any readiness reminders in the confirmation dia
 
 Select any character in the **Party** tab to open their character sheet in a side drawer. Clicking any weapon, armour, item, or spell name inside the sheet opens its entry in the rules compendium.
 
-![Character sheet drawer for a level 1 thief showing hit points, saving throws, and thief skills](../images/sheet.webp)
+![Character sheet drawer for a level 1 thief showing hit points, ability scores, modifiers, and saving throws](../images/sheet.webp)
 
 - **Sheet:** Displays hit points, armour class, THAC0 (To Hit Armour Class 0), attack bonus, movement speeds, XP toward the next level, active conditions and light, ability scores with modifiers, saving throws, thief or class skills, and spoken languages.
 - **Inventory:** Groups **Worn and wielded** items (each with **Unequip**), **Light** controls (**Light a torch**, **Light the lantern**, **Put out light**, and **Set fire to dropped oil**), **Pack** items, **Gems and jewellery**, and **Purse**. Select the three-dot **Actions for** menu on any pack row to **Equip**, **Use** (for magic items), **Give to…**, or **Drop…** directly from the sheet.

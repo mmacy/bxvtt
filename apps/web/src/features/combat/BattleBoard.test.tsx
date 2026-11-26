@@ -91,6 +91,35 @@ describe('BattleBoard', () => {
     expect(screen.queryByRole('button', { name: 'Resolve now' })).not.toBeInTheDocument();
   });
 
+  it("asks a player to declare while one of their characters hasn't", () => {
+    const api = createFakeApi();
+    stubRules(api);
+    renderWithTable(<BattleBoard />, { snapshot: fixtureSnapshot('battle', 'player'), api });
+    expect(screen.getByText('Declare an action for each of your characters.')).toBeInTheDocument();
+    expect(screen.queryByText('Waiting for the party to declare.')).not.toBeInTheDocument();
+  });
+
+  it('says the board waits for the party once all of the viewer’s characters have declared', () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('battle', 'player');
+    const declarations = snapshot.declarations as DeclarationsState;
+    declarations.declarations['character-0002'] = { action: 'hold', character_id: 'character-0002' } as never;
+    declarations.declared = [...declarations.declared, 'character-0002'];
+    renderWithTable(<BattleBoard />, { snapshot, api });
+    expect(screen.getByText('Waiting for the party to declare.')).toBeInTheDocument();
+    expect(screen.queryByText('Declare an action for each of your characters.')).not.toBeInTheDocument();
+  });
+
+  it('leaves the strip above the rows empty once everyone has declared, since the footer says so', () => {
+    const api = createFakeApi();
+    stubRules(api);
+    renderWithTable(<BattleBoard />, { snapshot: everyoneDeclared('player', false), api });
+    expect(screen.queryByText('Declare an action for each of your characters.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Waiting for the party to declare.')).not.toBeInTheDocument();
+    expect(footer()).toHaveTextContent('Everyone has declared');
+  });
+
   it('tells a player who is not the caller who resolves the round once everyone has declared', () => {
     const api = createFakeApi();
     stubRules(api);
@@ -464,6 +493,25 @@ describe('BattleBoard', () => {
     expect(screen.queryByText(/^Wren, .*will (move|fall back)/)).not.toBeInTheDocument();
   });
 
+  it('marks each planned place with a faded portrait in a ring, and draws no line to it', () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('battle', 'player');
+    const declarations = snapshot.declarations as DeclarationsState;
+    declarations.projection = {
+      advance_feet: { 'character-0001': 35, 'character-0002': 20, 'character-0003': 0, 'character-0004': 0 },
+      front_rank: { 'group-0001': ['character-0001', 'character-0002'] },
+    };
+    const { container } = renderWithTable(<BattleBoard />, { snapshot, api });
+    // Every element styled for the plan is a marker, one per mover, so no connector line joins them.
+    const planned = [...container.querySelectorAll('[class*="planned"]')];
+    expect(planned).toHaveLength(2);
+    for (const marker of planned) {
+      expect(marker).toHaveAttribute('aria-hidden', 'true');
+      expect(marker.querySelector('svg')).not.toBeNull();
+    }
+  });
+
   it('lets the referee resolve early after a confirmation, holding for the rest', async () => {
     const api = createFakeApi();
     stubRules(api);
@@ -529,13 +577,14 @@ describe('BattleBoard', () => {
     expect(await screen.findByText('Round 3 result')).toBeInTheDocument();
   });
 
-  it('takes the rows and the footer out of play while a round plays back, and holds the live Hiding badge', async () => {
+  it('dims the rows and the footer while a round plays back, keeps them usable, and holds the live Hiding badge', async () => {
     const api = createFakeApi();
     stubRules(api);
     const snapshot = fixtureSnapshot('battle', 'player');
     const encounter = snapshot.game?.view.encounter;
     if (!encounter) throw new Error('No encounter in the fixture.');
     encounter.hiding = ['character-0001'];
+    api.declare.mockResolvedValue(snapshot.declarations as DeclarationsState);
     const { store, user } = renderWithTable(<BattleBoard />, {
       snapshot,
       api,
@@ -544,19 +593,31 @@ describe('BattleBoard', () => {
     const list = screen.getByRole('list', { name: 'Actions this round' });
     expect(within(row('Brenna')).getByText('Hiding')).toBeInTheDocument();
     // A keyboard user is on Brenna's Change button when the round resolves.
-    within(row('Brenna')).getByRole('button', { name: 'Change' }).focus();
+    const change = within(row('Brenna')).getByRole('button', { name: 'Change' });
+    change.focus();
     act(() => store.getState().receive({ type: 'feed', entry: roundEntry(snapshot, 1, 2) }));
     expect(await screen.findByText('Round 2 begins.')).toBeInTheDocument();
-    expect(list).toHaveAttribute('inert');
-    expect(footer()).toHaveAttribute('inert');
-    // The live view already lists the hide, but the round that sets it up hasn't played yet.
-    expect(within(row('Brenna')).queryByText('Hiding')).not.toBeInTheDocument();
-    // Focus moves to the strip instead of falling to the page.
-    expect(screen.getByRole('button', { name: 'Pause playback' })).toHaveFocus();
-    await user.click(screen.getByRole('button', { name: 'Skip' }));
-    expect(await screen.findByText('Round 2 result')).toBeInTheDocument();
     expect(list).not.toHaveAttribute('inert');
     expect(footer()).not.toHaveAttribute('inert');
+    expect(row('Brenna').className).toMatch(/dimmedForPlayback/);
+    expect(footer().className).toMatch(/dimmedForPlayback/);
+    // Focus stays where it was.
+    expect(change).toHaveFocus();
+    // The live view already lists the hide, but the round that sets it up hasn't played yet.
+    expect(within(row('Brenna')).queryByText('Hiding')).not.toBeInTheDocument();
+
+    // The player declares for the next round while the last one plays back.
+    await user.click(within(row('Wren')).getByRole('button', { name: 'Actions' }));
+    const composer = screen.getByRole('region', { name: 'Declare for Wren' });
+    await user.click(within(composer).getByRole('radio', { name: 'Hold' }));
+    await user.click(within(composer).getByRole('button', { name: 'Hold this round' }));
+    expect(api.declare).toHaveBeenCalledWith(store.getState().tableId, 'character-0002', { action: 'hold' });
+    expect(screen.getByText('Round 2 begins.')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Skip' }));
+    expect(await screen.findByText('Round 2 result')).toBeInTheDocument();
+    expect(row('Brenna').className).not.toMatch(/dimmedForPlayback/);
+    expect(footer().className).not.toMatch(/dimmedForPlayback/);
     expect(within(row('Brenna')).getByText('Hiding')).toBeInTheDocument();
   });
 
