@@ -16,6 +16,7 @@ import {
 import { useMemo, useState } from 'react';
 import {
   cachesToTake,
+  rolledTreasureNumbers,
   useCommandSchema,
   useHere,
   useLegalCommand,
@@ -39,6 +40,7 @@ import {
   type SelectGroup,
   type SelectOption,
 } from '@/ui';
+import { cacheMenuName } from './actions';
 import { useActionContext } from './hooks';
 import { packItems } from './party';
 import { useExploreSend } from './useExploreSend';
@@ -253,13 +255,14 @@ function FieldInput({ commandType, field, value, values, onChange, can, actingFi
       );
     }
     case 'feature': {
-      const options: SelectOption[] = cachesToTake(here).map((cache, index, all) => ({
+      const numbers = rolledTreasureNumbers(here?.caches ?? []);
+      const options: SelectOption[] = cachesToTake(here).map((cache) => ({
         value: cache.id,
-        label: all.length > 1 ? `Treasure ${index + 1}` : 'Treasure here',
+        label: cacheMenuName(cache, numbers),
       }));
-      if (here?.pile) options.push({ value: 'pile', label: 'Dropped goods here' });
+      if (here?.pile) options.push({ value: 'pile', label: 'Dropped goods' });
       return (
-        <Field label={text.label} hint={options.length === 0 ? 'No treasure is visible here.' : text.help}>
+        <Field label={text.label} hint={options.length === 0 ? 'No treasure within reach.' : text.help}>
           <Select
             options={options}
             value={typeof value === 'string' ? value : undefined}

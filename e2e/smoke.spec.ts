@@ -143,7 +143,7 @@ async function castSleep(page: Page, name: string, group: string) {
   await composer.getByRole('radio', { name: 'Cast' }).click();
   await composer
     .getByRole('radiogroup', { name: 'How to cast Sleep' })
-    .getByRole('radio', { name: 'By Hit Dice' })
+    .getByRole('radio', { name: 'By hit dice' })
     .click();
   await declaring(page, () => composer.getByRole('button', { name: `Cast sleep at ${group}` }).click());
 }
@@ -219,7 +219,7 @@ test('a referee and two players play The Toll at Crookback Bridge from table cre
 
   await test.step('in town, the caller rests the party and the casters prepare sleep', async () => {
     await sam.page.getByRole('tab', { name: 'Rest and prepare' }).click();
-    await sam.page.getByRole('button', { name: 'Rest a night' }).click();
+    await sam.page.getByRole('button', { name: 'Rest for a night' }).click();
     await expect(ann.page.getByRole('banner').getByText(/Day 1, 0[89]:/)).toBeVisible();
     await ann.page.getByRole('tab', { name: 'Rest and prepare' }).click();
     for (const name of ['Mazpar', 'Elfy']) {
@@ -230,10 +230,11 @@ test('a referee and two players play The Toll at Crookback Bridge from table cre
       await sheet.getByRole('button', { name: 'Prepare spells' }).click();
       const prepare = ann.page.getByRole('dialog', { name: `Prepare ${name}'s spells` });
       // The dialog may already choose the spell in the book. Fill the one first-level slot either way.
-      if (await prepare.getByText('Slots used: 0 of 1').isVisible()) {
-        await prepare.getByRole('button', { name: 'More copies of Sleep' }).click();
+      const firstLevel = prepare.getByRole('region', { name: '1st-level spells' });
+      if (await firstLevel.getByText('0 of 1 slots chosen').isVisible()) {
+        await firstLevel.getByRole('button', { name: 'More copies of Sleep' }).click();
       }
-      await expect(prepare.getByText('Slots used: 1 of 1')).toBeVisible();
+      await expect(firstLevel.getByText('1 of 1 slots chosen')).toBeVisible();
       await prepare.getByRole('button', { name: 'Prepare spells' }).click();
       await expect(prepare).toHaveCount(0);
       await expect(sheet.getByRole('region', { name: 'Memorized spells' })).toContainText(/Sleep/);

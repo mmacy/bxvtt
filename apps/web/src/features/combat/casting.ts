@@ -1,12 +1,12 @@
 /**
- * Whether a member can cast spells at their level, and why they have nothing to cast now, from the class catalog
- * (a magic ability and spell slots at the member's level) and the feed (the member's last preparation and the
+ * Whether a member can cast spells at their level, and why they have nothing to cast now, from the view (the
+ * member's `spell_slots`, spell book, and memorized spells) and the feed (the member's last preparation and the
  * spells cast since).
  */
 import type { MemberView } from '@bxvtt/shared/bxapi';
 import type { FeedEntry } from '@bxvtt/shared/protocol';
 import { useMemo } from 'react';
-import { useFeed, useRulesEntry, type ClassDetail } from '@/app';
+import { useFeed } from '@/app';
 import { memorizedSpells } from './model';
 
 export interface CastingState {
@@ -14,21 +14,6 @@ export interface CastingState {
   caster: boolean;
   /** Why the member has nothing to cast, or `null` when they have a spell memorized or don't cast. */
   reason: string | null;
-}
-
-/**
- * Whether the class casts spells at a level: it has a magic ability, and its progression gives that level at
- * least one spell slot.
- */
-export function classCastsAt(entry: ClassDetail | null, level: number): boolean {
-  if (entry === null) return false;
-  // Read defensively: a catalog entry that failed to load in part shouldn't break the composer.
-  const abilities = Array.isArray(entry.abilities) ? entry.abilities : [];
-  const progression = Array.isArray(entry.progression) ? entry.progression : [];
-  const magic = abilities.some((a) => a.tag === 'arcane_magic' || a.tag === 'divine_magic');
-  const row = progression.find((p) => p.level === level);
-  const slots = Array.isArray(row?.spell_slots) ? row.spell_slots : [];
-  return magic && slots.some((n) => typeof n === 'number' && n > 0);
 }
 
 /**
@@ -63,23 +48,20 @@ export function noSpellsReason(name: string, spent: boolean): string {
 
 /** Whether a member casts, and why they have nothing to cast now. */
 export function useCasting(member: MemberView): CastingState {
-  const entry = useRulesEntry<ClassDetail>(`classes/${member.class_id}`).data;
   const feed = useFeed();
   return useMemo(() => {
-    const caster = classCastsAt(entry, member.level) || (member.spell_book ?? []).length > 0;
+    const caster = member.spell_slots.some((n) => n > 0) || member.spell_book.length > 0;
     if (!caster || memorizedSpells(member).length > 0) return { caster, reason: null };
     return { caster, reason: noSpellsReason(member.name, castEverySpell(feed, member.id)) };
-  }, [entry, member, feed]);
+  }, [member, feed]);
 }
 
 /**
- * Whether a member's class is a spellcasting class at all (a magic ability in the class catalog), or has a spell
- * book, whatever their level. The row's suggestion keeps such members out of melee by default.
+ * Whether a member's class casts spells at all, whatever their level: the view gives a caster's class an entry in
+ * `spell_slots` for each spell level, and a class that casts nothing none. A spell book or a memorized spell
+ * counts too. The row's suggestion keeps such members out of melee by default.
  */
-export function useMemberCasts(member: MemberView | null): boolean {
-  const entry = useRulesEntry<ClassDetail>(member ? `classes/${member.class_id}` : null).data;
+export function memberCasts(member: MemberView | null): boolean {
   if (member === null) return false;
-  const abilities = Array.isArray(entry?.abilities) ? entry.abilities : [];
-  const magic = abilities.some((a) => a.tag === 'arcane_magic' || a.tag === 'divine_magic');
-  return magic || (member.spell_book ?? []).length > 0;
+  return member.spell_slots.length > 0 || member.spell_book.length > 0 || member.memorized_spells.length > 0;
 }

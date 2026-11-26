@@ -350,7 +350,7 @@ describe('the health check', () => {
     expect(anonymous).toMatchObject({
       status: 'ok',
       host_key_required: true,
-      bxapi: { reachable: true, meta: null },
+      bxapi: { reachable: true, outdated: false, meta: null },
     });
     const user = await createUser(server, 'Rhea');
     const full = await user.client.health();

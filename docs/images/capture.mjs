@@ -93,6 +93,7 @@ async function startServer() {
       },
     },
   );
+  console.log(`The capture server is process ${server.pid} on port ${port}.`);
   for (let attempt = 0; attempt < 50; attempt += 1) {
     const response = await fetch(`${base}/api/health`).catch(() => null);
     if (response?.ok) return;
@@ -438,8 +439,23 @@ async function main() {
   await samPage.getByRole('button', { name: /^Buy for Tinks/ }).click();
   await sleep(1500);
 
-  // The party rests a night in town, and Mazpar memorizes sleep.
+  // The party rests a night in town. Theo opens the prepare dialog on Mazpar's Spells tab, and the API sends
+  // the same choice, so Mazpar memorizes sleep.
   await apis.sam.send({ command_type: 'rest', kind: 'night' });
+  await theoPage
+    .getByRole('list', { name: 'Marching order' })
+    .getByRole('button', { name: 'Mazpar', exact: true })
+    .click();
+  const theoSheet = theoPage.getByRole('dialog').last();
+  await theoSheet.getByRole('tab', { name: 'Spells' }).click();
+  await theoSheet.getByRole('button', { name: 'Prepare spells' }).first().click();
+  const prepare = theoPage.getByRole('dialog', { name: "Prepare Mazpar's spells" });
+  await prepare.getByRole('heading', { name: '1st-level spells' }).waitFor();
+  await sleep(900);
+  await snap(theoPage, 'spells-prepare');
+  await prepare.getByRole('button', { name: 'Cancel' }).click();
+  await theoPage.keyboard.press('Escape');
+  await sleep(500);
   await apis.theo.send({
     command_type: 'prepare_spells',
     character_id: ids.Mazpar,

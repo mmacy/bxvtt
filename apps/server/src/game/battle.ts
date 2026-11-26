@@ -10,7 +10,7 @@ import type {
   RoundProjection,
   User,
 } from '@bxvtt/shared/protocol';
-import { ResolveRoundRequest, SaveDeclarationRequest } from '@bxvtt/shared/protocol';
+import { DeclarationBody, ResolveRoundRequest, SaveDeclarationRequest } from '@bxvtt/shared/protocol';
 import type { Context } from '../context';
 import { json, str } from '../db';
 import { ApiError, parseBody } from '../errors';
@@ -18,7 +18,6 @@ import { now } from '../ids';
 import { RESOLVE_ROUND } from './classify';
 import { readSeats } from './seats';
 import { attributeRefusals, previewRefusals } from './refusals';
-import { TARGET_FIELD_NAMES, unlistedTarget, withoutUnlistedCreatures } from './targets';
 import type { GameService, LiveGame } from './service';
 
 /** The path parameters of a declaration route. */
@@ -72,17 +71,14 @@ export class BattleService {
   ) {}
 
   /**
-   * Builds the declarations state of a game for one role, or `null` outside a battle. A player's copy names only
-   * the monsters that the player view lists, even when a referee aimed at one the party can't see, or a preview
-   * rejection names one.
+   * Builds the declarations state of a game, or `null` outside a battle. Every member reads the same state,
+   * because the party plans together. A preview rejection names only what a declaration named, and osrlib
+   * refuses a target that the player view doesn't list as it refuses an ID that doesn't exist.
    *
    * @param live - The game.
-   * @param role - The reader's role.
    */
-  async state(live: LiveGame, role: Role = 'player'): Promise<DeclarationsState | null> {
-    const state = await this.refereeState(live);
-    if (state === null || role === 'referee') return state;
-    return withoutUnlistedCreatures(state, live.view, live.creatures);
+  async state(live: LiveGame): Promise<DeclarationsState | null> {
+    return this.refereeState(live);
   }
 
   /** The stored declarations of the round being declared, by member, with who saved each one. */
@@ -101,7 +97,11 @@ export class BattleService {
     )) {
       const memberId = str(row, 'member_id');
       if (!declarers.includes(memberId)) continue;
-      declarations[memberId] = json<BattleDeclaration>(row, 'declaration_json');
+      // A row stored before the server dropped unknown fields keeps only bxapi's fields, because every member
+      // reads the declarations.
+      const parsed = DeclarationBody.safeParse(json<unknown>(row, 'declaration_json'));
+      if (!parsed.success) continue;
+      declarations[memberId] = { ...parsed.data, character_id: memberId } as BattleDeclaration;
       declaredBy[memberId] = str(row, 'user_id');
     }
     return { declarations, declaredBy };
@@ -133,10 +133,21 @@ export class BattleService {
         `/v1/sessions/${encodeURIComponent(live.sessionId)}/battle-round/preview`,
         { declarations },
       );
+      const { can_hide: canHide, can_back_stab: canBackStab } = result;
+      // A preview from before osrlib 2.8 parses with no lists, which would read as "nobody can hide", and the
+      // client prefers the projection's lists. So such a preview counts as a failed one.
+      if (!Array.isArray(canHide) || !Array.isArray(canBackStab)) {
+        throw new Error('The battle round preview has no can_hide or can_back_stab.');
+      }
       preview = {
         key,
         refusals: previewRefusals(result.rejections, live.view.encounter?.declarers ?? []),
-        projection: { advance_feet: result.advance_feet, front_rank: result.front_rank },
+        projection: {
+          advance_feet: result.advance_feet,
+          front_rank: result.front_rank,
+          can_hide: canHide,
+          can_back_stab: canBackStab,
+        },
         failedAt: null,
       };
     } catch (error) {
@@ -196,15 +207,8 @@ export class BattleService {
    */
   async pushLocked(tableId: string): Promise<void> {
     const live = await this.game.current(tableId);
-    const forReferees = live === null ? null : await this.state(live, 'referee');
-    const forPlayers =
-      live === null || forReferees === null
-        ? null
-        : withoutUnlistedCreatures(forReferees, live.view, live.creatures);
-    this.ctx.hub.send(tableId, ({ role }) => ({
-      type: 'declarations',
-      declarations: role === 'referee' ? forReferees : forPlayers,
-    }));
+    const declarations = live === null ? null : await this.state(live);
+    this.ctx.hub.send(tableId, () => ({ type: 'declarations', declarations }));
   }
 
   /**
@@ -235,7 +239,7 @@ export class BattleService {
    * @param user - The user in the member's seat, or a referee.
    * @param role - The user's role.
    * @param memberId - The member.
-   * @param declaration - The declaration.
+   * @param declaration - The declaration, parsed, so it holds only the fields bxapi defines.
    * @param requestId - The request ID, for bxapi's log.
    */
   async save(
@@ -243,24 +247,12 @@ export class BattleService {
     user: User,
     role: Role,
     memberId: string,
-    declaration: Record<string, unknown>,
+    declaration: DeclarationBody,
     requestId: string,
   ): Promise<DeclarationsState> {
     return this.game.locked(tableId, async () => {
       const live = await this.requireBattle(tableId);
       this.checkMember(live, user, role, memberId);
-      // A player aims only at the creatures the player view lists, because everyone at the table reads the
-      // declarations.
-      const unlisted =
-        role === 'referee'
-          ? null
-          : unlistedTarget(declaration, TARGET_FIELD_NAMES, live.view, live.creatures);
-      if (unlisted !== null) {
-        throw new ApiError('target_unknown', "That target isn't in this fight. Choose another target.", {
-          field: `declaration.${unlisted.field}`,
-          id: unlisted.id,
-        });
-      }
       const stored = { ...declaration, character_id: memberId };
       this.ctx.db.run(
         `INSERT OR REPLACE INTO declarations (table_id, session_id, member_id, round, declaration_json, user_id, updated_at)
@@ -282,7 +274,7 @@ export class BattleService {
           this.ctx.log.warn({ err: error, table: tableId }, 'could not resolve the round automatically');
         }
       }
-      return this.stateOrInactive(await this.game.require(tableId), role);
+      return this.stateOrInactive(await this.game.require(tableId));
     });
   }
 
@@ -305,7 +297,7 @@ export class BattleService {
         memberId,
       );
       await this.pushLocked(tableId);
-      return this.stateOrInactive(live, role);
+      return this.stateOrInactive(live);
     });
   }
 
@@ -338,7 +330,7 @@ export class BattleService {
       const after = await this.game.require(tableId);
       return {
         accepted,
-        declarations: await this.stateOrInactive(after, role),
+        declarations: await this.stateOrInactive(after),
         game: await this.game.project(after, role),
       };
     });
@@ -434,9 +426,9 @@ export class BattleService {
     }
   }
 
-  private async stateOrInactive(live: LiveGame, role: Role): Promise<DeclarationsState> {
+  private async stateOrInactive(live: LiveGame): Promise<DeclarationsState> {
     return (
-      (await this.state(live, role)) ?? {
+      (await this.state(live)) ?? {
         active: false,
         revision: live.revision,
         round: null,
@@ -463,9 +455,9 @@ export function registerBattleRoutes(app: FastifyInstance, ctx: Context): void {
 
   app.get('/api/tables/:tableId/game/declarations', async (request, reply) => {
     const { tableId } = TableParams.parse(request.params);
-    const role = ctx.tables.requireMember(tableId, ctx.auth.user(request));
+    ctx.tables.requireMember(tableId, ctx.auth.user(request));
     const live = await ctx.game.require(tableId);
-    return reply.type('application/json').send(JSON.stringify(await battle.state(live, role)));
+    return reply.type('application/json').send(JSON.stringify(await battle.state(live)));
   });
 
   app.put('/api/tables/:tableId/game/declarations/:memberId', async (request) => {

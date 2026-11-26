@@ -452,9 +452,17 @@
 
 .spellTop {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
+}
+
+.spellTopEnd {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-1);
+  margin-inline-start: auto;
 }
 
 .spellName {
@@ -477,7 +485,38 @@
 .slotsLine {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-1-5);
+}
+
+.slotPairs {
+  display: contents;
+}
+
+/* One spell level's slots, in the outline style of a magic badge: "1st level 1 of 2". */
+.slotPair {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 20px;
+  padding: 0 var(--space-1-5);
+  border: var(--border-hair) solid color-mix(in srgb, var(--color-magic) 55%, transparent);
+  border-radius: var(--radius-pill);
+  color: var(--color-magic);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.slotPair dt,
+.slotPair dd {
+  margin: 0;
+}
+
+.slotPair dd {
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Dialog forms ------------------------------------------------------------------------------------------------ */
@@ -518,6 +557,17 @@
 .pickName {
   flex: 1;
   min-width: 0;
+}
+
+/* A spell's row and, under it, the row of its reversed form. */
+.pickGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.pickRowReversed {
+  margin-inline-start: var(--space-4);
 }
 
 .prepareLevel {

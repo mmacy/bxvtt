@@ -1072,11 +1072,12 @@ export interface paths {
          *       `mode`. Spells and scrolls with `single` or `up_to_n` targeting (such as `magic_missile` with
          *       `spell_mode: "missiles"`) take individual `"monster-NNNN"` or `"npc-NNNN"` IDs from
          *       `encounter.groups[i].members` in `targets`. Use an entry whose `status` is `"alive"`.
-         *     - **Treasure caches (`inspect_treasure`, `remove_treasure_trap`, `take_treasure`):** Pass the opaque
-         *       `explored[i].features[j].id` as `feature_id` for a feature on the party's current cell. The handle starts with
-         *       `feature:`. Don't parse it. A player can use the handle without reading the referee view. osrlib also accepts the
-         *       feature's authored ID from the adventure document, a legacy form for a referee tool, and resolves either form
-         *       only among the features at the party's location.
+         *     - **Treasure caches (`inspect_treasure`, `remove_treasure_trap`, `take_treasure`):** Pass a handle from the
+         *       player view's `features_here` as `feature_id`. The list has the `explored[i].features[j].id` of each treasure
+         *       cache the party can reach from where it stands. The handle starts with `feature:`. Don't parse it. A referee
+         *       tool reads the same handle from `feature_handles` in the referee view. osrlib also accepts the feature's
+         *       authored ID from the adventure document, a legacy form, and resolves either form only among the features at
+         *       the party's location.
          *
          *     When osrlib refuses a command under the B/X rules, this operation still returns HTTP 200 with `accepted` set to
          *     `false` and rule `rejections`, leaving the session and `revision` unchanged. When accepted, the server persists
@@ -1118,6 +1119,10 @@ export interface paths {
          *     and `front_rank` gives each group's projected front rank, keyed by group ID. The projection leaves out what the
          *     monsters do, because the session decides that after it rolls initiative.
          *
+         *     `can_hide` lists the declarers who could declare `hide` beside the other planned declarations, and
+         *     `can_back_stab` lists the declarers who could declare an `attack` with `back_stab`. Use them to offer those two
+         *     choices only to a member the session would accept them from.
+         *
          *     The preview takes the session lock, rolls no dice, passes no game time, and changes nothing: `revision` stays the
          *     same, so the request takes no `expected_revision` and needs no `Idempotency-Key`.
          */
@@ -1157,9 +1162,17 @@ export interface paths {
          *       `travel_to_town` is currently usable from the party's position.
          *     - `explored`: the party's known map for each level. Each entry includes mapped `cells` and `edges`, entered
          *       `areas` with their names, descriptions, and walked cells, visible `features` with opaque `feature:` IDs,
-         *       known `transitions` without destinations or gates, and `entrance` when that cell is known. A feature ID is ready
-         *       to pass as `feature_id`. Feature cache contents, hidden discoveries, and destinations that the party hasn't
-         *       learned stay omitted.
+         *       known `transitions` without destinations or gates, and `entrance` when that cell is known. A feature's
+         *       `emptied` is `true` once the party has emptied that authored cache, and `trap_state` on a feature or an area
+         *       is the trap's state as the party knows it. Feature cache contents, hidden discoveries, and destinations that
+         *       the party hasn't learned stay omitted.
+         *     - `features_here`: the feature IDs that `inspect_treasure`, `remove_treasure_trap`, and `take_treasure` accept as
+         *       `feature_id` from where the party stands. It's empty outside `exploring` mode.
+         *     - `spell_names`, `reversed_spell_names`, and `spell_levels`: the name and level of every spell ID the view
+         *       shows. Each member's `spell_slots`, `preparable_spells`, and `learnable_spells` give what a `prepare_spells` or
+         *       `learn_spell` dialog offers that member.
+         *     - `item_names` and `item_names_plural`: what to call each item ID the view shows, in a member's `inventory` or
+         *       in the `contents` of a pile in `piles`.
          *     - `encounter`: active encounter state, or `null`. Pass `declarers` to build `resolve_battle_round`, and pass a
          *       group's `id` as `target_group_id` for attacks, `close`, thrown splash items, and `area` or `hd_budget` spells
          *       (such as `fire_ball` and `sleep`). Each group also has `members` with individual `"monster-NNNN"` or
@@ -1170,6 +1183,68 @@ export interface paths {
          *     - `town_healing_prices`: gold-piece prices for temple services accepted by `purchase_healing`.
          */
         get: operations["get_player_view"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sessions/{session_id}/rules/spells/{spell_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a spell the player view names
+         * @description Return osrlib's `SpellTemplate` for a spell that the session's player view names in `spell_names`.
+         *
+         *     A session's adventure can add spells to the built-in catalog, and `GET /v1/rules/spells/{spell_id}` serves only
+         *     the built-in ones. This operation reads the session's own catalog, osrlib's `GameSession.effective_spells`, so
+         *     it also answers for a spell the adventure adds. Use `level` and `spell_list` to place a spell from a member's
+         *     `spell_book` in a `prepare_spells` dialog, and the `key` of each entry in `modes` as the `mode` of a `cast_spell`
+         *     command.
+         *
+         *     The operation serves the spells in `spell_names` and no others: the ones in a member's `spell_book`,
+         *     `memorized_spells`, `preparable_spells`, or `learnable_spells`, and the ones behind an effect on a member. So it
+         *     answers for a spell the adventure adds as soon as a member could prepare or learn it. A spell the view doesn't
+         *     name gets 404 `not_found`, whether or not the session's catalog has it, so the response doesn't reveal a spell
+         *     on an unidentified scroll or a spell the adventure keeps for its monsters. A player and a referee get the same
+         *     answer.
+         */
+        get: operations["get_session_spell"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/sessions/{session_id}/rules/classes/{class_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a party member's class
+         * @description Return osrlib's `ClassDefinition` for the class of a party member, including a class the party brought.
+         *
+         *     A character can have a custom class that osrlib's catalog doesn't include, and `GET /v1/rules/classes/{class_id}`
+         *     serves only the built-in classes. This operation returns the definition osrlib uses for the member, read from
+         *     `Character.definition`. `progression` has one row for each level, with the `spell_slots` a spell dialog needs,
+         *     `thac0`, `saves`, and the XP the level takes.
+         *
+         *     The operation serves the classes of the party's members and no others. When two members have the same
+         *     `class_id`, it returns the definition of the first in marching order. A class no member has gets 404
+         *     `not_found`. A player and a referee get the same answer.
+         */
+        get: operations["get_session_class"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1191,7 +1266,9 @@ export interface paths {
          *
          *     Acquires the session lock to return a consistent snapshot containing the full embedded adventure, all spawned
          *     monsters with hit points and group `monster_ids`, active effects, trigger flags, `command_log`, and `event_log`.
-         *     The view omits the master seed, RNG state, and secret feature-handle key. Use it to power a referee dashboard or
+         *     The view omits the master seed, RNG state, and secret feature-handle key. `feature_handles` maps each feature
+         *     to the `feature:` ID the player view shows for it, keyed `"{dungeon}:{level}:{feature id}"` for an authored
+         *     feature and by cache ID for a generated cache. Use the view to power a referee dashboard or
          *     choose referee commands for `POST /v1/sessions/{session_id}/commands`. To create a restorable snapshot or export
          *     the master seed and feature-handle key, call `POST /v1/sessions/{session_id}/saves` and
          *     `GET /v1/saves/{save_id}/document` instead.
@@ -1972,7 +2049,10 @@ export interface components {
              *     needs `id` set to `null`, no conditions or stat modifiers, and no magic items or valuables.
              *     Constructing the command copies the character. A change you make
              *     to your object afterwards doesn't reach the command, and the command log records the
-             *     character as you sent it.
+             *     character as you sent it. The member who joins gets the display names of the session's catalog
+             *     on each item template the character's stacks embed, as
+             *     `ItemInstance.template` describes, while the
+             *     command keeps the templates it arrived with.
              */
             character: components["schemas"]["Character"];
         };
@@ -2393,6 +2473,36 @@ export interface components {
              */
             name: string;
             /**
+             * Display Name
+             * @description What to call one unit of this ammunition in a sentence, like `"arrow"` or `"crossbow bolt"`.
+             *
+             *     It names one of the units that `ItemInstance.quantity`
+             *     counts, not the lot, so `"Arrows (quiver of 20)"` is `"arrow"`, and a full quiver reads "20 arrows".
+             *     It's lowercase unless a word is a proper noun or an abbreviation, and it has no article.
+             *     `PlayerView.item_names` gives it to the players' client.
+             *
+             *     A template you write that leaves it out gets its `name`.
+             * @default
+             */
+            display_name: string;
+            /**
+             * Display Name Plural
+             * @description What to call two or more units, like `"arrows"` or `"crossbow bolts"`.
+             *
+             *     `PlayerView.item_names_plural` gives it to the players' client. A
+             *     template you write that leaves it out gets `display_name` with the regular English ending on the word that names the
+             *     item: the last word before the first `of`, `with`, or `vs`, a comma, a bonus like `+1`, a closing Roman numeral, or
+             *     an opening parenthesis, or the last word when the name has none of them. So `"Idol of the drowned saint"` becomes
+             *     `"Idols of the drowned saint"`, and `"Lantern (hooded)"` becomes `"Lanterns (hooded)"`. The ending is `s`, or `es`
+             *     after `s`, `x`, `z`, `ch`, or `sh`, or `ies` in place of a `y` that follows a consonant, and `staff` becomes
+             *     `staves` with its capital kept, so `"Staff of the Magi"` becomes `"Staves of the Magi"`. The connecting words count
+             *     in any case, so `"Staff Of Power"` becomes `"Staves Of Power"`, and any spaces after the word stay after the ending.
+             *     The compiled plural of every built-in template follows the same rule. Set it yourself when the name is already
+             *     plural, like `"Torches (6)"`, or when the plural is irregular.
+             * @default
+             */
+            display_name_plural: string;
+            /**
              * Cost Gp
              * @description The listed price in gold pieces, for one lot. 0 for sling stones.
              */
@@ -2647,6 +2757,35 @@ export interface components {
              * @description The display name.
              */
             name: string;
+            /**
+             * Display Name
+             * @description What to call one of these in a sentence, like `"shield"` or `"suit of chainmail"`.
+             *
+             *     Body armour is named as a suit, so a count reads "2 suits of chainmail". It's lowercase unless a
+             *     word is a proper noun or an abbreviation, and it has no article, so put a number or an article in
+             *     front of it. `PlayerView.item_names` gives it to the players' client.
+             *
+             *     A template you write that leaves it out gets its `name`.
+             * @default
+             */
+            display_name: string;
+            /**
+             * Display Name Plural
+             * @description What to call two or more of these, like `"shields"` or `"suits of chainmail"`.
+             *
+             *     `PlayerView.item_names_plural` gives it to the players' client. A
+             *     template you write that leaves it out gets `display_name` with the regular English ending on the word that names the
+             *     item: the last word before the first `of`, `with`, or `vs`, a comma, a bonus like `+1`, a closing Roman numeral, or
+             *     an opening parenthesis, or the last word when the name has none of them. So `"Idol of the drowned saint"` becomes
+             *     `"Idols of the drowned saint"`, and `"Lantern (hooded)"` becomes `"Lanterns (hooded)"`. The ending is `s`, or `es`
+             *     after `s`, `x`, `z`, `ch`, or `sh`, or `ies` in place of a `y` that follows a consonant, and `staff` becomes
+             *     `staves` with its capital kept, so `"Staff of the Magi"` becomes `"Staves of the Magi"`. The connecting words count
+             *     in any case, so `"Staff Of Power"` becomes `"Staves Of Power"`, and any spaces after the word stay after the ending.
+             *     The compiled plural of every built-in template follows the same rule. Set it yourself when the name is already
+             *     plural, like `"Torches (6)"`, or when the plural is irregular.
+             * @default
+             */
+            display_name_plural: string;
             /**
              * Cost Gp
              * @description The listed price in gold pieces.
@@ -3425,6 +3564,13 @@ export interface components {
              *       `close`, if the declaration sets one, decide that, as
              *       `weapon_id` describes.
              *
+             *     You don't need to combine the second and third conditions yourself.
+             *     `EncounterView.can_back_stab` lists the members
+             *     who meet both this round, and
+             *     `BattleRoundPreview.can_back_stab` lists
+             *     them beside a planned round. The first and last conditions depend on the declaration, so check
+             *     them with `preview_battle_round`.
+             *
              *     A thief can close on a group and back-stab in the same round: declare `attack` with
              *     `move="close"` and `back_stab=True`. The session judges the back-stab at the distance the move
              *     will reach. So a thief reaches a group up to their encounter rate plus 5' away. That's 35' for a
@@ -3612,7 +3758,10 @@ export interface components {
          *
          *     `preview_battle_round` returns one. Read `rejections`
          *     to grey out a choice the session would refuse, and read `advance_feet` and `front_rank` to show
-         *     where the members would stand once their declared moves are made. The model is frozen.
+         *     where the members would stand once their declared moves are made. Read `can_hide` and
+         *     `can_back_stab` to offer a member a `hide` or a back-stab the session would accept beside the
+         *     choices already made. The model is frozen. A preview without `can_hide` or `can_back_stab`,
+         *     like one built by osrlib 2.7.0, parses with each of them empty.
          */
         BattleRoundPreview: {
             /**
@@ -3651,6 +3800,43 @@ export interface components {
             front_rank: {
                 [key: string]: string[];
             };
+            /**
+             * Can Hide
+             * @description The declarers who could declare `hide` in this round beside the other planned declarations, in
+             *     marching order. It's what `EncounterView.can_hide`
+             *     means, judged where the members would stand once the other members' planned moves are made, as
+             *     the session judges a `hide`. So a thief in the front rank is here once another member's planned
+             *     `close` takes their place in it, and a thief behind the front rank isn't here once another
+             *     member's planned fighting withdrawal leaves them in it.
+             *
+             *     A member declares one action in a round, so each member is judged as if the `hide` took the
+             *     place of their own planned declaration. A member's own planned move never takes them out of the
+             *     list, and a member whose planned declaration is the `hide` is here exactly when `rejections`
+             *     accepts it. For every declarer, membership matches what this function returns for the same plan
+             *     with that member's declaration replaced by a `hide`: the member is here exactly when that
+             *     preview has no rejection for them. When the plan makes no move, the list is the view's
+             *     `can_hide`.
+             * @default []
+             */
+            can_hide: string[];
+            /**
+             * Can Back Stab
+             * @description The declarers who could declare an `attack` with
+             *     `BattleDeclaration.back_stab` in this round
+             *     beside the other planned declarations, in marching order. It's what
+             *     `EncounterView.can_back_stab` means, and the
+             *     same rejection codes bound it: a member here never gets `battle.declaration.back_stab_no_ability`
+             *     or `battle.declaration.back_stab_target_aware`, and a declarer outside it always gets one of
+             *     them.
+             *
+             *     The session judges every declaration of a round before any of them resolves, and neither check
+             *     reads where the members stand, so the planned declarations don't change the list and it's
+             *     always the view's `can_back_stab`. A member whose planned declaration is a `hide` hasn't hidden
+             *     yet, so outside the party's free round they're here only when they were already hiding. A
+             *     hiding member whose planned move will end the attempt when it comes up is still here.
+             * @default []
+             */
+            can_back_stab: string[];
         };
         /**
          * BattleRoundPreviewRequest
@@ -3888,7 +4074,10 @@ export interface components {
          *     - `session.command.member_incapacitated` - the member can't act.
          *     - `magic.cast.unknown_spell` - `spell_id` matches no spell in the session's catalog.
          *     - `magic.cast.silenced_area` - a *silence* effect covers the party's cell.
-         *     - `magic.cast.unknown_target` - a target id matches no entity in the session.
+         *     - `magic.cast.unknown_target` - a target id isn't a party member's. No encounter is open
+         *       in this command's modes, so the party can act on no other creature. A monster or an NPC
+         *       adventurer of an encounter that has ended gets this code, with the same params as an id
+         *       that matches nothing.
          *     - `magic.cast.not_memorized` - the caster has no memorized copy. A member who
          *       can't cast spells at all gets this code too.
          *     - `magic.cast.caster_incapacitated`, `magic.cast.caster_restrained`,
@@ -3953,13 +4142,16 @@ export interface components {
             reversed: boolean;
             /**
              * Targets
-             * @description Who or what the spell targets, as entity ids: a party member's
-             *     `MemberView.id`, a monster's id, or, for a spell that
+             * @description Who or what the spell targets: a party member's
+             *     `MemberView.id`, in any state, or, for a spell that
              *     affects a place rather than a creature, a cell reference in the
              *     `cell:{dungeon}:{level}:{x},{y}` form that `cell_ref`
-             *     builds. The mode's targeting sets how many targets it takes, and the session refuses the
-             *     wrong number with `magic.cast.target_count`. The session refuses a cell reference for a
-             *     mode that works only on creatures with `magic.cast.target_must_be_creature`.
+             *     builds. A dead or petrified member can be named, so *raise dead* and *stone to flesh* work on
+             *     them. The session refuses any other id with `magic.cast.unknown_target`, a monster's or an NPC
+             *     adventurer's included, even one an earlier event named. The mode's targeting sets how many
+             *     targets it takes, and the session refuses the wrong number with `magic.cast.target_count`.
+             *     The session refuses a cell reference for a mode that works only on creatures with
+             *     `magic.cast.target_must_be_creature`.
              * @default []
              */
             targets: string[];
@@ -8200,9 +8392,9 @@ export interface components {
          *     each group in `groups` gives every member's distance to it and the members who can reach it in
          *     melee. Read those to draw the fight and to offer each member the moves and attacks they can make.
          *
-         *     The id tuples `declarers`, `immobile`, `reloading`, `can_hide`, and `hiding` describe the battle
-         *     round as the players see it at the table: who is able to act, who is held fast, who is still
-         *     reloading a crossbow, who can hide, and who is hiding.
+         *     The id tuples `declarers`, `immobile`, `reloading`, `can_hide`, `hiding`, and `can_back_stab`
+         *     describe the battle round as the players see it at the table: who is able to act, who is held
+         *     fast, who is still reloading a crossbow, who can hide, who is hiding, and who can back-stab.
          *     Each group's `front_rank` says who can attack
          *     that group in melee this round. Each of these matches a rejection that would refuse the whole
          *     round, so if you read them, you offer only the declarations the session accepts. To check a
@@ -8296,7 +8488,9 @@ export interface components {
              *     `hide` where the members will stand once the round's declared moves are made, so a member in
              *     this list who would end up in the front rank because of another member's move is refused with
              *     `battle.declaration.hide_in_front_rank`. A member outside it gets
-             *     `battle.declaration.hide_not_a_thief` or `battle.declaration.hide_in_front_rank`.
+             *     `battle.declaration.hide_not_a_thief` or `battle.declaration.hide_in_front_rank`. To learn who
+             *     can hide beside the declarations planned so far, read
+             *     `BattleRoundPreview.can_hide`.
              * @default []
              */
             can_hide: string[];
@@ -8307,7 +8501,8 @@ export interface components {
              *
              *     A member here can declare an `attack` with
              *     `BattleDeclaration.back_stab` in any round
-             *     without a place in the front rank, as long as their class has the `back_stab` ability. The
+             *     without a place in the front rank, as long as their class has the `back_stab` ability and they
+             *     can act, and `can_back_stab` lists them. The
              *     back-stab still needs a melee weapon, or bare hands, and a group within 5' of the member, as
              *     each group's `member_distance_feet`
              *     shows, or a `close` that brings one within 5'. The list doesn't say
@@ -8318,6 +8513,33 @@ export interface components {
              * @default []
              */
             hiding: string[];
+            /**
+             * Can Back Stab
+             * @description The declarers who can declare an `attack` with
+             *     `BattleDeclaration.back_stab` this round, in
+             *     marching order: those whose class has the `back_stab` ability, as the thief's does, in the
+             *     party's free round (see `party_free_round`) or while they're in `hiding`. Empty outside a battle.
+             *
+             *     The session refuses a back-stab by any other declarer with `battle.declaration.back_stab_no_ability`
+             *     or `battle.declaration.back_stab_target_aware`, and never refuses one by a member here with
+             *     either code. A member who can't act isn't a declarer, so they aren't here, even while they're in
+             *     `hiding`. Like `hiding`, the list holds every member who has hidden, whatever the secret hide in
+             *     shadows roll was, so it never tells the players whether a hide worked.
+             *
+             *     The list doesn't read the declaration, so the session can still refuse a back-stab by a member
+             *     here for what the declaration says: `battle.declaration.back_stab_not_attack` when the action
+             *     isn't `attack`, `battle.declaration.back_stab_not_melee` for a missile weapon, or a dagger aimed
+             *     at a group more than 5' from the member after their `close`, and the checks every attack takes,
+             *     like `battle.declaration.unknown_group`, `battle.declaration.weapon_not_wielded`,
+             *     `combat.attack.out_of_reach`, and `combat.attack.attacker_blind`. In the free round, a back-stab
+             *     takes the melee checks of any attack, so a member outside the group's front rank gets
+             *     `battle.declaration.not_in_front_rank`. In any other round, a member here is hiding and needs no
+             *     place in the front rank. To
+             *     learn who can back-stab beside the declarations planned so far, read
+             *     `BattleRoundPreview.can_back_stab`.
+             * @default []
+             */
+            can_back_stab: string[];
             /**
              * Advance Feet
              * @description Each living member's place on the range track, keyed by member id, in feet forward of the party
@@ -8363,7 +8585,8 @@ export interface components {
              *
              *     It's the round in which any thief's back-stab is legal: an `attack` that sets
              *     `BattleDeclaration.back_stab`. In other
-             *     rounds, only the members in `hiding` can back-stab. It's true while
+             *     rounds, only the members in `hiding` can back-stab. `can_back_stab` lists the members who can
+             *     back-stab in this round, in either case. It's true while
              *     `BattleState.monsters_hold_rounds` is above
              *     zero.
              * @default false
@@ -8637,6 +8860,19 @@ export interface components {
                 number,
                 number
             ][];
+            /**
+             * Trap State
+             * @description The room trap's state as the party knows it, with the values and meaning of
+             *     `MapFeatureView.trap_state`: `"found"` once a
+             *     `Search` has found it, and `"sprung"` once it has gone off. No
+             *     command removes a room trap, so a room never shows `"removed"`.
+             *
+             *     It's `null` while the party hasn't met the room's trap, and for a room with no trap, so a room
+             *     the players know nothing about looks the same whether or not it's trapped. The view lists an area
+             *     only once the party has entered it, so a trap found or sprung through a door of a room the party
+             *     hasn't entered shows here once the party walks in.
+             */
+            trap_state?: ("found" | "sprung" | "removed") | null;
         };
         /**
          * EquipItem
@@ -8745,7 +8981,11 @@ export interface components {
             target_id: string;
             /**
              * Item Names
-             * @description The display names of the items that were destroyed.
+             * @description The names of the items that were destroyed, as the players know them: a mundane item's
+             *     `name`, like `"Torches (6)"`, an identified magic item's `name`, and an unidentified magic item's
+             *     masked name, like `"a sword with a faint aura"`, the `display` that
+             *     `MemberView.inventory` showed for it. The event has
+             *     player visibility, so it never names an unidentified item by its true name.
              */
             item_names: string[];
             /**
@@ -9243,12 +9483,22 @@ export interface components {
             /**
              * Id
              * @description The feature's id. It has to be unique across the level, counting the features on the level
-             *     and on all its areas together. A player client uses the opaque
-             *     `MapFeatureView.id` in feature commands. Current
-             *     callers can still pass this raw id when it is unambiguous. The id `"pile"` is reserved for
-             *     the drop pile on a cell, and
+             *     and on all its areas together. The id `"pile"` is reserved for the drop pile on a cell, and
              *     `validate_adventure` reports a feature that
              *     uses it.
+             *
+             *     The `feature_id` of `TakeTreasure`,
+             *     `InspectTreasure`, and
+             *     `RemoveTreasureTrap` takes either this id or the
+             *     opaque `feature:` handle in `MapFeatureView.id`, and
+             *     both forms stay supported. A player client sends the handle, because the player view lists
+             *     only handles. A referee tool can send this id. Both forms resolve against the same features,
+             *     the ones the party can reach where it stands, so this id reaches and reveals nothing that a
+             *     handle doesn't. A command that names a feature on another cell or level, or a construction
+             *     trick the party hasn't found, gets the same `exploration.feature.unknown` rejection as an id
+             *     that no feature has. A handle always names one feature. This id names two when a cache the
+             *     session generated on the same cell has the same id, like `"cache-0001"`, and the session
+             *     refuses it with that rejection too.
              */
             id: string;
             /**
@@ -9260,11 +9510,36 @@ export interface components {
             kind: "treasure_cache" | "construction_trick" | "custom";
             /**
              * Description
-             * @description Text to show when the party finds the feature. Events contain the feature's id, not its text,
-             *     so look the text up here.
+             * @description What the players read about the feature. The player view shows it as
+             *     `MapFeatureView.description` once the feature
+             *     comes into view. A feature without a `cell` comes into view when the party enters its area,
+             *     and a feature on a cell comes into view when that cell is on the party's map, because the party
+             *     has walked it, remembers seeing it, or lights it now. A construction trick also has to be found
+             *     first.
+             *
+             *     The players read a cache's description before anyone opens it, and they still read it after
+             *     the party empties it. So write what the party sees from outside, like "A banded chest under
+             *     the altar", and never what's inside or a trap the party hasn't found. Put the contents in the
+             *     cache's `item_ids`, `magic_item_ids`, `coins`, and `valuables`, the trap in `trap`, and
+             *     anything else meant for the referee alone in `referee_notes`.
+             *
+             *     Events contain the feature's id, not its text, so look the text up here.
              * @default
              */
             description: string;
+            /**
+             * Referee Notes
+             * @description What the referee reads about the feature, and the players never do: what a cache holds, how
+             *     its trap is hidden, or what a module's author tells the referee about it. Empty means you
+             *     wrote none.
+             *
+             *     osrlib never reads it, no event includes it, and no rule depends on it. It's in the adventure
+             *     document, so a save and the referee view's
+             *     `RefereeView.adventure` have it, and the player
+             *     view never does. Write what the players may read in `description`.
+             * @default
+             */
+            referee_notes: string;
             /**
              * Cell
              * @description The cell the feature is on. A feature listed on a level needs one. A feature listed on an area
@@ -9627,6 +9902,38 @@ export interface components {
              *     `"Torches (6)"`, `"Iron spikes (12)"`.
              */
             name: string;
+            /**
+             * Display Name
+             * @description What to call one unit of this gear in a sentence, like `"torch"` or `"vial of holy water"`.
+             *
+             *     It names one of the units that `ItemInstance.quantity`
+             *     counts, not a lot from the price list, so `"Torches (6)"` is `"torch"`, and a stack of six reads
+             *     "6 torches". Where the price list names a substance, it names the container or the measure the
+             *     session counts: `"vial of holy water"`, `"flask of oil"`, `"pint of wine"`. It's lowercase unless a
+             *     word is a proper noun or an abbreviation, and it has no article, so put a number or an article in
+             *     front of it. `PlayerView.item_names` gives it to the players' client.
+             *
+             *     A template you write that leaves it out gets its `name`.
+             * @default
+             */
+            display_name: string;
+            /**
+             * Display Name Plural
+             * @description What to call two or more units, like `"torches"` or `"vials of holy water"`.
+             *
+             *     `PlayerView.item_names_plural` gives it to the players' client. A
+             *     template you write that leaves it out gets `display_name` with the regular English ending on the word that names the
+             *     item: the last word before the first `of`, `with`, or `vs`, a comma, a bonus like `+1`, a closing Roman numeral, or
+             *     an opening parenthesis, or the last word when the name has none of them. So `"Idol of the drowned saint"` becomes
+             *     `"Idols of the drowned saint"`, and `"Lantern (hooded)"` becomes `"Lanterns (hooded)"`. The ending is `s`, or `es`
+             *     after `s`, `x`, `z`, `ch`, or `sh`, or `ies` in place of a `y` that follows a consonant, and `staff` becomes
+             *     `staves` with its capital kept, so `"Staff of the Magi"` becomes `"Staves of the Magi"`. The connecting words count
+             *     in any case, so `"Staff Of Power"` becomes `"Staves Of Power"`, and any spaces after the word stay after the ending.
+             *     The compiled plural of every built-in template follows the same rule. Set it yourself when the name is already
+             *     plural, like `"Torches (6)"`, or when the plural is irregular.
+             * @default
+             */
+            display_name_plural: string;
             /**
              * Cost Gp
              * @description The listed price in gold pieces, for one lot.
@@ -10823,10 +11130,14 @@ export interface components {
             character_id: string;
             /**
              * Feature Id
-             * @description Which cache to check for a trap. Use a
-             *     `MapFeatureView.id` from the current player view.
-             *     For compatibility, an unambiguous raw authored id or generated cache id still works. The
-             *     cache has to be on the party's cell and available to the party.
+             * @description Which cache to check for a trap: a `feature:` handle from
+             *     `MapFeatureView.id` in the current player view, or the
+             *     cache's raw id, an authored `FeatureSpec.id` or the id
+             *     of a cache the engine generated. Both forms stay supported. A player client sends the handle,
+             *     because the player view lists only handles. Both forms resolve against the same caches, the
+             *     available ones the party can reach where it stands, so a raw id reaches and reveals
+             *     nothing that a handle doesn't. A cache anywhere else gets the same
+             *     `exploration.feature.unknown` rejection as an id that no cache has.
              */
             feature_id: string;
         };
@@ -11154,6 +11465,28 @@ export interface components {
              * @description What it turned out to be, as its magic item catalog id.
              */
             template_id: string;
+            /**
+             * Display Name
+             * @description What to call the item now that the party knows it, the template's
+             *     `display_name`, like `"potion of healing"`.
+             *
+             *     It's here because the command that identifies an item can also use it up, like a potion drunk
+             *     before the party knew what it was. Then no view names it by its true name, because the view built
+             *     after the command no longer shows the item and the view from before showed it masked. When the
+             *     item is still carried, the view's
+             *     `PlayerView.item_names` has the same name under
+             *     `instance_id` and `template_id`.
+             * @default
+             */
+            display_name: string;
+            /**
+             * Display Name Plural
+             * @description What to call two or more of the item, the template's
+             *     `display_name_plural`, like
+             *     `"potions of healing"`.
+             * @default
+             */
+            display_name_plural: string;
         };
         /**
          * ItemInstance
@@ -11176,6 +11509,16 @@ export interface components {
              * @description The item itself, one of the four equipment templates. See `ItemTemplate`. The
              *     whole template is embedded rather than referenced by id, so an instance of an item an adventure bundled stays
              *     readable without that adventure.
+             *
+             *     A session gives an embedded template the display names of the template its catalog,
+             *     `GameSession.effective_equipment`, has under the same id.
+             *     It does this to every stack a party member or an NPC adventurer carries when the session starts, when
+             *     `load_game` restores it, and when `AddMember`
+             *     adds a member. Only `display_name` and `display_name_plural` change, with the entries of `overrides_applied` that
+             *     name those two fields, which record where the names came from. The rest of the template is rules data that travels
+             *     with the character. So a stack from a save or a party document that osrlib 2.7.0 wrote, whose
+             *     template has no display names, is named as the catalog names it, in the views and in the next save. A template
+             *     whose id the catalog doesn't have, like an item another adventure bundled, keeps the names it has.
              */
             template: components["schemas"]["WeaponTemplate"] | components["schemas"]["ArmourTemplate"] | components["schemas"]["GearTemplate"] | components["schemas"]["AmmunitionTemplate"];
             /**
@@ -11749,6 +12092,8 @@ export interface components {
              *     [spell id index](https://mmacy.github.io/osrlib-python/reference/content-ids/spells/)) or one
              *     the adventure bundles. It has to be on the spell list of the caster's class. At each spell
              *     level, no more spells fit in the book than the caster has slots at that level.
+             *     `MemberView.learnable_spells` lists each
+             *     spell that this caster may learn, so build a learn dialog from it.
              */
             spell_id: string;
         };
@@ -12731,6 +13076,42 @@ export interface components {
              * @description The display name. Show this only once the instance is identified.
              */
             name: string;
+            /**
+             * Display Name
+             * @description What to call one of these items in a sentence once the party knows what it is, like
+             *     `"potion of healing"` or `"sword +1"`.
+             *
+             *     It's lowercase unless a word is a proper noun or an abbreviation, like the `ESP` of
+             *     `"potion of ESP"`, and it has no article, so put a number or an article in front of it. For
+             *     enchanted ammunition it names one of the units that
+             *     `MagicItemInstance.quantity` counts, so
+             *     `"Arrows +1 (3d10 arrows)"` is `"arrow +1"`. Footwear and gloves are named as a pair, like
+             *     `"pair of boots of speed"`, so a count reads "2 pairs of boots of speed".
+             *
+             *     Like `name`, show it only once the instance is identified. Until then,
+             *     `PlayerView.item_names` names the item by its masked name.
+             *
+             *     A template you construct yourself that leaves it out gets its `name`.
+             * @default
+             */
+            display_name: string;
+            /**
+             * Display Name Plural
+             * @description What to call two or more of these items, like `"potions of healing"` or `"swords +1"`.
+             *
+             *     `PlayerView.item_names_plural` gives it to the players' client. A
+             *     template you construct yourself that leaves it out gets `display_name` with the regular English ending on the word
+             *     that names the item: the last word before the first `of`, `with`, or `vs`, a comma, a bonus like `+1`, a closing
+             *     Roman numeral, or an opening parenthesis, or the last word when the name has none of them. So `"Idol of the drowned
+             *     saint"` becomes `"Idols of the drowned saint"`, and `"Lantern (hooded)"` becomes `"Lanterns (hooded)"`. The ending
+             *     is `s`, or `es` after `s`, `x`, `z`, `ch`, or `sh`, or `ies` in place of a `y` that follows a consonant, and `staff`
+             *     becomes `staves` with its capital kept, so `"Staff of the Magi"` becomes `"Staves of the Magi"`. The connecting
+             *     words count in any case, so `"Staff Of Power"` becomes `"Staves Of Power"`, and any spaces after the word stay after
+             *     the ending. The compiled plural of every built-in template follows the same rule. Set it yourself when the name is
+             *     already plural, like `"Torches (6)"`, or when the plural is irregular.
+             * @default
+             */
+            display_name_plural: string;
             /** @description What kind of item it is. See `MagicItemCategory`. */
             category: components["schemas"]["MagicItemCategory"];
             /**
@@ -12952,7 +13333,12 @@ export interface components {
             kind: "treasure_cache" | "construction_trick" | "custom" | "generated_cache";
             /**
              * Description
-             * @description The authored description, or an empty string for a generated cache.
+             * @description The feature's authored `FeatureSpec.description`,
+             *     or an empty string for a generated cache. It's written for the players to read. The view shows
+             *     it from the moment the feature comes into view, and for a cache, before anyone opens it and
+             *     after the party empties it. The feature's
+             *     `FeatureSpec.referee_notes` never appear in
+             *     the player view.
              * @default
              */
             description: string;
@@ -12966,7 +13352,11 @@ export interface components {
             ] | null;
             /**
              * Area Id
-             * @description The containing area's id after entry, otherwise `null`.
+             * @description The id of the area the feature is in, once the party has entered that area, otherwise `null`.
+             *     For an authored feature, it's the area that lists the feature. For a generated cache, it's the
+             *     area that owns the cache's cell, the area that
+             *     `LevelSpec.area_at` returns. It never names an area
+             *     the party hasn't entered.
              */
             area_id?: string | null;
             /**
@@ -12974,6 +13364,19 @@ export interface components {
              * @description The party's known trap state, or `null` when the party knows no trap state.
              */
             trap_state?: ("found" | "sprung" | "removed") | null;
+            /**
+             * Emptied
+             * @description True for an authored treasure cache the party has emptied with
+             *     `TakeTreasure`.
+             *
+             *     The cache stays in the list under the same `id` and description, so you can draw it opened.
+             *     Don't offer it to `TakeTreasure`, which refuses it with `exploration.feature.emptied`. It's
+             *     false for every other feature, and for a cache the party hasn't emptied, however little it
+             *     holds. A generated cache is never marked emptied, because the session removes it when the
+             *     party takes it, so it leaves the list.
+             * @default false
+             */
+            emptied: boolean;
         };
         /**
          * MarkTriggerFired
@@ -13360,17 +13763,23 @@ export interface components {
              *     `worn_armour`, `shield`, `wielded`, and `rings`. Mundane items appear as the inventory
              *     serializes them.
              *
-             *     A magic item is masked until it's identified. An unidentified one has a `display` name in
-             *     place of its true name, like `"a potion"`, or `"a dagger with a faint aura"` for a magic
-             *     weapon. When the display name refers to a weapon, the entry also has the `qualities` of that
-             *     plain weapon, as an identified one does, so you can tell a melee attack from a missile
-             *     attack without revealing the weapon's bonus or curse. It has a `missile_ranges` key only
-             *     when the rules give the weapon ranges, so on a sword the key is absent rather than empty.
-             *     Every magic staff displays as `"a staff"` and has the staff's `qualities`. Any other item
-             *     whose display name comes from its category, like `"a wand"`, has neither key, because its
-             *     display name doesn't refer to a weapon. An identified item
-             *     shows its `name`, its `template_id`, and whether a curse has been revealed. Charges never
-             *     appear.
+             *     A magic item is masked until it's identified. An unidentified one has a `display` name in place of its true
+             *     name, like `"a potion"`, or `"a dagger with a faint aura"` for a magic weapon. An enchanted weapon, suit of
+             *     armour, or shield is named after one unit of the mundane item underneath it, its
+             *     `display_name` with an article, so enchanted arrows display as
+             *     `"an arrow with a faint aura"` and enchanted chainmail as `"a suit of chainmail with a faint aura"`. A suit of
+             *     enchanted armour with no mundane item recorded displays as `"a suit of armour with a faint aura"`. When the
+             *     display name refers to a weapon, the entry also has the `qualities` of that plain weapon, as an identified one
+             *     does, so you can tell a melee attack from a missile attack without revealing the weapon's bonus or curse. It has
+             *     a `missile_ranges` key only when the rules give the weapon ranges, so on a sword the key is absent rather than
+             *     empty. Every magic staff displays as `"a staff"` and has the staff's `qualities`. Any other item whose display
+             *     name comes from its category, like `"a wand"`, has neither key, because its display name doesn't refer to a
+             *     weapon. An identified item shows its `name`, its `template_id`, and whether a curse has been revealed. Charges
+             *     never appear.
+             *
+             *     To name an item in a sentence, look up the id it has here in
+             *     `PlayerView.item_names`: a mundane item's
+             *     `template.id`, and a magic item's or a valuable's `instance_id`.
              */
             inventory: {
                 [key: string]: unknown;
@@ -13602,13 +14011,90 @@ export interface components {
             /**
              * Spell Book
              * @description The ids of the spells in the member's spell book, as in
-             *     `Character.spell_book`. They're the spells the member
-             *     can choose from in a `PrepareSpells`. Empty for a class that
-             *     has no spell book. To show a spell's name, look its id up in
+             *     `Character.spell_book`, in the order they were
+             *     written in. Empty for a class that has no spell book. An arcane caster prepares only from the
+             *     book, and `preparable_spells` lists the spells in it that the member has a slot for. To show a
+             *     spell's name, look its id up in
              *     `PlayerView.spell_names`.
              * @default []
              */
             spell_book: string[];
+            /**
+             * Spell Slots
+             * @description How many spells the member can memorize at each spell level, lowest level first, as in the
+             *     `spell_slots` of the class's progression row
+             *     for the member's level. Entry `i` is the slot count at spell level `i + 1`. It comes from
+             *     `Character.definition`, so it's right for a custom
+             *     class too.
+             *
+             *     A `PrepareSpells` fits these counts: at each spell level,
+             *     select no more copies than the count there, and group `preparable_spells` by
+             *     `PlayerView.spell_levels` to fill them. An arcane
+             *     caster's book has room at a spell level for this count less the spells the book already has
+             *     there. A 1st-level cleric has a count of 0 at every level, and a class that casts nothing has no
+             *     counts.
+             * @default []
+             */
+            spell_slots: number[];
+            /**
+             * Preparable Spells
+             * @description The ids of the spells the member may select in a
+             *     `PrepareSpells`, in the order of the session's catalog,
+             *     `GameSession.effective_spells`. Build a
+             *     prepare dialog from it.
+             *
+             *     For an arcane caster, they're the spells in `spell_book` at the spell levels where the member has
+             *     a slot, so a spell that a lost level left in the book without a slot isn't here. For a divine
+             *     caster, they're the spells on the class's spell list at every spell level where the member has a
+             *     slot, and the spells the adventure bundles for that list are among them. A cleric has no slot
+             *     until 2nd level, so the list is empty for a 1st-level cleric. It's empty for a class that casts
+             *     nothing.
+             *
+             *     A spell id is here exactly when a `PrepareSpells` that selects one copy of it in its normal form
+             *     is refused with none of these codes, which belong to the spell and the member:
+             *     `magic.memorize.not_a_caster`, `magic.memorize.unknown_spell`, `magic.memorize.wrong_list`,
+             *     `magic.memorize.not_in_book`, and `magic.memorize.slots_exceeded`. The list doesn't depend on
+             *     the moment, so it's the same before the party has slept (`magic.memorize.needs_sleep`), during an
+             *     encounter or a battle (`session.command.wrong_mode`), and while the member can't act
+             *     (`session.command.member_incapacitated`). The selections as a whole still have to fit
+             *     `spell_slots` at each spell level.
+             *
+             *     The form of a copy is up to the caster's kind. An arcane caster may select the reversed form of a
+             *     spell that has an entry in
+             *     `PlayerView.reversed_spell_names`, and the
+             *     session refuses the reversed form of any other spell with `magic.memorize.not_reversible`. A
+             *     divine caster selects the normal form and chooses the form when casting, and the session refuses a
+             *     reversed selection with `magic.memorize.divine_reverses_at_cast`. To show a spell's name, look its
+             *     id up in `PlayerView.spell_names`.
+             * @default []
+             */
+            preparable_spells: string[];
+            /**
+             * Learnable Spells
+             * @description The ids of the spells the member may write into their spell book with
+             *     `LearnSpell`, in the order of the session's catalog,
+             *     `GameSession.effective_spells`. Build a learn
+             *     dialog from it.
+             *
+             *     They're the spells on the class's spell list that aren't in `spell_book`, at each spell level
+             *     where the book has room. The room at a spell level is the member's count there in `spell_slots`,
+             *     less the spells the book already has at that level. The spells the adventure bundles for that list
+             *     are among them. The list is empty for a divine caster and for a class that casts nothing,
+             *     because neither keeps a spell book. It's also empty while the book has a spell that the session's
+             *     catalog doesn't have, because the session can't tell that spell's level, and so can't tell how
+             *     much room the book has left.
+             *
+             *     A spell id is here exactly when a `LearnSpell` for it is refused with none of these codes, which
+             *     belong to the spell and the member: `magic.book.not_arcane`, `magic.book.unknown_spell`,
+             *     `magic.book.wrong_list`, `magic.book.duplicate`, and `magic.book.capacity_exceeded`. The list
+             *     doesn't depend on the moment, so it's the same during an encounter or a battle
+             *     (`session.command.wrong_mode`) and while the member can't act
+             *     (`session.command.member_incapacitated`). Learning one spell can fill the book at that spell's
+             *     level, so read the view again after each `LearnSpell`. To show a spell's name, look its id up in
+             *     `PlayerView.spell_names`.
+             * @default []
+             */
+            learnable_spells: string[];
             /**
              * Thief Skills
              * @description The member's chance at each thief skill at their level, keyed by the skill field names of
@@ -13724,7 +14210,7 @@ export interface components {
             api_version: string;
             /**
              * Engine Version
-             * @description Installed osrlib rules engine version string, such as `"2.7.0"`.
+             * @description Installed osrlib rules engine version string, such as `"2.8.0"`.
              */
             engine_version: string;
             /**
@@ -16467,6 +16953,32 @@ export interface components {
             character_id: string;
         };
         /**
+         * PileItemView
+         * @description One thing in a dropped pile, by the id the events name it by, with its count.
+         *
+         *     You get these from `PileView.contents`. Look `item_id` up
+         *     in `PlayerView.item_names` and
+         *     `PlayerView.item_names_plural` to name it.
+         */
+        PileItemView: {
+            /**
+             * Item Id
+             * @description The catalog id of a mundane stack, like `"holy_water"`, or the instance id of a magic item,
+             *     like `"magic-item-0003"`, or of a gem or piece of jewellery, like `"valuable-0007"`. It's the form
+             *     of id that `ItemsDroppedEvent.item_ids` and the
+             *     other item events use, and an unidentified magic item's template id never appears here.
+             */
+            item_id: string;
+            /**
+             * Quantity
+             * @description How many units: the size of a mundane stack, the
+             *     `quantity` of a magic item, which is more than 1
+             *     only for enchanted ammunition, and always 1 for a gem or piece of jewellery.
+             * @default 1
+             */
+            quantity: number;
+        };
+        /**
          * PileView
          * @description A known dropped pile in explored space.
          *
@@ -16499,6 +17011,18 @@ export interface components {
              *     }
              */
             coins: components["schemas"]["Coins"];
+            /**
+             * Contents
+             * @description One entry per thing in the pile, in the order of `items`, each with the id the events name
+             *     it by and its count.
+             *
+             *     A mundane stack has its catalog id, so a client reads `"holy_water"` and 2 here where `items` has
+             *     the string `"holy_water×2"`. A magic item and a valuable have their instance ids. Name each entry
+             *     from `PlayerView.item_names`, which has a key for
+             *     every id here.
+             * @default []
+             */
+            contents: components["schemas"]["PileItemView"][];
         };
         /**
          * PlaceParty
@@ -16645,6 +17169,32 @@ export interface components {
              */
             can_travel_to_town: boolean;
             /**
+             * Features Here
+             * @description The handles that the feature commands accept in `feature_id` from where the party stands, in
+             *     the order the current level's `features` lists
+             *     them. The commands are `TakeTreasure`,
+             *     `InspectTreasure`, and
+             *     `RemoveTreasureTrap`.
+             *
+             *     Each entry is the `MapFeatureView.id` of a treasure cache
+             *     the party can reach: an authored or generated cache on the party's cell, or an authored cache
+             *     that belongs to the whole of the area the party stands in. The session resolves a command's
+             *     `feature_id` against the same caches, so a cache that isn't listed here is refused with
+             *     `exploration.feature.unknown`. It's empty unless the session is exploring, because the commands
+             *     are legal only then. A custom feature or a construction trick is never listed, because no
+             *     command acts on one.
+             *
+             *     A command can still refuse a listed cache for another reason. `TakeTreasure` refuses an emptied
+             *     cache with `exploration.feature.emptied`, which
+             *     `MapFeatureView.emptied` tells you beforehand.
+             *     `RemoveTreasureTrap` accepts only a cache whose
+             *     `trap_state` is `"found"`. To take the goods
+             *     dropped on the party's cell, send `"pile"`, when `piles`
+             *     has an entry for the cell.
+             * @default []
+             */
+            features_here: string[];
+            /**
              * Piles
              * @description The dropped piles the party knows about, keyed by the cell reference
              *     `cell_ref` returns. A pile in a cell the party has
@@ -16655,13 +17205,13 @@ export interface components {
             };
             /**
              * Emptied Caches
-             * @description The treasure caches the party has already emptied, as `"{dungeon}:{level}:{id}"`
-             *     references, so you can draw a looted cache as looted.
+             * @description The authored treasure caches the party has emptied, as `"{dungeon}:{level}:{id}"` feature
+             *     references, in the order the party emptied them.
              *
-             *     These established raw references are a post-use diagnostic for compatibility. New command
-             *     targets come from `MapFeatureView.id`. A raw authored
-             *     feature id can appear here only after the party has used it, not in the new `features` list
-             *     before use.
+             *     To draw an emptied cache, read
+             *     `MapFeatureView.emptied` instead, which marks the
+             *     cache in `features` under its handle. Command targets come from
+             *     `MapFeatureView.id`.
              */
             emptied_caches: string[];
             /**
@@ -16674,9 +17224,11 @@ export interface components {
              * @description The name of each spell whose id the view shows, keyed by spell id, like
              *     `{"magic_missile": "Magic Missile"}`. Show these names, not the ids.
              *
-             *     A spell id appears in three places in the view: in a member's
-             *     `spell_book`, as the `spell_id` of a copy in a member's
-             *     `memorized_spells`, and as the
+             *     A spell id appears in five places in the view: in a member's
+             *     `spell_book`,
+             *     `preparable_spells`, and
+             *     `learnable_spells`, as the `spell_id` of a copy in
+             *     a member's `memorized_spells`, and as the
              *     `kind` of an effect in `effects`, because a spell's
              *     effect has the spell's id as its kind unless the spell's data gives it a kind of its own. Every one
              *     of those ids that the session's catalog,
@@ -16685,8 +17237,10 @@ export interface components {
              *     bundles has its name here too, which `load_spells` doesn't have. An
              *     effect kind that isn't a spell id, like a torch's `"light"`, has no entry.
              *
-             *     It names no spell whose id the view doesn't show, so the spells on a scroll stay hidden. A spell id
-             *     on a member that the session's catalog doesn't have, like one from a party made for another
+             *     It names no spell whose id the view doesn't show. So a spell the adventure bundles for a list that
+             *     no member casts from stays hidden, and so does a spell at a level where no member could prepare or
+             *     learn it. A spell on a scroll is named only when a member could prepare or learn it anyway. A spell
+             *     id on a member that the session's catalog doesn't have, like one from a party made for another
              *     adventure, has no entry either, and the session refuses to prepare or cast that spell. The name here
              *     is always the spell's normal form. For a copy prepared reversed, show its name from
              *     `reversed_spell_names`.
@@ -16712,6 +17266,88 @@ export interface components {
              * @default {}
              */
             reversed_spell_names: {
+                [key: string]: string;
+            };
+            /**
+             * Spell Levels
+             * @description The level of each spell in `spell_names`, keyed by spell id, like
+             *     `{"magic_missile": 1, "web": 2}`. Group a prepare or learn dialog by it, because a member's slots
+             *     are counted per spell level, in
+             *     `MemberView.spell_slots`.
+             *
+             *     Each value is the spell's `level`, read from the same
+             *     catalog as `spell_names`, so a spell the adventure bundles has the level its author gave it. A
+             *     spell id belongs to exactly one spell list, like `light_mu` to the magic-user's and `light_c` to
+             *     the cleric's, so each id has one level for every class that casts from its list, like the elf,
+             *     who casts from the magic-user's list.
+             * @default {}
+             */
+            spell_levels: {
+                [key: string]: number;
+            };
+            /**
+             * Item Names
+             * @description What to call one of each item whose id the view shows, keyed by that id, like
+             *     `{"torch": "torch", "holy_water": "vial of holy water", "magic-item-0003": "potion"}`. Show these
+             *     names, not the ids, and put a number or an article in front of one: "a torch". To word a count,
+             *     like "6 torches", use `item_names_plural`.
+             *
+             *     An item id appears in the view in four forms, and each is a key here:
+             *
+             *     - The catalog id of a mundane stack, like `"holy_water"`, in a member's
+             *       `inventory` and in a pile's
+             *       `contents`. For a stack a member carries, its name is
+             *       the `display_name` of the template the stack
+             *       embeds, which the session gives the display names of the template its catalog,
+             *       `GameSession.effective_equipment`, has
+             *       under that id, as `ItemInstance.template` says. So a
+             *       stack from a save or a party document that osrlib 2.7.0 wrote is named as the catalog names it,
+             *       and the name here matches the stack's template in `inventory`. A bundled id can't shadow a
+             *       built-in one, because a session refuses an adventure whose bundled id collides with a built-in
+             *       id. A carried stack whose id the catalog doesn't have, like an item another adventure bundled,
+             *       keeps the names its template has. For a pile, the name comes from the catalog, and a pile's
+             *       catalog id that the catalog doesn't have has no entry.
+             *     - The instance id of a magic item, like `"magic-item-0003"`, in an inventory and in a pile.
+             *       Until the party identifies the item, its name is the masked name the inventory shows, without
+             *       the article: `"potion"`, `"curious device"`, or `"shield with a faint aura"`. So a cursed item
+             *       and the item it passes for have the same name, and the name tells nothing the inventory
+             *       doesn't. Once the item is identified, its name is the
+             *       `display_name` of its template in the magic
+             *       item catalog, like `"potion of healing"`.
+             *     - The template id of an identified magic item, like `"potion_of_healing"`, which the inventory
+             *       shows once the item is identified, with the same name. A pile shows a magic item by its
+             *       instance id alone, identified or not, so an identified item's template id is a key only while
+             *       a member carries it. An unidentified item's template id is never a key.
+             *     - The instance id of a gem or a piece of jewellery, like `"valuable-0007"`. Its name is its kind,
+             *       `"gem"` or `"piece of jewellery"`. The players see everything else about it from the moment
+             *       they take it, its own name and its value in gold pieces included, in the inventory's
+             *       `valuables`.
+             *
+             *     It names no item whose id the view doesn't show. The player-visible item events, like
+             *     `ItemAcquiredEvent`, name items by the same ids. An
+             *     item the command left in a member's pack or in a pile the view shows is a key in the view you
+             *     build after the command. An item the command used up, sold, or left behind on a trail is a key
+             *     in the view from before it. An item that is identified and used up in the same command, like a
+             *     potion drunk before the party knew it, has its true name on the
+             *     `ItemIdentifiedEvent`.
+             * @default {}
+             */
+            item_names: {
+                [key: string]: string;
+            };
+            /**
+             * Item Names Plural
+             * @description What to call two or more of each item in `item_names`, with the same keys, like
+             *     `{"torch": "torches", "holy_water": "vials of holy water", "magic-item-0003": "potions"}`.
+             *
+             *     Each value is the plural of the name in `item_names`: the template's
+             *     `display_name_plural`, the plural of a
+             *     masked name, like `"shields with a faint aura"`, or `"gems"` or `"pieces of jewellery"`. Use it
+             *     with a count from a pile's `contents`, an inventory
+             *     entry's `quantity`, or the ids an event repeats, one per unit: "2 vials of holy water".
+             * @default {}
+             */
+            item_names_plural: {
                 [key: string]: string;
             };
             /**
@@ -16825,6 +17461,15 @@ export interface components {
              *     caster's slots at that level, and an empty tuple clears the list. The caster's current
              *     list is in
              *     `MemberView.memorized_spells`.
+             *
+             *     Choose the spells from
+             *     `MemberView.preparable_spells`, which lists
+             *     each spell that this caster may select in its normal form. An arcane caster may also select the
+             *     reversed form of a listed spell that has an entry in
+             *     `PlayerView.reversed_spell_names`. Group
+             *     the list by `PlayerView.spell_levels`, and at each
+             *     spell level select no more copies than the count there in
+             *     `MemberView.spell_slots`.
              * @default []
              */
             selections: components["schemas"]["MemorizedSpell"][];
@@ -17829,8 +18474,10 @@ export interface components {
          *     each field's docstring links the model to read next. The fields are the groups
          *     `session_state` writes, minus the master seed, the RNG stream
          *     positions, and the player-handle key, so `view.model_dump(mode="json")` is that save payload
-         *     without those keys. The seed and stream positions let a player predict every roll to come.
-         *     The key lets someone reproduce and control the session's opaque feature handles.
+         *     without those keys, plus one field the save doesn't contain,
+         *     `feature_handles`. The seed and stream
+         *     positions let a player predict every roll to come. The key lets someone reproduce and control the
+         *     session's opaque feature handles, so the view gives you the handles themselves instead.
          *
          *     The view is a snapshot of the moment it was built. The session's mutable state is copied into it,
          *     so later play leaves the view as it was, and editing what you find on a view changes nothing on
@@ -18020,6 +18667,28 @@ export interface components {
             event_log: (components["schemas"]["Event"] | {
                 [key: string]: unknown;
             })[];
+            /**
+             * Feature Handles
+             * @description The player handle of every feature in the session, keyed by the reference the save uses for
+             *     the feature. An authored feature's key is `"{dungeon}:{level}:{feature id}"`, the form in
+             *     `DungeonState.emptied_caches` and
+             *     `DungeonState.found_traps`, and every feature the
+             *     adventure authors has one, on a level or in an area, found or not. A generated cache's key is its
+             *     id in `DungeonState.generated_caches`, like
+             *     `"cache-0001"`, and every cache there has one, including a lair cache the players can't see yet,
+             *     except a cache whose cell reference names no cell of the adventure, which the session never
+             *     shows or resolves.
+             *
+             *     Each value is the `MapFeatureView.id` that the player view
+             *     shows for the feature once the party knows it. Use it to show a referee the feature the players
+             *     see, and to send the same `feature_id` they do. This is the one field the save doesn't contain:
+             *     the session derives each handle from the player-handle key, and neither view contains the key.
+             *     The session removes a generated cache when the party takes it, and its entry leaves with it.
+             * @default {}
+             */
+            feature_handles: {
+                [key: string]: string;
+            };
         };
         /**
          * Rejection
@@ -18393,10 +19062,14 @@ export interface components {
             character_id: string;
             /**
              * Feature Id
-             * @description Which trapped cache to disarm. Use a
-             *     `MapFeatureView.id` from the current player view, or
-             *     an unambiguous raw authored id. Only an authored cache can be trapped. A cache with no trap,
-             *     or with a trap nobody has found, gets the same `exploration.feature.unknown` rejection.
+             * @description Which trapped cache to disarm: a `feature:` handle from
+             *     `MapFeatureView.id` in the current player view, or the
+             *     cache's raw `FeatureSpec.id`, since only an authored
+             *     cache can be trapped. Both forms stay supported. A player client sends the handle, because the
+             *     player view lists only handles. Both forms resolve against the same caches, the available
+             *     ones the party can reach where it stands, so a raw id reaches and reveals nothing that a
+             *     handle doesn't. A cache anywhere else, a cache with no trap, and a cache whose trap nobody has
+             *     found all get the same `exploration.feature.unknown` rejection as an id that no cache has.
              */
             feature_id: string;
         };
@@ -21239,10 +21912,15 @@ export interface components {
             source?: string | null;
             /**
              * Feature Id
-             * @description What to empty. Use a
-             *     `MapFeatureView.id` from the current player view.
-             *     For compatibility, an unambiguous raw authored id or generated cache id still works. The
-             *     literal `"pile"` means the goods dropped on the party's cell, which
+             * @description What to empty: a `feature:` handle from
+             *     `MapFeatureView.id` in the current player view, or the
+             *     cache's raw id, an authored `FeatureSpec.id` or the id
+             *     of a cache the engine generated. Both forms stay supported. A player client sends the handle,
+             *     because the player view lists only handles. Both forms resolve against the same caches, the
+             *     available ones the party can reach where it stands, so a raw id reaches and reveals
+             *     nothing that a handle doesn't. A cache anywhere else gets the same
+             *     `exploration.feature.unknown` rejection as an id that no cache has. The literal `"pile"` means
+             *     the goods dropped on the party's cell, which
              *     `PlayerView.piles` lists by cell reference. The session
              *     refuses a cache that's already emptied with `exploration.feature.emptied`.
              */
@@ -22874,10 +23552,18 @@ export interface components {
          *     any curse. A magic sword that can light up when its wielder says so turns its light on or off.
          *
          *     A device is a wand, a staff, or a rod. `target_id` is the id of whoever the item is used on:
-         *     the party member who drinks a potion, a party member for a staff of healing's touch, or an
+         *     the party member who drinks a potion, a creature for a staff of healing's touch, or an
          *     encounter group for a device that covers an area. When the member reads a scroll with several
          *     spells on it, choose the spell and its targets with `spell_id`, `mode`, and `targets`. They
          *     work like the same fields of `CastSpell`.
+         *
+         *     A scroll or a staff of healing names as a target only a creature the party can act on now: a
+         *     party member, in any state, or a creature in a group of the open encounter that hasn't fled,
+         *     which the player view lists in
+         *     `EncounterGroupView.members`. A scroll's
+         *     spell can't name a dead creature of the encounter, as a battle's `cast` can't. The session
+         *     refuses any other id with the code it gives an id that matches nothing, so a creature of an
+         *     encounter that has ended gets the same answer as an id that never existed.
          *
          *     A device whose powers the session doesn't resolve, like a staff of commanding, spends a charge,
          *     and its `ItemUsedEvent` has the device's text in `manual`
@@ -22919,13 +23605,17 @@ export interface components {
          *     - Scrolls: `exploration.action.requires_light` (reading needs light, and
          *       infravision isn't enough), `items.scroll.spent`, `items.scroll.no_such_spell`,
          *       and `items.scroll.wrong_caster`. A read also gets the checks of a cast, at the
-         *       scroll's level: `magic.cast.unknown_target`, `magic.cast.unknown_mode`,
+         *       scroll's level: `magic.cast.unknown_target` (a target that isn't a party member and
+         *       isn't a living creature in a group of the open encounter that hasn't fled),
+         *       `magic.cast.unknown_mode`,
          *       `magic.cast.target_count`, `magic.cast.target_must_be_creature`,
          *       `magic.cast.out_of_range`, `magic.cast.caster_incapacitated`,
          *       `magic.cast.caster_restrained`, and `magic.cast.anti_magic_shell`.
          *     - Devices: `items.device.inert` (no charges left),
          *       `items.use.target_required` (an area device used in an encounter needs a
-         *       `target_id`), `items.use.unknown_target`, `items.use.target_cannot_be_healed` (a
+         *       `target_id`), `items.use.unknown_target` (a group that isn't in the open encounter or
+         *       has fled, or a staff of healing's target that isn't a party member and isn't in a group
+         *       of the open encounter that hasn't fled), `items.use.target_cannot_be_healed` (a
          *       staff of healing used on a creature that's dead or turned to stone),
          *       `items.use.target_healed_today` (a staff of healing used on a creature it already
          *       healed today, because the OSE SRD's staff "Is effective on any individual at most once
@@ -22982,10 +23672,12 @@ export interface components {
              *     isn't a party member's with `items.use.target_not_allowed`, and a member who is dead or turned
              *     to stone with `items.use.target_cannot_drink`.
              *
-             *     For a device, pass a party member's id for a device that heals by touch, or an encounter
-             *     group's `EncounterGroupView.id` for a device that
-             *     covers an area. A healing device with `null` heals the member using it. The session refuses a
-             *     healing device on a creature that's dead or turned to stone with
+             *     For a device, pass a creature's id for a device that heals by touch, or an encounter group's
+             *     `EncounterGroupView.id` for a device that covers
+             *     an area. A healing device with `null` heals the member using it. It can touch a party member
+             *     or a creature in a group of the open encounter that hasn't fled, and the session refuses any
+             *     other id with `items.use.unknown_target`, a creature of an encounter that has ended included.
+             *     The session refuses a healing device on a creature that's dead or turned to stone with
              *     `items.use.target_cannot_be_healed`, and one on a creature it already healed today with
              *     `items.use.target_healed_today`.
              */
@@ -23008,8 +23700,10 @@ export interface components {
             /**
              * Targets
              * @description The read spell's targets, named as in
-             *     `CastSpell.targets`. When it's empty, `target_id`
-             *     is the single target, so a scroll spell with one target needs only `target_id`.
+             *     `CastSpell.targets`. During an encounter, a target
+             *     can also be a living creature in a group that hasn't fled, by its
+             *     `EncounterMemberView.id`. When it's empty,
+             *     `target_id` is the single target, so a scroll spell with one target needs only `target_id`.
              * @default []
              */
             targets: string[];
@@ -23474,6 +24168,35 @@ export interface components {
              * @description The display name, for example `"Sword"`.
              */
             name: string;
+            /**
+             * Display Name
+             * @description What to call one of these weapons in a sentence, like `"sword"` or `"two-handed sword"`.
+             *
+             *     It's lowercase unless a word is a proper noun or an abbreviation, and it has no article, so put a number or an
+             *     article in front of it: "a sword", "2 swords".
+             *     `PlayerView.item_names` gives it to the players' client.
+             *
+             *     A template you write that leaves it out gets its `name`.
+             * @default
+             */
+            display_name: string;
+            /**
+             * Display Name Plural
+             * @description What to call two or more of these weapons, like `"swords"` or `"staves"`.
+             *
+             *     `PlayerView.item_names_plural` gives it to the players' client. A
+             *     template you write that leaves it out gets `display_name` with the regular English ending on the word that names the
+             *     item: the last word before the first `of`, `with`, or `vs`, a comma, a bonus like `+1`, a closing Roman numeral, or
+             *     an opening parenthesis, or the last word when the name has none of them. So `"Idol of the drowned saint"` becomes
+             *     `"Idols of the drowned saint"`, and `"Lantern (hooded)"` becomes `"Lanterns (hooded)"`. The ending is `s`, or `es`
+             *     after `s`, `x`, `z`, `ch`, or `sh`, or `ies` in place of a `y` that follows a consonant, and `staff` becomes
+             *     `staves` with its capital kept, so `"Staff of the Magi"` becomes `"Staves of the Magi"`. The connecting words count
+             *     in any case, so `"Staff Of Power"` becomes `"Staves Of Power"`, and any spaces after the word stay after the ending.
+             *     The compiled plural of every built-in template follows the same rule. Set it yourself when the name is already
+             *     plural, like `"Torches (6)"`, or when the plural is irregular.
+             * @default
+             */
+            display_name_plural: string;
             /**
              * Cost Gp
              * @description The listed price in gold pieces, for one weapon.
@@ -24044,6 +24767,7 @@ export type PartyMovedEvent = components['schemas']['PartyMovedEvent'];
 export type PartyReorderedEvent = components['schemas']['PartyReorderedEvent'];
 export type PartySpec = components['schemas']['PartySpec'];
 export type PickLock = components['schemas']['PickLock'];
+export type PileItemView = components['schemas']['PileItemView'];
 export type PileView = components['schemas']['PileView'];
 export type PlaceParty = components['schemas']['PlaceParty'];
 export type PlayerView = components['schemas']['PlayerView'];
@@ -30114,6 +30838,256 @@ export interface operations {
                 };
             };
             /** @description - `not_found`: Your client has no session with this id. `GET /v1/sessions` lists your sessions. */
+            404: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `session_busy`: The request waited more than 5 seconds for another request running on the session and made no changes. `revision` reports the session's current revision. Retry the request. */
+            409: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `misdirected_request`: The server runs without API keys, and the request's `Host` header isn't `localhost`, `127.0.0.1`, or `[::1]`. Call the server by one of those names, or configure API keys on the server. A server with API keys never returns this code. */
+            421: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `rate_limited`: Your client exceeded the per-minute request budget (`BXAPI_RATE_LIMIT_PER_MINUTE`, 600 by default). Wait the seconds in the `Retry-After` header and retry. Requests without a valid API key share a separate budget and receive 429 instead of 401 `unauthorized` when that budget is exhausted. */
+            429: {
+                headers: {
+                    /** @description Whole seconds to wait before retrying, at least `1`. */
+                    "Retry-After"?: number;
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description - `internal_error`: The server failed because of a bug. The response says nothing about the cause, and the server logs it. Report the request to the server's operator.
+             *     - `session_unreadable`: The server's osrlib can't load the session's stored state, for example because a server running another osrlib version wrote it. Report the session's id and `request_id` to the server's operator.
+             */
+            500: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `database_busy`: Another process held the SQLite write lock for more than 5 seconds. Wait the 1 second in the `Retry-After` header and retry. */
+            503: {
+                headers: {
+                    /** @description Whole seconds to wait before retrying: `1`. */
+                    "Retry-After"?: number;
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_session_spell: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The `ETag` of a cached response for this request, such as `W/"5f0c1b6de0a94d7f8f3f0f5b7a1c2d3e"`, or `*`. While the content is unchanged, the server answers 304 with no body. */
+                "If-None-Match"?: string;
+            };
+            path: {
+                /** @description Session `id` (`ses_` followed by 22 characters), from `POST /v1/sessions`, `POST /v1/saves/{save_id}/restore`, or `GET /v1/sessions`. */
+                session_id: string;
+                /** @description Spell id from a key of `spell_names` in the player view, such as `magic_missile`. */
+                spell_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description osrlib's `SpellTemplate`, from the session's spell catalog. */
+            200: {
+                headers: {
+                    ETag: components["headers"]["ETag"];
+                    /** @description `private, no-cache`. Revalidate with `If-None-Match` before reusing a cached copy. */
+                    "Cache-Control"?: string;
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpellTemplate"];
+                };
+            };
+            /** @description The response whose `ETag` you sent in `If-None-Match` is still current. The response has no body. */
+            304: {
+                headers: {
+                    ETag: components["headers"]["ETag"];
+                    /** @description `private, no-cache`. Revalidate with `If-None-Match` before reusing a cached copy. */
+                    "Cache-Control"?: string;
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description - `unauthorized`: The request has no API key or has an unknown key. Send `Authorization: Bearer <key>` with a key configured on the server. Retrying the same request fails. */
+            401: {
+                headers: {
+                    /** @description `Bearer`, the authentication scheme the server accepts. */
+                    "WWW-Authenticate"?: string;
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description - `not_found`: Your client has no session with this id. `GET /v1/sessions` lists your sessions.
+             *     - `not_found`: The player view's `spell_names` has no entry for this spell id (`resource` is `spell`). Read the ids from `GET /v1/sessions/{session_id}/view`. For a built-in spell the view doesn't name, call `GET /v1/rules/spells/{spell_id}`.
+             */
+            404: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `session_busy`: The request waited more than 5 seconds for another request running on the session and made no changes. `revision` reports the session's current revision. Retry the request. */
+            409: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `misdirected_request`: The server runs without API keys, and the request's `Host` header isn't `localhost`, `127.0.0.1`, or `[::1]`. Call the server by one of those names, or configure API keys on the server. A server with API keys never returns this code. */
+            421: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `rate_limited`: Your client exceeded the per-minute request budget (`BXAPI_RATE_LIMIT_PER_MINUTE`, 600 by default). Wait the seconds in the `Retry-After` header and retry. Requests without a valid API key share a separate budget and receive 429 instead of 401 `unauthorized` when that budget is exhausted. */
+            429: {
+                headers: {
+                    /** @description Whole seconds to wait before retrying, at least `1`. */
+                    "Retry-After"?: number;
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description - `internal_error`: The server failed because of a bug. The response says nothing about the cause, and the server logs it. Report the request to the server's operator.
+             *     - `session_unreadable`: The server's osrlib can't load the session's stored state, for example because a server running another osrlib version wrote it. Report the session's id and `request_id` to the server's operator.
+             */
+            500: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `database_busy`: Another process held the SQLite write lock for more than 5 seconds. Wait the 1 second in the `Retry-After` header and retry. */
+            503: {
+                headers: {
+                    /** @description Whole seconds to wait before retrying: `1`. */
+                    "Retry-After"?: number;
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_session_class: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description The `ETag` of a cached response for this request, such as `W/"5f0c1b6de0a94d7f8f3f0f5b7a1c2d3e"`, or `*`. While the content is unchanged, the server answers 304 with no body. */
+                "If-None-Match"?: string;
+            };
+            path: {
+                /** @description Session `id` (`ses_` followed by 22 characters), from `POST /v1/sessions`, `POST /v1/saves/{save_id}/restore`, or `GET /v1/sessions`. */
+                session_id: string;
+                /** @description Class id from `party[i].class_id` in the player view, such as `magic_user`. */
+                class_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description osrlib's `ClassDefinition` of the party member's class. */
+            200: {
+                headers: {
+                    ETag: components["headers"]["ETag"];
+                    /** @description `private, no-cache`. Revalidate with `If-None-Match` before reusing a cached copy. */
+                    "Cache-Control"?: string;
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassDefinition"];
+                };
+            };
+            /** @description The response whose `ETag` you sent in `If-None-Match` is still current. The response has no body. */
+            304: {
+                headers: {
+                    ETag: components["headers"]["ETag"];
+                    /** @description `private, no-cache`. Revalidate with `If-None-Match` before reusing a cached copy. */
+                    "Cache-Control"?: string;
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description - `unauthorized`: The request has no API key or has an unknown key. Send `Authorization: Bearer <key>` with a key configured on the server. Retrying the same request fails. */
+            401: {
+                headers: {
+                    /** @description `Bearer`, the authentication scheme the server accepts. */
+                    "WWW-Authenticate"?: string;
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description - `not_found`: Your client has no session with this id. `GET /v1/sessions` lists your sessions.
+             *     - `not_found`: No party member in the player view has this `class_id` (`resource` is `class`). Read the ids from `party[i].class_id` on `GET /v1/sessions/{session_id}/view`.
+             */
             404: {
                 headers: {
                     "X-Request-Id": components["headers"]["X-Request-Id"];

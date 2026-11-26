@@ -23,13 +23,13 @@ export type Rejection = components['schemas']['Rejection'];
 export const REJECTION_TEMPLATES: Record<string, Template> = {
   // Battle declarations ----------------------------------------------------------------------------------------
   'battle.declaration.back_stab_no_ability':
-    "{character|member} can't back-stab. Only thieves can make a back-stab attack.",
+    "{character|member} can't back-stab. Turn off Back-stab to attack normally.",
   'battle.declaration.back_stab_not_attack':
     'Back-stab only works with an attack. Choose Attack for {character|member}, or turn off back-stab.',
   'battle.declaration.back_stab_not_melee':
     "{character|member} can't back-stab with a missile weapon. Switch to a melee weapon or turn off back-stab.",
   'battle.declaration.back_stab_target_aware':
-    "The monsters have noticed {character|member}, so a back-stab won't work. Attack normally, or hide first.",
+    "The monsters have noticed {character|member}, so a back-stab won't work. Turn off Back-stab to attack normally.",
   'battle.declaration.cannot_move':
     "{character|member} can't move this round. Attack in place or choose Hold.",
   'battle.declaration.cast_cannot_move':
@@ -134,26 +134,26 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   'combat.attack.out_of_reach': [
     {
       when: ['attacker', 'distance_feet'],
-      text: '{attacker|entity} is {distance_feet|feet} from the target, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
+      text: '{attacker|entity} is {distance_feet|feet} from the target, too far to attack in melee.',
     },
     {
       when: ['character', 'target', 'distance_feet'],
-      text: '{character|member} is {distance_feet|feet} from {target|entity}, too far to reach in melee. Close in first, or use a missile weapon or a spell.',
+      text: '{character|member} is {distance_feet|feet} from {target|entity}, too far to attack in melee.',
     },
     {
       when: ['character', 'distance_feet'],
-      text: '{character|member} is {distance_feet|feet} from the target, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
+      text: '{character|member} is {distance_feet|feet} from the target, too far to attack in melee.',
     },
     {
       when: ['target', 'distance_feet'],
-      text: '{target|entity} is {distance_feet|feet} away, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
+      text: '{target|entity} is {distance_feet|feet} away, too far to attack in melee.',
     },
     {
       when: ['distance_feet'],
-      text: 'The target is {distance_feet|feet} away, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
+      text: 'The target is {distance_feet|feet} away, too far to attack in melee.',
     },
     {
-      text: 'The target is too far away for a melee attack. Close in first, or use a missile weapon or a spell.',
+      text: 'The target is too far away to attack in melee.',
     },
   ],
   'combat.attack.reload': '{attacker|entity} fired last round and must reload this round.',
@@ -224,9 +224,9 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   'exploration.door.stuck': 'The door is stuck. Choose a party member to force it open.',
   'exploration.door.wedged':
     "The door is already wedged with an iron spike, so you can't close or wedge it again.",
-  'exploration.feature.emptied': 'That treasure has already been taken.',
+  'exploration.feature.emptied': 'The party has already taken that treasure.',
   // Taking, inspecting, and disarming treasure all get this code, so it never says whether a trap exists.
-  'exploration.feature.unknown': "The party can't reach that from here, or hasn't found it yet.",
+  'exploration.feature.unknown': "The party can't do that here.",
   'exploration.give.same_member':
     "{character|member} can't give items to themselves. Choose another party member.",
   'exploration.item.not_carried': [
@@ -335,9 +335,9 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   'items.use.unknown_target': [
     {
       when: ['character'],
-      text: "{character|possessive} target isn't here anymore. Choose another target.",
+      text: "{character|possessive} target isn't here. Choose another target.",
     },
-    { text: "That target isn't here anymore. Choose another target." },
+    { text: "That target isn't here. Choose another target." },
   ],
 
   // Magic ------------------------------------------------------------------------------------------------------
@@ -347,7 +347,7 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   'magic.book.capacity_mismatch':
     'Choose {capacity|count:spell} of level {spell_level|number} for the spell book. You chose {chosen|number}.',
   'magic.book.duplicate': '{spell|spellcap} is already in the spell book.',
-  'magic.book.not_arcane': "{class|classcap} don't use spell books. Only arcane casters use spell books.",
+  'magic.book.not_arcane': "{class|classcap} don't keep spell books.",
   'magic.book.unknown_spell': "{spell|spellcap} isn't available in this adventure.",
   'magic.book.wrong_list': "{spell|spellcap} is a {list|spelllist} spell, which this class can't learn.",
   'magic.cast.anti_magic_shell': 'An anti-magic shell blocks {caster|member} from casting spells.',
@@ -356,10 +356,10 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   'magic.cast.not_memorized': [
     {
       when: ['character'],
-      text: "{character|member} doesn't have {spell|spell} memorized{reversed|inreverse}. Casters memorize spells after a night's rest.",
+      text: "{character|member} doesn't have {spell|spell} memorized{reversed|inreverse}.",
     },
     {
-      text: "That caster doesn't have {spell|spell} memorized{reversed|inreverse}. Casters memorize spells after a night's rest.",
+      text: "That caster doesn't have {spell|spell} memorized{reversed|inreverse}.",
     },
   ],
   'magic.cast.not_reversible': '{spell|spellcap} has no reversed form.',
@@ -390,14 +390,14 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   'magic.cast.unknown_target': [
     {
       when: ['character'],
-      text: "{character|possessive} target has fallen, fled, or isn't here. Choose another target.",
+      text: "{character|possessive} target has fallen or isn't here. Choose another target.",
     },
     {
-      text: "That target has fallen, fled, or isn't here. Choose another target.",
+      text: "That target has fallen or isn't here. Choose another target.",
     },
   ],
   'magic.memorize.divine_reverses_at_cast':
-    'Clerics choose the reversed form when casting, not when memorizing. Memorize {spell|spell} in its normal form.',
+    "{spell|spellcap} is reversed when it's cast, not when it's memorized. Memorize it in its normal form.",
   'magic.memorize.needs_sleep': "{character|member} needs a night's rest before preparing spells.",
   'magic.memorize.not_a_caster': "{class|classcap} can't memorize spells.",
   'magic.memorize.not_in_book': "{spell|spellcap} isn't in this caster's spell book.",

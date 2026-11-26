@@ -30,6 +30,8 @@ describe('previewing the declarations of a battle round', () => {
   let commandCalls = 0;
   let previewCalls = 0;
   let previewFails = false;
+  /** Makes bxapi's preview answer as an osrlib older than 2.8 does, without `can_hide` and `can_back_stab`. */
+  let previewWithoutLists = false;
 
   beforeAll(async () => {
     const bell = await readFile(`${findRepoRoot()}/adventures/the-drowned-bell.json`, 'utf8');
@@ -41,6 +43,11 @@ describe('previewing the declarations of a battle round', () => {
       if (method === 'POST' && path.endsWith('/battle-round/preview')) {
         previewCalls += 1;
         if (previewFails) throw new Error('bxapi is down');
+        if (previewWithoutLists) {
+          const result = (await original(method, path, options)) as Record<string, unknown>;
+          const { can_hide: _hide, can_back_stab: _backStab, ...older } = result;
+          return older;
+        }
       }
       return original(method, path, options);
     }) as typeof bxapi.request;
@@ -101,6 +108,8 @@ describe('previewing the declarations of a battle round', () => {
     expect(state.declared).toEqual(['character-0001']);
     expect(state.declarations['character-0001']).toMatchObject({ action: 'hide' });
     expect(codes(state)).toEqual([['character-0001', 'battle.declaration.hide_in_front_rank']]);
+    // The preview judges a hide where everyone would stand, so Tess can't hide from the front rank.
+    expect(state.projection?.can_hide).toEqual([]);
     expect(state.projection?.advance_feet).toEqual({
       'character-0001': 0,
       'character-0002': 0,
@@ -126,6 +135,11 @@ describe('previewing the declarations of a battle round', () => {
     expect(state.refusals).toEqual([]);
     expect(state.projection?.advance_feet['character-0002']).toBe(25);
     expect(state.projection?.front_rank[group()]).toEqual(['character-0002']);
+    // Brenna's close puts Tess behind the front rank, so the preview offers her a hide that the encounter view
+    // doesn't list yet.
+    expect(state.projection?.can_hide).toEqual(['character-0001']);
+    expect(game.view.encounter?.can_hide).toEqual([]);
+    expect(Array.isArray(state.projection?.can_back_stab)).toBe(true);
   });
 
   it('reads the same state twice with one preview', async () => {
@@ -135,7 +149,7 @@ describe('previewing the declarations of a battle round', () => {
     expect(previewCalls).toBe(before);
   });
 
-  it("shows a player a preview rejection without a creature the player view doesn't list", async () => {
+  it("shows a player the same preview rejection as the referee for a creature the player view doesn't list", async () => {
     const forReferee = await referee.client.declare(tableId, 'character-0003', {
       action: 'cast',
       spell_id: 'magic_missile',
@@ -148,19 +162,19 @@ describe('previewing the declarations of a battle round', () => {
         params: expect.objectContaining({ target: 'monster-0099' }),
       }),
     ]);
+    // The party plans together, so a player reads the referee's declaration and bxapi's refusal as they are.
+    // osrlib 2.8 refuses an ID the party can't see as it refuses one that doesn't exist, so neither tells a
+    // player anything.
     const forPlayer = await alice.client.getDeclarations(tableId);
+    expect(forPlayer?.refusals).toEqual(forReferee.refusals);
     const refusal = forPlayer?.refusals[0];
-    expect(forPlayer?.refusals).toHaveLength(1);
-    expect(refusal).toMatchObject({ member_id: 'character-0003', code: forReferee.refusals[0]?.code });
-    // The hidden ID leaves the params, so the player's text takes the wording without a target.
-    expect(refusal?.params).not.toHaveProperty('target');
+    expect(refusal?.code).toBe('magic.cast.unknown_target');
     const text = describeRejection(
       { code: refusal?.code ?? '', params: refusal?.params as ParamMap },
       contextFromPlayerView(game.view),
     );
     expect(text).not.toMatch(/null|monster-/i);
-    expect(forPlayer?.declarations['character-0003']?.targets).toEqual([]);
-    expect(JSON.stringify(forPlayer)).not.toContain('monster-0099');
+    expect(forPlayer?.declarations['character-0003']?.targets).toEqual(['monster-0099']);
   });
 
   it('names the refused member from params.character when a round is resolved anyway, with one bxapi call', async () => {
@@ -200,6 +214,59 @@ describe('previewing the declarations of a battle round', () => {
     }
   });
 
+  it('treats a preview without the hide and back-stab lists as a failed preview', async () => {
+    previewWithoutLists = true;
+    try {
+      const state = await alice.client.declare(tableId, 'character-0002', { action: 'hold' });
+      expect(state.declared).toEqual(['character-0001', 'character-0002']);
+      expect(state.projection).toBeNull();
+      expect(state.preview_unavailable).toBe(true);
+    } finally {
+      previewWithoutLists = false;
+    }
+  });
+
+  it('stores and sends only the fields bxapi defines, so a note in a declaration reaches nobody', async () => {
+    const secret = 'the chief is invisible behind the altar';
+    const declare = async (user: TestUser, memberId: string) => {
+      const response = await fetch(`${server.url}/api/tables/${tableId}/game/declarations/${memberId}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${user.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ declaration: { action: 'hold', note: secret, extra: { note: secret } } }),
+      });
+      expect(response.status).toBe(200);
+      return response.text();
+    };
+    // The referee's own answer drops the note too, so nothing stores it.
+    expect(await declare(referee, 'character-0003')).not.toContain(secret);
+    expect(await declare(alice, 'character-0002')).not.toContain(secret);
+    // A row stored before the server dropped unknown fields loses them when the server reads it.
+    server.server.ctx.db.run(
+      "UPDATE declarations SET declaration_json = json_set(declaration_json, '$.note', ?) WHERE table_id = ? AND member_id = ?",
+      secret,
+      tableId,
+      'character-0001',
+    );
+    const read = await alice.client.getDeclarations(tableId);
+    expect(read?.declarations['character-0001']).toMatchObject({ action: 'hold' });
+    const fresh = await connect(server, alice, tableId);
+    try {
+      // The snapshot carries the declarations, with the row the server read.
+      expect(JSON.stringify(fresh.messages)).toContain('"declarations":{');
+      const texts = [
+        ...alice.received,
+        ...referee.received,
+        ...aliceWs.messages.map((message) => JSON.stringify(message)),
+        ...fresh.messages.map((message) => JSON.stringify(message)),
+      ];
+      expect(texts.filter((text) => text.includes(secret))).toEqual([]);
+      expect(texts.some((text) => text.includes('"note"'))).toBe(false);
+    } finally {
+      fresh.close();
+    }
+    await referee.client.clearDeclaration(tableId, 'character-0003');
+  });
+
   it('never sends the player a creature ID before the player view showed it, or any referee data', async () => {
     const refereeState = await referee.client.getRefereeState(tableId);
     const ids = refereeState.monsters.map((monster) => monster.id);
@@ -213,6 +280,5 @@ describe('previewing the declarations of a battle round', () => {
     ).toEqual([]);
     const texts = [...alice.received, ...aliceWs.messages.map((message) => JSON.stringify(message))];
     expect(findRefereeData(texts)).toEqual([]);
-    expect(texts.some((text) => text.includes('monster-0099'))).toBe(false);
   });
 });

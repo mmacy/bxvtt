@@ -85,31 +85,10 @@ const DETAILS: Record<string, unknown> = {
   },
 };
 
-/** The parts of each class entry that the town reads: its magic ability and its slots at each level. */
-export const CLASSES: Record<string, unknown> = {
-  fighter: { id: 'fighter', abilities: [], progression: [{ level: 1, spell_slots: [] }] },
-  thief: { id: 'thief', abilities: [], progression: [{ level: 1, spell_slots: [] }] },
-  magic_user: {
-    id: 'magic_user',
-    abilities: [{ tag: 'arcane_magic', params: { spell_list: 'magic_user' } }],
-    progression: [{ level: 1, spell_slots: [1] }],
-  },
-  cleric: {
-    id: 'cleric',
-    abilities: [{ tag: 'divine_magic', params: { spell_list: 'cleric' } }],
-    progression: [
-      { level: 1, spell_slots: [] },
-      { level: 2, spell_slots: [1] },
-    ],
-  },
-};
-
 /** Makes `api.fullCatalog` return the small equipment catalog, and `api.listAdventures` return the adventures. */
 export function stubCatalog(api: FakeApi, adventures?: unknown): void {
   const items = Object.values(DETAILS);
-  const classes = Object.values(CLASSES);
   api.fullCatalog.mockImplementation(async (catalog: string) => {
-    if (catalog === 'classes') return { catalog, total: classes.length, items: classes } as never;
     if (catalog !== 'equipment') throw new Error(`The test did not stub the ${catalog} catalog.`);
     return { catalog, total: items.length, items } as never;
   });
@@ -152,22 +131,37 @@ export function partyWithPackItem(
   return party;
 }
 
-/** Turns a party member into another class, with spells in the book and nothing memorized. */
+/**
+ * Turns a party member into a caster with nothing memorized, with the spell fields bxapi's view states for one:
+ * `spell_slots` at the member's level, and the book spells (`sleep`, then `spell-1` and on) as the spells it can
+ * prepare. A 1st-level cleric has five empty slots and nothing to prepare, a 2nd-level cleric has one slot and the
+ * cleric list to prepare from, and a custom class gets the slots and spells passed to it.
+ */
 export function makeCaster(
   snapshot: Snapshot,
   memberName: string,
   classId: string,
-  options: { book?: number; level?: number } = {},
+  options: { book?: number; level?: number; slots?: number[]; className?: string } = {},
 ): void {
   const member = snapshot.game?.view.party.find((candidate) => candidate.name === memberName);
   if (!member) throw new Error(`No member named ${memberName}.`);
+  const level = options.level ?? 1;
+  const book = Array.from({ length: options.book ?? 0 }, (_, i) => (i === 0 ? 'sleep' : `spell-${i}`));
+  const divine = classId === 'cleric';
+  const slots =
+    options.slots ?? (divine ? [level >= 2 ? 1 : 0, 0, 0, 0, 0] : [Math.min(level, 2), 0, 0, 0, 0, 0]);
   member.class_id = classId;
-  member.level = options.level ?? 1;
+  if (options.className !== undefined) member.class_name = options.className;
+  member.level = level;
   member.memorized_spells = [];
-  (member as unknown as { spell_book: unknown[] }).spell_book = Array.from(
-    { length: options.book ?? 0 },
-    (_, i) => ({ spell_id: `spell-${i}` }),
-  );
+  member.spell_book = divine ? [] : book;
+  member.spell_slots = slots;
+  member.preparable_spells = !slots.some((n) => n > 0)
+    ? []
+    : divine
+      ? ['cure_light_wounds', 'protection_from_evil']
+      : book;
+  member.learnable_spells = [];
 }
 
 /** A feed entry for an accepted command whose events are the given ones. */

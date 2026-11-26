@@ -177,6 +177,10 @@ const FIXED: Record<string, { title: string; detail: string }> = {
     detail:
       "The server can't reach the game service. Ask the server host to start the game service, then try again.",
   },
+  bxapi_outdated: {
+    title: 'The game service is out of date',
+    detail: "Games can't run until it's updated. Ask the server host to update the game service.",
+  },
   bxapi_storage_full: {
     title: 'Server storage is full',
     detail:
@@ -193,10 +197,6 @@ const FIXED: Record<string, { title: string; detail: string }> = {
   invalid_response: {
     title: 'Received an unreadable response from the server',
     detail: 'Reload the page. If it keeps happening, check that this address points to your bxvtt server.',
-  },
-  target_unknown: {
-    title: "That target isn't in this fight",
-    detail: 'Choose another target.',
   },
   character_invalid: {
     title: "Those character choices aren't valid",

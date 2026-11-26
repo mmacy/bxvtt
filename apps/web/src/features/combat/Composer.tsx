@@ -6,33 +6,50 @@ import {
   joinList,
   memberName,
   monsterName,
-  spellName,
+  spellFormName,
   type TextContext,
 } from '@bxvtt/shared/text';
 import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import {
   getApi,
   loadCatalog,
+  useDeclarations,
   useMonsterCatalog,
+  useRevision,
   useRulesEntry,
   useSendDeclaration,
+  useSpellDetail,
   useTableUi,
   useTextContext,
   type ClassDetail,
-  type SpellDetail,
 } from '@/app';
-import { Banner, Button, Card, Checkbox, cx, Icon, SegmentedControl, Select, type IconName } from '@/ui';
+import {
+  Banner,
+  Button,
+  Card,
+  Checkbox,
+  cx,
+  Field,
+  Icon,
+  SegmentedControl,
+  Select,
+  Skeleton,
+  type IconName,
+} from '@/ui';
 import {
   attackDeclaration,
   carries,
+  currentProjection,
   liveGroups,
   memberDistance,
   memberGap,
   membersInReach,
   memorizedSpells,
   planAttack,
-  spellModeLabel,
+  spellModeOptions,
+  spellRangeText,
   spellRangeFeet,
+  stealthLists,
   usableItems,
   type CarriedItem,
   type MemberGear,
@@ -55,13 +72,16 @@ const TAB_LABELS: Record<ComposerTab, { label: string; icon: IconName }> = {
   hold: { label: 'Hold', icon: 'pause' },
 };
 
-/** The class abilities that offer a choice in battle, read from the class catalog. */
-export function useClassAbilities(classId: string | null): { turnUndead: boolean; backStab: boolean } {
+/**
+ * Whether the member's class turns undead, from the class catalog. Hide and back-stab come from bxapi's lists
+ * instead (`stealthLists`).
+ */
+export function useTurnsUndead(classId: string | null): boolean {
   const entry = useRulesEntry<ClassDetail>(classId === null ? null : `classes/${classId}`);
-  return useMemo(() => {
-    const tags = new Set((entry.data?.abilities ?? []).map((ability) => ability.tag));
-    return { turnUndead: tags.has('turn_undead'), backStab: tags.has('back_stab') };
-  }, [entry.data]);
+  return useMemo(
+    () => (entry.data?.abilities ?? []).some((ability) => ability.tag === 'turn_undead'),
+    [entry.data],
+  );
 }
 
 interface MonsterEntry {
@@ -147,7 +167,8 @@ export function Composer({
 }: ComposerProps) {
   const ctx = useTextContext();
   const { declare, pending } = useSendDeclaration();
-  const abilities = useClassAbilities(member.class_id);
+  const turnsUndead = useTurnsUndead(member.class_id);
+  const lists = stealthLists(encounter, currentProjection(useDeclarations(), useRevision()));
   const gazers = useGazeGroups(encounter);
   const spells = memorizedSpells(member);
   const usable = usableItems(gear);
@@ -162,12 +183,15 @@ export function Composer({
   tabs.push('move');
   if (usable.length > 0) tabs.push('item');
   if (gear.items.length > 0 && others.length > 0) tabs.push('give');
-  if (abilities.turnUndead) tabs.push('turn');
-  // Hide is offered to the members the view lists in `can_hide`, to a member who already declared a hide, and to
-  // a member the view gives thief skills. `can_hide` reads the battle as it stands, so a thief in the front rank
-  // isn't in it, though another member's declared move can make the hide work. The preview says when it won't.
-  const thiefSkills = Object.keys(member.thief_skills).length > 0;
-  if (encounter.can_hide.includes(member.id) || current?.action === 'hide' || thiefSkills) tabs.push('hide');
+  if (turnsUndead) tabs.push('turn');
+  // Hide is offered to the members bxapi lists in `can_hide`, and to a member whose saved action is a hide, so the
+  // player can see and change it. Once offered, the tab stays until the composer closes, so a planned move
+  // elsewhere in the party never takes the open tab away.
+  const savedHide = current?.action === 'hide';
+  const canHide = lists.canHide.includes(member.id);
+  const [hideOffered, setHideOffered] = useState(canHide || savedHide);
+  if ((canHide || savedHide) && !hideOffered) setHideOffered(true);
+  if (hideOffered) tabs.push('hide');
   tabs.push('hold');
 
   const usableTabs = tabs.filter((t) => t !== 'cast' || spells.length > 0);
@@ -176,9 +200,11 @@ export function Composer({
     usableTabs.includes(initial) ? initial : (usableTabs[0] ?? 'hold'),
   );
   const openSheet = useTableUi((s) => s.openCharacterSheet);
-  const [gaze, setGaze] = useState<string>(
-    typeof current?.gaze_defense === 'string' ? current.gaze_defense : 'none',
-  );
+  const hasMirror = carries(gear, 'mirror');
+  const [chosenGaze, setGaze] = useState<GazeChoice>(current?.gaze_defense ?? 'none');
+  // A saved mirror guard reads as no guard once the member no longer carries a mirror, since the list has no
+  // mirror to show and resending it would only be refused.
+  const gaze: GazeChoice = chosenGaze === 'mirror' && !hasMirror ? 'none' : chosenGaze;
   const [error, setError] = useState<string | null>(null);
 
   const submit = async (body: DeclarationBody) => {
@@ -189,7 +215,6 @@ export function Composer({
     else if (result.status === 'error') setError(result.message);
   };
 
-  const hasMirror = carries(gear, 'mirror');
   return (
     <section className={styles.composer} aria-label={`Declare for ${member.name}`}>
       <div className={styles.composerHead}>
@@ -234,25 +259,19 @@ export function Composer({
       {gazers.length > 0 && (
         <div className={styles.gazeRow}>
           <Icon name="eye" size={14} />
-          <span className={styles.gazeText}>A petrifying gaze can turn front-rank characters to stone.</span>
-          <Select
-            size="sm"
-            className={styles.compactSelect}
-            aria-label="Guard against gaze"
-            value={gaze}
-            onValueChange={setGaze}
-            options={[
-              { value: 'none', label: 'No guard' },
-              { value: 'avert_eyes', label: 'Avert eyes (−4 to hit)' },
-              {
-                value: 'mirror',
-                label: hasMirror
-                  ? 'Watch in a mirror (−1 to hit)'
-                  : `Watch in a mirror (${member.name} has none)`,
-                disabled: !hasMirror,
-              },
-            ]}
-          />
+          <Field label="Guard against the gaze" className={styles.gazeField}>
+            <Select
+              size="sm"
+              className={styles.compactSelect}
+              value={gaze}
+              onValueChange={(value) => setGaze(gazeChoice(value))}
+              options={[
+                { value: 'none', label: 'No guard' },
+                { value: 'avert_eyes', label: 'Avert eyes' },
+                ...(hasMirror ? [{ value: 'mirror', label: 'Use a mirror' }] : []),
+              ]}
+            />
+          </Field>
         </div>
       )}
 
@@ -270,7 +289,7 @@ export function Composer({
             member={member}
             encounter={encounter}
             gear={gear}
-            backStab={abilities.backStab}
+            canBackStab={lists.canBackStab.includes(member.id)}
             current={current}
             pending={pending}
             onSubmit={submit}
@@ -322,6 +341,8 @@ export function Composer({
               variant="secondary"
               icon="eye-off"
               loading={pending}
+              disabled={!canHide && !savedHide}
+              disabledReason={`${member.name} can't hide this round.`}
               onClick={() => void submit({ action: 'hide' })}
             >
               Hide in shadows
@@ -345,6 +366,13 @@ export function Composer({
       </div>
     </section>
   );
+}
+
+/** A guard against a petrifying gaze, or none. */
+type GazeChoice = 'none' | NonNullable<DeclarationBody['gaze_defense']>;
+
+function gazeChoice(value: string): GazeChoice {
+  return value === 'avert_eyes' || value === 'mirror' ? value : 'none';
 }
 
 function tabFor(action: string | undefined): ComposerTab | null {
@@ -459,21 +487,22 @@ function AttackChoices({
   member,
   encounter,
   gear,
-  backStab,
+  canBackStab,
   current,
   pending,
   onSubmit,
-}: ChoiceProps & { gear: MemberGear; backStab: boolean; current: DeclarationBody | null }) {
+}: ChoiceProps & { gear: MemberGear; canBackStab: boolean; current: DeclarationBody | null }) {
   const [weaponId, setWeaponId] = useState<string>('auto');
-  // The class catalog says who has the back-stab ability, and the view lists who is hiding. Whether a back-stab
-  // works this round is bxapi's to say, and the board shows its reason when one won't.
-  const hiding = encounter.hiding.includes(member.id);
-  const canStab = backStab || hiding;
-  // A hiding member starts on a back-stab, the reason to hide, and a saved back-stab starts checked.
-  const [stab, setStab] = useState(hiding || current?.back_stab === true);
+  // bxapi lists who can back-stab this round. A saved back-stab stays visible so the player can change it, and the
+  // row shows bxapi's reason when it won't work.
+  const savedAttack = current?.action === 'attack' ? current : null;
+  const canStab = canBackStab || savedAttack?.back_stab === true;
+  // A saved attack keeps its choice. Otherwise a member in the list starts on a back-stab, the reason they're in it.
+  const [stab, setStab] = useState(savedAttack ? savedAttack.back_stab === true : canBackStab);
+  const stabbing = stab && canStab;
   // A back-stab is a melee attack, so it takes the wielded melee weapon unless the player chose one.
   const melee = gear.wielded.find((w) => w.melee)?.id ?? null;
-  const chosen = weaponId !== 'auto' ? weaponId : stab && canStab ? melee : null;
+  const chosen = weaponId !== 'auto' ? weaponId : stabbing ? melee : null;
   return (
     <div className={styles.choiceStack}>
       {(gear.wielded.length > 1 || canStab) && (
@@ -529,7 +558,7 @@ function AttackChoices({
               label={`${verb}: ${theGroup(viewLabels(group))}, ${formatFeet(plan.distance)} away`}
               selected={current?.action === 'attack' && current.target_group_id === group.id}
               pending={pending}
-              onClick={() => void onSubmit(attackDeclaration(plan, { weaponId: chosen, backStab: stab }))}
+              onClick={() => void onSubmit(attackDeclaration(plan, { weaponId: chosen, backStab: stabbing }))}
             />
           );
         })}
@@ -560,8 +589,7 @@ function CastChoices({ member, encounter, ctx, pending, onSubmit }: ChoiceProps 
             icon="spell"
             onClick={() => setChoice(index)}
           >
-            {capitalize(spellName(spell.spellId, ctx))}
-            {spell.reversed ? ' (reversed)' : ''}
+            {capitalize(spellFormName(spell.spellId, spell.reversed, ctx))}
             {spell.copies > 1 ? ` ×${spell.copies}` : ''}
           </Button>
         ))}
@@ -591,32 +619,34 @@ function SpellTargets({
   pending,
   onSubmit,
 }: ChoiceProps & { spellId: string; memorizedReversed: boolean; ctx: TextContext }) {
-  const entry = useRulesEntry<SpellDetail>(`spells/${spellId}`);
+  const entry = useSpellDetail(spellId);
   const creatures = useEncounterCreatures();
   const spell = entry.data;
-  const modes = spell?.modes ?? [];
   const [modeKey, setModeKey] = useState<string | null>(null);
   const [reversed, setReversed] = useState(memorizedReversed);
   const [targets, setTargets] = useState<string[]>([]);
+  // A reversed form has its own ways to cast it, with their own keys.
+  const form = reversed && spell?.reversed_form ? spell.reversed_form : spell;
+  const modes = form?.modes ?? [];
   const mode = modes.find((m) => m.key === modeKey) ?? modes[0];
-  if (entry.loading) return <p className={styles.choiceHint}>Loading spell details…</p>;
+  if (entry.loading) return <Skeleton lines={2} />;
   if (!spell || !mode)
-    return <p className={styles.choiceHint}>Couldn't load this spell's details. Try again in a moment.</p>;
+    return (
+      <p className={styles.choiceHint}>This spell&apos;s details didn&apos;t load. Try again in a moment.</p>
+    );
 
   const range = spellRangeFeet(spell.range_spec);
   const targeting = mode.targeting?.mode ?? null;
-  const name = capitalize(spellName(spellId, ctx));
+  const name = capitalize(spellFormName(spellId, reversed, ctx));
+  // A spell in the book had its form chosen when it was memorized. Any other is reversed as it's cast.
+  const choosesForm = spell.reversed_form && !memorizedReversed && !member.spell_book.includes(spellId);
   const base: DeclarationBody = {
     action: 'cast',
     spell_id: spellId,
     spell_mode: mode.key,
     ...(reversed ? { reversed: true } : {}),
   };
-  const labels = modes.map((m) => spellModeLabel(m.targeting?.mode));
-  const modeOptions = modes.map((m, i) => ({
-    value: m.key,
-    label: labels.filter((l) => l === labels[i]).length > 1 ? `${labels[i]} ${i + 1}` : (labels[i] ?? m.key),
-  }));
+  const modeOptions = spellModeOptions(modes, name);
   const single = targeting === 'single';
   // A spell that harms or hinders goes at monsters, and any other at the party. The session still checks it.
   const effect = mode.effect?.kind ?? null;
@@ -636,10 +666,10 @@ function SpellTargets({
   return (
     <div className={styles.choiceStack}>
       <p className={styles.choiceHint}>
-        {spell.range}
-        {spell.duration ? ` · ${spell.duration}` : ''} · {firstSentence(mode.prose || spell.intro)}
+        {spellRangeText(spell)}
+        {form?.duration ? ` · ${form.duration}` : ''} · {firstSentence(mode.prose || spell.intro)}
       </p>
-      {(modes.length > 1 || spell.reversed_form) && (
+      {(modes.length > 1 || choosesForm) && (
         <div className={styles.optionRow}>
           {modes.length > 1 && (
             <SegmentedControl
@@ -653,11 +683,15 @@ function SpellTargets({
               options={modeOptions}
             />
           )}
-          {spell.reversed_form && !memorizedReversed && (
+          {choosesForm && spell.reversed_form && (
             <Checkbox
               label={`Cast the reverse (${spell.reversed_form.name})`}
               checked={reversed}
-              onCheckedChange={setReversed}
+              onCheckedChange={(checked) => {
+                setReversed(checked);
+                setModeKey(null);
+                setTargets([]);
+              }}
             />
           )}
         </div>
@@ -822,9 +856,9 @@ function MoveChoices({
               title={`Close in on ${theGroup(viewLabels(group))}`}
               meta={formatFeet(distance, 'short')}
               note={
-                distance <= 5
-                  ? 'Already within 5 feet.'
-                  : `Moves up to ${formatFeet(Math.min(rate, Math.max(0, distance - 5)))} without attacking.`
+                group.front_rank.includes(member.id)
+                  ? 'Already in melee.'
+                  : 'Move toward them without attacking.'
               }
               disabledReason={stuck}
               label={`Close in on ${theGroup(viewLabels(group))}`}
@@ -837,8 +871,7 @@ function MoveChoices({
         <Tile
           icon="shield"
           title="Fighting withdrawal"
-          meta={formatFeet(Math.floor(rate / 2), 'short')}
-          note="Back away facing the monsters at half speed without attacking."
+          note="Back away from the monsters, facing them, without attacking."
           disabledReason={stuck}
           label="Fighting withdrawal"
           selected={moving === 'fighting_withdrawal'}
@@ -848,8 +881,7 @@ function MoveChoices({
         <Tile
           icon="footprints"
           title="Retreat"
-          meta={formatFeet(rate, 'short')}
-          note="Turn and run at full speed. Attackers gain +2 to hit you this round."
+          note={`Turn and run, ${rate} feet a round.`}
           disabledReason={stuck}
           label="Retreat"
           selected={moving === 'retreat'}
@@ -859,23 +891,20 @@ function MoveChoices({
       </div>
       {others.length > 0 && (
         <div className={styles.optionRow}>
-          <Select
-            size="sm"
-            className={styles.compactSelect}
-            aria-label="Trade places with"
-            value={replacement}
-            onValueChange={setReplacement}
-            options={[
-              { value: 'none', label: 'Withdraw without trading places' },
-              ...others.map((id) => ({ value: id, label: `Trade places with ${memberName(id, ctx)}` })),
-            ]}
-          />
+          <Field label="Trade places with">
+            <Select
+              size="sm"
+              className={styles.compactSelect}
+              value={replacement}
+              onValueChange={setReplacement}
+              options={[
+                { value: 'none', label: 'No one' },
+                ...others.map((id) => ({ value: id, label: memberName(id, ctx) })),
+              ]}
+            />
+          </Field>
         </div>
       )}
-      <p className={styles.choiceHint}>
-        When everyone declares the same withdrawal or retreat, the party moves together. If the whole party
-        retreats, the battle ends, but monsters that can follow give chase.
-      </p>
     </div>
   );
 }
@@ -1090,7 +1119,7 @@ function TurnChoice({ member, encounter, pending, onSubmit }: ChoiceProps) {
       <Tile
         icon="class-cleric"
         title="Present holy symbol"
-        note={`Affects ${joinList(undead.map((g) => theGroup(viewLabels(g))))}. Taking damage doesn't disrupt turning.`}
+        note={`Affects ${joinList(undead.map((g) => theGroup(viewLabels(g))))}.`}
         disabledReason={reason}
         label={`${member.name} turns undead`}
         pending={pending}

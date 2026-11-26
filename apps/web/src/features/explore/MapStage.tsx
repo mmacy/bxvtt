@@ -11,18 +11,19 @@ import {
   useMembers,
   usePermissionContext,
   usePings,
+  usePlayerTextContext,
   usePlayerView,
   usePreferences,
   useReduceMotion,
   useRefereeLens,
   useRefereeState,
-  useScene,
   useSendPing,
   useSendRefereeCommand,
   useShortcut,
   usePartyLight,
   useShownMode,
   useTableUser,
+  useTextContext,
   type FocusRequest,
   type GameCommand,
 } from '@/app';
@@ -104,7 +105,6 @@ export function keyDirection(event: Pick<KeyboardEvent, 'key' | 'code'>): Direct
  */
 export function MapStage() {
   const view = usePlayerView();
-  const scene = useScene();
   // The mode the shell shows, which holds a fight on screen while its last round plays back.
   const mode = useShownMode();
   const lens = useRefereeLens();
@@ -120,6 +120,8 @@ export function MapStage() {
   const doors = useSessionDoors();
   const names = useDungeonNames();
   const actions = useActionContext();
+  const text = useTextContext();
+  const playerText = usePlayerTextContext();
   const { send } = useExploreSend();
   const { send: sendReferee } = useSendRefereeCommand();
   const sendPing = useSendPing();
@@ -172,8 +174,10 @@ export function MapStage() {
     null;
   const map = useMemo(() => {
     if (view === null || viewedKey === null) return null;
-    return source ? buildRefereeLevel(source, viewedKey) : buildPlayerLevel(view, scene, viewedKey, doors);
-  }, [view, scene, source, viewedKey, doors]);
+    return source
+      ? buildRefereeLevel(source, viewedKey, text)
+      : buildPlayerLevel(view, viewedKey, doors, playerText);
+  }, [view, source, viewedKey, doors, text, playerText]);
   const mapDungeon = map?.dungeonId ?? null;
   const mapLevel = map?.levelNumber ?? null;
   const levelRef = useMemo<LevelRef | null>(

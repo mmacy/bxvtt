@@ -1,0 +1,270 @@
+{
+  "kind": "adventure",
+  "schema_version": 4,
+  "engine_version": "2.5.0",
+  "payload": {
+    "name": "Bundled rules test cellar",
+    "description": "A test adventure with one cellar, a bundled magic-user spell, and a bundled cleric spell.",
+    "hooks": ["A test adventure for bundled spells."],
+    "party": null,
+    "town": {
+      "name": "Tallow End",
+      "description": "A quiet hamlet with an inn and a chandler.",
+      "services": ["The Guttering Wick: beds and supper"],
+      "travel_turns": {
+        "cellar": 1
+      },
+      "healing_prices": {}
+    },
+    "dungeons": [
+      {
+        "id": "cellar",
+        "name": "The chandler cellar",
+        "levels": [
+          {
+            "number": 1,
+            "width": 7,
+            "height": 4,
+            "edges": {
+              "2,1:west": {
+                "kind": "open",
+                "door": null
+              },
+              "3,1:west": {
+                "kind": "open",
+                "door": null
+              },
+              "4,1:west": {
+                "kind": "open",
+                "door": null
+              },
+              "5,1:west": {
+                "kind": "open",
+                "door": null
+              },
+              "1,2:north": {
+                "kind": "open",
+                "door": null
+              },
+              "2,2:north": {
+                "kind": "open",
+                "door": null
+              },
+              "2,2:west": {
+                "kind": "open",
+                "door": null
+              },
+              "4,2:north": {
+                "kind": "open",
+                "door": null
+              },
+              "5,2:west": {
+                "kind": "open",
+                "door": null
+              }
+            },
+            "areas": [
+              {
+                "id": "cellar_stair",
+                "name": "Cellar stair",
+                "description": "Damp stone steps end in a low, dry cellar.",
+                "cells": [
+                  [1, 1],
+                  [2, 1],
+                  [1, 2],
+                  [2, 2]
+                ],
+                "encounter": null,
+                "features": [],
+                "trap": null,
+                "treasure": null
+              },
+              {
+                "id": "wine_racks",
+                "name": "Wine racks",
+                "description": "Empty racks line the walls, and the floor is swept clean.",
+                "cells": [
+                  [3, 1],
+                  [4, 1],
+                  [5, 1]
+                ],
+                "encounter": null,
+                "features": [],
+                "trap": null,
+                "treasure": null
+              },
+              {
+                "id": "cold_larder",
+                "name": "Cold larder",
+                "description": "A bare stone shelf runs along the back wall.",
+                "cells": [
+                  [4, 2],
+                  [5, 2]
+                ],
+                "encounter": null,
+                "features": [],
+                "trap": null,
+                "treasure": null
+              }
+            ],
+            "features": [],
+            "transitions": [],
+            "entrance": [1, 1],
+            "guidance": ""
+          }
+        ]
+      }
+    ],
+    "monsters": [],
+    "items": [],
+    "spells": [
+      {
+        "id": "ember_dart",
+        "name": "Ember Dart",
+        "spell_list": "magic_user",
+        "level": 1,
+        "duration": "Instant",
+        "duration_spec": {
+          "kind": "instant",
+          "unit": null,
+          "amount": null,
+          "dice": null,
+          "per_level": 0,
+          "concentration_cap_unit": null,
+          "concentration_cap_amount": null
+        },
+        "range": "60 feet",
+        "range_spec": {
+          "kind": "feet",
+          "feet": 60,
+          "per_level_feet": null
+        },
+        "reversed_form": null,
+        "modes": [
+          {
+            "key": "dart",
+            "targeting": {
+              "mode": "single",
+              "count": null,
+              "count_dice": null,
+              "hd_budget_dice": null,
+              "hd_cap": null,
+              "hd_min": null,
+              "shape": null,
+              "dimensions": {}
+            },
+            "save": null,
+            "effect": {
+              "kind": "damage",
+              "condition": null,
+              "cures_conditions": [],
+              "cures_effect_kinds": [],
+              "modifiers": [],
+              "params": {
+                "dice": "1d4",
+                "auto_hit": true
+              }
+            },
+            "manual": false,
+            "prose": "A spark of glowing ember strikes one visible creature within range for 1d4 hit points of damage. The dart needs no attack roll."
+          }
+        ],
+        "intro": "A spark of glowing ember strikes one visible creature within range.",
+        "conjured_monsters": [],
+        "conjured_monster_ids": [],
+        "overrides_applied": []
+      },
+      {
+        "id": "lantern_ward",
+        "name": "Lantern Ward",
+        "spell_list": "cleric",
+        "level": 1,
+        "duration": "Instant",
+        "duration_spec": {
+          "kind": "instant",
+          "unit": null,
+          "amount": null,
+          "dice": null,
+          "per_level": 0,
+          "concentration_cap_unit": null,
+          "concentration_cap_amount": null
+        },
+        "range": "A creature touched",
+        "range_spec": {
+          "kind": "touch",
+          "feet": null,
+          "per_level_feet": null
+        },
+        "reversed_form": {
+          "name": "Lantern Snuff",
+          "prose": "Draws the warmth from a touched creature for 1d4 hit points of damage. In combat, a melee attack roll is required.",
+          "modes": [
+            {
+              "key": "snuff",
+              "targeting": {
+                "mode": "single",
+                "count": null,
+                "count_dice": null,
+                "hd_budget_dice": null,
+                "hd_cap": null,
+                "hd_min": null,
+                "shape": null,
+                "dimensions": {}
+              },
+              "save": null,
+              "effect": {
+                "kind": "damage",
+                "condition": null,
+                "cures_conditions": [],
+                "cures_effect_kinds": [],
+                "modifiers": [],
+                "params": {
+                  "dice": "1d4",
+                  "touch_attack": true
+                }
+              },
+              "manual": false,
+              "prose": "Draws the warmth from a touched creature for 1d4 hit points of damage. In combat, a melee attack roll is required."
+            }
+          ],
+          "duration": null,
+          "duration_spec": null
+        },
+        "modes": [
+          {
+            "key": "mend",
+            "targeting": {
+              "mode": "single",
+              "count": null,
+              "count_dice": null,
+              "hd_budget_dice": null,
+              "hd_cap": null,
+              "hd_min": null,
+              "shape": null,
+              "dimensions": {}
+            },
+            "save": null,
+            "effect": {
+              "kind": "heal",
+              "condition": null,
+              "cures_conditions": [],
+              "cures_effect_kinds": [],
+              "modifiers": [],
+              "params": {
+                "dice": "1d4"
+              }
+            },
+            "manual": false,
+            "prose": "A touched creature recovers 1d4 hit points. The spell cannot raise a creature above its normal maximum."
+          }
+        ],
+        "intro": "A touch of lantern light closes small wounds.",
+        "conjured_monsters": [],
+        "conjured_monster_ids": [],
+        "overrides_applied": []
+      }
+    ],
+    "triggers": [],
+    "quests": []
+  }
+}

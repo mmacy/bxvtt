@@ -2,6 +2,7 @@ import { emptyContext } from '@bxvtt/shared/text';
 import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { takeOutcome } from './Aftermath';
+import { summarizeFight } from './fight';
 import { quietRound } from './EncounterPanel';
 import type { AnyEvent } from './playback';
 
@@ -53,6 +54,31 @@ describe('taking from the aftermath', () => {
     const outcome = takeOutcome(events, emptyContext());
     expect(outcome.tone).toBe('success');
     expect(outcome.text).toMatch(/2 gp/);
+  });
+});
+
+describe('how a fight ended', () => {
+  const ended = (code: string, extra: AnyEvent[] = []): AnyEvent[] => [
+    ...extra,
+    { event_type: 'battle_ended', code },
+  ];
+
+  it('leaves the sentence out when the title already says it', () => {
+    const won = summarizeFight(ended('battle.ended.victory'), emptyContext());
+    expect(won.title).toBe('The monsters are beaten');
+    expect(won.sentence).toBe('');
+    const fled = summarizeFight(ended('battle.ended.fled'), emptyContext());
+    expect(fled.title).toBe('The party escaped');
+    expect(fled.sentence).toBe('');
+    const quiet = summarizeFight([], emptyContext());
+    expect(quiet.title).toBe('Encounter ended');
+    expect(quiet.sentence).toBe('');
+  });
+
+  it('says every member has fallen in a defeat', () => {
+    expect(summarizeFight(ended('battle.ended.defeat'), emptyContext()).sentence).toBe(
+      'Every party member has fallen.',
+    );
   });
 });
 

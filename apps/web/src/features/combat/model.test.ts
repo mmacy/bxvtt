@@ -1,8 +1,11 @@
 import type { EncounterGroupView, EncounterView, MemberView } from '@bxvtt/shared/bxapi';
+import type { DeclarationBody } from '@bxvtt/shared/protocol';
 import { emptyContext, contextFromPlayerView } from '@bxvtt/shared/text';
 import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import {
+  spellModeOptions,
+  spellRangeText,
   blockedReason,
   blockingMembers,
   describeDeclaration,
@@ -274,11 +277,11 @@ describe('refusals that name no member', () => {
 });
 
 describe('describeDeclaration for several monsters', () => {
-  const missiles = {
+  const missiles: DeclarationBody = {
     action: 'cast',
     spell_id: 'magic_missile',
     targets: ['monster-0001', 'monster-0002'],
-  } as const;
+  };
 
   it('names each monster the player view lists', () => {
     const { view } = battle();
@@ -361,13 +364,13 @@ describe('suggestAction', () => {
     expect(suggestAction(brenna, encounter, gear, { casts: true })?.kind).toBe('hold');
   });
 
-  it('holds a back-rank member with no missile weapon, and says why', () => {
+  it('holds a back-rank member with no missile weapon, without a rule about why', () => {
     const { encounter, party } = battle();
     const brenna = member(party, 'Brenna');
     const back = { ...encounter, front_rank: ['character-0002'] };
     const suggestion = suggestAction(brenna, back, memberGear(brenna, emptyContext()), facts);
     expect(suggestion).toMatchObject({ kind: 'hold', body: { action: 'hold' } });
-    expect(suggestion?.reason).toBe('Brenna is in the back rank with no missile weapon.');
+    expect(suggestion?.reason).toBe('No attack from here.');
   });
 });
 
@@ -385,5 +388,146 @@ describe('repeating last round after the situation changed', () => {
         ctx,
       ),
     ).toBe('Brenna is no longer in reach of the goblins.');
+  });
+});
+
+describe('spellModeOptions', () => {
+  it('names each mode by its targeting when that label is its own', () => {
+    expect(
+      spellModeOptions(
+        [
+          {
+            key: 'single_4_plus',
+            prose: 'A single creature with 4+1 Hit Dice (see Hit point modifiers).',
+            targeting: { mode: 'single' },
+          },
+          {
+            key: 'hd_budget',
+            prose: 'A total of 2d8 Hit Dice of creatures of 4 HD or lower each.',
+            targeting: { mode: 'hd_budget' },
+          },
+        ],
+        'Spell',
+      ),
+    ).toEqual([
+      { value: 'single_4_plus', label: 'One creature' },
+      { value: 'hd_budget', label: 'By hit dice' },
+    ]);
+  });
+
+  it('names modes that share a label by the text before the colon', () => {
+    const single = { mode: 'single' };
+    expect(
+      spellModeOptions(
+        [
+          { key: 'illuminate', prose: 'Conjuring light: In a 15’ radius.', targeting: single },
+          {
+            key: 'blind',
+            prose: 'Blinding a creature: By casting the spell upon its eyes.',
+            targeting: single,
+          },
+          {
+            key: 'cancel',
+            prose: 'Cancelling darkness: Light may cancel a darkness spell.',
+            targeting: single,
+          },
+        ],
+        'Spell',
+      ).map((option) => option.label),
+    ).toEqual(['Conjuring light', 'Blinding a creature', 'Cancelling darkness']);
+    expect(
+      spellModeOptions(
+        [
+          {
+            key: 'heal',
+            prose: 'Healing a living subject: Restores 1d6+1 hit points (see Healing).',
+            targeting: single,
+          },
+          {
+            key: 'cure_paralysis',
+            prose: 'Curing paralysis: Paralysing effects are negated.',
+            targeting: single,
+          },
+        ],
+        'Spell',
+      ).map((option) => option.label),
+    ).toEqual(['Healing a living subject', 'Curing paralysis']);
+  });
+
+  it('uses the first sentence without its period for a shared label with no colon, and keeps a lone label', () => {
+    expect(
+      spellModeOptions(
+        [
+          {
+            key: 'a',
+            prose: 'Light may cancel a darkness spell. It lasts a while.',
+            targeting: { mode: 'area' },
+          },
+          { key: 'b', prose: 'Fills a room.', targeting: { mode: 'area' } },
+          { key: 'c', prose: 'Wards the caster.', targeting: { mode: 'self' } },
+        ],
+        'Spell',
+      ).map((option) => option.label),
+    ).toEqual(['Light may cancel a darkness spell', 'Fills a room', 'Self']);
+  });
+
+  it("names Darkness's modes by the form and their keys, because bxapi gives them the same prose", () => {
+    // Darkness, the reverse of Light, as the development bxapi serves it.
+    const prose =
+      'Creates a 15’ radius area of magical blackness, preventing normal sight (but not infravision). Like light, it may alternatively be used to blind creatures or to dispel a light spell.';
+    const single = { mode: 'single' };
+    expect(
+      spellModeOptions(
+        [
+          { key: 'darken', prose, targeting: single },
+          { key: 'blind', prose, targeting: single },
+          { key: 'cancel', prose, targeting: single },
+        ],
+        'Darkness',
+      ),
+    ).toEqual([
+      { value: 'darken', label: 'Darkness: darken' },
+      { value: 'blind', label: 'Darkness: blind' },
+      { value: 'cancel', label: 'Darkness: cancel' },
+    ]);
+  });
+
+  it('keeps the labels that were already distinct when only some modes share their prose', () => {
+    const single = { mode: 'single' };
+    expect(
+      spellModeOptions(
+        [
+          { key: 'dim_light', prose: 'Dims the light.', targeting: single },
+          { key: 'snuff_out', prose: 'Dims the light.', targeting: single },
+          { key: 'ward', prose: 'Wards a door: It holds.', targeting: single },
+        ],
+        'Gloom',
+      ).map((option) => option.label),
+    ).toEqual(['Gloom: dim light', 'Gloom: snuff out', 'Wards a door']);
+  });
+
+  it("names a reversed form's own modes by the same rule", () => {
+    expect(
+      spellModeOptions(
+        [
+          {
+            key: 'harm',
+            prose: 'Inflicts 1d6+1 hit points of damage to a touched creature.',
+            targeting: { mode: 'single' },
+          },
+        ],
+        'Spell',
+      ),
+    ).toEqual([{ value: 'harm', label: 'One creature' }]);
+  });
+});
+
+describe('spellRangeText', () => {
+  it('writes a distance in feet as the catalog does, and keeps any other range', () => {
+    expect(spellRangeText({ range: '60 feet', range_spec: { kind: 'feet', feet: 60 } })).toBe('60’');
+    expect(spellRangeText({ range: '120’', range_spec: { kind: 'feet', feet: 120 } })).toBe('120’');
+    expect(spellRangeText({ range: 'The caster', range_spec: { kind: 'caster', feet: null } })).toBe(
+      'The caster',
+    );
   });
 });

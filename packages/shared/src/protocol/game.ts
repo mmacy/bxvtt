@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import type { CommandOutcome, EventPage, PlayerView, RefereeView, Rejection } from '../bxapi';
 import { MemberId, TableId, UserId, displayString } from './common';
-import { Scene } from './scene';
 
 export type { EventPage, PlayerView, RefereeView, Rejection };
 
@@ -61,9 +60,11 @@ export type RefereeState = Omit<RefereeView, (typeof REFEREE_VIEW_OMITTED_FIELDS
 
 /**
  * The state of a table's game for one user. The `game` WebSocket message carries the same object, so a client
- * replaces its copy with each one. Every copy has the player `view`, which states what the party perceives, and
- * the `scene`, which adds item names, known room traps, and emptied caches. A player's copy has `referee: null`.
- * A referee's copy has the dynamic referee state in `referee`, built at the same `revision`.
+ * replaces its copy with each one. Every copy has the player `view`, which states what the party perceives,
+ * including item names (`item_names` and `item_names_plural`), the emptied caches (`MapFeatureView.emptied`), and
+ * the room traps the party knows (`EnteredAreaView.trap_state`). A player's copy has `referee: null`. A
+ * referee's copy has the dynamic referee state in `referee`, built at the same `revision`, which includes
+ * `feature_handles`: the player handle of every feature, keyed by its raw reference.
  */
 export const GameState = z.object({
   table_id: TableId,
@@ -75,8 +76,6 @@ export const GameState = z.object({
   revision: z.number().int(),
   /** bxapi's player view at `revision`. */
   view: z.custom<PlayerView>(),
-  /** What the server adds to the player view at `revision`. See {@link Scene}. */
-  scene: Scene,
   /** The commands that are legal now and that this user's role may send. */
   commands: z.array(LegalCommand),
   seats: z.array(Seat),
@@ -111,6 +110,11 @@ export type Command = z.infer<typeof Command>;
  * Body of `POST /api/tables/{table_id}/game/commands`. Pass the `revision` of the state the user acted on as
  * `expected_revision`. When the game has moved on, the server sends nothing to bxapi and answers 409
  * `revision_conflict`.
+ *
+ * A player's `take_treasure`, `inspect_treasure`, or `remove_treasure_trap` names a `feature:` handle from the
+ * player view (`features_here`), or `pile` for dropped goods. The server refuses any other `feature_id` from a
+ * player with `exploration.feature.unknown` and doesn't send it to bxapi, because the player view doesn't show
+ * raw feature IDs. A referee's tools send the same handles, from the referee state's `feature_handles`.
  */
 export const CommandRequest = z.strictObject({
   command: Command,

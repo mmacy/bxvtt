@@ -126,16 +126,16 @@ describe('hiding thieves', () => {
     ).toBe("Wren will be in the front rank this round and can't hide there. Choose another action.");
   });
 
-  it('offers hiding as a way to back-stab alert monsters', () => {
-    // A back-stab works from hiding as well as after surprise, so the refusal no longer says surprise is the only way.
-    const text = describeRejection(
-      { code: 'battle.declaration.back_stab_target_aware', params: { character: 'character-0002' } },
-      ctx,
+  it('points a refused back-stab at the Back-stab control, not at hiding', () => {
+    // Hiding isn't always possible in a round, so the refusal names the control that fixes the declaration.
+    const params = { character: 'character-0002' };
+    expect(describeRejection({ code: 'battle.declaration.back_stab_target_aware', params }, ctx)).toBe(
+      "The monsters have noticed Wren, so a back-stab won't work. Turn off Back-stab to attack normally.",
     );
-    expect(text).toBe(
-      "The monsters have noticed Wren, so a back-stab won't work. Attack normally, or hide first.",
+    // A custom class can have the ability, so the refusal doesn't say that only thieves can back-stab.
+    expect(describeRejection({ code: 'battle.declaration.back_stab_no_ability', params }, ctx)).toBe(
+      "Wren can't back-stab. Turn off Back-stab to attack normally.",
     );
-    expect(text).not.toMatch(/surprise/);
   });
 });
 
@@ -143,8 +143,17 @@ describe('an unknown treasure', () => {
   it('says the same thing for a take, a check, and a disarm, and never mentions a trap', () => {
     // One code covers all three, so a take refusal can't hint that the treasure is trapped.
     const text = describeRejection({ code: 'exploration.feature.unknown', params: {} }, ctx);
-    expect(text).toBe("The party can't reach that from here, or hasn't found it yet.");
+    expect(text).toBe("The party can't do that here.");
     expect(text).not.toMatch(/trap/i);
+  });
+
+  it('says the party took an emptied cache, and never names the feature', () => {
+    const text = describeRejection(
+      { code: 'exploration.feature.emptied', params: { feature: 'feature:cache_7' } },
+      ctx,
+    );
+    expect(text).toBe('The party has already taken that treasure.');
+    expect(text).not.toMatch(/cache/);
   });
 });
 
@@ -287,7 +296,7 @@ describe('coins by denomination', () => {
       ctx,
     );
     expect(line.text).toBe(
-      'Brenna takes a 50-foot rope, 2 gold pieces, 5 silver pieces, and 16 copper pieces.',
+      'Brenna takes a 50’ coil of rope, 2 gold pieces, 5 silver pieces, and 16 copper pieces.',
     );
     expect(line.detail).toBe(
       'Every coin is shared out, and the odd ones go to the front of the marching order.',
@@ -370,7 +379,7 @@ describe('coins by denomination', () => {
       }),
       ctx,
     );
-    expect(hoard.text).toBe('Treasure is rolled: 300 gold pieces and 400 silver pieces.');
+    expect(hoard.text).toBe('The referee rolls treasure: 300 gold pieces and 400 silver pieces.');
     expect(hoard.detail).toBe('Treasure types: C. The coins are worth 340 gp.');
   });
 });
@@ -623,7 +632,7 @@ describe('refusals of a battle declaration', () => {
 
   it("names the declaring member in the kernel's checks", () => {
     expect(rej('combat.attack.out_of_reach', { character: 'character-0002', distance_feet: 20 })).toBe(
-      'Wren is 20 feet from the target, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
+      'Wren is 20 feet from the target, too far to attack in melee.',
     );
     expect(
       rej('combat.attack.out_of_reach', {
@@ -631,14 +640,12 @@ describe('refusals of a battle declaration', () => {
         distance_feet: 5,
         target: 'monster-0002',
       }),
-    ).toBe(
-      'Tomas is 5 feet from Goblin 2, too far to reach in melee. Close in first, or use a missile weapon or a spell.',
-    );
+    ).toBe('Tomas is 5 feet from Goblin 2, too far to attack in melee.');
     expect(
       rej('magic.cast.target_count', { character: 'character-0003', expected: 1, supplied: 3, mode: 'x' }),
     ).toBe("Tomas' spell takes 1 target in this mode, but you chose 3.");
     expect(rej('magic.cast.unknown_target', { character: 'character-0003', target: 'monster-0002' })).toBe(
-      "Tomas' target has fallen, fled, or isn't here. Choose another target.",
+      "Tomas' target has fallen or isn't here. Choose another target.",
     );
     expect(rej('battle.declaration.no_target', { character: 'character-0002', group: 'group-0001' })).toBe(
       'No targets remain in the goblins for Wren to strike. Choose another group.',
@@ -673,7 +680,7 @@ describe('refusals of a battle declaration', () => {
 
   it('reads well without the member', () => {
     expect(describeRejection({ code: 'combat.attack.out_of_reach', params: { distance_feet: 20 } })).toBe(
-      'The target is 20 feet away, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
+      'The target is 20 feet away, too far to attack in melee.',
     );
     expect(describeRejection({ code: 'battle.declaration.target_count', params: {} })).toBe(
       'Choose one target for that action.',

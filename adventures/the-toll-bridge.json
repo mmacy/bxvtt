@@ -1284,6 +1284,7 @@
                     "id": "sea_chest",
                     "kind": "treasure_cache",
                     "description": "The battered sea chest under the window has a lid ringed with cup marks and nicked by knives.",
+                    "referee_notes": "The coins are the bandits' pooled winnings from a month of dice.",
                     "cell": null,
                     "item_ids": [
                       "crossbow",
@@ -1381,6 +1382,7 @@
                     "id": "toll_strongbox",
                     "kind": "treasure_cache",
                     "description": "A strongbox is bolted to the floor under the desk, its lid worn bright by daily use.",
+                    "referee_notes": "The coins are the week's tolls.",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [],
@@ -1496,6 +1498,7 @@
                     "id": "captains_chest",
                     "kind": "treasure_cache",
                     "description": "A brass-cornered chest stands on the stolen carpet at the foot of the curtained bed.",
+                    "referee_notes": "The coins are Mag Corrie's share of the tolls. The small iron box has a miller's mark on the lid.",
                     "cell": null,
                     "item_ids": [
                       "millers_strongbox"
@@ -1717,6 +1720,7 @@
                     "id": "hidden_bundle",
                     "kind": "treasure_cache",
                     "description": "An oilcloth bundle sits on the shelf, tied with wire that runs back into a crack in the stone.",
+                    "referee_notes": "A small crossbow is fixed behind the bundle and aimed outward. Opening the bundle fires it.",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [
@@ -1732,7 +1736,7 @@
                     "valuables": [
                       {
                         "kind": "gem",
-                        "name": "Amber",
+                        "name": "Piece of amber",
                         "value_gp": 100,
                         "weight_coins": 0
                       }
@@ -1934,6 +1938,7 @@
                     "id": "drowned_pack",
                     "kind": "treasure_cache",
                     "description": "A drowned pedlar's pack, wedged between two rocks.",
+                    "referee_notes": "",
                     "cell": null,
                     "item_ids": [
                       "lantern",

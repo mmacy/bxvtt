@@ -1,0 +1,174 @@
+{
+  "kind": "character",
+  "schema_version": 4,
+  "engine_version": "2.8.0",
+  "payload": {
+    "id": null,
+    "name": "Tam Fletcher",
+    "class_id": "hedge_mage",
+    "custom_class": {
+      "id": "hedge_mage",
+      "name": "Hedge Mage",
+      "race": "human",
+      "requirements": {},
+      "prime_requisites": ["int"],
+      "xp_tiers": [
+        {
+          "modifier_pct": 10,
+          "minimums": {
+            "int": 16
+          }
+        },
+        {
+          "modifier_pct": 5,
+          "minimums": {
+            "int": 13
+          }
+        },
+        {
+          "modifier_pct": 0,
+          "minimums": {
+            "int": 9
+          }
+        },
+        {
+          "modifier_pct": -10,
+          "minimums": {
+            "int": 6
+          }
+        },
+        {
+          "modifier_pct": -20,
+          "minimums": {
+            "int": 3
+          }
+        }
+      ],
+      "hit_die": 4,
+      "max_level": 3,
+      "armour": {
+        "kind": "none",
+        "shields_allowed": false
+      },
+      "weapons": {
+        "kind": "allowed",
+        "weapon_ids": ["dagger"],
+        "manual_notes": []
+      },
+      "languages": ["common"],
+      "may_not_lower": [],
+      "abilities": [
+        {
+          "tag": "arcane_magic",
+          "name": "Arcane Magic",
+          "prose": "See Spells for full details on arcane magic.\nMagical research: A magic-user of any level may spend time and money on magical research. This allows them to add new spells to their spell book and to research other magical effects. When a magic-user reaches 9th level, they are also able to create magic items.\nSpell casting: Magic-users own spell books containing the formulae for arcane spells. The level progression table (below) shows both the number of spells in the magic-user’s spell book and the number they may memorize, determined by the character’s experience level. Thus, a 1st level magic-user has one spell in their spell book, selected by the referee (who may allow the player to choose). The list of spells available to magic-users is found in Magic-User Spells.\nUsing magic items: As spell casters, magic-users are able to use magic scrolls of spells on their spell list. They can also use items that may only be used by arcane spell casters (e.g. magic wands).",
+          "manual": false,
+          "params": {
+            "spell_list": "magic_user"
+          }
+        }
+      ],
+      "thief_skills": [],
+      "level_titles": ["Dabbler", "Charmer", "Hedge mage"],
+      "progression": [
+        {
+          "level": 1,
+          "xp": 0,
+          "hit_dice": {
+            "count": 1,
+            "die": 4,
+            "bonus": 0,
+            "con_applies": true
+          },
+          "thac0": 19,
+          "attack_bonus": 0,
+          "saves": {
+            "death": 13,
+            "wands": 14,
+            "paralysis": 13,
+            "breath": 16,
+            "spells": 15
+          },
+          "spell_slots": [1, 0, 0, 0, 0, 0]
+        },
+        {
+          "level": 2,
+          "xp": 2500,
+          "hit_dice": {
+            "count": 2,
+            "die": 4,
+            "bonus": 0,
+            "con_applies": true
+          },
+          "thac0": 19,
+          "attack_bonus": 0,
+          "saves": {
+            "death": 13,
+            "wands": 14,
+            "paralysis": 13,
+            "breath": 16,
+            "spells": 15
+          },
+          "spell_slots": [2, 0, 0, 0, 0, 0]
+        },
+        {
+          "level": 3,
+          "xp": 5000,
+          "hit_dice": {
+            "count": 3,
+            "die": 4,
+            "bonus": 0,
+            "con_applies": true
+          },
+          "thac0": 19,
+          "attack_bonus": 0,
+          "saves": {
+            "death": 13,
+            "wands": 14,
+            "paralysis": 13,
+            "breath": 16,
+            "spells": 15
+          },
+          "spell_slots": [2, 1, 0, 0, 0, 0]
+        }
+      ],
+      "overrides_applied": []
+    },
+    "race": "human",
+    "level": 2,
+    "xp": 2500,
+    "scores": {
+      "str": 15,
+      "int": 11,
+      "wis": 13,
+      "dex": 9,
+      "con": 10,
+      "cha": 13
+    },
+    "alignment": "neutral",
+    "extra_languages": [],
+    "max_hp": 6,
+    "current_hp": 6,
+    "nonregen_damage": 0,
+    "inventory": {
+      "items": [],
+      "purse": {
+        "pp": 0,
+        "gp": 120,
+        "ep": 0,
+        "sp": 0,
+        "cp": 0
+      },
+      "valuables": [],
+      "worn_armour": null,
+      "shield": null,
+      "wielded": [],
+      "rings": []
+    },
+    "carrying_treasure": false,
+    "conditions": [],
+    "stat_modifiers": [],
+    "spell_book": ["sleep"],
+    "memorized_spells": []
+  }
+}

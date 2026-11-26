@@ -107,7 +107,7 @@ describe('cursor announcements', () => {
     const scene = new Scene(trapped);
     expect(cellContents(scene, 16, 15)).toBe('Treasure. An iron-bound chest. Trapped.');
     expect(describeCursor(scene, { x: 16, y: 14, side: 'north' }, 'ruler')).toMatch(
-      /, 1 square north of the party\. Emptied\. Press Enter to measure from here\.$/,
+      /, 1 square north of the party\. Treasure\. Emptied\. Press Enter to measure from here\.$/,
     );
     expect(describeCursor(scene, { x: 16, y: 15, side: 'north' }, 'ruler')).toMatch(
       /the party's square\. Treasure\. An iron-bound chest\. Trapped\. Press Enter/,

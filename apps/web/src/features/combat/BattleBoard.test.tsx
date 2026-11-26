@@ -27,6 +27,25 @@ beforeEach(() => {
   resetCombatUi();
 });
 
+/**
+ * The battle fixture with bxapi's hide and back-stab lists set: on the encounter, and on the preview's projection,
+ * or with no projection when `projection` is `null`.
+ */
+function withLists(lists: {
+  role?: 'player' | 'referee';
+  encounter?: { can_hide?: string[]; can_back_stab?: string[] };
+  projection?: { can_hide?: string[]; can_back_stab?: string[] } | null;
+}): Snapshot {
+  const snapshot = fixtureSnapshot('battle', lists.role ?? 'player');
+  const encounter = snapshot.game?.view.encounter;
+  const declarations = snapshot.declarations;
+  if (!encounter || !declarations?.projection) throw new Error('The fixture has no encounter or projection.');
+  Object.assign(encounter, lists.encounter);
+  if (lists.projection === null) declarations.projection = null;
+  else Object.assign(declarations.projection, lists.projection);
+  return snapshot;
+}
+
 /** The battle fixture with every declarer declared, and automatic resolution on or off. */
 function everyoneDeclared(role: 'player' | 'referee', autoResolve: boolean): Snapshot {
   const snapshot = fixtureSnapshot('battle', role);
@@ -353,20 +372,11 @@ describe('BattleBoard', () => {
     expect(api.declare).toHaveBeenCalledWith(store.getState().tableId, 'character-0002', { action: 'hide' });
   });
 
-  it('offers the hide to a thief the view leaves out of can_hide, and shows the refusal on her row', async () => {
+  it("keeps the Hide tab for a member's own saved hide when the lists leave her out, and shows the refusal", async () => {
     const api = createFakeApi();
     stubRules(api);
-    const snapshot = fixtureSnapshot('battle', 'player');
-    const encounter = snapshot.game?.view.encounter;
-    if (encounter) encounter.can_hide = [];
-    const { user, store } = renderWithTable(<BattleBoard />, { snapshot, api });
-    await user.click(within(row('Wren')).getByRole('button', { name: 'Actions' }));
-    const composer = screen.getByRole('region', { name: 'Declare for Wren' });
-    await user.click(within(composer).getByRole('radio', { name: 'Hide' }));
-    await user.click(within(composer).getByRole('button', { name: 'Hide in shadows' }));
-    expect(api.declare).toHaveBeenCalledWith(store.getState().tableId, 'character-0002', { action: 'hide' });
-    // The server's preview refuses it while Wren would stand in the front rank, and the row says why.
-    const declarations = structuredClone(store.getState().declarations) as DeclarationsState;
+    const snapshot = withLists({ encounter: { can_hide: [] }, projection: { can_hide: [] } });
+    const declarations = snapshot.declarations as DeclarationsState;
     declarations.declarations['character-0002'] = { character_id: 'character-0002', action: 'hide' } as never;
     declarations.declared = [...declarations.declared, 'character-0002'];
     declarations.refusals = [
@@ -376,37 +386,119 @@ describe('BattleBoard', () => {
         params: { character: 'character-0002' },
       },
     ];
-    act(() => store.getState().receive({ type: 'declarations', declarations }));
-    // The row names the hide as the button did, not as "An action".
-    await waitFor(() => expect(row('Wren')).toHaveTextContent(/Won't work: Hide in shadows/));
-    await waitFor(() =>
-      expect(
-        within(row('Wren')).getAllByText(/Wren will be in the front rank this round and can't hide there/)
-          .length,
-      ).toBeGreaterThan(0),
-    );
+    const { user, store } = renderWithTable(<BattleBoard />, { snapshot, api });
+    // The row names the hide as the button did, not as "An action", and says why it won't work.
+    expect(row('Wren')).toHaveTextContent(/Won't work: Hide in shadows/);
+    expect(
+      within(row('Wren')).getAllByText(/Wren will be in the front rank this round and can't hide there/)
+        .length,
+    ).toBeGreaterThan(0);
+    await user.click(within(row('Wren')).getByRole('button', { name: 'Change' }));
+    const composer = screen.getByRole('region', { name: 'Declare for Wren' });
+    expect(within(composer).getByRole('radio', { name: 'Hide' })).toBeChecked();
+    await user.click(within(composer).getByRole('button', { name: 'Hide in shadows' }));
+    expect(api.declare).toHaveBeenCalledWith(store.getState().tableId, 'character-0002', { action: 'hide' });
   });
 
-  it('offers no hide to a member without thief skills who is not in can_hide', async () => {
+  it("offers Hide from the encounter's list when there is no preview, and to no one else", async () => {
     const api = createFakeApi();
     stubRules(api);
-    const snapshot = fixtureSnapshot('battle', 'referee');
-    const encounter = snapshot.game?.view.encounter;
-    if (encounter) encounter.can_hide = [];
+    const snapshot = withLists({
+      role: 'referee',
+      encounter: { can_hide: ['character-0002'] },
+      projection: null,
+    });
+    const { user } = renderWithTable(<BattleBoard />, { snapshot, api });
+    await user.click(within(row('Wren')).getByRole('button', { name: /Declare for Wren|Actions/ }));
+    expect(
+      within(screen.getByRole('region', { name: 'Declare for Wren' })).getByRole('radio', { name: 'Hide' }),
+    ).toBeInTheDocument();
+    await user.click(within(row('Tamsin')).getByRole('button', { name: /Declare for Tamsin|Actions/ }));
+    expect(
+      within(screen.getByRole('region', { name: 'Declare for Tamsin' })).queryByRole('radio', {
+        name: 'Hide',
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("reads Hide and Back-stab from the preview's lists over the encounter's", async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = withLists({
+      encounter: { can_hide: ['character-0002'], can_back_stab: [] },
+      projection: { can_hide: [], can_back_stab: ['character-0002'] },
+    });
+    const { user } = renderWithTable(<BattleBoard />, { snapshot, api });
+    await user.click(within(row('Wren')).getByRole('button', { name: 'Actions' }));
+    const composer = screen.getByRole('region', { name: 'Declare for Wren' });
+    expect(within(composer).queryByRole('radio', { name: 'Hide' })).not.toBeInTheDocument();
+    await user.click(within(composer).getByRole('radio', { name: 'Attack' }));
+    expect(within(composer).getByRole('checkbox', { name: 'Back-stab' })).toBeChecked();
+  });
+
+  it("shows no Back-stab to a member the lists leave out, unless it's her own saved choice", async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const empty = withLists({ encounter: { can_back_stab: [] }, projection: { can_back_stab: [] } });
+    const first = renderWithTable(<BattleBoard />, { snapshot: empty, api });
+    await first.user.click(within(row('Wren')).getByRole('button', { name: 'Actions' }));
+    let composer = screen.getByRole('region', { name: 'Declare for Wren' });
+    await first.user.click(within(composer).getByRole('radio', { name: 'Attack' }));
+    expect(within(composer).queryByRole('checkbox', { name: 'Back-stab' })).not.toBeInTheDocument();
+    first.unmount();
+
+    const saved = withLists({ encounter: { can_back_stab: [] }, projection: { can_back_stab: [] } });
+    const declarations = saved.declarations as DeclarationsState;
+    declarations.declarations['character-0002'] = {
+      character_id: 'character-0002',
+      action: 'attack',
+      target_group_id: 'group-0001',
+      move: 'close',
+      back_stab: true,
+    } as never;
+    declarations.declared = [...declarations.declared, 'character-0002'];
+    const second = renderWithTable(<BattleBoard />, { snapshot: saved, api });
+    await second.user.click(within(row('Wren')).getByRole('button', { name: 'Change' }));
+    composer = screen.getByRole('region', { name: 'Declare for Wren' });
+    expect(within(composer).getByRole('checkbox', { name: 'Back-stab' })).toBeChecked();
+  });
+
+  it('keeps the open Hide tab, disabled with a reason, when the member leaves can_hide', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = withLists({ projection: { can_hide: ['character-0002'] } });
+    const { user, store } = renderWithTable(<BattleBoard />, { snapshot, api });
+    await user.click(within(row('Wren')).getByRole('button', { name: 'Actions' }));
+    const composer = screen.getByRole('region', { name: 'Declare for Wren' });
+    await user.click(within(composer).getByRole('radio', { name: 'Hide' }));
+    // Another member's planned move puts Wren in the front rank, so the preview drops her from the list.
+    const declarations = structuredClone(store.getState().declarations) as DeclarationsState;
+    if (declarations.projection) declarations.projection.can_hide = [];
+    act(() => store.getState().receive({ type: 'declarations', declarations }));
+    const hide = within(composer).getByRole('button', { name: 'Hide in shadows' });
+    await waitFor(() => expect(hide).toHaveAttribute('aria-disabled', 'true'));
+    expect(hide).toHaveAccessibleDescription("Wren can't hide this round.");
+    expect(within(composer).getByRole('radio', { name: 'Hide' })).toBeChecked();
+  });
+
+  it('offers no hide to a member who is not in can_hide', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = withLists({
+      role: 'referee',
+      encounter: { can_hide: [] },
+      projection: { can_hide: [] },
+    });
     const { user } = renderWithTable(<BattleBoard />, { snapshot, api });
     await user.click(within(row('Tamsin')).getByRole('button', { name: /Declare for Tamsin|Actions/ }));
     const composer = screen.getByRole('region', { name: 'Declare for Tamsin' });
     expect(within(composer).queryByRole('radio', { name: 'Hide' })).not.toBeInTheDocument();
   });
 
-  it('offers a back-stab to a hiding member, and leaves the judgement to the session', async () => {
+  it("offers a back-stab to a member in the encounter's can_back_stab when there is no preview", async () => {
     const api = createFakeApi();
     stubRules(api);
-    const snapshot = fixtureSnapshot('battle', 'player');
-    const encounter = snapshot.game?.view.encounter;
-    if (!encounter) throw new Error('No encounter in the fixture.');
-    encounter.party_free_round = false;
-    encounter.hiding = ['character-0002'];
+    const snapshot = withLists({ encounter: { can_back_stab: ['character-0002'] }, projection: null });
     const { user } = renderWithTable(<BattleBoard />, { snapshot, api });
     await user.click(within(row('Wren')).getByRole('button', { name: 'Actions' }));
     const composer = screen.getByRole('region', { name: 'Declare for Wren' });
@@ -414,19 +506,10 @@ describe('BattleBoard', () => {
     expect(within(composer).getByRole('checkbox', { name: /Back-stab/ })).toBeInTheDocument();
   });
 
-  it('offers a hiding thief a back-stab as the quick action, and starts the Back-stab box checked', async () => {
+  it('offers a member in can_back_stab a back-stab as the quick action, and starts the Back-stab box checked', async () => {
     const api = createFakeApi();
     stubRules(api);
-    const rules = api.rules.getMockImplementation();
-    api.rules.mockImplementation(async (path: string) =>
-      path === 'classes/thief'
-        ? ({ id: 'thief', abilities: [{ tag: 'back_stab' }] } as never)
-        : (rules?.(path) as never),
-    );
-    const snapshot = fixtureSnapshot('battle', 'player');
-    const encounter = snapshot.game?.view.encounter;
-    if (!encounter) throw new Error('No encounter in the fixture.');
-    encounter.hiding = ['character-0002'];
+    const snapshot = withLists({ projection: { can_back_stab: ['character-0002'] } });
     api.declare.mockResolvedValue(snapshot.declarations as DeclarationsState);
     const { user, store } = renderWithTable(<BattleBoard />, { snapshot, api });
     // The goblins stand 30 feet off, within Wren's move, so she closes in to strike.
@@ -447,18 +530,49 @@ describe('BattleBoard', () => {
     expect(box).toHaveAccessibleDescription("Strike a monster that hasn't noticed Wren.");
   });
 
-  it('offers a thief who is not hiding the usual quick action, not a back-stab', async () => {
+  it('offers a thief outside can_back_stab the usual quick action, not a back-stab', async () => {
     const api = createFakeApi();
     stubRules(api);
-    const rules = api.rules.getMockImplementation();
-    api.rules.mockImplementation(async (path: string) =>
-      path === 'classes/thief'
-        ? ({ id: 'thief', abilities: [{ tag: 'back_stab' }] } as never)
-        : (rules?.(path) as never),
-    );
-    renderWithTable(<BattleBoard />, { snapshot: fixtureSnapshot('battle', 'player'), api });
-    await waitFor(() => expect(api.rules).toHaveBeenCalledWith('classes/thief'));
+    renderWithTable(<BattleBoard />, { snapshot: withLists({ projection: { can_back_stab: [] } }), api });
+    expect(await within(row('Wren')).findByRole('button', { name: /goblins/ })).toBeInTheDocument();
     expect(within(row('Wren')).queryByRole('button', { name: /^Back-stab/ })).not.toBeInTheDocument();
+  });
+
+  it("notes on the Close in tile whether the member is already in melee, from the group's front rank", async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = withLists({ role: 'referee' });
+    const group = snapshot.game?.view.encounter?.groups[0];
+    if (!group) throw new Error('No group in the fixture.');
+    group.front_rank = ['character-0002'];
+    const { user } = renderWithTable(<BattleBoard />, { snapshot, api });
+    await user.click(within(row('Wren')).getByRole('button', { name: /Declare for Wren|Actions/ }));
+    let composer = screen.getByRole('region', { name: 'Declare for Wren' });
+    await user.click(within(composer).getByRole('radio', { name: 'Move' }));
+    expect(within(composer).getByRole('button', { name: /^Close in on/ })).toHaveAccessibleDescription(
+      'Already in melee.',
+    );
+    const retreat = within(composer).getByRole('button', { name: 'Retreat' });
+    // The member's movement rate is in the note, so the tile's number slot holds only distances.
+    expect(retreat).toHaveAccessibleDescription('Turn and run, 30 feet a round.');
+    expect(retreat).toHaveTextContent(/^RetreatTurn and run, 30 feet a round\.$/);
+    // The trade-places choice has a visible label, and its options are the members.
+    const trade = within(composer).getByRole('combobox', { name: 'Trade places with' });
+    expect(within(composer).getByText('Trade places with')).toBeVisible();
+    await user.click(trade);
+    expect((await screen.findAllByRole('option')).map((o) => o.textContent)).toEqual([
+      'No one',
+      'Brenna',
+      'Osric',
+      'Tamsin',
+    ]);
+    await user.keyboard('{Escape}');
+    await user.click(within(row('Tamsin')).getByRole('button', { name: /Declare for Tamsin|Actions/ }));
+    composer = screen.getByRole('region', { name: 'Declare for Tamsin' });
+    await user.click(within(composer).getByRole('radio', { name: 'Move' }));
+    expect(within(composer).getByRole('button', { name: /^Close in on/ })).toHaveAccessibleDescription(
+      'Move toward them without attacking.',
+    );
   });
 
   it('gives the Hide tab one line that sets up the back-stab, without restating who may hide', async () => {
@@ -485,6 +599,8 @@ describe('BattleBoard', () => {
     declarations.projection = {
       advance_feet: { 'character-0001': 35, 'character-0002': 0, 'character-0003': 0, 'character-0004': 0 },
       front_rank: { 'group-0001': ['character-0001'] },
+      can_hide: [],
+      can_back_stab: [],
     };
     renderWithTable(<BattleBoard />, { snapshot, api });
     expect(
@@ -501,6 +617,8 @@ describe('BattleBoard', () => {
     declarations.projection = {
       advance_feet: { 'character-0001': 35, 'character-0002': 20, 'character-0003': 0, 'character-0004': 0 },
       front_rank: { 'group-0001': ['character-0001', 'character-0002'] },
+      can_hide: [],
+      can_back_stab: [],
     };
     const { container } = renderWithTable(<BattleBoard />, { snapshot, api });
     // Every element styled for the plan is a marker, one per mover, so no connector line joins them.
@@ -664,5 +782,116 @@ describe('BattleBoard', () => {
     // Replay hands focus back to the pause button.
     await user.keyboard('{Enter}');
     expect(screen.getByRole('button', { name: 'Pause playback' })).toHaveFocus();
+  });
+});
+
+describe('the composer sends only what it shows', () => {
+  /** The body of the last declaration the API received. */
+  function lastBody(api: FakeApi): Record<string, unknown> {
+    const call = api.declare.mock.calls.at(-1);
+    if (!call) throw new Error('Nothing was declared.');
+    return call[2] as Record<string, unknown>;
+  }
+
+  it('sends no back-stab once the lists drop the member and the Back-stab box goes', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = withLists({
+      encounter: { can_back_stab: [] },
+      projection: { can_back_stab: ['character-0002'] },
+    });
+    api.declare.mockResolvedValue(snapshot.declarations as DeclarationsState);
+    const { user, store } = renderWithTable(<BattleBoard />, { snapshot, api });
+    await user.click(within(row('Wren')).getByRole('button', { name: 'Actions' }));
+    const composer = screen.getByRole('region', { name: 'Declare for Wren' });
+    await user.click(within(composer).getByRole('radio', { name: 'Attack' }));
+    expect(within(composer).getByRole('checkbox', { name: 'Back-stab' })).toBeChecked();
+    const declarations = structuredClone(store.getState().declarations) as DeclarationsState;
+    if (declarations.projection) declarations.projection.can_back_stab = [];
+    act(() => store.getState().receive({ type: 'declarations', declarations }));
+    await waitFor(() =>
+      expect(within(composer).queryByRole('checkbox', { name: 'Back-stab' })).not.toBeInTheDocument(),
+    );
+    await user.click(within(composer).getByRole('button', { name: /the goblins/ }));
+    expect(lastBody(api).back_stab).not.toBe(true);
+  });
+
+  it('sends no back-stab after the player unchecks a saved one the lists no longer offer', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = withLists({ encounter: { can_back_stab: [] }, projection: { can_back_stab: [] } });
+    const declarations = snapshot.declarations as DeclarationsState;
+    declarations.declarations['character-0002'] = {
+      character_id: 'character-0002',
+      action: 'attack',
+      target_group_id: 'group-0001',
+      move: 'close',
+      back_stab: true,
+    } as never;
+    declarations.declared = [...declarations.declared, 'character-0002'];
+    api.declare.mockResolvedValue(declarations);
+    const { user } = renderWithTable(<BattleBoard />, { snapshot, api });
+    await user.click(within(row('Wren')).getByRole('button', { name: 'Change' }));
+    const composer = screen.getByRole('region', { name: 'Declare for Wren' });
+    await user.click(within(composer).getByRole('checkbox', { name: 'Back-stab' }));
+    await user.click(within(composer).getByRole('button', { name: /the goblins/ }));
+    expect(lastBody(api).back_stab).not.toBe(true);
+  });
+
+  it("starts at no guard when a saved mirror guard's member no longer carries a mirror", async () => {
+    const api = createFakeApi();
+    api.rules.mockImplementation(async (path: string) => {
+      if (path === 'monsters') return { items: [{ id: 'goblin' }], total: 1 } as never;
+      if (path === 'monsters/goblin')
+        return { abilities: [{ tag: 'petrification', params: { vector: 'gaze' } }] } as never;
+      if (path.startsWith('classes/')) return { id: path.slice(8), abilities: [] } as never;
+      return { abilities: [] } as never;
+    });
+    const snapshot = fixtureSnapshot('battle', 'player');
+    const declarations = snapshot.declarations as DeclarationsState;
+    declarations.declarations['character-0002'] = {
+      character_id: 'character-0002',
+      action: 'hold',
+      gaze_defense: 'mirror',
+    } as never;
+    declarations.declared = [...declarations.declared, 'character-0002'];
+    api.declare.mockResolvedValue(declarations);
+    const { user } = renderWithTable(<BattleBoard />, { snapshot, api });
+    await user.click(within(row('Wren')).getByRole('button', { name: 'Change' }));
+    const composer = screen.getByRole('region', { name: 'Declare for Wren' });
+    const guard = await within(composer).findByRole('combobox', { name: 'Guard against the gaze' });
+    expect(guard).toHaveTextContent('No guard');
+    await user.click(within(composer).getByRole('button', { name: 'Hold this round' }));
+    expect(lastBody(api)).toEqual({ action: 'hold' });
+  });
+});
+
+describe("the preview's projection after a round resolves", () => {
+  it("falls back to the encounter's lists and plans no places until the new round's declarations arrive", async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = withLists({
+      encounter: { can_back_stab: [] },
+      projection: { can_back_stab: ['character-0002'] },
+    });
+    const declarations = snapshot.declarations as DeclarationsState;
+    if (declarations.projection)
+      declarations.projection.advance_feet = {
+        ...declarations.projection.advance_feet,
+        'character-0001': 35,
+      };
+    const { user, store } = renderWithTable(<BattleBoard />, { snapshot, api });
+    expect(
+      screen.getAllByText(/^Brenna, .*will move to 35 feet past the party line$/).length,
+    ).toBeGreaterThan(0);
+    // The resolved round's game arrives before the declarations frame for the new round.
+    const game = store.getState().game;
+    if (!game) throw new Error('No game.');
+    act(() => store.getState().receive({ type: 'game', game: { ...game, revision: game.revision + 1 } }));
+    await waitFor(() => expect(screen.queryByText(/^Brenna, .*will move to/)).not.toBeInTheDocument());
+    await user.click(within(row('Wren')).getByRole('button', { name: 'Actions' }));
+    const composer = screen.getByRole('region', { name: 'Declare for Wren' });
+    await user.click(within(composer).getByRole('radio', { name: 'Attack' }));
+    expect(within(composer).queryByRole('checkbox', { name: 'Back-stab' })).not.toBeInTheDocument();
   });
 });

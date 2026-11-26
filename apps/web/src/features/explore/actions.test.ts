@@ -2,6 +2,7 @@ import { emptyContext } from '@bxvtt/shared/text';
 import { describe, expect, it, vi } from 'vitest';
 import { canSendCommand, partyHere, type HereFeature, type PermissionContext } from '@/app';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
+import { hereFeature, pileView } from '@/app/testing/views';
 import type { MenuEntry } from '@/ui';
 import {
   cacheEntries,
@@ -36,7 +37,7 @@ function context(role: 'player' | 'referee') {
   const run = vi.fn();
   const ctx: ActionContext = {
     view: game.view,
-    here: partyHere(game.view, game.scene),
+    here: partyHere(game.view),
     can: (type, member) => canSendCommand(permissions, type, member).allowed,
     run,
     text: emptyContext(),
@@ -149,46 +150,36 @@ describe('searchEntries', () => {
 });
 
 describe('cacheEntries', () => {
-  const cache: HereFeature = {
-    id: 'feature:chest',
-    kind: 'treasure_cache',
-    description: 'An iron-bound chest.',
-    cell: null,
-    areaId: 'hall',
-    trapState: null,
-    reachable: true,
-    emptied: false,
-  };
+  const cache = hereFeature({ id: 'feature:chest', description: 'An iron-bound chest.', areaId: 'hall' });
 
-  it('takes a reachable cache, and lets a thief check it for traps', () => {
+  it('takes a cache in reach, and lets a thief check it for traps', () => {
     const { ctx, run } = context('player');
     const entries = cacheEntries(ctx, cache);
-    expect(entries.map(entryLabel)).toEqual([
-      'Take treasure',
-      'Give all to one member',
-      'Check for traps: Wren',
-    ]);
-    select(entries, 'Take treasure');
+    expect(entries.map(entryLabel)).toEqual(['Take', 'Give all to one member', 'Check for traps: Wren']);
+    select(entries, 'Take');
     expect(run).toHaveBeenCalledWith({ command_type: 'take_treasure', feature_id: 'feature:chest' });
   });
 
-  it('offers to disarm a found trap instead of checking again', () => {
+  it('offers to take anyway, or to disarm, a cache whose trap the party found', () => {
     const { ctx } = context('player');
     const trapped: HereFeature = { ...cache, trapState: 'found' };
-    expect(cacheEntries(ctx, trapped).map(entryLabel)).toContain('Disarm trap: Wren');
+    expect(cacheEntries(ctx, trapped).map(entryLabel)).toEqual([
+      'Take anyway',
+      'Give all to one member',
+      'Disarm trap: Wren',
+    ]);
   });
 
-  it('offers nothing to take from a cache out of reach', () => {
+  it('offers nothing for a cache out of reach or emptied, because bxapi accepts none of the commands for it', () => {
     const { ctx } = context('player');
-    expect(cacheEntries(ctx, { ...cache, reachable: false }).map(entryLabel)).toEqual([
-      'Check for traps: Wren',
-    ]);
+    expect(cacheEntries(ctx, { ...cache, inReach: false })).toEqual([]);
+    expect(cacheEntries(ctx, { ...cache, emptied: true })).toEqual([]);
   });
 
   it('keeps taking apart from the other actions, which the scene panel puts under More', () => {
     const { ctx } = context('player');
-    expect(cacheTakeEntry(ctx, cache)).toMatchObject({ label: 'Take treasure' });
-    expect(cacheTakeEntry(ctx, { ...cache, reachable: false })).toBeNull();
+    expect(cacheTakeEntry(ctx, cache)).toMatchObject({ label: 'Take' });
+    expect(cacheTakeEntry(ctx, { ...cache, inReach: false })).toBeNull();
     expect(cacheMoreEntries(ctx, cache).map(entryLabel)).toEqual([
       'Give all to one member',
       'Check for traps: Wren',
@@ -218,21 +209,12 @@ describe('treasureEntries', () => {
     const { ctx } = context('player');
     const here = ctx.here;
     if (!here) throw new Error('The party is in town.');
-    const chest: HereFeature = {
-      id: 'feature:chest',
-      kind: 'treasure_cache',
-      description: '',
-      cell: null,
-      areaId: null,
-      trapState: null,
-      reachable: true,
-      emptied: false,
-    };
+    const chest = hereFeature({ id: 'feature:chest' });
     here.caches = [chest, { ...chest, id: 'feature:emptied', emptied: true }];
-    here.pile = true;
+    here.pile = pileView();
     const labels = treasureEntries(ctx).map(entryLabel);
     expect(labels).toEqual(
-      expect.arrayContaining(['Treasure', 'Take treasure', 'Dropped goods', 'Pick up dropped goods']),
+      expect.arrayContaining(['Treasure', 'Take', 'Dropped goods', 'Pick up dropped goods']),
     );
     // The emptied cache offers nothing, so the one left needs no number.
     expect(labels).not.toContain('Treasure 2');
@@ -246,21 +228,29 @@ describe('treasureEntries', () => {
     const { ctx } = context('player');
     const here = ctx.here;
     if (!here) throw new Error('The party is in town.');
-    const chest: HereFeature = {
-      id: 'feature:chest',
-      kind: 'treasure_cache',
-      description: 'An iron-bound chest.',
-      cell: null,
-      areaId: null,
-      trapState: null,
-      reachable: true,
-      emptied: false,
-    };
+    const chest = hereFeature({ id: 'feature:chest', description: 'An iron-bound chest.' });
     here.caches = [chest, { ...chest, id: 'feature:satchel', description: 'A rotted satchel.' }];
-    here.pile = false;
+    here.pile = null;
     const labels = treasureEntries(ctx).map(entryLabel);
     expect(labels).toEqual(expect.arrayContaining(['An iron-bound chest.', 'A rotted satchel.']));
     expect(labels.filter((label) => label.startsWith('Treasure'))).toEqual([]);
+  });
+
+  it('numbers the rolled treasures, and leaves out the treasures out of reach', () => {
+    const { ctx } = context('player');
+    const here = ctx.here;
+    if (!here) throw new Error('The party is in town.');
+    here.caches = [
+      hereFeature({ id: 'feature:far', inReach: false }),
+      hereFeature({ id: 'feature:hoard' }),
+      hereFeature({ id: 'feature:chest', description: 'An iron-bound chest.' }),
+    ];
+    here.pile = null;
+    const labels = treasureEntries(ctx).map(entryLabel);
+    expect(labels.filter((label) => label.startsWith('Treasure') || label.startsWith('An '))).toEqual([
+      'Treasure 2',
+      'An iron-bound chest.',
+    ]);
   });
 });
 

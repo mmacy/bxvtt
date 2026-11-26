@@ -119,6 +119,8 @@
     {
       "id": "battle_axe",
       "name": "Battle axe",
+      "display_name": "battle axe",
+      "display_name_plural": "battle axes",
       "type": "weapon",
       "lot_size": 1,
       "cost_gp": 7
@@ -126,6 +128,8 @@
     {
       "id": "club",
       "name": "Club",
+      "display_name": "club",
+      "display_name_plural": "clubs",
       "type": "weapon",
       "lot_size": 1,
       "cost_gp": 3
@@ -133,6 +137,8 @@
     {
       "id": "crossbow",
       "name": "Crossbow",
+      "display_name": "crossbow",
+      "display_name_plural": "crossbows",
       "type": "weapon",
       "lot_size": 1,
       "cost_gp": 30
@@ -140,6 +146,8 @@
     {
       "id": "dagger",
       "name": "Dagger",
+      "display_name": "dagger",
+      "display_name_plural": "daggers",
       "type": "weapon",
       "lot_size": 1,
       "cost_gp": 3
@@ -147,6 +155,8 @@
     {
       "id": "hand_axe",
       "name": "Hand axe",
+      "display_name": "hand axe",
+      "display_name_plural": "hand axes",
       "type": "weapon",
       "lot_size": 1,
       "cost_gp": 4
@@ -154,6 +164,8 @@
     {
       "id": "javelin",
       "name": "Javelin",
+      "display_name": "javelin",
+      "display_name_plural": "javelins",
       "type": "weapon",
       "lot_size": 1,
       "cost_gp": 1
@@ -161,6 +173,8 @@
     {
       "id": "lance",
       "name": "Lance",
+      "display_name": "lance",
+      "display_name_plural": "lances",
       "type": "weapon",
       "lot_size": 1,
       "cost_gp": 5
@@ -168,6 +182,8 @@
     {
       "id": "long_bow",
       "name": "Long bow",
+      "display_name": "long bow",
+      "display_name_plural": "long bows",
       "type": "weapon",
       "lot_size": 1,
       "cost_gp": 40
@@ -175,6 +191,8 @@
     {
       "id": "mace",
       "name": "Mace",
+      "display_name": "mace",
+      "display_name_plural": "maces",
       "type": "weapon",
       "lot_size": 1,
       "cost_gp": 5
@@ -182,6 +200,8 @@
     {
       "id": "pole_arm",
       "name": "Pole arm",
+      "display_name": "pole arm",
+      "display_name_plural": "pole arms",
       "type": "weapon",
       "lot_size": 1,
       "cost_gp": 7
@@ -189,6 +209,8 @@
     {
       "id": "short_bow",
       "name": "Short bow",
+      "display_name": "short bow",
+      "display_name_plural": "short bows",
       "type": "weapon",
       "lot_size": 1,
       "cost_gp": 25
@@ -196,6 +218,8 @@
     {
       "id": "short_sword",
       "name": "Short sword",
+      "display_name": "short sword",
+      "display_name_plural": "short swords",
       "type": "weapon",
       "lot_size": 1,
       "cost_gp": 7
@@ -203,6 +227,8 @@
     {
       "id": "silver_dagger",
       "name": "Silver dagger",
+      "display_name": "silver dagger",
+      "display_name_plural": "silver daggers",
       "type": "weapon",
       "lot_size": 1,
       "cost_gp": 30
@@ -210,6 +236,8 @@
     {
       "id": "sling",
       "name": "Sling",
+      "display_name": "sling",
+      "display_name_plural": "slings",
       "type": "weapon",
       "lot_size": 1,
       "cost_gp": 2
@@ -217,6 +245,8 @@
     {
       "id": "spear",
       "name": "Spear",
+      "display_name": "spear",
+      "display_name_plural": "spears",
       "type": "weapon",
       "lot_size": 1,
       "cost_gp": 3
@@ -224,6 +254,8 @@
     {
       "id": "staff",
       "name": "Staff",
+      "display_name": "staff",
+      "display_name_plural": "staves",
       "type": "weapon",
       "lot_size": 1,
       "cost_gp": 2
@@ -231,6 +263,8 @@
     {
       "id": "sword",
       "name": "Sword",
+      "display_name": "sword",
+      "display_name_plural": "swords",
       "type": "weapon",
       "lot_size": 1,
       "cost_gp": 10
@@ -238,6 +272,8 @@
     {
       "id": "two_handed_sword",
       "name": "Two-handed sword",
+      "display_name": "two-handed sword",
+      "display_name_plural": "two-handed swords",
       "type": "weapon",
       "lot_size": 1,
       "cost_gp": 15
@@ -245,6 +281,8 @@
     {
       "id": "war_hammer",
       "name": "War hammer",
+      "display_name": "war hammer",
+      "display_name_plural": "war hammers",
       "type": "weapon",
       "lot_size": 1,
       "cost_gp": 5
@@ -252,6 +290,8 @@
     {
       "id": "chainmail",
       "name": "Chainmail",
+      "display_name": "suit of chainmail",
+      "display_name_plural": "suits of chainmail",
       "type": "armour",
       "lot_size": 1,
       "cost_gp": 40
@@ -259,6 +299,8 @@
     {
       "id": "leather",
       "name": "Leather",
+      "display_name": "suit of leather armour",
+      "display_name_plural": "suits of leather armour",
       "type": "armour",
       "lot_size": 1,
       "cost_gp": 20
@@ -266,6 +308,8 @@
     {
       "id": "plate_mail",
       "name": "Plate mail",
+      "display_name": "suit of plate mail",
+      "display_name_plural": "suits of plate mail",
       "type": "armour",
       "lot_size": 1,
       "cost_gp": 60
@@ -273,6 +317,8 @@
     {
       "id": "shield",
       "name": "Shield",
+      "display_name": "shield",
+      "display_name_plural": "shields",
       "type": "armour",
       "lot_size": 1,
       "cost_gp": 10
@@ -280,6 +326,8 @@
     {
       "id": "backpack",
       "name": "Backpack",
+      "display_name": "backpack",
+      "display_name_plural": "backpacks",
       "type": "gear",
       "lot_size": 1,
       "cost_gp": 5
@@ -287,6 +335,8 @@
     {
       "id": "crowbar",
       "name": "Crowbar",
+      "display_name": "crowbar",
+      "display_name_plural": "crowbars",
       "type": "gear",
       "lot_size": 1,
       "cost_gp": 10
@@ -294,6 +344,8 @@
     {
       "id": "garlic",
       "name": "Garlic",
+      "display_name": "bulb of garlic",
+      "display_name_plural": "bulbs of garlic",
       "type": "gear",
       "lot_size": 1,
       "cost_gp": 5
@@ -301,6 +353,8 @@
     {
       "id": "grappling_hook",
       "name": "Grappling hook",
+      "display_name": "grappling hook",
+      "display_name_plural": "grappling hooks",
       "type": "gear",
       "lot_size": 1,
       "cost_gp": 25
@@ -308,6 +362,8 @@
     {
       "id": "hammer",
       "name": "Hammer (small)",
+      "display_name": "small hammer",
+      "display_name_plural": "small hammers",
       "type": "gear",
       "lot_size": 1,
       "cost_gp": 2
@@ -315,6 +371,8 @@
     {
       "id": "holy_symbol",
       "name": "Holy symbol",
+      "display_name": "holy symbol",
+      "display_name_plural": "holy symbols",
       "type": "gear",
       "lot_size": 1,
       "cost_gp": 25
@@ -322,6 +380,8 @@
     {
       "id": "holy_water",
       "name": "Holy water (vial)",
+      "display_name": "vial of holy water",
+      "display_name_plural": "vials of holy water",
       "type": "gear",
       "lot_size": 1,
       "cost_gp": 25
@@ -329,6 +389,8 @@
     {
       "id": "iron_spikes",
       "name": "Iron spikes (12)",
+      "display_name": "iron spike",
+      "display_name_plural": "iron spikes",
       "type": "gear",
       "lot_size": 12,
       "cost_gp": 1
@@ -336,6 +398,8 @@
     {
       "id": "lantern",
       "name": "Lantern",
+      "display_name": "lantern",
+      "display_name_plural": "lanterns",
       "type": "gear",
       "lot_size": 1,
       "cost_gp": 10
@@ -343,6 +407,8 @@
     {
       "id": "mirror",
       "name": "Mirror (hand-sized, steel)",
+      "display_name": "hand mirror",
+      "display_name_plural": "hand mirrors",
       "type": "gear",
       "lot_size": 1,
       "cost_gp": 5
@@ -350,6 +416,8 @@
     {
       "id": "oil_flask",
       "name": "Oil (1 flask)",
+      "display_name": "flask of oil",
+      "display_name_plural": "flasks of oil",
       "type": "gear",
       "lot_size": 1,
       "cost_gp": 2
@@ -357,6 +425,8 @@
     {
       "id": "pole",
       "name": "Pole (10’ long, wooden)",
+      "display_name": "10’ pole",
+      "display_name_plural": "10’ poles",
       "type": "gear",
       "lot_size": 1,
       "cost_gp": 1
@@ -364,6 +434,8 @@
     {
       "id": "rations_iron",
       "name": "Rations (iron, 7 days)",
+      "display_name": "iron ration",
+      "display_name_plural": "iron rations",
       "type": "gear",
       "lot_size": 7,
       "cost_gp": 15
@@ -371,6 +443,8 @@
     {
       "id": "rations_standard",
       "name": "Rations (standard, 7 days)",
+      "display_name": "standard ration",
+      "display_name_plural": "standard rations",
       "type": "gear",
       "lot_size": 7,
       "cost_gp": 5
@@ -378,6 +452,8 @@
     {
       "id": "rope",
       "name": "Rope (50’)",
+      "display_name": "50’ coil of rope",
+      "display_name_plural": "50’ coils of rope",
       "type": "gear",
       "lot_size": 1,
       "cost_gp": 1
@@ -385,6 +461,8 @@
     {
       "id": "sack_large",
       "name": "Sack (large)",
+      "display_name": "large sack",
+      "display_name_plural": "large sacks",
       "type": "gear",
       "lot_size": 1,
       "cost_gp": 2
@@ -392,6 +470,8 @@
     {
       "id": "sack_small",
       "name": "Sack (small)",
+      "display_name": "small sack",
+      "display_name_plural": "small sacks",
       "type": "gear",
       "lot_size": 1,
       "cost_gp": 1
@@ -399,6 +479,8 @@
     {
       "id": "stakes_and_mallet",
       "name": "Stakes (3) and mallet",
+      "display_name": "set of stakes and mallet",
+      "display_name_plural": "sets of stakes and mallet",
       "type": "gear",
       "lot_size": 1,
       "cost_gp": 3
@@ -406,6 +488,8 @@
     {
       "id": "thieves_tools",
       "name": "Thieves’ tools",
+      "display_name": "set of thieves’ tools",
+      "display_name_plural": "sets of thieves’ tools",
       "type": "gear",
       "lot_size": 1,
       "cost_gp": 25
@@ -413,6 +497,8 @@
     {
       "id": "tinder_box",
       "name": "Tinder box (flint & steel)",
+      "display_name": "tinder box",
+      "display_name_plural": "tinder boxes",
       "type": "gear",
       "lot_size": 1,
       "cost_gp": 3
@@ -420,6 +506,8 @@
     {
       "id": "torch",
       "name": "Torches (6)",
+      "display_name": "torch",
+      "display_name_plural": "torches",
       "type": "gear",
       "lot_size": 6,
       "cost_gp": 1
@@ -427,6 +515,8 @@
     {
       "id": "waterskin",
       "name": "Waterskin",
+      "display_name": "waterskin",
+      "display_name_plural": "waterskins",
       "type": "gear",
       "lot_size": 1,
       "cost_gp": 1
@@ -434,6 +524,8 @@
     {
       "id": "wine",
       "name": "Wine (2 pints)",
+      "display_name": "pint of wine",
+      "display_name_plural": "pints of wine",
       "type": "gear",
       "lot_size": 2,
       "cost_gp": 1
@@ -441,6 +533,8 @@
     {
       "id": "wolfsbane",
       "name": "Wolfsbane (1 bunch)",
+      "display_name": "bunch of wolfsbane",
+      "display_name_plural": "bunches of wolfsbane",
       "type": "gear",
       "lot_size": 1,
       "cost_gp": 10
@@ -448,6 +542,8 @@
     {
       "id": "arrows",
       "name": "Arrows (quiver of 20)",
+      "display_name": "arrow",
+      "display_name_plural": "arrows",
       "type": "ammunition",
       "lot_size": 20,
       "cost_gp": 5
@@ -455,6 +551,8 @@
     {
       "id": "crossbow_bolts",
       "name": "Crossbow bolts (case of 30)",
+      "display_name": "crossbow bolt",
+      "display_name_plural": "crossbow bolts",
       "type": "ammunition",
       "lot_size": 30,
       "cost_gp": 10
@@ -462,6 +560,8 @@
     {
       "id": "silver_tipped_arrow",
       "name": "Silver tipped arrow (1)",
+      "display_name": "silver tipped arrow",
+      "display_name_plural": "silver tipped arrows",
       "type": "ammunition",
       "lot_size": 1,
       "cost_gp": 5
@@ -469,6 +569,8 @@
     {
       "id": "sling_stones",
       "name": "Sling stones",
+      "display_name": "sling stone",
+      "display_name_plural": "sling stones",
       "type": "ammunition",
       "lot_size": 1,
       "cost_gp": 0
@@ -478,821 +580,1149 @@
     {
       "id": "amulet_of_protection_against_scrying",
       "name": "Amulet of Protection Against Scrying",
+      "display_name": "amulet of protection against scrying",
+      "display_name_plural": "amulets of protection against scrying",
       "category": "misc"
     },
     {
       "id": "armour_plus_1",
       "name": "Armour +1",
+      "display_name": "suit of armour +1",
+      "display_name_plural": "suits of armour +1",
       "category": "armour"
     },
     {
       "id": "armour_plus_2",
       "name": "Armour +2",
+      "display_name": "suit of armour +2",
+      "display_name_plural": "suits of armour +2",
       "category": "armour"
     },
     {
       "id": "armour_plus_3",
       "name": "Armour +3",
+      "display_name": "suit of armour +3",
+      "display_name_plural": "suits of armour +3",
       "category": "armour"
     },
     {
       "id": "arrows_plus_1",
       "name": "Arrows +1 (3d10 arrows)",
+      "display_name": "arrow +1",
+      "display_name_plural": "arrows +1",
       "category": "weapon"
     },
     {
       "id": "arrows_plus_2",
       "name": "Arrows +2 (1d6 arrows)",
+      "display_name": "arrow +2",
+      "display_name_plural": "arrows +2",
       "category": "weapon"
     },
     {
       "id": "axe_plus_1",
       "name": "Axe +1",
+      "display_name": "axe +1",
+      "display_name_plural": "axes +1",
       "category": "weapon"
     },
     {
       "id": "axe_plus_2",
       "name": "Axe +2",
+      "display_name": "axe +2",
+      "display_name_plural": "axes +2",
       "category": "weapon"
     },
     {
       "id": "bag_of_devouring",
       "name": "Bag of Devouring",
+      "display_name": "bag of devouring",
+      "display_name_plural": "bags of devouring",
       "category": "misc"
     },
     {
       "id": "bag_of_holding",
       "name": "Bag of Holding",
+      "display_name": "bag of holding",
+      "display_name_plural": "bags of holding",
       "category": "misc"
     },
     {
       "id": "boots_of_levitation",
       "name": "Boots of Levitation",
+      "display_name": "pair of boots of levitation",
+      "display_name_plural": "pairs of boots of levitation",
       "category": "misc"
     },
     {
       "id": "boots_of_speed",
       "name": "Boots of Speed",
+      "display_name": "pair of boots of speed",
+      "display_name_plural": "pairs of boots of speed",
       "category": "misc"
     },
     {
       "id": "boots_of_travelling_and_leaping",
       "name": "Boots of Travelling and Leaping",
+      "display_name": "pair of boots of travelling and leaping",
+      "display_name_plural": "pairs of boots of travelling and leaping",
       "category": "misc"
     },
     {
       "id": "bow_plus_1",
       "name": "Bow +1",
+      "display_name": "bow +1",
+      "display_name_plural": "bows +1",
       "category": "weapon"
     },
     {
       "id": "broom_of_flying",
       "name": "Broom of Flying",
+      "display_name": "broom of flying",
+      "display_name_plural": "brooms of flying",
       "category": "misc"
     },
     {
       "id": "crossbow_bolts_plus_1",
       "name": "Crossbow Bolts +1 (2d6 bolts)",
+      "display_name": "crossbow bolt +1",
+      "display_name_plural": "crossbow bolts +1",
       "category": "weapon"
     },
     {
       "id": "crossbow_bolts_plus_2",
       "name": "Crossbow Bolts +2 (1d6 bolts)",
+      "display_name": "crossbow bolt +2",
+      "display_name_plural": "crossbow bolts +2",
       "category": "weapon"
     },
     {
       "id": "crystal_ball",
       "name": "Crystal Ball",
+      "display_name": "crystal ball",
+      "display_name_plural": "crystal balls",
       "category": "misc"
     },
     {
       "id": "crystal_ball_with_clairaudience",
       "name": "Crystal Ball with Clairaudience",
+      "display_name": "crystal ball with clairaudience",
+      "display_name_plural": "crystal balls with clairaudience",
       "category": "misc"
     },
     {
       "id": "crystal_ball_with_esp",
       "name": "Crystal Ball with ESP",
+      "display_name": "crystal ball with ESP",
+      "display_name_plural": "crystal balls with ESP",
       "category": "misc"
     },
     {
       "id": "cursed_armour_ac_9",
       "name": "Cursed Armour, AC 9 [10]",
+      "display_name": "suit of cursed armour, AC 9 [10]",
+      "display_name_plural": "suits of cursed armour, AC 9 [10]",
       "category": "armour"
     },
     {
       "id": "cursed_armour_minus_1",
       "name": "Cursed Armour -1",
+      "display_name": "suit of cursed armour -1",
+      "display_name_plural": "suits of cursed armour -1",
       "category": "armour"
     },
     {
       "id": "cursed_armour_minus_2",
       "name": "Cursed Armour -2",
+      "display_name": "suit of cursed armour -2",
+      "display_name_plural": "suits of cursed armour -2",
       "category": "armour"
     },
     {
       "id": "cursed_scroll",
       "name": "Cursed Scroll",
+      "display_name": "cursed scroll",
+      "display_name_plural": "cursed scrolls",
       "category": "scroll"
     },
     {
       "id": "cursed_shield_ac_9",
       "name": "Cursed Shield, AC 9 [10]",
+      "display_name": "cursed shield, AC 9 [10]",
+      "display_name_plural": "cursed shields, AC 9 [10]",
       "category": "armour"
     },
     {
       "id": "cursed_shield_minus_2",
       "name": "Cursed Shield -2",
+      "display_name": "cursed shield -2",
+      "display_name_plural": "cursed shields -2",
       "category": "armour"
     },
     {
       "id": "dagger_plus_1",
       "name": "Dagger +1",
+      "display_name": "dagger +1",
+      "display_name_plural": "daggers +1",
       "category": "weapon"
     },
     {
       "id": "dagger_plus_2_plus_3_vs_orcs_goblins_and_kobolds",
       "name": "Dagger +2, +3 vs orcs, goblins, and kobolds",
+      "display_name": "dagger +2, +3 vs orcs, goblins, and kobolds",
+      "display_name_plural": "daggers +2, +3 vs orcs, goblins, and kobolds",
       "category": "weapon"
     },
     {
       "id": "displacer_cloak",
       "name": "Displacer Cloak",
+      "display_name": "displacer cloak",
+      "display_name_plural": "displacer cloaks",
       "category": "misc"
     },
     {
       "id": "drums_of_panic",
       "name": "Drums of Panic",
+      "display_name": "set of drums of panic",
+      "display_name_plural": "sets of drums of panic",
       "category": "misc"
     },
     {
       "id": "efreeti_bottle",
       "name": "Efreeti Bottle",
+      "display_name": "efreeti bottle",
+      "display_name_plural": "efreeti bottles",
       "category": "misc"
     },
     {
       "id": "elemental_summoning_device_air",
       "name": "Elemental Summoning Device: Air",
+      "display_name": "air elemental summoning device",
+      "display_name_plural": "air elemental summoning devices",
       "category": "misc"
     },
     {
       "id": "elemental_summoning_device_earth",
       "name": "Elemental Summoning Device: Earth",
+      "display_name": "earth elemental summoning device",
+      "display_name_plural": "earth elemental summoning devices",
       "category": "misc"
     },
     {
       "id": "elemental_summoning_device_fire",
       "name": "Elemental Summoning Device: Fire",
+      "display_name": "fire elemental summoning device",
+      "display_name_plural": "fire elemental summoning devices",
       "category": "misc"
     },
     {
       "id": "elemental_summoning_device_water",
       "name": "Elemental Summoning Device: Water",
+      "display_name": "water elemental summoning device",
+      "display_name_plural": "water elemental summoning devices",
       "category": "misc"
     },
     {
       "id": "elven_cloak_and_boots",
       "name": "Elven Cloak and Boots",
+      "display_name": "set of elven cloak and boots",
+      "display_name_plural": "sets of elven cloak and boots",
       "category": "misc"
     },
     {
       "id": "flying_carpet",
       "name": "Flying Carpet",
+      "display_name": "flying carpet",
+      "display_name_plural": "flying carpets",
       "category": "misc"
     },
     {
       "id": "gauntlets_of_ogre_power",
       "name": "Gauntlets of Ogre Power",
+      "display_name": "pair of gauntlets of ogre power",
+      "display_name_plural": "pairs of gauntlets of ogre power",
       "category": "misc"
     },
     {
       "id": "girdle_of_giant_strength",
       "name": "Girdle of Giant Strength",
+      "display_name": "girdle of giant strength",
+      "display_name_plural": "girdles of giant strength",
       "category": "misc"
     },
     {
       "id": "helm_of_alignment_changing",
       "name": "Helm of Alignment Changing",
+      "display_name": "helm of alignment changing",
+      "display_name_plural": "helms of alignment changing",
       "category": "misc"
     },
     {
       "id": "helm_of_reading_languages_and_magic",
       "name": "Helm of Reading Languages and Magic",
+      "display_name": "helm of reading languages and magic",
+      "display_name_plural": "helms of reading languages and magic",
       "category": "misc"
     },
     {
       "id": "helm_of_telepathy",
       "name": "Helm of Telepathy",
+      "display_name": "helm of telepathy",
+      "display_name_plural": "helms of telepathy",
       "category": "misc"
     },
     {
       "id": "helm_of_teleportation",
       "name": "Helm of Teleportation",
+      "display_name": "helm of teleportation",
+      "display_name_plural": "helms of teleportation",
       "category": "misc"
     },
     {
       "id": "horn_of_blasting",
       "name": "Horn of Blasting",
+      "display_name": "horn of blasting",
+      "display_name_plural": "horns of blasting",
       "category": "misc"
     },
     {
       "id": "mace_plus_1",
       "name": "Mace +1",
+      "display_name": "mace +1",
+      "display_name_plural": "maces +1",
       "category": "weapon"
     },
     {
       "id": "mace_plus_2",
       "name": "Mace +2",
+      "display_name": "mace +2",
+      "display_name_plural": "maces +2",
       "category": "weapon"
     },
     {
       "id": "mace_plus_3",
       "name": "Mace +3",
+      "display_name": "mace +3",
+      "display_name_plural": "maces +3",
       "category": "weapon"
     },
     {
       "id": "medallion_of_esp_30",
       "name": "Medallion of ESP 30’",
+      "display_name": "medallion of ESP 30’",
+      "display_name_plural": "medallions of ESP 30’",
       "category": "misc"
     },
     {
       "id": "medallion_of_esp_90",
       "name": "Medallion of ESP 90’",
+      "display_name": "medallion of ESP 90’",
+      "display_name_plural": "medallions of ESP 90’",
       "category": "misc"
     },
     {
       "id": "mirror_of_life_trapping",
       "name": "Mirror of Life Trapping",
+      "display_name": "mirror of life trapping",
+      "display_name_plural": "mirrors of life trapping",
       "category": "misc"
     },
     {
       "id": "potion_of_clairaudience",
       "name": "Potion of Clairaudience",
+      "display_name": "potion of clairaudience",
+      "display_name_plural": "potions of clairaudience",
       "category": "potion"
     },
     {
       "id": "potion_of_clairvoyance",
       "name": "Potion of Clairvoyance",
+      "display_name": "potion of clairvoyance",
+      "display_name_plural": "potions of clairvoyance",
       "category": "potion"
     },
     {
       "id": "potion_of_control_animal",
       "name": "Potion of Control Animal",
+      "display_name": "potion of control animal",
+      "display_name_plural": "potions of control animal",
       "category": "potion"
     },
     {
       "id": "potion_of_control_dragon",
       "name": "Potion of Control Dragon",
+      "display_name": "potion of control dragon",
+      "display_name_plural": "potions of control dragon",
       "category": "potion"
     },
     {
       "id": "potion_of_control_giant",
       "name": "Potion of Control Giant",
+      "display_name": "potion of control giant",
+      "display_name_plural": "potions of control giant",
       "category": "potion"
     },
     {
       "id": "potion_of_control_human",
       "name": "Potion of Control Human",
+      "display_name": "potion of control human",
+      "display_name_plural": "potions of control human",
       "category": "potion"
     },
     {
       "id": "potion_of_control_plant",
       "name": "Potion of Control Plant",
+      "display_name": "potion of control plant",
+      "display_name_plural": "potions of control plant",
       "category": "potion"
     },
     {
       "id": "potion_of_control_undead",
       "name": "Potion of Control Undead",
+      "display_name": "potion of control undead",
+      "display_name_plural": "potions of control undead",
       "category": "potion"
     },
     {
       "id": "potion_of_delusion",
       "name": "Potion of Delusion",
+      "display_name": "potion of delusion",
+      "display_name_plural": "potions of delusion",
       "category": "potion"
     },
     {
       "id": "potion_of_diminution",
       "name": "Potion of Diminution",
+      "display_name": "potion of diminution",
+      "display_name_plural": "potions of diminution",
       "category": "potion"
     },
     {
       "id": "potion_of_esp",
       "name": "Potion of ESP",
+      "display_name": "potion of ESP",
+      "display_name_plural": "potions of ESP",
       "category": "potion"
     },
     {
       "id": "potion_of_fire_resistance",
       "name": "Potion of Fire Resistance",
+      "display_name": "potion of fire resistance",
+      "display_name_plural": "potions of fire resistance",
       "category": "potion"
     },
     {
       "id": "potion_of_flying",
       "name": "Potion of Flying",
+      "display_name": "potion of flying",
+      "display_name_plural": "potions of flying",
       "category": "potion"
     },
     {
       "id": "potion_of_gaseous_form",
       "name": "Potion of Gaseous Form",
+      "display_name": "potion of gaseous form",
+      "display_name_plural": "potions of gaseous form",
       "category": "potion"
     },
     {
       "id": "potion_of_giant_strength",
       "name": "Potion of Giant Strength",
+      "display_name": "potion of giant strength",
+      "display_name_plural": "potions of giant strength",
       "category": "potion"
     },
     {
       "id": "potion_of_growth",
       "name": "Potion of Growth",
+      "display_name": "potion of growth",
+      "display_name_plural": "potions of growth",
       "category": "potion"
     },
     {
       "id": "potion_of_healing",
       "name": "Potion of Healing",
+      "display_name": "potion of healing",
+      "display_name_plural": "potions of healing",
       "category": "potion"
     },
     {
       "id": "potion_of_heroism",
       "name": "Potion of Heroism",
+      "display_name": "potion of heroism",
+      "display_name_plural": "potions of heroism",
       "category": "potion"
     },
     {
       "id": "potion_of_invisibility",
       "name": "Potion of Invisibility",
+      "display_name": "potion of invisibility",
+      "display_name_plural": "potions of invisibility",
       "category": "potion"
     },
     {
       "id": "potion_of_invulnerability",
       "name": "Potion of Invulnerability",
+      "display_name": "potion of invulnerability",
+      "display_name_plural": "potions of invulnerability",
       "category": "potion"
     },
     {
       "id": "potion_of_levitation",
       "name": "Potion of Levitation",
+      "display_name": "potion of levitation",
+      "display_name_plural": "potions of levitation",
       "category": "potion"
     },
     {
       "id": "potion_of_longevity",
       "name": "Potion of Longevity",
+      "display_name": "potion of longevity",
+      "display_name_plural": "potions of longevity",
       "category": "potion"
     },
     {
       "id": "potion_of_poison",
       "name": "Potion of Poison",
+      "display_name": "potion of poison",
+      "display_name_plural": "potions of poison",
       "category": "potion"
     },
     {
       "id": "potion_of_polymorph_self",
       "name": "Potion of Polymorph Self",
+      "display_name": "potion of polymorph self",
+      "display_name_plural": "potions of polymorph self",
       "category": "potion"
     },
     {
       "id": "potion_of_speed",
       "name": "Potion of Speed",
+      "display_name": "potion of speed",
+      "display_name_plural": "potions of speed",
       "category": "potion"
     },
     {
       "id": "potion_of_treasure_finding",
       "name": "Potion of Treasure Finding",
+      "display_name": "potion of treasure finding",
+      "display_name_plural": "potions of treasure finding",
       "category": "potion"
     },
     {
       "id": "ring_of_controlling_animals",
       "name": "Ring of Controlling Animals",
+      "display_name": "ring of controlling animals",
+      "display_name_plural": "rings of controlling animals",
       "category": "ring"
     },
     {
       "id": "ring_of_controlling_humans",
       "name": "Ring of Controlling Humans",
+      "display_name": "ring of controlling humans",
+      "display_name_plural": "rings of controlling humans",
       "category": "ring"
     },
     {
       "id": "ring_of_controlling_plants",
       "name": "Ring of Controlling Plants",
+      "display_name": "ring of controlling plants",
+      "display_name_plural": "rings of controlling plants",
       "category": "ring"
     },
     {
       "id": "ring_of_delusion",
       "name": "Ring of Delusion",
+      "display_name": "ring of delusion",
+      "display_name_plural": "rings of delusion",
       "category": "ring"
     },
     {
       "id": "ring_of_djinni_summoning",
       "name": "Ring of Djinni Summoning",
+      "display_name": "ring of djinni summoning",
+      "display_name_plural": "rings of djinni summoning",
       "category": "ring"
     },
     {
       "id": "ring_of_fire_resistance",
       "name": "Ring of Fire Resistance",
+      "display_name": "ring of fire resistance",
+      "display_name_plural": "rings of fire resistance",
       "category": "ring"
     },
     {
       "id": "ring_of_invisibility",
       "name": "Ring of Invisibility",
+      "display_name": "ring of invisibility",
+      "display_name_plural": "rings of invisibility",
       "category": "ring"
     },
     {
       "id": "ring_of_protection",
       "name": "Ring of Protection",
+      "display_name": "ring of protection",
+      "display_name_plural": "rings of protection",
       "category": "ring"
     },
     {
       "id": "ring_of_protection_5_radius",
       "name": "Ring of Protection, 5’ Radius",
+      "display_name": "ring of protection, 5’ radius",
+      "display_name_plural": "rings of protection, 5’ radius",
       "category": "ring"
     },
     {
       "id": "ring_of_regeneration",
       "name": "Ring of Regeneration",
+      "display_name": "ring of regeneration",
+      "display_name_plural": "rings of regeneration",
       "category": "ring"
     },
     {
       "id": "ring_of_spell_storing",
       "name": "Ring of Spell Storing",
+      "display_name": "ring of spell storing",
+      "display_name_plural": "rings of spell storing",
       "category": "ring"
     },
     {
       "id": "ring_of_spell_turning",
       "name": "Ring of Spell Turning",
+      "display_name": "ring of spell turning",
+      "display_name_plural": "rings of spell turning",
       "category": "ring"
     },
     {
       "id": "ring_of_telekinesis",
       "name": "Ring of Telekinesis",
+      "display_name": "ring of telekinesis",
+      "display_name_plural": "rings of telekinesis",
       "category": "ring"
     },
     {
       "id": "ring_of_water_walking",
       "name": "Ring of Water Walking",
+      "display_name": "ring of water walking",
+      "display_name_plural": "rings of water walking",
       "category": "ring"
     },
     {
       "id": "ring_of_weakness",
       "name": "Ring of Weakness",
+      "display_name": "ring of weakness",
+      "display_name_plural": "rings of weakness",
       "category": "ring"
     },
     {
       "id": "ring_of_wishes",
       "name": "Ring of Wishes",
+      "display_name": "ring of wishes",
+      "display_name_plural": "rings of wishes",
       "category": "ring"
     },
     {
       "id": "ring_of_x_ray_vision",
       "name": "Ring of X-Ray Vision",
+      "display_name": "ring of x-ray vision",
+      "display_name_plural": "rings of x-ray vision",
       "category": "ring"
     },
     {
       "id": "rod_of_cancellation",
       "name": "Rod of Cancellation",
+      "display_name": "rod of cancellation",
+      "display_name_plural": "rods of cancellation",
       "category": "rod"
     },
     {
       "id": "rope_of_climbing",
       "name": "Rope of Climbing",
+      "display_name": "rope of climbing",
+      "display_name_plural": "ropes of climbing",
       "category": "misc"
     },
     {
       "id": "scarab_of_protection",
       "name": "Scarab of Protection",
+      "display_name": "scarab of protection",
+      "display_name_plural": "scarabs of protection",
       "category": "misc"
     },
     {
       "id": "scroll_of_protection_from_elementals",
       "name": "Scroll of Protection from Elementals",
+      "display_name": "scroll of protection from elementals",
+      "display_name_plural": "scrolls of protection from elementals",
       "category": "scroll"
     },
     {
       "id": "scroll_of_protection_from_lycanthropes",
       "name": "Scroll of Protection from Lycanthropes",
+      "display_name": "scroll of protection from lycanthropes",
+      "display_name_plural": "scrolls of protection from lycanthropes",
       "category": "scroll"
     },
     {
       "id": "scroll_of_protection_from_magic",
       "name": "Scroll of Protection from Magic",
+      "display_name": "scroll of protection from magic",
+      "display_name_plural": "scrolls of protection from magic",
       "category": "scroll"
     },
     {
       "id": "scroll_of_protection_from_undead",
       "name": "Scroll of Protection from Undead",
+      "display_name": "scroll of protection from undead",
+      "display_name_plural": "scrolls of protection from undead",
       "category": "scroll"
     },
     {
       "id": "shield_plus_1",
       "name": "Shield +1",
+      "display_name": "shield +1",
+      "display_name_plural": "shields +1",
       "category": "armour"
     },
     {
       "id": "shield_plus_2",
       "name": "Shield +2",
+      "display_name": "shield +2",
+      "display_name_plural": "shields +2",
       "category": "armour"
     },
     {
       "id": "shield_plus_3",
       "name": "Shield +3",
+      "display_name": "shield +3",
+      "display_name_plural": "shields +3",
       "category": "armour"
     },
     {
       "id": "sling_plus_1",
       "name": "Sling +1",
+      "display_name": "sling +1",
+      "display_name_plural": "slings +1",
       "category": "weapon"
     },
     {
       "id": "spear_plus_1",
       "name": "Spear +1",
+      "display_name": "spear +1",
+      "display_name_plural": "spears +1",
       "category": "weapon"
     },
     {
       "id": "spear_plus_2",
       "name": "Spear +2",
+      "display_name": "spear +2",
+      "display_name_plural": "spears +2",
       "category": "weapon"
     },
     {
       "id": "spear_plus_3",
       "name": "Spear +3",
+      "display_name": "spear +3",
+      "display_name_plural": "spears +3",
       "category": "weapon"
     },
     {
       "id": "spell_scroll_1",
       "name": "Spell Scroll (1 spell)",
+      "display_name": "spell scroll with 1 spell",
+      "display_name_plural": "spell scrolls with 1 spell",
       "category": "scroll"
     },
     {
       "id": "spell_scroll_2",
       "name": "Spell Scroll (2 spells)",
+      "display_name": "spell scroll with 2 spells",
+      "display_name_plural": "spell scrolls with 2 spells",
       "category": "scroll"
     },
     {
       "id": "spell_scroll_3",
       "name": "Spell Scroll (3 spells)",
+      "display_name": "spell scroll with 3 spells",
+      "display_name_plural": "spell scrolls with 3 spells",
       "category": "scroll"
     },
     {
       "id": "spell_scroll_5",
       "name": "Spell Scroll (5 spells)",
+      "display_name": "spell scroll with 5 spells",
+      "display_name_plural": "spell scrolls with 5 spells",
       "category": "scroll"
     },
     {
       "id": "spell_scroll_7",
       "name": "Spell Scroll (7 spells)",
+      "display_name": "spell scroll with 7 spells",
+      "display_name_plural": "spell scrolls with 7 spells",
       "category": "scroll"
     },
     {
       "id": "staff_of_commanding",
       "name": "Staff of Commanding",
+      "display_name": "staff of commanding",
+      "display_name_plural": "staves of commanding",
       "category": "staff"
     },
     {
       "id": "staff_of_healing",
       "name": "Staff of Healing",
+      "display_name": "staff of healing",
+      "display_name_plural": "staves of healing",
       "category": "staff"
     },
     {
       "id": "staff_of_power",
       "name": "Staff of Power",
+      "display_name": "staff of power",
+      "display_name_plural": "staves of power",
       "category": "staff"
     },
     {
       "id": "staff_of_snakes",
       "name": "Staff of Snakes",
+      "display_name": "staff of snakes",
+      "display_name_plural": "staves of snakes",
       "category": "staff"
     },
     {
       "id": "staff_of_striking",
       "name": "Staff of Striking",
+      "display_name": "staff of striking",
+      "display_name_plural": "staves of striking",
       "category": "staff"
     },
     {
       "id": "staff_of_withering",
       "name": "Staff of Withering",
+      "display_name": "staff of withering",
+      "display_name_plural": "staves of withering",
       "category": "staff"
     },
     {
       "id": "staff_of_wizardry",
       "name": "Staff of Wizardry",
+      "display_name": "staff of wizardry",
+      "display_name_plural": "staves of wizardry",
       "category": "staff"
     },
     {
       "id": "sword_minus_1_cursed",
       "name": "Sword -1, Cursed",
+      "display_name": "sword -1, cursed",
+      "display_name_plural": "swords -1, cursed",
       "category": "sword"
     },
     {
       "id": "sword_minus_2_cursed",
       "name": "Sword -2, Cursed",
+      "display_name": "sword -2, cursed",
+      "display_name_plural": "swords -2, cursed",
       "category": "sword"
     },
     {
       "id": "sword_plus_1",
       "name": "Sword +1",
+      "display_name": "sword +1",
+      "display_name_plural": "swords +1",
       "category": "sword"
     },
     {
       "id": "sword_plus_1_energy_drain",
       "name": "Sword +1, Energy Drain",
+      "display_name": "sword +1, energy drain",
+      "display_name_plural": "swords +1, energy drain",
       "category": "sword"
     },
     {
       "id": "sword_plus_1_flaming",
       "name": "Sword +1, Flaming",
+      "display_name": "sword +1, flaming",
+      "display_name_plural": "swords +1, flaming",
       "category": "sword"
     },
     {
       "id": "sword_plus_1_light",
       "name": "Sword +1, Light",
+      "display_name": "sword +1, light",
+      "display_name_plural": "swords +1, light",
       "category": "sword"
     },
     {
       "id": "sword_plus_1_locate_objects",
       "name": "Sword +1, Locate Objects",
+      "display_name": "sword +1, locate objects",
+      "display_name_plural": "swords +1, locate objects",
       "category": "sword"
     },
     {
       "id": "sword_plus_1_plus_2_vs_lycanthropes",
       "name": "Sword +1, +2 vs Lycanthropes",
+      "display_name": "sword +1, +2 vs lycanthropes",
+      "display_name_plural": "swords +1, +2 vs lycanthropes",
       "category": "sword"
     },
     {
       "id": "sword_plus_1_plus_2_vs_spell_users",
       "name": "Sword +1, +2 vs Spell Users",
+      "display_name": "sword +1, +2 vs spell users",
+      "display_name_plural": "swords +1, +2 vs spell users",
       "category": "sword"
     },
     {
       "id": "sword_plus_1_plus_3_vs_dragons",
       "name": "Sword +1, +3 vs Dragons",
+      "display_name": "sword +1, +3 vs dragons",
+      "display_name_plural": "swords +1, +3 vs dragons",
       "category": "sword"
     },
     {
       "id": "sword_plus_1_plus_3_vs_enchanted_creatures",
       "name": "Sword +1, +3 vs Enchanted Creatures",
+      "display_name": "sword +1, +3 vs enchanted creatures",
+      "display_name_plural": "swords +1, +3 vs enchanted creatures",
       "category": "sword"
     },
     {
       "id": "sword_plus_1_plus_3_vs_regenerating_creatures",
       "name": "Sword +1, +3 vs Regenerating Creatures",
+      "display_name": "sword +1, +3 vs regenerating creatures",
+      "display_name_plural": "swords +1, +3 vs regenerating creatures",
       "category": "sword"
     },
     {
       "id": "sword_plus_1_plus_3_vs_undead",
       "name": "Sword +1, +3 vs Undead",
+      "display_name": "sword +1, +3 vs undead",
+      "display_name_plural": "swords +1, +3 vs undead",
       "category": "sword"
     },
     {
       "id": "sword_plus_1_wishes",
       "name": "Sword +1, Wishes",
+      "display_name": "sword +1, wishes",
+      "display_name_plural": "swords +1, wishes",
       "category": "sword"
     },
     {
       "id": "sword_plus_2",
       "name": "Sword +2",
+      "display_name": "sword +2",
+      "display_name_plural": "swords +2",
       "category": "sword"
     },
     {
       "id": "sword_plus_2_charm_person",
       "name": "Sword +2, Charm Person",
+      "display_name": "sword +2, charm person",
+      "display_name_plural": "swords +2, charm person",
       "category": "sword"
     },
     {
       "id": "sword_plus_3",
       "name": "Sword +3",
+      "display_name": "sword +3",
+      "display_name_plural": "swords +3",
       "category": "sword"
     },
     {
       "id": "treasure_map_i",
       "name": "Treasure Map: I",
+      "display_name": "treasure map I",
+      "display_name_plural": "treasure maps I",
       "category": "scroll"
     },
     {
       "id": "treasure_map_ii",
       "name": "Treasure Map: II",
+      "display_name": "treasure map II",
+      "display_name_plural": "treasure maps II",
       "category": "scroll"
     },
     {
       "id": "treasure_map_iii",
       "name": "Treasure Map: III",
+      "display_name": "treasure map III",
+      "display_name_plural": "treasure maps III",
       "category": "scroll"
     },
     {
       "id": "treasure_map_iv",
       "name": "Treasure Map: IV",
+      "display_name": "treasure map IV",
+      "display_name_plural": "treasure maps IV",
       "category": "scroll"
     },
     {
       "id": "treasure_map_ix",
       "name": "Treasure Map: IX",
+      "display_name": "treasure map IX",
+      "display_name_plural": "treasure maps IX",
       "category": "scroll"
     },
     {
       "id": "treasure_map_v",
       "name": "Treasure Map: V",
+      "display_name": "treasure map V",
+      "display_name_plural": "treasure maps V",
       "category": "scroll"
     },
     {
       "id": "treasure_map_vi",
       "name": "Treasure Map: VI",
+      "display_name": "treasure map VI",
+      "display_name_plural": "treasure maps VI",
       "category": "scroll"
     },
     {
       "id": "treasure_map_vii",
       "name": "Treasure Map: VII",
+      "display_name": "treasure map VII",
+      "display_name_plural": "treasure maps VII",
       "category": "scroll"
     },
     {
       "id": "treasure_map_viii",
       "name": "Treasure Map: VIII",
+      "display_name": "treasure map VIII",
+      "display_name_plural": "treasure maps VIII",
       "category": "scroll"
     },
     {
       "id": "treasure_map_x",
       "name": "Treasure Map: X",
+      "display_name": "treasure map X",
+      "display_name_plural": "treasure maps X",
       "category": "scroll"
     },
     {
       "id": "treasure_map_xi",
       "name": "Treasure Map: XI",
+      "display_name": "treasure map XI",
+      "display_name_plural": "treasure maps XI",
       "category": "scroll"
     },
     {
       "id": "treasure_map_xii",
       "name": "Treasure Map: XII",
+      "display_name": "treasure map XII",
+      "display_name_plural": "treasure maps XII",
       "category": "scroll"
     },
     {
       "id": "wand_of_cold",
       "name": "Wand of Cold",
+      "display_name": "wand of cold",
+      "display_name_plural": "wands of cold",
       "category": "wand"
     },
     {
       "id": "wand_of_enemy_detection",
       "name": "Wand of Enemy Detection",
+      "display_name": "wand of enemy detection",
+      "display_name_plural": "wands of enemy detection",
       "category": "wand"
     },
     {
       "id": "wand_of_fear",
       "name": "Wand of Fear",
+      "display_name": "wand of fear",
+      "display_name_plural": "wands of fear",
       "category": "wand"
     },
     {
       "id": "wand_of_fire_balls",
       "name": "Wand of Fire Balls",
+      "display_name": "wand of fire balls",
+      "display_name_plural": "wands of fire balls",
       "category": "wand"
     },
     {
       "id": "wand_of_illusion",
       "name": "Wand of Illusion",
+      "display_name": "wand of illusion",
+      "display_name_plural": "wands of illusion",
       "category": "wand"
     },
     {
       "id": "wand_of_lightning_bolts",
       "name": "Wand of Lightning Bolts",
+      "display_name": "wand of lightning bolts",
+      "display_name_plural": "wands of lightning bolts",
       "category": "wand"
     },
     {
       "id": "wand_of_magic_detection",
       "name": "Wand of Magic Detection",
+      "display_name": "wand of magic detection",
+      "display_name_plural": "wands of magic detection",
       "category": "wand"
     },
     {
       "id": "wand_of_metal_detection",
       "name": "Wand of Metal Detection",
+      "display_name": "wand of metal detection",
+      "display_name_plural": "wands of metal detection",
       "category": "wand"
     },
     {
       "id": "wand_of_negation",
       "name": "Wand of Negation",
+      "display_name": "wand of negation",
+      "display_name_plural": "wands of negation",
       "category": "wand"
     },
     {
       "id": "wand_of_paralysation",
       "name": "Wand of Paralysation",
+      "display_name": "wand of paralysation",
+      "display_name_plural": "wands of paralysation",
       "category": "wand"
     },
     {
       "id": "wand_of_polymorph",
       "name": "Wand of Polymorph",
+      "display_name": "wand of polymorph",
+      "display_name_plural": "wands of polymorph",
       "category": "wand"
     },
     {
       "id": "wand_of_secret_door_detection",
       "name": "Wand of Secret Door Detection",
+      "display_name": "wand of secret door detection",
+      "display_name_plural": "wands of secret door detection",
       "category": "wand"
     },
     {
       "id": "wand_of_trap_detection",
       "name": "Wand of Trap Detection",
+      "display_name": "wand of trap detection",
+      "display_name_plural": "wands of trap detection",
       "category": "wand"
     },
     {
       "id": "war_hammer_plus_1",
       "name": "War Hammer +1",
+      "display_name": "war hammer +1",
+      "display_name_plural": "war hammers +1",
       "category": "weapon"
     },
     {
       "id": "war_hammer_plus_2",
       "name": "War Hammer +2",
+      "display_name": "war hammer +2",
+      "display_name_plural": "war hammers +2",
       "category": "weapon"
     },
     {
       "id": "war_hammer_plus_3_dwarven_thrower",
       "name": "War Hammer +3, Dwarven Thrower",
+      "display_name": "war hammer +3, dwarven thrower",
+      "display_name_plural": "war hammers +3, dwarven thrower",
       "category": "weapon"
     }
   ],

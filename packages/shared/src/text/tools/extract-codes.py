@@ -6,8 +6,9 @@ script reads the installed osrlib package and writes two files that the tests us
 - `data/codes.json`: every rejection code with the parameter names that osrlib passes with it, every event type
   with its codes and fields, the values of the osrlib enums that the text layer labels, and the game clock
   constants.
-- `data/catalog.json`: the display names of the built-in monsters, spells, equipment, magic items, classes, and
-  languages, which the text layer uses when an event names a catalog ID.
+- `data/catalog.json`: the names of the built-in monsters, spells, equipment, magic items, classes, and
+  languages, with osrlib's singular and plural display names for monsters and items. The text layer uses
+  them when an event names a catalog ID.
 
 Run it from the repository root, then format the output:
 
@@ -203,6 +204,8 @@ def extract_catalog() -> dict:
                 {
                     "id": item.id,
                     "name": item.name,
+                    "display_name": item.display_name,
+                    "display_name_plural": item.display_name_plural,
                     "type": item.item_type,
                     "lot_size": getattr(item, "lot_size", 1) or 1,
                     "cost_gp": item.cost_gp,
@@ -213,7 +216,13 @@ def extract_catalog() -> dict:
         "languages": [{"id": language.id, "name": language.name} for language in load_languages().languages],
         "equipment": gear,
         "magic_items": [
-            {"id": item.id, "name": item.name, "category": str(getattr(item.category, "value", item.category))}
+            {
+                "id": item.id,
+                "name": item.name,
+                "display_name": item.display_name,
+                "display_name_plural": item.display_name_plural,
+                "category": str(getattr(item.category, "value", item.category)),
+            }
             for item in load_magic_items().items
         ],
         "spells": [

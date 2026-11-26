@@ -1,12 +1,13 @@
 /**
  * Encounters and battle: meeting monsters by walking into a keyed room, talking, fleeing with pursuit, turning
  * undead, declaring for each player's own members, a refused declaration, playback, a single-target spell at one
- * monster, a party member dying, victory with its summary, and a total party kill reaching the end screen.
+ * monster, a party member dying, victory with its summary, a total party kill reaching the end screen, and a thief
+ * who hides in the back rank and back-stabs the next round.
  *
  * Every game uses a fixed session seed, so each fight repeats. The tests assert on what the table sees, never on
  * a particular die roll.
  */
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 import { expect, test, type Crew } from './support/fixtures';
 import {
   battleBoard,
@@ -397,7 +398,7 @@ test.describe('battle', () => {
     // row, and the round can't resolve until Flarg's action changes.
     for (const actor of [sam, ann]) {
       await expect(declarationRow(actor.page, 'Flarg')).toContainText(/Won't work: /);
-      await expect(declarationRow(actor.page, 'Flarg')).toContainText(/too far for a melee attack/);
+      await expect(declarationRow(actor.page, 'Flarg')).toContainText(/too far to attack in melee/);
       await expect(battleBoard(actor.page).getByRole('heading', { name: 'Round 1' })).toBeVisible();
     }
     await expect(battleBoard(sam.page).getByRole('button', { name: 'Resolve round' })).toHaveAttribute(
@@ -475,7 +476,7 @@ test.describe('battle', () => {
     }
     // The server previews the declarations as they arrive, so the board names Flarg's before anyone resolves.
     await openTable(sam.page, table.path);
-    await expect(declarationRow(sam.page, 'Flarg')).toContainText(/too far for a melee attack/);
+    await expect(declarationRow(sam.page, 'Flarg')).toContainText(/too far to attack in melee/);
     // The board's button and the action bar's button both wait for Flarg.
     const resolveButtons = sam.page.getByRole('button', { name: 'Resolve round' });
     await expect(resolveButtons).toHaveCount(2);
@@ -600,5 +601,98 @@ test.describe('battle', () => {
       .getByRole('button', { name: 'Close' })
       .click();
     await expect(sam.page.getByRole('region', { name: 'The goblins are beaten' })).toHaveCount(0);
+  });
+});
+
+test.describe('hide in shadows and back-stab', () => {
+  test('a thief in the back rank is offered Hide, the one in front isn’t, and the hidden thief can back-stab next round', async ({
+    crew,
+  }) => {
+    const ruth = await crew.person('Ruth');
+    const sam = await crew.person('Sam');
+    // Two thieves: Tinks leads the march, and Wren walks behind Flarg.
+    const setup = await setupTable({
+      name: 'Two thieves',
+      referee: ruth,
+      players: [sam],
+      party: [
+        { owner: sam, name: 'Tinks', classId: 'thief', buy: ['leather', 'sword'] },
+        { owner: sam, name: 'Flarg', classId: 'fighter' },
+        { owner: sam, name: 'Wren', classId: 'thief', buy: ['leather', 'sword'] },
+        { owner: sam, name: 'Clarence', classId: 'cleric' },
+      ],
+      seed: 1981,
+      settings: { auto_resolve: true },
+    });
+    const tableId = setup.table.id;
+    await enterDungeon(sam.client, tableId, 'priory');
+    // The cloister walk is two abreast, so Tinks and Flarg form the front rank.
+    await placeParty(ruth.client, tableId, { dungeon: 'priory', level: 1, x: 8, y: 12, facing: 'north' });
+    let game = await send(ruth.client, tableId, {
+      command_type: 'spawn_monsters',
+      template_id: 'goblin',
+      count_fixed: 2,
+      distance_feet: 40,
+    });
+    if (game.mode === 'encounter') game = await send(sam.client, tableId, { command_type: 'engage_battle' });
+    expect(game.mode).toBe('battle');
+    const seat = (name: string): string => {
+      const found = game.seats.find((candidate) => candidate.name === name);
+      if (found === undefined) throw new Error(`Nobody named ${name} is in the party.`);
+      return found.member_id;
+    };
+    await openTable(sam.page, setup.path);
+    const board = battleBoard(sam.page);
+    await expect(board).toBeVisible();
+
+    const openChoices = async (name: string) => {
+      const close = sam.page.getByRole('button', { name: /^Close .*'s actions$/ });
+      if ((await close.count()) > 0) await close.first().click();
+      await declarationRow(sam.page, name)
+        .getByRole('button', { name: /^(Actions|Change)/ })
+        .click();
+      const composer = sam.page.getByRole('region', { name: `Declare for ${name}` });
+      await expect(composer).toBeVisible();
+      return composer;
+    };
+    const tabs = (composer: Locator, name: string) =>
+      composer.getByRole('radiogroup', { name: `What ${name} does this round` });
+
+    // Round 1: Tinks stands in the front rank, so she has no Hide tab. Wren has one.
+    const tinks = await openChoices('Tinks');
+    await expect(tabs(tinks, 'Tinks').getByRole('radio', { name: 'Attack' })).toBeVisible();
+    await expect(tabs(tinks, 'Tinks').getByRole('radio', { name: 'Hide' })).toHaveCount(0);
+    const wren = await openChoices('Wren');
+    await tabs(wren, 'Wren').getByRole('radio', { name: 'Hide' }).click();
+    await expect(wren).toContainText(
+      'Wren slips into the shadows to set up a back-stab. The referee rolls in secret.',
+    );
+    // Nobody has hidden yet, so nobody is offered a back-stab.
+    await tabs(wren, 'Wren').getByRole('radio', { name: 'Attack' }).click();
+    await expect(wren.getByRole('checkbox', { name: /^Back-stab/ })).toHaveCount(0);
+    await tabs(wren, 'Wren').getByRole('radio', { name: 'Hide' }).click();
+    await declaring(sam.page, () => wren.getByRole('button', { name: 'Hide in shadows' }).click());
+    await expect(declarationRow(sam.page, 'Wren')).toContainText('Hide in shadows');
+
+    // The rest of the party holds, and the round resolves.
+    const before = (await sam.client.getGame(tableId)).revision;
+    for (const name of ['Tinks', 'Flarg', 'Clarence']) {
+      await sam.client.declare(tableId, seat(name), { action: 'hold' });
+    }
+    game = await waitForGame(sam.client, tableId, (next) => next.revision > before, 'round 1 to resolve');
+    expect(game.mode).toBe('battle');
+    await expect(board.getByRole('heading', { name: 'Round 2' })).toBeVisible({ timeout: 30_000 });
+
+    // Round 2: Wren is hiding, so her attack offers a back-stab, checked. Tinks's doesn't.
+    const wrenAgain = await openChoices('Wren');
+    await tabs(wrenAgain, 'Wren').getByRole('radio', { name: 'Attack' }).click();
+    const backStab = wrenAgain.getByRole('checkbox', { name: /^Back-stab/ });
+    await expect(backStab).toBeVisible();
+    await expect(backStab).toBeChecked();
+    await expect(wrenAgain).toContainText("Strike a monster that hasn't noticed Wren.");
+    const tinksAgain = await openChoices('Tinks');
+    await tabs(tinksAgain, 'Tinks').getByRole('radio', { name: 'Attack' }).click();
+    await expect(tinksAgain.getByRole('checkbox', { name: /^Back-stab/ })).toHaveCount(0);
+    await expect(tabs(tinksAgain, 'Tinks').getByRole('radio', { name: 'Hide' })).toHaveCount(0);
   });
 });

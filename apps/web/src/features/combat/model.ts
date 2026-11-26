@@ -8,7 +8,14 @@
  * resolves, and the board shows its refusal next to the declaration it names.
  */
 import type { BattleDeclaration, EncounterGroupView, EncounterView, MemberView } from '@bxvtt/shared/bxapi';
-import type { DeclarationBody, DeclarationRefusal, Member, Seat } from '@bxvtt/shared/protocol';
+import type {
+  DeclarationBody,
+  DeclarationRefusal,
+  DeclarationsState,
+  Member,
+  RoundProjection,
+  Seat,
+} from '@bxvtt/shared/protocol';
 import {
   battleActionLabel,
   describeRejection,
@@ -444,16 +451,52 @@ export function suggestAction(
       return { kind: 'close', body, plan, reason: null };
     }
   }
-  const missile = gear.wielded.some((w) => w.missile);
-  const reason = !encounter.front_rank.includes(member.id)
-    ? `${member.name} is in the back rank with no missile weapon${missile ? ' in range' : ''}.`
-    : `${member.name} has no missile weapon${missile ? ' in range' : ''}. Open Actions to close in.`;
-  return { kind: 'hold', body: { action: 'hold' }, plan: null, reason };
+  return { kind: 'hold', body: { action: 'hold' }, plan: null, reason: 'No attack from here.' };
 }
 
 function hasArmour(member: MemberView): boolean {
   const inventory = asRecord(member.inventory);
   return asRecord(inventory?.worn_armour) !== null || asRecord(inventory?.shield) !== null;
+}
+
+// Hide and back-stab -------------------------------------------------------------------------------------------
+
+/** The members bxapi lets declare a hide or a back-stab this round. */
+export interface StealthLists {
+  canHide: readonly string[];
+  canBackStab: readonly string[];
+}
+
+/**
+ * The preview's projection when it was judged at the game's current revision, and otherwise `null`. The store
+ * applies the game and the declarations as separate frames, so just after a round resolves the new game can arrive
+ * beside the last round's projection. Until the declarations catch up, readers fall back to the encounter.
+ *
+ * @param declarations - The table's declarations state, or `null` when there is none.
+ * @param revision - The revision of the game the store holds, or `null` when there is no game.
+ */
+export function currentProjection(
+  declarations: DeclarationsState | null | undefined,
+  revision: number | null,
+): RoundProjection | null {
+  if (!declarations?.projection || declarations.revision !== revision) return null;
+  return declarations.projection;
+}
+
+/**
+ * Who can hide and who can back-stab this round: the preview's lists, judged beside the planned declarations, when
+ * the server has a projection, and otherwise the encounter's lists.
+ *
+ * @param encounter - The open encounter.
+ * @param projection - The projection `currentProjection` returns, or `null` when there is none.
+ */
+export function stealthLists(
+  encounter: EncounterView,
+  projection: RoundProjection | null | undefined,
+): StealthLists {
+  return projection
+    ? { canHide: projection.can_hide, canBackStab: projection.can_back_stab }
+    : { canHide: encounter.can_hide, canBackStab: encounter.can_back_stab };
 }
 
 // Words for declarations ---------------------------------------------------------------------------------------
@@ -553,7 +596,7 @@ export function describeDeclaration(
       text = d.action ? battleActionLabel(d.action) : 'An action';
   }
   if (d.gaze_defense === 'avert_eyes') text += ', averting eyes';
-  if (d.gaze_defense === 'mirror') text += ', watching in a mirror';
+  if (d.gaze_defense === 'mirror') text += ', using a mirror';
   return text;
 }
 
@@ -733,4 +776,71 @@ export function spellModeLabel(targeting: string | null | undefined): string {
     default:
       return 'Cast';
   }
+}
+
+/** One way to cast a spell, as a spell template states it. */
+export interface SpellModeLike {
+  key: string;
+  prose: string;
+  targeting?: { mode?: string | null } | null;
+}
+
+/**
+ * The option label for each way to cast a spell form. A mode is named by its targeting ("One creature", "By hit
+ * dice") when no other mode of the form has the same label. Modes that share a label are named by the text before
+ * the colon in their prose ("Conjuring light: In a 15’ radius." gives "Conjuring light"), or by their first
+ * sentence without its final period when the prose has no colon. Modes whose prose still gives them the same
+ * label are named by the form and the key ("Darkness: darken"), because a bare key such as "Cancel" would read as
+ * the dialog's own Cancel button.
+ *
+ * @param modes - The modes of the spell form being cast: the spell's own, or its reversed form's.
+ * @param formName - The name of the form being cast, as the dialog's title names it, such as "Darkness".
+ */
+export function spellModeOptions(
+  modes: readonly SpellModeLike[],
+  formName: string,
+): Array<{ value: string; label: string }> {
+  const byTargeting = modes.map((mode) => spellModeLabel(mode.targeting?.mode));
+  const byProse = modes.map((mode, index) => {
+    const label = byTargeting[index] ?? 'Cast';
+    return sharedLabel(byTargeting, label) ? spellModeName(mode.prose) || label : label;
+  });
+  // When bxapi's prose doesn't tell two modes apart, each takes its key, bxapi's own word for the mode.
+  return modes.map((mode, index) => {
+    const label = byProse[index] ?? 'Cast';
+    return {
+      value: mode.key,
+      label: sharedLabel(byProse, label) ? `${formName}: ${keyWords(mode.key)}` : label,
+    };
+  });
+}
+
+function sharedLabel(labels: readonly string[], label: string): boolean {
+  return labels.filter((other) => other === label).length > 1;
+}
+
+/** A mode key in lower case, with underscores read as spaces: `cure_paralysis` gives "cure paralysis". */
+function keyWords(key: string): string {
+  return key.replaceAll('_', ' ').trim().toLowerCase();
+}
+
+function spellModeName(prose: string): string {
+  const text = prose.replace(/\s*\(see\b[^)]*\)/gi, '').trim();
+  const line = text.split('\n')[0] ?? '';
+  const sentence = (/^(.*?[.!?])(\s|$)/.exec(line)?.[1] ?? line).trim();
+  const colon = sentence.indexOf(':');
+  return colon > 0 ? sentence.slice(0, colon).trim() : sentence.replace(/\.$/, '');
+}
+
+/**
+ * A spell's range as the rules catalog writes it, such as "120’", from the structured `range_spec` when it's a
+ * distance in feet. An adventure's own spell can write the same range as "120 feet", so the catalog and the game's
+ * spells read alike. Any other range keeps its own text, such as "The caster".
+ */
+export function spellRangeText(spell: {
+  range: string;
+  range_spec?: { kind: string; feet?: number | null } | null;
+}): string {
+  const spec = spell.range_spec;
+  return spec?.kind === 'feet' && typeof spec.feet === 'number' ? `${spec.feet}’` : spell.range;
 }

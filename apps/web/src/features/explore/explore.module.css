@@ -523,8 +523,21 @@
   color: var(--color-text-subtle);
 }
 
-.sceneTitle {
+/* The room's name, with the badge of a trap the party knows in the room right after it. */
+.sceneTitleGroup {
+  display: flex;
   flex: 1;
+  align-items: center;
+  gap: var(--space-1-5);
+  min-width: 0;
+}
+
+.sceneTitleBadge {
+  flex: none;
+}
+
+.sceneTitle {
+  flex: 0 1 auto;
   min-width: 0;
   margin: 0;
   overflow: hidden;
@@ -534,6 +547,13 @@
   font-weight: var(--weight-semibold);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* The words after the count on the folded header's button, which a phone leaves out. */
+@media (max-width: 640px) {
+  .sceneCountWords {
+    display: none;
+  }
 }
 
 .sceneMeta {
@@ -593,14 +613,6 @@
   border-top: var(--border-hair) solid var(--color-border);
 }
 
-.sceneRowWarning {
-  color: var(--color-text-strong);
-}
-
-.sceneRowWarning .sceneRowIcon {
-  color: var(--color-warning);
-}
-
 .sceneRowIcon {
   margin-top: 1px;
   color: var(--color-text-subtle);
@@ -633,6 +645,11 @@
 .sceneSub {
   color: var(--color-text-muted);
   font-size: var(--text-xs);
+}
+
+/* The text of a treasure the party has emptied. */
+.sceneMuted {
+  color: var(--color-text-muted);
 }
 
 /* Dialogs ------------------------------------------------------------------------------------------------ */

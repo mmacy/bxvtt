@@ -1,5 +1,4 @@
 import { joinList, memberName } from '@bxvtt/shared/text';
-import { useMemo } from 'react';
 import {
   formatShortcut,
   useAction,
@@ -8,6 +7,7 @@ import {
   useEncounter,
   useGameMode,
   useParty,
+  useRevision,
   useSendDeclaration,
   useShortcut,
   useTableSettings,
@@ -15,9 +15,15 @@ import {
 } from '@/app';
 import { ActionBarDivider, ActionBarItem, Button } from '@/ui';
 import { QUICK_ICONS, quickAction, quickTooltip, repeatTooltip, useRepeatLastRound } from './BattleBoard';
-import { useMemberCasts } from './casting';
-import { useClassAbilities } from './Composer';
-import { blockedNote, blockedReason, blockingMembers, memberGear } from './model';
+import { memberCasts } from './casting';
+import {
+  blockedNote,
+  blockedReason,
+  blockingMembers,
+  currentProjection,
+  memberGear,
+  stealthLists,
+} from './model';
 import { useCombatPeople } from './people';
 import { useCombatUi } from './state';
 import { useEncounterCommands } from './useEncounterCommands';
@@ -228,6 +234,7 @@ function BattleActions() {
   const encounter = useEncounter();
   const party = useParty();
   const declarations = useDeclarations();
+  const projection = currentProjection(declarations, useRevision());
   const ctx = useTextContext();
   const people = useCombatPeople();
   const settings = useTableSettings();
@@ -247,15 +254,16 @@ function BattleActions() {
   const mine = declarers.filter((id) => people.isMine(id));
   const next = mine.find((id) => !declared.includes(id)) ?? null;
   const nextMember = party.find((m) => m.id === next) ?? null;
-  const casts = useMemberCasts(nextMember);
-  const { backStab } = useClassAbilities(nextMember?.class_id ?? null);
-  const quick = useMemo(
-    () =>
-      nextMember
-        ? quickAction(nextMember, encounter, memberGear(nextMember, ctx), ctx, { casts, backStab })
-        : null,
-    [nextMember, encounter, ctx, casts, backStab],
-  );
+  const casts = memberCasts(nextMember);
+  const canBackStab =
+    nextMember !== null &&
+    encounter !== null &&
+    stealthLists(encounter, projection).canBackStab.includes(nextMember.id);
+  // While a round plays back, the bar offers nothing to declare yet.
+  const quick =
+    nextMember && !playing
+      ? quickAction(nextMember, encounter, memberGear(nextMember, ctx), ctx, { casts, canBackStab })
+      : null;
   const repeatable = repeat.candidates(mine.filter((id) => !declared.includes(id)));
   const everyone = declarers.length > 0 && declarers.every((id) => declared.includes(id));
   const waiting = declarers.filter((id) => !declared.includes(id));

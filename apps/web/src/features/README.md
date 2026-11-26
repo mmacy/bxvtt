@@ -26,7 +26,7 @@ The play layout targets viewports from `820px` wide upward; below `1100px`, the 
 ## Rules for feature code
 
 - Build all controls and surfaces from `@/ui` and tokens from `tokens.css` (`src/ui/README.md`).
-- Offer choices strictly from `game.commands`, `PlayerView`, `game.scene` (item names, room traps, and emptied caches), rules catalogs, and command JSON schemas, and display `bxapi` refusals in game terms via `@bxvtt/shared/text`.
+- Offer choices strictly from `game.commands`, `PlayerView` (which states item names, room traps, emptied caches, and the caches in reach), rules catalogs, and command JSON schemas, and display `bxapi` refusals in game terms via `@bxvtt/shared/text`.
 - Render user-entered strings (names, chat, notes, pin text, save labels) as React text nodes; never use `dangerouslySetInnerHTML`.
 - Read referee state only from the referee hooks (`useRefereeState()`, `useAdventureDocument()`, `useRefereeNotes()`), which return `null` whenever the user is a player or has turned off `refereeLens`.
 
@@ -48,8 +48,9 @@ The play layout targets viewports from `820px` wide upward; below `1100px`, the 
 Inside `TableProvider` (or `NoTableProvider` on screens outside a table):
 
 - **Table & membership:** `useTableId`, `useConnectionStatus`, `useConnectionError`, `useTableDetail`, `useTableSettings`, `useTableUser`, `useMyMembership`, `useMyRole`, `useIsReferee`, `useRefereeLens`, `useMembers`, `useMember`, `usePresence`, `useRejoinRequests`, `useDecideRejoin`.
-- **Active session:** `useGame`, `useGameMode`, `useShownMode` (retains combat mode while final round playback finishes before `EndScreen`), `useRevision`, `usePlayerView`, `useScene`, `useHere` (what the party perceives at its cell, from the player view and the scene), `usePartyLocation`, `useLegalCommands`, `useLegalCommand`, `useParty`, `usePartyMember`, `useSeats`, `useMySeats`, `useControllableMembers`, `useCaller`, `useEncounter`, `useBattleRound`, `useDeclarations`, `usePartyLight`.
-- **Referee, feed, notes, annotations, text:** `useRefereeState`, `useAdventureDocument`, `useRefereeNotes`, `useFeed`, `useOlderFeed`, `usePartyNotes`, `useAnnotations`, `usePings`, `useSendPing`, `useNotices`, `useTextContext`.
+- **Active session:** `useGame`, `useGameMode`, `useShownMode` (retains combat mode while final round playback finishes before `EndScreen`), `useRevision`, `usePlayerView`, `useHere` (what the party perceives at its cell and what it can reach, from the player view), `usePartyLocation`, `useLegalCommands`, `useLegalCommand`, `useParty`, `usePartyMember`, `useSeats`, `useMySeats`, `useControllableMembers`, `useCaller`, `useEncounter`, `useBattleRound`, `useDeclarations`, `usePartyLight`.
+- **Referee, feed, notes, annotations, text:** `useRefereeState`, `useAdventureDocument`, `useRefereeNotes`, `useFeed`, `useOlderFeed`, `usePartyNotes`, `useAnnotations`, `usePings`, `useSendPing`, `useNotices`, `useTextContext`, `usePlayerTextContext` (the players' names only, for a screen that shows a referee what the players see).
+- **Item names and treasure:** `itemStackPhrase(id, quantity, ctx)` names an item and a count ("a torch", "2 vials of holy water"), `itemStackPhrases` names a list and collapses unnamed entries into "something else", and `pileContents` and `pileContentsSentence` name a dropped pile's coins and contents. `cachesToTake(here)` lists the caches in reach that aren't emptied, and `treasureRowText` gives a treasure's row text ("Treasure 2 lies here.").
 - **Permission checks (`{ allowed, reason }`):** `useCanSend(commandType, memberId?)`, `useCanControlMember(memberId)`, `useCanActForParty()`, `useCanDeclare(memberId)`, `useCanResolveRound({ early })` (also exported as pure functions taking `usePermissionContext()`).
 
 ### Commands, declarations, catalogs, overlays, shortcuts, and map bus

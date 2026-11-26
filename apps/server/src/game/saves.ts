@@ -248,6 +248,7 @@ export class SaveService {
    */
   async restore(tableId: string, user: User, saveId: string): Promise<GameState> {
     return this.game.locked(tableId, async () => {
+      await this.game.requireEngine();
       const save = this.row(tableId, saveId);
       const previous = this.ctx.tables.game(tableId);
       const session = await callBxapi(async () => {

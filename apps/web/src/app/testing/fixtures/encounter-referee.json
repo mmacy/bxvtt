@@ -1,94 +1,94 @@
 {
   "type": "snapshot",
   "user": {
-    "id": "usr_egewOApmbWw9MocOHTy8BA",
+    "id": "usr_n42KOsHJshcCoV-DsSEH_A",
     "name": "Ruth",
-    "color": "#3fa7d6",
-    "created_at": "2026-11-26T03:50:16Z"
+    "color": "#e76742",
+    "created_at": "2026-11-26T09:06:55Z"
   },
   "role": "referee",
   "table": {
-    "id": "tbl_-ZP3TZvp486zli31J_fpEg",
+    "id": "tbl__oydcMhUrTR91n_a-wuI9Q",
     "name": "Thursday at the Drowned Bell",
-    "invite_code": "WP28K-H51F3-RNK1E-971Z2",
+    "invite_code": "1M0E9-EWVA9-S02ZT-T4Q6Q",
     "phase": "playing",
     "settings": {
       "party_control": "caller",
-      "caller_user_id": "usr_27uu5K1E6usvnfFnEE4Z5w",
+      "caller_user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw",
       "auto_resolve": true,
       "autosave": true
     },
     "members": [
       {
-        "user_id": "usr_egewOApmbWw9MocOHTy8BA",
+        "user_id": "usr_n42KOsHJshcCoV-DsSEH_A",
         "name": "Ruth",
-        "color": "#3fa7d6",
+        "color": "#e76742",
         "role": "referee",
-        "joined_at": "2026-11-26T03:50:16Z"
+        "joined_at": "2026-11-26T09:06:55Z"
       },
       {
-        "user_id": "usr_27uu5K1E6usvnfFnEE4Z5w",
+        "user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw",
         "name": "Sam",
-        "color": "#5c8de5",
+        "color": "#f29e2e",
         "role": "player",
-        "joined_at": "2026-11-26T03:50:16Z"
+        "joined_at": "2026-11-26T09:06:55Z"
       }
     ],
     "roster": [
       {
-        "id": "ros_6rUc1c7DRBYuDjaBrKyg6w",
-        "character_id": "chr_kbZUbWT4xi4KafUy5knY-Q",
-        "owner_user_id": "usr_27uu5K1E6usvnfFnEE4Z5w",
+        "id": "ros_zQrFbKnB2roZ1RjM_i3ypA",
+        "character_id": "chr_87CZrmG6gnh9y_-_0Hpv4Q",
+        "owner_user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw",
         "name": "Brenna",
         "class_id": "fighter",
         "level": 1,
-        "added_at": "2026-11-26T03:50:16Z"
+        "added_at": "2026-11-26T09:06:55Z"
       },
       {
-        "id": "ros_8QA1tcCZ6gzmQvgZTr9rHQ",
-        "character_id": "chr_c8_ZZdyjmkVAy9uixkvsqQ",
-        "owner_user_id": "usr_27uu5K1E6usvnfFnEE4Z5w",
+        "id": "ros_aAmPJ44di01YRLi8rfj7CQ",
+        "character_id": "chr_Hw6g7yC9Z-K1cGphwzk4yw",
+        "owner_user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw",
         "name": "Wren",
         "class_id": "thief",
         "level": 1,
-        "added_at": "2026-11-26T03:50:16Z"
+        "added_at": "2026-11-26T09:06:55Z"
       },
       {
-        "id": "ros_LnKn3lkCppPAF1aNRZCk5A",
-        "character_id": "chr_G9XlzUGM_mSbj2P1O_oV2Q",
-        "owner_user_id": "usr_egewOApmbWw9MocOHTy8BA",
+        "id": "ros_578ujxA--kIyRLoBAtVpOg",
+        "character_id": "chr_6fyERi-3LCsVThEI_hswxQ",
+        "owner_user_id": "usr_n42KOsHJshcCoV-DsSEH_A",
         "name": "Osric",
         "class_id": "cleric",
         "level": 1,
-        "added_at": "2026-11-26T03:50:16Z"
+        "added_at": "2026-11-26T09:06:55Z"
       },
       {
-        "id": "ros_ugfTsy59UGVWhkqe1webZw",
-        "character_id": "chr_GSvjYBg8v1z0fa_m8g3FnQ",
-        "owner_user_id": "usr_egewOApmbWw9MocOHTy8BA",
+        "id": "ros_HchkjIIflwaIIyVueCpldA",
+        "character_id": "chr_C1IdtMsXmGZde2iQ14iwbQ",
+        "owner_user_id": "usr_n42KOsHJshcCoV-DsSEH_A",
         "name": "Tamsin",
         "class_id": "fighter",
         "level": 1,
-        "added_at": "2026-11-26T03:50:16Z"
+        "added_at": "2026-11-26T09:06:55Z"
       }
     ],
     "game": {
-      "session_id": "ses_6XXMPT9DkFiHdydQWvUZGQ",
+      "session_id": "ses_rEucMvINs3jFWwyOmfy3JA",
       "adventure_id": "sample:the-drowned-bell",
       "adventure_name": "The Drowned Bell",
       "mode": "encounter",
       "ended": false,
-      "started_at": "2026-11-26T03:50:16Z"
+      "started_at": "2026-11-26T09:06:55Z"
     },
-    "created_by": "usr_egewOApmbWw9MocOHTy8BA",
-    "created_at": "2026-11-26T03:50:16Z"
+    "created_by": "usr_n42KOsHJshcCoV-DsSEH_A",
+    "created_at": "2026-11-26T09:06:55Z"
   },
   "presence": {
-    "online": ["usr_egewOApmbWw9MocOHTy8BA"]
+    "online": ["usr_n42KOsHJshcCoV-DsSEH_A"]
   },
   "game": {
-    "table_id": "tbl_-ZP3TZvp486zli31J_fpEg",
-    "session_id": "ses_6XXMPT9DkFiHdydQWvUZGQ",
+    "table_id": "tbl__oydcMhUrTR91n_a-wuI9Q",
+    "session_id": "ses_rEucMvINs3jFWwyOmfy3JA",
     "adventure_id": "sample:the-drowned-bell",
     "adventure_name": "The Drowned Bell",
     "mode": "encounter",
@@ -131,6 +131,8 @@
                   "item_type": "gear",
                   "id": "torch",
                   "name": "Torches (6)",
+                  "display_name": "torch",
+                  "display_name_plural": "torches",
                   "cost_gp": 1,
                   "lot_size": 6,
                   "capacity_coins": null,
@@ -144,7 +146,7 @@
                     "burn_turns": 6,
                     "light_radius_feet": 30
                   },
-                  "overrides_applied": []
+                  "overrides_applied": ["display_name", "display_name_plural"]
                 },
                 "quantity": 6
               }
@@ -163,13 +165,15 @@
                 "item_type": "armour",
                 "id": "leather",
                 "name": "Leather",
+                "display_name": "suit of leather armour",
+                "display_name_plural": "suits of leather armour",
                 "cost_gp": 20,
                 "weight_coins": 200,
                 "ac": 7,
                 "ac_ascending": 12,
                 "ac_bonus": null,
                 "category": "light",
-                "overrides_applied": []
+                "overrides_applied": ["display_name", "display_name_plural"]
               },
               "quantity": 1
             },
@@ -181,6 +185,8 @@
                   "item_type": "weapon",
                   "id": "sword",
                   "name": "Sword",
+                  "display_name": "sword",
+                  "display_name_plural": "swords",
                   "cost_gp": 10,
                   "weight_coins": 60,
                   "damage": "1d8",
@@ -231,6 +237,9 @@
           "movement_rate_feet": 90,
           "languages": ["alignment_lawful", "common"],
           "spell_book": [],
+          "spell_slots": [],
+          "preparable_spells": [],
+          "learnable_spells": [],
           "thief_skills": {}
         },
         {
@@ -258,13 +267,15 @@
                 "item_type": "armour",
                 "id": "leather",
                 "name": "Leather",
+                "display_name": "suit of leather armour",
+                "display_name_plural": "suits of leather armour",
                 "cost_gp": 20,
                 "weight_coins": 200,
                 "ac": 7,
                 "ac_ascending": 12,
                 "ac_bonus": null,
                 "category": "light",
-                "overrides_applied": []
+                "overrides_applied": ["display_name", "display_name_plural"]
               },
               "quantity": 1
             },
@@ -276,6 +287,8 @@
                   "item_type": "weapon",
                   "id": "short_sword",
                   "name": "Short sword",
+                  "display_name": "short sword",
+                  "display_name_plural": "short swords",
                   "cost_gp": 7,
                   "weight_coins": 30,
                   "damage": "1d6",
@@ -326,6 +339,9 @@
           "movement_rate_feet": 90,
           "languages": ["alignment_neutral", "common"],
           "spell_book": [],
+          "spell_slots": [],
+          "preparable_spells": [],
+          "learnable_spells": [],
           "thief_skills": {
             "climb_sheer_surfaces": 87,
             "find_remove_treasure_traps": 10,
@@ -361,13 +377,15 @@
                 "item_type": "armour",
                 "id": "leather",
                 "name": "Leather",
+                "display_name": "suit of leather armour",
+                "display_name_plural": "suits of leather armour",
                 "cost_gp": 20,
                 "weight_coins": 200,
                 "ac": 7,
                 "ac_ascending": 12,
                 "ac_bonus": null,
                 "category": "light",
-                "overrides_applied": []
+                "overrides_applied": ["display_name", "display_name_plural"]
               },
               "quantity": 1
             },
@@ -379,6 +397,8 @@
                   "item_type": "weapon",
                   "id": "mace",
                   "name": "Mace",
+                  "display_name": "mace",
+                  "display_name_plural": "maces",
                   "cost_gp": 5,
                   "weight_coins": 30,
                   "damage": "1d6",
@@ -429,6 +449,9 @@
           "movement_rate_feet": 90,
           "languages": ["alignment_lawful", "common"],
           "spell_book": [],
+          "spell_slots": [0, 0, 0, 0, 0],
+          "preparable_spells": [],
+          "learnable_spells": [],
           "thief_skills": {}
         },
         {
@@ -448,6 +471,8 @@
                   "item_type": "gear",
                   "id": "torch",
                   "name": "Torches (6)",
+                  "display_name": "torch",
+                  "display_name_plural": "torches",
                   "cost_gp": 1,
                   "lot_size": 6,
                   "capacity_coins": null,
@@ -461,7 +486,7 @@
                     "burn_turns": 6,
                     "light_radius_feet": 30
                   },
-                  "overrides_applied": []
+                  "overrides_applied": ["display_name", "display_name_plural"]
                 },
                 "quantity": 6
               }
@@ -480,13 +505,15 @@
                 "item_type": "armour",
                 "id": "leather",
                 "name": "Leather",
+                "display_name": "suit of leather armour",
+                "display_name_plural": "suits of leather armour",
                 "cost_gp": 20,
                 "weight_coins": 200,
                 "ac": 7,
                 "ac_ascending": 12,
                 "ac_bonus": null,
                 "category": "light",
-                "overrides_applied": []
+                "overrides_applied": ["display_name", "display_name_plural"]
               },
               "quantity": 1
             },
@@ -498,6 +525,8 @@
                   "item_type": "weapon",
                   "id": "spear",
                   "name": "Spear",
+                  "display_name": "spear",
+                  "display_name_plural": "spears",
                   "cost_gp": 3,
                   "weight_coins": 30,
                   "damage": "1d6",
@@ -561,6 +590,9 @@
           "movement_rate_feet": 90,
           "languages": ["alignment_neutral", "common"],
           "spell_book": [],
+          "spell_slots": [],
+          "preparable_spells": [],
+          "learnable_spells": [],
           "thief_skills": {}
         }
       ],
@@ -626,17 +658,19 @@
               "cells": [
                 [14, 22],
                 [14, 23]
-              ]
+              ],
+              "trap_state": null
             }
           ],
           "features": [
             {
-              "id": "feature:dfd024cc83621a88c5d5bb6825f11606d0af6b161b43b98ee624d06c1a89f880",
+              "id": "feature:467b05b6d2fd341d25c3ce614c4173e2dd9032eb2909c1caa010049ca8272c50",
               "kind": "custom",
               "description": "The statue is Saint Corvane, holding up a lantern. Someone has chipped the glass out of the lantern to see whether there was silver inside it.",
               "cell": null,
               "area_id": "gatehouse_stair",
-              "trap_state": null
+              "trap_state": null,
+              "emptied": false
             }
           ],
           "transitions": [],
@@ -650,11 +684,29 @@
         }
       ],
       "can_travel_to_town": false,
+      "features_here": [],
       "piles": {},
       "emptied_caches": [],
       "effects": [],
       "spell_names": {},
       "reversed_spell_names": {},
+      "spell_levels": {},
+      "item_names": {
+        "torch": "torch",
+        "leather": "suit of leather armour",
+        "sword": "sword",
+        "short_sword": "short sword",
+        "mace": "mace",
+        "spear": "spear"
+      },
+      "item_names_plural": {
+        "torch": "torches",
+        "leather": "suits of leather armour",
+        "sword": "swords",
+        "short_sword": "short swords",
+        "mace": "maces",
+        "spear": "spears"
+      },
       "fatigued": false,
       "exhausted": false,
       "deprivation": {},
@@ -773,6 +825,7 @@
         "reloading": [],
         "can_hide": [],
         "hiding": [],
+        "can_back_stab": [],
         "advance_feet": {},
         "formation_width": 6,
         "party_free_round": false
@@ -946,37 +999,25 @@
       {
         "member_id": "character-0001",
         "name": "Brenna",
-        "user_id": "usr_27uu5K1E6usvnfFnEE4Z5w"
+        "user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw"
       },
       {
         "member_id": "character-0002",
         "name": "Wren",
-        "user_id": "usr_27uu5K1E6usvnfFnEE4Z5w"
+        "user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw"
       },
       {
         "member_id": "character-0003",
         "name": "Osric",
-        "user_id": "usr_egewOApmbWw9MocOHTy8BA"
+        "user_id": "usr_n42KOsHJshcCoV-DsSEH_A"
       },
       {
         "member_id": "character-0004",
         "name": "Tamsin",
-        "user_id": "usr_egewOApmbWw9MocOHTy8BA"
+        "user_id": "usr_n42KOsHJshcCoV-DsSEH_A"
       }
     ],
-    "caller_user_id": "usr_27uu5K1E6usvnfFnEE4Z5w",
-    "scene": {
-      "names": {
-        "leather": "Leather",
-        "mace": "Mace",
-        "short_sword": "Short sword",
-        "spear": "Spear",
-        "sword": "Sword",
-        "torch": "Torches (6)"
-      },
-      "room_traps": [],
-      "emptied_features": []
-    },
+    "caller_user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw",
     "referee": {
       "ruleset": {
         "hp_reroll_at_first_level": false,
@@ -1025,6 +1066,8 @@
                     "item_type": "gear",
                     "id": "torch",
                     "name": "Torches (6)",
+                    "display_name": "torch",
+                    "display_name_plural": "torches",
                     "cost_gp": 1,
                     "lot_size": 6,
                     "capacity_coins": null,
@@ -1038,7 +1081,7 @@
                       "burn_turns": 6,
                       "light_radius_feet": 30
                     },
-                    "overrides_applied": []
+                    "overrides_applied": ["display_name", "display_name_plural"]
                   },
                   "quantity": 6
                 }
@@ -1057,13 +1100,15 @@
                   "item_type": "armour",
                   "id": "leather",
                   "name": "Leather",
+                  "display_name": "suit of leather armour",
+                  "display_name_plural": "suits of leather armour",
                   "cost_gp": 20,
                   "weight_coins": 200,
                   "ac": 7,
                   "ac_ascending": 12,
                   "ac_bonus": null,
                   "category": "light",
-                  "overrides_applied": []
+                  "overrides_applied": ["display_name", "display_name_plural"]
                 },
                 "quantity": 1
               },
@@ -1075,6 +1120,8 @@
                     "item_type": "weapon",
                     "id": "sword",
                     "name": "Sword",
+                    "display_name": "sword",
+                    "display_name_plural": "swords",
                     "cost_gp": 10,
                     "weight_coins": 60,
                     "damage": "1d8",
@@ -1131,13 +1178,15 @@
                   "item_type": "armour",
                   "id": "leather",
                   "name": "Leather",
+                  "display_name": "suit of leather armour",
+                  "display_name_plural": "suits of leather armour",
                   "cost_gp": 20,
                   "weight_coins": 200,
                   "ac": 7,
                   "ac_ascending": 12,
                   "ac_bonus": null,
                   "category": "light",
-                  "overrides_applied": []
+                  "overrides_applied": ["display_name", "display_name_plural"]
                 },
                 "quantity": 1
               },
@@ -1149,6 +1198,8 @@
                     "item_type": "weapon",
                     "id": "short_sword",
                     "name": "Short sword",
+                    "display_name": "short sword",
+                    "display_name_plural": "short swords",
                     "cost_gp": 7,
                     "weight_coins": 30,
                     "damage": "1d6",
@@ -1205,13 +1256,15 @@
                   "item_type": "armour",
                   "id": "leather",
                   "name": "Leather",
+                  "display_name": "suit of leather armour",
+                  "display_name_plural": "suits of leather armour",
                   "cost_gp": 20,
                   "weight_coins": 200,
                   "ac": 7,
                   "ac_ascending": 12,
                   "ac_bonus": null,
                   "category": "light",
-                  "overrides_applied": []
+                  "overrides_applied": ["display_name", "display_name_plural"]
                 },
                 "quantity": 1
               },
@@ -1223,6 +1276,8 @@
                     "item_type": "weapon",
                     "id": "mace",
                     "name": "Mace",
+                    "display_name": "mace",
+                    "display_name_plural": "maces",
                     "cost_gp": 5,
                     "weight_coins": 30,
                     "damage": "1d6",
@@ -1271,6 +1326,8 @@
                     "item_type": "gear",
                     "id": "torch",
                     "name": "Torches (6)",
+                    "display_name": "torch",
+                    "display_name_plural": "torches",
                     "cost_gp": 1,
                     "lot_size": 6,
                     "capacity_coins": null,
@@ -1284,7 +1341,7 @@
                       "burn_turns": 6,
                       "light_radius_feet": 30
                     },
-                    "overrides_applied": []
+                    "overrides_applied": ["display_name", "display_name_plural"]
                   },
                   "quantity": 6
                 }
@@ -1303,13 +1360,15 @@
                   "item_type": "armour",
                   "id": "leather",
                   "name": "Leather",
+                  "display_name": "suit of leather armour",
+                  "display_name_plural": "suits of leather armour",
                   "cost_gp": 20,
                   "weight_coins": 200,
                   "ac": 7,
                   "ac_ascending": 12,
                   "ac_bonus": null,
                   "category": "light",
-                  "overrides_applied": []
+                  "overrides_applied": ["display_name", "display_name_plural"]
                 },
                 "quantity": 1
               },
@@ -1321,6 +1380,8 @@
                     "item_type": "weapon",
                     "id": "spear",
                     "name": "Spear",
+                    "display_name": "spear",
+                    "display_name_plural": "spears",
                     "cost_gp": 3,
                     "weight_coins": 30,
                     "damage": "1d6",
@@ -1990,47 +2051,75 @@
         "evading": false,
         "pursuit": null
       },
-      "battle": null
+      "battle": null,
+      "feature_handles": {
+        "priory:1:votive_niche": "feature:940d78ef1c3957c4561aac343326b4a52c2e118393669d95305eaa2e559f32d2",
+        "priory:1:fallen_statue": "feature:467b05b6d2fd341d25c3ce614c4173e2dd9032eb2909c1caa010049ca8272c50",
+        "priory:1:relief_map": "feature:79e31742b835ed32e70f75398450ab93e6d477ecf49b07673beed9370a8d37ca",
+        "priory:1:chapel_altar": "feature:af22b99bbc19559d9dc3535288ba49f67944f3b9549303e9101cde681215cd0f",
+        "priory:1:wine_casks": "feature:342202f06d0a7cc86d62c17f1946af96e4815c39dba17aae91f378333be31a11",
+        "priory:1:goblin_loot": "feature:310fa1b7f41c490b544f8d471d985ee3591d639b9d89746b04333ee78eebd133",
+        "priory:1:iron_chest": "feature:8cb76b859013c84ec71706fc4555c78f7a3613d7af43809289a6eed182fbcda2",
+        "priory:1:gilt_psalter": "feature:02e4a33044dc3c44f0377c756e518aacaea6089e205b9a60492cdc25bfde7106",
+        "priory:1:stirge_nest": "feature:32effd2bb6e5d4867d44849f169ecab0365ca0128ed4fc39408699a1254cec5d",
+        "priory:1:lost_satchel": "feature:80c91fae5e4e92fb10763a9ccf88a518421d57cfeeb0d30846414235b0fceab1",
+        "priory:2:goblin_pouch": "feature:2ec7eff3f7a434ff5b39fbe724014d6142e597ac10c763f5ca619e68f9055306",
+        "priory:2:abbots_coffin": "feature:b68a69bc390e74e771a474a1e172911b6a264b50b48de66870fe5df1d5b3977c",
+        "priory:2:priors_desk": "feature:090105fcc07436edfaeeebe4ff226659dfe500a7d97fa19591bf6dada87a2c37",
+        "priory:2:unsent_letter": "feature:cbff6bec10873bd435db8691aca3b02608f9310a768f991730332f26453fac64",
+        "priory:2:reliquary_casket": "feature:34501b7b25c68d099c0bc8025822a52a7842581b29154a3b6a5327105a7fab2d",
+        "priory:2:offering_chest": "feature:6745a3ab95d1790204709534a96406cdbcf4abcd72199cd4d072dac91058fa21",
+        "priory:2:drowned_purse": "feature:fa3c6cb3bdb0eb1e257916015b8186ff231185aa97d9f2a4691e9c9ea1f178b0",
+        "priory:2:gnawed_bones": "feature:faa8f0e67ff1123165bf71a16c7f7d467f387c75dbe5c729c6e90e2bfe5d19be",
+        "priory:2:bone_wheel": "feature:0b9dfc38e7743012fe4d8a89fd713f401d1238f4710a43b03c4869ce6006f314",
+        "priory:2:sloping_floor": "feature:9f25958097bcad7f282c9fe8a6fccdb472a9c548c9cef93072519100338cd0a1",
+        "priory:3:vestment_chest": "feature:8c571d9e894d1571b3b2bfe972aab65b8c34adbbfc8ab8a74bb9d3c4e108b49e",
+        "priory:3:brothers_strongbox": "feature:1067527f35ee3ebdfdc4ed66f8414d2a20f694ae0ac9a4c712d56ad1591d2b0d",
+        "priory:3:key_stone": "feature:3294dec44937155df5c1697de16aeaede809655bf298e0cbffecaf3950f31e3b",
+        "priory:3:inside_the_bell": "feature:0dfacec1b2f168fdc85491a0a89cdc4b559f99e2706886f63d1e34f6903ea814",
+        "priory:3:priors_hoard": "feature:9b1a1124b9622e39bac0259a68ae146cca8465f7f2b426d2420a9e0b43133924",
+        "priory:3:mercy": "feature:82b76a3a386dc3b4fc082fe7ceb5bdb4a4c680e95fa660cf0116660f75a3b0cd"
+      }
     }
   },
   "declarations": null,
   "feed": {
     "entries": [
       {
-        "seq": 25,
-        "created_at": "2026-11-26T03:50:16Z",
-        "user_id": "usr_27uu5K1E6usvnfFnEE4Z5w",
+        "seq": 1,
+        "created_at": "2026-11-26T09:06:55Z",
+        "user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw",
         "visibility": "everyone",
         "to": [],
         "kind": "system",
         "code": "member_joined",
         "params": {
-          "user_id": "usr_27uu5K1E6usvnfFnEE4Z5w"
+          "user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw"
         }
       },
       {
-        "seq": 26,
-        "created_at": "2026-11-26T03:50:16Z",
-        "user_id": "usr_egewOApmbWw9MocOHTy8BA",
+        "seq": 2,
+        "created_at": "2026-11-26T09:06:55Z",
+        "user_id": "usr_n42KOsHJshcCoV-DsSEH_A",
         "visibility": "everyone",
         "to": [],
         "kind": "system",
         "code": "game_started",
         "params": {
-          "session_id": "ses_6XXMPT9DkFiHdydQWvUZGQ",
+          "session_id": "ses_rEucMvINs3jFWwyOmfy3JA",
           "adventure_name": "The Drowned Bell"
         }
       },
       {
-        "seq": 27,
-        "created_at": "2026-11-26T03:50:16Z",
-        "user_id": "usr_27uu5K1E6usvnfFnEE4Z5w",
+        "seq": 3,
+        "created_at": "2026-11-26T09:06:55Z",
+        "user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw",
         "visibility": "everyone",
         "to": [],
         "kind": "game",
         "command_type": "enter_dungeon",
         "revision": 1,
-        "session_id": "ses_6XXMPT9DkFiHdydQWvUZGQ",
+        "session_id": "ses_rEucMvINs3jFWwyOmfy3JA",
         "events": [
           {
             "code": "exploration.location.entered",
@@ -2092,6 +2181,7 @@
           "groups": {},
           "monsters": {},
           "items": {},
+          "items_plural": {},
           "dungeons": {
             "priory": "The priory on Corvane's Holm"
           }
@@ -2100,29 +2190,29 @@
         "xp_gained": {}
       },
       {
-        "seq": 28,
-        "created_at": "2026-11-26T03:50:16Z",
+        "seq": 4,
+        "created_at": "2026-11-26T09:06:55Z",
         "user_id": null,
         "visibility": "everyone",
         "to": [],
         "kind": "system",
         "code": "save_created",
         "params": {
-          "save_id": "sav_V0HpKnevwX8Umql-NpgpVg",
+          "save_id": "sav_68vYIh1F2H1IXKC1b98FDQ",
           "label": "Autosave: Entered the priory on Corvane's Holm",
           "autosave": true
         }
       },
       {
-        "seq": 29,
-        "created_at": "2026-11-26T03:50:16Z",
-        "user_id": "usr_27uu5K1E6usvnfFnEE4Z5w",
+        "seq": 5,
+        "created_at": "2026-11-26T09:06:55Z",
+        "user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw",
         "visibility": "everyone",
         "to": [],
         "kind": "game",
         "command_type": "move_party",
         "revision": 2,
-        "session_id": "ses_6XXMPT9DkFiHdydQWvUZGQ",
+        "session_id": "ses_rEucMvINs3jFWwyOmfy3JA",
         "events": [
           {
             "code": "exploration.party.moved",
@@ -2141,21 +2231,22 @@
           "groups": {},
           "monsters": {},
           "items": {},
+          "items_plural": {},
           "dungeons": {}
         },
         "actor_id": null,
         "xp_gained": {}
       },
       {
-        "seq": 30,
-        "created_at": "2026-11-26T03:50:16Z",
-        "user_id": "usr_egewOApmbWw9MocOHTy8BA",
+        "seq": 6,
+        "created_at": "2026-11-26T09:06:55Z",
+        "user_id": "usr_n42KOsHJshcCoV-DsSEH_A",
         "visibility": "everyone",
         "to": [],
         "kind": "game",
         "command_type": "spawn_monsters",
         "revision": 3,
-        "session_id": "ses_6XXMPT9DkFiHdydQWvUZGQ",
+        "session_id": "ses_rEucMvINs3jFWwyOmfy3JA",
         "events": [
           {
             "code": "session.monsters.spawned",
@@ -2251,21 +2342,22 @@
             }
           },
           "items": {},
+          "items_plural": {},
           "dungeons": {}
         },
         "actor_id": null,
         "xp_gained": {}
       },
       {
-        "seq": 31,
-        "created_at": "2026-11-26T03:50:16Z",
+        "seq": 7,
+        "created_at": "2026-11-26T09:06:55Z",
         "user_id": null,
         "visibility": "everyone",
         "to": [],
         "kind": "system",
         "code": "save_created",
         "params": {
-          "save_id": "sav_TR2Yt_2tygvgNQKbgqfaNA",
+          "save_id": "sav_TEPEXsuOt57zZv9aHxpmSw",
           "label": "Autosave: Met 3 goblins in the priory on Corvane's Holm, level 1",
           "autosave": true
         }
@@ -2294,6 +2386,6 @@
       "updated_at": null
     }
   },
-  "server_time": "2026-11-26T03:50:16Z",
+  "server_time": "2026-11-26T09:06:55Z",
   "rejoin_requests": []
 }

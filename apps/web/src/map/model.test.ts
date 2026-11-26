@@ -55,7 +55,22 @@ describe('fromPlayerView', () => {
     expect(map.transitions).toEqual([]);
     expect(map.areas).toEqual([]);
     expect(map.features.map((f) => f.kind)).toEqual(['pile']);
-    expect(map.features[0]).toMatchObject({ x: 6, y: 9, contents: ['dagger×1'] });
+    // Without names for its contents, a pile lists nothing rather than the view's raw strings.
+    expect(map.features[0]).toMatchObject({ x: 6, y: 9, contents: [] });
+  });
+
+  it('names a pile’s contents with the names the client passes, and holds no referee notes', () => {
+    const map = fromPlayerView(explored.view, undefined, {
+      pileContents: (pile) => [`${pile.coins_gp_value} gp`, 'a dagger'],
+      extras: { features: [{ id: 'feature:statue', kind: 'custom', x: 6, y: 8, description: 'A statue.' }] },
+    });
+    expect(map?.features.find((f) => f.kind === 'pile')?.contents).toEqual([
+      `${Object.values(explored.view.piles)[0]?.coins_gp_value ?? -1} gp`,
+      'a dagger',
+    ]);
+    // A player's map is built from the player view alone, so no feature on it has referee notes.
+    expect(map?.features.length).toBe(2);
+    expect(map?.features.every((f) => f.refereeNotes === null)).toBe(true);
   });
 
   it('names the areas a client passes, on known cells only, with no key numbers', () => {
@@ -182,8 +197,23 @@ describe('fromRefereeView', () => {
     expect(feature('altar_hoard')?.trap?.state).toMatch(/hidden|found/);
     expect(feature('loose_stone')).toMatchObject({ kind: 'trick', found: false });
     expect(feature('carved_face')).toMatchObject({ kind: 'custom', areaId: null, x: 6, y: 8 });
-    expect(feature('pile@6,9')?.contents).toEqual(['dagger × 1']);
+    expect(feature('pile@6,9')?.contents).toEqual(['dagger']);
     expect(map.features.filter((f) => f.kind === 'generated_cache')).toHaveLength(1);
+  });
+
+  it('names items with the phrase the client passes, and carries the adventure’s referee notes', () => {
+    const level = structuredClone(fixtureLevel(explored, 'vault', 1));
+    const bowl = level.areas.flatMap((a) => a.features).find((f) => f.id === 'offering_bowl');
+    if (!bowl) throw new Error('No offering bowl.');
+    bowl.referee_notes = 'The bowl is silver under the grime.';
+    const map = fromRefereeView(level, explored.referee.dungeon_state, {
+      dungeonId: 'vault',
+      itemPhrase: (id, quantity) => `${quantity} × ${id}`,
+    });
+    expect(map.features.find((f) => f.id === 'pile@6,9')?.contents).toEqual(['1 × dagger']);
+    expect(map.features.find((f) => f.id === 'offering_bowl')?.refereeNotes).toBe(
+      'The bowl is silver under the grime.',
+    );
   });
 
   it('numbers areas in order and anchors labels inside them, clear of stairs', () => {

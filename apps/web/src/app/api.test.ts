@@ -35,4 +35,20 @@ describe('describeProblem', () => {
     expect(message.title).toBe("The bxvtt server isn't responding");
     expect(message.detail).toMatch(/starting or restarting/);
   });
+
+  it('says the game service is out of date, not unreachable, for an engine that is too old', () => {
+    const message = describeProblem(
+      new BxvttProblemError({
+        type: 'about:blank',
+        title: 'Service Unavailable',
+        status: 503,
+        code: 'bxapi_outdated',
+        detail: 'The server says why.',
+      }),
+    );
+    expect(message.title).toBe('The game service is out of date');
+    expect(message.detail).toBe(
+      "Games can't run until it's updated. Ask the server host to update the game service.",
+    );
+  });
 });

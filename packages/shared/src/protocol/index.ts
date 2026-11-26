@@ -17,7 +17,6 @@ export * from './problems';
 export * from './rejoin';
 export * from './rules';
 export * from './saves';
-export * from './scene';
 export * from './tables';
 export * from './users';
 export * from './ws';

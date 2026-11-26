@@ -1,14 +1,14 @@
-import type { MemberView, SpellSummary } from '@bxvtt/shared/bxapi';
+import type { MemberView, PlayerView } from '@bxvtt/shared/bxapi';
+import { capitalizeFirst, ordinal, spellFormName, type TextContext } from '@bxvtt/shared/text';
+import { useMemo, useRef, useState, type RefObject } from 'react';
 import {
-  capitalizeFirst,
-  joinList,
-  ordinal,
-  spellFormName,
-  spellName,
-  type TextContext,
-} from '@bxvtt/shared/text';
-import { useMemo, useState } from 'react';
-import { useParty, usePartyLocation, useSendCommand, useSpellCatalog, useTextContext } from '@/app';
+  useParty,
+  usePartyLocation,
+  usePlayerView,
+  useSendCommand,
+  useSpellDetail,
+  useTextContext,
+} from '@/app';
 import {
   Badge,
   Banner,
@@ -25,35 +25,47 @@ import {
   Select,
   Skeleton,
 } from '@/ui';
-import { classMagic, spellSlotsAt } from '../wizard/tables';
+import { spellModeOptions, spellRangeText } from '../combat/model';
 import { useMemberCommand } from './actions';
 import { spellDuration, spellRange, withoutPointers } from './spellText';
 import { RuleLink } from './RuleLink';
 import type { SheetModel } from './model';
 import styles from './sheet.module.css';
-import { useClassDetail, useSpellDetail } from './catalogs';
+
+/** The view's spell levels, by spell ID. */
+type SpellLevels = PlayerView['spell_levels'];
+
+const NO_LEVELS: SpellLevels = {};
 
 /**
  * A spell's name in the form a member has it: the name the player view states, including a spell the adventure
- * bundles, and for a reversed copy the name of the reverse. The catalogs name a spell the view doesn't.
+ * bundles, and for a reversed copy the name of the reverse.
  */
 function nameOf(id: string, reversed: boolean, ctx: TextContext): string {
   return capitalizeFirst(spellFormName(id, reversed, ctx));
 }
 
+function useSpellLevels(): SpellLevels {
+  return usePlayerView()?.spell_levels ?? NO_LEVELS;
+}
+
+/** The text a spell's details show when they failed to load. */
+const DETAILS_FAILED = "This spell's details didn't load. Try again in a moment.";
+
 /** A spell's full text: the introduction and each way to cast it. */
 export function SpellDetailBody({ spellId }: { spellId: string }) {
   const entry = useSpellDetail(spellId);
+  const levels = useSpellLevels();
   if (entry.loading) return <Skeleton lines={4} />;
-  if (!entry.data) return <p className={styles.detailProse}>No details available for this spell.</p>;
+  if (!entry.data) return <p className={styles.detailProse}>{DETAILS_FAILED}</p>;
   const spell = entry.data;
   return (
     <div className={styles.detail}>
       <dl className={styles.detailFacts}>
         <dt>Level</dt>
-        <dd>{spell.level}</dd>
+        <dd>{ordinal(levels[spellId] ?? spell.level)}</dd>
         <dt>Range</dt>
-        <dd>{spell.range}</dd>
+        <dd>{spellRangeText(spell)}</dd>
         <dt>Duration</dt>
         <dd>{spell.duration}</dd>
         {spell.reversed_form && (
@@ -63,7 +75,7 @@ export function SpellDetailBody({ spellId }: { spellId: string }) {
           </>
         )}
       </dl>
-      {spell.intro && <p className={styles.detailProse}>{withoutPointers(spell.intro)}</p>}
+      {showIntro(spell) && <p className={styles.detailProse}>{withoutPointers(spell.intro)}</p>}
       {spell.modes.map((mode) => (
         <p key={mode.key} className={styles.detailProse}>
           {withoutPointers(mode.prose)}
@@ -71,6 +83,18 @@ export function SpellDetailBody({ spellId }: { spellId: string }) {
       ))}
     </div>
   );
+}
+
+/**
+ * Whether a spell's details show its summary: it has one, and no mode's text starts with the same words, as an
+ * adventure's own spell often does.
+ */
+function showIntro(spell: { intro: string; modes: ReadonlyArray<{ prose: string }> }): boolean {
+  const summary = withoutPointers(spell.intro)
+    .replace(/[.!?]+$/, '')
+    .trim();
+  if (summary === '') return false;
+  return !spell.modes.some((mode) => withoutPointers(mode.prose).startsWith(summary));
 }
 
 function SpellInfo({ spellId, name }: { spellId: string; name: string }) {
@@ -85,23 +109,100 @@ function SpellInfo({ spellId, name }: { spellId: string; name: string }) {
   );
 }
 
+/** A spell's name on a card, linked to the rules reference only when the rules catalog has the spell. */
+function SpellCardName({ spellId, name }: { spellId: string; name: string }) {
+  const detail = useSpellDetail(spellId);
+  return (
+    <span className={styles.spellName}>
+      <RuleLink entry={detail.inCatalog ? { kind: 'spells', id: spellId } : null}>{name}</RuleLink>
+    </span>
+  );
+}
+
 /**
- * The spells tab: the spell book, the memorized spells with a cast button for each, and preparing and learning
- * spells when bxapi offers those commands.
+ * "1st level · Range: 120’ · 2 turns". The level comes from the view, and the range and duration join it once
+ * the spell's details load.
+ */
+function SpellMeta({ spellId, levels }: { spellId: string; levels: SpellLevels }) {
+  const detail = useSpellDetail(spellId);
+  const level = levels[spellId] ?? detail.data?.level;
+  if (level === undefined) return null;
+  return (
+    <span className={styles.spellMeta}>
+      {ordinal(level)} level
+      {detail.data &&
+        ` · ${spellRange(spellRangeText(detail.data))} · ${spellDuration(detail.data.duration)}`}
+    </span>
+  );
+}
+
+/**
+ * The slots at each spell level that has any, with how many copies are memorized there. When a memorized copy has
+ * no level in the view, the counts can't be placed, so each level shows its slots alone.
+ */
+function SlotDisplay({
+  slots,
+  model,
+  levels,
+}: {
+  slots: readonly number[];
+  model: SheetModel;
+  levels: SpellLevels;
+}) {
+  const placed = model.memorized.every((copy) => levels[copy.spellId] !== undefined);
+  return (
+    <div className={styles.slotsLine}>
+      <span className={styles.muted} aria-hidden="true">
+        Slots
+      </span>
+      <dl className={styles.slotPairs} aria-label="Spell slots">
+        {slots.map((n, index) => {
+          if (n <= 0) return null;
+          const level = index + 1;
+          const memorized = model.memorized.filter((copy) => levels[copy.spellId] === level).length;
+          return (
+            <div key={level} className={styles.slotPair}>
+              <dt>{ordinal(level)} level</dt>
+              <dd>
+                {placed ? (
+                  <>
+                    {memorized} of {n}
+                    <span className="visually-hidden-inline"> memorized</span>
+                  </>
+                ) : (
+                  `${n} ${n === 1 ? 'slot' : 'slots'}`
+                )}
+              </dd>
+            </div>
+          );
+        })}
+      </dl>
+    </div>
+  );
+}
+
+/** Whether a member has any magic to show a spells tab for: spell slots, a spell book, or a memorized spell. */
+export function hasSpells(member: MemberView | null): boolean {
+  if (!member) return false;
+  return member.spell_slots.length > 0 || member.spell_book.length > 0 || member.memorized_spells.length > 0;
+}
+
+/**
+ * The spells tab: the spell slots, the memorized spells with a cast button for each, the spell book, and
+ * preparing and learning spells when bxapi offers those commands. Every fact comes from the member's view.
  */
 export function SpellsTab({ member, model }: { member: MemberView; model: SheetModel }) {
-  const classEntry = useClassDetail(model.classId);
-  const catalog = useSpellCatalog();
   const ctx = useTextContext();
-  const magic = classMagic(classEntry.data);
-  const slots = spellSlotsAt(classEntry.data, model.level);
+  const levels = useSpellLevels();
   const prepare = useMemberCommand('prepare_spells', member.id);
   const learn = useMemberCommand('learn_spell', member.id);
   const cast = useMemberCommand('cast_spell', member.id);
-  const [preparing, setPreparing] = useState<'header' | 'notice' | null>(null);
+  const [preparing, setPreparing] = useState(false);
   const [casting, setCasting] = useState<{ spellId: string; reversed: boolean } | null>(null);
   const [learning, setLearning] = useState(false);
-  const spells = catalog.data;
+  // Preparing the first spells, or casting the last copy of one, removes the button that opened the dialog, so
+  // focus returns to the section's heading.
+  const heading = useRef<HTMLHeadingElement>(null);
 
   const memorized = useMemo(() => {
     const groups = new Map<string, { spellId: string; reversed: boolean; count: number }>();
@@ -114,44 +215,26 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
     return [...groups.values()];
   }, [model.memorized]);
 
+  const slots = member.spell_slots;
+  const hasSlots = slots.some((n) => n > 0);
+  const canPrepare = prepare.legal !== null && member.preparable_spells.length > 0;
   const blocked = [prepare, learn, cast].find((c) => c.legal !== null && !c.permission.allowed);
-  const bookNames = model.spellBook.map((id) => nameOf(id, false, ctx));
-  // A caster whose class table gives slots at this level but who has nothing memorized can't cast yet.
-  const unprepared = magic !== null && model.memorized.length === 0 && slots.some((n) => n > 0);
-  // After a level up, the class table can give more slots than the caster has memorized.
-  const openSlots = Math.max(0, slots.reduce((sum, n) => sum + n, 0) - model.memorized.length);
+  const showBook = member.spell_book.length > 0 || member.learnable_spells.length > 0;
+  const prepareButton = (
+    <Button
+      size="sm"
+      variant="secondary"
+      icon="book"
+      disabled={!prepare.permission.allowed}
+      disabledReason={prepare.permission.reason}
+      onClick={() => setPreparing(true)}
+    >
+      Prepare spells
+    </Button>
+  );
 
   return (
     <div className={styles.tabPanel}>
-      {unprepared && (
-        <Banner
-          tone="info"
-          icon="book"
-          title={
-            magic.kind === 'arcane' && bookNames.length > 0
-              ? `${member.name} knows ${joinList(bookNames)} but hasn't memorized ${
-                  bookNames.length === 1 ? 'it' : 'them'
-                }, so they can't cast ${bookNames.length === 1 ? 'it' : 'them'} yet.`
-              : `${member.name} has no spells memorized, so they can't cast any yet.`
-          }
-          actions={
-            prepare.legal ? (
-              <Button
-                size="sm"
-                variant="secondary"
-                icon="book"
-                disabled={!prepare.permission.allowed}
-                disabledReason={prepare.permission.reason}
-                onClick={() => setPreparing('notice')}
-              >
-                Prepare spells
-              </Button>
-            ) : undefined
-          }
-        >
-          A caster prepares spells after a night&apos;s rest.
-        </Banner>
-      )}
       {blocked && !blocked.permission.allowed && (
         <Banner tone="neutral" icon="lock">
           {blocked.permission.reason}
@@ -159,67 +242,39 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
       )}
       <section className={styles.section} aria-labelledby="spells-memorized">
         <div className={styles.sectionHeader}>
-          <h3 id="spells-memorized" className={styles.sectionTitle}>
+          <h3 id="spells-memorized" ref={heading} tabIndex={-1} className={styles.sectionTitle}>
             Memorized spells
           </h3>
-          {prepare.legal && !unprepared && (
-            <Button
-              size="sm"
-              variant="secondary"
-              icon="book"
-              disabled={!prepare.permission.allowed}
-              disabledReason={prepare.permission.reason}
-              onClick={() => setPreparing('header')}
-            >
-              Prepare spells
-            </Button>
-          )}
+          {canPrepare && memorized.length > 0 && prepareButton}
         </div>
-        <div className={styles.slotsLine} aria-label="Spell slots">
-          {slots.some((n) => n > 0) ? (
-            slots.map((n, i) =>
-              n > 0 ? (
-                <Badge key={i} tone="magic" appearance="outline">
-                  {ordinal(i + 1)} level: {n} {n === 1 ? 'slot' : 'slots'}
-                </Badge>
-              ) : null,
-            )
-          ) : (
-            <span className={styles.muted}>No spell slots at level {model.level}.</span>
-          )}
-        </div>
-        {!unprepared && model.memorized.length > 0 && openSlots > 0 && (
-          <p className={styles.note}>
-            {openSlots === 1
-              ? `${member.name} has 1 open spell slot.`
-              : `${member.name} has ${openSlots} open spell slots.`}{' '}
-            Prepare spells after a night&apos;s rest to fill {openSlots === 1 ? 'it' : 'them'}.
-          </p>
-        )}
-        <p className={styles.note}>Preparing spells takes 6 turns after a night&apos;s rest.</p>
+        {hasSlots && <SlotDisplay slots={slots} model={model} levels={levels} />}
         {memorized.length === 0 ? (
-          <p className={styles.muted}>No spells memorized.</p>
+          hasSlots ? (
+            <EmptyState
+              size="compact"
+              icon="book"
+              title="No spells memorized"
+              action={canPrepare ? prepareButton : undefined}
+            />
+          ) : (
+            <EmptyState size="compact" icon="book" title="No spell slots yet" />
+          )
         ) : (
           <div className={styles.spellGrid}>
             {memorized.map((copy) => {
               const name = nameOf(copy.spellId, copy.reversed, ctx);
-              const summary = spells?.find((s) => s.id === copy.spellId);
               return (
                 <div key={`${copy.spellId}:${copy.reversed}`} className={styles.spellCard}>
                   <div className={styles.spellTop}>
-                    <span className={styles.spellName}>
-                      <RuleLink entry={{ kind: 'spells', id: copy.spellId }}>{name}</RuleLink>
+                    <SpellCardName spellId={copy.spellId} name={name} />
+                    <span className={styles.spellTopEnd}>
+                      {copy.count > 1 && <Badge tone="magic">×{copy.count}</Badge>}
+                      <SpellInfo spellId={copy.spellId} name={name} />
                     </span>
-                    {copy.count > 1 && <Badge tone="magic">×{copy.count}</Badge>}
                   </div>
-                  {summary && (
-                    <span className={styles.spellMeta}>
-                      {ordinal(summary.level)} level · {spellRange(summary.range)} ·{' '}
-                      {spellDuration(summary.duration)}
-                    </span>
-                  )}
-                  <div className={styles.spellActions}>
-                    {cast.legal && (
+                  <SpellMeta spellId={copy.spellId} levels={levels} />
+                  {cast.legal && (
+                    <div className={styles.spellActions}>
                       <Button
                         size="sm"
                         variant="secondary"
@@ -230,9 +285,8 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
                       >
                         Cast
                       </Button>
-                    )}
-                    <SpellInfo spellId={copy.spellId} name={name} />
-                  </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -240,19 +294,23 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
         )}
       </section>
 
-      {(magic?.kind === 'arcane' || model.spellBook.length > 0) && (
+      {showBook && (
         <section className={styles.section} aria-labelledby="spells-book">
           <div className={styles.sectionHeader}>
             <h3 id="spells-book" className={styles.sectionTitle}>
               Spell book
             </h3>
-            {learn.legal && magic?.kind === 'arcane' && (
+            {learn.legal && (
               <Button
                 size="sm"
                 variant="ghost"
                 icon="plus"
-                disabled={!learn.permission.allowed}
-                disabledReason={learn.permission.reason}
+                disabled={member.learnable_spells.length === 0 || !learn.permission.allowed}
+                disabledReason={
+                  member.learnable_spells.length === 0
+                    ? `${member.name} can't learn a new spell now.`
+                    : learn.permission.reason
+                }
                 onClick={() => setLearning(true)}
               >
                 Learn a spell
@@ -264,22 +322,16 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
           ) : (
             <div className={styles.spellGrid}>
               {model.spellBook.map((id) => {
-                const summary = spells?.find((s) => s.id === id);
                 const name = nameOf(id, false, ctx);
                 return (
                   <div key={id} className={styles.spellCard}>
                     <div className={styles.spellTop}>
-                      <span className={styles.spellName}>
-                        <RuleLink entry={{ kind: 'spells', id }}>{name}</RuleLink>
+                      <SpellCardName spellId={id} name={name} />
+                      <span className={styles.spellTopEnd}>
+                        <SpellInfo spellId={id} name={name} />
                       </span>
-                      <SpellInfo spellId={id} name={name} />
                     </div>
-                    {summary && (
-                      <span className={styles.spellMeta}>
-                        {ordinal(summary.level)} level · {spellRange(summary.range)} ·{' '}
-                        {spellDuration(summary.duration)}
-                      </span>
-                    )}
+                    <SpellMeta spellId={id} levels={levels} />
                   </div>
                 );
               })}
@@ -288,155 +340,133 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
         </section>
       )}
 
-      {preparing && magic && (
+      {preparing && (
         <PrepareDialog
           member={member}
           model={model}
-          spellList={magic.spellList}
-          arcane={magic.kind === 'arcane'}
-          slots={slots}
-          onClose={() => setPreparing(null)}
+          levels={levels}
+          returnFocus={heading}
+          onClose={() => setPreparing(false)}
         />
       )}
       {casting && (
-        <CastDialog
-          member={member}
-          copy={casting}
-          arcane={magic?.kind === 'arcane'}
-          onClose={() => setCasting(null)}
-        />
+        <CastDialog member={member} copy={casting} returnFocus={heading} onClose={() => setCasting(null)} />
       )}
-      {learning && magic && (
-        <LearnDialog
-          member={member}
-          model={model}
-          spellList={magic.spellList}
-          onClose={() => setLearning(false)}
-        />
-      )}
+      {learning && <LearnDialog member={member} levels={levels} onClose={() => setLearning(false)} />}
     </div>
   );
 }
 
-/** Whether a member has any magic to show a spells tab for. */
-export function useHasSpells(model: Pick<SheetModel, 'classId' | 'spellBook' | 'memorized'> | null): boolean {
-  const classEntry = useClassDetail(model ? model.classId : null);
-  if (!model) return false;
-  return model.spellBook.length > 0 || model.memorized.length > 0 || classMagic(classEntry.data) !== null;
-}
-
-interface PrepareProps {
-  member: MemberView;
-  model: SheetModel;
-  spellList: string;
-  arcane: boolean;
-  slots: number[];
-  onClose: () => void;
-}
-
-/** Why a spell's count can't rise: every slot the class table gives at its level is taken. */
-function slotsFullSentence(level: number, slots: number): string {
-  return slots === 1
-    ? `The slot for ${ordinal(level)}-level spells is full.`
-    : `All ${slots} slots for ${ordinal(level)}-level spells are full.`;
-}
-
-function PrepareRow({
-  spell,
-  arcane,
-  counts,
+/** One count control in the prepare dialog: a spell in one form. */
+function PrepareCount({
+  name,
+  value,
   free,
-  levelSlots,
-  setCount,
+  level,
+  onChange,
 }: {
-  spell: SpellSummary;
-  arcane: boolean;
-  counts: Record<string, number>;
-  /** Slots still open at this spell's level, so a count can't go past the slots. */
+  name: string;
+  value: number;
+  /** Slots still open at the spell's level, so a count can't go past the slots. */
   free: number;
-  /** All the slots the class table gives at this spell's level. */
-  levelSlots: number;
-  setCount: (key: string, value: number) => void;
+  level: number;
+  onChange: (value: number) => void;
 }) {
-  const detail = useSpellDetail(arcane ? spell.id : null);
-  const reversible = arcane && detail.data?.reversed_form;
-  const full = slotsFullSentence(spell.level, levelSlots);
   return (
-    <li className={styles.pickRow}>
-      <span className={styles.pickName}>
-        {spell.name}
-        <span className={styles.spellMeta}> · {spell.range}</span>
-      </span>
-      <NumberInput
-        aria-label={`Copies of ${spell.name}`}
-        incrementLabel={`More copies of ${spell.name}`}
-        decrementLabel={`Fewer copies of ${spell.name}`}
-        value={counts[`${spell.id}:false`] ?? 0}
-        min={0}
-        max={(counts[`${spell.id}:false`] ?? 0) + free}
-        maxReason={full}
-        onChange={(v) => setCount(`${spell.id}:false`, v ?? 0)}
-      />
-      {reversible && (
-        <NumberInput
-          aria-label={`Copies of ${detail.data?.reversed_form?.name ?? 'the reversed form'}`}
-          incrementLabel={`More copies of ${detail.data?.reversed_form?.name ?? 'the reversed form'}`}
-          decrementLabel={`Fewer copies of ${detail.data?.reversed_form?.name ?? 'the reversed form'}`}
-          value={counts[`${spell.id}:true`] ?? 0}
-          min={0}
-          max={(counts[`${spell.id}:true`] ?? 0) + free}
-          maxReason={full}
-          onChange={(v) => setCount(`${spell.id}:true`, v ?? 0)}
-        />
-      )}
-    </li>
+    <NumberInput
+      aria-label={`Copies of ${name}`}
+      incrementLabel={`More copies of ${name}`}
+      decrementLabel={`Fewer copies of ${name}`}
+      value={value}
+      min={0}
+      max={value + free}
+      maxReason={`No ${ordinal(level)}-level slots left.`}
+      onChange={(v) => onChange(v ?? 0)}
+    />
   );
 }
 
-/** Chooses the spells to memorize, level by level, within the slots the class table lists. */
-function PrepareDialog({ member, model, spellList, arcane, slots, onClose }: PrepareProps) {
-  const catalog = useSpellCatalog();
+/** The key of one form of a spell in the prepare dialog's counts. */
+function formKey(spellId: string, reversed: boolean): string {
+  return `${spellId}:${reversed}`;
+}
+
+/**
+ * Chooses the spells to memorize, level by level: the spells bxapi lists in `preparable_spells`, grouped by the
+ * view's spell levels, within the member's `spell_slots`.
+ */
+function PrepareDialog({
+  member,
+  model,
+  levels,
+  returnFocus,
+  onClose,
+}: {
+  member: MemberView;
+  model: SheetModel;
+  levels: SpellLevels;
+  returnFocus: RefObject<HTMLElement | null>;
+  onClose: () => void;
+}) {
+  const ctx = useTextContext();
+  const reversedNames = usePlayerView()?.reversed_spell_names ?? {};
   const { send, pending } = useSendCommand();
   const [error, setError] = useState<string | null>(null);
+  const [hadMemorized] = useState(() => model.memorized.length > 0);
   const [counts, setCounts] = useState<Record<string, number>>(() => {
     const initial: Record<string, number> = {};
+    // A memorized copy of a spell bxapi doesn't list as preparable has no row here, so it starts uncounted.
     for (const copy of model.memorized) {
-      const key = `${copy.spellId}:${copy.reversed}`;
+      if (!member.preparable_spells.includes(copy.spellId)) continue;
+      const key = formKey(copy.spellId, copy.reversed);
       initial[key] = (initial[key] ?? 0) + 1;
     }
-    // With nothing memorized, an arcane caster starts from one copy of each spell in the book, as far as the
-    // slots at each level go. The player changes it before preparing.
-    if (arcane && model.memorized.length === 0) {
-      slots.forEach((n, index) => {
-        const level = index + 1;
-        (catalog.data ?? [])
-          .filter((spell) => spell.level === level && model.spellBook.includes(spell.id))
+    // With nothing memorized, the first choice is one copy of each book spell, as far as each level's slots go.
+    // The player changes it before preparing.
+    if (model.memorized.length === 0) {
+      member.spell_slots.forEach((n, index) => {
+        member.preparable_spells
+          .filter((id) => levels[id] === index + 1 && member.spell_book.includes(id))
           .slice(0, n)
-          .forEach((spell) => {
-            initial[`${spell.id}:false`] = 1;
+          .forEach((id) => {
+            initial[formKey(id, false)] = 1;
           });
       });
     }
     return initial;
   });
-  const candidates = (catalog.data ?? []).filter((s) =>
-    arcane ? model.spellBook.includes(s.id) : s.spell_list === spellList,
+  const groups = member.spell_slots
+    .map((n, index) => ({
+      level: index + 1,
+      slots: n,
+      spells: member.preparable_spells.filter((id) => levels[id] === index + 1),
+    }))
+    .filter((group) => group.slots > 0 && group.spells.length > 0);
+  // A spell in the book chose its form when it was memorized, so only a book spell has a row for its reverse.
+  const reversedNameOf = (id: string) => (member.spell_book.includes(id) ? reversedNames[id] : undefined);
+  // The forms the dialog has a row for. The counts and the command cover these alone, so a spell that leaves the
+  // view while the dialog is open is never sent.
+  const shown = groups.flatMap(({ spells }) =>
+    spells.flatMap((id) => [
+      { spellId: id, reversed: false },
+      ...(reversedNameOf(id) === undefined ? [] : [{ spellId: id, reversed: true }]),
+    ]),
   );
-  const levels = slots.map((n, i) => ({ level: i + 1, slots: n })).filter((l) => l.slots > 0);
-  const chosenAt = (level: number) =>
-    candidates
-      .filter((s) => s.level === level)
-      .reduce((sum, s) => sum + (counts[`${s.id}:false`] ?? 0) + (counts[`${s.id}:true`] ?? 0), 0);
+  const countOf = (id: string, reversed: boolean) => counts[formKey(id, reversed)] ?? 0;
+  const chosenIn = (spells: readonly string[]) =>
+    shown
+      .filter((f) => spells.includes(f.spellId))
+      .reduce((sum, f) => sum + countOf(f.spellId, f.reversed), 0);
+  const chosenTotal = chosenIn(shown.map((f) => f.spellId));
+  const setCount = (key: string, value: number) => setCounts((c) => ({ ...c, [key]: value }));
 
   const submit = async () => {
     setError(null);
-    const selections = Object.entries(counts).flatMap(([key, n]) => {
-      const [spellId, reversed] = key.split(':');
-      if (!spellId) return [];
-      return Array.from({ length: n }, () =>
-        reversed === 'true' ? { spell_id: spellId, reversed: true } : { spell_id: spellId },
-      );
-    });
+    const selections = shown.flatMap(({ spellId, reversed }) =>
+      Array.from({ length: countOf(spellId, reversed) }, () =>
+        reversed ? { spell_id: spellId, reversed: true } : { spell_id: spellId },
+      ),
+    );
     const result = await send(
       { command_type: 'prepare_spells', character_id: member.id, selections },
       { display: 'inline' },
@@ -452,108 +482,110 @@ function PrepareDialog({ member, model, spellList, arcane, slots, onClose }: Pre
         if (!open) onClose();
       }}
       title={`Prepare ${member.name}'s spells`}
-      description="The new list replaces what is memorized now. Preparing spells takes 6 turns."
+      returnFocus={returnFocus}
+      initialFocus={PREPARE_FOCUS}
+      description={
+        hadMemorized ? `Your choices replace the spells ${member.name} has memorized now.` : undefined
+      }
       size="md"
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button variant="primary" icon="book" loading={pending} onClick={() => void submit()}>
+          <Button
+            variant="primary"
+            icon="book"
+            loading={pending}
+            disabled={chosenTotal === 0}
+            disabledReason="Choose a spell to prepare."
+            onClick={() => void submit()}
+          >
             Prepare spells
           </Button>
         </>
       }
     >
       <div className={styles.form}>
-        {error && (
-          <Banner tone="warning" title="Couldn't prepare spells">
-            {error}
-          </Banner>
-        )}
-        {levels.length === 0 && (
-          <EmptyState
-            icon="book"
-            size="compact"
-            title="No spell slots yet"
-            description={`${member.name} gains spell slots at a higher level.`}
-          />
-        )}
-        {catalog.loading && <Skeleton lines={4} />}
-        {levels.map(({ level, slots: n }) => {
-          const list = candidates.filter((s) => s.level === level);
+        {error && <Banner tone="warning">{error}</Banner>}
+        {groups.length === 0 && <EmptyState icon="book" size="compact" title="Nothing to prepare" />}
+        {groups.map(({ level, slots, spells }) => {
+          const chosen = chosenIn(spells);
+          const free = Math.max(0, slots - chosen);
+          const label = `${ordinal(level)}-level spells`;
           return (
-            <section
-              key={level}
-              className={styles.prepareLevel}
-              aria-label={`${ordinal(level)}-level spells`}
-            >
+            <section key={level} className={styles.prepareLevel} aria-label={label}>
               <div className={styles.sectionHeader}>
-                <h3 className={styles.sectionTitle}>{ordinal(level)}-level spells</h3>
-                <Badge tone={chosenAt(level) > n ? 'warning' : 'neutral'}>
-                  Slots used: {chosenAt(level)} of {n}
+                <h3 className={styles.sectionTitle}>{label}</h3>
+                <Badge tone={chosen > slots ? 'warning' : 'neutral'}>
+                  {chosen} of {slots}
+                  <span className="visually-hidden-inline"> slots chosen</span>
                 </Badge>
               </div>
-              {list.length === 0 ? (
-                <p className={styles.muted}>
-                  {arcane
-                    ? `No ${ordinal(level)}-level spells in the spell book.`
-                    : 'No spells at this level.'}
-                </p>
-              ) : (
-                <ul className={styles.pickList}>
-                  {list.map((spell) => (
-                    <PrepareRow
-                      key={spell.id}
-                      spell={spell}
-                      arcane={arcane}
-                      counts={counts}
-                      free={Math.max(0, n - chosenAt(level))}
-                      levelSlots={n}
-                      setCount={(key, value) => setCounts((c) => ({ ...c, [key]: value }))}
-                    />
-                  ))}
-                </ul>
-              )}
+              <ul className={styles.pickList}>
+                {spells.map((id) => {
+                  const name = nameOf(id, false, ctx);
+                  const reversedName = reversedNameOf(id);
+                  return (
+                    <li key={id} className={styles.pickGroup}>
+                      <div className={styles.pickRow}>
+                        <span className={styles.pickName}>{name}</span>
+                        <PrepareCount
+                          name={name}
+                          value={countOf(id, false)}
+                          free={free}
+                          level={level}
+                          onChange={(v) => setCount(formKey(id, false), v)}
+                        />
+                        <SpellInfo spellId={id} name={name} />
+                      </div>
+                      {reversedName !== undefined && (
+                        <div className={`${styles.pickRow} ${styles.pickRowReversed}`}>
+                          <span className={styles.pickName}>
+                            {capitalizeFirst(reversedName)} <Badge tone="neutral">Reversed</Badge>
+                          </span>
+                          <PrepareCount
+                            name={capitalizeFirst(reversedName)}
+                            value={countOf(id, true)}
+                            free={free}
+                            level={level}
+                            onChange={(v) => setCount(formKey(id, true), v)}
+                          />
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
             </section>
           );
         })}
-        {arcane && (
-          <p className={styles.note}>
-            Arcane casters choose between normal and reversed forms when memorizing a spell.
-          </p>
-        )}
       </div>
     </Dialog>
   );
 }
 
-/** A label for one way to cast a spell: its prose when each way has its own, or its key in words. */
-function modeLabel(
-  mode: { key: string; prose: string },
-  modes: ReadonlyArray<{ key: string; prose: string }>,
-): string {
-  const distinct = new Set(modes.map((m) => m.prose)).size === modes.length;
-  return distinct && mode.prose
-    ? withoutPointers(mode.prose)
-    : capitalizeFirst(mode.key.replaceAll('_', ' '));
-}
+/** The dialogs' first controls: a count, a way to cast or a target, and the spell to learn. */
+const PREPARE_FOCUS = { selector: '[role="spinbutton"]' };
+const CAST_FOCUS = { selector: '[role="radio"][data-state="checked"], [role="combobox"]' };
+const LEARN_FOCUS = { selector: '[role="combobox"]' };
 
 /** Casts a memorized spell outside battle, with its usage and targets. */
 function CastDialog({
   member,
   copy,
-  arcane,
+  returnFocus,
   onClose,
 }: {
   member: MemberView;
   copy: { spellId: string; reversed: boolean };
-  arcane: boolean;
+  returnFocus: RefObject<HTMLElement | null>;
   onClose: () => void;
 }) {
   const entry = useSpellDetail(copy.spellId);
   const party = useParty();
   const ctx = useTextContext();
+  const reversedName = usePlayerView()?.reversed_spell_names[copy.spellId];
   const location = usePartyLocation();
   const { send, pending } = useSendCommand();
   const [reversed, setReversed] = useState(copy.reversed);
@@ -561,23 +593,25 @@ function CastDialog({
   const [targets, setTargets] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const spell = entry.data;
+  // A reversed form has its own ways to cast it, with their own keys.
   const form = reversed && spell?.reversed_form ? spell.reversed_form : spell;
   const modes = form?.modes ?? [];
   const mode = modes.find((m) => m.key === modeKey) ?? modes[0];
   const targeting = mode?.targeting?.mode ?? 'single';
+  // A spell in the book had its form chosen when it was memorized. Any other is reversed as it's cast.
+  const choosesForm =
+    !member.spell_book.includes(copy.spellId) && reversedName !== undefined && !copy.reversed;
   const cell =
     location?.kind === 'dungeon' && location.position
       ? `cell:${location.dungeon_id}:${location.level_number}:${location.position[0]},${location.position[1]}`
       : null;
   const options = [
-    ...party.map((m) => ({ value: m.id, label: m.id === member.id ? `${m.name} (the caster)` : m.name })),
-    ...(cell ? [{ value: cell, label: 'The place where the party stands' }] : []),
+    ...party.map((m) => ({ value: m.id, label: m.id === member.id ? `${m.name} (self)` : m.name })),
+    ...(cell ? [{ value: cell, label: 'Where the party stands' }] : []),
   ];
-  const name = spell
-    ? reversed && spell.reversed_form
-      ? spell.reversed_form.name
-      : spell.name
-    : capitalizeFirst(spellName(copy.spellId, ctx));
+  // The title names the form being cast, so it follows the "instead" checkbox.
+  const name = nameOf(copy.spellId, reversed, ctx);
+  const needsTarget = mode !== undefined && targeting !== 'self' && targets.length === 0;
 
   const submit = async () => {
     if (!mode) return;
@@ -605,7 +639,8 @@ function CastDialog({
         if (!open) onClose();
       }}
       title={`Cast ${name}`}
-      description="Casting outside battle takes 1 round and expends one memorized copy."
+      returnFocus={returnFocus}
+      initialFocus={CAST_FOCUS}
       size="md"
       footer={
         <>
@@ -616,11 +651,13 @@ function CastDialog({
             variant="primary"
             icon="spell"
             loading={pending}
-            disabled={!mode}
+            disabled={!mode || needsTarget}
             disabledReason={
-              !mode && !entry.loading && spell === null
-                ? `The details of ${name} didn't load. Close this dialog and try again.`
-                : undefined
+              entry.failed
+                ? `${name}'s details didn't load. Close this and try again.`
+                : needsTarget
+                  ? 'Choose a target first.'
+                  : undefined
             }
             onClick={() => void submit()}
           >
@@ -630,35 +667,26 @@ function CastDialog({
       }
     >
       <div className={styles.form}>
-        {error && (
-          <Banner tone="warning" title="Couldn't cast spell">
-            {error}
-          </Banner>
-        )}
+        {error && <Banner tone="warning">{error}</Banner>}
         {entry.loading && <Skeleton lines={3} />}
-        {spell?.reversed_form && (
+        {choosesForm && spell?.reversed_form && (
           <Checkbox
-            label={`Cast the reversed form, ${spell.reversed_form.name}`}
-            description={
-              arcane
-                ? 'Arcane casters choose normal or reversed form when memorizing.'
-                : 'Divine casters choose normal or reversed form when casting.'
-            }
+            label={`Cast ${capitalizeFirst(reversedName)} instead`}
             checked={reversed}
-            disabled={arcane}
             onCheckedChange={(checked) => {
               setReversed(checked);
               setModeKey(null);
+              setTargets([]);
             }}
           />
         )}
         {modes.length > 1 && (
-          <Field label="Casting mode">
+          <Field label="How to cast">
             <RadioGroup
-              aria-label="Casting mode"
+              aria-label="How to cast"
               value={mode?.key}
               onValueChange={setModeKey}
-              options={modes.map((m) => ({ value: m.key, label: modeLabel(m, modes) }))}
+              options={spellModeOptions(modes, name)}
             />
           </Field>
         )}
@@ -694,32 +722,37 @@ function CastDialog({
   );
 }
 
-/** Writes a new spell into an arcane caster's book. */
+/** Writes a new spell into a caster's book, from the spells bxapi lists in `learnable_spells`. */
 function LearnDialog({
   member,
-  model,
-  spellList,
+  levels,
   onClose,
 }: {
   member: MemberView;
-  model: SheetModel;
-  spellList: string;
+  levels: SpellLevels;
   onClose: () => void;
 }) {
-  const catalog = useSpellCatalog();
+  const ctx = useTextContext();
   const { send, pending } = useSendCommand();
   const [spellId, setSpellId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const options = (catalog.data ?? [])
-    .filter((s) => s.spell_list === spellList && !model.spellBook.includes(s.id))
-    .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name))
-    .map((s) => ({ value: s.id, label: s.name, description: `${ordinal(s.level)} level` }));
+  const spells = member.learnable_spells
+    .map((id) => ({ id, name: nameOf(id, false, ctx), level: levels[id] }))
+    .sort((a, b) => (a.level ?? 0) - (b.level ?? 0) || a.name.localeCompare(b.name));
+  // The combobox can't group its options, so each one names its level only when the list spans levels.
+  const oneLevel = new Set(spells.map((s) => s.level)).size <= 1;
+  const options = spells.map((s) => ({
+    value: s.id,
+    label: s.name,
+    description: oneLevel || s.level === undefined ? undefined : `${ordinal(s.level)} level`,
+  }));
+  const chosen = spellId !== null && member.learnable_spells.includes(spellId) ? spellId : null;
 
   const submit = async () => {
-    if (!spellId) return;
+    if (!chosen) return;
     setError(null);
     const result = await send(
-      { command_type: 'learn_spell', character_id: member.id, spell_id: spellId },
+      { command_type: 'learn_spell', character_id: member.id, spell_id: chosen },
       { display: 'inline' },
     );
     if (result.status === 'accepted') onClose();
@@ -732,8 +765,9 @@ function LearnDialog({
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
-      title={`Teach ${member.name} a spell`}
-      description="Add a spell when leveling up or learning from a mentor or scroll. A spell book fits as many spells of each level as the caster has spell slots."
+      title="Learn a spell"
+      initialFocus={LEARN_FOCUS}
+      description={`Choose a spell to write into ${member.name}'s spell book.`}
       size="md"
       footer={
         <>
@@ -744,25 +778,25 @@ function LearnDialog({
             variant="primary"
             icon="book"
             loading={pending}
-            disabled={!spellId}
-            disabledReason={`Choose a spell to add to ${member.name}'s spell book.`}
+            disabled={!chosen}
+            disabledReason="Choose a spell first."
             onClick={() => void submit()}
           >
-            Add to spell book
+            {chosen ? `Learn ${nameOf(chosen, false, ctx)}` : 'Learn spell'}
           </Button>
         </>
       }
     >
       <div className={styles.form}>
-        {error && (
-          <Banner tone="warning" title="Couldn't learn spell">
-            {error}
-          </Banner>
+        {error && <Banner tone="warning">{error}</Banner>}
+        {options.length === 0 ? (
+          <EmptyState icon="book" size="compact" title="No spells to learn" />
+        ) : (
+          <Field label="Spell">
+            <Combobox value={chosen} onChange={setSpellId} options={options} placeholder="Search spells" />
+          </Field>
         )}
-        <Field label="Spell">
-          <Combobox value={spellId} onChange={setSpellId} options={options} placeholder="Search spells" />
-        </Field>
-        {spellId && <SpellDetailBody spellId={spellId} />}
+        {chosen && <SpellDetailBody spellId={chosen} />}
       </div>
     </Dialog>
   );

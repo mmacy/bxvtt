@@ -1,16 +1,16 @@
 {
   "type": "snapshot",
   "user": {
-    "id": "usr_27uu5K1E6usvnfFnEE4Z5w",
+    "id": "usr_ztGBLFoxEIwDPWo4LWVDUw",
     "name": "Sam",
-    "color": "#5c8de5",
-    "created_at": "2026-11-26T03:50:16Z"
+    "color": "#f29e2e",
+    "created_at": "2026-11-26T09:06:55Z"
   },
   "role": "player",
   "table": {
-    "id": "tbl_-ZP3TZvp486zli31J_fpEg",
+    "id": "tbl__oydcMhUrTR91n_a-wuI9Q",
     "name": "Thursday at the Drowned Bell",
-    "invite_code": "WP28K-H51F3-RNK1E-971Z2",
+    "invite_code": "1M0E9-EWVA9-S02ZT-T4Q6Q",
     "phase": "lobby",
     "settings": {
       "party_control": "caller",
@@ -20,79 +20,79 @@
     },
     "members": [
       {
-        "user_id": "usr_egewOApmbWw9MocOHTy8BA",
+        "user_id": "usr_n42KOsHJshcCoV-DsSEH_A",
         "name": "Ruth",
-        "color": "#3fa7d6",
+        "color": "#e76742",
         "role": "referee",
-        "joined_at": "2026-11-26T03:50:16Z"
+        "joined_at": "2026-11-26T09:06:55Z"
       },
       {
-        "user_id": "usr_27uu5K1E6usvnfFnEE4Z5w",
+        "user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw",
         "name": "Sam",
-        "color": "#5c8de5",
+        "color": "#f29e2e",
         "role": "player",
-        "joined_at": "2026-11-26T03:50:16Z"
+        "joined_at": "2026-11-26T09:06:55Z"
       }
     ],
     "roster": [
       {
-        "id": "ros_6rUc1c7DRBYuDjaBrKyg6w",
-        "character_id": "chr_kbZUbWT4xi4KafUy5knY-Q",
-        "owner_user_id": "usr_27uu5K1E6usvnfFnEE4Z5w",
+        "id": "ros_zQrFbKnB2roZ1RjM_i3ypA",
+        "character_id": "chr_87CZrmG6gnh9y_-_0Hpv4Q",
+        "owner_user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw",
         "name": "Brenna",
         "class_id": "fighter",
         "level": 1,
-        "added_at": "2026-11-26T03:50:16Z"
+        "added_at": "2026-11-26T09:06:55Z"
       },
       {
-        "id": "ros_8QA1tcCZ6gzmQvgZTr9rHQ",
-        "character_id": "chr_c8_ZZdyjmkVAy9uixkvsqQ",
-        "owner_user_id": "usr_27uu5K1E6usvnfFnEE4Z5w",
+        "id": "ros_aAmPJ44di01YRLi8rfj7CQ",
+        "character_id": "chr_Hw6g7yC9Z-K1cGphwzk4yw",
+        "owner_user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw",
         "name": "Wren",
         "class_id": "thief",
         "level": 1,
-        "added_at": "2026-11-26T03:50:16Z"
+        "added_at": "2026-11-26T09:06:55Z"
       },
       {
-        "id": "ros_LnKn3lkCppPAF1aNRZCk5A",
-        "character_id": "chr_G9XlzUGM_mSbj2P1O_oV2Q",
-        "owner_user_id": "usr_egewOApmbWw9MocOHTy8BA",
+        "id": "ros_578ujxA--kIyRLoBAtVpOg",
+        "character_id": "chr_6fyERi-3LCsVThEI_hswxQ",
+        "owner_user_id": "usr_n42KOsHJshcCoV-DsSEH_A",
         "name": "Osric",
         "class_id": "cleric",
         "level": 1,
-        "added_at": "2026-11-26T03:50:16Z"
+        "added_at": "2026-11-26T09:06:55Z"
       },
       {
-        "id": "ros_ugfTsy59UGVWhkqe1webZw",
-        "character_id": "chr_GSvjYBg8v1z0fa_m8g3FnQ",
-        "owner_user_id": "usr_egewOApmbWw9MocOHTy8BA",
+        "id": "ros_HchkjIIflwaIIyVueCpldA",
+        "character_id": "chr_C1IdtMsXmGZde2iQ14iwbQ",
+        "owner_user_id": "usr_n42KOsHJshcCoV-DsSEH_A",
         "name": "Tamsin",
         "class_id": "fighter",
         "level": 1,
-        "added_at": "2026-11-26T03:50:16Z"
+        "added_at": "2026-11-26T09:06:55Z"
       }
     ],
     "game": null,
-    "created_by": "usr_egewOApmbWw9MocOHTy8BA",
-    "created_at": "2026-11-26T03:50:16Z"
+    "created_by": "usr_n42KOsHJshcCoV-DsSEH_A",
+    "created_at": "2026-11-26T09:06:55Z"
   },
   "presence": {
-    "online": ["usr_27uu5K1E6usvnfFnEE4Z5w"]
+    "online": ["usr_ztGBLFoxEIwDPWo4LWVDUw"]
   },
   "game": null,
   "declarations": null,
   "feed": {
     "entries": [
       {
-        "seq": 25,
-        "created_at": "2026-11-26T03:50:16Z",
-        "user_id": "usr_27uu5K1E6usvnfFnEE4Z5w",
+        "seq": 1,
+        "created_at": "2026-11-26T09:06:55Z",
+        "user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw",
         "visibility": "everyone",
         "to": [],
         "kind": "system",
         "code": "member_joined",
         "params": {
-          "user_id": "usr_27uu5K1E6usvnfFnEE4Z5w"
+          "user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw"
         }
       }
     ],
@@ -109,5 +109,5 @@
     },
     "referee": null
   },
-  "server_time": "2026-11-26T03:50:16Z"
+  "server_time": "2026-11-26T09:06:55Z"
 }

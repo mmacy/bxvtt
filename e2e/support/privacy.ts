@@ -2,6 +2,9 @@
  * Markers of referee-only data, and a scan of everything a player's browser received for them. A player must
  * never receive referee data, so any marker in a player's HTTP bodies or WebSocket frames is a leak.
  */
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { REPO_ROOT } from './env';
 
 /**
  * Structural markers of referee data in JSON: referee events and feed entries, secret rolls, the referee view's
@@ -21,6 +24,8 @@ export const STRUCTURAL_MARKERS = [
   '"treasure_snapshot_cp"',
   '"defeated_monsters"',
   '"monster_ids"',
+  '"feature_handles"',
+  '"referee_notes"',
   'hoard_generated',
   'surprise_rolled',
   'reaction_rolled',
@@ -57,6 +62,40 @@ export const BELL_MARKERS = [
   'Hadric Vole',
   'who drowned with his treasure rather than leave it',
 ];
+
+/** The sample adventure documents the server offers every table. */
+const SAMPLE_ADVENTURES = ['the-drowned-bell.json', 'the-toll-bridge.json'];
+
+/**
+ * Collects every non-empty `referee_notes` string in a JSON value.
+ *
+ * @param value - A parsed adventure document, or a part of one.
+ * @param notes - The list to add to.
+ */
+function collectNotes(value: unknown, notes: string[]): void {
+  if (Array.isArray(value)) {
+    for (const entry of value) collectNotes(entry, notes);
+    return;
+  }
+  if (typeof value !== 'object' || value === null) return;
+  for (const [key, entry] of Object.entries(value)) {
+    if (key === 'referee_notes' && typeof entry === 'string') {
+      if (entry.trim() !== '') notes.push(entry);
+    } else {
+      collectNotes(entry, notes);
+    }
+  }
+}
+
+/**
+ * The text of every feature's referee notes in the two sample adventures, read from the built documents in
+ * `adventures/`. The referee reads these in the area key, and a player must never receive them.
+ */
+export const SAMPLE_REFEREE_NOTES: string[] = SAMPLE_ADVENTURES.flatMap((file) => {
+  const notes: string[] = [];
+  collectNotes(JSON.parse(readFileSync(join(REPO_ROOT, 'adventures', file), 'utf8')) as unknown, notes);
+  return notes;
+});
 
 /** One marker found in what a player received. */
 export interface Leak {

@@ -17,6 +17,11 @@ export const Health = z.object({
   uptime_seconds: z.number(),
   bxapi: z.object({
     reachable: z.boolean(),
+    /**
+     * Whether bxapi answers but runs an osrlib older than bxvtt needs, so the server serves no game. Anyone gets
+     * it, because it reveals no version. `false` while bxapi is unreachable.
+     */
+    outdated: z.boolean(),
     meta: z
       .object({
         api_version: z.string(),

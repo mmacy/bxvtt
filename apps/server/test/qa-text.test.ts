@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { GameEntry } from '@bxvtt/shared/protocol';
-import { describeGameEntry, emptyContext, extendContextWithScene } from '@bxvtt/shared/text';
+import { describeGameEntry, emptyContext } from '@bxvtt/shared/text';
 import { findRepoRoot } from '../src/config';
 import type { TestServer, TestUser } from './helpers';
 import { createCharacter, createTable, createUser, findRefereeData, startServer } from './helpers';
@@ -12,11 +12,9 @@ async function gameEntries(user: TestUser, tableId: string): Promise<GameEntry[]
   return page.entries.filter((entry): entry is GameEntry => entry.kind === 'game');
 }
 
-/** The text of an entry for a player who has only the entry and the scene. */
-function narrate(entry: GameEntry, scene: { names: Record<string, string> }) {
-  return describeGameEntry(entry, extendContextWithScene(emptyContext(), scene), { only: 'player' }).map(
-    (line) => line.text,
-  );
+/** The text of an entry for a player who has only the entry and the names it recorded. */
+function narrate(entry: GameEntry) {
+  return describeGameEntry(entry, emptyContext(), { only: 'player' }).map((line) => line.text);
 }
 
 describe('text from the QA pass', () => {
@@ -67,7 +65,7 @@ describe('text from the QA pass', () => {
     if (entry === undefined) throw new Error('no game entry');
     expect(entry.names?.dungeons).toEqual({ priory: "The priory on Corvane's Holm" });
     // A new browser that has only the entry names the dungeon too.
-    expect(narrate(entry, { names: {} })[0]).toBe("The party enters the priory on Corvane's Holm, level 1.");
+    expect(narrate(entry)[0]).toBe("The party enters the priory on Corvane's Holm, level 1.");
     const saves = await alice.client.listSaves(tableId);
     expect(saves.items.map((save) => save.label)).toContain("Autosave: Entered the priory on Corvane's Holm");
   });
@@ -99,12 +97,12 @@ describe('text from the QA pass', () => {
       'group-0001': { label: 'goblin', label_plural: 'goblins', count: 2, size: 2 },
     });
     if (talk === undefined) throw new Error('no talk entry');
-    expect(narrate(talk, met.game.scene)[0]).toMatch(/^Osric talks to the goblins\. They .+ now\.$/);
+    expect(narrate(talk)[0]).toMatch(/^Osric talks to the goblins\. They .+ now\.$/);
     const meeting = entries.find(
       (entry) => entry.command_type === 'move_party' && entry.revision === met.revision,
     );
     if (meeting === undefined) throw new Error('no meeting entry');
-    const opening = narrate(meeting, met.game.scene);
+    const opening = narrate(meeting);
     expect(opening).toContain('The party meets 2 goblins, 30 feet away.');
     expect(opening.filter((line) => line.startsWith('The monsters '))).toHaveLength(1);
   });
@@ -122,9 +120,7 @@ describe('text from the QA pass', () => {
     const meeting = entries.find((entry) => entry.revision === met.revision);
     if (meeting === undefined) throw new Error('no meeting entry');
     // osrlib's event names only Mag Corrie and counts both: "Encounter: 2 Mag Corries".
-    expect(narrate(meeting, met.game.scene)).toContain(
-      "The party meets Mag Corrie and Mag's bodyguard, 20 feet away.",
-    );
+    expect(narrate(meeting)).toContain("The party meets Mag Corrie and Mag's bodyguard, 20 feet away.");
     expect(findRefereeData(alice.received)).toEqual([]);
   });
 
@@ -161,7 +157,7 @@ describe('text from the QA pass', () => {
     // A fighter needs 4,000 for level 3, so one award stops at 3,999.
     expect(gained).toBeLessThan(5000);
     if (entry === undefined) throw new Error('no entry');
-    const text = narrate(entry, awarded.game.scene).join(' ');
+    const text = narrate(entry).join(' ');
     expect(text).toContain(
       `gains ${(gained ?? 0).toLocaleString('en-US')} of the 5,000 experience points awarded.`,
     );
@@ -188,7 +184,7 @@ describe('text from the QA pass', () => {
       (candidate) => candidate.revision === waited.revision,
     );
     if (entry === undefined) throw new Error('no wait entry');
-    const lines = narrate(entry, waited.game.scene);
+    const lines = narrate(entry);
     expect(lines.length).toBeGreaterThan(0);
     if (entry.events.length === 0) expect(lines[0]).toMatch(/^The party waits\. The goblins hold back\.$/);
   });

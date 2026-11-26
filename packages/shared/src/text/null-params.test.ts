@@ -18,9 +18,7 @@ describe('a param that bxapi or the server sends as null', () => {
         },
         ctx,
       ),
-    ).toBe(
-      'Wren is 30 feet from the target, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
-    );
+    ).toBe('Wren is 30 feet from the target, too far to attack in melee.');
     expect(
       describeRejection(
         {

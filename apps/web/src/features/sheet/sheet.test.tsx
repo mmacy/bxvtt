@@ -4,7 +4,6 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { resetMyCharacters } from '@/app';
 import { useCombatStage, useTableUi } from '@/app';
-import catalog from '../wizard/__fixtures__/catalog.json';
 import stored from '../wizard/__fixtures__/stored.json';
 import { StoredCharacterCard } from './StoredCharacterCard';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
@@ -345,76 +344,685 @@ describe('combat playback', () => {
   });
 });
 
-describe('a caster with nothing memorized', () => {
-  /** The exploring snapshot with Wren as a magic-user who knows Sleep and has memorized nothing. */
-  function casterSnapshot(stage: 'exploring' | 'town') {
-    const snapshot = fixtureSnapshot(stage, 'player');
-    const party = snapshot.game?.view.party ?? [];
-    const wren = party[1];
-    if (!wren) throw new Error('no Wren');
-    party[1] = { ...wren, class_id: 'magic_user', spell_book: ['sleep'], memorized_spells: [] };
-    return { snapshot, wren: party[1] };
-  }
-  function casterApi() {
-    const api = createFakeApi();
-    api.rules.mockImplementation(async (path: string) =>
-      path === 'spells'
-        ? { items: catalog.spells.items, total: catalog.spells.items.length, limit: 200, offset: 0 }
-        : { items: [], total: 0, limit: 200, offset: 0 },
-    );
-    api.fullCatalog.mockImplementation(async (name) =>
-      name === 'classes'
-        ? ({ catalog: name, total: 1, items: [catalog.details.magic_user] } as never)
-        : ({ catalog: name, total: 0, items: [] } as never),
-    );
-    return api;
-  }
+/** The parts of a spell template the spells tab reads. */
+function spellTemplate(
+  id: string,
+  name: string,
+  extra: {
+    range?: string;
+    feet?: number;
+    duration?: string;
+    reversed?: { name: string; mode: string };
+    modes?: Array<{ key: string; prose: string; targeting?: { mode: string } }>;
+    intro?: string;
+  } = {},
+) {
+  return {
+    id,
+    name,
+    spell_list: 'magic_user',
+    level: 1,
+    range: extra.range ?? '60 feet',
+    range_spec:
+      extra.feet === undefined ? { kind: 'special', feet: null } : { kind: 'feet', feet: extra.feet },
+    duration: extra.duration ?? 'Instant',
+    intro: extra.intro ?? `${name} does something.`,
+    modes: extra.modes ?? [{ key: id, prose: `${name} does something.`, targeting: { mode: 'single' } }],
+    reversed_form: extra.reversed
+      ? {
+          name: extra.reversed.name,
+          prose: '',
+          modes: [{ key: extra.reversed.mode, prose: '', targeting: { mode: 'single' } }],
+        }
+      : null,
+  };
+}
 
-  it('says why the caster cannot cast and keeps a refusal in the prepare dialog', async () => {
-    const { snapshot, wren } = casterSnapshot('exploring');
-    const api = casterApi();
+/** An API whose rules catalog has Sleep and Light, and neither of the adventure's bundled spells. */
+function spellApi() {
+  const api = createFakeApi();
+  api.fullCatalog.mockImplementation(async (name) =>
+    name === 'spells'
+      ? ({
+          catalog: name,
+          total: 2,
+          items: [
+            spellTemplate('sleep', 'Sleep', { range: '240’', duration: '4d4 turns' }),
+            spellTemplate('light_mu', 'Light', { reversed: { name: 'Darkness', mode: 'darkness' } }),
+          ],
+        } as never)
+      : ({ catalog: name, total: 0, items: [] } as never),
+  );
+  return api;
+}
+
+type ViewMember = NonNullable<ReturnType<typeof fixtureSnapshot>['game']>['view']['party'][number];
+
+/**
+ * The town snapshot with one member changed into a caster, and the view's spell maps set. The fixture's Osric is a
+ * 1st-level cleric with five empty slots, and Wren is a thief.
+ */
+function casterSnapshot(
+  index: number,
+  member: Partial<ViewMember>,
+  spells: {
+    names?: Record<string, string>;
+    levels?: Record<string, number>;
+    reversed?: Record<string, string>;
+  },
+) {
+  const snapshot = fixtureSnapshot('town', 'player');
+  const view = snapshot.game?.view;
+  const base = view?.party[index];
+  if (!view || !base) throw new Error('no member');
+  const caster = { ...base, memorized_spells: [], learnable_spells: [], ...member };
+  view.party[index] = caster;
+  view.spell_names = { ...view.spell_names, ...spells.names };
+  view.spell_levels = { ...view.spell_levels, ...spells.levels };
+  view.reversed_spell_names = { ...view.reversed_spell_names, ...spells.reversed };
+  return { snapshot, caster };
+}
+
+/** A level 2 magic-user with Sleep and Light in the book, as Wren, who is played by the viewer's user. */
+function mageSnapshot(member: Partial<ViewMember> = {}) {
+  return casterSnapshot(
+    1,
+    {
+      class_id: 'magic_user',
+      class_name: 'Magic-user',
+      level: 2,
+      spell_slots: [2, 0, 0, 0, 0, 0],
+      spell_book: ['sleep', 'light_mu'],
+      preparable_spells: ['sleep', 'light_mu'],
+      ...member,
+    },
+    {
+      names: { sleep: 'Sleep', light_mu: 'Light' },
+      levels: { sleep: 1, light_mu: 1 },
+      reversed: { light_mu: 'Darkness' },
+    },
+  );
+}
+
+async function openSpells(user: ReturnType<typeof renderWithTable>['user']) {
+  await user.click(await screen.findByRole('tab', { name: 'Spells' }));
+}
+
+describe('the spells tab, from the view', () => {
+  it("lists a cleric's bundled spell by level with the level's count, and no reversed row", async () => {
+    const { snapshot, caster } = casterSnapshot(
+      1,
+      {
+        class_id: 'cleric',
+        class_name: 'Cleric',
+        level: 2,
+        spell_book: [],
+        spell_slots: [1, 0, 0, 0, 0],
+        preparable_spells: ['cure_light_wounds', 'lantern_ward'],
+      },
+      {
+        names: { cure_light_wounds: 'Cure Light Wounds', lantern_ward: 'Lantern Ward' },
+        levels: { cure_light_wounds: 1, lantern_ward: 1 },
+        reversed: { lantern_ward: 'Lantern Snuff' },
+      },
+    );
+    const { user } = renderWithTable(<CharacterSheet memberId={caster.id} onClose={() => {}} />, {
+      snapshot,
+      api: spellApi(),
+    });
+    await openSpells(user);
+    // With nothing memorized, the one Prepare button is the empty state's.
+    expect(screen.getByText('No spells memorized')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Prepare spells' }));
+    const dialog = await screen.findByRole('dialog', { name: "Prepare Wren's spells" });
+    expect(dialog).not.toHaveAccessibleDescription(/replace/);
+    const level = within(dialog).getByRole('region', { name: '1st-level spells' });
+    expect(level).toHaveTextContent('0 of 1 slots chosen');
+    expect(within(level).getByText('Lantern Ward')).toBeInTheDocument();
+    expect(within(level).getByRole('spinbutton', { name: 'Copies of Lantern Ward' })).toBeInTheDocument();
+    // A cleric reverses a spell as it's cast, so the dialog has no row for Lantern Snuff.
+    expect(within(dialog).queryByText('Lantern Snuff')).toBeNull();
+    expect(within(dialog).queryByText('Reversed')).toBeNull();
+    const prepare = within(dialog).getByRole('button', { name: 'Prepare spells' });
+    expect(prepare).toHaveAttribute('aria-disabled', 'true');
+    expect(prepare).toHaveAccessibleDescription('Choose a spell to prepare.');
+    await user.click(within(level).getByRole('button', { name: 'More copies of Lantern Ward' }));
+    expect(level).toHaveTextContent('1 of 1 slots chosen');
+    expect(
+      within(level).getByRole('spinbutton', { name: 'Copies of Cure Light Wounds' }),
+    ).toHaveAccessibleDescription('No 1st-level slots left.');
+  });
+
+  it('gives a book spell with a reverse its own row, and sends the reversed copies', async () => {
+    const { snapshot, caster } = mageSnapshot();
+    const api = spellApi();
+    const game = snapshot.game;
+    if (!game) throw new Error('no game');
+    api.sendCommand.mockResolvedValue(accepted(snapshot));
+    const { user } = renderWithTable(<CharacterSheet memberId={caster.id} onClose={() => {}} />, {
+      snapshot,
+      api,
+    });
+    await openSpells(user);
+    await user.click(screen.getByRole('button', { name: 'Prepare spells' }));
+    const dialog = await screen.findByRole('dialog', { name: "Prepare Wren's spells" });
+    // The first choice is one copy of each book spell, which fills both slots.
+    expect(within(dialog).getByRole('region', { name: '1st-level spells' })).toHaveTextContent(
+      '2 of 2 slots chosen',
+    );
+    expect(within(dialog).getByText('Reversed')).toBeInTheDocument();
+    const darkness = within(dialog).getByRole('spinbutton', { name: 'Copies of Darkness' });
+    expect(darkness).toHaveValue('0');
+    await user.click(within(dialog).getByRole('button', { name: 'Fewer copies of Light' }));
+    await user.click(within(dialog).getByRole('button', { name: 'More copies of Darkness' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Prepare spells' }));
+    await waitFor(() => expect(api.sendCommand).toHaveBeenCalled());
+    expect(api.sendCommand.mock.calls[0]?.[1]).toEqual({
+      command_type: 'prepare_spells',
+      character_id: caster.id,
+      selections: [{ spell_id: 'sleep' }, { spell_id: 'light_mu', reversed: true }],
+    });
+  });
+
+  it("keeps a refusal in the prepare dialog, as the refusal's sentence alone", async () => {
+    const { snapshot, caster } = mageSnapshot();
+    const api = spellApi();
     const game = snapshot.game;
     if (!game) throw new Error('no game');
     api.sendCommand.mockResolvedValue({
       accepted: false,
-      rejections: [{ code: 'magic.memorize.needs_sleep', params: { character: wren.id } }],
+      rejections: [{ code: 'magic.memorize.needs_sleep', params: { character: caster.id } }],
       events: [],
       messages: [],
       game,
     } as unknown as CommandResult);
-    const { user } = renderWithTable(<CharacterSheet memberId={wren.id} onClose={() => {}} />, {
+    const { user } = renderWithTable(<CharacterSheet memberId={caster.id} onClose={() => {}} />, {
       snapshot,
       api,
     });
-    await user.click(await screen.findByRole('tab', { name: 'Spells' }));
-    expect(
-      await screen.findByText("Wren knows Sleep but hasn't memorized it, so they can't cast it yet."),
-    ).toBeInTheDocument();
-    expect(screen.getByText("A caster prepares spells after a night's rest.")).toBeInTheDocument();
-    await user.click(screen.getAllByRole('button', { name: 'Prepare spells' })[0] as HTMLElement);
+    await openSpells(user);
+    await user.click(screen.getByRole('button', { name: 'Prepare spells' }));
     const dialog = await screen.findByRole('dialog', { name: /Prepare/ });
-    // One copy of Sleep fills the one first-level slot, so the count can't go higher.
-    const more = within(dialog).getByRole('button', { name: 'More copies of Sleep' });
-    expect(more).toHaveAttribute('aria-disabled', 'true');
-    expect(within(dialog).getByRole('spinbutton', { name: 'Copies of Sleep' })).toHaveAccessibleDescription(
-      'The slot for 1st-level spells is full.',
-    );
     await user.click(within(dialog).getByRole('button', { name: 'Prepare spells' }));
-    // The refusal stays in the dialog, where the player can change the choice.
     expect(await within(dialog).findByText(/rest/i)).toBeInTheDocument();
-    expect(screen.getByRole('dialog', { name: /Prepare/ })).toBeInTheDocument();
-    expect(api.sendCommand).toHaveBeenCalledWith(
-      expect.any(String),
-      { command_type: 'prepare_spells', character_id: wren.id, selections: expect.any(Array) },
-      game.revision,
+    expect(within(dialog).queryByText("Couldn't prepare spells")).toBeNull();
+  });
+
+  it("shows a custom caster's slots from the view, without the class catalog", async () => {
+    const { snapshot, caster } = casterSnapshot(
+      1,
+      {
+        class_id: 'hedge_mage',
+        class_name: 'Hedge Mage',
+        level: 2,
+        spell_slots: [2, 0, 0, 0, 0, 0],
+        spell_book: ['sleep'],
+        preparable_spells: ['sleep'],
+        memorized_spells: [{ spell_id: 'sleep' }],
+      },
+      { names: { sleep: 'Sleep' }, levels: { sleep: 1 } },
+    );
+    const api = spellApi();
+    const { user } = renderWithTable(<CharacterSheet memberId={caster.id} onClose={() => {}} />, {
+      snapshot,
+      api,
+    });
+    await openSpells(user);
+    const slots = screen.getByLabelText('Spell slots');
+    expect(slots).toHaveTextContent('1st level1 of 2 memorized');
+    expect(slots).not.toHaveTextContent('2nd level');
+    expect((await screen.findAllByText('1st level · Range: 240’ · 4d4 turns')).length).toBeGreaterThan(0);
+    expect(api.fullCatalog).not.toHaveBeenCalledWith('classes');
+  });
+
+  it('says a 1st-level cleric has no spell slots yet, and offers nothing to prepare', async () => {
+    const snapshot = fixtureSnapshot('town', 'player');
+    const osric = snapshot.game?.view.party[2];
+    if (!osric) throw new Error('no Osric');
+    expect(osric.spell_slots).toEqual([0, 0, 0, 0, 0]);
+    const { user } = renderWithTable(<CharacterSheet memberId={osric.id} onClose={() => {}} />, {
+      snapshot,
+      api: spellApi(),
+    });
+    await openSpells(user);
+    expect(screen.getByText('No spell slots yet')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Spell slots')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Prepare spells' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Spell book' })).toBeNull();
+  });
+
+  it('learns a bundled spell from the list bxapi gives', async () => {
+    const { snapshot, caster } = mageSnapshot({ learnable_spells: ['ember_dart'] });
+    if (snapshot.game) {
+      snapshot.game.view.spell_names.ember_dart = 'Ember Dart';
+      snapshot.game.view.spell_levels.ember_dart = 1;
+    }
+    const api = spellApi();
+    api.getSessionSpell.mockResolvedValue(spellTemplate('ember_dart', 'Ember Dart') as never);
+    api.sendCommand.mockResolvedValue(accepted(snapshot));
+    const { user } = renderWithTable(<CharacterSheet memberId={caster.id} onClose={() => {}} />, {
+      snapshot,
+      api,
+    });
+    await openSpells(user);
+    await user.click(screen.getByRole('button', { name: 'Learn a spell' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Learn a spell' });
+    expect(dialog).toHaveAccessibleDescription("Choose a spell to write into Wren's spell book.");
+    const learn = within(dialog).getByRole('button', { name: 'Learn spell' });
+    expect(learn).toHaveAccessibleDescription('Choose a spell first.');
+    await user.click(within(dialog).getByRole('combobox', { name: 'Spell' }));
+    const option = await screen.findByRole('option', { name: /Ember Dart/ });
+    // Every spell on the list is 1st level, so no option repeats it.
+    expect(option).not.toHaveTextContent('1st level');
+    await user.click(option);
+    await user.click(within(dialog).getByRole('button', { name: 'Learn Ember Dart' }));
+    await waitFor(() =>
+      expect(api.sendCommand.mock.calls[0]?.[1]).toEqual({
+        command_type: 'learn_spell',
+        character_id: caster.id,
+        spell_id: 'ember_dart',
+      }),
     );
   });
 
+  it('disables Learn a spell with a reason when bxapi lists nothing to learn', async () => {
+    const { snapshot, caster } = mageSnapshot({ learnable_spells: [] });
+    const { user } = renderWithTable(<CharacterSheet memberId={caster.id} onClose={() => {}} />, {
+      snapshot,
+      api: spellApi(),
+    });
+    await openSpells(user);
+    const learn = screen.getByRole('button', { name: 'Learn a spell' });
+    expect(learn).toHaveAttribute('aria-disabled', 'true');
+    expect(learn).toHaveAccessibleDescription("Wren can't learn a new spell now.");
+  });
+
+  it("loads a bundled spell's details from the game, and names it without a rules link", async () => {
+    const { snapshot, caster } = mageSnapshot({
+      spell_book: ['ember_dart'],
+      preparable_spells: ['ember_dart'],
+      memorized_spells: [{ spell_id: 'ember_dart' }],
+    });
+    if (snapshot.game) {
+      snapshot.game.view.spell_names.ember_dart = 'Ember Dart';
+      snapshot.game.view.spell_levels.ember_dart = 1;
+    }
+    const api = spellApi();
+    api.getSessionSpell.mockResolvedValue(spellTemplate('ember_dart', 'Ember Dart') as never);
+    const { user, store } = renderWithTable(<CharacterSheet memberId={caster.id} onClose={() => {}} />, {
+      snapshot,
+      api,
+    });
+    await openSpells(user);
+    const memorized = screen.getByRole('heading', { name: 'Memorized spells' }).closest('section');
+    if (!memorized) throw new Error('no section');
+    expect(await within(memorized).findByText('1st level · Range: 60 feet · Instant')).toBeInTheDocument();
+    expect(api.getSessionSpell).toHaveBeenCalledWith(store.getState().tableId, 'ember_dart');
+    expect(within(memorized).queryByRole('button', { name: 'Ember Dart' })).toBeNull();
+    expect(within(memorized).getByText('Ember Dart')).toBeInTheDocument();
+  });
+
+  it("says when a bundled spell's details didn't load, and keeps its level", async () => {
+    const { snapshot, caster } = mageSnapshot({
+      spell_book: ['ember_dart'],
+      preparable_spells: ['ember_dart'],
+      memorized_spells: [{ spell_id: 'ember_dart' }],
+    });
+    if (snapshot.game) {
+      snapshot.game.view.spell_names.ember_dart = 'Ember Dart';
+      snapshot.game.view.spell_levels.ember_dart = 1;
+    }
+    const api = spellApi();
+    api.getSessionSpell.mockRejectedValue(new Error('offline'));
+    const { user } = renderWithTable(<CharacterSheet memberId={caster.id} onClose={() => {}} />, {
+      snapshot,
+      api,
+    });
+    await openSpells(user);
+    const memorized = screen.getByRole('heading', { name: 'Memorized spells' }).closest('section');
+    if (!memorized) throw new Error('no section');
+    await waitFor(() => expect(api.getSessionSpell).toHaveBeenCalled());
+    // The card's meta line keeps the level from the view, beside the slot display's own "1st level".
+    await waitFor(() => expect(within(memorized).getAllByText('1st level')).toHaveLength(2));
+    expect(within(memorized).queryByText(/Range:/)).toBeNull();
+    await user.click(within(memorized).getByRole('button', { name: 'About Ember Dart' }));
+    expect(
+      await screen.findByText("This spell's details didn't load. Try again in a moment."),
+    ).toBeInTheDocument();
+  });
+
+  it("casts a cleric's spell in reverse with the reversed form's own mode", async () => {
+    const { snapshot, caster } = casterSnapshot(
+      1,
+      {
+        class_id: 'cleric',
+        class_name: 'Cleric',
+        level: 2,
+        spell_book: [],
+        spell_slots: [1, 0, 0, 0, 0],
+        preparable_spells: ['lantern_ward'],
+        memorized_spells: [{ spell_id: 'lantern_ward' }],
+      },
+      {
+        names: { lantern_ward: 'Lantern Ward' },
+        levels: { lantern_ward: 1 },
+        reversed: { lantern_ward: 'Lantern Snuff' },
+      },
+    );
+    const api = spellApi();
+    api.getSessionSpell.mockResolvedValue(
+      spellTemplate('lantern_ward', 'Lantern Ward', {
+        reversed: { name: 'Lantern Snuff', mode: 'snuff' },
+      }) as never,
+    );
+    api.sendCommand.mockResolvedValue(accepted(snapshot));
+    const { user } = renderWithTable(<CharacterSheet memberId={caster.id} onClose={() => {}} />, {
+      snapshot,
+      api,
+    });
+    await openSpells(user);
+    await user.click(screen.getByRole('button', { name: 'Cast' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Cast Lantern Ward' });
+    expect(dialog).not.toHaveAccessibleDescription(/round/);
+    const cast = within(dialog).getByRole('button', { name: 'Cast' });
+    expect(cast).toHaveAccessibleDescription('Choose a target first.');
+    // With one way to cast and one target, focus starts on Target.
+    await waitFor(() => expect(within(dialog).getByRole('combobox', { name: 'Target' })).toHaveFocus());
+    await user.click(await within(dialog).findByRole('checkbox', { name: 'Cast Lantern Snuff instead' }));
+    // The title names the form the checkbox chose.
+    expect(screen.getByRole('dialog', { name: 'Cast Lantern Snuff' })).toBe(dialog);
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Cast Lantern Snuff instead' }));
+    expect(screen.getByRole('dialog', { name: 'Cast Lantern Ward' })).toBe(dialog);
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Cast Lantern Snuff instead' }));
+    await user.click(within(dialog).getByRole('combobox', { name: 'Target' }));
+    await user.click(await screen.findByRole('option', { name: 'Brenna' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Cast' }));
+    await waitFor(() =>
+      expect(api.sendCommand.mock.calls[0]?.[1]).toEqual({
+        command_type: 'cast_spell',
+        character_id: caster.id,
+        spell_id: 'lantern_ward',
+        mode: 'snuff',
+        reversed: true,
+        targets: ['character-0001'],
+      }),
+    );
+  });
+
+  it('leaves out a memorized copy of a spell bxapi no longer lists as preparable', async () => {
+    const { snapshot, caster } = casterSnapshot(
+      1,
+      {
+        class_id: 'magic_user',
+        class_name: 'Magic-user',
+        level: 1,
+        spell_slots: [1, 0, 0, 0, 0, 0],
+        spell_book: ['sleep'],
+        preparable_spells: ['sleep'],
+        memorized_spells: [{ spell_id: 'foreign_spell' }],
+      },
+      { names: { sleep: 'Sleep' }, levels: { sleep: 1 } },
+    );
+    const api = spellApi();
+    api.sendCommand.mockResolvedValue(accepted(snapshot));
+    const { user } = renderWithTable(<CharacterSheet memberId={caster.id} onClose={() => {}} />, {
+      snapshot,
+      api,
+    });
+    await openSpells(user);
+    await user.click(screen.getByRole('button', { name: 'Prepare spells' }));
+    const dialog = await screen.findByRole('dialog', { name: "Prepare Wren's spells" });
+    expect(within(dialog).getByRole('region', { name: '1st-level spells' })).toHaveTextContent(
+      '0 of 1 slots chosen',
+    );
+    expect(within(dialog).getByRole('button', { name: 'Prepare spells' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    await user.click(within(dialog).getByRole('button', { name: 'More copies of Sleep' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Prepare spells' }));
+    await waitFor(() => expect(api.sendCommand).toHaveBeenCalled());
+    expect(api.sendCommand.mock.calls[0]?.[1]).toEqual({
+      command_type: 'prepare_spells',
+      character_id: caster.id,
+      selections: [{ spell_id: 'sleep' }],
+    });
+  });
+
+  it('sends only the spells the prepare dialog still shows after the view changes under it', async () => {
+    const { snapshot, caster } = casterSnapshot(
+      1,
+      {
+        class_id: 'magic_user',
+        class_name: 'Magic-user',
+        level: 3,
+        spell_slots: [1, 1, 0, 0, 0, 0],
+        spell_book: ['sleep', 'web'],
+        preparable_spells: ['sleep', 'web'],
+        memorized_spells: [{ spell_id: 'sleep' }, { spell_id: 'web' }],
+      },
+      { names: { sleep: 'Sleep', web: 'Web' }, levels: { sleep: 1, web: 2 } },
+    );
+    const api = spellApi();
+    api.getSessionSpell.mockResolvedValue(spellTemplate('web', 'Web') as never);
+    api.sendCommand.mockResolvedValue(accepted(snapshot));
+    const { user, store } = renderWithTable(<CharacterSheet memberId={caster.id} onClose={() => {}} />, {
+      snapshot,
+      api,
+    });
+    await openSpells(user);
+    await user.click(screen.getByRole('button', { name: 'Prepare spells' }));
+    const dialog = await screen.findByRole('dialog', { name: "Prepare Wren's spells" });
+    expect(within(dialog).getByRole('region', { name: '2nd-level spells' })).toBeInTheDocument();
+    const game = store.getState().game;
+    if (!game) throw new Error('no game');
+    const changed = {
+      ...game,
+      revision: game.revision + 1,
+      view: {
+        ...game.view,
+        party: game.view.party.map((m) =>
+          m.id === caster.id ? { ...m, spell_slots: [1, 0, 0, 0, 0, 0], preparable_spells: ['sleep'] } : m,
+        ),
+      },
+    };
+    act(() => store.getState().receiveGame(changed));
+    expect(within(dialog).queryByRole('region', { name: '2nd-level spells' })).toBeNull();
+    await user.click(within(dialog).getByRole('button', { name: 'Prepare spells' }));
+    await waitFor(() => expect(api.sendCommand).toHaveBeenCalled());
+    expect(api.sendCommand.mock.calls[0]?.[1]).toEqual({
+      command_type: 'prepare_spells',
+      character_id: caster.id,
+      selections: [{ spell_id: 'sleep' }],
+    });
+  });
+
+  it('moves focus to the memorized spells heading when the first preparation removes its button', async () => {
+    const { snapshot, caster } = mageSnapshot();
+    const api = spellApi();
+    const game = snapshot.game;
+    if (!game) throw new Error('no game');
+    const prepared = {
+      ...game,
+      revision: game.revision + 1,
+      view: {
+        ...game.view,
+        party: game.view.party.map((m) =>
+          m.id === caster.id
+            ? { ...m, memorized_spells: [{ spell_id: 'sleep' }, { spell_id: 'light_mu' }] }
+            : m,
+        ),
+      },
+    };
+    api.sendCommand.mockResolvedValue({
+      accepted: true,
+      rejections: [],
+      events: [],
+      messages: [],
+      game: prepared,
+    } as unknown as CommandResult);
+    const { user } = renderWithTable(<CharacterSheet memberId={caster.id} onClose={() => {}} />, {
+      snapshot,
+      api,
+    });
+    await openSpells(user);
+    const opener = screen.getByRole('button', { name: 'Prepare spells' });
+    await user.click(opener);
+    const dialog = await screen.findByRole('dialog', { name: "Prepare Wren's spells" });
+    await user.click(within(dialog).getByRole('button', { name: 'Prepare spells' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: "Prepare Wren's spells" })).toBeNull());
+    expect(opener).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Memorized spells' })).toHaveFocus());
+  });
+
+  it('offers a magic-user no reversed form as a book spell is cast, since it was chosen when memorized', async () => {
+    const { snapshot, caster } = mageSnapshot({ memorized_spells: [{ spell_id: 'light_mu' }] });
+    const { user } = renderWithTable(<CharacterSheet memberId={caster.id} onClose={() => {}} />, {
+      snapshot,
+      api: spellApi(),
+    });
+    await openSpells(user);
+    await user.click(screen.getByRole('button', { name: 'Cast' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Cast Light' });
+    // The spell's details load before the form choice could show.
+    await within(dialog).findByText('Light does something.');
+    expect(within(dialog).queryByRole('checkbox', { name: /instead/ })).toBeNull();
+  });
+
+  it('names the ways to cast a spell by the label before the colon, or by the first sentence', async () => {
+    const { snapshot, caster } = mageSnapshot({ memorized_spells: [{ spell_id: 'light_mu' }] });
+    const api = createFakeApi();
+    api.fullCatalog.mockResolvedValue({
+      catalog: 'spells',
+      total: 1,
+      items: [
+        spellTemplate('light_mu', 'Light', {
+          modes: [
+            { key: 'conjure', prose: 'Conjuring light: In a 15’ radius.', targeting: { mode: 'single' } },
+            {
+              key: 'blind',
+              prose: 'Blinding a creature: By casting the spell upon its eyes.',
+              targeting: { mode: 'single' },
+            },
+            {
+              key: 'cancel',
+              prose: 'Cancelling darkness: Light may cancel a darkness spell.',
+              targeting: { mode: 'single' },
+            },
+          ],
+        }),
+      ],
+    } as never);
+    const { user } = renderWithTable(<CharacterSheet memberId={caster.id} onClose={() => {}} />, {
+      snapshot,
+      api,
+    });
+    await openSpells(user);
+    await user.click(await screen.findByRole('button', { name: 'Cast' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Cast Light' });
+    const group = within(dialog).getByRole('radiogroup', { name: 'How to cast' });
+    for (const label of ['Conjuring light', 'Blinding a creature', 'Cancelling darkness'])
+      expect(within(group).getByRole('radio', { name: label })).toBeInTheDocument();
+    expect(within(group).getAllByRole('radio')).toHaveLength(3);
+    // Focus starts on the chosen way to cast.
+    await waitFor(() => expect(within(group).getByRole('radio', { name: 'Conjuring light' })).toHaveFocus());
+  });
+
+  it('opens the prepare dialog on its first count, and the learn dialog on the spell field', async () => {
+    const { snapshot, caster } = mageSnapshot({ learnable_spells: ['ember_dart'] });
+    if (snapshot.game) {
+      snapshot.game.view.spell_names.ember_dart = 'Ember Dart';
+      snapshot.game.view.spell_levels.ember_dart = 1;
+    }
+    const { user } = renderWithTable(<CharacterSheet memberId={caster.id} onClose={() => {}} />, {
+      snapshot,
+      api: spellApi(),
+    });
+    await openSpells(user);
+    await user.click(screen.getByRole('button', { name: 'Prepare spells' }));
+    const prepare = await screen.findByRole('dialog', { name: "Prepare Wren's spells" });
+    await waitFor(() =>
+      expect(within(prepare).getByRole('spinbutton', { name: 'Copies of Sleep' })).toHaveFocus(),
+    );
+    await user.click(within(prepare).getByRole('button', { name: 'Cancel' }));
+    await user.click(screen.getByRole('button', { name: 'Learn a spell' }));
+    const learn = await screen.findByRole('dialog', { name: 'Learn a spell' });
+    await waitFor(() => expect(within(learn).getByRole('combobox', { name: 'Spell' })).toHaveFocus());
+  });
+
+  it('names each option’s level in the learn dialog only when the list spans levels', async () => {
+    const { snapshot, caster } = mageSnapshot({ learnable_spells: ['ember_dart', 'web'] });
+    if (snapshot.game) {
+      Object.assign(snapshot.game.view.spell_names, { ember_dart: 'Ember Dart', web: 'Web' });
+      Object.assign(snapshot.game.view.spell_levels, { ember_dart: 1, web: 2 });
+    }
+    const { user } = renderWithTable(<CharacterSheet memberId={caster.id} onClose={() => {}} />, {
+      snapshot,
+      api: spellApi(),
+    });
+    await openSpells(user);
+    await user.click(screen.getByRole('button', { name: 'Learn a spell' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Learn a spell' });
+    await user.click(within(dialog).getByRole('combobox', { name: 'Spell' }));
+    expect(await screen.findByRole('option', { name: /Ember Dart/ })).toHaveTextContent('1st level');
+    expect(screen.getByRole('option', { name: /Web/ })).toHaveTextContent('2nd level');
+  });
+
+  it('prints a bundled spell’s range as the catalog does, and leaves out a summary the text repeats', async () => {
+    const { snapshot, caster } = mageSnapshot({
+      spell_book: ['ember_dart'],
+      preparable_spells: ['ember_dart'],
+    });
+    if (snapshot.game) {
+      snapshot.game.view.spell_names.ember_dart = 'Ember Dart';
+      snapshot.game.view.spell_levels.ember_dart = 1;
+    }
+    const api = spellApi();
+    api.getSessionSpell.mockResolvedValue(
+      spellTemplate('ember_dart', 'Ember Dart', {
+        range: '60 feet',
+        feet: 60,
+        intro: 'A spark of glowing ember strikes one visible creature within range.',
+        modes: [
+          {
+            key: 'dart',
+            prose:
+              'A spark of glowing ember strikes one visible creature within range for 1d4 hit points of damage.',
+          },
+        ],
+      }) as never,
+    );
+    const { user } = renderWithTable(<CharacterSheet memberId={caster.id} onClose={() => {}} />, {
+      snapshot,
+      api,
+    });
+    await openSpells(user);
+    expect(await screen.findByText('1st level · Range: 60’ · Instant')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'About Ember Dart' }));
+    expect(await screen.findByText(/for 1d4 hit points of damage\.$/)).toBeInTheDocument();
+    expect(
+      screen.queryByText('A spark of glowing ember strikes one visible creature within range.'),
+    ).toBeNull();
+    expect(screen.getByText('60’')).toBeInTheDocument();
+  });
+
+  it('puts the info button at the top right of both kinds of card', async () => {
+    const { snapshot, caster } = mageSnapshot({ memorized_spells: [{ spell_id: 'sleep' }] });
+    const { user } = renderWithTable(<CharacterSheet memberId={caster.id} onClose={() => {}} />, {
+      snapshot,
+      api: spellApi(),
+    });
+    await openSpells(user);
+    for (const info of screen.getAllByRole('button', { name: /^About / })) {
+      expect(info.closest('[class*="spellTop"]')).not.toBeNull();
+    }
+  });
+
   it('marks the caster in the party panel while the party is in town', async () => {
-    const { snapshot, wren } = casterSnapshot('town');
-    const { user } = renderWithTable(<PartyPanel />, { snapshot, api: casterApi() });
+    const { snapshot, caster } = mageSnapshot();
+    const { user } = renderWithTable(<PartyPanel />, { snapshot, api: spellApi() });
     await user.click(await screen.findByRole('button', { name: /^No spells memorized for Wren/ }));
-    expect(useTableUi.getState().sheetMemberId).toBe(wren.id);
+    expect(useTableUi.getState().sheetMemberId).toBe(caster.id);
     expect(useTableUi.getState().sheetTab).toBe('spells');
   });
 });

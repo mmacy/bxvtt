@@ -8,15 +8,20 @@ import { Tooltip } from './Popover';
 import styles from './Dialog.module.css';
 
 /**
- * Which element takes focus when a dialog or drawer opens: a ref to an element inside it, or `'content'` for the
- * window itself, so a screen reader starts at the title and no control looks selected. By default Radix focuses
- * the first focusable element.
+ * Which element takes focus when a dialog or drawer opens: a ref to an element inside it, `'content'` for the
+ * window itself, so a screen reader starts at the title and no control looks selected, or `{ selector }` for the
+ * first element inside the window that matches a CSS selector, for a kit control that takes no ref. When the
+ * selector matches nothing, Radix focuses the first focusable element, as it does by default.
  */
-export type InitialFocus = RefObject<HTMLElement | null> | 'content';
+export type InitialFocus = RefObject<HTMLElement | null> | 'content' | { selector: string };
 
 /** Focus handlers that record the opener and then move focus as `initialFocus` asks. */
-function useOpenFocus(enabled: boolean, initialFocus: InitialFocus | undefined) {
-  const focus = useReturnFocus(enabled);
+function useOpenFocus(
+  enabled: boolean,
+  initialFocus: InitialFocus | undefined,
+  returnFocus?: RefObject<HTMLElement | null>,
+) {
+  const focus = useReturnFocus(enabled, returnFocus);
   return {
     onOpenAutoFocus: (event: Event) => {
       focus.onOpenAutoFocus();
@@ -28,7 +33,12 @@ function useOpenFocus(enabled: boolean, initialFocus: InitialFocus | undefined) 
         }
         return;
       }
-      const target = initialFocus.current;
+      const target =
+        'selector' in initialFocus
+          ? event.currentTarget instanceof HTMLElement
+            ? event.currentTarget.querySelector<HTMLElement>(initialFocus.selector)
+            : null
+          : initialFocus.current;
       if (target) {
         event.preventDefault();
         target.focus({ preventScroll: true });
@@ -57,6 +67,11 @@ export interface DialogProps {
   paper?: boolean;
   /** Which element takes focus on open. Defaults to the first focusable element. */
   initialFocus?: InitialFocus;
+  /**
+   * Which element takes focus on close when the element that opened the dialog has left the page, such as a
+   * button that the dialog's own action removed. Give a heading `tabIndex={-1}` to make it focusable.
+   */
+  returnFocus?: RefObject<HTMLElement | null>;
   className?: string;
 }
 
@@ -76,9 +91,10 @@ export function Dialog({
   hideClose = false,
   paper = false,
   initialFocus,
+  returnFocus,
   className,
 }: DialogProps) {
-  const focus = useOpenFocus(!trigger, initialFocus);
+  const focus = useOpenFocus(!trigger, initialFocus, returnFocus);
   return (
     <DialogPrimitive.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
       {trigger && <DialogPrimitive.Trigger asChild>{trigger}</DialogPrimitive.Trigger>}

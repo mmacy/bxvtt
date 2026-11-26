@@ -185,7 +185,14 @@ export const EVENT_SAMPLES: Record<string, EventSample> = {
     },
   },
   item_consumed: { base: { character_id: A, item_id: 'iron_spikes' } },
-  item_identified: { base: { instance_id: 'magic-item-0001', template_id: 'potion_of_healing' } },
+  item_identified: {
+    base: {
+      instance_id: 'magic-item-0001',
+      template_id: 'potion_of_healing',
+      display_name: 'potion of healing',
+      display_name_plural: 'potions of healing',
+    },
+  },
   item_used: { base: { character_id: A, instance_id: 'magic-item-0001', manual: [], target_id: null } },
   items_dropped: {
     base: { character_id: A, item_ids: ['rope'], coins_gp_value: 10, coins: { gp: 10, sp: 0, cp: 0 } },

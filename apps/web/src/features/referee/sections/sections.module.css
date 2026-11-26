@@ -161,6 +161,27 @@
 
 .block,
 .trap,
+/* What the players read about a feature, on the parchment their scene panel uses. */
+.playersRead {
+  display: grid;
+  gap: var(--space-0-5);
+}
+
+.playersReadLabel {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+.featureParchment {
+  padding: var(--space-2) var(--space-3);
+}
+
+/* The referee notes keep the author's line breaks. */
+.notesProse {
+  margin: 0;
+  white-space: pre-line;
+}
+
 .feature,
 .door,
 .triggerNote {

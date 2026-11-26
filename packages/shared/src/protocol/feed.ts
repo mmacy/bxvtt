@@ -69,9 +69,9 @@ export type EntryLabel = z.infer<typeof EntryLabel>;
  *
  * Each record holds only the IDs that the entry's events name, except `groups`, which also holds every group of
  * the encounter open when the command ran, with its size, so a talk or the start of an encounter can name the
- * monsters. A monster has its group's label as the player
- * view showed it, such as `robed corpse`, never its template's true name. An item has the name the party knew,
- * so an unidentified magic item keeps its masked name.
+ * monsters. A monster has its group's label as the player view showed it, such as `robed corpse`, never its
+ * template's true name. An item has the name the party knew, so an unidentified magic item keeps its masked
+ * name. The server reads every name from what a player can see, never from the referee view.
  */
 export const EntryNames = z.object({
   /** Party member names by member ID: `character-0001` to `Brenna`. */
@@ -80,8 +80,19 @@ export const EntryNames = z.object({
   groups: z.record(z.string(), EntryLabel),
   /** The label of each monster's group, by monster ID (`monster-0003`) or NPC ID (`npc-0001`). */
   monsters: z.record(z.string(), EntryLabel),
-  /** Item display names by item ID, as in `scene.names`. */
+  /**
+   * What to call one of each item the events name, by item ID: the name in the player view's `item_names` from
+   * after the command, or from before it for an item the command used up, sold, or left behind, and otherwise
+   * the `display_name` of an `item_identified` event. An item that no player-visible source names has no entry,
+   * and the text names it with a generic phrase.
+   */
   items: z.record(z.string(), z.string()),
+  /**
+   * What to call two or more of each item in `items`, by item ID, from the same sources. An entry written
+   * before osrlib 2.8 has none, and the text forms the plural itself. Optional in the type so that older
+   * fixtures and stored entries still parse.
+   */
+  items_plural: z.record(z.string(), z.string()).optional(),
   /**
    * Dungeon names by dungeon ID, for the dungeons the events name that the party has entered, as in the player
    * view's `dungeons`. Optional in the type so that older fixtures still compile.

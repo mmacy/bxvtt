@@ -130,13 +130,50 @@ describe('rejections', () => {
     [
       'magic.cast.not_memorized',
       { spell: 'sleep', reversed: 0 },
-      "That caster doesn't have Sleep memorized. Casters memorize spells after a night's rest.",
+      "That caster doesn't have Sleep memorized.",
     ],
     [
       'magic.cast.not_memorized',
       { spell: 'cure_light_wounds', reversed: 1 },
-      "That caster doesn't have Cure Light Wounds memorized in its reversed form. Casters memorize spells after a night's rest.",
+      "That caster doesn't have Cure Light Wounds memorized in its reversed form.",
     ],
+    [
+      'magic.cast.not_memorized',
+      { character: 'character-0002', spell: 'sleep', reversed: 0 },
+      "Tomas doesn't have Sleep memorized.",
+    ],
+    ['magic.book.not_arcane', { class: 'fighter' }, "Fighters don't keep spell books."],
+    [
+      'magic.memorize.divine_reverses_at_cast',
+      { spell: 'cure_light_wounds' },
+      "Cure Light Wounds is reversed when it's cast, not when it's memorized. Memorize it in its normal form.",
+    ],
+    [
+      'magic.cast.unknown_target',
+      { character: 'character-0002', target: 'monster-0099' },
+      "Tomas' target has fallen or isn't here. Choose another target.",
+    ],
+    [
+      'magic.cast.unknown_target',
+      { target: 'monster-0099' },
+      "That target has fallen or isn't here. Choose another target.",
+    ],
+    [
+      'items.use.unknown_target',
+      { character: 'character-0002', target: 'monster-0099' },
+      "Tomas' target isn't here. Choose another target.",
+    ],
+    [
+      'items.use.unknown_target',
+      { target: 'monster-0099' },
+      "That target isn't here. Choose another target.",
+    ],
+    [
+      'exploration.feature.emptied',
+      { feature: 'feature:cache_7' },
+      'The party has already taken that treasure.',
+    ],
+    ['exploration.feature.unknown', { feature: 'feature:cache_7' }, "The party can't do that here."],
     [
       'magic.cast.out_of_range',
       { spell: 'magic_missile', distance_feet: 180, range_feet: 150 },
@@ -145,7 +182,7 @@ describe('rejections', () => {
     [
       'combat.attack.out_of_reach',
       { distance_feet: 20 },
-      'The target is 20 feet away, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
+      'The target is 20 feet away, too far to attack in melee.',
     ],
     [
       'combat.attack.attacker_incapacitated',
@@ -217,9 +254,7 @@ describe('rejections', () => {
         ],
         ctx,
       ),
-    ).toEqual([
-      'The target is 20 feet away, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
-    ]);
+    ).toEqual(['The target is 20 feet away, too far to attack in melee.']);
   });
 });
 
@@ -471,7 +506,7 @@ describe('events', () => {
     ],
     [
       { event_type: 'battle_ended', code: 'battle.ended.victory', visibility: 'player' },
-      'The party wins the battle!',
+      'The party wins the battle.',
       'good',
       'battle',
     ],
@@ -516,7 +551,7 @@ describe('events', () => {
         coins_gp_value: 30,
         origin: 'treasure',
       },
-      'Wren takes 2 torches, a 50-foot rope, a jade idol, a potion, and coins worth 30 gp.',
+      'Wren takes 2 torches, a 50’ coil of rope, a jade idol, a potion, and coins worth 30 gp.',
       'good',
       'treasure',
     ],
@@ -937,5 +972,21 @@ describe('commands', () => {
       button: 'Juggle torches',
       phrase: 'juggle torches',
     });
+  });
+});
+
+describe('trap events', () => {
+  it('says a known trap stays quiet without calling it known', () => {
+    const safe = describeEvent(
+      {
+        event_type: 'trap',
+        code: 'exploration.trap.safe',
+        visibility: 'player',
+        character_id: 'character-0001',
+        trap_ref: 'priory:1:iron_chest',
+      } as never,
+      ctx,
+    );
+    expect(safe?.text).toBe("The trap doesn't go off.");
   });
 });

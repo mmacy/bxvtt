@@ -77,10 +77,15 @@
 }
 
 /* The playback strip. */
+/*
+ * The playback strip. Its text keeps at least 12rem of line, and the controls move to a line of their own when
+ * the strip is too narrow for both, so the strip never forces its card wider than the screen.
+ */
 .strip {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2) var(--space-3);
   min-height: 52px;
   padding: var(--space-2) var(--space-3);
   border: var(--border-hair) solid var(--color-border);
@@ -95,7 +100,7 @@
 /* The strip's live region. It stays mounted while the beats inside it change, so each beat is announced. */
 .stripLive {
   display: grid;
-  flex: 1 1 auto;
+  flex: 1 1 12rem;
   min-width: 0;
 }
 
@@ -169,11 +174,16 @@
   color: var(--color-text-subtle);
 }
 
+/* The controls wrap among themselves on a phone, so Skip never leaves the card. */
 .stripControls {
   display: flex;
-  flex: none;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   align-items: center;
   gap: var(--space-1);
+  min-width: 0;
+  margin-inline-start: auto;
 }
 
 .stripCount {
@@ -412,9 +422,8 @@
   color: var(--color-warning-strong);
 }
 
-.gazeText {
+.gazeField {
   flex: 1 1 200px;
-  font-size: var(--text-sm);
 }
 
 .noSpells {
@@ -1000,7 +1009,7 @@
   color: var(--color-text-strong);
 }
 
-/* A treasure's description on one line, with the trap warning under it. */
+/* The dropped goods line, with the pile's contents under it. */
 .pickUpBlock {
   display: grid;
   flex: 1 1 200px;
@@ -1008,16 +1017,43 @@
   min-width: 0;
 }
 
+/* The pile's contents. The line wraps, so every entry stays readable. */
+.pickUpSub {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/*
+ * A treasure's icon and description. Its basis is the text's full width, so a description too long to share a
+ * line with the controls takes the line, wraps inside it, and pushes the controls to the next line.
+ */
+.pickUpLineGroup {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: flex-start;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.pickUpIcon {
+  flex: none;
+  margin-top: var(--space-0-5);
+}
+
 .pickUpLine {
-  overflow: hidden;
+  min-width: 0;
   font-size: var(--text-sm);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
   color: var(--color-text-strong);
 }
 
-.pickUpWarning {
-  font-size: var(--text-sm);
+/* The "Trapped" badge and the Take button, at the end of the line or on their own line. */
+.pickUpControls {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1-5);
+  margin-left: auto;
 }
 
 /* The action bar. */

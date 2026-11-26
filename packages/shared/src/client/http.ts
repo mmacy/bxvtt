@@ -48,6 +48,7 @@ import type {
   SaveEntry,
   SaveList,
   SeatList,
+  SpellTemplate,
   StartGameRequest,
   StartingRollRequest,
   StartingRolls,
@@ -768,6 +769,18 @@ export class BxvttClient {
    */
   getAdventureDocument<T = Record<string, unknown>>(tableId: string): Promise<T> {
     return this.request('GET', `/api/tables/${enc(tableId)}/game/adventure`);
+  }
+
+  /**
+   * Reads a spell from the current game's own catalog, including a spell the adventure bundles, which
+   * {@link BxvttClient.rules} doesn't have. Any member of the table may read it. A spell that the game's player view
+   * doesn't name gets 404 `not_found`.
+   *
+   * @param tableId - The table ID.
+   * @param spellId - The spell ID, such as `sleep` or `ember_dart`.
+   */
+  getSessionSpell(tableId: string, spellId: string): Promise<SpellTemplate> {
+    return this.request('GET', `/api/tables/${enc(tableId)}/game/rules/spells/${enc(spellId)}`);
   }
 
   /**

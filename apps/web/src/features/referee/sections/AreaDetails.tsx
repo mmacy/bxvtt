@@ -12,7 +12,7 @@ import {
   type TextContext,
 } from '@bxvtt/shared/text';
 import { useMapBus } from '@/app';
-import { Badge, type BadgeTone, Button, Icon, SectionLabel } from '@/ui';
+import { Badge, type BadgeTone, Banner, Button, Icon, Parchment, SectionLabel } from '@/ui';
 import {
   areaAt,
   areaCenter,
@@ -52,7 +52,7 @@ const TRAP_BADGE: Record<TrapStatus, { label: string; tone: BadgeTone }> = {
   hidden: { label: 'Not found', tone: 'neutral' },
   found: { label: 'Found', tone: 'warning' },
   sprung: { label: 'Sprung', tone: 'danger' },
-  removed: { label: 'Removed', tone: 'success' },
+  removed: { label: 'Disarmed', tone: 'success' },
 };
 
 function TrapBlock({ trap, status, title }: { trap: TrapSpec; status: TrapStatus; title: string }) {
@@ -106,7 +106,7 @@ function FeatureBlock({
           {isCache ? 'Treasure' : trick ? 'Construction trick' : 'Feature'}
         </span>
         <IdMark className={styles.idMark}>{feature.id}</IdMark>
-        {isCache && <Badge tone={emptied ? 'neutral' : 'gold'}>{emptied ? 'Taken' : 'Still here'}</Badge>}
+        {isCache && <Badge tone={emptied ? 'neutral' : 'gold'}>{emptied ? 'Emptied' : 'Still here'}</Badge>}
         {trick && (
           <Badge tone={record.foundTricks.has(ref) ? 'warning' : 'neutral'}>
             {record.foundTricks.has(ref) ? 'Found' : 'Not found'}
@@ -114,7 +114,21 @@ function FeatureBlock({
         )}
         {feature.cell && <IdMark className={styles.idMark}>cell {feature.cell.join(', ')}</IdMark>}
       </div>
-      <p className={styles.prose}>{feature.description}</p>
+      {feature.description.trim() !== '' && (
+        <div className={styles.playersRead}>
+          <span className={styles.playersReadLabel}>Players read</span>
+          <Parchment variant="note" className={styles.featureParchment}>
+            <p className={styles.prose}>{feature.description}</p>
+          </Parchment>
+        </div>
+      )}
+      {feature.referee_notes.trim() !== '' && (
+        <section aria-label="Referee notes">
+          <Banner tone="referee" icon="referee" title="Referee notes" announce="none">
+            <p className={styles.notesProse}>{feature.referee_notes}</p>
+          </Banner>
+        </section>
+      )}
       {contents.length > 0 && (
         <ul className={styles.contents} aria-label="Contents">
           {contents.map((line, index) => (

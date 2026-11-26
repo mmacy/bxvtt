@@ -1,6 +1,6 @@
 /**
  * Item text for the wizard's shop. The wording matches the town's Outfitter, so a player who learned one shop
- * knows the other: the same columns, the same lot sentences ("1 lot is 6 torches"), and the same row summary.
+ * knows the other: the same columns, the same lot phrases ("Comes as 6 torches"), and the same row summary.
  */
 import type { EquipmentDetail } from '@/app';
 import { emptyContext, itemPhrase, resolveItemNoun, weaponQualityLabel } from '@bxvtt/shared/text';
@@ -13,7 +13,10 @@ export function lotSize(detail: EquipmentDetail | undefined): number {
     : 1;
 }
 
-/** "1 lot is 6 torches" or "2 lots are 12 torches", or `null` for an item that sells singly. */
+/**
+ * What a purchase of lots holds, such as "Comes as 6 torches" for one lot or "Comes as 12 torches" for two, or
+ * `null` for an item that sells singly. The town's Outfitter uses the same wording.
+ */
 export function lotSentence(
   id: string,
   name: string,
@@ -23,7 +26,7 @@ export function lotSentence(
   const size = lotSize(detail);
   if (size <= 1) return null;
   const what = itemPhrase(resolveItemNoun(id, emptyContext(), { name }), size * lots);
-  return lots <= 1 ? `1 lot is ${what}` : `${lots} lots are ${what}`;
+  return `Comes as ${what}`;
 }
 
 /** The weight in coins when the entry lists one. Gear lists none. */

@@ -48,8 +48,11 @@ const view = {
 };
 const base = contextFromPlayerView(view);
 
-/** `game.scene.names` as the bxvtt server sends it: catalog lot names, masked names, and authored names. */
-const sceneNames: Record<string, string> = {
+/**
+ * Item names as a feed entry stored them before osrlib 2.8, from the scene the server sent then: catalog lot names,
+ * masked names with their articles, and authored names. Such stored entries must still read well.
+ */
+const storedNames: Record<string, string> = {
   torch: 'Torches (6)',
   holy_water: 'Holy water (vial)',
   chainmail: 'Chainmail',
@@ -65,10 +68,10 @@ const sceneNames: Record<string, string> = {
   'valuable-0002': 'Silver torc',
 };
 
-/** The client's workaround: it copies `scene.names` into `ctx.items` with the article stripped. */
+/** The client's old workaround: it copied the stored names into `ctx.items` with the article stripped. */
 function copiedByHand(ctx: TextContext): TextContext {
   const items = { ...ctx.items };
-  for (const [id, name] of Object.entries(sceneNames)) items[id] = stripArticle(name);
+  for (const [id, name] of Object.entries(storedNames)) items[id] = stripArticle(name);
   return { ...ctx, items };
 }
 
@@ -84,8 +87,8 @@ const acquired = (itemIds: string[], origin: string, characterId = 'character-00
 
 describe('item names (reported)', () => {
   const contexts: [string, TextContext][] = [
-    ['scene names copied into ctx.items', copiedByHand(base)],
-    ['extendContextWithNames', extendContextWithNames(base, sceneNames)],
+    ['stored names copied into ctx.items', copiedByHand(base)],
+    ['extendContextWithNames', extendContextWithNames(base, storedNames)],
   ];
 
   describe.each(contexts)('with %s', (_label, ctx) => {
@@ -142,7 +145,7 @@ describe('item names (reported)', () => {
       expect(describeEvent(acquired(['hand_of_saint_corvane'], 'treasure'), ctx).text).toBe(
         'Wren takes the Hand of Saint Corvane.',
       );
-      expect(itemName('priors_iron_key', ctx)).toBe("a prior's iron key");
+      expect(itemName('priors_iron_key', ctx)).toBe("the prior's iron key");
       expect(itemName('tongue_of_mercy', ctx)).toBe('a tongue of the bell Mercy');
       expect(itemName('valuable-0001', ctx)).toBe('the Jade Idol');
       expect(itemName('valuable-0002', ctx)).toBe('a silver torc');
@@ -164,7 +167,7 @@ describe('item names (reported)', () => {
       },
     });
     expect(itemName('hand_of_saint_corvane', ctx)).toBe('the Hand of Saint Corvane');
-    expect(itemName('priors_iron_key', ctx)).toBe("a prior's iron key");
+    expect(itemName('priors_iron_key', ctx)).toBe("the prior's iron key");
   });
 
   it('makes good nouns from catalog listings whatever names the caller passes', () => {
@@ -188,14 +191,14 @@ describe('item names (reported)', () => {
 
   it('gives the client one noun for an inventory entry', () => {
     // The combat and sheet models named items with `equipmentNoun(id)?.one ?? itemName(id, ctx).toLowerCase()`.
-    const ctx = extendContextWithNames(base, sceneNames);
+    const ctx = extendContextWithNames(base, storedNames);
     expect(resolveItemNoun('torch', ctx)).toEqual(equipmentNoun('torch'));
     expect(itemPhrase(resolveItemNoun('torch', ctx), 6)).toBe('6 torches');
     expect(itemPhrase(resolveItemNoun('holy_water', ctx))).toBe('a vial of holy water');
     expect(itemPhrase(resolveItemNoun('moon_blade', ctx, { name: 'Moon blade' }))).toBe('a moon blade');
     expect(itemPhrase(resolveItemNoun('hand_of_saint_corvane', ctx))).toBe('the Hand of Saint Corvane');
-    expect(itemPhrase(resolveItemNoun('thieves_tools', ctx))).toBe("thieves' tools");
-    expect(itemPhrase(resolveItemNoun('thieves_tools', ctx), 2)).toBe("2 sets of thieves' tools");
+    expect(itemPhrase(resolveItemNoun('thieves_tools', ctx))).toBe('a set of thieves’ tools');
+    expect(itemPhrase(resolveItemNoun('thieves_tools', ctx), 2)).toBe('2 sets of thieves’ tools');
     expect(itemLabel(resolveItemNoun('chainmail', ctx))).toBe('Chainmail');
     expect(itemLabel(resolveItemNoun('leather', ctx))).toBe('Leather armour');
     expect(itemLabel(resolveItemNoun('plate_mail', ctx))).toBe('Plate mail');
@@ -1225,7 +1228,7 @@ describe('the last QA run (F-102, F-103, F-204, F-208)', () => {
       origin: 'treasure',
     } as never;
     expect(describeEvent(take, ctx).text).toBe("Osric takes Miller Aske's strongbox and coins worth 73 gp.");
-    expect(itemPhrase(itemNounFromName("Prior's iron key"))).toBe("a prior's iron key");
+    expect(itemPhrase(itemNounFromName("Prior's iron key"))).toBe("the prior's iron key");
   });
 
   it('says that a share counts its coins rounded down, not that coins went missing (F-208)', () => {

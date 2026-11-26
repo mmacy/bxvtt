@@ -1,12 +1,6 @@
 /** Rest, spell preparation through the character sheet, and a generic form for any other town command. */
 import type { MemberView, PlayerView } from '@bxvtt/shared/bxapi';
-import {
-  describeEvents,
-  formatDuration,
-  formatGameClock,
-  restKindDescription,
-  restKindLabel,
-} from '@bxvtt/shared/text';
+import { describeEvents, formatGameClock, restKindDescription, restKindLabel } from '@bxvtt/shared/text';
 import { useCallback, useMemo } from 'react';
 import {
   useCommandSchema,
@@ -21,23 +15,21 @@ import { Accordion, Banner, Button, EmptyState, Icon, Panel, type IconName } fro
 import { commandInfo, count } from '@bxvtt/shared/text';
 import { CommandForm } from './CommandForm';
 import { usePartyAccess } from './hooks';
-import { MemberToken, PlaceHeader, classLine } from './parts';
+import { MemberToken, PlaceHeader, levelClassLine } from './parts';
 import { placeName } from './services';
 import { readFields } from './schemaForm';
 import { useTownUi } from './townUi';
 import styles from './RestAndPrepare.module.css';
 
 const REST_ICONS: Record<string, IconName> = { turn: 'hourglass', night: 'moon', day: 'sun' };
-/** What each rest is for, in town. The length shows once, on its own line. */
+/**
+ * What each rest is for, in town. No bxapi field states a rest's length, so the panel doesn't either, and the
+ * report after a rest shows the game time that passed.
+ */
 const REST_PURPOSE: Record<string, string> = {
-  turn: 'Take a short break.',
-  night: 'Sleep so spellcasters can prepare spells afterward.',
-  day: 'Sleep and recover hit points for living party members.',
-};
-const REST_LENGTH: Record<string, string> = {
-  turn: formatDuration(1, 'turn'),
-  night: formatDuration(48, 'turn'),
-  day: formatDuration(144, 'turn'),
+  turn: 'A short break.',
+  night: 'Sleep, so casters can prepare spells.',
+  day: 'Sleep, so casters can prepare spells, and recover hit points.',
 };
 
 /** The game time that passed and the hit points each member recovered, from the views before and after. */
@@ -87,12 +79,17 @@ export function useRest(): { rest: (kind: string) => Promise<void>; pending: boo
   return { rest, pending };
 }
 
-function spellCounts(member: MemberView): { book: number; prepared: number } {
-  const book = (member as unknown as { spell_book?: unknown }).spell_book;
-  return {
-    book: Array.isArray(book) ? book.length : 0,
-    prepared: Array.isArray(member.memorized_spells) ? member.memorized_spells.length : 0,
-  };
+/** Whether a member casts: spell slots, a spell book, or a memorized spell. The sheet's Spells tab uses this test. */
+function isCaster(member: MemberView): boolean {
+  return member.spell_slots.length > 0 || member.spell_book.length > 0 || member.memorized_spells.length > 0;
+}
+
+/** ", 1 in spell book, none memorized" for a caster, and nothing for anyone else. */
+function spellLine(member: MemberView): string {
+  if (!isCaster(member)) return '';
+  const book = member.spell_book.length > 0 ? `, ${member.spell_book.length} in spell book` : '';
+  const memorized = member.memorized_spells.length;
+  return `${book}, ${memorized === 0 ? 'none' : memorized} memorized`;
 }
 
 /** Commands this page has a control for elsewhere in town. */
@@ -130,7 +127,6 @@ function RestPanel() {
             <div className={styles.restText}>
               <h3 className={styles.restName}>{restKindLabel(kind)}</h3>
               <p className={styles.restDetail}>{REST_PURPOSE[kind] ?? restKindDescription(kind)}</p>
-              {REST_LENGTH[kind] && <p className={styles.restLength}>{REST_LENGTH[kind]} of game time</p>}
             </div>
             <Button
               variant="secondary"
@@ -139,17 +135,13 @@ function RestPanel() {
               disabledReason={access.explanation}
               onClick={() => void rest(kind)}
             >
-              {`Rest ${restKindLabel(kind).toLowerCase()}`}
+              {`Rest for ${restKindLabel(kind).toLowerCase()}`}
             </Button>
           </div>
         ))}
       </div>
       {!access.allowed && <p className={styles.explain}>{access.explanation}</p>}
-      {report !== null && report.error !== null && (
-        <Banner tone="warning" title="Couldn't rest">
-          {report.error}
-        </Banner>
-      )}
+      {report !== null && report.error !== null && <Banner tone="warning">{report.error}</Banner>}
       {report !== null && report.error === null && (
         <div className={styles.report} role="status" aria-label="Rest summary">
           <h3 className={styles.reportTitle}>{`${restKindLabel(report.kind)} passed`}</h3>
@@ -174,24 +166,18 @@ function SheetPanel() {
   const party = useParty();
   const openSheet = useTableUi((s) => s.openCharacterSheet);
   return (
-    <Panel title="Spells and gear" meta="Character sheets">
-      <p className={styles.lead}>
-        Open a spellcaster&apos;s sheet to prepare, learn, or cast spells. Open any character&apos;s sheet to
-        equip gear or trade items.
-      </p>
+    <Panel title="Spells and gear">
       <ul className={styles.members}>
         {party.map((member) => {
-          const counts = spellCounts(member);
-          const caster = counts.book + counts.prepared > 0;
+          const caster = isCaster(member);
           return (
             <li key={member.id} className={styles.member}>
               <MemberToken member={member} size={32} />
               <div className={styles.memberText}>
                 <span className={styles.memberName}>{member.name}</span>
                 <span className={styles.memberMeta}>
-                  {classLine(member)}
-                  {counts.book + counts.prepared > 0 &&
-                    `, ${counts.book} in spell book, ${counts.prepared} prepared`}
+                  {levelClassLine(member)}
+                  {spellLine(member)}
                 </span>
               </div>
               <Button
@@ -239,7 +225,7 @@ export function RestAndPrepare() {
       <PlaceHeader
         icon="rest"
         title={placeName('rest', view?.town_services ?? []) ?? 'Rest and prepare'}
-        lead="Rest to recover hit points, then prepare spells on each caster's character sheet."
+        lead="Rest, then prepare spells from each caster's sheet."
       />
       <div className={styles.page}>
         <div className={styles.column}>

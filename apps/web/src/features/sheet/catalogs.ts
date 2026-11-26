@@ -55,7 +55,10 @@ function useFullEntry<C extends FullCatalogName>(catalog: C, id: string | null) 
 
 /** A class's full entry, or `null` for no ID. */
 export const useClassDetail = (id: string | null) => useFullEntry('classes', id);
-/** A spell's full entry, or `null` for no ID. */
-export const useSpellDetail = (id: string | null) => useFullEntry('spells', id);
+/**
+ * A spell's details, from the rules catalog or, for a spell the adventure bundles, from the game. The hook lives in
+ * the app layer so the battle composer shares it.
+ */
+export { useSpellDetail } from '@/app';
 /** A magic item's full entry, or `null` for no ID. */
 export const useMagicItemDetail = (id: string | null) => useFullEntry('magic-items', id);

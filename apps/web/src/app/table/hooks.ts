@@ -16,7 +16,6 @@ import type {
   PlayerView,
   RefereeState,
   Role,
-  Scene,
   Seat,
   TableDetail,
   TableSettings,
@@ -152,16 +151,10 @@ export function usePlayerView(): PlayerView | null {
   return useTableStore((s) => s.game?.view ?? null);
 }
 
-/** The scene: item names, the room traps the party knows, and the caches it emptied. */
-export function useScene(): Scene | null {
-  return useTableStore((s) => s.game?.scene ?? null);
-}
-
-/** What the party perceives where it stands, from the player view and the scene, or `null` in town. */
+/** What the party perceives where it stands, from the player view, or `null` in town. */
 export function useHere(): Here | null {
   const view = useTableStore((s) => s.game?.view ?? null);
-  const scene = useTableStore((s) => s.game?.scene ?? null);
-  return useMemo(() => (view === null ? null : partyHere(view, scene)), [view, scene]);
+  return useMemo(() => (view === null ? null : partyHere(view)), [view]);
 }
 
 /** Where the party is: `{ kind: 'town' }` or a dungeon cell with its facing. */

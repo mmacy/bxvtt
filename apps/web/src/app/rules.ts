@@ -17,9 +17,11 @@ import type {
   SpellSummary,
   paths,
 } from '@bxvtt/shared/bxapi';
-import { useEffect } from 'react';
+import type { FullCatalog, SpellTemplate } from '@bxvtt/shared/protocol';
+import { useEffect, useMemo, useRef } from 'react';
 import { create } from 'zustand';
 import { describeProblem, getApi, type ProblemMessage } from './api';
+import { useTableStore } from './table/context';
 
 /** The response body of a bxapi rules route, such as `RulesResponse<'/v1/rules/spells/{spell_id}'>`. */
 export type RulesResponse<P extends keyof paths> = paths[P] extends {
@@ -119,10 +121,37 @@ export function loadCatalog<T>(key: string, load: () => Promise<T>): Promise<T> 
   return promise;
 }
 
-/** The request behind a cache key: `list:<path>` fetches every page, and `entry:<path>` fetches one entry. */
+/** The cache key of the whole spell catalog, which `useFullCatalog('spells')` shares. */
+const FULL_SPELLS = 'full:spells';
+
+/** The cache key of one spell from a game's own catalog. The session ID starts a new cache for a new game. */
+function sessionSpellKey(tableId: string, sessionId: string, spellId: string): string {
+  return `session-spell:${[tableId, sessionId, spellId].map(encodeURIComponent).join('/')}`;
+}
+
+/**
+ * The request behind a cache key: `list:<path>` fetches every page, `full:spells` fetches the whole spell catalog,
+ * `session-spell:<table>/<session>/<spell>` fetches one spell from the game's own catalog, and `entry:<path>`
+ * fetches one entry.
+ */
 function loaderFor(key: string): () => Promise<unknown> {
   if (key.startsWith('list:')) return () => fetchAll(key.slice('list:'.length));
+  if (key === FULL_SPELLS) return () => getApi().fullCatalog('spells');
+  if (key.startsWith('session-spell:')) {
+    const [tableId = '', , spellId = ''] = key
+      .slice('session-spell:'.length)
+      .split('/')
+      .map(decodeURIComponent);
+    return () => getApi().getSessionSpell(tableId, spellId);
+  }
   return () => getApi().rules(key.slice('entry:'.length));
+}
+
+function clearEntry(key: string): void {
+  useCatalogStore.setState((state) => {
+    const { [key]: _removed, ...rest } = state.entries;
+    return { entries: rest };
+  });
 }
 
 function useCatalog<T>(key: string | null): CatalogResult<T> {
@@ -136,11 +165,7 @@ function useCatalog<T>(key: string | null): CatalogResult<T> {
     error: entry?.status === 'error' ? entry.error : null,
     loading: key !== null && (entry === undefined || entry.status === 'loading'),
     retry: () => {
-      if (key === null) return;
-      useCatalogStore.setState((state) => {
-        const { [key]: _removed, ...rest } = state.entries;
-        return { entries: rest };
-      });
+      if (key !== null) clearEntry(key);
     },
   };
 }
@@ -187,6 +212,76 @@ export const useCommandSchema = (commandType: string | null) =>
   useRulesEntry<CommandDetail>(commandType === null ? null : `commands/${commandType}`);
 /** The license of the rules content. */
 export const useRulesLicense = () => useRulesEntry<RulesLicense>('license');
+
+/** A spell's details, from the rules catalog or from the game's own catalog. */
+export interface SpellDetailResult {
+  /** The spell's template, or `null` while it loads, after a failed load, or for no ID. */
+  data: SpellTemplate | null;
+  loading: boolean;
+  /** Whether the details failed to load. */
+  failed: boolean;
+  /** Whether the rules catalog has the spell, so a link to its compendium entry opens something. */
+  inCatalog: boolean;
+}
+
+const spellIndexes = new WeakMap<FullCatalog<'spells'>, ReadonlyMap<string, SpellTemplate>>();
+
+function spellIndex(catalog: FullCatalog<'spells'>): ReadonlyMap<string, SpellTemplate> {
+  let index = spellIndexes.get(catalog);
+  if (index === undefined) {
+    index = new Map(catalog.items.map((spell) => [spell.id, spell]));
+    spellIndexes.set(catalog, index);
+  }
+  return index;
+}
+
+/**
+ * The details of any spell the player view names: the rules catalog's entry when the catalog has the spell, and
+ * otherwise the game's own entry from `GET /api/tables/{table_id}/game/rules/spells/{spell_id}`, which has the
+ * spells an adventure bundles. Outside a game, a spell the catalog lacks fails to load.
+ *
+ * ```tsx
+ * const detail = useSpellDetail('ember_dart');
+ * if (detail.loading) return <Skeleton lines={4} />;
+ * ```
+ *
+ * @param spellId - The spell ID, or `null` to load nothing.
+ */
+export function useSpellDetail(spellId: string | null): SpellDetailResult {
+  const catalog = useCatalog<FullCatalog<'spells'>>(spellId === null ? null : FULL_SPELLS);
+  const tableId = useTableStore((s) => s.tableId);
+  const sessionId = useTableStore((s) => s.game?.session_id ?? null);
+  const fromCatalog = useMemo(
+    () => (spellId === null || catalog.data === null ? undefined : spellIndex(catalog.data).get(spellId)),
+    [catalog.data, spellId],
+  );
+  // The game's route answers only once the catalog has answered without the spell, or failed.
+  const catalogSettled = catalog.data !== null || catalog.error !== null;
+  const sessionKey =
+    spellId !== null && fromCatalog === undefined && catalogSettled && sessionId !== null
+      ? sessionSpellKey(tableId, sessionId, spellId)
+      : null;
+  const session = useCatalog<SpellTemplate>(sessionKey);
+  // A component that mounts after a failed load tries again, so "try again in a moment" works by reopening. That
+  // covers the whole spell catalog, which outside a game is the only source.
+  const triedCatalog = useRef(false);
+  useEffect(() => {
+    if (spellId === null || triedCatalog.current) return;
+    triedCatalog.current = true;
+    if (useCatalogStore.getState().entries[FULL_SPELLS]?.status === 'error') clearEntry(FULL_SPELLS);
+  }, [spellId]);
+  const triedKey = useRef<string | null>(null);
+  useEffect(() => {
+    if (sessionKey === null || triedKey.current === sessionKey) return;
+    triedKey.current = sessionKey;
+    if (useCatalogStore.getState().entries[sessionKey]?.status === 'error') clearEntry(sessionKey);
+  }, [sessionKey]);
+  if (spellId === null) return { data: null, loading: false, failed: false, inCatalog: false };
+  if (fromCatalog !== undefined) return { data: fromCatalog, loading: false, failed: false, inCatalog: true };
+  if (!catalogSettled) return { data: null, loading: true, failed: false, inCatalog: false };
+  if (sessionKey === null) return { data: null, loading: false, failed: true, inCatalog: false };
+  return { data: session.data, loading: session.loading, failed: session.error !== null, inCatalog: false };
+}
 
 /**
  * The catalog lists that have loaded so far, without starting any request. `useTextContext` reads it to name

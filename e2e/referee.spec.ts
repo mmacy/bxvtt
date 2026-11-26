@@ -125,6 +125,39 @@ test.describe('referee tools', () => {
     await expect(ruth.page.getByRole('tab', { name: 'Referee', exact: true })).toBeVisible();
   });
 
+  test('the referee reads a treasure’s referee notes in the area key, and a player in the room doesn’t', async ({
+    crew,
+  }) => {
+    const { ruth, sam, tableId } = await bellTable(crew);
+    const note = 'The clay bottle in the altar cloth holds the potion of healing.';
+    const description = 'Two silver candlesticks stand on the altar beside two small stoppered flasks';
+    await placeParty(ruth.client, tableId, { dungeon: 'priory', level: 1, x: 17, y: 12 });
+
+    // The referee's key for the chapel shows what the players read and, apart from it, the referee notes.
+    const now = await openRefereeSection(ruth.page, 'now');
+    await expect(now).toContainText('A narrow chapel that the looters never reached');
+    const treasure = now
+      .getByRole('listitem')
+      .filter({ hasText: 'Players read' })
+      .filter({ hasText: description });
+    await expect(treasure).toBeVisible();
+    const notes = treasure.getByRole('region', { name: 'Referee notes' });
+    await expect(notes).toContainText(note);
+    await expect(treasure.getByText('Still here', { exact: true })).toBeVisible();
+    // The scene panel is the players' view for everyone, so even the referee's copy has no notes.
+    const ruthScene = ruth.page.getByRole('region', { name: 'Current location', exact: true });
+    await expect(ruthScene.getByText(new RegExp(description))).toBeVisible();
+    await expect(ruthScene.getByText(note)).toHaveCount(0);
+
+    // Sam stands in the same room and reads the altar's description, but not the notes.
+    const scene = sam.page.getByRole('region', { name: 'Current location' });
+    await expect(scene.getByRole('heading', { name: 'Chapel of Saint Corvane' })).toBeVisible();
+    await expect(scene.getByText(new RegExp(description))).toBeVisible();
+    await expect(sam.page.getByText(note)).toHaveCount(0);
+    expect(await sam.page.content()).not.toContain('clay bottle in the altar cloth holds');
+    await screenshot(ruth.page, 'referee-notes');
+  });
+
   test('the referee gives an item and coins, and the player sees them', async ({ crew }) => {
     const { ruth, sam, tableId } = await bellTable(crew);
     const before = await sam.client.getGame(tableId);

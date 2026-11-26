@@ -27,6 +27,7 @@ export interface FightSummary {
   /** `victory`, `fled`, `defeat`, or an encounter outcome such as `parley` or `evaded`. */
   outcome: string | null;
   title: string;
+  /** One sentence about how it ended, or an empty string when the title says it all. */
   sentence: string;
   rounds: number;
   /** "3 goblins slain", "2 skeletons escaped", by kind and how each was defeated. */
@@ -228,7 +229,8 @@ export function summarizeFight(events: readonly AnyEvent[], ctx: TextContext): F
         names.length > 0
           ? `${capitalizeFirst(joinList(names))} ${one ? 'is' : 'are'} beaten`
           : 'The monsters are beaten';
-      sentence = 'The party won the fight.';
+      // The title already says the monsters are beaten.
+      sentence = '';
       break;
     }
     case 'defeat':
@@ -237,11 +239,11 @@ export function summarizeFight(events: readonly AnyEvent[], ctx: TextContext): F
       break;
     case 'fled':
       title = 'The party escaped';
-      sentence = 'The party retreated cleanly.';
+      sentence = '';
       break;
     case null:
       title = 'Encounter ended';
-      sentence = 'The party can explore again.';
+      sentence = '';
       break;
     default:
       title = encounterOutcomeLabel(outcome);
