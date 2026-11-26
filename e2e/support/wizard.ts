@@ -56,7 +56,8 @@ export async function next(dialog: Locator): Promise<void> {
 }
 
 /**
- * Rolls ability scores, and rolls again while the roll doesn't qualify for the class.
+ * Rolls ability scores, and rolls again while the roll doesn't qualify for the class. A new table allows no
+ * rerolls, so a spec that needs more than one roll raises the table's `ability_score_rerolls` first.
  *
  * @returns How many times the player rolled.
  */
@@ -69,7 +70,11 @@ export async function rollFor(dialog: Locator, classId: WizardClass, maxRolls = 
     const entry = qualifies.getByRole('listitem').filter({ hasText: new RegExp(`^${label}`) });
     const text = (await entry.textContent()) ?? '';
     if (!/needs/i.test(text)) return rolls;
-    await dialog.getByRole('button', { name: 'Roll again' }).click();
+    const again = dialog.getByRole('button', { name: 'Roll again' });
+    if ((await again.count()) === 0) {
+      throw new Error(`Roll ${rolls} doesn't qualify for ${label}, and the table allows no reroll.`);
+    }
+    await again.click();
     // A new roll replaces the old one, so wait for the list to say something else.
     await expect(entry).not.toHaveText(text);
   }

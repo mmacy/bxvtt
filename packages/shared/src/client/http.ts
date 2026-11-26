@@ -478,9 +478,10 @@ export class BxvttClient {
    * its draft uses it to get back to the roll.
    *
    * @param tableId - The table ID.
-   * @throws BxvttProblemError `not_found` when the user has no open roll at the table, or isn't a member.
+   * @returns The roll, or `null` when the user has no open roll at the table.
+   * @throws BxvttProblemError `not_found` when the user isn't a member of the table.
    */
-  getCurrentAbilityRoll(tableId: string): Promise<AbilityRoll> {
+  getCurrentAbilityRoll(tableId: string): Promise<AbilityRoll | null> {
     return this.request('GET', `/api/tables/${enc(tableId)}/ability-rolls/current`);
   }
 

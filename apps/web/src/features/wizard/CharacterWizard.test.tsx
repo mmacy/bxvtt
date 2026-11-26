@@ -105,15 +105,7 @@ function wizardApi(options: { refusal?: BxvttProblemError; rolls?: ServerRolls }
   });
   api.rollAbilities.mockResolvedValue(ROLL);
   api.getAbilityRoll.mockResolvedValue(ROLL);
-  api.getCurrentAbilityRoll.mockRejectedValue(
-    new BxvttProblemError({
-      type: 'about:blank',
-      title: 'Not Found',
-      status: 404,
-      code: 'not_found',
-      detail: 'none',
-    } as Problem),
-  );
+  api.getCurrentAbilityRoll.mockResolvedValue(null);
   api.fullCatalog.mockImplementation(async (name) => {
     if (name === 'classes') {
       const items = Object.values(catalog.details);

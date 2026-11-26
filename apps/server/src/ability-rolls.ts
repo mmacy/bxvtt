@@ -141,11 +141,12 @@ export class AbilityRollStore {
    *
    * @param tableId - The table ID. The caller checks membership.
    * @param userId - The user ID.
-   * @throws ApiError `not_found` when the user has no open roll at the table, or a bxapi failure.
+   * @returns The roll, or `null` when the user has no open roll at the table.
+   * @throws ApiError A bxapi failure.
    */
-  async readNewest(tableId: string, userId: string): Promise<AbilityRoll> {
+  async readNewest(tableId: string, userId: string): Promise<AbilityRoll | null> {
     const newest = this.newest(tableId, userId);
-    if (newest === null) notFound('ability roll', 'current');
+    if (newest === null) return null;
     return this.read(newest.id, userId);
   }
 

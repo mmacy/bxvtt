@@ -76,7 +76,11 @@ export async function combatTable(crew: Crew, options: CombatTableOptions = {}):
     players: [sam, ann],
     party,
     seed: options.seed ?? 1981,
-    settings: { auto_resolve: options.autoResolve ?? true },
+    settings: {
+      auto_resolve: options.autoResolve ?? true,
+      // The weak party's seeds roll a 1 on the hit die, which the standard rules' hit die reroll would roll again.
+      ...(strong ? {} : { ruleset: { hp_reroll_at_first_level: false } }),
+    },
   });
   const tableId = setup.table.id;
   const game = setup.game as GameState;

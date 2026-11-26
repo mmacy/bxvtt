@@ -144,15 +144,13 @@ describe('the table ruleset', () => {
       alignment: 'lawful',
       ability_roll_id: first.id,
     });
-    await expect(alice.client.getCurrentAbilityRoll(tableId)).rejects.toSatisfy((error) =>
-      isProblem(error, 'not_found'),
-    );
+    expect(await alice.client.getCurrentAbilityRoll(tableId)).toBeNull();
     await expect(outsider.client.getCurrentAbilityRoll(tableId)).rejects.toSatisfy((error) =>
       isProblem(error, 'not_found'),
     );
     const next = await alice.client.rollAbilities(tableId, { seed: 9 });
     expect(next.rerolls_left).toBe(0);
-    expect((await alice.client.getCurrentAbilityRoll(tableId)).id).toBe(next.id);
+    expect((await alice.client.getCurrentAbilityRoll(tableId))?.id).toBe(next.id);
   });
 
   it('counts rerolls against the current limit, closes the rest at creation, and allows any number when unlimited', async () => {

@@ -66,6 +66,8 @@ export async function stagedTable(
     party,
     adventure: ADVENTURES.bell,
     start: stage !== 'lobby',
+    // Flarg's seed rolls a 1 on the hit die, which the standard rules' hit die reroll would roll again.
+    ...(stage === 'game_over' ? { settings: { ruleset: { hp_reroll_at_first_level: false } } } : {}),
   });
   const tableId = setup.table.id;
   const staged: StagedTable = { ...setup, ruth, sam, tableId };

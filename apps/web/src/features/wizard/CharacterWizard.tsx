@@ -402,7 +402,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
       .getCurrentAbilityRoll(tableId)
       .then(
         (roll) => {
-          if (cancelled || currentRollId.current !== null) return;
+          if (cancelled || roll === null || currentRollId.current !== null) return;
           takeRoll(roll, false);
           // Scores the player didn't see this wizard roll would look like a roll made for them.
           setProblem({
@@ -413,7 +413,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
           });
         },
         () => {
-          // No open roll, or the server can't say: the player rolls as usual.
+          // The server can't say: the player rolls as usual.
         },
       )
       .finally(() => {

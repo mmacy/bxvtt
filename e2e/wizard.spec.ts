@@ -52,7 +52,10 @@ test.describe('character wizard', () => {
     }) => {
       const sam = await crew.person('Sam');
       const table = await sam.client.createTable({ name: `Wizard ${classId}` });
-      // The halfling's first roll has too little Dexterity, so the player rolls again.
+      // The halfling's first roll has too little Dexterity, so the player rolls again, which the table allows.
+      if (classId === 'halfling') {
+        await sam.client.updateTable(table.id, { settings: { ability_score_rerolls: 1 } });
+      }
       await sam.seedAbilityRolls(
         classId === 'halfling' ? [UNQUALIFIED_HALFLING_SEED, ROLL_SEEDS.halfling] : [ROLL_SEEDS[classId]],
       );
@@ -337,6 +340,8 @@ test.describe('character wizard', () => {
   test('a draft survives closing the dialog and reloading the page', async ({ crew }) => {
     const sam = await crew.person('Sam');
     const table = await sam.client.createTable({ name: 'Draft' });
+    // Start over rolls new ability scores, so the table allows a reroll.
+    await sam.client.updateTable(table.id, { settings: { ability_score_rerolls: 1 } });
     await sam.seedAbilityRolls([ROLL_SEEDS.thief]);
     await sam.page.goto(`/tables/${table.id}`);
     let dialog = await openWizard(sam.page);
@@ -432,14 +437,16 @@ test.describe('character wizard', () => {
     await dialog.getByRole('button', { name: /^Choose a class \(complete\)/ }).click();
     await expect(dialog.getByText('Your class is fixed as a fighter')).toBeVisible();
     await expect(dialog).toContainText(
-      'To play another class, select Start over and roll new ability scores.',
+      'You rolled hit points for these ability scores, which fixed your class.',
     );
+    // A new table allows no rerolls, so nothing offers new ability scores for another class.
+    await expect(dialog).not.toContainText('Start over');
+    await expect(dialog.getByRole('button', { name: 'Start over' })).toHaveCount(0);
     await expect(dialog.getByRole('button', { name: CLASS_CARDS.cleric, exact: true })).toBeDisabled();
     await expect(dialog.getByRole('button', { name: CLASS_CARDS.fighter, exact: true })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
-    await expect(dialog.getByRole('checkbox', { name: 'Reroll a first hit die of 1 or 2' })).toBeDisabled();
 
     // The other choices stay free, and the hit points wait where the player left them.
     await next(dialog);

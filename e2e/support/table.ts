@@ -3,7 +3,13 @@
  * test through the interface. Every character uses a fixed seed.
  */
 import type { BxvttClient } from '@bxvtt/shared/client';
-import type { Command, GameState, StoredCharacter, TableDetail, TableSettings } from '@bxvtt/shared/protocol';
+import type {
+  Command,
+  GameState,
+  StoredCharacter,
+  TableDetail,
+  UpdateTableRequest,
+} from '@bxvtt/shared/protocol';
 import { expect, type Page } from '@playwright/test';
 import type { Actor } from './fixtures';
 
@@ -102,7 +108,8 @@ export interface TableSetup {
   start?: boolean;
   /** The session seed. Defaults to 1981, so every game's dice repeat. */
   seed?: number;
-  settings?: Partial<TableSettings>;
+  /** Settings to change before the party is created, so the characters roll under the table's rules. */
+  settings?: UpdateTableRequest['settings'];
 }
 
 /** A table that {@link setupTable} made. */

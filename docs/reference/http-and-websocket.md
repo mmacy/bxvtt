@@ -114,7 +114,7 @@ All paths below sit under `/api` (for example, `GET /api/health`), and `{t}` den
 | `DELETE /tables/{t}/roster/{entry_id}` | `removeFromRoster(tableId, entryId)` | Character owner or referee | `TableDetail` |
 | `GET /rulesets` | `listRulesets()` | User | `StartingRulesetList`: the `standard` and `creation_house_rules` starting rulesets |
 | `POST /tables/{t}/ability-rolls` | `rollAbilities(tableId, body?)` | Table member, in any phase | `201` `AbilityRoll`: `bxapi`'s roll, whose `rolls` hold the dice behind each score, with `table_id`, the recorded `rules`, and `rerolls_left` |
-| `GET /tables/{t}/ability-rolls/current` | `getCurrentAbilityRoll(tableId)` | Table member | `AbilityRoll`: the user's newest open roll at the table, or `404 not_found` when there is none |
+| `GET /tables/{t}/ability-rolls/current` | `getCurrentAbilityRoll(tableId)` | Table member | `AbilityRoll`: the user's newest open roll at the table, or `null` when there is none |
 | `GET /ability-rolls/{roll_id}` | `getAbilityRoll(rollId)` | Roll owner, still a member of the roll's table | `AbilityRoll` |
 | `GET /ability-rolls/{roll_id}/starting-rolls` | `getStartingRolls(rollId)` | Roll owner | `StartingRollsStatus` |
 | `POST /ability-rolls/{roll_id}/hit-points` | `rollHitPoints(rollId, body)` | Roll owner (rate-limited) | `StartingRolls` |

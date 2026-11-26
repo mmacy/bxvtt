@@ -281,10 +281,8 @@ test.describe('first run and lobby', () => {
     // Settings save and reach the player's copy of the table.
     await ruth.page.getByRole('radio', { name: 'Anyone with a character' }).click();
     await expect(ruth.page.getByRole('radio', { name: 'Anyone with a character' })).toBeChecked();
-    await ruth.page.getByRole('switch', { name: 'Resolve battle rounds automatically' }).click();
-    await expect(
-      ruth.page.getByRole('switch', { name: 'Resolve battle rounds automatically' }),
-    ).not.toBeChecked();
+    await ruth.page.getByRole('switch', { name: 'Resolve rounds automatically' }).click();
+    await expect(ruth.page.getByRole('switch', { name: 'Resolve rounds automatically' })).not.toBeChecked();
     await expect
       .poll(async () => (await sam.client.getTable(table.id)).settings)
       .toMatchObject({ party_control: 'anyone', auto_resolve: false });

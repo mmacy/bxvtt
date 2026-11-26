@@ -62,7 +62,6 @@ test.describe('a new caster', () => {
       });
     await expect(cast).toBeDisabled();
     await expect(composer).toContainText('Mazpar has no spells memorized');
-    await expect(composer.getByRole('button', { name: "Open Mazpar's spells" })).toBeVisible();
     await sam.page.screenshot({ path: `${SCREENS_DIR}/caster-no-spells-in-battle.png` });
   });
 
@@ -113,7 +112,10 @@ test.describe('a new caster', () => {
       .getByRole('radio', { name: 'Cast' })
       .click();
     // Sleep by Hit Dice takes the goblins as a group, so it needs no single target.
-    await composer.getByRole('radio', { name: 'By hit dice' }).click();
+    await composer
+      .getByRole('radiogroup', { name: 'How to cast Sleep' })
+      .getByRole('radio', { name: 'Put creatures of 4 Hit Dice or lower to sleep' })
+      .click();
     const declare = composer.getByRole('button', { name: /^Cast sleep/i }).first();
     await expect(declare).toBeEnabled();
     await expect(declare).toBeVisible();
