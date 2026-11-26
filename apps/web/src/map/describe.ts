@@ -23,14 +23,32 @@ function humanize(text: string): string {
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
-export function doorSummary(door: MapDoor): string {
+/**
+ * A door's state as a phrase, such as "closed, locked". A referee reads why a gated door won't open, and a player
+ * reads only that it won't.
+ *
+ * @param door - The door.
+ * @param referee - Whether the phrase is for the referee's map.
+ */
+export function doorSummary(door: MapDoor, referee: boolean): string {
   const parts: string[] = [door.open ? 'open' : 'closed'];
   if (door.wedged) parts.push('wedged with a spike');
   if (door.locked) parts.push('locked');
   if (door.unlocked) parts.push('unlocked');
   if (door.stuck) parts.push('stuck');
-  if (door.gated) parts.push('guarded by a condition');
+  if (door.gated) parts.push(referee ? 'opens only when its condition is met' : "won't open yet");
   return parts.join(', ');
+}
+
+/** How many characters of a feature's referee notes the referee's tooltip shows. */
+const NOTES_LENGTH = 120;
+
+/** The tooltip line for a feature's referee notes, cut to 120 characters, or `null` when there are none. */
+export function refereeNotesLine(notes: string | null): string | null {
+  const text = notes?.trim() ?? '';
+  if (text === '') return null;
+  const shown = text.length > NOTES_LENGTH ? `${text.slice(0, NOTES_LENGTH).trimEnd()}…` : text;
+  return `Referee notes: ${shown}`;
 }
 
 const TRAP_STATES: Record<MapTrap['state'], string> = {
@@ -54,7 +72,7 @@ function trapLines(trap: MapTrap, referee: boolean): string[] {
   return lines;
 }
 
-function featureTitle(feature: MapFeature): string {
+function featureTitle(feature: MapFeature, referee: boolean): string {
   switch (feature.kind) {
     case 'cache':
       return feature.emptied ? 'Emptied' : 'Treasure';
@@ -63,7 +81,8 @@ function featureTitle(feature: MapFeature): string {
     case 'pile':
       return 'Dropped goods';
     case 'trick':
-      return feature.found === false ? 'Undiscovered construction trick' : 'Construction trick';
+      if (!referee) return 'Something odd';
+      return feature.found === false ? 'Construction trick, not found' : 'Construction trick';
     case 'custom':
       return 'Point of interest';
   }
@@ -87,8 +106,10 @@ export function describeTarget(target: MapTarget, map: LevelMap): TargetDescript
       let title = 'Wall';
       if (edge.kind === 'door' && edge.door) {
         const hidden = edge.door.secret && edge.door.discovered === false;
-        title = edge.door.secret ? (hidden ? 'Secret door (undiscovered)' : 'Secret door (found)') : 'Door';
-        lines.push(hidden ? 'Appears as a wall to players.' : humanize(doorSummary(edge.door)) + '.');
+        title = edge.door.secret ? (hidden ? 'Secret door, not found' : 'Secret door, found') : 'Door';
+        lines.push(
+          hidden ? 'Appears as a wall to players.' : humanize(doorSummary(edge.door, referee)) + '.',
+        );
       } else if (edge.kind === 'passage') {
         title = 'Passage';
         lines.push('Leads through the wall.');
@@ -102,10 +123,18 @@ export function describeTarget(target: MapTarget, map: LevelMap): TargetDescript
       const f = target.feature;
       const lines: string[] = [];
       if (f.description) lines.push(f.description);
-      if (f.contents.length > 0) lines.push(f.contents.join(', '));
+      if (f.contents.length > 0) {
+        // A player reads a pile one entry per line. A referee reads what a cache holds on one labeled line.
+        if (!referee) lines.push(...f.contents);
+        else if (f.kind === 'cache' || f.kind === 'generated_cache')
+          lines.push(`Holds: ${f.contents.join(', ')}`);
+        else lines.push(f.contents.join(', '));
+      }
       if (f.trap) lines.push(...trapLines(f.trap, referee));
+      const notes = referee ? refereeNotesLine(f.refereeNotes) : null;
+      if (notes !== null) lines.push(notes);
       if (referee && !f.known) lines.push('Unseen by the party.');
-      return { title: featureTitle(f), lines };
+      return { title: featureTitle(f, referee), lines };
     }
     case 'transition': {
       const t = target.transition;
@@ -114,7 +143,8 @@ export function describeTarget(target: MapTarget, map: LevelMap): TargetDescript
         const sameLevel = t.to.dungeonId === map.dungeonId && t.to.levelNumber === map.levelNumber;
         lines.push(sameLevel ? 'Leads elsewhere on this level.' : `Leads to level ${t.to.levelNumber}.`);
       }
-      if (t.gated) lines.push('Requires a condition to pass.');
+      if (t.gated)
+        lines.push(referee ? 'Opens only when its condition is met.' : 'Something blocks the way.');
       return { title: TRANSITION_NAMES[t.kind], lines };
     }
     case 'cell': {

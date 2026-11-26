@@ -3,11 +3,14 @@ import { coinParts, describeEvents, joinList, type Coins, type TextContext } fro
 import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import {
   cachesToTake,
+  pileContentsSentence,
+  treasureRowText,
   useCanSend,
   useCombatStage,
   useFeed,
   useGameMode,
   useHere,
+  usePlayerTextContext,
   useReduceMotion,
   useRevision,
   useParty,
@@ -102,7 +105,7 @@ export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
         <PlaybackStrip playback={playback} ctx={ctx} idle={null} />
       ) : (
         <div className={styles.aftermathBody}>
-          <p className={styles.aftermathSentence}>{summary.sentence}</p>
+          {summary.sentence !== '' && <p className={styles.aftermathSentence}>{summary.sentence}</p>}
           <dl className={styles.facts}>
             {summary.defeated.length > 0 && (
               <div className={styles.fact}>
@@ -156,12 +159,15 @@ export function PickUp() {
   const here = useHere();
   const canTake = useCanSend('take_treasure');
   const ctx = useTextContext();
+  const playerText = usePlayerTextContext();
+  const contentsId = useId();
   const { send, pendingType } = useSendCommand();
   const [outcome, setOutcome] = useState<{ tone: 'success' | 'info' | 'danger'; text: string } | null>(null);
-  const caches = cachesToTake(here).filter((cache) => cache.reachable);
-  const pile = here?.pile === true;
+  const caches = cachesToTake(here);
+  const pile = here?.pile ?? null;
+  const contents = pile === null ? '' : pileContentsSentence(pile, playerText);
   // The answer stays on screen after the goods are gone.
-  if (!pile && caches.length === 0 && outcome === null) return null;
+  if (pile === null && caches.length === 0 && outcome === null) return null;
   // Report what bxapi answered, including that there was nothing to take, so the button never fails silently.
   const take = async (featureId: string) => {
     setOutcome(null);
@@ -181,16 +187,24 @@ export function PickUp() {
           {outcome.text}
         </p>
       )}
-      {pile && (
+      {pile !== null && (
         <div className={styles.pickUpRow}>
           <Icon name="coins" size={16} />
-          <span className={styles.pickUpText}>Dropped goods lie here.</span>
+          <span className={styles.pickUpBlock}>
+            <span className={styles.pickUpText}>Dropped goods lie here.</span>
+            {contents !== '' && (
+              <span id={contentsId} className={styles.pickUpSub}>
+                {contents}
+              </span>
+            )}
+          </span>
           <Button
             size="sm"
             variant="secondary"
             loading={busy}
             disabled={!canTake.allowed}
             disabledReason={canTake.reason}
+            aria-describedby={contents === '' ? undefined : contentsId}
             onClick={() => void take('pile')}
           >
             Pick up
@@ -200,7 +214,7 @@ export function PickUp() {
       {caches.map((cache) => (
         <CacheRow
           key={cache.id}
-          description={cache.description}
+          text={treasureRowText(cache, caches)}
           trapFound={cache.trapState === 'found'}
           busy={busy}
           canTake={canTake}
@@ -213,29 +227,28 @@ export function PickUp() {
 
 /**
  * One treasure the party can take where it stands: its description on one line, and the take button. When the
- * party has found a trap on it, a warning line says what's at risk and the button reads "Take anyway", so the
+ * party has found a trap on it, a "Trapped" badge sits beside the text and the button reads "Take anyway", so the
  * player decides. The client never says whether a trap exists before the party finds it.
  */
 function CacheRow({
-  description,
+  text,
   trapFound,
   busy,
   canTake,
   onTake,
 }: {
-  /** The author's description, or an empty string for a rolled cache. */
-  description: string;
+  /** The row's text, from `treasureRowText`. */
+  text: string;
   trapFound: boolean;
   busy: boolean;
   canTake: { allowed: boolean; reason: string | null };
   onTake: () => void;
 }) {
   const fullId = useId();
-  const text = description.trim() || 'Treasure lies here.';
   return (
     <div className={styles.pickUpRow}>
       <Icon name="chest" size={16} />
-      <span className={styles.pickUpBlock}>
+      <span className={styles.pickUpLineGroup}>
         <span className={styles.pickUpLine} aria-hidden="true">
           {text}
         </span>
@@ -244,9 +257,9 @@ function CacheRow({
           {text}
         </span>
         {trapFound && (
-          <span className={cx(styles.pickUpWarning, styles.toneBad)}>
-            The party found a trap on this. Taking it may spring the trap.
-          </span>
+          <Badge tone="warning" icon="trap" className={styles.pickUpBadge}>
+            Trapped
+          </Badge>
         )}
       </span>
       <Button
@@ -258,7 +271,7 @@ function CacheRow({
         aria-describedby={fullId}
         onClick={onTake}
       >
-        {trapFound ? 'Take anyway' : 'Take treasure'}
+        {trapFound ? 'Take anyway' : 'Take'}
       </Button>
     </div>
   );

@@ -23,12 +23,7 @@ import type {
   TableDetail,
   User,
 } from '@bxvtt/shared/protocol';
-import {
-  contextFromPlayerView,
-  emptyContext,
-  extendContextWithNames,
-  type TextContext,
-} from '@bxvtt/shared/text';
+import { contextFromPlayerView, emptyContext, type TextContext } from '@bxvtt/shared/text';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 
 /** Why the server removed this user from the table. */
@@ -194,15 +189,13 @@ export function newerGame(current: GameState | null, incoming: GameState | null)
 }
 
 /**
- * Builds the player-visible text context for a game state: names from the player view (party, spells, dungeons,
- * and entered areas) and the scene's item names, on top of the previous context. Every name goes through the text
- * layer's own functions, which keep its curated nouns: the scene names `Torches (6)` for a torch, and the context
- * still says "a torch".
+ * Builds the player-visible text context for a game state, on top of the previous context: names from the player
+ * view, which include the party, spells, dungeons, entered areas, and every item the view shows (`item_names` and
+ * `item_names_plural`). Every name goes through the text layer's own functions, which keep its curated nouns.
  */
 export function buildBaseTextContext(previous: TextContext, game: GameState | null): TextContext {
   if (game === null) return previous;
-  const ctx = contextFromPlayerView(game.view, previous);
-  return Object.keys(game.scene.names).length > 0 ? extendContextWithNames(ctx, game.scene.names) : ctx;
+  return contextFromPlayerView(game.view, previous);
 }
 
 function exploredKeys(game: GameState | null): Set<string> {

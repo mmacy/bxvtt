@@ -2,15 +2,16 @@
  * Builds the map of one level from what the viewer may know.
  *
  * - A player, and a referee with the lens off, see the player view: the entered areas, the features and
- *   transitions the party knows, the piles, and the entrance. The scene marks the caches the party emptied. The
- *   table's session lore adds what refusals and events taught the party about doors, such as a door that turned
- *   out to be locked.
+ *   transitions the party knows, the caches it emptied, the piles, and the entrance. The table's session lore adds
+ *   what refusals and events taught the party about doors, such as a door that turned out to be locked.
  * - A referee with the lens on sees the whole keyed level from the adventure document and the referee state.
  *
  * Every function here translates data. None decides what the party could see or do.
  */
 import type { ExploredLevelView } from '@bxvtt/shared/bxapi';
-import type { PlayerView, RefereeState, Scene } from '@bxvtt/shared/protocol';
+import type { PlayerView, RefereeState } from '@bxvtt/shared/protocol';
+import type { TextContext } from '@bxvtt/shared/text';
+import { itemStackPhrase, pileContents } from '@/app';
 import {
   edgeKey,
   fromPlayerView,
@@ -138,12 +139,8 @@ function featureKind(kind: ExploredLevelView['features'][number]['kind']): Featu
  * area-wide feature goes on the cell nearest the centre of the area's walked cells.
  *
  * @param level - The player view's level.
- * @param emptied - The `feature:` handles of the caches the party emptied, from `scene.emptied_features`.
  */
-export function viewExtras(
-  level: ExploredLevelView | null,
-  emptied: ReadonlySet<string> = new Set(),
-): PlayerMapExtras {
+export function viewExtras(level: ExploredLevelView | null): PlayerMapExtras {
   if (level === null) return {};
   const features: NonNullable<PlayerMapExtras['features']> = [];
   for (const feature of level.features) {
@@ -157,7 +154,7 @@ export function viewExtras(
       x: cell[0],
       y: cell[1],
       description: feature.description,
-      emptied: emptied.has(feature.id),
+      emptied: feature.emptied,
     });
   }
   return {
@@ -193,20 +190,21 @@ export function partyLightRadiusFeet(view: PlayerView): number | undefined {
  * and the door states the table learned this session.
  *
  * @param view - The player view.
- * @param scene - The scene.
  * @param key - The level key, such as `priory:1`.
  * @param doors - What the table learned about doors, by `{dungeon}:{level}:{edge key}`.
+ * @param text - The players' text context, which names what lies in a dropped pile.
  */
 export function buildPlayerLevel(
   view: PlayerView,
-  scene: Scene | null,
   key: string,
   doors: Readonly<Record<string, DoorLore>> = {},
+  text?: TextContext,
 ): LevelMap | null {
   const level = viewLevel(view, key);
   const map = fromPlayerView(view, key, {
-    extras: viewExtras(level, new Set(scene?.emptied_features ?? [])),
+    extras: viewExtras(level),
     lightRadiusFeet: partyLightRadiusFeet(view),
+    pileContents: text === undefined ? undefined : (pile) => pileContents(pile, text),
   });
   if (map === null) return null;
   const trapByFeature = new Map(
@@ -236,9 +234,22 @@ export function buildPlayerLevel(
   return { ...map, features, edges, entrance: entrance ? [entrance[0], entrance[1]] : map.entrance };
 }
 
-/** Builds a referee's map of one level, or `null` when the adventure has no such level. */
-export function buildRefereeLevel(source: RefereeMapSource, key: string): LevelMap | null {
-  return fromReferee(source, key);
+/**
+ * Builds a referee's map of one level, or `null` when the adventure has no such level.
+ *
+ * @param source - The referee state and the adventure document.
+ * @param key - The level key, such as `priory:1`.
+ * @param text - The referee's text context, which names the items in caches and piles.
+ */
+export function buildRefereeLevel(
+  source: RefereeMapSource,
+  key: string,
+  text?: TextContext,
+): LevelMap | null {
+  return fromReferee(source, key, {
+    itemPhrase:
+      text === undefined ? undefined : (itemId, quantity) => itemStackPhrase(itemId, quantity, text),
+  });
 }
 
 /** The key of the door lore for one side of a cell. */

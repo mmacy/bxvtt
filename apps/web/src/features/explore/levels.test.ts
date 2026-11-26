@@ -1,6 +1,7 @@
-import type { ExploredLevelView } from '@bxvtt/shared/bxapi';
+import { contextFromPlayerView } from '@bxvtt/shared/text';
 import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
+import { addPileAtParty, enteredArea, exploredLevel, mapFeature } from '@/app/testing/views';
 import {
   areaCenterCell,
   buildPlayerLevel,
@@ -19,44 +20,27 @@ function exploring() {
 
 describe('viewExtras', () => {
   it('puts the view’s stairs and features on the map, an area-wide one at the area’s middle, and marks emptied caches', () => {
-    const level: ExploredLevelView = {
+    const level = exploredLevel({
       dungeon_id: 'priory',
       level_number: 1,
-      cells: [],
-      edges: {},
       areas: [
-        {
+        enteredArea({
           id: 'hall',
           name: 'Hall',
-          description: '',
           cells: [
             [0, 0],
             [1, 0],
             [2, 0],
           ],
-        },
+        }),
       ],
       transitions: [{ kind: 'stairs_down', position: [2, 0], side: null }],
       features: [
-        {
-          id: 'feature:chest',
-          kind: 'treasure_cache',
-          description: 'A chest.',
-          cell: null,
-          area_id: 'hall',
-          trap_state: null,
-        },
-        {
-          id: 'feature:statue',
-          kind: 'custom',
-          description: 'A statue.',
-          cell: [0, 0],
-          area_id: null,
-          trap_state: null,
-        },
+        mapFeature({ id: 'feature:chest', description: 'A chest.', area_id: 'hall', emptied: true }),
+        mapFeature({ id: 'feature:statue', kind: 'custom', description: 'A statue.', cell: [0, 0] }),
       ],
-    };
-    const extras = viewExtras(level, new Set(['feature:chest']));
+    });
+    const extras = viewExtras(level);
     expect(extras.transitions).toEqual([{ kind: 'stairs_down', x: 2, y: 0, side: null }]);
     expect(extras.features).toEqual([
       expect.objectContaining({ id: 'feature:chest', kind: 'cache', x: 1, y: 0, emptied: true }),
@@ -82,9 +66,9 @@ describe('areaCenterCell', () => {
 });
 
 describe('buildPlayerLevel', () => {
-  it('builds the party’s level from the player view and the scene', () => {
+  it('builds the party’s level from the player view', () => {
     const game = exploring();
-    const map = buildPlayerLevel(game.view, game.scene, 'priory:1');
+    const map = buildPlayerLevel(game.view, 'priory:1');
     expect(map?.layer).toBe('player');
     expect(map?.party).toEqual({ x: 14, y: 22, facing: 'north' });
     // The fallen statue is a feature of the whole area, so it sits at the area's middle.
@@ -110,7 +94,7 @@ describe('buildPlayerLevel', () => {
     const level = view.explored[0];
     if (!level) throw new Error('No explored level.');
     level.edges['14,22:north'] = { kind: 'door', door_open: false, door_wedged: false };
-    const map = buildPlayerLevel(view, game.scene, 'priory:1', { 'priory:1:14,22:north': { locked: true } });
+    const map = buildPlayerLevel(view, 'priory:1', { 'priory:1:14,22:north': { locked: true } });
     const door = map?.edges.find((edge) => edge.key === '14,22:north')?.door;
     expect(door?.locked).toBe(true);
     expect(door?.stuck).toBeNull();
@@ -118,7 +102,7 @@ describe('buildPlayerLevel', () => {
 
   it('marks the entrance and names the entered areas from the player view', () => {
     const game = exploring();
-    const map = buildPlayerLevel(game.view, game.scene, 'priory:1');
+    const map = buildPlayerLevel(game.view, 'priory:1');
     expect(map?.entrance).toEqual([14, 23]);
     expect(map?.areas.map((area) => area.name)).toEqual(['Gatehouse stair']);
   });
@@ -128,15 +112,8 @@ describe('buildPlayerLevel', () => {
     const view = structuredClone(game.view);
     const level = view.explored[0];
     if (!level) throw new Error('No explored level.');
-    level.features.push({
-      id: 'feature:chest',
-      kind: 'treasure_cache',
-      description: '',
-      cell: [14, 22],
-      area_id: null,
-      trap_state: 'found',
-    });
-    const map = buildPlayerLevel(view, game.scene, 'priory:1');
+    level.features.push(mapFeature({ id: 'feature:chest', cell: [14, 22], trap_state: 'found' }));
+    const map = buildPlayerLevel(view, 'priory:1');
     expect(map?.features.find((feature) => feature.id === 'feature:chest')?.trap).toEqual({
       state: 'found',
       trigger: null,
@@ -144,9 +121,32 @@ describe('buildPlayerLevel', () => {
     });
   });
 
+  it('names a pile’s contents for the tooltip, one entry each, with the names the players know', () => {
+    const snapshot = fixtureSnapshot('exploring', 'player');
+    addPileAtParty(
+      snapshot,
+      {
+        coins: { pp: 0, gp: 30, ep: 0, sp: 0, cp: 0 },
+        contents: [
+          { item_id: 'holy_water', quantity: 2 },
+          { item_id: 'gilded_skull', quantity: 1 },
+        ],
+      },
+      { holy_water: ['vial of holy water', 'vials of holy water'] },
+    );
+    const view = snapshot.game?.view;
+    if (!view) throw new Error('The fixture has no game.');
+    const map = buildPlayerLevel(view, 'priory:1', {}, contextFromPlayerView(view));
+    expect(map?.features.find((feature) => feature.kind === 'pile')?.contents).toEqual([
+      '30 gold pieces',
+      '2 vials of holy water',
+      'something else',
+    ]);
+  });
+
   it('returns null for a level the party hasn’t mapped', () => {
     const game = exploring();
-    expect(buildPlayerLevel(game.view, game.scene, 'priory:3')).toBeNull();
+    expect(buildPlayerLevel(game.view, 'priory:3')).toBeNull();
   });
 });
 

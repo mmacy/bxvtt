@@ -233,7 +233,11 @@ export function playerViewFrom(
     dungeons: [],
     can_travel_to_town: false,
     spell_names: {},
+    spell_levels: {},
     reversed_spell_names: {},
+    item_names: {},
+    item_names_plural: {},
+    features_here: [],
     explored: [
       {
         dungeon_id: dungeonId,

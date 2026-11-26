@@ -194,10 +194,6 @@ const FIXED: Record<string, { title: string; detail: string }> = {
     title: 'Received an unreadable response from the server',
     detail: 'Reload the page. If it keeps happening, check that this address points to your bxvtt server.',
   },
-  target_unknown: {
-    title: "That target isn't in this fight",
-    detail: 'Choose another target.',
-  },
   character_invalid: {
     title: "Those character choices aren't valid",
     detail: 'Review your choices and try again.',

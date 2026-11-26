@@ -64,15 +64,15 @@ The module depends only on React (with no imports from `@/ui`), so it mounts ins
 - **Canonical edge keys:** `osrlib` names every edge once from its south or east cell (`"2,0:west"` separates `(1, 0)` and `(2, 0)`; `"2,4:north"` separates `(2, 3)` and `(2, 4)`). Call `edgeKey(x, y, direction)` and `parseEdgeKey(key)` rather than formatting keys manually.
 - **`PlayerView.explored`:** Lists known cells per visited level (combining walked, remembered, and currently lit cells without distinguishing them) and classifies boundary edges as `wall`, `open`, or `door` (with `door_open` and `door_wedged` booleans). Unfound secret doors appear as `wall`, passages appear as `open`, and room names, stairs, traps, features, and locked/stuck/gated door flags are omitted. `fromPlayerView` defaults light radius to `30` feet unless `lightRadiusFeet` is supplied.
 - **`RefereeView`:** Combines the full `LevelSpec` (`RefereeView.adventure`) with mutable `RefereeView.dungeon_state` (door states, `explored` vs. `seen` cells, trap states, caches, piles, and resolved encounters).
-- **Supplementing `PlayerView` with `options.extras`:** Pass the player view's entered areas, known transitions, and visible features via `options.extras` (never referee data). `viewExtras` in `features/explore/levels.ts` builds them, and marks the caches in `game.scene.emptied_features` as emptied. Area labels render from `16px/cell` zoom upward, wrapping and avoiding tokens, doors, secret-door `S` marks, stairs, features, and earlier labels; pass `areaLabels={false}` if rendering custom labels.
+- **Supplementing `PlayerView` with `options.extras`:** Pass the player view's entered areas, known transitions, and visible features via `options.extras` (never referee data). `viewExtras` in `features/explore/levels.ts` builds them, and marks the caches whose `MapFeatureView.emptied` is true as emptied. Area labels render from `16px/cell` zoom upward, wrapping and avoiding tokens, doors, secret-door `S` marks, stairs, features, and earlier labels; pass `areaLabels={false}` if rendering custom labels.
 
 ## Model builders
 
 | Function | Return value |
 | --- | --- |
-| `fromPlayerView(view, levelKey?, options?)` | Player `LevelMap` or `null` (`options.lightRadiusFeet` and `options.extras`). |
-| `fromReferee(refereeView, levelKey?)` | Referee `LevelMap` (reading active light radius from the effects ledger) or `null`. |
-| `fromRefereeView(levelSpec, dungeonState, { dungeonId, light })` | Referee `LevelMap` from separate adventure and dungeon state objects. |
+| `fromPlayerView(view, levelKey?, options?)` | Player `LevelMap` or `null` (`options.lightRadiusFeet`, `options.extras`, and `options.pileContents`, which names a pile's contents for its tooltip). Every feature's `refereeNotes` is `null`. |
+| `fromReferee(refereeView, levelKey?, options?)` | Referee `LevelMap` (reading active light radius from the effects ledger) or `null`. `options.itemPhrase` names the items in caches and piles. Each authored feature carries its `FeatureSpec.referee_notes` in `refereeNotes`. |
+| `fromRefereeView(levelSpec, dungeonState, { dungeonId, light, itemPhrase })` | Referee `LevelMap` from separate adventure and dungeon state objects. |
 | `refereeLight(refereeView)` | `{ radiusFeet }` from the largest active party light effect, or `null` when unlit or covered by darkness. |
 | `playerLevelKeys(view)`, `refereeLevelKeys(refereeView)` | Known `"dungeon:level"` keys, ordered with the party's current level first. |
 | `currentLevelKey(view)` | Current `"dungeon:level"` key, or `null` in town. |

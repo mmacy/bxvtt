@@ -109,7 +109,7 @@ function placePhrase(scene: Scene, x: number, y: number): string {
   return referee && !scene.isKnown(x, y) ? `${name}, not yet seen by the party` : name;
 }
 
-function edgePhrase(edge: MapEdge | undefined): string {
+function edgePhrase(edge: MapEdge | undefined, referee: boolean): string {
   if (!edge) return 'unexplored';
   switch (edge.kind) {
     case 'wall':
@@ -122,7 +122,7 @@ function edgePhrase(edge: MapEdge | undefined): string {
       const door = edge.door;
       if (!door) return 'a door';
       if (door.secret && door.discovered === false) return 'a secret door, undiscovered';
-      return `${door.secret ? 'a secret door' : 'a door'}, ${doorSummary(door)}`;
+      return `${door.secret ? 'a secret door' : 'a door'}, ${doorSummary(door, referee)}`;
     }
   }
 }
@@ -173,7 +173,7 @@ export function describeCursor(
       return `${where} Press Enter to choose this square, or Escape to cancel.`;
     case 'pick-edge': {
       const edge = scene.edgeAt(cursor.x, cursor.y, cursor.side);
-      return `${cursor.side.charAt(0).toUpperCase()}${cursor.side.slice(1)} side: ${edgePhrase(edge)}. ${where} Press E for the next side, Enter to choose this edge, or Escape to cancel.`;
+      return `${cursor.side.charAt(0).toUpperCase()}${cursor.side.slice(1)} side: ${edgePhrase(edge, scene.map.layer === 'referee')}. ${where} Press E for the next side, Enter to choose this edge, or Escape to cancel.`;
     }
     case 'pin':
       return `${where} Press Enter to place a pin here.`;

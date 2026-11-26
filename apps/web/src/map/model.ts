@@ -29,6 +29,10 @@ export type DungeonSpec = Schemas['DungeonSpec'];
 type FeatureSpec = Schemas['FeatureSpec'];
 type TrapSpec = Schemas['TrapSpec'];
 type Coins = Schemas['Coins'];
+type PileView = Schemas['PileView'];
+
+/** Names one item ID and a count for a tooltip, such as "2 vials of holy water". */
+export type ItemPhrase = (itemId: string, quantity: number) => string;
 
 /** Which audience a map was built for. A player map holds only what `PlayerView` contains. */
 export type MapLayer = 'player' | 'referee';
@@ -131,8 +135,13 @@ export interface MapFeature {
   found: boolean | null;
   /** The treasure trap on a cache, referee maps only. */
   trap: MapTrap | null;
-  /** One line per thing inside, for a tooltip, like `"120 gp"` or `"dagger×1"`. */
+  /** One entry per thing inside, for a tooltip, like `"120 gp"` or `"a dagger"`. */
   contents: string[];
+  /**
+   * What the adventure tells the referee about the feature (`FeatureSpec.referee_notes`), or an empty string when
+   * it says nothing. Always `null` on a player map, which never holds referee data.
+   */
+  refereeNotes: string | null;
   /** Whether the party knows the feature's cell. */
   known: boolean;
 }
@@ -240,6 +249,11 @@ export interface PlayerMapOptions {
   /** The light radius to hint when the party has light. The player view doesn't state it. */
   lightRadiusFeet?: number;
   extras?: PlayerMapExtras;
+  /**
+   * Names a dropped pile's coins and contents, one entry per thing, from the player view's item names. Without it,
+   * a pile's tooltip lists nothing.
+   */
+  pileContents?: (pile: PileView) => string[];
 }
 
 /** The level keys a player view knows, current level first. */
@@ -310,9 +324,8 @@ export function fromPlayerView(
   for (const [ref, pile] of Object.entries(view.piles)) {
     const cell = cellOfRef(ref, dungeonId, levelNumber);
     if (!cell) continue;
-    const contents = [...pile.items];
-    if (pile.coins_gp_value > 0) contents.push(`${pile.coins_gp_value} gp in coins`);
-    features.push(pileFeature(cell, contents, seen.has(cellKey(cell[0], cell[1]))));
+    const contents = options.pileContents?.(pile) ?? [];
+    features.push(pileFeature(cell, contents, seen.has(cellKey(cell[0], cell[1])), null));
   }
   for (const extra of options.extras?.features ?? []) {
     features.push({
@@ -327,6 +340,7 @@ export function fromPlayerView(
       found: extra.kind === 'trick' ? true : null,
       trap: null,
       contents: [],
+      refereeNotes: null,
       known: seen.has(cellKey(extra.x, extra.y)),
     });
   }
@@ -421,6 +435,8 @@ export interface RefereeMapOptions {
   dungeonId: string;
   /** The party's light, from `refereeLight`, or `null` when it has none. */
   light?: { radiusFeet: number } | null;
+  /** Names the items in caches and piles. Without it, an item reads by its ID with spaces. */
+  itemPhrase?: ItemPhrase;
 }
 
 /**
@@ -430,6 +446,7 @@ export interface RefereeMapOptions {
  */
 export function fromRefereeView(level: LevelSpec, state: DungeonState, options: RefereeMapOptions): LevelMap {
   const { dungeonId } = options;
+  const name: ItemPhrase = options.itemPhrase ?? plainItemPhrase;
   const levelNumber = level.number;
   const key = levelKey(dungeonId, levelNumber);
   const inBounds = (x: number, y: number) => x >= 0 && y >= 0 && x < level.width && y < level.height;
@@ -567,7 +584,8 @@ export function fromRefereeView(level: LevelSpec, state: DungeonState, options: 
       emptied: kind === 'cache' && emptied.has(ref(spec.id)),
       found: kind === 'trick' ? foundTricks.has(ref(spec.id)) : null,
       trap: spec.trap ? describeTrapState(spec.trap, trapState(spec.id)) : null,
-      contents: kind === 'cache' ? describeContents(spec) : [],
+      contents: kind === 'cache' ? describeContents(spec, name) : [],
+      refereeNotes: spec.referee_notes,
       known: known.has(cellKey(cell[0], cell[1])),
     });
   };
@@ -583,7 +601,7 @@ export function fromRefereeView(level: LevelSpec, state: DungeonState, options: 
     if (!cell) continue;
     const contents = coinLines(cache.coins);
     for (const valuable of cache.valuables) contents.push(valuable.name || valuable.kind);
-    for (const item of cache.magic_items) contents.push(magicItemName(item));
+    for (const item of cache.magic_items) contents.push(name(item.template_id, item.quantity));
     if (cache.treasure_types.length > 0) contents.unshift(`Rolled on ${cache.treasure_types.join(', ')}`);
     features.push({
       id,
@@ -597,17 +615,18 @@ export function fromRefereeView(level: LevelSpec, state: DungeonState, options: 
       found: null,
       trap: null,
       contents,
+      refereeNotes: '',
       known: known.has(cellKey(cell[0], cell[1])),
     });
   }
   for (const [cellReference, pile] of Object.entries(state.piles)) {
     const cell = cellOfRef(cellReference, dungeonId, levelNumber);
     if (!cell) continue;
-    const contents = pile.items.map((item) => `${item.item_id.replaceAll('_', ' ')} × ${item.quantity}`);
-    for (const item of pile.magic_items) contents.push(magicItemName(item));
+    const contents = pile.items.map((item) => name(item.item_id, item.quantity));
+    for (const item of pile.magic_items) contents.push(name(item.template_id, item.quantity));
     for (const valuable of pile.valuables) contents.push(valuable.name || valuable.kind);
     contents.push(...coinLines(pile.coins));
-    features.push(pileFeature(cell, contents, known.has(cellKey(cell[0], cell[1]))));
+    features.push(pileFeature(cell, contents, known.has(cellKey(cell[0], cell[1])), ''));
   }
 
   const occupied = new Set<string>();
@@ -708,7 +727,11 @@ export function refereeLevelKeys(source: RefereeMapSource): string[] {
  * Builds the referee's map of one level straight from a referee view. Pass a level key, or leave it
  * out for the party's level. Returns `null` when the adventure has no such level.
  */
-export function fromReferee(source: RefereeMapSource, key?: string): LevelMap | null {
+export function fromReferee(
+  source: RefereeMapSource,
+  key?: string,
+  options: Pick<RefereeMapOptions, 'itemPhrase'> = {},
+): LevelMap | null {
   const wanted = key ?? refereeLevelKeys(source)[0];
   if (wanted === undefined) return null;
   const parsed = parseLevelKey(wanted);
@@ -716,7 +739,11 @@ export function fromReferee(source: RefereeMapSource, key?: string): LevelMap | 
   const dungeon = source.adventure.dungeons.find((d) => d.id === parsed.dungeonId);
   const level = dungeon?.levels.find((l) => l.number === parsed.levelNumber);
   if (!dungeon || !level) return null;
-  return fromRefereeView(level, source.dungeon_state, { dungeonId: dungeon.id, light: refereeLight(source) });
+  return fromRefereeView(level, source.dungeon_state, {
+    dungeonId: dungeon.id,
+    light: refereeLight(source),
+    itemPhrase: options.itemPhrase,
+  });
 }
 
 /**
@@ -766,7 +793,12 @@ function partyOn(
   return { x: location.position[0], y: location.position[1], facing: location.facing ?? 'north' };
 }
 
-function pileFeature(cell: Cell, contents: string[], known: boolean): MapFeature {
+function pileFeature(
+  cell: Cell,
+  contents: string[],
+  known: boolean,
+  refereeNotes: string | null,
+): MapFeature {
   return {
     id: `pile@${cell[0]},${cell[1]}`,
     kind: 'pile',
@@ -779,6 +811,7 @@ function pileFeature(cell: Cell, contents: string[], known: boolean): MapFeature
     found: null,
     trap: null,
     contents,
+    refereeNotes,
     known,
   };
 }
@@ -791,15 +824,16 @@ function coinLines(coins: Coins): string[] {
   return (['pp', 'gp', 'ep', 'sp', 'cp'] as const).filter((d) => coins[d] > 0).map((d) => `${coins[d]} ${d}`);
 }
 
-function magicItemName(item: Schemas['MagicItemInstance']): string {
-  const name = item.template_id.replaceAll('_', ' ');
-  return item.quantity > 1 ? `${name}×${item.quantity}` : name;
+/** An item's ID with spaces and its count, for a map built without item names. */
+function plainItemPhrase(itemId: string, quantity: number): string {
+  const name = itemId.replaceAll('_', ' ');
+  return quantity > 1 ? `${quantity} ${name}` : name;
 }
 
-function describeContents(spec: FeatureSpec): string[] {
+function describeContents(spec: FeatureSpec, name: ItemPhrase): string[] {
   const lines = coinLines(spec.coins);
-  for (const id of spec.item_ids) lines.push(id.replaceAll('_', ' '));
-  for (const id of spec.magic_item_ids) lines.push(id.replaceAll('_', ' '));
+  for (const id of spec.item_ids) lines.push(name(id, 1));
+  for (const id of spec.magic_item_ids) lines.push(name(id, 1));
   for (const valuable of spec.valuables) lines.push(valuable.name || valuable.kind);
   return lines;
 }

@@ -56,9 +56,11 @@ export type {
   SendResult,
   SkipReason,
 } from './commands';
-export { useTextContext } from './text';
-export { cachesToTake, partyHere } from './here';
+export { usePlayerTextContext, useTextContext } from './text';
+export { cachesNotEmptied, cachesToTake, partyHere, rolledTreasureNumbers, treasureRowText } from './here';
 export type { Cell, Here, HereFeature } from './here';
+export { itemStackPhrase, itemStackPhrases, pileContents, pileContentsSentence } from './items';
+export type { ItemStack } from './items';
 export * from './rules';
 export { resetMyCharacters, useMyCharacters, useStoredCharacter } from './characters';
 export { useMapBus } from './mapBus';

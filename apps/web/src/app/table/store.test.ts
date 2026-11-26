@@ -1,5 +1,5 @@
 import type { FeedEntry, GameState, ServerMessage } from '@bxvtt/shared/protocol';
-import { emptyContext, itemName } from '@bxvtt/shared/text';
+import { emptyContext, itemCount, itemName } from '@bxvtt/shared/text';
 import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot } from '../testing/fixtures';
 import {
@@ -196,14 +196,29 @@ describe('createTableStore', () => {
 });
 
 describe('buildBaseTextContext', () => {
-  it("keeps the text layer's nouns when the scene names an item by its catalog lot", () => {
+  it("keeps the text layer's nouns when the view names an item by its catalog lot", () => {
     const game = fixtureSnapshot('exploring', 'player').game;
     if (!game) throw new Error('The fixture has no game.');
     const ctx = buildBaseTextContext(emptyContext(), {
       ...game,
-      scene: { ...game.scene, names: { ...game.scene.names, torch: 'Torches (6)' } },
+      view: { ...game.view, item_names: { ...game.view.item_names, torch: 'Torches (6)' } },
     });
     expect(itemName('torch', ctx)).toBe('a torch');
+  });
+
+  it('names items by the view, with its plurals', () => {
+    const game = fixtureSnapshot('exploring', 'player').game;
+    if (!game) throw new Error('The fixture has no game.');
+    const ctx = buildBaseTextContext(emptyContext(), {
+      ...game,
+      view: {
+        ...game.view,
+        item_names: { 'magic-item-0003': 'potion' },
+        item_names_plural: { 'magic-item-0003': 'potions' },
+      },
+    });
+    expect(itemName('magic-item-0003', ctx)).toBe('a potion');
+    expect(itemCount('magic-item-0003', 2, ctx)).toBe('2 potions');
   });
 });
 

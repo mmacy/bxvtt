@@ -3,13 +3,20 @@ import { describeEvent, directionLabel, type TextContext } from '@bxvtt/shared/t
 import { useEffect, useId, useState, type ReactNode } from 'react';
 import {
   UNKEYED_PLACE_TITLE,
-  cachesToTake,
+  cachesNotEmptied,
+  pileContentsSentence,
+  rolledTreasureNumbers,
   scopedStorage,
+  treasureRowText,
+  useCanSend,
   useHere,
+  useLegalCommand,
+  usePlayerTextContext,
   usePlayerView,
   useTextContext,
   type Here,
   type HereFeature,
+  type Permission,
 } from '@/app';
 import {
   Badge,
@@ -26,12 +33,11 @@ import {
 import {
   cacheMoreEntries,
   cacheSnippet,
-  cacheTakeEntry,
   doorEntries,
   doorsHere,
   joinGroups,
-  pileTakeEntry,
   stairsHere,
+  takeLabel,
   transitionAction,
   transitionDescription,
   treasureEntries,
@@ -82,19 +88,10 @@ export function thingsHere(count: number): string {
 
 type KnownTrapState = 'found' | 'sprung' | 'removed';
 
-/** What a known trap in the party's room means to the party, in one sentence. */
-export function roomTrapSentence(state: KnownTrapState): string {
-  switch (state) {
-    case 'found':
-      return 'The party found a trap in this room.';
-    case 'sprung':
-      return 'The trap in this room has sprung.';
-    case 'removed':
-      return 'The trap in this room is disarmed.';
-  }
-}
-
-/** The badge beside a treasure whose trap the party knows about. */
+/**
+ * The badge for a trap the party knows about: beside a treasure, or beside the room's name in the header for a
+ * room trap, which is only ever found or sprung.
+ */
 export function treasureTrapBadge(state: KnownTrapState): {
   label: string;
   tone: BadgeTone;
@@ -110,22 +107,32 @@ export function treasureTrapBadge(state: KnownTrapState): {
   }
 }
 
-/** The accessible name of a treasure's More menu, which differs for each treasure when several lie here. */
-export function treasureMoreLabel(cache: Pick<HereFeature, 'description'>, count: number): string {
-  const snippet = count > 1 ? cacheSnippet(cache) : null;
-  return snippet === null ? 'More for this treasure' : `More for ${snippet}`;
+/**
+ * The accessible name of a treasure's More menu, which differs for each treasure when several lie here.
+ *
+ * @param cache - The treasure.
+ * @param count - How many treasures here have a More menu.
+ * @param numbers - The rolled treasures' numbers, from `rolledTreasureNumbers`.
+ */
+export function treasureMoreLabel(
+  cache: Pick<HereFeature, 'id' | 'description'>,
+  count: number,
+  numbers: ReadonlyMap<string, number> = new Map(),
+): string {
+  if (count <= 1) return 'More for this treasure';
+  const snippet = cacheSnippet(cache);
+  return snippet === null ? `More for treasure ${numbers.get(cache.id) ?? 1}` : `More for ${snippet}`;
 }
 
 interface RowProps {
   icon: IconName;
   children: ReactNode;
   action?: ReactNode;
-  tone?: 'warning';
 }
 
-function Row({ icon, children, action, tone }: RowProps) {
+function Row({ icon, children, action }: RowProps) {
   return (
-    <li className={cx(styles.sceneRow, tone === 'warning' && styles.sceneRowWarning)}>
+    <li className={styles.sceneRow}>
       <Icon name={icon} size={16} className={styles.sceneRowIcon} />
       <div className={styles.sceneRowText}>{children}</div>
       {action && <div className={styles.sceneRowAction}>{action}</div>}
@@ -162,37 +169,95 @@ function Actions({ entries, label }: { entries: MenuEntry[]; label: keyof typeof
   );
 }
 
-/** The dropped goods row's button. Its visible label is short, and its accessible name says what it picks up. */
-function PickUpButton({ ctx }: { ctx: ActionContext }) {
-  const take = pileTakeEntry(ctx);
-  if (!take) return null;
-  return (
-    <Button size="sm" variant="secondary" aria-label={take.label} onClick={() => take.onSelect?.()}>
+/** Whether `take_treasure` is legal now, and whether the viewer may send it. */
+interface TakeState {
+  legal: boolean;
+  permission: Permission;
+}
+
+/**
+ * The dropped goods on the party's cell: what lies there, from the pile's coins and contents, and the Pick up
+ * button. Its visible label is short, and its accessible name says what it picks up.
+ */
+function PileRow({ here, take, ctx }: { here: Here; take: TakeState; ctx: ActionContext }) {
+  const contentsId = useId();
+  const text = usePlayerTextContext();
+  const contents = here.pile === null ? '' : pileContentsSentence(here.pile, text);
+  const action = take.legal ? (
+    <Button
+      size="sm"
+      variant="secondary"
+      aria-label="Pick up dropped goods"
+      aria-describedby={contents === '' ? undefined : contentsId}
+      disabled={!take.permission.allowed}
+      disabledReason={take.permission.reason}
+      onClick={() => ctx.run({ command_type: 'take_treasure', feature_id: 'pile' })}
+    >
       Pick up
     </Button>
+  ) : undefined;
+  return (
+    <Row icon="coins" action={action}>
+      <span>Dropped goods lie here.</span>
+      {contents !== '' && (
+        <span id={contentsId} className={styles.sceneSub}>
+          {contents}
+        </span>
+      )}
+    </Row>
   );
 }
 
 /**
  * One treasure where the party stands: its description, the trap the party knows about, and its actions. Take
- * is a button of its own, and the rest of the actions sit in the More menu.
+ * is a button of its own, and the rest of the actions sit in the More menu. An emptied treasure stays on the list
+ * with an "Emptied" badge and no actions. A treasure out of reach says to step closer while the party explores.
  */
-function TreasureRow({ cache, count, ctx }: { cache: HereFeature; count: number; ctx: ActionContext }) {
+function TreasureRow({
+  cache,
+  list,
+  menus,
+  here,
+  take,
+  ctx,
+}: {
+  cache: HereFeature;
+  /** Every treasure on the list, for the rolled treasures' numbers. */
+  list: readonly HereFeature[];
+  /** How many treasures on the list have a More menu. */
+  menus: number;
+  here: Here;
+  take: TakeState;
+  ctx: ActionContext;
+}) {
   const descriptionId = useId();
-  const take = cacheTakeEntry(ctx, cache);
-  const more = cacheMoreEntries(ctx, cache);
+  const text = treasureRowText(cache, list);
+  if (cache.emptied) {
+    return (
+      <Row icon="chest">
+        <span className={styles.sceneLine}>
+          <span className={styles.sceneMuted}>{text}</span>
+          <Badge tone="neutral">Emptied</Badge>
+        </span>
+      </Row>
+    );
+  }
   const badge = cache.trapState ? treasureTrapBadge(cache.trapState) : null;
+  const more = cache.inReach ? cacheMoreEntries(ctx, cache) : [];
+  const showTake = cache.inReach && take.legal;
   const action =
-    take || more.length > 0 ? (
+    showTake || more.length > 0 ? (
       <div className={styles.sceneRowButtons}>
-        {take && (
+        {showTake && (
           <Button
             size="sm"
             variant="secondary"
             aria-describedby={descriptionId}
-            onClick={() => take.onSelect?.()}
+            disabled={!take.permission.allowed}
+            disabledReason={take.permission.reason}
+            onClick={() => ctx.run({ command_type: 'take_treasure', feature_id: cache.id })}
           >
-            Take
+            {takeLabel(cache)}
           </Button>
         )}
         {more.length > 0 && (
@@ -200,7 +265,12 @@ function TreasureRow({ cache, count, ctx }: { cache: HereFeature; count: number;
             align="end"
             items={more}
             trigger={
-              <IconButton icon="more" size="sm" variant="ghost" label={treasureMoreLabel(cache, count)} />
+              <IconButton
+                icon="more"
+                size="sm"
+                variant="ghost"
+                label={treasureMoreLabel(cache, menus, rolledTreasureNumbers(list))}
+              />
             }
           />
         )}
@@ -209,14 +279,14 @@ function TreasureRow({ cache, count, ctx }: { cache: HereFeature; count: number;
   return (
     <Row icon="chest" action={action}>
       <span className={styles.sceneLine}>
-        <span id={descriptionId}>{cache.description || 'Treasure lies here.'}</span>
+        <span id={descriptionId}>{text}</span>
         {badge && (
           <Badge tone={badge.tone} icon={badge.icon}>
             {badge.label}
           </Badge>
         )}
       </span>
-      {!cache.reachable && <span className={styles.sceneSub}>Step closer to reach it.</span>}
+      {here.exploring && !cache.inReach && <span className={styles.sceneSub}>Step closer to reach it.</span>}
     </Row>
   );
 }
@@ -232,6 +302,8 @@ export function ScenePanel() {
   const ctx = useActionContext();
   const ctxText = useTextContext();
   const doorLore = useSessionDoors();
+  const takeLegal = useLegalCommand('take_treasure') !== null;
+  const takePermission = useCanSend('take_treasure');
   const [pinned, setPinned] = useState(() => prefs.read(PINNED_KEY) === true);
   const [open, setOpen] = useState(true);
   const [fresh, setFresh] = useState(false);
@@ -287,7 +359,11 @@ export function ScenePanel() {
   const key = levelKey(here.dungeonId, here.levelNumber);
   const [x, y] = here.position;
   const stairs = stairsHere(here);
-  const caches = cachesToTake(here);
+  const caches = here.caches;
+  const openCaches = cachesNotEmptied(here);
+  const take: TakeState = { legal: takeLegal, permission: takePermission };
+  // The More menu offers something only for a treasure in reach.
+  const menus = openCaches.filter((cache) => cache.inReach && cacheMoreEntries(ctx, cache).length > 0).length;
   const passages = here.transitions.filter(
     (transition): transition is typeof transition & { side: 'north' | 'east' | 'south' | 'west' } =>
       transition.kind === 'passage' &&
@@ -297,16 +373,16 @@ export function ScenePanel() {
         transition.side === 'west'),
   );
   const doors = doorsHere(view);
-  const traps = here.roomTrap ? [here.roomTrap] : [];
+  const roomTrap = here.roomTrap ? treasureTrapBadge(here.roomTrap) : null;
   const title = area?.name ?? UNNAMED_PLACE;
+  // An emptied treasure and the room's trap don't count: the count is the cue that something here wants attention.
   const count =
     stairs.length +
     passages.length +
-    caches.length +
+    openCaches.length +
     (here.pile ? 1 : 0) +
     doors.length +
-    here.features.length +
-    traps.length;
+    here.features.length;
   const quick = joinGroups(
     stairs.length > 0 && ctx.can('use_stairs')
       ? [
@@ -351,7 +427,14 @@ export function ScenePanel() {
     <section className={cx(styles.scene, fresh && styles.sceneFresh)} aria-label="Current location">
       <header className={styles.sceneHeader}>
         <Icon name={area ? 'map' : 'footprints'} size={16} className={styles.sceneHeaderIcon} />
-        <h2 className={styles.sceneTitle}>{title}</h2>
+        <div className={styles.sceneTitleGroup}>
+          <h2 className={styles.sceneTitle}>{title}</h2>
+          {roomTrap && (
+            <Badge tone={roomTrap.tone} icon={roomTrap.icon} className={styles.sceneTitleBadge}>
+              {roomTrap.label}
+            </Badge>
+          )}
+        </div>
         {open && facing && (
           <span className={styles.sceneMeta}>Facing {directionLabel(facing).toLowerCase()}</span>
         )}
@@ -432,13 +515,17 @@ export function ScenePanel() {
               </Row>
             ))}
             {caches.map((cache) => (
-              <TreasureRow key={cache.id} cache={cache} count={caches.length} ctx={ctx} />
+              <TreasureRow
+                key={cache.id}
+                cache={cache}
+                list={caches}
+                menus={menus}
+                here={here}
+                take={take}
+                ctx={ctx}
+              />
             ))}
-            {here.pile && (
-              <Row icon="coins" action={<PickUpButton ctx={ctx} />}>
-                Dropped goods lie here.
-              </Row>
-            )}
+            {here.pile && <PileRow here={here} take={take} ctx={ctx} />}
             {doors.map((door) => {
               const name = directionLabel(door.direction).toLowerCase();
               const entries = doorEntries(
@@ -474,15 +561,6 @@ export function ScenePanel() {
             {here.features.map((feature) => (
               <Row key={feature.id} icon={feature.kind === 'construction_trick' ? 'search' : 'eye'}>
                 {feature.description}
-              </Row>
-            ))}
-            {traps.map((trap) => (
-              <Row
-                key={`trap-${trap.area_id}`}
-                icon="trap"
-                tone={trap.state === 'found' ? 'warning' : undefined}
-              >
-                {roomTrapSentence(trap.state)}
               </Row>
             ))}
           </ul>

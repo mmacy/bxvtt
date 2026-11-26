@@ -21,6 +21,7 @@ export {
   type Bounds,
   type EdgeKind,
   type FeatureKind,
+  type ItemPhrase,
   type LevelMap,
   type MapArea,
   type MapCell,

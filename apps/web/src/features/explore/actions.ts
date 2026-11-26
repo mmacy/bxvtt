@@ -17,7 +17,7 @@ import {
   searchKindLabel,
   type TextContext,
 } from '@bxvtt/shared/text';
-import { cachesToTake, type GameCommand, type Here, type HereFeature } from '@/app';
+import { cachesToTake, rolledTreasureNumbers, type GameCommand, type Here, type HereFeature } from '@/app';
 import type { Direction } from '@/map';
 import type { IconName, MenuEntry } from '@/ui';
 import type { ExploreSendOptions } from './useExploreSend';
@@ -322,14 +322,38 @@ export function cacheSnippet(cache: Pick<HereFeature, 'description'>): string | 
   return `${text.slice(0, SNIPPET_LENGTH).trimEnd()}…`;
 }
 
+/**
+ * A treasure's name in a menu that lists several: the start of its description, or "Treasure 2" for a rolled
+ * treasure, numbered among the rolled treasures where the party stands.
+ *
+ * @param cache - The treasure.
+ * @param numbers - The rolled treasures' numbers, from `rolledTreasureNumbers`.
+ */
+export function cacheMenuName(
+  cache: Pick<HereFeature, 'id' | 'description'>,
+  numbers: ReadonlyMap<string, number>,
+): string {
+  return cacheSnippet(cache) ?? `Treasure ${numbers.get(cache.id) ?? 1}`;
+}
+
+/** The label of a treasure's take action: "Take anyway" when the party has found a trap on it. */
+export function takeLabel(cache: Pick<HereFeature, 'trapState'>): string {
+  return cache.trapState === 'found' ? 'Take anyway' : 'Take';
+}
+
+/** Whether the treasure commands work on a cache where the party stands: it is in reach and not emptied. */
+function actionable(cache: HereFeature): boolean {
+  return cache.inReach && !cache.emptied;
+}
+
 /** The take action for one treasure, or `null` when the party can't reach it or the viewer can't send it. */
 export function cacheTakeEntry(
   ctx: ActionContext,
   cache: HereFeature,
 ): Extract<MenuEntry, { type?: 'item' }> | null {
-  if (!cache.reachable || !ctx.can('take_treasure')) return null;
+  if (!actionable(cache) || !ctx.can('take_treasure')) return null;
   return {
-    label: 'Take treasure',
+    label: takeLabel(cache),
     icon: 'coins',
     onSelect: () => ctx.run({ command_type: 'take_treasure', feature_id: cache.id }),
   };
@@ -338,8 +362,10 @@ export function cacheTakeEntry(
 /** The actions for one treasure other than taking it: giving it all to one member, and checking or disarming. */
 export function cacheMoreEntries(ctx: ActionContext, cache: HereFeature): MenuEntry[] {
   const entries: MenuEntry[] = [];
+  // bxapi accepts every treasure command only for a cache in reach, so nothing is offered for any other.
+  if (!actionable(cache)) return entries;
   const living = livingMembers(ctx.view.party);
-  if (cache.reachable && ctx.can('take_treasure') && living.length > 1) {
+  if (ctx.can('take_treasure') && living.length > 1) {
     entries.push({
       type: 'submenu',
       label: 'Give all to one member',
@@ -474,14 +500,15 @@ export function treasureEntries(ctx: ActionContext): MenuEntry[] {
   const here = ctx.here;
   if (!here) return [];
   const shown = cachesToTake(here);
+  const numbers = rolledTreasureNumbers(here.caches);
   const caches: MenuEntry[] = [];
   for (const cache of shown) {
     const items = cacheEntries(ctx, cache);
     if (items.length === 0) continue;
-    if (shown.length > 1) caches.push({ type: 'label', label: cacheSnippet(cache) ?? 'Treasure' });
+    if (shown.length > 1) caches.push({ type: 'label', label: cacheMenuName(cache, numbers) });
     caches.push(...items);
   }
-  const goods = here.pile ? pileEntries(ctx) : [];
+  const goods = here.pile !== null ? pileEntries(ctx) : [];
   // With both here, each group carries its name: "Treasure" for a cache, "Dropped goods" for a pile.
   if (caches.length > 0 && goods.length > 0) {
     const named = shown.length > 1 ? caches : [{ type: 'label' as const, label: 'Treasure' }, ...caches];
@@ -493,7 +520,7 @@ export function treasureEntries(ctx: ActionContext): MenuEntry[] {
 /** The name of the bar's treasure menu, by what lies here: "Treasure", "Dropped goods", or both. */
 export function treasureMenuLabel(here: Here | null): string {
   const caches = cachesToTake(here).length > 0;
-  const pile = here?.pile === true;
+  const pile = (here?.pile ?? null) !== null;
   if (caches && pile) return 'Treasure and dropped goods';
   return pile ? 'Dropped goods' : 'Treasure';
 }
