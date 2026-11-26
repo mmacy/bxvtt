@@ -45,7 +45,15 @@ level
     name: 'Guardroom',
     description: 'Broken spears litter the flagstones.',
     encounter: monsters([['goblin', '1d4']]),
-    features: [feature({ id: 'iron_box', kind: 'treasure_cache', description: 'A rusted iron box.', coins: { gp: 40 } })],
+    features: [
+      feature({
+        id: 'iron_box',
+        kind: 'treasure_cache',
+        description: 'A rusted iron box sits under the broken spear rack.',
+        referee_notes: "The coins are the goblins' pay, and the box isn't locked.",
+        coins: { gp: 40 },
+      }),
+    ],
   })
   .door([2, 1], 'east');
 
@@ -77,9 +85,10 @@ Each dungeon level starts as an ASCII grid where each character represents one 1
 
 ### Design tips for multiplayer fog of war
 
-- **Write each cache `description` as what the party sees:** The player view shows a treasure cache's authored `description` to every player once the cache is in sight, before anyone opens it and after it's emptied. Describe the container and where it stands, such as "A rusted iron box sits under the collapsed shelf." Don't list the contents, name a magic item or identify a potion, or describe a trap the party hasn't found. The same applies to the `description` of any other feature that the party can see.
-- **Check the caches in an adventure you wrote before this version:** Earlier versions showed a cache's `description` only to the referee, so an older adventure might list contents or describe a trap there. Read every cache `description` before you run the adventure for players. The two sample adventures had their cache descriptions reworded for this reason.
-- **Keep cache IDs neutral:** Players name a cache by an opaque `feature:` handle from the player view, and the server refuses a player's treasure command that names a raw cache `id`. An authored `id` still reaches a player's browser once the party empties the cache, because the player view then lists it in `emptied_caches`. Choose an `id` such as `altar_box`, not `trapped_false_bottom`.
+- **Write each feature's `description` for the players:** The player view shows a feature's authored `description` to every player once the feature is in sight, and for a treasure cache that's before anyone opens it and after the party empties it. Describe the container and where it stands, such as "A rusted iron box sits under the collapsed shelf." Don't list the contents, name a magic item or identify a potion, or describe a trap the party hasn't found.
+- **Write what only the referee should know in `referee_notes`:** A feature's `referee_notes` is text for the referee alone, such as what a cache holds, whose money it is, or how its trap is hidden. `osrlib` never reads it and no rule depends on it. The server sends it to referees inside the adventure document, and the player view never contains it. Put the contents themselves in the cache's `coins`, `item_ids`, `magic_item_ids`, and `valuables`, and the trap in `trap`. The caches in the two sample adventures show the split.
+- **Move referee text out of an older adventure's descriptions:** An adventure written before `referee_notes` existed might list a cache's contents or describe its trap in `description`, where every player reads it. Read every feature `description` before you run such an adventure for players, and move that text to `referee_notes`.
+- **Keep feature IDs neutral:** Players name a cache by an opaque `feature:` handle from the player view, and the server refuses a player's treasure command that names a raw `id`. An authored `id` still reaches a player's browser, in the `{dungeon}:{level}:{id}` references of the player view's `emptied_caches` once the party empties the cache, and in some trap and search events ([osrlib-python#322](https://github.com/mmacy/osrlib-python/issues/322)). Choose an `id` such as `altar_box`, not `trapped_false_bottom`.
 - **Set `family_id` on disguised custom monsters:** When an adventure bundles a custom monster whose template ID would give away a plot twist, set `family_id` on the template (see `drowned_prior` in `adventures/src/the-drowned-bell.mjs`) so player-visible group labels and monster names do not unmask it early.
 
 ## Validate and play-test with `check.mjs`

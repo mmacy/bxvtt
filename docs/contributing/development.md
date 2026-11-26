@@ -105,7 +105,7 @@ The `Docs` workflow (`.github/workflows/docs.yml`) builds the site and publishes
 
 ## Code and design rules
 
-- **Never implement a B/X game rule in bxvtt.** Derive valid choices from `game.commands`, `PlayerView`, `game.scene`, rules catalogs, and JSON command schemas, and let `bxapi` validate and roll dice.
+- **Never implement a B/X game rule in bxvtt.** Derive valid choices from `game.commands`, `PlayerView`, rules catalogs, and JSON command schemas, and let `bxapi` validate and roll dice.
 - **Filter referee data strictly on the server.** Players must never receive `RefereeView`, referee events, adventure JSON, referee notes, referee-only pins, or secret rolls over HTTP or WebSocket.
 - **Keep TypeScript strict.** Avoid `any`, `enum` (use string literal unions), `@ts-ignore`, `@ts-expect-error`, `eslint-disable`, and unsafe non-null assertions.
 - **Validate at every boundary.** Parse all incoming HTTP bodies, queries, and WebSocket messages with zod schemas from `@bxvtt/shared/protocol`.

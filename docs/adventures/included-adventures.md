@@ -40,7 +40,7 @@ Referees can upload any valid `osrlib` adventure JSON document (exported from `o
 3. Wait while `bxapi` validates the document. If validation fails, a warning banner identifies the file and reports the exact schema or dungeon defect without storing anything.
 4. When the banner confirms that the file is a valid adventure (for example, **The Sunken Vault is a valid adventure**), select **Upload**. The adventure is added to this table's list (up to 20 uploaded adventures per table) and selected automatically.
 
-Players read the `description` of every treasure cache that comes into their party's sight, before anyone opens it. If you wrote the adventure before this behavior, check the cache descriptions first. See [Design tips for multiplayer fog of war](authoring-and-checking.md#design-tips-for-multiplayer-fog-of-war).
+Players read the `description` of every treasure cache that comes into their party's sight, before anyone opens it, whereas only the referee reads its `referee_notes`. Before you upload an adventure, check that no `description` lists a cache's contents or describes a trap the party hasn't found. See [Design tips for multiplayer fog of war](authoring-and-checking.md#design-tips-for-multiplayer-fog-of-war).
 
 To remove an uploaded adventure from the table's picker, select the trash icon on its card and confirm **Delete adventure**. Existing saves from games that ran that adventure continue to work.
 

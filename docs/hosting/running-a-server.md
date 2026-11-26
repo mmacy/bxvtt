@@ -122,7 +122,7 @@ If storage reaches 100%, `bxapi` rejects writes and bxvtt returns HTTP 507 `bxap
 
 5. Start `bxapi`, then start `bxvtt`.
 
-This version of bxvtt needs a `bxapi` built on `osrlib` 2.7 that has `POST /v1/sessions/{session_id}/battle-round/preview` and `POST /v1/ability-rolls/{roll_id}/preview` (`bxapi` `main` from its pull request 51 onward), so run the `git pull` in step 3 before you start the new bxvtt. With an older `bxapi`, the character wizard and the battle board fail.
+This version of bxvtt needs a `bxapi` built on `osrlib` 2.8 (`bxapi` `main` from its pull request 58 onward), so run the `git pull` in step 3 before you start the new bxvtt. bxvtt doesn't check the engine version, so confirm that the startup log reports `"engine":"2.8.0"` or later. With an older `bxapi`, the player view lacks emptied caches, room trap states, the caches in reach, and item names, the battle board can't check declarations, and `bxapi` accepts a player's out-of-battle spell or item aimed at any creature of the session, including one the party hasn't met.
 
 On startup, bxvtt migrates older SQLite schemas forward automatically and refuses to open a database created by a newer schema version. Schema version 7 drops the `target_handles` and `battle_refusals` tables, which bxvtt no longer uses, and clears stored battle declarations, so players redeclare in a round that was in progress. Keep your pre-update backup until you verify your next session.
 
