@@ -9555,7 +9555,7 @@
      "sessions"
     ],
     "summary": "Send a command to a session",
-    "description": "Execute one osrlib command, such as `{\"command_type\": \"move_party\", \"direction\": \"north\"}`.\n\nSelect the command variant with `command_type` (up to 65,536 bytes). `GET /v1/sessions/{session_id}/commands`\nlists commands legal in the current mode for your role, and `GET /v1/rules/commands/{command_type}` returns each\ncommand's JSON Schema. Command models ignore unknown fields. Display `messages` to the player and update your UI\nfrom `view` (pass `include=view` to receive `PlayerView` alongside `revision` in one atomic response, or call\n`GET /v1/sessions/{session_id}/view`).\n\nMapping `PlayerView` fields into common multi-field commands:\n\n- **Town purchases (`purchase_equipment`):** Pass a party member's `party[i].id` (such as `\"character-0001\"`) as\n  `character_id` and repeat equipment `id` values in `item_ids` once per purchase lot (unlike `purchases` on\n  `POST /v1/characters`, which takes `{item_id, quantity}` objects).\n- **Out-of-battle spells (`cast_spell`):** Pass `character_id`, `spell_id`, and `mode` set to a `SpellMode.key`\n  from `GET /v1/rules/spells/{spell_id}` (such as `\"heal\"` on `cure_light_wounds`, not the session's\n  `SessionMode`), plus target IDs in `targets` (such as `[\"character-0001\"]` or `\"cell:barrow:1:0,0\"`).\n- **Battle rounds (`resolve_battle_round`):** Include exactly one `BattleDeclaration` in `declarations` for each\n  member ID in `encounter.declarers`. Pass `target_group_id` from `encounter.groups[i].id` (such as\n  `\"group-0001\"`) for `attack`, `close`, thrown splash items, and `area` or `hd_budget` spells (such as\n  `fire_ball` or `sleep` with `spell_mode: \"hd_budget\"`). In battle, spell casts set `spell_mode` rather than\n  `mode`. Spells and scrolls with `single` or `up_to_n` targeting (such as `magic_missile` with\n  `spell_mode: \"missiles\"`) take individual `\"monster-NNNN\"` or `\"npc-NNNN\"` IDs from\n  `encounter.groups[i].members` in `targets`. Use an entry whose `status` is `\"alive\"`.\n- **Treasure caches (`inspect_treasure`, `remove_treasure_trap`, `take_treasure`):** Pass the opaque\n  `explored[i].features[j].id` as `feature_id` for a feature on the party's current cell. The handle starts with\n  `feature:`. Don't parse it. A player can use the handle without reading the referee view. osrlib also accepts the\n  feature's authored ID from the adventure document, a legacy form for a referee tool, and resolves either form\n  only among the features at the party's location.\n\nWhen osrlib refuses a command under the B/X rules, this operation still returns HTTP 200 with `accepted` set to\n`false` and rule `rejections`, leaving the session and `revision` unchanged. When accepted, the server persists\nthe updated state before responding, increments `revision` by 1, and returns the command's events followed by any\ntriggered quest or area events (filtered by `visibility`, which defaults to `player`).\n\nTo retry safely after a lost connection or timeout, send an `Idempotency-Key` header (which replays the original\n`CommandOutcome`) or pass `expected_revision` (which returns 409 `revision_conflict` if the first attempt\nalready succeeded).",
+    "description": "Execute one osrlib command, such as `{\"command_type\": \"move_party\", \"direction\": \"north\"}`.\n\nSelect the command variant with `command_type` (up to 65,536 bytes). `GET /v1/sessions/{session_id}/commands`\nlists commands legal in the current mode for your role, and `GET /v1/rules/commands/{command_type}` returns each\ncommand's JSON Schema. Command models ignore unknown fields. Display `messages` to the player and update your UI\nfrom `view` (pass `include=view` to receive `PlayerView` alongside `revision` in one atomic response, or call\n`GET /v1/sessions/{session_id}/view`).\n\nMapping `PlayerView` fields into common multi-field commands:\n\n- **Town purchases (`purchase_equipment`):** Pass a party member's `party[i].id` (such as `\"character-0001\"`) as\n  `character_id` and repeat equipment `id` values in `item_ids` once per purchase lot (unlike `purchases` on\n  `POST /v1/characters`, which takes `{item_id, quantity}` objects).\n- **Out-of-battle spells (`cast_spell`):** Pass `character_id`, `spell_id`, and `mode` set to a `SpellMode.key`\n  from `GET /v1/rules/spells/{spell_id}` (such as `\"heal\"` on `cure_light_wounds`, not the session's\n  `SessionMode`), plus target IDs in `targets` (such as `[\"character-0001\"]` or `\"cell:barrow:1:0,0\"`).\n- **Battle rounds (`resolve_battle_round`):** Include exactly one `BattleDeclaration` in `declarations` for each\n  member ID in `encounter.declarers`. Pass `target_group_id` from `encounter.groups[i].id` (such as\n  `\"group-0001\"`) for `attack`, `close`, thrown splash items, and `area` or `hd_budget` spells (such as\n  `fire_ball` or `sleep` with `spell_mode: \"hd_budget\"`). In battle, spell casts set `spell_mode` rather than\n  `mode`. Spells and scrolls with `single` or `up_to_n` targeting (such as `magic_missile` with\n  `spell_mode: \"missiles\"`) take individual `\"monster-NNNN\"` or `\"npc-NNNN\"` IDs from\n  `encounter.groups[i].members` in `targets`. Use an entry whose `status` is `\"alive\"`.\n- **Treasure caches (`inspect_treasure`, `remove_treasure_trap`, `take_treasure`):** Pass a handle from the\n  player view's `features_here` as `feature_id`. The list has the `explored[i].features[j].id` of each treasure\n  cache the party can reach from where it stands. The handle starts with `feature:`. Don't parse it. A referee\n  tool reads the same handle from `feature_handles` in the referee view. osrlib also accepts the feature's\n  authored ID from the adventure document, a legacy form, and resolves either form only among the features at\n  the party's location.\n\nWhen osrlib refuses a command under the B/X rules, this operation still returns HTTP 200 with `accepted` set to\n`false` and rule `rejections`, leaving the session and `revision` unchanged. When accepted, the server persists\nthe updated state before responding, increments `revision` by 1, and returns the command's events followed by any\ntriggered quest or area events (filtered by `visibility`, which defaults to `player`).\n\nTo retry safely after a lost connection or timeout, send an `Idempotency-Key` header (which replays the original\n`CommandOutcome`) or pass `expected_revision` (which returns 409 `revision_conflict` if the first attempt\nalready succeeded).",
     "operationId": "send_command",
     "security": [
      {
@@ -10151,7 +10151,7 @@
      "sessions"
     ],
     "summary": "Preview a battle round",
-    "description": "Judge the declarations planned so far for a battle round, and show where they would leave the party.\n\nCall this after each choice on a battle screen, with every declaration made so far, to learn which declarations\nthe session would refuse and whose they are. `rejections` has one entry for each declaration you sent, keyed by\nthe declaring member's ID, with the same `code` and `params` that `resolve_battle_round` returns on\n`POST /v1/sessions/{session_id}/commands`. An empty list means the session would accept that declaration. When\nyou send one declaration for each member in `encounter.declarers` and every list in `rejections` is empty,\n`resolve_battle_round` accepts the same declarations.\n\n`advance_feet` gives each living member's projected place on the range track once the planned moves are made,\nand `front_rank` gives each group's projected front rank, keyed by group ID. The projection leaves out what the\nmonsters do, because the session decides that after it rolls initiative.\n\nThe preview takes the session lock, rolls no dice, passes no game time, and changes nothing: `revision` stays the\nsame, so the request takes no `expected_revision` and needs no `Idempotency-Key`.",
+    "description": "Judge the declarations planned so far for a battle round, and show where they would leave the party.\n\nCall this after each choice on a battle screen, with every declaration made so far, to learn which declarations\nthe session would refuse and whose they are. `rejections` has one entry for each declaration you sent, keyed by\nthe declaring member's ID, with the same `code` and `params` that `resolve_battle_round` returns on\n`POST /v1/sessions/{session_id}/commands`. An empty list means the session would accept that declaration. When\nyou send one declaration for each member in `encounter.declarers` and every list in `rejections` is empty,\n`resolve_battle_round` accepts the same declarations.\n\n`advance_feet` gives each living member's projected place on the range track once the planned moves are made,\nand `front_rank` gives each group's projected front rank, keyed by group ID. The projection leaves out what the\nmonsters do, because the session decides that after it rolls initiative.\n\n`can_hide` lists the declarers who could declare `hide` beside the other planned declarations, and\n`can_back_stab` lists the declarers who could declare an `attack` with `back_stab`. Use them to offer those two\nchoices only to a member the session would accept them from.\n\nThe preview takes the session lock, rolls no dice, passes no game time, and changes nothing: `revision` stays the\nsame, so the request takes no `expected_revision` and needs no `Idempotency-Key`.",
     "operationId": "preview_battle_round",
     "security": [
      {
@@ -10440,7 +10440,7 @@
      "sessions"
     ],
     "summary": "Get the player view",
-    "description": "Return osrlib's `PlayerView`: everything the players may see at the session's current revision.\n\nRender your game screen from this object (or pass `include=view` to `POST /v1/sessions/{session_id}/commands` to\nreceive `PlayerView` alongside `revision` in one response, because standalone `PlayerView` omits `revision`).\nAcquires the session lock so the snapshot always reflects state between commands. The view never includes\nunexplored cells, monster hit points, referee rolls, or the secret feature-handle key.\n\nKey fields for rendering a client UI:\n\n- `mode`: current session mode, which governs legal commands (`GET /v1/sessions/{session_id}/commands`).\n- `location`: `kind` is `\"town\"` in town, or `\"dungeon\"` with `dungeon_id`, `level_number`, `[x, y]` `position`,\n  and `facing`.\n- `party`: party members in marching order, with in-session `id` (such as `\"character-0001\"`, passed as\n  `character_id` to commands), hit points, conditions, inventory, `scores`, `armour_class`, `thac0`, `saves`,\n  `movement_rate_feet`, and `thief_skills`. Combat stats include bonuses and curses from worn unidentified magic\n  items while `inventory` masks unidentified names (such as `\"a shield with a faint aura\"`).\n- `dungeons`: IDs and names of dungeons the party has entered. `can_travel_to_town` states whether\n  `travel_to_town` is currently usable from the party's position.\n- `explored`: the party's known map for each level. Each entry includes mapped `cells` and `edges`, entered\n  `areas` with their names, descriptions, and walked cells, visible `features` with opaque `feature:` IDs,\n  known `transitions` without destinations or gates, and `entrance` when that cell is known. A feature ID is ready\n  to pass as `feature_id`. Feature cache contents, hidden discoveries, and destinations that the party hasn't\n  learned stay omitted.\n- `encounter`: active encounter state, or `null`. Pass `declarers` to build `resolve_battle_round`, and pass a\n  group's `id` as `target_group_id` for attacks, `close`, thrown splash items, and `area` or `hd_budget` spells\n  (such as `fire_ball` and `sleep`). Each group also has `members` with individual `\"monster-NNNN\"` or\n  `\"npc-NNNN\"` IDs and coarse `status` values. Use an `\"alive\"` member's `id` in `targets` for a `single` or\n  `up_to_n` spell or scroll. To find catalog templates matching a group's `family_id`, search\n  `GET /v1/rules/monsters` with `q` and check `family_id` on `GET /v1/rules/monsters/{monster_id}`.\n- `journal` and `quests`: discovered journal entries and active or completed quests.\n- `town_healing_prices`: gold-piece prices for temple services accepted by `purchase_healing`.",
+    "description": "Return osrlib's `PlayerView`: everything the players may see at the session's current revision.\n\nRender your game screen from this object (or pass `include=view` to `POST /v1/sessions/{session_id}/commands` to\nreceive `PlayerView` alongside `revision` in one response, because standalone `PlayerView` omits `revision`).\nAcquires the session lock so the snapshot always reflects state between commands. The view never includes\nunexplored cells, monster hit points, referee rolls, or the secret feature-handle key.\n\nKey fields for rendering a client UI:\n\n- `mode`: current session mode, which governs legal commands (`GET /v1/sessions/{session_id}/commands`).\n- `location`: `kind` is `\"town\"` in town, or `\"dungeon\"` with `dungeon_id`, `level_number`, `[x, y]` `position`,\n  and `facing`.\n- `party`: party members in marching order, with in-session `id` (such as `\"character-0001\"`, passed as\n  `character_id` to commands), hit points, conditions, inventory, `scores`, `armour_class`, `thac0`, `saves`,\n  `movement_rate_feet`, and `thief_skills`. Combat stats include bonuses and curses from worn unidentified magic\n  items while `inventory` masks unidentified names (such as `\"a shield with a faint aura\"`).\n- `dungeons`: IDs and names of dungeons the party has entered. `can_travel_to_town` states whether\n  `travel_to_town` is currently usable from the party's position.\n- `explored`: the party's known map for each level. Each entry includes mapped `cells` and `edges`, entered\n  `areas` with their names, descriptions, and walked cells, visible `features` with opaque `feature:` IDs,\n  known `transitions` without destinations or gates, and `entrance` when that cell is known. A feature's\n  `emptied` is `true` once the party has emptied that authored cache, and `trap_state` on a feature or an area\n  is the trap's state as the party knows it. Feature cache contents, hidden discoveries, and destinations that\n  the party hasn't learned stay omitted.\n- `features_here`: the feature IDs that `inspect_treasure`, `remove_treasure_trap`, and `take_treasure` accept as\n  `feature_id` from where the party stands. It's empty outside `exploring` mode.\n- `spell_names`, `reversed_spell_names`, and `spell_levels`: the name and level of every spell ID the view\n  shows. Each member's `spell_slots`, `preparable_spells`, and `learnable_spells` give what a `prepare_spells` or\n  `learn_spell` dialog offers that member.\n- `item_names` and `item_names_plural`: what to call each item ID the view shows, in a member's `inventory` or\n  in the `contents` of a pile in `piles`.\n- `encounter`: active encounter state, or `null`. Pass `declarers` to build `resolve_battle_round`, and pass a\n  group's `id` as `target_group_id` for attacks, `close`, thrown splash items, and `area` or `hd_budget` spells\n  (such as `fire_ball` and `sleep`). Each group also has `members` with individual `\"monster-NNNN\"` or\n  `\"npc-NNNN\"` IDs and coarse `status` values. Use an `\"alive\"` member's `id` in `targets` for a `single` or\n  `up_to_n` spell or scroll. To find catalog templates matching a group's `family_id`, search\n  `GET /v1/rules/monsters` with `q` and check `family_id` on `GET /v1/rules/monsters/{monster_id}`.\n- `journal` and `quests`: discovered journal entries and active or completed quests.\n- `town_healing_prices`: gold-piece prices for temple services accepted by `purchase_healing`.",
     "operationId": "get_player_view",
     "security": [
      {
@@ -10637,13 +10637,441 @@
     }
    }
   },
+  "/v1/sessions/{session_id}/rules/spells/{spell_id}": {
+   "get": {
+    "tags": [
+     "sessions"
+    ],
+    "summary": "Get a spell the player view names",
+    "description": "Return osrlib's `SpellTemplate` for a spell that the session's player view names in `spell_names`.\n\nA session's adventure can add spells to the built-in catalog, and `GET /v1/rules/spells/{spell_id}` serves only\nthe built-in ones. This operation reads the session's own catalog, osrlib's `GameSession.effective_spells`, so\nit also answers for a spell the adventure adds. Use `level` and `spell_list` to place a spell from a member's\n`spell_book` in a `prepare_spells` dialog, and the `key` of each entry in `modes` as the `mode` of a `cast_spell`\ncommand.\n\nThe operation serves the spells in `spell_names` and no others: the ones in a member's `spell_book`,\n`memorized_spells`, `preparable_spells`, or `learnable_spells`, and the ones behind an effect on a member. So it\nanswers for a spell the adventure adds as soon as a member could prepare or learn it. A spell the view doesn't\nname gets 404 `not_found`, whether or not the session's catalog has it, so the response doesn't reveal a spell\non an unidentified scroll or a spell the adventure keeps for its monsters. A player and a referee get the same\nanswer.",
+    "operationId": "get_session_spell",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "description": "Session `id` (`ses_` followed by 22 characters), from `POST /v1/sessions`, `POST /v1/saves/{save_id}/restore`, or `GET /v1/sessions`.",
+       "title": "Session Id"
+      },
+      "description": "Session `id` (`ses_` followed by 22 characters), from `POST /v1/sessions`, `POST /v1/saves/{save_id}/restore`, or `GET /v1/sessions`."
+     },
+     {
+      "name": "spell_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "description": "Spell id from a key of `spell_names` in the player view, such as `magic_missile`.",
+       "title": "Spell Id"
+      },
+      "description": "Spell id from a key of `spell_names` in the player view, such as `magic_missile`."
+     },
+     {
+      "name": "If-None-Match",
+      "in": "header",
+      "required": false,
+      "description": "The `ETag` of a cached response for this request, such as `W/\"5f0c1b6de0a94d7f8f3f0f5b7a1c2d3e\"`, or `*`. While the content is unchanged, the server answers 304 with no body.",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "osrlib's `SpellTemplate`, from the session's spell catalog.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SpellTemplate"
+        }
+       }
+      },
+      "headers": {
+       "ETag": {
+        "$ref": "#/components/headers/ETag"
+       },
+       "Cache-Control": {
+        "description": "`private, no-cache`. Revalidate with `If-None-Match` before reusing a cached copy.",
+        "schema": {
+         "type": "string"
+        }
+       },
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "304": {
+      "description": "The response whose `ETag` you sent in `If-None-Match` is still current. The response has no body.",
+      "headers": {
+       "ETag": {
+        "$ref": "#/components/headers/ETag"
+       },
+       "Cache-Control": {
+        "description": "`private, no-cache`. Revalidate with `If-None-Match` before reusing a cached copy.",
+        "schema": {
+         "type": "string"
+        }
+       },
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "401": {
+      "description": "- `unauthorized`: The request has no API key or has an unknown key. Send `Authorization: Bearer <key>` with a key configured on the server. Retrying the same request fails.",
+      "headers": {
+       "WWW-Authenticate": {
+        "description": "`Bearer`, the authentication scheme the server accepts.",
+        "schema": {
+         "type": "string"
+        }
+       },
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      },
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "- `not_found`: Your client has no session with this id. `GET /v1/sessions` lists your sessions.\n- `not_found`: The player view's `spell_names` has no entry for this spell id (`resource` is `spell`). Read the ids from `GET /v1/sessions/{session_id}/view`. For a built-in spell the view doesn't name, call `GET /v1/rules/spells/{spell_id}`.",
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      },
+      "headers": {
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "409": {
+      "description": "- `session_busy`: The request waited more than 5 seconds for another request running on the session and made no changes. `revision` reports the session's current revision. Retry the request.",
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      },
+      "headers": {
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "421": {
+      "description": "- `misdirected_request`: The server runs without API keys, and the request's `Host` header isn't `localhost`, `127.0.0.1`, or `[::1]`. Call the server by one of those names, or configure API keys on the server. A server with API keys never returns this code.",
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      },
+      "headers": {
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "429": {
+      "description": "- `rate_limited`: Your client exceeded the per-minute request budget (`BXAPI_RATE_LIMIT_PER_MINUTE`, 600 by default). Wait the seconds in the `Retry-After` header and retry. Requests without a valid API key share a separate budget and receive 429 instead of 401 `unauthorized` when that budget is exhausted.",
+      "headers": {
+       "Retry-After": {
+        "description": "Whole seconds to wait before retrying, at least `1`.",
+        "schema": {
+         "type": "integer"
+        }
+       },
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      },
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "- `internal_error`: The server failed because of a bug. The response says nothing about the cause, and the server logs it. Report the request to the server's operator.\n- `session_unreadable`: The server's osrlib can't load the session's stored state, for example because a server running another osrlib version wrote it. Report the session's id and `request_id` to the server's operator.",
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      },
+      "headers": {
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "503": {
+      "description": "- `database_busy`: Another process held the SQLite write lock for more than 5 seconds. Wait the 1 second in the `Retry-After` header and retry.",
+      "headers": {
+       "Retry-After": {
+        "description": "Whole seconds to wait before retrying: `1`.",
+        "schema": {
+         "type": "integer"
+        }
+       },
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      },
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/v1/sessions/{session_id}/rules/classes/{class_id}": {
+   "get": {
+    "tags": [
+     "sessions"
+    ],
+    "summary": "Get a party member's class",
+    "description": "Return osrlib's `ClassDefinition` for the class of a party member, including a class the party brought.\n\nA character can have a custom class that osrlib's catalog doesn't include, and `GET /v1/rules/classes/{class_id}`\nserves only the built-in classes. This operation returns the definition osrlib uses for the member, read from\n`Character.definition`. `progression` has one row for each level, with the `spell_slots` a spell dialog needs,\n`thac0`, `saves`, and the XP the level takes.\n\nThe operation serves the classes of the party's members and no others. When two members have the same\n`class_id`, it returns the definition of the first in marching order. A class no member has gets 404\n`not_found`. A player and a referee get the same answer.",
+    "operationId": "get_session_class",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "session_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "description": "Session `id` (`ses_` followed by 22 characters), from `POST /v1/sessions`, `POST /v1/saves/{save_id}/restore`, or `GET /v1/sessions`.",
+       "title": "Session Id"
+      },
+      "description": "Session `id` (`ses_` followed by 22 characters), from `POST /v1/sessions`, `POST /v1/saves/{save_id}/restore`, or `GET /v1/sessions`."
+     },
+     {
+      "name": "class_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "description": "Class id from `party[i].class_id` in the player view, such as `magic_user`.",
+       "title": "Class Id"
+      },
+      "description": "Class id from `party[i].class_id` in the player view, such as `magic_user`."
+     },
+     {
+      "name": "If-None-Match",
+      "in": "header",
+      "required": false,
+      "description": "The `ETag` of a cached response for this request, such as `W/\"5f0c1b6de0a94d7f8f3f0f5b7a1c2d3e\"`, or `*`. While the content is unchanged, the server answers 304 with no body.",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "osrlib's `ClassDefinition` of the party member's class.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ClassDefinition"
+        }
+       }
+      },
+      "headers": {
+       "ETag": {
+        "$ref": "#/components/headers/ETag"
+       },
+       "Cache-Control": {
+        "description": "`private, no-cache`. Revalidate with `If-None-Match` before reusing a cached copy.",
+        "schema": {
+         "type": "string"
+        }
+       },
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "304": {
+      "description": "The response whose `ETag` you sent in `If-None-Match` is still current. The response has no body.",
+      "headers": {
+       "ETag": {
+        "$ref": "#/components/headers/ETag"
+       },
+       "Cache-Control": {
+        "description": "`private, no-cache`. Revalidate with `If-None-Match` before reusing a cached copy.",
+        "schema": {
+         "type": "string"
+        }
+       },
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "401": {
+      "description": "- `unauthorized`: The request has no API key or has an unknown key. Send `Authorization: Bearer <key>` with a key configured on the server. Retrying the same request fails.",
+      "headers": {
+       "WWW-Authenticate": {
+        "description": "`Bearer`, the authentication scheme the server accepts.",
+        "schema": {
+         "type": "string"
+        }
+       },
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      },
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "- `not_found`: Your client has no session with this id. `GET /v1/sessions` lists your sessions.\n- `not_found`: No party member in the player view has this `class_id` (`resource` is `class`). Read the ids from `party[i].class_id` on `GET /v1/sessions/{session_id}/view`.",
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      },
+      "headers": {
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "409": {
+      "description": "- `session_busy`: The request waited more than 5 seconds for another request running on the session and made no changes. `revision` reports the session's current revision. Retry the request.",
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      },
+      "headers": {
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "421": {
+      "description": "- `misdirected_request`: The server runs without API keys, and the request's `Host` header isn't `localhost`, `127.0.0.1`, or `[::1]`. Call the server by one of those names, or configure API keys on the server. A server with API keys never returns this code.",
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      },
+      "headers": {
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "429": {
+      "description": "- `rate_limited`: Your client exceeded the per-minute request budget (`BXAPI_RATE_LIMIT_PER_MINUTE`, 600 by default). Wait the seconds in the `Retry-After` header and retry. Requests without a valid API key share a separate budget and receive 429 instead of 401 `unauthorized` when that budget is exhausted.",
+      "headers": {
+       "Retry-After": {
+        "description": "Whole seconds to wait before retrying, at least `1`.",
+        "schema": {
+         "type": "integer"
+        }
+       },
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      },
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "- `internal_error`: The server failed because of a bug. The response says nothing about the cause, and the server logs it. Report the request to the server's operator.\n- `session_unreadable`: The server's osrlib can't load the session's stored state, for example because a server running another osrlib version wrote it. Report the session's id and `request_id` to the server's operator.",
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      },
+      "headers": {
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "503": {
+      "description": "- `database_busy`: Another process held the SQLite write lock for more than 5 seconds. Wait the 1 second in the `Retry-After` header and retry.",
+      "headers": {
+       "Retry-After": {
+        "description": "Whole seconds to wait before retrying: `1`.",
+        "schema": {
+         "type": "integer"
+        }
+       },
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      },
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/v1/sessions/{session_id}/referee-view": {
    "get": {
     "tags": [
      "sessions"
     ],
     "summary": "Get the referee view",
-    "description": "Requires a `referee` API key. Return osrlib's `RefereeView` of the session.\n\nAcquires the session lock to return a consistent snapshot containing the full embedded adventure, all spawned\nmonsters with hit points and group `monster_ids`, active effects, trigger flags, `command_log`, and `event_log`.\nThe view omits the master seed, RNG state, and secret feature-handle key. Use it to power a referee dashboard or\nchoose referee commands for `POST /v1/sessions/{session_id}/commands`. To create a restorable snapshot or export\nthe master seed and feature-handle key, call `POST /v1/sessions/{session_id}/saves` and\n`GET /v1/saves/{save_id}/document` instead.",
+    "description": "Requires a `referee` API key. Return osrlib's `RefereeView` of the session.\n\nAcquires the session lock to return a consistent snapshot containing the full embedded adventure, all spawned\nmonsters with hit points and group `monster_ids`, active effects, trigger flags, `command_log`, and `event_log`.\nThe view omits the master seed, RNG state, and secret feature-handle key. `feature_handles` maps each feature\nto the `feature:` ID the player view shows for it, keyed `\"{dungeon}:{level}:{feature id}\"` for an authored\nfeature and by cache ID for a generated cache. Use the view to power a referee dashboard or\nchoose referee commands for `POST /v1/sessions/{session_id}/commands`. To create a restorable snapshot or export\nthe master seed and feature-handle key, call `POST /v1/sessions/{session_id}/saves` and\n`GET /v1/saves/{save_id}/document` instead.",
     "operationId": "get_referee_view",
     "security": [
      {
@@ -13508,7 +13936,7 @@
      },
      "character": {
       "$ref": "#/components/schemas/Character",
-      "description": "The character who joins. Build it with\n`create_character` and pass its `character`. It\nneeds `id` set to `null`, no conditions or stat modifiers, and no magic items or valuables.\nConstructing the command copies the character. A change you make\nto your object afterwards doesn't reach the command, and the command log records the\ncharacter as you sent it."
+      "description": "The character who joins. Build it with\n`create_character` and pass its `character`. It\nneeds `id` set to `null`, no conditions or stat modifiers, and no magic items or valuables.\nConstructing the command copies the character. A change you make\nto your object afterwards doesn't reach the command, and the command log records the\ncharacter as you sent it. The member who joins gets the display names of the session's catalog\non each item template the character's stacks embed, as\n`ItemInstance.template` describes, while the\ncommand keeps the templates it arrived with."
      }
     },
     "type": "object",
@@ -13934,6 +14362,18 @@
       "title": "Name",
       "description": "The display name as the price list prints it, which includes the lot: `\"Arrows (quiver of 20)\"`."
      },
+     "display_name": {
+      "type": "string",
+      "title": "Display Name",
+      "description": "What to call one unit of this ammunition in a sentence, like `\"arrow\"` or `\"crossbow bolt\"`.\n\nIt names one of the units that `ItemInstance.quantity`\ncounts, not the lot, so `\"Arrows (quiver of 20)\"` is `\"arrow\"`, and a full quiver reads \"20 arrows\".\nIt's lowercase unless a word is a proper noun or an abbreviation, and it has no article.\n`PlayerView.item_names` gives it to the players' client.\n\nA template you write that leaves it out gets its `name`.",
+      "default": ""
+     },
+     "display_name_plural": {
+      "type": "string",
+      "title": "Display Name Plural",
+      "description": "What to call two or more units, like `\"arrows\"` or `\"crossbow bolts\"`.\n\n`PlayerView.item_names_plural` gives it to the players' client. A\ntemplate you write that leaves it out gets `display_name` with the regular English ending on the word that names the\nitem: the last word before the first `of`, `with`, or `vs`, a comma, a bonus like `+1`, a closing Roman numeral, or\nan opening parenthesis, or the last word when the name has none of them. So `\"Idol of the drowned saint\"` becomes\n`\"Idols of the drowned saint\"`, and `\"Lantern (hooded)\"` becomes `\"Lanterns (hooded)\"`. The ending is `s`, or `es`\nafter `s`, `x`, `z`, `ch`, or `sh`, or `ies` in place of a `y` that follows a consonant, and `staff` becomes\n`staves` with its capital kept, so `\"Staff of the Magi\"` becomes `\"Staves of the Magi\"`. The connecting words count\nin any case, so `\"Staff Of Power\"` becomes `\"Staves Of Power\"`, and any spaces after the word stay after the ending.\nThe compiled plural of every built-in template follows the same rule. Set it yourself when the name is already\nplural, like `\"Torches (6)\"`, or when the plural is irregular.",
+      "default": ""
+     },
      "cost_gp": {
       "type": "integer",
       "minimum": 0,
@@ -14183,6 +14623,18 @@
       "type": "string",
       "title": "Name",
       "description": "The display name."
+     },
+     "display_name": {
+      "type": "string",
+      "title": "Display Name",
+      "description": "What to call one of these in a sentence, like `\"shield\"` or `\"suit of chainmail\"`.\n\nBody armour is named as a suit, so a count reads \"2 suits of chainmail\". It's lowercase unless a\nword is a proper noun or an abbreviation, and it has no article, so put a number or an article in\nfront of it. `PlayerView.item_names` gives it to the players' client.\n\nA template you write that leaves it out gets its `name`.",
+      "default": ""
+     },
+     "display_name_plural": {
+      "type": "string",
+      "title": "Display Name Plural",
+      "description": "What to call two or more of these, like `\"shields\"` or `\"suits of chainmail\"`.\n\n`PlayerView.item_names_plural` gives it to the players' client. A\ntemplate you write that leaves it out gets `display_name` with the regular English ending on the word that names the\nitem: the last word before the first `of`, `with`, or `vs`, a comma, a bonus like `+1`, a closing Roman numeral, or\nan opening parenthesis, or the last word when the name has none of them. So `\"Idol of the drowned saint\"` becomes\n`\"Idols of the drowned saint\"`, and `\"Lantern (hooded)\"` becomes `\"Lanterns (hooded)\"`. The ending is `s`, or `es`\nafter `s`, `x`, `z`, `ch`, or `sh`, or `ies` in place of a `y` that follows a consonant, and `staff` becomes\n`staves` with its capital kept, so `\"Staff of the Magi\"` becomes `\"Staves of the Magi\"`. The connecting words count\nin any case, so `\"Staff Of Power\"` becomes `\"Staves Of Power\"`, and any spaces after the word stay after the ending.\nThe compiled plural of every built-in template follows the same rule. Set it yourself when the name is already\nplural, like `\"Torches (6)\"`, or when the plural is irregular.",
+      "default": ""
      },
      "cost_gp": {
       "type": "integer",
@@ -14649,7 +15101,7 @@
      "back_stab": {
       "type": "boolean",
       "title": "Back Stab",
-      "description": "Make this `attack` a back-stab, or leave it `false` for an ordinary attack.\n\nThe OSE SRD's thief entry says \"When attacking an unaware opponent from behind, a thief\nreceives a +4 bonus to hit and doubles any damage dealt.\" osrlib has no facing in battle, so\nthe session reads an unaware opponent from behind in one of two ways: a monster the party\nsurprised, in the round it can't act, or a monster a hiding thief strikes unnoticed. Set this\nfield only when all of these are true:\n\n- The action is `attack`.\n- The member's class has the `back_stab` ability, as a thief's does.\n- The monsters can't act this round because the party surprised them, or the member is\n  hiding. The first is the party's free round, while\n  `BattleState.monsters_hold_rounds`\n  is above zero. The second holds while the member is in\n  `EncounterView.hiding`. The session reads both\n  when it accepts the round.\n- The attack is a melee attack. The weapon and the member's distance to the group after their\n  `close`, if the declaration sets one, decide that, as\n  `weapon_id` describes.\n\nA thief can close on a group and back-stab in the same round: declare `attack` with\n`move=\"close\"` and `back_stab=True`. The session judges the back-stab at the distance the move\nwill reach. So a thief reaches a group up to their encounter rate plus 5' away. That's 35' for a\nthief in leather armour under the ruleset's default `basic` encumbrance, and 45' for one in no\narmour. *Haste* doubles the rate.\n\nAn accepted back-stab in the free round is always a back-stab. It hits the same monster an\nordinary melee attack would. It gets +4 to hit, the defender's shield doesn't count, and its\ndamage is doubled: the whole sum of the weapon's dice and the member's modifiers, not the dice\nalone. The bonus and the doubling come from the class's `back_stab` ability. Every attack roll\nthe declaration makes in the round is a back-stab, even when the monsters win initiative, and\nthe attack's `AttackRolledEvent` has `back_stab` set to\ntrue, so your game can say so.\n\nA back-stab from hiding works differently, because the session rolls the thief's skills in\nsecret, as the OSE SRD's \"The referee should roll for hear noise, hide in shadows and move\nsilently on the player’s behalf\" says:\n\n- A hiding member's back-stab doesn't need the group's front rank, so\n  `battle.declaration.not_in_front_rank` doesn't apply to it, when the session accepts the\n  round or when the attack comes up. Every other melee check does, `combat.attack.out_of_reach`\n  among them, so the group has to be within 5' of the member, or the declaration has to set\n  `move=\"close\"` to bring it within 5'. The attack hits the monster an ordinary melee attack\n  would. Without a `close`, the member strikes from where they stand, and their place in the\n  ranks doesn't change.\n- A `close` on the back-stab is part of the approach. The member closes in the party's\n  movement step with the round's other moves, the move doesn't end the attempt, and the move\n  silently roll at the attack is the roll for that approach. After the attack the member stands\n  where the close took them, as any member who closes does.\n- When the attack comes up, before its first attack roll, the session rolls the member's move\n  silently skill, which only the referee sees, in a\n  `DetectionRolledEvent` of kind\n  `\"move_silently\"`. It makes this roll for every such attack by a hiding member, whatever the\n  hide in shadows roll was and whichever way the ruleset is set, so the draws are the same\n  under both settings. An attack that fizzles makes no roll. A back-stab with a slow weapon,\n  like a battle axe, comes up when its blow resolves, after both sides' blocks, so the session\n  makes the roll then. The member is still hiding through the monsters' block before it, and the\n  monsters pass over them there if their hide in shadows roll passed.\n- The attack is a back-stab when the two rolls pass the test the ruleset's\n  `back_stab_needs_both_skills`\n  sets: both rolls by default, or either roll with the flag off. Then every attack roll the\n  declaration makes is a back-stab, with the bonus and the doubling of the free round. Under\n  *haste*, the declaration's two swings share the one move silently roll, made before the\n  first, so both are back-stabs or neither is, as both are in the free round. Otherwise it's\n  an ordinary melee attack. The attack's `AttackRolledEvent.back_stab` is how\n  the players learn which.\n- The attempt ends when the attack comes up, whatever happens.\n\nA member stays hiding from the `hide` until the first of these:\n\n- The member's next declaration other than `hold` or `hide` comes up in its step of the round.\n  A `hold` keeps the attempt, so a thief can stay hidden for several rounds. A second `hide`\n  replaces it with a new hide in shadows roll. An `attack` comes up in the missile or the melee\n  step, not in the movement step, so a `close` on any attack, a back-stab or an ordinary one,\n  doesn't end the attempt. An attack with a slow weapon, a back-stab or an ordinary one, comes\n  up when its blow resolves after both sides' blocks, so the member is still hiding through the\n  monsters' block before it, and passed over there if their hide in shadows roll passed.\n- The member takes damage: a `DamageDealtEvent` on them\n  with an `amount` above 0. One with an `amount` of 0 doesn't end the attempt, because the\n  member took no damage.\n- A monster or an NPC adventurer attacks the member, shoots at them, or casts a spell at them\n  alone, when that action resolves.\n- The member can't act, or is confused, at the end of a round.\n- The battle ends.\n\nA back-stab declared from hiding whose attempt ended before the attack came up, because the\nmember took damage or was attacked, stays a melee attack without the front rank check. It's an\nordinary attack, and the session makes no move silently roll for it.\n\nWhile a member is hiding, the monsters' choice of targets reads only the hide in shadows roll,\nunder both settings. When the session or a built-in policy picks one member for a monster or\nan NPC adventurer to attack, shoot at, cast at, or breathe on, it passes over a hiding member\nwhose hide in shadows roll passed while it could pick another member. That covers the built-in\npolicies, a confused monster's attack on the party, and a breath that hits one target. A member\nturned to stone is never another member it could pick: the session passes over statues first,\nas it does for any target, so when every other member in reach is stone, the hiding member is\nthe only one it could pick. When that member is the only one it could pick, the monster finds\nthem and attacks, which ends the attempt. A member\nwhose roll failed has been noticed, as the OSE SRD's \"If a hide in shadows or move silently\nroll fails, the referee knows that the thief has been noticed\" says, and can be picked like\nany other. A policy of your own reads\n`BattleState.hiding` to do the same. Hiding changes only\nthe choice of a target. A group still closes on the nearest member it can see, a hiding member\nincluded, and an area, like a red dragon's breath, covers a hiding member as it covers anyone in\nits ranks.\n\nThe session refuses a back-stab with the first of these that applies, in this order. Each\nof the four back-stab codes has the member's id as its `character` param.\n\n1. `battle.declaration.back_stab_not_attack`: the action isn't `attack`. The session checks\n   this before any other check on the declaration.\n2. `battle.declaration.back_stab_no_ability`: the member's class has no `back_stab` ability.\n3. `battle.declaration.back_stab_target_aware`: the monsters aren't surprised this round, and\n   the member isn't hiding.\n4. The checks of an ordinary attack on its group and weapon:\n   `battle.declaration.unknown_group`, `battle.declaration.no_target`,\n   `battle.declaration.weapon_not_wielded`, and `battle.declaration.item_unusable`.\n5. `battle.declaration.back_stab_not_melee`: the attack the session would resolve is a\n   missile attack. That's a missile weapon like a bow, or a weapon that's both melee and\n   missile, like a dagger, aimed at a group more than 5' from the member after their\n   `close`.\n6. The rest of an ordinary melee attack's checks, like\n   `battle.declaration.not_in_front_rank` and `combat.attack.out_of_reach`, judged after the\n   round's declared moves. A hiding member's back-stab skips `not_in_front_rank`.\n\nA declaration that leaves this field `false` resolves exactly as it would without it. A hiding\nmember's attack without it is an ordinary attack with every check, the front rank's included,\nand it ends the attempt.\n[The adaptations register](https://mmacy.github.io/osrlib-python/adaptations/) describes the\nback-stab in full.",
+      "description": "Make this `attack` a back-stab, or leave it `false` for an ordinary attack.\n\nThe OSE SRD's thief entry says \"When attacking an unaware opponent from behind, a thief\nreceives a +4 bonus to hit and doubles any damage dealt.\" osrlib has no facing in battle, so\nthe session reads an unaware opponent from behind in one of two ways: a monster the party\nsurprised, in the round it can't act, or a monster a hiding thief strikes unnoticed. Set this\nfield only when all of these are true:\n\n- The action is `attack`.\n- The member's class has the `back_stab` ability, as a thief's does.\n- The monsters can't act this round because the party surprised them, or the member is\n  hiding. The first is the party's free round, while\n  `BattleState.monsters_hold_rounds`\n  is above zero. The second holds while the member is in\n  `EncounterView.hiding`. The session reads both\n  when it accepts the round.\n- The attack is a melee attack. The weapon and the member's distance to the group after their\n  `close`, if the declaration sets one, decide that, as\n  `weapon_id` describes.\n\nYou don't need to combine the second and third conditions yourself.\n`EncounterView.can_back_stab` lists the members\nwho meet both this round, and\n`BattleRoundPreview.can_back_stab` lists\nthem beside a planned round. The first and last conditions depend on the declaration, so check\nthem with `preview_battle_round`.\n\nA thief can close on a group and back-stab in the same round: declare `attack` with\n`move=\"close\"` and `back_stab=True`. The session judges the back-stab at the distance the move\nwill reach. So a thief reaches a group up to their encounter rate plus 5' away. That's 35' for a\nthief in leather armour under the ruleset's default `basic` encumbrance, and 45' for one in no\narmour. *Haste* doubles the rate.\n\nAn accepted back-stab in the free round is always a back-stab. It hits the same monster an\nordinary melee attack would. It gets +4 to hit, the defender's shield doesn't count, and its\ndamage is doubled: the whole sum of the weapon's dice and the member's modifiers, not the dice\nalone. The bonus and the doubling come from the class's `back_stab` ability. Every attack roll\nthe declaration makes in the round is a back-stab, even when the monsters win initiative, and\nthe attack's `AttackRolledEvent` has `back_stab` set to\ntrue, so your game can say so.\n\nA back-stab from hiding works differently, because the session rolls the thief's skills in\nsecret, as the OSE SRD's \"The referee should roll for hear noise, hide in shadows and move\nsilently on the player’s behalf\" says:\n\n- A hiding member's back-stab doesn't need the group's front rank, so\n  `battle.declaration.not_in_front_rank` doesn't apply to it, when the session accepts the\n  round or when the attack comes up. Every other melee check does, `combat.attack.out_of_reach`\n  among them, so the group has to be within 5' of the member, or the declaration has to set\n  `move=\"close\"` to bring it within 5'. The attack hits the monster an ordinary melee attack\n  would. Without a `close`, the member strikes from where they stand, and their place in the\n  ranks doesn't change.\n- A `close` on the back-stab is part of the approach. The member closes in the party's\n  movement step with the round's other moves, the move doesn't end the attempt, and the move\n  silently roll at the attack is the roll for that approach. After the attack the member stands\n  where the close took them, as any member who closes does.\n- When the attack comes up, before its first attack roll, the session rolls the member's move\n  silently skill, which only the referee sees, in a\n  `DetectionRolledEvent` of kind\n  `\"move_silently\"`. It makes this roll for every such attack by a hiding member, whatever the\n  hide in shadows roll was and whichever way the ruleset is set, so the draws are the same\n  under both settings. An attack that fizzles makes no roll. A back-stab with a slow weapon,\n  like a battle axe, comes up when its blow resolves, after both sides' blocks, so the session\n  makes the roll then. The member is still hiding through the monsters' block before it, and the\n  monsters pass over them there if their hide in shadows roll passed.\n- The attack is a back-stab when the two rolls pass the test the ruleset's\n  `back_stab_needs_both_skills`\n  sets: both rolls by default, or either roll with the flag off. Then every attack roll the\n  declaration makes is a back-stab, with the bonus and the doubling of the free round. Under\n  *haste*, the declaration's two swings share the one move silently roll, made before the\n  first, so both are back-stabs or neither is, as both are in the free round. Otherwise it's\n  an ordinary melee attack. The attack's `AttackRolledEvent.back_stab` is how\n  the players learn which.\n- The attempt ends when the attack comes up, whatever happens.\n\nA member stays hiding from the `hide` until the first of these:\n\n- The member's next declaration other than `hold` or `hide` comes up in its step of the round.\n  A `hold` keeps the attempt, so a thief can stay hidden for several rounds. A second `hide`\n  replaces it with a new hide in shadows roll. An `attack` comes up in the missile or the melee\n  step, not in the movement step, so a `close` on any attack, a back-stab or an ordinary one,\n  doesn't end the attempt. An attack with a slow weapon, a back-stab or an ordinary one, comes\n  up when its blow resolves after both sides' blocks, so the member is still hiding through the\n  monsters' block before it, and passed over there if their hide in shadows roll passed.\n- The member takes damage: a `DamageDealtEvent` on them\n  with an `amount` above 0. One with an `amount` of 0 doesn't end the attempt, because the\n  member took no damage.\n- A monster or an NPC adventurer attacks the member, shoots at them, or casts a spell at them\n  alone, when that action resolves.\n- The member can't act, or is confused, at the end of a round.\n- The battle ends.\n\nA back-stab declared from hiding whose attempt ended before the attack came up, because the\nmember took damage or was attacked, stays a melee attack without the front rank check. It's an\nordinary attack, and the session makes no move silently roll for it.\n\nWhile a member is hiding, the monsters' choice of targets reads only the hide in shadows roll,\nunder both settings. When the session or a built-in policy picks one member for a monster or\nan NPC adventurer to attack, shoot at, cast at, or breathe on, it passes over a hiding member\nwhose hide in shadows roll passed while it could pick another member. That covers the built-in\npolicies, a confused monster's attack on the party, and a breath that hits one target. A member\nturned to stone is never another member it could pick: the session passes over statues first,\nas it does for any target, so when every other member in reach is stone, the hiding member is\nthe only one it could pick. When that member is the only one it could pick, the monster finds\nthem and attacks, which ends the attempt. A member\nwhose roll failed has been noticed, as the OSE SRD's \"If a hide in shadows or move silently\nroll fails, the referee knows that the thief has been noticed\" says, and can be picked like\nany other. A policy of your own reads\n`BattleState.hiding` to do the same. Hiding changes only\nthe choice of a target. A group still closes on the nearest member it can see, a hiding member\nincluded, and an area, like a red dragon's breath, covers a hiding member as it covers anyone in\nits ranks.\n\nThe session refuses a back-stab with the first of these that applies, in this order. Each\nof the four back-stab codes has the member's id as its `character` param.\n\n1. `battle.declaration.back_stab_not_attack`: the action isn't `attack`. The session checks\n   this before any other check on the declaration.\n2. `battle.declaration.back_stab_no_ability`: the member's class has no `back_stab` ability.\n3. `battle.declaration.back_stab_target_aware`: the monsters aren't surprised this round, and\n   the member isn't hiding.\n4. The checks of an ordinary attack on its group and weapon:\n   `battle.declaration.unknown_group`, `battle.declaration.no_target`,\n   `battle.declaration.weapon_not_wielded`, and `battle.declaration.item_unusable`.\n5. `battle.declaration.back_stab_not_melee`: the attack the session would resolve is a\n   missile attack. That's a missile weapon like a bow, or a weapon that's both melee and\n   missile, like a dagger, aimed at a group more than 5' from the member after their\n   `close`.\n6. The rest of an ordinary melee attack's checks, like\n   `battle.declaration.not_in_front_rank` and `combat.attack.out_of_reach`, judged after the\n   round's declared moves. A hiding member's back-stab skips `not_in_front_rank`.\n\nA declaration that leaves this field `false` resolves exactly as it would without it. A hiding\nmember's attack without it is an ordinary attack with every check, the front rank's included,\nand it ends the attempt.\n[The adaptations register](https://mmacy.github.io/osrlib-python/adaptations/) describes the\nback-stab in full.",
       "default": false
      }
     },
@@ -14752,6 +15204,24 @@
       "type": "object",
       "title": "Front Rank",
       "description": "For each group that hasn't fled, keyed by group id, the members who would stand in its front rank\nwithin 5' of it once the planned moves are made, in marching order. It means what\n`EncounterGroupView.front_rank` means, after the\nmoves."
+     },
+     "can_hide": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Can Hide",
+      "description": "The declarers who could declare `hide` in this round beside the other planned declarations, in\nmarching order. It's what `EncounterView.can_hide`\nmeans, judged where the members would stand once the other members' planned moves are made, as\nthe session judges a `hide`. So a thief in the front rank is here once another member's planned\n`close` takes their place in it, and a thief behind the front rank isn't here once another\nmember's planned fighting withdrawal leaves them in it.\n\nA member declares one action in a round, so each member is judged as if the `hide` took the\nplace of their own planned declaration. A member's own planned move never takes them out of the\nlist, and a member whose planned declaration is the `hide` is here exactly when `rejections`\naccepts it. For every declarer, membership matches what this function returns for the same plan\nwith that member's declaration replaced by a `hide`: the member is here exactly when that\npreview has no rejection for them. When the plan makes no move, the list is the view's\n`can_hide`.",
+      "default": []
+     },
+     "can_back_stab": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Can Back Stab",
+      "description": "The declarers who could declare an `attack` with\n`BattleDeclaration.back_stab` in this round\nbeside the other planned declarations, in marching order. It's what\n`EncounterView.can_back_stab` means, and the\nsame rejection codes bound it: a member here never gets `battle.declaration.back_stab_no_ability`\nor `battle.declaration.back_stab_target_aware`, and a declarer outside it always gets one of\nthem.\n\nThe session judges every declaration of a round before any of them resolves, and neither check\nreads where the members stand, so the planned declarations don't change the list and it's\nalways the view's `can_back_stab`. A member whose planned declaration is a `hide` hasn't hidden\nyet, so outside the party's free round they're here only when they were already hiding. A\nhiding member whose planned move will end the attempt when it comes up is still here.",
+      "default": []
      }
     },
     "type": "object",
@@ -14761,7 +15231,7 @@
      "front_rank"
     ],
     "title": "BattleRoundPreview",
-    "description": "What a battle round would do with the declarations planned so far, worked out without playing it.\n\n`preview_battle_round` returns one. Read `rejections`\nto grey out a choice the session would refuse, and read `advance_feet` and `front_rank` to show\nwhere the members would stand once their declared moves are made. The model is frozen."
+    "description": "What a battle round would do with the declarations planned so far, worked out without playing it.\n\n`preview_battle_round` returns one. Read `rejections`\nto grey out a choice the session would refuse, and read `advance_feet` and `front_rank` to show\nwhere the members would stand once their declared moves are made. Read `can_hide` and\n`can_back_stab` to offer a member a `hide` or a back-stab the session would accept beside the\nchoices already made. The model is frozen. A preview without `can_hide` or `can_back_stab`,\nlike one built by osrlib 2.7.0, parses with each of them empty."
    },
    "BattleRoundPreviewRequest": {
     "properties": {
@@ -14964,7 +15434,7 @@
       },
       "type": "array",
       "title": "Targets",
-      "description": "Who or what the spell targets, as entity ids: a party member's\n`MemberView.id`, a monster's id, or, for a spell that\naffects a place rather than a creature, a cell reference in the\n`cell:{dungeon}:{level}:{x},{y}` form that `cell_ref`\nbuilds. The mode's targeting sets how many targets it takes, and the session refuses the\nwrong number with `magic.cast.target_count`. The session refuses a cell reference for a\nmode that works only on creatures with `magic.cast.target_must_be_creature`.",
+      "description": "Who or what the spell targets: a party member's\n`MemberView.id`, in any state, or, for a spell that\naffects a place rather than a creature, a cell reference in the\n`cell:{dungeon}:{level}:{x},{y}` form that `cell_ref`\nbuilds. A dead or petrified member can be named, so *raise dead* and *stone to flesh* work on\nthem. The session refuses any other id with `magic.cast.unknown_target`, a monster's or an NPC\nadventurer's included, even one an earlier event named. The mode's targeting sets how many\ntargets it takes, and the session refuses the wrong number with `magic.cast.target_count`.\nThe session refuses a cell reference for a mode that works only on creatures with\n`magic.cast.target_must_be_creature`.",
       "default": []
      }
     },
@@ -14976,7 +15446,7 @@
      "command_type"
     ],
     "title": "CastSpell",
-    "description": "Cast a memorized spell outside battle (one round).\n\nThe caster needs a memorized copy of the spell, which\n`PrepareSpells` gives them, and casting uses the\ncopy up. Each target is an entity id, or a `cell:` reference for a spell that affects a\nplace. This command isn't legal during an encounter or a battle. To cast at monsters the\nparty has met, open battle with\n`EngageBattle` and declare a `cast`\n`BattleDeclaration` in the round.\n\nModes:\n\n`town`, `exploring`\n\n**Rejections:**\n\n- `session.command.wrong_mode` - an encounter or battle is underway, or the\n  session has ended.\n- `session.command.unknown_member` - `character_id` matches no party member.\n- `session.command.member_incapacitated` - the member can't act.\n- `magic.cast.unknown_spell` - `spell_id` matches no spell in the session's catalog.\n- `magic.cast.silenced_area` - a *silence* effect covers the party's cell.\n- `magic.cast.unknown_target` - a target id matches no entity in the session.\n- `magic.cast.not_memorized` - the caster has no memorized copy. A member who\n  can't cast spells at all gets this code too.\n- `magic.cast.caster_incapacitated`, `magic.cast.caster_restrained`,\n  `magic.cast.anti_magic_shell` - the caster can't cast right now.\n- `magic.cast.not_reversible` - `reversed` is set on a spell with no reversed\n  form.\n- `magic.cast.unknown_mode` - `mode` matches no mode of the spell.\n- `magic.cast.target_count` - the number of targets is wrong for the mode.\n- `magic.cast.target_must_be_creature` - a target is a cell reference, and the\n  mode works only on creatures, like *fire ball*'s or *sleep*'s.\n- `magic.cast.out_of_range` - a target is beyond the spell's range.\n\n**Events:**\n\n`SpellCastEvent`, then the events of the\nspell's resolution: saving throws, damage, healing, and effects attached, each a\nseparate event. One round passes."
+    "description": "Cast a memorized spell outside battle (one round).\n\nThe caster needs a memorized copy of the spell, which\n`PrepareSpells` gives them, and casting uses the\ncopy up. Each target is an entity id, or a `cell:` reference for a spell that affects a\nplace. This command isn't legal during an encounter or a battle. To cast at monsters the\nparty has met, open battle with\n`EngageBattle` and declare a `cast`\n`BattleDeclaration` in the round.\n\nModes:\n\n`town`, `exploring`\n\n**Rejections:**\n\n- `session.command.wrong_mode` - an encounter or battle is underway, or the\n  session has ended.\n- `session.command.unknown_member` - `character_id` matches no party member.\n- `session.command.member_incapacitated` - the member can't act.\n- `magic.cast.unknown_spell` - `spell_id` matches no spell in the session's catalog.\n- `magic.cast.silenced_area` - a *silence* effect covers the party's cell.\n- `magic.cast.unknown_target` - a target id isn't a party member's. No encounter is open\n  in this command's modes, so the party can act on no other creature. A monster or an NPC\n  adventurer of an encounter that has ended gets this code, with the same params as an id\n  that matches nothing.\n- `magic.cast.not_memorized` - the caster has no memorized copy. A member who\n  can't cast spells at all gets this code too.\n- `magic.cast.caster_incapacitated`, `magic.cast.caster_restrained`,\n  `magic.cast.anti_magic_shell` - the caster can't cast right now.\n- `magic.cast.not_reversible` - `reversed` is set on a spell with no reversed\n  form.\n- `magic.cast.unknown_mode` - `mode` matches no mode of the spell.\n- `magic.cast.target_count` - the number of targets is wrong for the mode.\n- `magic.cast.target_must_be_creature` - a target is a cell reference, and the\n  mode works only on creatures, like *fire ball*'s or *sleep*'s.\n- `magic.cast.out_of_range` - a target is beyond the spell's range.\n\n**Events:**\n\n`SpellCastEvent`, then the events of the\nspell's resolution: saving throws, damage, healing, and effects attached, each a\nseparate event. One round passes."
    },
    "Character": {
     "properties": {
@@ -19737,7 +20207,7 @@
       },
       "type": "array",
       "title": "Can Hide",
-      "description": "The declarers who can declare `hide` this round, in marching order: those whose class has\nthief skills, as the thief's does, and who don't stand in the party's front rank, the first row\nof the ranks toward any group that hasn't fled and has a living member. Empty outside a battle.\n\nIt reads the battle as it stands, as each group's `front_rank` does. The session judges a\n`hide` where the members will stand once the round's declared moves are made, so a member in\nthis list who would end up in the front rank because of another member's move is refused with\n`battle.declaration.hide_in_front_rank`. A member outside it gets\n`battle.declaration.hide_not_a_thief` or `battle.declaration.hide_in_front_rank`.",
+      "description": "The declarers who can declare `hide` this round, in marching order: those whose class has\nthief skills, as the thief's does, and who don't stand in the party's front rank, the first row\nof the ranks toward any group that hasn't fled and has a living member. Empty outside a battle.\n\nIt reads the battle as it stands, as each group's `front_rank` does. The session judges a\n`hide` where the members will stand once the round's declared moves are made, so a member in\nthis list who would end up in the front rank because of another member's move is refused with\n`battle.declaration.hide_in_front_rank`. A member outside it gets\n`battle.declaration.hide_not_a_thief` or `battle.declaration.hide_in_front_rank`. To learn who\ncan hide beside the declarations planned so far, read\n`BattleRoundPreview.can_hide`.",
       "default": []
      },
      "hiding": {
@@ -19746,7 +20216,16 @@
       },
       "type": "array",
       "title": "Hiding",
-      "description": "The members who are hiding, in marching order: each has declared a `hide` that resolved, and\nthe attempt hasn't ended since. Empty outside a battle.\n\nA member here can declare an `attack` with\n`BattleDeclaration.back_stab` in any round\nwithout a place in the front rank, as long as their class has the `back_stab` ability. The\nback-stab still needs a melee weapon, or bare hands, and a group within 5' of the member, as\neach group's `member_distance_feet`\nshows, or a `close` that brings one within 5'. The list doesn't say\nwhether a hide worked: the session rolls the skills in secret, and the attack's\n`AttackRolledEvent.back_stab` tells the players\nwhether it was a back-stab. A member leaves the list when the attempt ends, which\n`BattleDeclaration.back_stab` describes.",
+      "description": "The members who are hiding, in marching order: each has declared a `hide` that resolved, and\nthe attempt hasn't ended since. Empty outside a battle.\n\nA member here can declare an `attack` with\n`BattleDeclaration.back_stab` in any round\nwithout a place in the front rank, as long as their class has the `back_stab` ability and they\ncan act, and `can_back_stab` lists them. The\nback-stab still needs a melee weapon, or bare hands, and a group within 5' of the member, as\neach group's `member_distance_feet`\nshows, or a `close` that brings one within 5'. The list doesn't say\nwhether a hide worked: the session rolls the skills in secret, and the attack's\n`AttackRolledEvent.back_stab` tells the players\nwhether it was a back-stab. A member leaves the list when the attempt ends, which\n`BattleDeclaration.back_stab` describes.",
+      "default": []
+     },
+     "can_back_stab": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Can Back Stab",
+      "description": "The declarers who can declare an `attack` with\n`BattleDeclaration.back_stab` this round, in\nmarching order: those whose class has the `back_stab` ability, as the thief's does, in the\nparty's free round (see `party_free_round`) or while they're in `hiding`. Empty outside a battle.\n\nThe session refuses a back-stab by any other declarer with `battle.declaration.back_stab_no_ability`\nor `battle.declaration.back_stab_target_aware`, and never refuses one by a member here with\neither code. A member who can't act isn't a declarer, so they aren't here, even while they're in\n`hiding`. Like `hiding`, the list holds every member who has hidden, whatever the secret hide in\nshadows roll was, so it never tells the players whether a hide worked.\n\nThe list doesn't read the declaration, so the session can still refuse a back-stab by a member\nhere for what the declaration says: `battle.declaration.back_stab_not_attack` when the action\nisn't `attack`, `battle.declaration.back_stab_not_melee` for a missile weapon, or a dagger aimed\nat a group more than 5' from the member after their `close`, and the checks every attack takes,\nlike `battle.declaration.unknown_group`, `battle.declaration.weapon_not_wielded`,\n`combat.attack.out_of_reach`, and `combat.attack.attacker_blind`. In the free round, a back-stab\ntakes the melee checks of any attack, so a member outside the group's front rank gets\n`battle.declaration.not_in_front_rank`. In any other round, a member here is hiding and needs no\nplace in the front rank. To\nlearn who can back-stab beside the declarations planned so far, read\n`BattleRoundPreview.can_back_stab`.",
       "default": []
      },
      "advance_feet": {
@@ -19773,7 +20252,7 @@
      "party_free_round": {
       "type": "boolean",
       "title": "Party Free Round",
-      "description": "True in the round the party gets free after it surprised the monsters, while the monsters can't\nact. False in every other round, and outside a battle.\n\nIt's the round in which any thief's back-stab is legal: an `attack` that sets\n`BattleDeclaration.back_stab`. In other\nrounds, only the members in `hiding` can back-stab. It's true while\n`BattleState.monsters_hold_rounds` is above\nzero.",
+      "description": "True in the round the party gets free after it surprised the monsters, while the monsters can't\nact. False in every other round, and outside a battle.\n\nIt's the round in which any thief's back-stab is legal: an `attack` that sets\n`BattleDeclaration.back_stab`. In other\nrounds, only the members in `hiding` can back-stab. `can_back_stab` lists the members who can\nback-stab in this round, in either case. It's true while\n`BattleState.monsters_hold_rounds` is above\nzero.",
       "default": false
      }
     },
@@ -19784,7 +20263,7 @@
      "in_battle"
     ],
     "title": "EncounterView",
-    "description": "The current encounter or battle's public state.\n\nYou get one from `PlayerView.encounter`, which\nis `null` when the party isn't in an encounter.\n\nIn a battle, each party member stands at their own place on the range track, the\none-dimensional measure of distance a battle uses. `advance_feet` gives each member's place, and\neach group in `groups` gives every member's distance to it and the members who can reach it in\nmelee. Read those to draw the fight and to offer each member the moves and attacks they can make.\n\nThe id tuples `declarers`, `immobile`, `reloading`, `can_hide`, and `hiding` describe the battle\nround as the players see it at the table: who is able to act, who is held fast, who is still\nreloading a crossbow, who can hide, and who is hiding.\nEach group's `front_rank` says who can attack\nthat group in melee this round. Each of these matches a rejection that would refuse the whole\nround, so if you read them, you offer only the declarations the session accepts. To check a\nchoice against the choices already made for the round, call\n`preview_battle_round`."
+    "description": "The current encounter or battle's public state.\n\nYou get one from `PlayerView.encounter`, which\nis `null` when the party isn't in an encounter.\n\nIn a battle, each party member stands at their own place on the range track, the\none-dimensional measure of distance a battle uses. `advance_feet` gives each member's place, and\neach group in `groups` gives every member's distance to it and the members who can reach it in\nmelee. Read those to draw the fight and to offer each member the moves and attacks they can make.\n\nThe id tuples `declarers`, `immobile`, `reloading`, `can_hide`, `hiding`, and `can_back_stab`\ndescribe the battle round as the players see it at the table: who is able to act, who is held\nfast, who is still reloading a crossbow, who can hide, who is hiding, and who can back-stab.\nEach group's `front_rank` says who can attack\nthat group in melee this round. Each of these matches a rejection that would refuse the whole\nround, so if you read them, you offer only the declarations the session accepts. To check a\nchoice against the choices already made for the round, call\n`preview_battle_round`."
    },
    "EncumbranceMode": {
     "type": "string",
@@ -19968,6 +20447,23 @@
       "title": "Cells",
       "description": "Only the area cells the party has walked, in authored order.",
       "default": []
+     },
+     "trap_state": {
+      "anyOf": [
+       {
+        "type": "string",
+        "enum": [
+         "found",
+         "sprung",
+         "removed"
+        ]
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Trap State",
+      "description": "The room trap's state as the party knows it, with the values and meaning of\n`MapFeatureView.trap_state`: `\"found\"` once a\n`Search` has found it, and `\"sprung\"` once it has gone off. No\ncommand removes a room trap, so a room never shows `\"removed\"`.\n\nIt's `null` while the party hasn't met the room's trap, and for a room with no trap, so a room\nthe players know nothing about looks the same whether or not it's trapped. The view lists an area\nonly once the party has entered it, so a trap found or sprung through a door of a room the party\nhasn't entered shows here once the party walks in."
      }
     },
     "type": "object",
@@ -20045,7 +20541,7 @@
       },
       "type": "array",
       "title": "Item Names",
-      "description": "The display names of the items that were destroyed."
+      "description": "The names of the items that were destroyed, as the players know them: a mundane item's\n`name`, like `\"Torches (6)\"`, an identified magic item's `name`, and an unidentified magic item's\nmasked name, like `\"a sword with a faint aura\"`, the `display` that\n`MemberView.inventory` showed for it. The event has\nplayer visibility, so it never names an unidentified item by its true name."
      },
      "saved_items": {
       "items": {
@@ -20907,7 +21403,7 @@
      "id": {
       "type": "string",
       "title": "Id",
-      "description": "The feature's id. It has to be unique across the level, counting the features on the level\nand on all its areas together. A player client uses the opaque\n`MapFeatureView.id` in feature commands. Current\ncallers can still pass this raw id when it is unambiguous. The id `\"pile\"` is reserved for\nthe drop pile on a cell, and\n`validate_adventure` reports a feature that\nuses it."
+      "description": "The feature's id. It has to be unique across the level, counting the features on the level\nand on all its areas together. The id `\"pile\"` is reserved for the drop pile on a cell, and\n`validate_adventure` reports a feature that\nuses it.\n\nThe `feature_id` of `TakeTreasure`,\n`InspectTreasure`, and\n`RemoveTreasureTrap` takes either this id or the\nopaque `feature:` handle in `MapFeatureView.id`, and\nboth forms stay supported. A player client sends the handle, because the player view lists\nonly handles. A referee tool can send this id. Both forms resolve against the same features,\nthe ones the party can reach where it stands, so this id reaches and reveals nothing that a\nhandle doesn't. A command that names a feature on another cell or level, or a construction\ntrick the party hasn't found, gets the same `exploration.feature.unknown` rejection as an id\nthat no feature has. A handle always names one feature. This id names two when a cache the\nsession generated on the same cell has the same id, like `\"cache-0001\"`, and the session\nrefuses it with that rejection too."
      },
      "kind": {
       "type": "string",
@@ -20922,7 +21418,13 @@
      "description": {
       "type": "string",
       "title": "Description",
-      "description": "Text to show when the party finds the feature. Events contain the feature's id, not its text,\nso look the text up here.",
+      "description": "What the players read about the feature. The player view shows it as\n`MapFeatureView.description` once the feature\ncomes into view. A feature without a `cell` comes into view when the party enters its area,\nand a feature on a cell comes into view when that cell is on the party's map, because the party\nhas walked it, remembers seeing it, or lights it now. A construction trick also has to be found\nfirst.\n\nThe players read a cache's description before anyone opens it, and they still read it after\nthe party empties it. So write what the party sees from outside, like \"A banded chest under\nthe altar\", and never what's inside or a trap the party hasn't found. Put the contents in the\ncache's `item_ids`, `magic_item_ids`, `coins`, and `valuables`, the trap in `trap`, and\nanything else meant for the referee alone in `referee_notes`.\n\nEvents contain the feature's id, not its text, so look the text up here.",
+      "default": ""
+     },
+     "referee_notes": {
+      "type": "string",
+      "title": "Referee Notes",
+      "description": "What the referee reads about the feature, and the players never do: what a cache holds, how\nits trap is hidden, or what a module's author tells the referee about it. Empty means you\nwrote none.\n\nosrlib never reads it, no event includes it, and no rule depends on it. It's in the adventure\ndocument, so a save and the referee view's\n`RefereeView.adventure` have it, and the player\nview never does. Write what the players may read in `description`.",
       "default": ""
      },
      "cell": {
@@ -21305,6 +21807,18 @@
       "type": "string",
       "title": "Name",
       "description": "The display name as the price list prints it, which includes the lot size for gear sold in lots:\n`\"Torches (6)\"`, `\"Iron spikes (12)\"`."
+     },
+     "display_name": {
+      "type": "string",
+      "title": "Display Name",
+      "description": "What to call one unit of this gear in a sentence, like `\"torch\"` or `\"vial of holy water\"`.\n\nIt names one of the units that `ItemInstance.quantity`\ncounts, not a lot from the price list, so `\"Torches (6)\"` is `\"torch\"`, and a stack of six reads\n\"6 torches\". Where the price list names a substance, it names the container or the measure the\nsession counts: `\"vial of holy water\"`, `\"flask of oil\"`, `\"pint of wine\"`. It's lowercase unless a\nword is a proper noun or an abbreviation, and it has no article, so put a number or an article in\nfront of it. `PlayerView.item_names` gives it to the players' client.\n\nA template you write that leaves it out gets its `name`.",
+      "default": ""
+     },
+     "display_name_plural": {
+      "type": "string",
+      "title": "Display Name Plural",
+      "description": "What to call two or more units, like `\"torches\"` or `\"vials of holy water\"`.\n\n`PlayerView.item_names_plural` gives it to the players' client. A\ntemplate you write that leaves it out gets `display_name` with the regular English ending on the word that names the\nitem: the last word before the first `of`, `with`, or `vs`, a comma, a bonus like `+1`, a closing Roman numeral, or\nan opening parenthesis, or the last word when the name has none of them. So `\"Idol of the drowned saint\"` becomes\n`\"Idols of the drowned saint\"`, and `\"Lantern (hooded)\"` becomes `\"Lanterns (hooded)\"`. The ending is `s`, or `es`\nafter `s`, `x`, `z`, `ch`, or `sh`, or `ies` in place of a `y` that follows a consonant, and `staff` becomes\n`staves` with its capital kept, so `\"Staff of the Magi\"` becomes `\"Staves of the Magi\"`. The connecting words count\nin any case, so `\"Staff Of Power\"` becomes `\"Staves Of Power\"`, and any spaces after the word stay after the ending.\nThe compiled plural of every built-in template follows the same rule. Set it yourself when the name is already\nplural, like `\"Torches (6)\"`, or when the plural is irregular.",
+      "default": ""
      },
      "cost_gp": {
       "type": "integer",
@@ -22420,7 +22934,7 @@
      "feature_id": {
       "type": "string",
       "title": "Feature Id",
-      "description": "Which cache to check for a trap. Use a\n`MapFeatureView.id` from the current player view.\nFor compatibility, an unambiguous raw authored id or generated cache id still works. The\ncache has to be on the party's cell and available to the party."
+      "description": "Which cache to check for a trap: a `feature:` handle from\n`MapFeatureView.id` in the current player view, or the\ncache's raw id, an authored `FeatureSpec.id` or the id\nof a cache the engine generated. Both forms stay supported. A player client sends the handle,\nbecause the player view lists only handles. Both forms resolve against the same caches, the\navailable ones the party can reach where it stands, so a raw id reaches and reveals\nnothing that a handle doesn't. A cache anywhere else gets the same\n`exploration.feature.unknown` rejection as an id that no cache has."
      }
     },
     "type": "object",
@@ -22802,6 +23316,18 @@
       "type": "string",
       "title": "Template Id",
       "description": "What it turned out to be, as its magic item catalog id."
+     },
+     "display_name": {
+      "type": "string",
+      "title": "Display Name",
+      "description": "What to call the item now that the party knows it, the template's\n`display_name`, like `\"potion of healing\"`.\n\nIt's here because the command that identifies an item can also use it up, like a potion drunk\nbefore the party knew what it was. Then no view names it by its true name, because the view built\nafter the command no longer shows the item and the view from before showed it masked. When the\nitem is still carried, the view's\n`PlayerView.item_names` has the same name under\n`instance_id` and `template_id`.",
+      "default": ""
+     },
+     "display_name_plural": {
+      "type": "string",
+      "title": "Display Name Plural",
+      "description": "What to call two or more of the item, the template's\n`display_name_plural`, like\n`\"potions of healing\"`.",
+      "default": ""
      }
     },
     "type": "object",
@@ -22837,7 +23363,7 @@
        }
       ],
       "title": "Template",
-      "description": "The item itself, one of the four equipment templates. See `ItemTemplate`. The\nwhole template is embedded rather than referenced by id, so an instance of an item an adventure bundled stays\nreadable without that adventure.",
+      "description": "The item itself, one of the four equipment templates. See `ItemTemplate`. The\nwhole template is embedded rather than referenced by id, so an instance of an item an adventure bundled stays\nreadable without that adventure.\n\nA session gives an embedded template the display names of the template its catalog,\n`GameSession.effective_equipment`, has under the same id.\nIt does this to every stack a party member or an NPC adventurer carries when the session starts, when\n`load_game` restores it, and when `AddMember`\nadds a member. Only `display_name` and `display_name_plural` change, with the entries of `overrides_applied` that\nname those two fields, which record where the names came from. The rest of the template is rules data that travels\nwith the character. So a stack from a save or a party document that osrlib 2.7.0 wrote, whose\ntemplate has no display names, is named as the catalog names it, in the views and in the next save. A template\nwhose id the catalog doesn't have, like an item another adventure bundled, keeps the names it has.",
       "discriminator": {
        "propertyName": "item_type",
        "mapping": {
@@ -23377,7 +23903,7 @@
      "spell_id": {
       "type": "string",
       "title": "Spell Id",
-      "description": "The spell to write into the book, by its id in\n`GameSession.effective_spells`: a\nbuilt-in spell (see the\n[spell id index](https://mmacy.github.io/osrlib-python/reference/content-ids/spells/)) or one\nthe adventure bundles. It has to be on the spell list of the caster's class. At each spell\nlevel, no more spells fit in the book than the caster has slots at that level."
+      "description": "The spell to write into the book, by its id in\n`GameSession.effective_spells`: a\nbuilt-in spell (see the\n[spell id index](https://mmacy.github.io/osrlib-python/reference/content-ids/spells/)) or one\nthe adventure bundles. It has to be on the spell list of the caster's class. At each spell\nlevel, no more spells fit in the book than the caster has slots at that level.\n`MemberView.learnable_spells` lists each\nspell that this caster may learn, so build a learn dialog from it."
      }
     },
     "type": "object",
@@ -24428,6 +24954,18 @@
       "title": "Name",
       "description": "The display name. Show this only once the instance is identified."
      },
+     "display_name": {
+      "type": "string",
+      "title": "Display Name",
+      "description": "What to call one of these items in a sentence once the party knows what it is, like\n`\"potion of healing\"` or `\"sword +1\"`.\n\nIt's lowercase unless a word is a proper noun or an abbreviation, like the `ESP` of\n`\"potion of ESP\"`, and it has no article, so put a number or an article in front of it. For\nenchanted ammunition it names one of the units that\n`MagicItemInstance.quantity` counts, so\n`\"Arrows +1 (3d10 arrows)\"` is `\"arrow +1\"`. Footwear and gloves are named as a pair, like\n`\"pair of boots of speed\"`, so a count reads \"2 pairs of boots of speed\".\n\nLike `name`, show it only once the instance is identified. Until then,\n`PlayerView.item_names` names the item by its masked name.\n\nA template you construct yourself that leaves it out gets its `name`.",
+      "default": ""
+     },
+     "display_name_plural": {
+      "type": "string",
+      "title": "Display Name Plural",
+      "description": "What to call two or more of these items, like `\"potions of healing\"` or `\"swords +1\"`.\n\n`PlayerView.item_names_plural` gives it to the players' client. A\ntemplate you construct yourself that leaves it out gets `display_name` with the regular English ending on the word\nthat names the item: the last word before the first `of`, `with`, or `vs`, a comma, a bonus like `+1`, a closing\nRoman numeral, or an opening parenthesis, or the last word when the name has none of them. So `\"Idol of the drowned\nsaint\"` becomes `\"Idols of the drowned saint\"`, and `\"Lantern (hooded)\"` becomes `\"Lanterns (hooded)\"`. The ending\nis `s`, or `es` after `s`, `x`, `z`, `ch`, or `sh`, or `ies` in place of a `y` that follows a consonant, and `staff`\nbecomes `staves` with its capital kept, so `\"Staff of the Magi\"` becomes `\"Staves of the Magi\"`. The connecting\nwords count in any case, so `\"Staff Of Power\"` becomes `\"Staves Of Power\"`, and any spaces after the word stay after\nthe ending. The compiled plural of every built-in template follows the same rule. Set it yourself when the name is\nalready plural, like `\"Torches (6)\"`, or when the plural is irregular.",
+      "default": ""
+     },
      "category": {
       "$ref": "#/components/schemas/MagicItemCategory",
       "description": "What kind of item it is. See `MagicItemCategory`."
@@ -24738,7 +25276,7 @@
      "description": {
       "type": "string",
       "title": "Description",
-      "description": "The authored description, or an empty string for a generated cache.",
+      "description": "The feature's authored `FeatureSpec.description`,\nor an empty string for a generated cache. It's written for the players to read. The view shows\nit from the moment the feature comes into view, and for a cache, before anyone opens it and\nafter the party empties it. The feature's\n`FeatureSpec.referee_notes` never appear in\nthe player view.",
       "default": ""
      },
      "cell": {
@@ -24773,7 +25311,7 @@
        }
       ],
       "title": "Area Id",
-      "description": "The containing area's id after entry, otherwise `null`."
+      "description": "The id of the area the feature is in, once the party has entered that area, otherwise `null`.\nFor an authored feature, it's the area that lists the feature. For a generated cache, it's the\narea that owns the cache's cell, the area that\n`LevelSpec.area_at` returns. It never names an area\nthe party hasn't entered."
      },
      "trap_state": {
       "anyOf": [
@@ -24791,6 +25329,12 @@
       ],
       "title": "Trap State",
       "description": "The party's known trap state, or `null` when the party knows no trap state."
+     },
+     "emptied": {
+      "type": "boolean",
+      "title": "Emptied",
+      "description": "True for an authored treasure cache the party has emptied with\n`TakeTreasure`.\n\nThe cache stays in the list under the same `id` and description, so you can draw it opened.\nDon't offer it to `TakeTreasure`, which refuses it with `exploration.feature.emptied`. It's\nfalse for every other feature, and for a cache the party hasn't emptied, however little it\nholds. A generated cache is never marked emptied, because the session removes it when the\nparty takes it, so it leaves the list.",
+      "default": false
      }
     },
     "type": "object",
@@ -25098,7 +25642,7 @@
       "additionalProperties": true,
       "type": "object",
       "title": "Inventory",
-      "description": "The member's pack, as a JSON-ready dict with the keys `items`, `purse`, `valuables`,\n`worn_armour`, `shield`, `wielded`, and `rings`. Mundane items appear as the inventory\nserializes them.\n\nA magic item is masked until it's identified. An unidentified one has a `display` name in\nplace of its true name, like `\"a potion\"`, or `\"a dagger with a faint aura\"` for a magic\nweapon. When the display name refers to a weapon, the entry also has the `qualities` of that\nplain weapon, as an identified one does, so you can tell a melee attack from a missile\nattack without revealing the weapon's bonus or curse. It has a `missile_ranges` key only\nwhen the rules give the weapon ranges, so on a sword the key is absent rather than empty.\nEvery magic staff displays as `\"a staff\"` and has the staff's `qualities`. Any other item\nwhose display name comes from its category, like `\"a wand\"`, has neither key, because its\ndisplay name doesn't refer to a weapon. An identified item\nshows its `name`, its `template_id`, and whether a curse has been revealed. Charges never\nappear."
+      "description": "The member's pack, as a JSON-ready dict with the keys `items`, `purse`, `valuables`,\n`worn_armour`, `shield`, `wielded`, and `rings`. Mundane items appear as the inventory\nserializes them.\n\nA magic item is masked until it's identified. An unidentified one has a `display` name in place of its true\nname, like `\"a potion\"`, or `\"a dagger with a faint aura\"` for a magic weapon. An enchanted weapon, suit of\narmour, or shield is named after one unit of the mundane item underneath it, its\n`display_name` with an article, so enchanted arrows display as\n`\"an arrow with a faint aura\"` and enchanted chainmail as `\"a suit of chainmail with a faint aura\"`. A suit of\nenchanted armour with no mundane item recorded displays as `\"a suit of armour with a faint aura\"`. When the\ndisplay name refers to a weapon, the entry also has the `qualities` of that plain weapon, as an identified one\ndoes, so you can tell a melee attack from a missile attack without revealing the weapon's bonus or curse. It has\na `missile_ranges` key only when the rules give the weapon ranges, so on a sword the key is absent rather than\nempty. Every magic staff displays as `\"a staff\"` and has the staff's `qualities`. Any other item whose display\nname comes from its category, like `\"a wand\"`, has neither key, because its display name doesn't refer to a\nweapon. An identified item shows its `name`, its `template_id`, and whether a curse has been revealed. Charges\nnever appear.\n\nTo name an item in a sentence, look up the id it has here in\n`PlayerView.item_names`: a mundane item's\n`template.id`, and a magic item's or a valuable's `instance_id`."
      },
      "memorized_spells": {
       "items": {
@@ -25268,7 +25812,34 @@
       },
       "type": "array",
       "title": "Spell Book",
-      "description": "The ids of the spells in the member's spell book, as in\n`Character.spell_book`. They're the spells the member\ncan choose from in a `PrepareSpells`. Empty for a class that\nhas no spell book. To show a spell's name, look its id up in\n`PlayerView.spell_names`.",
+      "description": "The ids of the spells in the member's spell book, as in\n`Character.spell_book`, in the order they were\nwritten in. Empty for a class that has no spell book. An arcane caster prepares only from the\nbook, and `preparable_spells` lists the spells in it that the member has a slot for. To show a\nspell's name, look its id up in\n`PlayerView.spell_names`.",
+      "default": []
+     },
+     "spell_slots": {
+      "items": {
+       "type": "integer"
+      },
+      "type": "array",
+      "title": "Spell Slots",
+      "description": "How many spells the member can memorize at each spell level, lowest level first, as in the\n`spell_slots` of the class's progression row\nfor the member's level. Entry `i` is the slot count at spell level `i + 1`. It comes from\n`Character.definition`, so it's right for a custom\nclass too.\n\nA `PrepareSpells` fits these counts: at each spell level,\nselect no more copies than the count there, and group `preparable_spells` by\n`PlayerView.spell_levels` to fill them. An arcane\ncaster's book has room at a spell level for this count less the spells the book already has\nthere. A 1st-level cleric has a count of 0 at every level, and a class that casts nothing has no\ncounts.",
+      "default": []
+     },
+     "preparable_spells": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Preparable Spells",
+      "description": "The ids of the spells the member may select in a\n`PrepareSpells`, in the order of the session's catalog,\n`GameSession.effective_spells`. Build a\nprepare dialog from it.\n\nFor an arcane caster, they're the spells in `spell_book` at the spell levels where the member has\na slot, so a spell that a lost level left in the book without a slot isn't here. For a divine\ncaster, they're the spells on the class's spell list at every spell level where the member has a\nslot, and the spells the adventure bundles for that list are among them. A cleric has no slot\nuntil 2nd level, so the list is empty for a 1st-level cleric. It's empty for a class that casts\nnothing.\n\nA spell id is here exactly when a `PrepareSpells` that selects one copy of it in its normal form\nis refused with none of these codes, which belong to the spell and the member:\n`magic.memorize.not_a_caster`, `magic.memorize.unknown_spell`, `magic.memorize.wrong_list`,\n`magic.memorize.not_in_book`, and `magic.memorize.slots_exceeded`. The list doesn't depend on\nthe moment, so it's the same before the party has slept (`magic.memorize.needs_sleep`), during an\nencounter or a battle (`session.command.wrong_mode`), and while the member can't act\n(`session.command.member_incapacitated`). The selections as a whole still have to fit\n`spell_slots` at each spell level.\n\nThe form of a copy is up to the caster's kind. An arcane caster may select the reversed form of a\nspell that has an entry in\n`PlayerView.reversed_spell_names`, and the\nsession refuses the reversed form of any other spell with `magic.memorize.not_reversible`. A\ndivine caster selects the normal form and chooses the form when casting, and the session refuses a\nreversed selection with `magic.memorize.divine_reverses_at_cast`. To show a spell's name, look its\nid up in `PlayerView.spell_names`.",
+      "default": []
+     },
+     "learnable_spells": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Learnable Spells",
+      "description": "The ids of the spells the member may write into their spell book with\n`LearnSpell`, in the order of the session's catalog,\n`GameSession.effective_spells`. Build a learn\ndialog from it.\n\nThey're the spells on the class's spell list that aren't in `spell_book`, at each spell level\nwhere the book has room. The room at a spell level is the member's count there in `spell_slots`,\nless the spells the book already has at that level. The spells the adventure bundles for that list\nare among them. The list is empty for a divine caster and for a class that casts nothing,\nbecause neither keeps a spell book. It's also empty while the book has a spell that the session's\ncatalog doesn't have, because the session can't tell that spell's level, and so can't tell how\nmuch room the book has left.\n\nA spell id is here exactly when a `LearnSpell` for it is refused with none of these codes, which\nbelong to the spell and the member: `magic.book.not_arcane`, `magic.book.unknown_spell`,\n`magic.book.wrong_list`, `magic.book.duplicate`, and `magic.book.capacity_exceeded`. The list\ndoesn't depend on the moment, so it's the same during an encounter or a battle\n(`session.command.wrong_mode`) and while the member can't act\n(`session.command.member_incapacitated`). Learning one spell can fill the book at that spell's\nlevel, so read the view again after each `LearnSpell`. To show a spell's name, look its id up in\n`PlayerView.spell_names`.",
       "default": []
      },
      "thief_skills": {
@@ -25367,7 +25938,7 @@
      "engine_version": {
       "type": "string",
       "title": "Engine Version",
-      "description": "Installed osrlib rules engine version string, such as `\"2.7.0\"`."
+      "description": "Installed osrlib rules engine version string, such as `\"2.8.0\"`."
      },
      "schema_version": {
       "type": "integer",
@@ -28156,6 +28727,27 @@
     "title": "PickLock",
     "description": "Pick the lock of a locked door with a thief's skill and thieves' tools (one turn).\n\nThe party must be exploring a dungeon (see\n`EnterDungeon`). Only a member with thief\nskills can pick a lock. That member needs thieves' tools in their pack and light,\nand infravision isn't enough. A member who fails can't try that lock again until they\ngain a level. A picked door is unlocked but still closed, so follow with\n`OpenDoor`.\n\nModes:\n\n`exploring`\n\n**Rejections:**\n\n- `session.command.wrong_mode` - the session is not exploring a dungeon.\n- `session.command.unknown_member` - `character_id` matches no party member.\n- `session.command.member_incapacitated` - the member cannot act.\n- `exploration.lock.not_a_thief` - the member has no thief skills.\n- `exploration.lock.no_tools` - the member carries no thieves' tools.\n- `exploration.door.no_door` - no known door on that side of the cell.\n- `exploration.lock.not_locked` - the door has no lock left to pick.\n- `exploration.action.requires_light` - the party has no light. Infravision\n  isn't enough to pick a lock.\n- `exploration.lock.locked_out` - this member already failed at this lock at\n  their current level.\n\n**Events:**\n\n`DetectionRolledEvent` with the\nskill roll and, on success, a `DoorEvent`\nwith code `exploration.door.unlocked`. The attempt costs one turn, and the events of\nthat turn follow: light burning down, the fatigue rule, and the wandering-monster\ncheck, each with its usual events."
    },
+   "PileItemView": {
+    "properties": {
+     "item_id": {
+      "type": "string",
+      "title": "Item Id",
+      "description": "The catalog id of a mundane stack, like `\"holy_water\"`, or the instance id of a magic item,\nlike `\"magic-item-0003\"`, or of a gem or piece of jewellery, like `\"valuable-0007\"`. It's the form\nof id that `ItemsDroppedEvent.item_ids` and the\nother item events use, and an unidentified magic item's template id never appears here."
+     },
+     "quantity": {
+      "type": "integer",
+      "title": "Quantity",
+      "description": "How many units: the size of a mundane stack, the\n`quantity` of a magic item, which is more than 1\nonly for enchanted ammunition, and always 1 for a gem or piece of jewellery.",
+      "default": 1
+     }
+    },
+    "type": "object",
+    "required": [
+     "item_id"
+    ],
+    "title": "PileItemView",
+    "description": "One thing in a dropped pile, by the id the events name it by, with its count.\n\nYou get these from `PileView.contents`. Look `item_id` up\nin `PlayerView.item_names` and\n`PlayerView.item_names_plural` to name it."
+   },
    "PileView": {
     "properties": {
      "items": {
@@ -28181,6 +28773,15 @@
        "sp": 0,
        "cp": 0
       }
+     },
+     "contents": {
+      "items": {
+       "$ref": "#/components/schemas/PileItemView"
+      },
+      "type": "array",
+      "title": "Contents",
+      "description": "One entry per thing in the pile, in the order of `items`, each with the id the events name\nit by and its count.\n\nA mundane stack has its catalog id, so a client reads `\"holy_water\"` and 2 here where `items` has\nthe string `\"holy_water×2\"`. A magic item and a valuable have their instance ids. Name each entry\nfrom `PlayerView.item_names`, which has a key for\nevery id here.",
+      "default": []
      }
     },
     "type": "object",
@@ -28309,6 +28910,15 @@
       "description": "Whether the exploring party can use\n`TravelToTown` from its current position.",
       "default": false
      },
+     "features_here": {
+      "items": {
+       "type": "string"
+      },
+      "type": "array",
+      "title": "Features Here",
+      "description": "The handles that the feature commands accept in `feature_id` from where the party stands, in\nthe order the current level's `features` lists\nthem. The commands are `TakeTreasure`,\n`InspectTreasure`, and\n`RemoveTreasureTrap`.\n\nEach entry is the `MapFeatureView.id` of a treasure cache\nthe party can reach: an authored or generated cache on the party's cell, or an authored cache\nthat belongs to the whole of the area the party stands in. The session resolves a command's\n`feature_id` against the same caches, so a cache that isn't listed here is refused with\n`exploration.feature.unknown`. It's empty unless the session is exploring, because the commands\nare legal only then. A custom feature or a construction trick is never listed, because no\ncommand acts on one.\n\nA command can still refuse a listed cache for another reason. `TakeTreasure` refuses an emptied\ncache with `exploration.feature.emptied`, which\n`MapFeatureView.emptied` tells you beforehand.\n`RemoveTreasureTrap` accepts only a cache whose\n`trap_state` is `\"found\"`. To take the goods\ndropped on the party's cell, send `\"pile\"`, when `piles`\nhas an entry for the cell.",
+      "default": []
+     },
      "piles": {
       "additionalProperties": {
        "$ref": "#/components/schemas/PileView"
@@ -28323,7 +28933,7 @@
       },
       "type": "array",
       "title": "Emptied Caches",
-      "description": "The treasure caches the party has already emptied, as `\"{dungeon}:{level}:{id}\"`\nreferences, so you can draw a looted cache as looted.\n\nThese established raw references are a post-use diagnostic for compatibility. New command\ntargets come from `MapFeatureView.id`. A raw authored\nfeature id can appear here only after the party has used it, not in the new `features` list\nbefore use."
+      "description": "The authored treasure caches the party has emptied, as `\"{dungeon}:{level}:{id}\"` feature\nreferences, in the order the party emptied them.\n\nTo draw an emptied cache, read\n`MapFeatureView.emptied` instead, which marks the\ncache in `features` under its handle. Command targets come from\n`MapFeatureView.id`."
      },
      "effects": {
       "items": {
@@ -28339,7 +28949,7 @@
       },
       "type": "object",
       "title": "Spell Names",
-      "description": "The name of each spell whose id the view shows, keyed by spell id, like\n`{\"magic_missile\": \"Magic Missile\"}`. Show these names, not the ids.\n\nA spell id appears in three places in the view: in a member's\n`spell_book`, as the `spell_id` of a copy in a member's\n`memorized_spells`, and as the\n`kind` of an effect in `effects`, because a spell's\neffect has the spell's id as its kind unless the spell's data gives it a kind of its own. Every one\nof those ids that the session's catalog,\n`GameSession.effective_spells`, has is a key\nhere, with the spell's `name`. A spell the adventure\nbundles has its name here too, which `load_spells` doesn't have. An\neffect kind that isn't a spell id, like a torch's `\"light\"`, has no entry.\n\nIt names no spell whose id the view doesn't show, so the spells on a scroll stay hidden. A spell id\non a member that the session's catalog doesn't have, like one from a party made for another\nadventure, has no entry either, and the session refuses to prepare or cast that spell. The name here\nis always the spell's normal form. For a copy prepared reversed, show its name from\n`reversed_spell_names`.",
+      "description": "The name of each spell whose id the view shows, keyed by spell id, like\n`{\"magic_missile\": \"Magic Missile\"}`. Show these names, not the ids.\n\nA spell id appears in five places in the view: in a member's\n`spell_book`,\n`preparable_spells`, and\n`learnable_spells`, as the `spell_id` of a copy in\na member's `memorized_spells`, and as the\n`kind` of an effect in `effects`, because a spell's\neffect has the spell's id as its kind unless the spell's data gives it a kind of its own. Every one\nof those ids that the session's catalog,\n`GameSession.effective_spells`, has is a key\nhere, with the spell's `name`. A spell the adventure\nbundles has its name here too, which `load_spells` doesn't have. An\neffect kind that isn't a spell id, like a torch's `\"light\"`, has no entry.\n\nIt names no spell whose id the view doesn't show. So a spell the adventure bundles for a list that\nno member casts from stays hidden, and so does a spell at a level where no member could prepare or\nlearn it. A spell on a scroll is named only when a member could prepare or learn it anyway. A spell\nid on a member that the session's catalog doesn't have, like one from a party made for another\nadventure, has no entry either, and the session refuses to prepare or cast that spell. The name here\nis always the spell's normal form. For a copy prepared reversed, show its name from\n`reversed_spell_names`.",
       "default": {}
      },
      "reversed_spell_names": {
@@ -28349,6 +28959,33 @@
       "type": "object",
       "title": "Reversed Spell Names",
       "description": "The name of each spell's reverse, keyed by spell id, like `{\"light_mu\": \"Darkness\"}`, for every\nspell in `spell_names` that has one.\n\nEach value is the `name` of the spell's\n`reversed_form`, read from the same catalog as\n`spell_names`, so a spell the adventure bundles has the name its author gave the reverse. A spell\nthat doesn't reverse has no entry.\n\nShow this name for an arcane caster's copy whose `reversed` is true in\n`memorized_spells`. A divine caster prepares the\nnormal form and chooses the form when casting, so every memorized copy of a reversible spell can be\ncast either way. To offer that choice, show both names.",
+      "default": {}
+     },
+     "spell_levels": {
+      "additionalProperties": {
+       "type": "integer"
+      },
+      "type": "object",
+      "title": "Spell Levels",
+      "description": "The level of each spell in `spell_names`, keyed by spell id, like\n`{\"magic_missile\": 1, \"web\": 2}`. Group a prepare or learn dialog by it, because a member's slots\nare counted per spell level, in\n`MemberView.spell_slots`.\n\nEach value is the spell's `level`, read from the same\ncatalog as `spell_names`, so a spell the adventure bundles has the level its author gave it. A\nspell id belongs to exactly one spell list, like `light_mu` to the magic-user's and `light_c` to\nthe cleric's, so each id has one level for every class that casts from its list, like the elf,\nwho casts from the magic-user's list.",
+      "default": {}
+     },
+     "item_names": {
+      "additionalProperties": {
+       "type": "string"
+      },
+      "type": "object",
+      "title": "Item Names",
+      "description": "What to call one of each item whose id the view shows, keyed by that id, like\n`{\"torch\": \"torch\", \"holy_water\": \"vial of holy water\", \"magic-item-0003\": \"potion\"}`. Show these\nnames, not the ids, and put a number or an article in front of one: \"a torch\". To word a count,\nlike \"6 torches\", use `item_names_plural`.\n\nAn item id appears in the view in four forms, and each is a key here:\n\n- The catalog id of a mundane stack, like `\"holy_water\"`, in a member's\n  `inventory` and in a pile's\n  `contents`. For a stack a member carries, its name is\n  the `display_name` of the template the stack\n  embeds, which the session gives the display names of the template its catalog,\n  `GameSession.effective_equipment`, has\n  under that id, as `ItemInstance.template` says. So a\n  stack from a save or a party document that osrlib 2.7.0 wrote is named as the catalog names it,\n  and the name here matches the stack's template in `inventory`. A bundled id can't shadow a\n  built-in one, because a session refuses an adventure whose bundled id collides with a built-in\n  id. A carried stack whose id the catalog doesn't have, like an item another adventure bundled,\n  keeps the names its template has. For a pile, the name comes from the catalog, and a pile's\n  catalog id that the catalog doesn't have has no entry.\n- The instance id of a magic item, like `\"magic-item-0003\"`, in an inventory and in a pile.\n  Until the party identifies the item, its name is the masked name the inventory shows, without\n  the article: `\"potion\"`, `\"curious device\"`, or `\"shield with a faint aura\"`. So a cursed item\n  and the item it passes for have the same name, and the name tells nothing the inventory\n  doesn't. Once the item is identified, its name is the\n  `display_name` of its template in the magic\n  item catalog, like `\"potion of healing\"`.\n- The template id of an identified magic item, like `\"potion_of_healing\"`, which the inventory\n  shows once the item is identified, with the same name. A pile shows a magic item by its\n  instance id alone, identified or not, so an identified item's template id is a key only while\n  a member carries it. An unidentified item's template id is never a key.\n- The instance id of a gem or a piece of jewellery, like `\"valuable-0007\"`. Its name is its kind,\n  `\"gem\"` or `\"piece of jewellery\"`. The players see everything else about it from the moment\n  they take it, its own name and its value in gold pieces included, in the inventory's\n  `valuables`.\n\nIt names no item whose id the view doesn't show. The player-visible item events, like\n`ItemAcquiredEvent`, name items by the same ids. An\nitem the command left in a member's pack or in a pile the view shows is a key in the view you\nbuild after the command. An item the command used up, sold, or left behind on a trail is a key\nin the view from before it. An item that is identified and used up in the same command, like a\npotion drunk before the party knew it, has its true name on the\n`ItemIdentifiedEvent`.",
+      "default": {}
+     },
+     "item_names_plural": {
+      "additionalProperties": {
+       "type": "string"
+      },
+      "type": "object",
+      "title": "Item Names Plural",
+      "description": "What to call two or more of each item in `item_names`, with the same keys, like\n`{\"torch\": \"torches\", \"holy_water\": \"vials of holy water\", \"magic-item-0003\": \"potions\"}`.\n\nEach value is the plural of the name in `item_names`: the template's\n`display_name_plural`, the plural of a\nmasked name, like `\"shields with a faint aura\"`, or `\"gems\"` or `\"pieces of jewellery\"`. Use it\nwith a count from a pile's `contents`, an inventory\nentry's `quantity`, or the ids an event repeats, one per unit: \"2 vials of holy water\".",
       "default": {}
      },
      "fatigued": {
@@ -28456,7 +29093,7 @@
       },
       "type": "array",
       "title": "Selections",
-      "description": "The spells to memorize. They replace the caster's current list rather than adding to it.\nEach `MemorizedSpell` has a spell id and, for an\narcane caster, whether the copy is the reversed form of a reversible spell. Repeat a spell\nto memorize more than one copy of it. The number at each spell level has to fit the\ncaster's slots at that level, and an empty tuple clears the list. The caster's current\nlist is in\n`MemberView.memorized_spells`.",
+      "description": "The spells to memorize. They replace the caster's current list rather than adding to it.\nEach `MemorizedSpell` has a spell id and, for an\narcane caster, whether the copy is the reversed form of a reversible spell. Repeat a spell\nto memorize more than one copy of it. The number at each spell level has to fit the\ncaster's slots at that level, and an empty tuple clears the list. The caster's current\nlist is in\n`MemberView.memorized_spells`.\n\nChoose the spells from\n`MemberView.preparable_spells`, which lists\neach spell that this caster may select in its normal form. An arcane caster may also select the\nreversed form of a listed spell that has an entry in\n`PlayerView.reversed_spell_names`. Group\nthe list by `PlayerView.spell_levels`, and at each\nspell level select no more copies than the count there in\n`MemberView.spell_slots`.",
       "default": []
      }
     },
@@ -29644,6 +30281,15 @@
       "type": "array",
       "title": "Event Log",
       "description": "Everything that has happened, in order, each entry the `Event`\nsubclass that was emitted, including the referee-visibility events a player never sees. An entry\nrestored from a save whose event type this library has no class for stays the raw mapping it\narrived as, so check for a `dict` before reading an entry's attributes."
+     },
+     "feature_handles": {
+      "additionalProperties": {
+       "type": "string"
+      },
+      "type": "object",
+      "title": "Feature Handles",
+      "description": "The player handle of every feature in the session, keyed by the reference the save uses for\nthe feature. An authored feature's key is `\"{dungeon}:{level}:{feature id}\"`, the form in\n`DungeonState.emptied_caches` and\n`DungeonState.found_traps`, and every feature the\nadventure authors has one, on a level or in an area, found or not. A generated cache's key is its\nid in `DungeonState.generated_caches`, like\n`\"cache-0001\"`, and every cache there has one, including a lair cache the players can't see yet,\nexcept a cache whose cell reference names no cell of the adventure, which the session never\nshows or resolves.\n\nEach value is the `MapFeatureView.id` that the player view\nshows for the feature once the party knows it. Use it to show a referee the feature the players\nsee, and to send the same `feature_id` they do. This is the one field the save doesn't contain:\nthe session derives each handle from the player-handle key, and neither view contains the key.\nThe session removes a generated cache when the party takes it, and its entry leaves with it.",
+      "default": {}
      }
     },
     "type": "object",
@@ -29674,7 +30320,7 @@
      "event_log"
     ],
     "title": "RefereeView",
-    "description": "The referee state in a save, except seeds, random streams, and the player-handle key.\n\nGet one from `GameSession.view` with\n`Visibility.REFEREE`, or from `build_referee_view`. Use\nit where players can't see it: as the context an LLM referee reasons over, in a debugging panel,\nor in a test that checks state a player may not see. Never send it to a player's client, and draw\nnothing a player sees from it. `PlayerView` is for that.\n\nEach field is the session's model rather than a dict, so you read\n`view.monsters[0].current_hp` and `view.flags[\"key\"]` with the types this reference documents, and\neach field's docstring links the model to read next. The fields are the groups\n`session_state` writes, minus the master seed, the RNG stream\npositions, and the player-handle key, so `view.model_dump(mode=\"json\")` is that save payload\nwithout those keys. The seed and stream positions let a player predict every roll to come.\nThe key lets someone reproduce and control the session's opaque feature handles.\n\nThe view is a snapshot of the moment it was built. The session's mutable state is copied into it,\nso later play leaves the view as it was, and editing what you find on a view changes nothing on\nthe session. Being frozen fixes the view's fields rather than their contents, so\nrebinding `view.flags` raises while `view.flags[\"key\"] = 1` and `view.monsters[0].current_hp = 0`\nedit the view's copies and are allowed. Build a fresh view after each command rather than\nediting one. The command log, the event log, and the journal are shared with the session instead of\ncopied, because a command, an event, and a journal entry are frozen records of something that has\nalready happened."
+    "description": "The referee state in a save, except seeds, random streams, and the player-handle key.\n\nGet one from `GameSession.view` with\n`Visibility.REFEREE`, or from `build_referee_view`. Use\nit where players can't see it: as the context an LLM referee reasons over, in a debugging panel,\nor in a test that checks state a player may not see. Never send it to a player's client, and draw\nnothing a player sees from it. `PlayerView` is for that.\n\nEach field is the session's model rather than a dict, so you read\n`view.monsters[0].current_hp` and `view.flags[\"key\"]` with the types this reference documents, and\neach field's docstring links the model to read next. The fields are the groups\n`session_state` writes, minus the master seed, the RNG stream\npositions, and the player-handle key, so `view.model_dump(mode=\"json\")` is that save payload\nwithout those keys, plus one field the save doesn't contain,\n`feature_handles`. The seed and stream\npositions let a player predict every roll to come. The key lets someone reproduce and control the\nsession's opaque feature handles, so the view gives you the handles themselves instead.\n\nThe view is a snapshot of the moment it was built. The session's mutable state is copied into it,\nso later play leaves the view as it was, and editing what you find on a view changes nothing on\nthe session. Being frozen fixes the view's fields rather than their contents, so\nrebinding `view.flags` raises while `view.flags[\"key\"] = 1` and `view.monsters[0].current_hp = 0`\nedit the view's copies and are allowed. Build a fresh view after each command rather than\nediting one. The command log, the event log, and the journal are shared with the session instead of\ncopied, because a command, an event, and a journal entry are frozen records of something that has\nalready happened."
    },
    "Rejection": {
     "properties": {
@@ -29910,7 +30556,7 @@
      "feature_id": {
       "type": "string",
       "title": "Feature Id",
-      "description": "Which trapped cache to disarm. Use a\n`MapFeatureView.id` from the current player view, or\nan unambiguous raw authored id. Only an authored cache can be trapped. A cache with no trap,\nor with a trap nobody has found, gets the same `exploration.feature.unknown` rejection."
+      "description": "Which trapped cache to disarm: a `feature:` handle from\n`MapFeatureView.id` in the current player view, or the\ncache's raw `FeatureSpec.id`, since only an authored\ncache can be trapped. Both forms stay supported. A player client sends the handle, because the\nplayer view lists only handles. Both forms resolve against the same caches, the available\nones the party can reach where it stands, so a raw id reaches and reveals nothing that a\nhandle doesn't. A cache anywhere else, a cache with no trap, and a cache whose trap nobody has\nfound all get the same `exploration.feature.unknown` rejection as an id that no cache has."
      }
     },
     "type": "object",
@@ -32361,7 +33007,7 @@
      "feature_id": {
       "type": "string",
       "title": "Feature Id",
-      "description": "What to empty. Use a\n`MapFeatureView.id` from the current player view.\nFor compatibility, an unambiguous raw authored id or generated cache id still works. The\nliteral `\"pile\"` means the goods dropped on the party's cell, which\n`PlayerView.piles` lists by cell reference. The session\nrefuses a cache that's already emptied with `exploration.feature.emptied`."
+      "description": "What to empty: a `feature:` handle from\n`MapFeatureView.id` in the current player view, or the\ncache's raw id, an authored `FeatureSpec.id` or the id\nof a cache the engine generated. Both forms stay supported. A player client sends the handle,\nbecause the player view lists only handles. Both forms resolve against the same caches, the\navailable ones the party can reach where it stands, so a raw id reaches and reveals\nnothing that a handle doesn't. A cache anywhere else gets the same\n`exploration.feature.unknown` rejection as an id that no cache has. The literal `\"pile\"` means\nthe goods dropped on the party's cell, which\n`PlayerView.piles` lists by cell reference. The session\nrefuses a cache that's already emptied with `exploration.feature.emptied`."
      },
      "recipient_id": {
       "anyOf": [
@@ -34199,7 +34845,7 @@
        }
       ],
       "title": "Target Id",
-      "description": "Who the item is used on, for a potion or a device: a wand, a staff, or a rod.\n\nFor a potion, pass the id of the party member who drinks it. The member in `character_id`\ngives it to them, and the potion's effect lands on them. Leave it `null`, or pass\n`character_id`, and the member who uses the potion drinks it. The session refuses an id that\nisn't a party member's with `items.use.target_not_allowed`, and a member who is dead or turned\nto stone with `items.use.target_cannot_drink`.\n\nFor a device, pass a party member's id for a device that heals by touch, or an encounter\ngroup's `EncounterGroupView.id` for a device that\ncovers an area. A healing device with `null` heals the member using it. The session refuses a\nhealing device on a creature that's dead or turned to stone with\n`items.use.target_cannot_be_healed`, and one on a creature it already healed today with\n`items.use.target_healed_today`."
+      "description": "Who the item is used on, for a potion or a device: a wand, a staff, or a rod.\n\nFor a potion, pass the id of the party member who drinks it. The member in `character_id`\ngives it to them, and the potion's effect lands on them. Leave it `null`, or pass\n`character_id`, and the member who uses the potion drinks it. The session refuses an id that\nisn't a party member's with `items.use.target_not_allowed`, and a member who is dead or turned\nto stone with `items.use.target_cannot_drink`.\n\nFor a device, pass a creature's id for a device that heals by touch, or an encounter group's\n`EncounterGroupView.id` for a device that covers\nan area. A healing device with `null` heals the member using it. It can touch a party member\nor a creature in a group of the open encounter that hasn't fled, and the session refuses any\nother id with `items.use.unknown_target`, a creature of an encounter that has ended included.\nThe session refuses a healing device on a creature that's dead or turned to stone with\n`items.use.target_cannot_be_healed`, and one on a creature it already healed today with\n`items.use.target_healed_today`."
      },
      "spell_id": {
       "anyOf": [
@@ -34231,7 +34877,7 @@
       },
       "type": "array",
       "title": "Targets",
-      "description": "The read spell's targets, named as in\n`CastSpell.targets`. When it's empty, `target_id`\nis the single target, so a scroll spell with one target needs only `target_id`.",
+      "description": "The read spell's targets, named as in\n`CastSpell.targets`. During an encounter, a target\ncan also be a living creature in a group that hasn't fled, by its\n`EncounterMemberView.id`. When it's empty,\n`target_id` is the single target, so a scroll spell with one target needs only `target_id`.",
       "default": []
      }
     },
@@ -34242,7 +34888,7 @@
      "command_type"
     ],
     "title": "UseItem",
-    "description": "Use a magic item: drink a potion, read a scroll, or activate a wand, staff, or rod (one round).\n\nIt's legal while exploring and during an encounter. In battle, use an item with a\n`use_item` `BattleDeclaration` instead. Name the\nmember in `character_id` and the item in `item_id`. Using an item identifies it and reveals\nany curse. A magic sword that can light up when its wielder says so turns its light on or off.\n\nA device is a wand, a staff, or a rod. `target_id` is the id of whoever the item is used on:\nthe party member who drinks a potion, a party member for a staff of healing's touch, or an\nencounter group for a device that covers an area. When the member reads a scroll with several\nspells on it, choose the spell and its targets with `spell_id`, `mode`, and `targets`. They\nwork like the same fields of `CastSpell`.\n\nA device whose powers the session doesn't resolve, like a staff of commanding, spends a charge,\nand its `ItemUsedEvent` has the device's text in `manual`\nfor the referee to rule on. The staves of power and wizardry strike only in a battle, so here\na use of either one is one of their other powers, like the cone of cold, the same way. The\nstaff of striking has no other power, so the session refuses it with `items.use.battle_only`.\n\nA member can give a potion they carry to another member to drink. The use is the carrier's,\nand so is the round it takes. The potion's effect lands on the drinker. Outside a battle the\nparty stands together, so any member can reach any other.\n\nA scroll casts its spell at the lowest level that can cast it, whatever the reader's level.\nThe session checks the read at that level. For example, a *magic missile* scroll fires one\nmissile, so it takes one target, even when a 6th-level magic-user reads it. The session\nrefuses a read before it uses up the scroll.\n\nModes:\n\n`exploring`, `encounter`\n\n**Rejections:**\n\nAny item:\n\n- `session.command.wrong_mode` - the session is in town or in battle, or has\n  ended.\n- `session.command.unknown_member` - `character_id` matches no party member.\n- `session.command.member_incapacitated` - the member can't act.\n- `exploration.item.not_carried` - the member carries no magic item with\n  that instance id.\n- `items.use.not_usable` - the item has no use, or the member's class can't\n  use the device.\n\nBy kind of item:\n\n- Potions: `items.use.target_not_allowed` when `target_id` isn't a party member's\n  id, and `items.use.target_cannot_drink` when it's the id of a member who is dead or\n  turned to stone. A member who is asleep or paralysed can be given a potion to drink.\n- Scrolls: `exploration.action.requires_light` (reading needs light, and\n  infravision isn't enough), `items.scroll.spent`, `items.scroll.no_such_spell`,\n  and `items.scroll.wrong_caster`. A read also gets the checks of a cast, at the\n  scroll's level: `magic.cast.unknown_target`, `magic.cast.unknown_mode`,\n  `magic.cast.target_count`, `magic.cast.target_must_be_creature`,\n  `magic.cast.out_of_range`, `magic.cast.caster_incapacitated`,\n  `magic.cast.caster_restrained`, and `magic.cast.anti_magic_shell`.\n- Devices: `items.device.inert` (no charges left),\n  `items.use.target_required` (an area device used in an encounter needs a\n  `target_id`), `items.use.unknown_target`, `items.use.target_cannot_be_healed` (a\n  staff of healing used on a creature that's dead or turned to stone),\n  `items.use.target_healed_today` (a staff of healing used on a creature it already\n  healed today, because the OSE SRD's staff \"Is effective on any individual at most once\n  per day\"), and `items.use.battle_only` (a staff whose only power is its strike, like the staff of\n  striking, works only as a battle declaration).\n\n**Events:**\n\n`ItemIdentifiedEvent`, and\n`CurseRevealedEvent` for a cursed item,\nthe first time the item is used. An\n`ItemUsedEvent` records what happened:\na potion drunk, potions mixed, a scroll read, a device activated, or a cursed\nscroll's curse. The events of the item's effect follow: healing, saving throws,\ndamage, effects attached, and a scroll's\n`SpellCastEvent`, each a separate event. While\nexploring, one round passes. During an encounter, the encounter round's events\nfollow instead. During a pursuit, a `PursuitEvent`\nround follows, because the party keeps running."
+    "description": "Use a magic item: drink a potion, read a scroll, or activate a wand, staff, or rod (one round).\n\nIt's legal while exploring and during an encounter. In battle, use an item with a\n`use_item` `BattleDeclaration` instead. Name the\nmember in `character_id` and the item in `item_id`. Using an item identifies it and reveals\nany curse. A magic sword that can light up when its wielder says so turns its light on or off.\n\nA device is a wand, a staff, or a rod. `target_id` is the id of whoever the item is used on:\nthe party member who drinks a potion, a creature for a staff of healing's touch, or an\nencounter group for a device that covers an area. When the member reads a scroll with several\nspells on it, choose the spell and its targets with `spell_id`, `mode`, and `targets`. They\nwork like the same fields of `CastSpell`.\n\nA scroll or a staff of healing names as a target only a creature the party can act on now: a\nparty member, in any state, or a creature in a group of the open encounter that hasn't fled,\nwhich the player view lists in\n`EncounterGroupView.members`. A scroll's\nspell can't name a dead creature of the encounter, as a battle's `cast` can't. The session\nrefuses any other id with the code it gives an id that matches nothing, so a creature of an\nencounter that has ended gets the same answer as an id that never existed.\n\nA device whose powers the session doesn't resolve, like a staff of commanding, spends a charge,\nand its `ItemUsedEvent` has the device's text in `manual`\nfor the referee to rule on. The staves of power and wizardry strike only in a battle, so here\na use of either one is one of their other powers, like the cone of cold, the same way. The\nstaff of striking has no other power, so the session refuses it with `items.use.battle_only`.\n\nA member can give a potion they carry to another member to drink. The use is the carrier's,\nand so is the round it takes. The potion's effect lands on the drinker. Outside a battle the\nparty stands together, so any member can reach any other.\n\nA scroll casts its spell at the lowest level that can cast it, whatever the reader's level.\nThe session checks the read at that level. For example, a *magic missile* scroll fires one\nmissile, so it takes one target, even when a 6th-level magic-user reads it. The session\nrefuses a read before it uses up the scroll.\n\nModes:\n\n`exploring`, `encounter`\n\n**Rejections:**\n\nAny item:\n\n- `session.command.wrong_mode` - the session is in town or in battle, or has\n  ended.\n- `session.command.unknown_member` - `character_id` matches no party member.\n- `session.command.member_incapacitated` - the member can't act.\n- `exploration.item.not_carried` - the member carries no magic item with\n  that instance id.\n- `items.use.not_usable` - the item has no use, or the member's class can't\n  use the device.\n\nBy kind of item:\n\n- Potions: `items.use.target_not_allowed` when `target_id` isn't a party member's\n  id, and `items.use.target_cannot_drink` when it's the id of a member who is dead or\n  turned to stone. A member who is asleep or paralysed can be given a potion to drink.\n- Scrolls: `exploration.action.requires_light` (reading needs light, and\n  infravision isn't enough), `items.scroll.spent`, `items.scroll.no_such_spell`,\n  and `items.scroll.wrong_caster`. A read also gets the checks of a cast, at the\n  scroll's level: `magic.cast.unknown_target` (a target that isn't a party member and\n  isn't a living creature in a group of the open encounter that hasn't fled),\n  `magic.cast.unknown_mode`,\n  `magic.cast.target_count`, `magic.cast.target_must_be_creature`,\n  `magic.cast.out_of_range`, `magic.cast.caster_incapacitated`,\n  `magic.cast.caster_restrained`, and `magic.cast.anti_magic_shell`.\n- Devices: `items.device.inert` (no charges left),\n  `items.use.target_required` (an area device used in an encounter needs a\n  `target_id`), `items.use.unknown_target` (a group that isn't in the open encounter or\n  has fled, or a staff of healing's target that isn't a party member and isn't in a group\n  of the open encounter that hasn't fled), `items.use.target_cannot_be_healed` (a\n  staff of healing used on a creature that's dead or turned to stone),\n  `items.use.target_healed_today` (a staff of healing used on a creature it already\n  healed today, because the OSE SRD's staff \"Is effective on any individual at most once\n  per day\"), and `items.use.battle_only` (a staff whose only power is its strike, like the staff of\n  striking, works only as a battle declaration).\n\n**Events:**\n\n`ItemIdentifiedEvent`, and\n`CurseRevealedEvent` for a cursed item,\nthe first time the item is used. An\n`ItemUsedEvent` records what happened:\na potion drunk, potions mixed, a scroll read, a device activated, or a cursed\nscroll's curse. The events of the item's effect follow: healing, saving throws,\ndamage, effects attached, and a scroll's\n`SpellCastEvent`, each a separate event. While\nexploring, one round passes. During an encounter, the encounter round's events\nfollow instead. During a pursuit, a `PursuitEvent`\nround follows, because the party keeps running."
    },
    "UseStairs": {
     "properties": {
@@ -34622,6 +35268,18 @@
       "type": "string",
       "title": "Name",
       "description": "The display name, for example `\"Sword\"`."
+     },
+     "display_name": {
+      "type": "string",
+      "title": "Display Name",
+      "description": "What to call one of these weapons in a sentence, like `\"sword\"` or `\"two-handed sword\"`.\n\nIt's lowercase unless a word is a proper noun or an abbreviation, and it has no article, so put a number or an\narticle in front of it: \"a sword\", \"2 swords\".\n`PlayerView.item_names` gives it to the players' client.\n\nA template you write that leaves it out gets its `name`.",
+      "default": ""
+     },
+     "display_name_plural": {
+      "type": "string",
+      "title": "Display Name Plural",
+      "description": "What to call two or more of these weapons, like `\"swords\"` or `\"staves\"`.\n\n`PlayerView.item_names_plural` gives it to the players' client. A\ntemplate you write that leaves it out gets `display_name` with the regular English ending on the word that names the\nitem: the last word before the first `of`, `with`, or `vs`, a comma, a bonus like `+1`, a closing Roman numeral, or\nan opening parenthesis, or the last word when the name has none of them. So `\"Idol of the drowned saint\"` becomes\n`\"Idols of the drowned saint\"`, and `\"Lantern (hooded)\"` becomes `\"Lanterns (hooded)\"`. The ending is `s`, or `es`\nafter `s`, `x`, `z`, `ch`, or `sh`, or `ies` in place of a `y` that follows a consonant, and `staff` becomes\n`staves` with its capital kept, so `\"Staff of the Magi\"` becomes `\"Staves of the Magi\"`. The connecting words count\nin any case, so `\"Staff Of Power\"` becomes `\"Staves Of Power\"`, and any spaces after the word stay after the ending.\nThe compiled plural of every built-in template follows the same rule. Set it yourself when the name is already\nplural, like `\"Torches (6)\"`, or when the plural is irregular.",
+      "default": ""
      },
      "cost_gp": {
       "type": "integer",
