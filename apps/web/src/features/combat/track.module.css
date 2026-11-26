@@ -98,6 +98,17 @@
   width: 32px;
 }
 
+.planned {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border: var(--border-thick) dashed var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  opacity: 0.8;
+  pointer-events: none;
+  transition: left var(--duration-slower) var(--ease-out);
+}
+
 .group {
   top: calc(var(--center) - 16px);
   display: grid;
@@ -273,6 +284,12 @@
   font-family: var(--font-ui);
   font-size: var(--text-xs);
   color: var(--color-magic);
+}
+
+.pop-hide {
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
 }
 
 @keyframes rise {

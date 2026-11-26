@@ -41,7 +41,7 @@ import { useCombatText, useEncounterCreatures } from './text';
 import { useCasting } from './casting';
 import { countBadge, groupHeading, theGroup, viewLabels } from './names';
 
-export type ComposerTab = 'attack' | 'cast' | 'move' | 'item' | 'give' | 'turn' | 'hold';
+export type ComposerTab = 'attack' | 'cast' | 'move' | 'item' | 'give' | 'turn' | 'hide' | 'hold';
 
 const TAB_LABELS: Record<ComposerTab, { label: string; icon: IconName }> = {
   attack: { label: 'Attack', icon: 'weapon-sword' },
@@ -50,6 +50,7 @@ const TAB_LABELS: Record<ComposerTab, { label: string; icon: IconName }> = {
   item: { label: 'Item', icon: 'potion' },
   give: { label: 'Give', icon: 'hand' },
   turn: { label: 'Turn undead', icon: 'class-cleric' },
+  hide: { label: 'Hide', icon: 'eye-off' },
   hold: { label: 'Hold', icon: 'pause' },
 };
 
@@ -161,6 +162,9 @@ export function Composer({
   if (usable.length > 0) tabs.push('item');
   if (gear.items.length > 0 && others.length > 0) tabs.push('give');
   if (abilities.turnUndead) tabs.push('turn');
+  // The view lists who can hide this round. A member who already declared a hide keeps the tab. A view from
+  // before osrlib 2.7 has no `can_hide` or `hiding`.
+  if ((encounter.can_hide ?? []).includes(member.id) || current?.action === 'hide') tabs.push('hide');
   tabs.push('hold');
 
   const usableTabs = tabs.filter((t) => t !== 'cast' || spells.length > 0);
@@ -313,6 +317,24 @@ export function Composer({
         {tab === 'turn' && (
           <TurnChoice member={member} encounter={encounter} pending={pending} onSubmit={submit} />
         )}
+        {tab === 'hide' && (
+          <div className={styles.choiceRow}>
+            <p className={styles.choiceHint}>
+              {member.name} slips into the shadows instead of acting. The referee rolls in secret, so you
+              won't know whether it worked. While hiding, {member.name} can back-stab from outside the front
+              rank.
+            </p>
+            <Button
+              size="sm"
+              variant="secondary"
+              icon="eye-off"
+              loading={pending}
+              onClick={() => void submit({ action: 'hide' })}
+            >
+              Hide in shadows
+            </Button>
+          </div>
+        )}
         {tab === 'hold' && (
           <div className={styles.choiceRow}>
             <p className={styles.choiceHint}>{member.name} stays put and does nothing this round.</p>
@@ -346,6 +368,8 @@ function tabFor(action: string | undefined): ComposerTab | null {
       return 'give';
     case 'turn_undead':
       return 'turn';
+    case 'hide':
+      return 'hide';
     case 'hold':
       return 'hold';
     default:
@@ -449,7 +473,9 @@ function AttackChoices({
 }: ChoiceProps & { gear: MemberGear; backStab: boolean; current: DeclarationBody | null }) {
   const [weaponId, setWeaponId] = useState<string>('auto');
   const [stab, setStab] = useState(false);
-  const canStab = backStab && encounter.party_free_round;
+  // The class catalog says who has the back-stab ability, and the view lists who is hiding. Whether a back-stab
+  // works this round is the session's to say, and the preview refuses one that won't.
+  const canStab = backStab || (encounter.hiding ?? []).includes(member.id);
   // A back-stab is a melee attack, so it takes the wielded melee weapon unless the player chose one.
   const melee = gear.wielded.find((w) => w.melee)?.id ?? null;
   const chosen = weaponId !== 'auto' ? weaponId : stab && canStab ? melee : null;
@@ -476,7 +502,7 @@ function AttackChoices({
           {canStab && (
             <Checkbox
               label="Back-stab"
-              description="The monsters are unaware this round: +4 to hit and double damage in melee."
+              description="A melee attack on monsters unaware of the attacker: +4 to hit and double damage."
               checked={stab}
               onCheckedChange={setStab}
             />

@@ -630,7 +630,9 @@ export function seatOwner(
 // Refusals -----------------------------------------------------------------------------------------------------
 
 /**
- * The text of the last attempt's refusals, by member, and the refusals that name no member under `null`.
+ * The text of the refusals of the stored declarations, by member, and the refusals that name no member under
+ * `general`. The server previews the declarations as members declare, so these say what the session would
+ * refuse before anyone resolves the round.
  */
 export function refusalTexts(
   refusals: readonly DeclarationRefusal[],
@@ -638,28 +640,17 @@ export function refusalTexts(
 ): { byMember: Record<string, string[]>; general: string[] } {
   const byMember: Record<string, string[]> = {};
   const general: string[] = [];
-  const add = (memberId: string, text: string) => {
-    const list = byMember[memberId] ?? [];
-    if (!list.includes(text)) list.push(text);
-    byMember[memberId] = list;
-  };
   for (const refusal of refusals) {
     const text = describeRejection({ code: refusal.code, params: toParamMap(refusal.params) }, ctx);
-    const candidates = refusal.candidates ?? [];
-    if (refusal.member_id !== null) add(refusal.member_id, text);
-    else if (candidates.length === 1 && candidates[0]) add(candidates[0], text);
-    else if (candidates.length > 1)
-      for (const id of candidates) add(id, `One of these declarations was refused: ${lowerFirst(text)}`);
-    else if (!general.includes(text)) general.push(text);
+    if (refusal.member_id === null) {
+      if (!general.includes(text)) general.push(text);
+      continue;
+    }
+    const list = byMember[refusal.member_id] ?? [];
+    if (!list.includes(text)) list.push(text);
+    byMember[refusal.member_id] = list;
   }
   return { byMember, general };
-}
-
-function lowerFirst(text: string): string {
-  // Keep a sentence that starts with a name capitalized.
-  return /^(The|A|An|This|That|It|One|Every|No)\b/.test(text)
-    ? text.charAt(0).toLowerCase() + text.slice(1)
-    : text;
 }
 
 // Spells -------------------------------------------------------------------------------------------------------

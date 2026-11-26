@@ -206,6 +206,86 @@ describe('BattleBoard', () => {
     expect(within(row('Brenna')).getByText(/front rank/)).toBeInTheDocument();
   });
 
+  it('keeps the round from resolving while the preview refuses a declaration, and says who has to change', () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = everyoneDeclared('player', false);
+    const declarations = snapshot.declarations as DeclarationsState;
+    declarations.refusals = [
+      {
+        member_id: 'character-0001',
+        code: 'combat.attack.out_of_reach',
+        params: { character: 'character-0001', distance_feet: 40 },
+      },
+    ];
+    renderWithTable(<BattleBoard />, { snapshot, api });
+    const resolve = screen.getByRole('button', { name: 'Resolve round' });
+    expect(resolve).toHaveAttribute('aria-disabled', 'true');
+    expect(resolve).toHaveAccessibleDescription('Brenna has to choose another action first.');
+    expect(footer()).toHaveTextContent(
+      'The round waits for Brenna to choose another action, because the session would refuse that declaration.',
+    );
+  });
+
+  it("marks a hiding member without saying whether the hide worked, and offers the hide to the view's list", async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('battle', 'player');
+    const encounter = snapshot.game?.view.encounter;
+    if (!encounter) throw new Error('No encounter in the fixture.');
+    encounter.can_hide = ['character-0002'];
+    encounter.hiding = ['character-0001'];
+    const { user, store } = renderWithTable(<BattleBoard />, { snapshot, api });
+    expect(within(row('Brenna')).getByText('Hiding')).toBeInTheDocument();
+    expect(within(row('Wren')).queryByText('Hiding')).not.toBeInTheDocument();
+    await user.click(within(row('Wren')).getByRole('button', { name: 'Actions' }));
+    const composer = screen.getByRole('region', { name: 'Declare for Wren' });
+    await user.click(within(composer).getByRole('radio', { name: 'Hide' }));
+    await user.click(within(composer).getByRole('button', { name: 'Hide in shadows' }));
+    expect(api.declare).toHaveBeenCalledWith(store.getState().tableId, 'character-0002', { action: 'hide' });
+  });
+
+  it('offers no hide to a member the view leaves out of can_hide', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('battle', 'player');
+    const encounter = snapshot.game?.view.encounter;
+    if (encounter) encounter.can_hide = [];
+    const { user } = renderWithTable(<BattleBoard />, { snapshot, api });
+    await user.click(within(row('Wren')).getByRole('button', { name: 'Actions' }));
+    const composer = screen.getByRole('region', { name: 'Declare for Wren' });
+    expect(within(composer).queryByRole('radio', { name: 'Hide' })).not.toBeInTheDocument();
+  });
+
+  it('offers a back-stab to a hiding member, and leaves the judgement to the session', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('battle', 'player');
+    const encounter = snapshot.game?.view.encounter;
+    if (!encounter) throw new Error('No encounter in the fixture.');
+    encounter.party_free_round = false;
+    encounter.hiding = ['character-0002'];
+    const { user } = renderWithTable(<BattleBoard />, { snapshot, api });
+    await user.click(within(row('Wren')).getByRole('button', { name: 'Actions' }));
+    const composer = screen.getByRole('region', { name: 'Declare for Wren' });
+    await user.click(within(composer).getByRole('radio', { name: 'Attack' }));
+    expect(within(composer).getByRole('checkbox', { name: /Back-stab/ })).toBeInTheDocument();
+  });
+
+  it('marks where a member will stand after the declared moves', () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('battle', 'player');
+    const declarations = snapshot.declarations as DeclarationsState;
+    declarations.projection = {
+      advance_feet: { 'character-0001': 35, 'character-0002': 0, 'character-0003': 0, 'character-0004': 0 },
+      front_rank: { 'group-0001': ['character-0001'] },
+    };
+    renderWithTable(<BattleBoard />, { snapshot, api });
+    expect(screen.getAllByText(/^Brenna, .*moves to 35 feet forward this round/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/^Wren, .*this round/)).not.toBeInTheDocument();
+  });
+
   it('lets the referee resolve early after a confirmation, holding for the rest', async () => {
     const api = createFakeApi();
     stubRules(api);

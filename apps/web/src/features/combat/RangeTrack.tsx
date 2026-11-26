@@ -22,6 +22,11 @@ export interface RangeTrackProps {
   animate: boolean;
   /** Shorter, for the collapsed board and the encounter panel. */
   compact?: boolean;
+  /**
+   * Where each member would stand once the round's declared moves are made, by member ID, from bxapi's preview.
+   * The track marks each place that differs from where the member stands now.
+   */
+  planned?: Readonly<Record<string, number>> | null;
 }
 
 const TOKEN = 32;
@@ -48,7 +53,11 @@ function lowerHeading(group: GroupLabels): string {
   return group.count === 1 ? group.label : (group.plural ?? group.label);
 }
 
-function memberLabel(member: TrackMember, meleeWith: readonly string[] = []): string {
+function memberLabel(
+  member: TrackMember,
+  meleeWith: readonly string[] = [],
+  planned: number | null = null,
+): string {
   const parts = [member.name, `${member.hp} of ${member.maxHp} hit points`];
   if (meleeWith.length > 0) parts.push(`in melee with ${joinList(meleeWith)}`);
   if (member.down) parts.push(member.conditions.includes('dead') ? 'dead' : 'unconscious');
@@ -58,6 +67,12 @@ function memberLabel(member: TrackMember, meleeWith: readonly string[] = []): st
     );
   for (const condition of member.conditions)
     if (condition !== 'dead') parts.push(conditionLabel(condition).toLowerCase());
+  if (planned !== null)
+    parts.push(
+      planned === 0
+        ? 'moves to the party line this round'
+        : `moves to ${formatFeet(Math.abs(planned))} ${planned > 0 ? 'forward' : 'back'} this round`,
+    );
   return parts.join(', ');
 }
 
@@ -84,6 +99,7 @@ export function RangeTrack({
   selected = null,
   animate,
   compact = false,
+  planned = null,
 }: RangeTrackProps) {
   // How many each group had at its largest, so a group that was all slain is named in the right number.
   const tableId = useTableId();
@@ -107,10 +123,19 @@ export function RangeTrack({
   const present = groups.filter((g) => !g.fled && g.count > 0);
   const gone = groups.filter((g) => g.fled || g.count === 0);
 
+  // A planned place that differs from where the member stands now, or `null`.
+  const plannedFor = (member: TrackMember): number | null => {
+    const place = planned?.[member.id];
+    return place === undefined || place === (member.advance ?? 0) ? null : place;
+  };
   const advances = standing.map((m) => m.advance ?? 0);
+  const plannedPlaces = standing.flatMap((m) => {
+    const place = plannedFor(m);
+    return place === null ? [] : [place];
+  });
   const front = advances.length > 0 ? Math.max(...advances) : 0;
-  const low = Math.min(0, ...advances);
-  const high = Math.max(front + 10, ...present.map((g) => g.distance), 30);
+  const low = Math.min(0, ...advances, ...plannedPlaces);
+  const high = Math.max(front + 10, ...plannedPlaces, ...present.map((g) => g.distance), 30);
   const span = Math.max(high - low, 20);
   const step = tickStep(span);
   const min = Math.floor(low / step) * step;
@@ -239,6 +264,22 @@ export function RangeTrack({
         })}
 
         {[...stacks.entries()].flatMap(([, stack]) =>
+          stack.flatMap((member, index) => {
+            const place = plannedFor(member);
+            if (place === null) return [];
+            const style = memberStyle(member, index, stack.length);
+            return [
+              <span
+                key={`${member.id}-planned`}
+                className={styles.planned}
+                style={{ ...style, left: at(place, -TOKEN), borderColor: colors[member.id] }}
+                aria-hidden="true"
+              />,
+            ];
+          }),
+        )}
+
+        {[...stacks.entries()].flatMap(([, stack]) =>
           stack.map((member, index) => (
             <div
               key={member.id}
@@ -249,9 +290,11 @@ export function RangeTrack({
                 engaged.has(member.id) && styles.engaged,
               )}
               style={memberStyle(member, index, stack.length)}
-              title={memberLabel(member, meleeOf(member.id))}
+              title={memberLabel(member, meleeOf(member.id), plannedFor(member))}
             >
-              <span className="visually-hidden">{memberLabel(member, meleeOf(member.id))}</span>
+              <span className="visually-hidden">
+                {memberLabel(member, meleeOf(member.id), plannedFor(member))}
+              </span>
               <TokenPortrait
                 name={member.name}
                 characterClass={tokenClass(member.classId)}

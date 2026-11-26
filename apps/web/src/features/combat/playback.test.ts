@@ -256,6 +256,52 @@ describe('the battlefield during playback', () => {
   });
 });
 
+describe('fleeing and escaping groups', () => {
+  const lookup = () => 'group-0001';
+  const fled = p({ event_type: 'monster_fled', code: 'battle.side.fled', group_id: 'group-0001' });
+  const escaped = p({ event_type: 'monster_escaped', code: 'battle.side.escaped', group_id: 'group-0001' });
+
+  it('keeps a fleeing group on the track until it escapes', () => {
+    const { encounter, party } = battle();
+    const start = trackFromView(encounter, party);
+    const running = applyEvent(start, fled, lookup);
+    expect(running.groups['group-0001']).toMatchObject({ fleeing: true, fled: false });
+    expect(applyEvent(running, escaped, lookup).groups['group-0001']).toMatchObject({
+      fleeing: true,
+      fled: true,
+    });
+  });
+
+  it('starts a group that the view shows running as fleeing', () => {
+    const { encounter, party } = battle();
+    if (!encounter) throw new Error('No encounter in the fixture.');
+    const running = { ...encounter, groups: encounter.groups.map((group) => ({ ...group, fleeing: true })) };
+    expect(trackFromView(running, party).groups['group-0001']?.fleeing).toBe(true);
+  });
+
+  it('sums up a group that got away as escaped, not as fleeing', () => {
+    expect(digestRound([fled, escaped], lookup)).toMatchObject({ fleeing: [], escaped: ['group-0001'] });
+  });
+});
+
+describe('a hide attempt', () => {
+  it('plays as a beat on the member, and never says whether it worked', () => {
+    const { view } = battle();
+    const hide = p({
+      event_type: 'hide_attempted',
+      code: 'battle.hide.attempted',
+      character_id: 'character-0002',
+    });
+    const beats = buildBeats([hide], contextFromPlayerView(view), {
+      includeReferee: false,
+      lookup: () => null,
+    });
+    expect(beats).toHaveLength(1);
+    expect(beats[0]?.focus).toEqual(['character-0002']);
+    expect(beats[0]?.pops).toEqual([{ tokenId: 'character-0002', kind: 'hide', text: 'Hiding' }]);
+  });
+});
+
 describe('digestRound', () => {
   it('sums up who acted first, the damage, the slain, and who flees', () => {
     const digest = digestRound(round, () => 'group-0001');

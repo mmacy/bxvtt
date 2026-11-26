@@ -455,7 +455,9 @@ test.describe('battle', () => {
     await expect(feed).not.toContainText(/the Gashnak|Gashnak One-Ears|hobgoblin/i);
   });
 
-  test('the refusal names the member whose declaration bxapi refused', async ({ crew }) => {
+  test('the board names a refused declaration before the round resolves, and the round waits for it', async ({
+    crew,
+  }) => {
     const table = await combatTable(crew, { autoResolve: false });
     const { sam, tableId, memberId } = table;
     const game = await walkIntoGuardroom(sam.client, tableId);
@@ -466,11 +468,16 @@ test.describe('battle', () => {
       const client = name === 'Tinks' ? sam.client : table.ann.client;
       await client.declare(tableId, memberId(name), { action: 'hold' });
     }
+    // The server previews the declarations as they arrive, so the board names Flarg's before anyone resolves.
+    await openTable(sam.page, table.path);
+    await expect(declarationRow(sam.page, 'Flarg')).toContainText(/too far for a melee attack/);
+    await expect(sam.page.getByRole('button', { name: 'Resolve round' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
     const result = await sam.client.resolveRound(tableId);
     expect(result.accepted).toBe(false);
     expect(result.declarations?.refusals.map((refusal) => refusal.member_id)).toEqual([memberId('Flarg')]);
-    await openTable(sam.page, table.path);
-    await expect(declarationRow(sam.page, 'Flarg')).toContainText(/too far for a melee attack/);
   });
 
   test('a party member dies, and the board and the party panel show it', async ({ crew }) => {

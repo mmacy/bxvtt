@@ -24,26 +24,33 @@ export const SaveDeclarationRequest = z.strictObject({
 export type SaveDeclarationRequest = z.infer<typeof SaveDeclarationRequest>;
 
 /**
- * One rejection bxapi gave a round, with the member whose declaration it concerns.
- *
- * osrlib returns every rejection of a round without saying whose declaration each one is about, and some
- * rejections name nobody, such as `combat.attack.out_of_reach`. The server attributes each one: from a param
- * that names a declarer, from the only declaration that isn't a `hold`, or by sending bxapi the round again
- * with one declaration swapped for one that osrlib always refuses, which never resolves the round. When it still
- * can't tell, `member_id` is `null` and `candidates` lists the members whose declarations could have caused it.
+ * One reason the session would refuse a stored declaration, or did refuse it, with the member whose declaration
+ * it is. Since osrlib 2.7, every rejection of a declaration names its member in `params.character`.
  */
 export const DeclarationRefusal = z.object({
+  /** The member whose declaration the session refuses, or `null` for a rejection of the round as a whole. */
   member_id: MemberId.nullable(),
   code: z.string(),
   params: z.record(z.string(), z.unknown()),
-  /**
-   * When `member_id` is `null`, the members whose declarations could have caused the rejection, in marching
-   * order. Absent when `member_id` names the member.
-   */
-  candidates: z.array(MemberId).optional(),
 });
-/** One rejection bxapi gave a round. */
+/** One reason the session would refuse a stored declaration. */
 export type DeclarationRefusal = z.infer<typeof DeclarationRefusal>;
+
+/** Where everyone would stand once the round's declared moves are made, from bxapi's battle round preview. */
+export const RoundProjection = z.object({
+  /**
+   * Each living member's place on the range track after the declared moves, in feet forward of the party line,
+   * as in `view.encounter.advance_feet`.
+   */
+  advance_feet: z.record(z.string(), z.number()),
+  /**
+   * For each group that hasn't fled, keyed by group ID, the members who would stand in its front rank after the
+   * declared moves, as in `view.encounter.groups[].front_rank`.
+   */
+  front_rank: z.record(z.string(), z.array(MemberId)),
+});
+/** Where everyone would stand once the round's declared moves are made. */
+export type RoundProjection = z.infer<typeof RoundProjection>;
 
 /**
  * The declarations for the current battle round. Everyone at the table sees them, because the party plans
@@ -64,8 +71,18 @@ export const DeclarationsState = z.object({
   declarations: z.record(z.string(), z.custom<BattleDeclaration>()),
   /** Who saved each declaration, keyed by member ID. */
   declared_by: z.record(z.string(), UserId),
-  /** bxapi's rejections of the last attempt to resolve this round, or an empty list. */
+  /**
+   * Why the session would refuse the stored declarations, from bxapi's battle round preview, or an empty list
+   * when it would accept them. A refused declaration stays stored, because whether it works can depend on the
+   * moves the others declare. The server previews the stored declarations whenever it builds this state, so
+   * the list changes as members declare. When the preview fails, the list is empty and `projection` is `null`.
+   */
   refusals: z.array(DeclarationRefusal),
+  /**
+   * Where everyone would stand once the stored declarations' moves are made, or `null` when nobody has declared
+   * or the preview failed. Optional in the type so that older fixtures still compile.
+   */
+  projection: RoundProjection.nullable().optional(),
 });
 /** The declarations for the current battle round. */
 export type DeclarationsState = z.infer<typeof DeclarationsState>;
@@ -73,7 +90,8 @@ export type DeclarationsState = z.infer<typeof DeclarationsState>;
 /**
  * Body of `POST /api/tables/{table_id}/game/declarations/resolve`. The caller or a referee may resolve a round
  * once every declarer has declared. A referee may pass `fill_with_hold` to resolve early, and the server then
- * declares `hold` for each member who hasn't declared.
+ * declares `hold` for each member who hasn't declared. It never replaces a stored declaration, even one the
+ * session would refuse, so a round with a refused declaration is refused until its member declares again.
  */
 export const ResolveRoundRequest = z.strictObject({
   fill_with_hold: z.boolean().optional(),
@@ -83,7 +101,7 @@ export type ResolveRoundRequest = z.infer<typeof ResolveRoundRequest>;
 
 /**
  * Response of `POST /api/tables/{table_id}/game/declarations/resolve`. When bxapi refuses the round, `accepted`
- * is `false`, the declarations stay, and `declarations.refusals` names each declaration bxapi refused.
+ * is `false`, the declarations stay, and `declarations.refusals` names each declaration that bxapi refused.
  */
 export const ResolveRoundResult = z.object({
   accepted: z.boolean(),

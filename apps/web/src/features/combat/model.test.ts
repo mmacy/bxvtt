@@ -222,31 +222,14 @@ describe('refusalTexts', () => {
 });
 
 describe('refusals that name no member', () => {
-  it('show on each candidate’s row', () => {
-    const { view } = battle();
-    const texts = refusalTexts(
-      [
-        {
-          member_id: null,
-          code: 'combat.attack.out_of_reach',
-          params: { distance_feet: 40 },
-          candidates: ['character-0001', 'character-0002'],
-        },
-      ],
-      contextFromPlayerView(view),
-    );
-    expect(texts.byMember['character-0001']?.[0]).toMatch(/^One of these declarations was refused: /);
-    expect(texts.byMember['character-0002']).toHaveLength(1);
-    expect(texts.general).toEqual([]);
-  });
-
-  it('stay general when there are no candidates', () => {
+  it('stay general', () => {
     const { view } = battle();
     const texts = refusalTexts(
       [{ member_id: null, code: 'combat.attack.out_of_reach', params: { distance_feet: 40 } }],
       contextFromPlayerView(view),
     );
     expect(texts.general).toHaveLength(1);
+    expect(texts.byMember).toEqual({});
   });
 });
 

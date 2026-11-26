@@ -439,6 +439,9 @@ function PartyOptions({
     });
   }
   if (!commands.pursuit && commands.legal('turn_undead') && turners.length > 0) {
+    // The button opens for anyone who can act for one of the turners. Only a viewer who can act for none of them
+    // sees why, with the first turner's reason.
+    const ownTurner = turners.find((member) => commands.can('turn_undead', member.id).allowed);
     options.push({
       icon: 'class-cleric',
       label: 'Turn undead',
@@ -446,7 +449,9 @@ function PartyOptions({
         ? `Present a holy symbol. Any undead left standing attack at once.`
         : 'None of these monsters are undead.',
       disabledReason: undead
-        ? reasonFor(commands, 'turn_undead', turners[0]?.id)
+        ? ownTurner
+          ? null
+          : reasonFor(commands, 'turn_undead', turners[0]?.id)
         : 'None of these monsters are undead.',
       loading: busy('turn_undead'),
       popover:
@@ -474,7 +479,7 @@ function PartyOptions({
               ),
             }
           : undefined,
-      onClick: () => turners[0] && commands.turn(turners[0].id),
+      onClick: () => ownTurner && commands.turn(ownTurner.id),
     });
   }
 

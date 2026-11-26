@@ -50,7 +50,7 @@ describe('the database layout', () => {
     db.close();
   });
 
-  it('drops the target handles of a version 6 database and keeps its other rows', () => {
+  it('drops the target handles and battle refusals of a version 6 database and keeps its other rows', () => {
     new Database(dir).close();
     const raw = new DatabaseSync(join(dir, 'bxvtt.db'));
     raw.exec(`CREATE TABLE target_handles (
@@ -64,15 +64,25 @@ describe('the database layout', () => {
         PRIMARY KEY (session_id, monster_id)
       );
       CREATE INDEX target_handles_by_encounter ON target_handles(session_id, encounter_key, label);
+      CREATE TABLE battle_refusals (
+        table_id TEXT PRIMARY KEY REFERENCES tables(id) ON DELETE CASCADE,
+        session_id TEXT NOT NULL,
+        revision INTEGER NOT NULL,
+        refusals_json TEXT NOT NULL
+      );
       INSERT INTO users (id, name, color, token_hash, created_at) VALUES ('usr_1', 'Rhea', '#e69f00', 'h', 'now');
       INSERT INTO tables (id, name, invite_code, party_control, auto_resolve, autosave, created_by, created_at)
         VALUES ('tbl_1', 'T', 'code', 'caller', 1, 1, 'usr_1', 'now');
       INSERT INTO target_handles VALUES ('tbl_1', 'ses_1', 'k', 'monster-0001', 'tgt_AAAAAAAAAAAAAAAA', 'goblin', 1);
+      INSERT INTO battle_refusals VALUES ('tbl_1', 'ses_1', 3, '[]');
       PRAGMA user_version = 6;`);
     raw.close();
     const db = new Database(dir);
     expect(db.get('PRAGMA user_version')).toEqual({ user_version: SCHEMA_VERSION });
     expect(db.get("SELECT count(*) AS n FROM sqlite_master WHERE name LIKE 'target_handles%'")).toEqual({
+      n: 0,
+    });
+    expect(db.get("SELECT count(*) AS n FROM sqlite_master WHERE name = 'battle_refusals'")).toEqual({
       n: 0,
     });
     expect(db.get("SELECT name FROM tables WHERE id = 'tbl_1'")).toEqual({ name: 'T' });

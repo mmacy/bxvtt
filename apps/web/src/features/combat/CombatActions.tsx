@@ -81,15 +81,19 @@ function ActionButton({
  * @param facts.canResolveEarly - Whether the user may resolve it sooner, which only a referee may.
  * @param facts.auto - Whether the table resolves each round by itself once everyone has declared.
  * @param facts.waiting - The characters who haven't declared yet.
+ * @param facts.refused - The names of the characters whose declarations the session would refuse.
  */
 export function resolveRoundReason(facts: {
   canResolve: { allowed: boolean; reason: string | null };
   canResolveEarly: { allowed: boolean; reason: string | null };
   auto: boolean;
   waiting: readonly string[];
+  refused?: readonly string[];
 }): string | null {
-  const { canResolve, canResolveEarly, auto, waiting } = facts;
+  const { canResolve, canResolveEarly, auto, waiting, refused = [] } = facts;
   if (!canResolve.allowed) return canResolve.reason;
+  if (refused.length > 0)
+    return `${joinList(refused)} ${refused.length === 1 ? 'has' : 'have'} to choose another action first.`;
   if (auto) return 'The round resolves by itself once everyone has declared.';
   if (waiting.length === 0) return null;
   if (!canResolveEarly.allowed) return canResolveEarly.reason;
@@ -254,11 +258,15 @@ function BattleActions() {
   const waiting = declarers.filter((id) => !declared.includes(id));
   const auto = settings?.auto_resolve ?? true;
   const showResolve = canResolve.allowed && !auto;
+  const refused = [
+    ...new Set((declarations?.refusals ?? []).flatMap((refusal) => refusal.member_id ?? [])),
+  ].map((id) => memberName(id, ctx));
   const resolveReason = resolveRoundReason({
     canResolve,
     canResolveEarly,
     auto,
     waiting,
+    refused,
   });
 
   // The bar offers the same highlighted choice as the member's row: it declares it, or opens the Cast tab.
@@ -271,7 +279,7 @@ function BattleActions() {
     if (repeatable.length > 0) void repeat.run(mine);
   };
   const resolveRound = () => {
-    if (showResolve && everyone) void resolve();
+    if (showResolve && everyone && refused.length === 0) void resolve();
   };
   const group = 'Battle';
   useShortcut({

@@ -41,7 +41,9 @@ export interface TrackGroup {
   labelPlural: string;
   distance: number;
   count: number;
+  /** Whether the group got away and left the battle. */
   fled: boolean;
+  /** Whether the group broke and is running. A fleeing group stays in the battle until it gets away. */
   fleeing: boolean;
   conditions: Record<string, number>;
   categories: string[];
@@ -83,7 +85,7 @@ export function trackFromView(encounter: EncounterView | null, party: readonly M
       distance: group.distance_feet,
       count: group.count,
       fled: group.fled,
-      fleeing: false,
+      fleeing: group.fleeing,
       conditions: { ...group.condition_counts },
       categories: [...group.categories],
       frontRank: [...group.front_rank],
@@ -186,7 +188,10 @@ export function applyEvent(state: TrackState, event: AnyEvent, lookup: MonsterGr
       });
     }
     case 'monster_fled':
+      // The group breaks and runs, but stays in the battle until a `monster_escaped` takes it off the track.
       return withGroup(str(event, 'group_id'), () => ({ fleeing: true }));
+    case 'monster_escaped':
+      return withGroup(str(event, 'group_id'), () => ({ fleeing: true, fled: true }));
     default:
       return state;
   }
@@ -197,7 +202,7 @@ export function applyEvent(state: TrackState, event: AnyEvent, lookup: MonsterGr
 /** Something to float over a token for a moment. */
 export interface Pop {
   tokenId: string;
-  kind: 'damage' | 'heal' | 'miss' | 'death' | 'condition';
+  kind: 'damage' | 'heal' | 'miss' | 'death' | 'condition' | 'hide';
   text: string;
 }
 
@@ -342,6 +347,12 @@ function popsFor(events: AnyEvent[], lookup: MonsterGroupLookup): Pop[] {
             kind: 'death',
             text: idKind(token) === 'character' ? 'Dead' : 'Slain',
           });
+        break;
+      }
+      case 'hide_attempted': {
+        // The players learn that the member tried to hide, never whether it worked.
+        const token = tokenFor(str(event, 'character_id'), lookup);
+        if (token) pops.push({ tokenId: token, kind: 'hide', text: 'Hiding' });
         break;
       }
       case 'condition_gained': {
@@ -512,6 +523,8 @@ export interface RoundDigest {
   /** Monster deaths by group token, or under `null` when the group is unknown. */
   slain: Array<{ groupId: string | null; count: number }>;
   fleeing: string[];
+  /** The groups that got away and left the battle this round. */
+  escaped: string[];
   /** Conditions gained, by token (a member, or a monster's group, or `null` when unknown). */
   conditions: Array<{ tokenId: string | null; condition: string; count: number }>;
   outcome: 'victory' | 'defeat' | 'fled' | null;
@@ -531,6 +544,7 @@ export function digestRound(events: readonly AnyEvent[], lookup: MonsterGroupLoo
     fallen: [],
     slain: [],
     fleeing: [],
+    escaped: [],
     conditions: [],
     outcome: null,
   };
@@ -583,6 +597,12 @@ export function digestRound(events: readonly AnyEvent[], lookup: MonsterGroupLoo
       case 'monster_fled': {
         const group = str(event, 'group_id');
         if (group && !digest.fleeing.includes(group)) digest.fleeing.push(group);
+        break;
+      }
+      case 'monster_escaped': {
+        const group = str(event, 'group_id');
+        if (group && !digest.escaped.includes(group)) digest.escaped.push(group);
+        digest.fleeing = digest.fleeing.filter((id) => id !== group);
         break;
       }
       case 'battle_ended':

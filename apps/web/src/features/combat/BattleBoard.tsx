@@ -305,6 +305,7 @@ export function BattleBoard() {
         selected={composing}
         animate={!reduce}
         compact={collapsed || composing !== null}
+        planned={playback.track ? null : (declarations?.projection?.advance_feet ?? null)}
       />
 
       {(composing === null || playback.playing) && (
@@ -357,6 +358,7 @@ export function BattleBoard() {
           declared={declared}
           mine={mine}
           general={refusals.general}
+          refused={declarers.filter((id) => (refusals.byMember[id]?.length ?? 0) > 0)}
           ctx={ctx}
           waiting={<WaitingSummary waiting={waiting} people={people} ctx={ctx} />}
         />
@@ -529,6 +531,12 @@ function MemberRow({
           <span className={styles.memberName}>
             {member.name}
             {!mine && owner && <span className={styles.memberOwner}>{owner.name}</span>}
+            {/* The view lists who is hiding, never whether the hide worked, and so does the board. */}
+            {(encounter.hiding ?? []).includes(member.id) && (
+              <Badge tone="neutral" icon="eye-off">
+                Hiding
+              </Badge>
+            )}
           </span>
           <HpBar
             size="sm"
@@ -628,8 +636,11 @@ function MemberRow({
 export function roundStartNote(facts: {
   auto: boolean;
   everyone: boolean;
-  /** Whether bxapi refused the last attempt, so the round waits for a change. */
-  refused: boolean;
+  /**
+   * The names of the members whose declarations the session would refuse, so the round waits for them to
+   * change, or `true` when bxapi refused the round as a whole.
+   */
+  refused: readonly string[] | boolean;
   /** Whether this user may resolve the round once everyone has declared. */
   canResolve: boolean;
   /** Whether this user may resolve the round now, before everyone has declared. */
@@ -640,7 +651,11 @@ export function roundStartNote(facts: {
   const { auto, everyone, refused, canResolve, early, caller } = facts;
   const resolver = caller ? `${caller} (the caller) or the referee` : 'the caller or the referee';
   let note: string;
-  if (everyone && refused) note = 'Everyone has declared, but the round waits for a changed declaration.';
+  const names = Array.isArray(refused) ? refused : [];
+  if (names.length > 0)
+    note = `The round waits for ${joinList(names)} to choose another action, because the session would refuse ${names.length === 1 ? 'that declaration' : 'those declarations'}.`;
+  else if (everyone && refused === true)
+    note = 'Everyone has declared, but the round waits for a changed declaration.';
   else if (auto)
     note = everyone
       ? 'Everyone has declared, so the round resolves now.'
@@ -653,7 +668,9 @@ export function roundStartNote(facts: {
     note = canResolve
       ? 'When everyone has declared, you resolve the round.'
       : `When everyone has declared, ${resolver} resolves the round.`;
-  return early ? `${note} Resolve now starts it at once, and anyone who hasn't declared holds.` : note;
+  return early && names.length === 0
+    ? `${note} Resolve now starts it at once, and anyone who hasn't declared holds.`
+    : note;
 }
 
 function RoundFooter({
@@ -662,6 +679,7 @@ function RoundFooter({
   declared,
   mine,
   general,
+  refused,
   ctx,
   waiting,
 }: {
@@ -671,6 +689,8 @@ function RoundFooter({
   declared: string[];
   mine: string[];
   general: string[];
+  /** The members whose stored declarations the session would refuse. */
+  refused: string[];
   ctx: TextContext;
   waiting: React.ReactNode;
 }) {
@@ -686,6 +706,13 @@ function RoundFooter({
   const auto = settings?.auto_resolve ?? true;
   const repeatable = repeat.candidates(mine.filter((id) => !declared.includes(id)));
   const early = !everyone && canResolveEarly.allowed && declarers.length > 0;
+  const refusedNames = refused.map((id) => memberName(id, ctx));
+  // The round can't resolve while the session would refuse a stored declaration. A hold for the members who
+  // haven't declared never replaces one.
+  const blocked =
+    refusedNames.length > 0
+      ? `${joinList(refusedNames)} ${refusedNames.length === 1 ? 'has' : 'have'} to choose another action first.`
+      : null;
 
   return (
     <footer className={styles.boardFoot}>
@@ -709,7 +736,7 @@ function RoundFooter({
             {roundStartNote({
               auto,
               everyone,
-              refused: general.length > 0,
+              refused: refusedNames.length > 0 ? refusedNames : general.length > 0,
               canResolve: canResolve.allowed,
               early,
               caller: caller.isMe ? null : (caller.member?.name ?? null),
@@ -734,16 +761,28 @@ function RoundFooter({
               variant="ghost"
               icon="flag"
               tooltip="Resolve the round at once, and anyone who hasn't declared holds"
+              disabled={blocked !== null}
+              disabledReason={blocked}
               onClick={() => setConfirming(true)}
             >
               Resolve now
             </Button>
           )}
-          {everyone && (canResolve.allowed || canResolveEarly.allowed) && (!auto || general.length > 0) && (
-            <Button size="sm" variant="primary" icon="play" loading={pending} onClick={() => void resolve()}>
-              Resolve round
-            </Button>
-          )}
+          {everyone &&
+            (canResolve.allowed || canResolveEarly.allowed) &&
+            (!auto || general.length > 0 || blocked !== null) && (
+              <Button
+                size="sm"
+                variant="primary"
+                icon="play"
+                loading={pending}
+                disabled={blocked !== null}
+                disabledReason={blocked}
+                onClick={() => void resolve()}
+              >
+                Resolve round
+              </Button>
+            )}
         </div>
       </div>
       <ConfirmDialog

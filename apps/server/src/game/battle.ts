@@ -1,11 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
+import type { BattleRoundPreview } from '@bxvtt/shared/bxapi';
 import type {
   BattleDeclaration,
   DeclarationRefusal,
   DeclarationsState,
   ResolveRoundResult,
   Role,
+  RoundProjection,
   User,
 } from '@bxvtt/shared/protocol';
 import { ResolveRoundRequest, SaveDeclarationRequest } from '@bxvtt/shared/protocol';
@@ -15,7 +17,7 @@ import { ApiError, parseBody } from '../errors';
 import { now } from '../ids';
 import { RESOLVE_ROUND } from './classify';
 import { readSeats } from './seats';
-import { attributeRefusals } from './refusals';
+import { attributeRefusals, previewRefusals } from './refusals';
 import { TARGET_FIELD_NAMES, unlistedTarget, withoutUnlistedCreatures } from './targets';
 import type { GameService, LiveGame } from './service';
 
@@ -34,13 +36,32 @@ function inBattle(live: LiveGame): boolean {
   return live.mode === 'battle' && live.view.encounter?.in_battle === true;
 }
 
+/** What the server learned from bxapi's preview of one set of stored declarations. */
+interface Preview {
+  /** The session, the revision, and the declarations the preview judged. */
+  key: string;
+  /** Why the session would refuse the declarations. */
+  refusals: DeclarationRefusal[];
+  /** Where everyone would stand after the declared moves, or `null` when the preview failed. */
+  projection: RoundProjection | null;
+  /** When the preview failed, in milliseconds since the epoch, or `null` when it succeeded. */
+  failedAt: number | null;
+}
+
+/** How long the server waits before it asks bxapi again for a preview that failed. */
+const PREVIEW_RETRY_MS = 5000;
+
 /**
- * Battle declarations at a shared table. Each player saves a declaration for the members in their seats. When
- * every declarer has one, the server resolves the round, automatically when the table's `auto_resolve` is on, or
- * when the caller or a referee asks. bxapi accepts or refuses a round as a whole. On a refusal the declarations
- * stay, and the server reports which declaration bxapi refused.
+ * Battle declarations at a shared table. Each player saves a declaration for the members in their seats, and the
+ * server asks bxapi to preview the stored declarations, so everyone sees which ones the session would refuse
+ * before the round resolves. When every declarer has a declaration, the server resolves the round,
+ * automatically when the table's `auto_resolve` is on and the preview refuses nothing, or when the caller or a
+ * referee asks. bxapi accepts or refuses a round as a whole. On a refusal the declarations stay.
  */
 export class BattleService {
+  /** The latest preview of each table's stored declarations. */
+  private readonly previews = new Map<string, Preview>();
+
   /**
    * @param ctx - The server's services.
    * @param game - The game service.
@@ -52,52 +73,119 @@ export class BattleService {
 
   /**
    * Builds the declarations state of a game for one role, or `null` outside a battle. A player's copy names only
-   * the monsters that the player view lists, even when a referee aimed at one the party can't see.
+   * the monsters that the player view lists, even when a referee aimed at one the party can't see, or a preview
+   * rejection names one.
    *
    * @param live - The game.
    * @param role - The reader's role.
    */
-  state(live: LiveGame, role: Role = 'player'): DeclarationsState | null {
-    const state = this.refereeState(live);
+  async state(live: LiveGame, role: Role = 'player'): Promise<DeclarationsState | null> {
+    const state = await this.refereeState(live);
     if (state === null || role === 'referee') return state;
     return withoutUnlistedCreatures(state, live.view, live.creatures);
   }
 
-  /** Builds the declarations state as stored, which a referee reads. */
-  private refereeState(live: LiveGame): DeclarationsState | null {
-    if (!inBattle(live)) return null;
-    const round = roundOf(live);
+  /** The stored declarations of the round being declared, by member, with who saved each one. */
+  private stored(live: LiveGame): {
+    declarations: Record<string, BattleDeclaration>;
+    declaredBy: Record<string, string>;
+  } {
     const declarers = live.view.encounter?.declarers ?? [];
-    const rows = this.ctx.db.all(
+    const declarations: Record<string, BattleDeclaration> = {};
+    const declaredBy: Record<string, string> = {};
+    for (const row of this.ctx.db.all(
       'SELECT * FROM declarations WHERE table_id = ? AND session_id = ? AND round = ?',
       live.tableId,
       live.sessionId,
-      round,
-    );
-    const declarations: Record<string, BattleDeclaration> = {};
-    const declaredBy: Record<string, string> = {};
-    for (const row of rows) {
+      roundOf(live),
+    )) {
       const memberId = str(row, 'member_id');
       if (!declarers.includes(memberId)) continue;
       declarations[memberId] = json<BattleDeclaration>(row, 'declaration_json');
       declaredBy[memberId] = str(row, 'user_id');
     }
-    const refusalRow = this.ctx.db.get(
-      'SELECT * FROM battle_refusals WHERE table_id = ? AND session_id = ? AND revision = ?',
-      live.tableId,
-      live.sessionId,
-      live.revision,
-    );
+    return { declarations, declaredBy };
+  }
+
+  /** The cache key of a set of stored declarations at the game's revision. */
+  private previewKey(live: LiveGame, declarations: readonly BattleDeclaration[]): string {
+    return `${live.sessionId}#${live.revision}#${JSON.stringify(declarations)}`;
+  }
+
+  /**
+   * Asks bxapi to preview the stored declarations, once for each revision and set of declarations. A preview that
+   * fails, because bxapi is unreachable or the battle ended in a race, gives no refusals and no projection, and
+   * the server asks again after {@link PREVIEW_RETRY_MS}.
+   */
+  private async preview(live: LiveGame, declarations: readonly BattleDeclaration[]): Promise<Preview> {
+    const key = this.previewKey(live, declarations);
+    const cached = this.previews.get(live.tableId);
+    if (
+      cached !== undefined &&
+      cached.key === key &&
+      (cached.failedAt === null || Date.now() - cached.failedAt < PREVIEW_RETRY_MS)
+    ) {
+      return cached;
+    }
+    let preview: Preview;
+    try {
+      const result = await this.ctx.bxapi.post<BattleRoundPreview>(
+        `/v1/sessions/${encodeURIComponent(live.sessionId)}/battle-round/preview`,
+        { declarations },
+      );
+      preview = {
+        key,
+        refusals: previewRefusals(result.rejections, live.view.encounter?.declarers ?? []),
+        projection: { advance_feet: result.advance_feet, front_rank: result.front_rank },
+        failedAt: null,
+      };
+    } catch (error) {
+      this.ctx.log.warn({ err: error, table: live.tableId }, 'could not preview the battle round');
+      preview = { key, refusals: [], projection: null, failedAt: Date.now() };
+    }
+    this.previews.set(live.tableId, preview);
+    return preview;
+  }
+
+  /** Builds the declarations state as stored, with the preview's refusals, which a referee reads. */
+  private async refereeState(live: LiveGame): Promise<DeclarationsState | null> {
+    if (!inBattle(live)) return null;
+    const declarers = live.view.encounter?.declarers ?? [];
+    const { declarations, declaredBy } = this.stored(live);
+    const declared = declarers.filter((memberId) => declarations[memberId] !== undefined);
+    const preview =
+      declared.length === 0
+        ? null
+        : await this.preview(
+            live,
+            declared.flatMap((memberId) => declarations[memberId] ?? []),
+          );
     return {
       active: true,
       revision: live.revision,
       round: live.view.encounter?.battle_round ?? null,
       declarers,
-      declared: declarers.filter((memberId) => declarations[memberId] !== undefined),
+      declared,
       declarations,
       declared_by: declaredBy,
-      refusals: refusalRow === undefined ? [] : json<DeclarationRefusal[]>(refusalRow, 'refusals_json'),
+      refusals: preview?.refusals ?? [],
+      projection: preview?.projection ?? null,
     };
+  }
+
+  /**
+   * Whether the round can resolve on its own: every declarer has declared, and bxapi's preview refuses none of
+   * the declarations. When the preview failed, the server resolves anyway and leaves the judgement to bxapi, so
+   * a table with `auto_resolve` on never waits for a resolve that nobody can start.
+   */
+  private async readyToResolve(live: LiveGame): Promise<boolean> {
+    const state = await this.refereeState(live);
+    return (
+      state !== null &&
+      state.declarers.length > 0 &&
+      state.declared.length === state.declarers.length &&
+      state.refusals.length === 0
+    );
   }
 
   /**
@@ -107,8 +195,11 @@ export class BattleService {
    */
   async pushLocked(tableId: string): Promise<void> {
     const live = await this.game.current(tableId);
-    const forPlayers = live === null ? null : this.state(live, 'player');
-    const forReferees = live === null ? null : this.state(live, 'referee');
+    const forReferees = live === null ? null : await this.state(live, 'referee');
+    const forPlayers =
+      live === null || forReferees === null
+        ? null
+        : withoutUnlistedCreatures(forReferees, live.view, live.creatures);
     this.ctx.hub.send(tableId, ({ role }) => ({
       type: 'declarations',
       declarations: role === 'referee' ? forReferees : forPlayers,
@@ -132,11 +223,12 @@ export class BattleService {
         roundOf(live),
       );
     }
-    this.ctx.db.run('DELETE FROM battle_refusals WHERE table_id = ?', live.tableId);
+    this.previews.delete(live.tableId);
   }
 
   /**
-   * Saves a declaration for one member.
+   * Saves a declaration for one member. The declaration is stored even when the preview refuses it, because
+   * whether it works can depend on the moves the others declare.
    *
    * @param tableId - The table ID.
    * @param user - The user in the member's seat, or a referee.
@@ -182,19 +274,12 @@ export class BattleService {
         now(),
       );
       await this.pushLocked(tableId);
-      if (this.ctx.tables.settings(tableId).auto_resolve) {
-        const state = this.refereeState(live);
-        if (
-          state !== null &&
-          state.declarers.length > 0 &&
-          state.declared.length === state.declarers.length
-        ) {
-          try {
-            await this.resolveLocked(live, user.id, false, requestId);
-          } catch (error) {
-            // The declaration is saved either way. The table can resolve the round again.
-            this.ctx.log.warn({ err: error, table: tableId }, 'could not resolve the round automatically');
-          }
+      if (this.ctx.tables.settings(tableId).auto_resolve && (await this.readyToResolve(live))) {
+        try {
+          await this.resolveLocked(live, user.id, false, requestId);
+        } catch (error) {
+          // The declaration is saved either way. The table can resolve the round again.
+          this.ctx.log.warn({ err: error, table: tableId }, 'could not resolve the round automatically');
         }
       }
       return this.stateOrInactive(await this.game.require(tableId), role);
@@ -253,14 +338,15 @@ export class BattleService {
       const after = await this.game.require(tableId);
       return {
         accepted,
-        declarations: this.stateOrInactive(after, role),
+        declarations: await this.stateOrInactive(after, role),
         game: await this.game.project(after, role),
       };
     });
   }
 
   /**
-   * Resolves the round automatically after `auto_resolve` was turned on, when every declarer has declared.
+   * Resolves the round automatically after `auto_resolve` was turned on, when every declarer has declared and
+   * the preview refuses nothing.
    *
    * @param tableId - The table ID.
    * @param user - The referee who changed the setting.
@@ -269,15 +355,16 @@ export class BattleService {
     await this.game.locked(tableId, async () => {
       const live = await this.game.current(tableId);
       if (live === null) return;
-      const state = this.refereeState(live);
-      if (state !== null && state.declarers.length > 0 && state.declared.length === state.declarers.length) {
-        await this.resolveLocked(live, user.id, false, 'auto-resolve');
-      }
+      if (await this.readyToResolve(live)) await this.resolveLocked(live, user.id, false, 'auto-resolve');
     });
   }
 
   /**
    * Sends `resolve_battle_round` with one declaration per declarer. The caller holds the table's lock.
+   *
+   * `fillWithHold` declares `hold` only for the members who haven't declared. It never replaces a stored
+   * declaration, even one the preview refuses, because the player chose it and can still change it. So a round
+   * with a refused declaration is refused until its member declares again or a referee declares for them.
    *
    * @returns Whether bxapi accepted the round.
    */
@@ -287,21 +374,20 @@ export class BattleService {
     fillWithHold: boolean,
     requestId: string,
   ): Promise<boolean> {
-    const state = this.refereeState(live);
-    if (state === null) throw new ApiError('not_in_battle', "The party isn't in a battle.");
-    const missing = state.declarers.filter((memberId) => state.declarations[memberId] === undefined);
+    if (!inBattle(live)) throw new ApiError('not_in_battle', "The party isn't in a battle.");
+    const declarers = live.view.encounter?.declarers ?? [];
+    const { declarations: stored } = this.stored(live);
+    const missing = declarers.filter((memberId) => stored[memberId] === undefined);
     if (missing.length > 0 && !fillWithHold) {
       throw new ApiError('declarations_incomplete', "Some party members haven't declared an action yet.", {
         missing,
       });
     }
-    const declarations = state.declarers.map((memberId) => {
-      const declaration = state.declarations[memberId];
-      return declaration ?? { character_id: memberId, action: 'hold' };
-    });
+    const declarations = declarers.map(
+      (memberId) => stored[memberId] ?? { character_id: memberId, action: 'hold' },
+    );
     const command = { command_type: RESOLVE_ROUND, declarations };
     const outcome = await this.game.executeLocked(live, command, requestId, userId);
-    const revision = live.revision;
     if (outcome.accepted) {
       await this.game.afterAcceptedLocked(live, outcome, {
         userId,
@@ -311,27 +397,17 @@ export class BattleService {
       return true;
     }
     if (outcome.view !== undefined) live.view = outcome.view;
-    const attributed = await attributeRefusals(
-      declarations as BattleDeclaration[],
-      outcome.rejections,
-      async (probe) => {
-        const result = await this.game.probeLocked(live, {
-          command_type: RESOLVE_ROUND,
-          declarations: probe,
-        });
-        return result === null ? null : result.rejections;
-      },
-    );
-    // osrlib refuses every probe, but if bxapi ever accepted one, the round has resolved and these refusals no
-    // longer apply.
-    if (live.revision !== revision) return true;
-    this.ctx.db.run(
-      'INSERT OR REPLACE INTO battle_refusals (table_id, session_id, revision, refusals_json) VALUES (?, ?, ?, ?)',
-      live.tableId,
-      live.sessionId,
-      live.revision,
-      JSON.stringify(attributed),
-    );
+    // The preview of the same declarations gives the same rejections, so the state shows these until a member
+    // declares again. They take the place of the stored declarations' preview.
+    const declared = declarers.flatMap((memberId) => stored[memberId] ?? []);
+    const previous = this.previews.get(live.tableId);
+    const key = this.previewKey(live, declared);
+    this.previews.set(live.tableId, {
+      key,
+      refusals: attributeRefusals(outcome.rejections, declarers),
+      projection: previous?.key === key ? previous.projection : null,
+      failedAt: null,
+    });
     await this.pushLocked(live.tableId);
     return false;
   }
@@ -358,9 +434,9 @@ export class BattleService {
     }
   }
 
-  private stateOrInactive(live: LiveGame, role: Role): DeclarationsState {
+  private async stateOrInactive(live: LiveGame, role: Role): Promise<DeclarationsState> {
     return (
-      this.state(live, role) ?? {
+      (await this.state(live, role)) ?? {
         active: false,
         revision: live.revision,
         round: null,
@@ -369,6 +445,7 @@ export class BattleService {
         declarations: {},
         declared_by: {},
         refusals: [],
+        projection: null,
       }
     );
   }
@@ -387,7 +464,7 @@ export function registerBattleRoutes(app: FastifyInstance, ctx: Context): void {
     const { tableId } = TableParams.parse(request.params);
     const role = ctx.tables.requireMember(tableId, ctx.auth.user(request));
     const live = await ctx.game.require(tableId);
-    return reply.type('application/json').send(JSON.stringify(battle.state(live, role)));
+    return reply.type('application/json').send(JSON.stringify(await battle.state(live, role)));
   });
 
   app.put('/api/tables/:tableId/game/declarations/:memberId', async (request) => {

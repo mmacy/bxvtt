@@ -57,11 +57,14 @@ ALTER TABLE ability_rolls ADD COLUMN gold_rolled_at TEXT;
 `;
 
 /**
- * Drops the monster target handles, which layout version 7 retired. Players name a monster by the ID that
- * bxapi's player view lists, so the server no longer stores a handle for each monster.
+ * Drops the two tables that layout version 7 retired. Players name a monster by the ID that bxapi's player view
+ * lists, so the server no longer stores a target handle for each monster. The declarations state carries bxapi's
+ * preview of the stored declarations, which gives the same rejections as resolving them, so the server no longer
+ * stores the refusals of the last attempt to resolve a round.
  */
-const DROP_TARGET_HANDLES = `
-DROP TABLE target_handles;
+const VERSION_7 = `
+DROP TABLE IF EXISTS target_handles;
+DROP TABLE IF EXISTS battle_refusals;
 `;
 
 /** The SQL that upgrades a database from the version before each key to that version. */
@@ -76,7 +79,7 @@ const MIGRATIONS: Record<number, string> = {
   ).join('\n'),
   5: BXAPI_GARBAGE,
   6: STARTING_ROLLS,
-  7: DROP_TARGET_HANDLES,
+  7: VERSION_7,
 };
 
 const SCHEMA = `
@@ -157,12 +160,6 @@ CREATE TABLE declarations (
   user_id TEXT NOT NULL,
   updated_at TEXT NOT NULL,
   PRIMARY KEY (table_id, session_id, member_id)
-);
-CREATE TABLE battle_refusals (
-  table_id TEXT PRIMARY KEY REFERENCES tables(id) ON DELETE CASCADE,
-  session_id TEXT NOT NULL,
-  revision INTEGER NOT NULL,
-  refusals_json TEXT NOT NULL
 );
 CREATE TABLE saves (
   id TEXT PRIMARY KEY,

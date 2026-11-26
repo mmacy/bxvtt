@@ -103,6 +103,51 @@ describe('EncounterPanel', () => {
   });
 });
 
+describe('turn undead with two turners (#30)', () => {
+  /** The encounter with undead, a cleric of Ruth's first in the marching order, and the viewer's cleric last. */
+  function twoClerics() {
+    const snapshot = fixtureSnapshot('encounter', 'player');
+    const game = snapshot.game as GameState;
+    const viewer = snapshot.user.id;
+    const tamsin = game.view.party.find((m) => m.id === 'character-0004');
+    if (tamsin) tamsin.class_id = 'cleric';
+    for (const seat of game.seats) if (seat.member_id === 'character-0004') seat.user_id = viewer;
+    for (const group of game.view.encounter?.groups ?? []) group.categories = ['undead'];
+    return snapshot;
+  }
+
+  it('lets the player of the second cleric open the turners and pick their own', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = twoClerics();
+    api.sendCommand.mockResolvedValue(accepted(snapshot.game as GameState));
+    const { user } = renderWithTable(<EncounterPanel />, { snapshot, api });
+    const turn = await screen.findByRole('button', { name: 'Turn undead' });
+    expect(turn).not.toHaveAttribute('aria-disabled', 'true');
+    await user.click(turn);
+    expect(await screen.findByRole('option', { name: /Osric/ })).toHaveAttribute('aria-disabled', 'true');
+    await user.click(screen.getByRole('option', { name: /Tamsin/ }));
+    expect(api.sendCommand).toHaveBeenCalledWith(
+      expect.any(String),
+      { command_type: 'turn_undead', character_id: 'character-0004' },
+      expect.any(Number),
+    );
+  });
+
+  it('keeps the button unavailable, with a reason, for a viewer who plays neither cleric', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = twoClerics();
+    const game = snapshot.game as GameState;
+    const ruth = snapshot.table?.members.find((m) => m.role === 'referee')?.user_id ?? null;
+    for (const seat of game.seats) if (seat.member_id === 'character-0004') seat.user_id = ruth;
+    renderWithTable(<EncounterPanel />, { snapshot, api });
+    const turn = await screen.findByRole('button', { name: 'Turn undead' });
+    expect(turn).toHaveAttribute('aria-disabled', 'true');
+    expect(turn).toHaveAccessibleDescription(/Osric/);
+  });
+});
+
 describe('CombatActions', () => {
   it('fights with the F key', async () => {
     const api = createFakeApi();
@@ -179,6 +224,18 @@ describe('resolveRoundReason', () => {
     expect(resolveRoundReason({ canResolve: denied, canResolveEarly: early, auto: false, waiting: [] })).toBe(
       denied.reason,
     );
+  });
+
+  it('names who has to change a declaration that the session would refuse', () => {
+    expect(
+      resolveRoundReason({
+        canResolve: allowed,
+        canResolveEarly: early,
+        auto: false,
+        waiting: [],
+        refused: ['Brenna', 'Wren'],
+      }),
+    ).toBe('Brenna and Wren have to choose another action first.');
   });
 
   it('says the round resolves by itself with automatic resolution on', () => {
