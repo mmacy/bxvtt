@@ -222,7 +222,9 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   'exploration.door.wedged':
     "The door is already wedged with an iron spike, so you can't close or wedge it again.",
   'exploration.feature.emptied': 'That treasure has already been taken.',
-  'exploration.feature.unknown': "That treasure isn't within reach here. Move to where it lies first.",
+  // Taking, inspecting, and disarming treasure all get this code, so it never says whether a trap exists.
+  'exploration.feature.unknown':
+    "The party can't reach that here, or hasn't found it. Move to where the treasure lies, and find a trap before you try to remove it.",
   'exploration.give.same_member':
     "{character|member} can't give items to themselves. Choose another party member.",
   'exploration.item.not_carried': [

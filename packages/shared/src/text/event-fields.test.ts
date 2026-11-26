@@ -12,14 +12,15 @@ import {
   describeGameEntry,
   describeRejection,
   emptyContext,
-  encounterMonsterLabels,
   extendContextWithEntryNames,
   memberClass,
   monsterName,
+  extendContextWithReferee,
+  type PlayerViewLike,
   type TextContext,
 } from './index';
 
-const view = {
+const view: PlayerViewLike = {
   party: [
     { id: 'character-0001', name: 'Brenna', class_id: 'fighter', class_name: 'Fighter', level: 1 },
     { id: 'character-0002', name: 'Wren', class_id: 'thief', class_name: 'Thief', level: 1 },
@@ -543,8 +544,8 @@ describe('names from the player view', () => {
     });
   });
 
-  it("names each monster by its group's label, without the referee view", () => {
-    expect(monsterName('monster-0002', ctx)).toBe('a goblin');
+  it('names each creature as the table calls it, without the referee view', () => {
+    expect(monsterName('monster-0002', ctx)).toBe('Goblin 2');
     expect(monsterName('npc-0001', ctx)).toBe('Mag Corrie');
     expect(
       describeEvent(
@@ -571,24 +572,6 @@ describe('names from the player view', () => {
     });
     expect(memberClass('character-0001', old)).toBe('magic-user');
     expect(old.reversedSpells).toBeUndefined();
-  });
-
-  it('numbers the monsters of an encounter as the table labels them', () => {
-    expect(
-      encounterMonsterLabels([
-        { label: 'goblin', members: [{ id: 'monster-0001' }, { id: 'monster-0002' }] },
-        { label: 'ogre', members: [{ id: 'monster-0003' }] },
-        { label: 'goblin', members: [{ id: 'monster-0004' }] },
-        { label: 'Mag Corrie', members: [{ id: 'npc-0001' }] },
-        { label: 'kobold' },
-      ]),
-    ).toEqual({
-      'monster-0001': 'Goblin 1',
-      'monster-0002': 'Goblin 2',
-      'monster-0003': 'Ogre',
-      'monster-0004': 'Goblin 3',
-      'npc-0001': 'Mag Corrie',
-    });
   });
 
   it('keeps flag descriptions when a context is copied', () => {
@@ -627,7 +610,7 @@ describe('refusals of a battle declaration', () => {
         target: 'monster-0002',
       }),
     ).toBe(
-      'Tomas is 5 feet from a goblin, too far to reach in melee. Close in first, or use a missile weapon or spell.',
+      'Tomas is 5 feet from Goblin 2, too far to reach in melee. Close in first, or use a missile weapon or spell.',
     );
     expect(
       rej('magic.cast.target_count', { character: 'character-0003', expected: 1, supplied: 3, mode: 'x' }),
@@ -677,5 +660,111 @@ describe('refusals of a battle declaration', () => {
     expect(describeRejection({ code: 'battle.declaration.target_count', params: {} })).toBe(
       'That action needs exactly one target. Choose who drinks the potion, takes the item, or is touched by the staff.',
     );
+  });
+});
+
+describe('creatures named as the table calls them', () => {
+  const hit = [
+    event('attack_rolled', 'combat.attack.hit', {
+      attacker_id: 'character-0001',
+      defender_id: 'monster-0002',
+      attack_name: 'Sword',
+      roll: 16,
+      modifier: 1,
+      total: 17,
+      required: 13,
+      defender_ac: 6,
+      natural: null,
+      back_stab: false,
+    }),
+    event('damage_dealt', 'combat.damage.dealt', {
+      target_id: 'monster-0002',
+      attacker_id: 'character-0001',
+      amount: 5,
+      rolls: [5],
+      keys: [],
+      non_regenerable: false,
+    }),
+  ];
+  const slain = event('monster_defeated', 'battle.monster.defeated', {
+    monster_id: 'monster-0002',
+    template_id: 'drowned_prior',
+    outcome: 'slain',
+    xp: 25,
+  });
+
+  it('names the creature a player aimed at, live and in the feed afterward', () => {
+    const live = describeEvents(hit, ctx).map((line) => line.text);
+    expect(live).toEqual(['Brenna hits Goblin 2 with a sword for 5 damage.']);
+    const feed = describeGameEntry(
+      {
+        command_type: 'resolve_battle_round',
+        events: hit,
+        names: {
+          members: { 'character-0001': 'Brenna' },
+          monsters: { 'monster-0002': { label: 'goblin', label_plural: 'goblins', name: 'Goblin 2' } },
+        },
+      },
+      emptyContext(),
+    ).map((line) => line.text);
+    expect(feed).toEqual(live);
+  });
+
+  it('reads an entry from before table names by its label', () => {
+    const lines = describeGameEntry(
+      {
+        command_type: 'resolve_battle_round',
+        events: hit,
+        names: {
+          members: { 'character-0001': 'Brenna' },
+          monsters: { 'monster-0002': { label: 'goblin', label_plural: 'goblins' } },
+        },
+      },
+      emptyContext(),
+    );
+    expect(lines.map((line) => line.text)).toEqual(['Brenna hits a goblin with a sword for 5 damage.']);
+  });
+
+  it('keeps a disguised group disguised', () => {
+    const disguised = contextFromPlayerView({
+      encounter: {
+        groups: [
+          {
+            id: 'group-0001',
+            label: 'robed corpse',
+            label_plural: 'robed corpses',
+            count: 1,
+            members: [{ id: 'monster-0002', status: 'alive' }],
+          },
+        ],
+      },
+    });
+    expect(describeEvent(slain, disguised).text).toBe('A robed corpse is slain.');
+    const later = extendContextWithEntryNames(emptyContext(), {
+      monsters: {
+        'monster-0002': { label: 'robed corpse', label_plural: 'robed corpses', name: 'Robed corpse' },
+      },
+    });
+    expect(describeEvents([slain], later)[0]?.text).toBe('A robed corpse is slain.');
+    const two = extendContextWithEntryNames(emptyContext(), {
+      monsters: {
+        'monster-0002': { label: 'robed corpse', label_plural: 'robed corpses', name: 'Robed corpse 2' },
+      },
+    });
+    expect(describeEvents([slain], two)[0]?.text).toBe('Robed corpse 2 is slain.');
+  });
+
+  it("keeps a referee's real name for an NPC, and the table name for a monster", () => {
+    const referee = extendContextWithReferee(ctx, {
+      monsters: [{ id: 'monster-0002', template: { id: 'goblin', name: 'Goblin' } }],
+      npcs: [{ id: 'npc-0001', name: 'Aldric', class_id: 'fighter', level: 2 }],
+    });
+    expect(monsterName('monster-0002', referee)).toBe('Goblin 2');
+    expect(monsterName('npc-0001', referee)).toBe('Aldric');
+    const entry = extendContextWithEntryNames(referee, {
+      monsters: { 'npc-0001': { label: 'Mag Corrie', label_plural: 'Mag Corrie', name: 'Mag Corrie' } },
+    });
+    expect(monsterName('npc-0001', entry)).toBe('Aldric');
+    expect(monsterName('npc-0001', contextFromPlayerView(view, referee))).toBe('Aldric');
   });
 });

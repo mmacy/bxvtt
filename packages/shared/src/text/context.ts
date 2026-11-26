@@ -20,6 +20,7 @@ import {
   spellCatalogName,
   type ItemNoun,
 } from './catalog';
+import { creatureNames } from './creatures';
 import { capitalizeFirst, lowerFirst, placeInSentence, pluralize, prettifyId, withArticle } from './format';
 
 export interface MemberInfo {
@@ -51,6 +52,12 @@ export interface MonsterInfo {
   templateId?: string;
   /** A name for a creature that has one, such as an NPC adventurer. */
   name?: string;
+  /**
+   * What the table calls the creature in its encounter, such as `Goblin 2` or `Ogre`, from
+   * [`creatureNames`][creatureNames]. The text names a creature by `name` first, then by this, and then by its
+   * label: `a goblin`.
+   */
+  tableName?: string;
 }
 
 export interface TextContext {
@@ -172,7 +179,7 @@ export interface PlayerViewLike {
       label: string;
       label_plural?: string;
       count?: number;
-      members?: ReadonlyArray<{ id: string; status?: string }>;
+      members?: ReadonlyArray<{ id: string; status: 'alive' | 'defeated' | 'fled' }>;
     }>;
   } | null;
   town_name?: string;
@@ -274,49 +281,19 @@ export function contextFromPlayerView(view: PlayerViewLike, base?: TextContext):
     const size = Math.max(group.count ?? 0, earlier[group.id]?.size ?? 0, earlier[group.id]?.count ?? 0);
     if (size > 0) info.size = size;
     ctx.groups[group.id] = info;
-    // Each monster reads by its group's label, which is what the players see. A name the context already has,
-    // such as one from the referee view, stays.
-    for (const monster of group.members ?? []) {
-      if (ctx.monsters[monster.id] === undefined) {
-        ctx.monsters[monster.id] = { label: info.label, labelPlural: info.labelPlural };
-      }
-    }
+  }
+  // Each creature reads by what the table calls it, such as `Goblin 2`, and otherwise by its group's label, which
+  // is what the players see. A label or a real name the context already has, such as a referee's NPC name, stays.
+  for (const creature of creatureNames(view.encounter?.groups)) {
+    const group = ctx.groups[creature.group_id];
+    const known: MonsterInfo = ctx.monsters[creature.id] ?? {
+      label: group?.label ?? 'monster',
+      ...(group === undefined ? {} : { labelPlural: group.labelPlural }),
+    };
+    ctx.monsters[creature.id] = { ...known, tableName: creature.name };
   }
   if (view.town_name) ctx.townName = view.town_name;
   return ctx;
-}
-
-/**
- * What the table calls each monster of an encounter, by monster ID: `Goblin 1`, `Goblin 2`, or the bare label
- * of a monster that is the only one with its label, such as `Ogre` or `Mag Corrie`. Monsters count by label
- * across every group in the order the groups list them, so a second group of goblins goes on from `Goblin 3`.
- * Pass the player view's `encounter.groups`: each group's `members` lists its monsters, the fallen and fled
- * included, so the numbers stay the same for the whole encounter. A group from a view without `members` adds
- * nothing.
- *
- * ```ts
- * const labels = encounterMonsterLabels(view.encounter?.groups ?? []);
- * labels['monster-0002']; // 'Goblin 2'
- * ```
- */
-export function encounterMonsterLabels(
-  groups: ReadonlyArray<{ label: string; members?: ReadonlyArray<{ id: string }> }>,
-): Record<string, string> {
-  const totals = new Map<string, number>();
-  for (const group of groups) {
-    totals.set(group.label, (totals.get(group.label) ?? 0) + (group.members?.length ?? 0));
-  }
-  const labels: Record<string, string> = {};
-  const counted = new Map<string, number>();
-  for (const group of groups) {
-    const name = capitalizeFirst(group.label.trim() === '' ? 'monster' : group.label);
-    for (const monster of group.members ?? []) {
-      const number = (counted.get(group.label) ?? 0) + 1;
-      counted.set(group.label, number);
-      labels[monster.id] = (totals.get(group.label) ?? 0) > 1 ? `${name} ${number}` : name;
-    }
-  }
-  return labels;
 }
 
 /** Loose shape of the parts of a referee view that the context reads. A `RefereeView` from bxapi fits it. */
@@ -351,11 +328,20 @@ export function extendContextWithReferee(ctx: TextContext, view: RefereeViewLike
       monster.template.name?.toLowerCase() ??
       prettifyId(monster.template.id);
     const labelPlural = monster.template.display_name_plural ?? labels?.labelPlural ?? pluralize(label);
-    next.monsters[monster.id] = { label, labelPlural, templateId: monster.template.id };
+    // What the table calls the monster stays, so the referee reads `Goblin 2` as the players do.
+    const tableName = next.monsters[monster.id]?.tableName;
+    next.monsters[monster.id] = {
+      label,
+      labelPlural,
+      templateId: monster.template.id,
+      ...(tableName === undefined ? {} : { tableName }),
+    };
   }
   for (const npc of view.npcs ?? []) {
     const info: MonsterInfo = { label: 'adventurer', labelPlural: 'adventurers', name: npc.name };
     if (npc.class_id) info.templateId = `npc:${npc.class_id}`;
+    const tableName = next.monsters[npc.id]?.tableName;
+    if (tableName !== undefined) info.tableName = tableName;
     next.monsters[npc.id] = info;
   }
   for (const group of view.encounter?.groups ?? []) {
@@ -559,6 +545,8 @@ export interface EntryLabelLike {
   count?: number;
   /** For a group, the most it has had alive. */
   size?: number;
+  /** For a monster, what the table called it in its encounter, such as `Goblin 2`. */
+  name?: string;
 }
 
 /** Loose shape of a game feed entry's `names` from the bxvtt server. A protocol `EntryNames` fits it. */
@@ -618,7 +606,15 @@ export function extendContextWithEntryNames(
     if (name.trim() !== '') next.dungeons[id] = name;
   }
   for (const [id, entry] of Object.entries(names.monsters ?? {})) {
-    if (entry.label.trim() !== '') next.monsters[id] = { ...next.monsters[id], ...label(entry) };
+    if (entry.label.trim() === '') continue;
+    // The entry's label and table name replace the context's, and a real name the context has, such as a
+    // referee's NPC name, stays.
+    const tableName = entry.name !== undefined && entry.name.trim() !== '' ? entry.name : undefined;
+    next.monsters[id] = {
+      ...next.monsters[id],
+      ...label(entry),
+      ...(tableName === undefined ? {} : { tableName }),
+    };
   }
   const unknownItems = Object.fromEntries(
     Object.entries(names.items ?? {}).filter(([id]) => next.items[id] === undefined),
@@ -626,16 +622,22 @@ export function extendContextWithEntryNames(
   return extendContextWithNames(next, unknownItems);
 }
 
-/** Loose shape of the parts of a bxvtt scene that name things. A protocol `Scene` fits it. */
+/** Loose shape of the part of a bxvtt scene that names things. A protocol `Scene` fits it. */
 export interface SceneNamesLike {
+  /** Item, magic item, and valuable display names by ID. */
   names?: Readonly<Record<string, string>>;
+  /**
+   * Dungeon names by dungeon ID, from an older scene. The player view's `dungeons` now names them, and
+   * `contextFromPlayerView` reads it, so a scene without this field loses nothing.
+   */
   dungeon_names?: Readonly<Record<string, string>>;
 }
 
 /**
- * Add what a bxvtt scene names: item names from `scene.names`, read as in
- * [`extendContextWithNames`][extendContextWithNames], and the names of the dungeons the party has entered from
- * `scene.dungeon_names`, so a player's text reads "the priory on Corvane's Holm" where it would read "the priory".
+ * Add the item names that a bxvtt scene states in `scene.names`, read as in
+ * [`extendContextWithNames`][extendContextWithNames]. Dungeon and area names come from the player view, which
+ * `contextFromPlayerView` reads. A scene from before the player view named dungeons may still state them in
+ * `dungeon_names`, and this reads them too.
  *
  * ```ts
  * ctx = extendContextWithScene(contextFromPlayerView(game.view, ctx), game.scene);
@@ -838,7 +840,7 @@ export function memberClass(id: string, ctx: TextContext): string | undefined {
 function npcName(id: string, ctx: TextContext): string {
   const known = ctx.monsters[id];
   if (known?.name) return known.name;
-  if (known) return oneOf(known.label);
+  if (known) return tabledName(known);
   return 'an adventurer';
 }
 
@@ -849,14 +851,15 @@ function soleGroupLabel(ctx: TextContext): string | undefined {
 }
 
 /**
- * Name of a monster: `a goblin`. A monster the context can't resolve takes the label of the encounter's only
- * monster group when there is just one kind, and otherwise reads as `a monster`.
+ * Name of a monster: its own name when it has one (an NPC adventurer's), what the table calls it in its encounter
+ * (`Goblin 2`), or its label (`a goblin`). A monster the context can't resolve takes the label of the encounter's
+ * only monster group when there is just one kind, and otherwise reads as `a monster`.
  */
 export function monsterName(id: string | null | undefined, ctx: TextContext): string {
   if (!id) return 'a monster';
   const known = ctx.monsters[id];
   if (known?.name) return known.name;
-  if (known) return oneOf(known.label);
+  if (known) return tabledName(known);
   const sole = soleGroupLabel(ctx);
   return sole ? oneOf(sole) : 'a monster';
 }
@@ -868,6 +871,16 @@ export function monsterName(id: string | null | undefined, ctx: TextContext): st
  */
 export function isProperLabel(label: string): boolean {
   return /^\p{Lu}/u.test(label.trim());
+}
+
+/**
+ * A creature the context knows, in a sentence: what the table calls it when that tells it apart from others of its
+ * label (`Goblin 2`), and otherwise its label (`an ogre`, or `Mag Corrie` for a proper name).
+ */
+function tabledName(known: MonsterInfo): string {
+  const table = known.tableName;
+  if (table !== undefined && table !== capitalizeFirst(known.label)) return table;
+  return oneOf(known.label);
 }
 
 /** One creature by its label: `a goblin`, or `Mag Corrie` for a proper name. */

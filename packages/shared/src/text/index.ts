@@ -7,6 +7,7 @@
 export * from './catalog';
 export * from './commands';
 export * from './context';
+export * from './creatures';
 export * from './events';
 export * from './format';
 export * from './humanize';
