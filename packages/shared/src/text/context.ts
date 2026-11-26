@@ -208,6 +208,13 @@ export interface PlayerViewLike {
   reversed_spell_names?: Readonly<Record<string, string>>;
   /** The dungeons the party has entered, with their names. */
   dungeons?: ReadonlyArray<{ id?: string; name?: string }>;
+  /**
+   * The dropped piles the party has found, by cell. Entry `i` of `contents` and of `items` describe the same thing:
+   * its ID and count, and its display string, which is a valuable's own name.
+   */
+  piles?: Readonly<
+    Record<string, { items?: readonly string[]; contents?: ReadonlyArray<{ item_id: string }> }>
+  >;
   /** The party's map, with the areas it has entered on each level. */
   explored?: ReadonlyArray<{
     dungeon_id: string;
@@ -253,6 +260,50 @@ function registerInventory(items: Record<string, string>, inventory: unknown): v
   registerItemEntry(items, inventory.shield);
 }
 
+/** The words a valuable reads by when it has no name of its own: its kind, as osrlib names it. */
+const VALUABLE_KINDS: ReadonlySet<string> = new Set(['gem', 'jewellery', 'piece of jewellery']);
+
+/** A valuable's own name, or `undefined` when it has none beyond its kind, such as a generated `Gem`. */
+function ownValuableName(name: unknown): string | undefined {
+  const text = asString(name)?.trim();
+  if (text === undefined || text === '' || VALUABLE_KINDS.has(text.toLowerCase())) return undefined;
+  return text;
+}
+
+/**
+ * The own name of each gem and piece of jewellery that a player view shows, by instance ID, such as
+ * `{ 'valuable-0003': 'Silver altar candlestick' }`. The view's `item_names` names a valuable by its kind alone,
+ * but the players see its own name from the moment they take it: in a member's `inventory.valuables`, and in a
+ * pile's `items`, whose entry `i` is the display string of `contents[i]`. A pile is read only when the two lists
+ * have the same length. A valuable whose name is empty or just its kind, as a generated one's is, isn't listed,
+ * so it keeps the kind.
+ *
+ * @param view - The player view.
+ */
+export function valuableNames(view: PlayerViewLike): Record<string, string> {
+  const names: Record<string, string> = {};
+  for (const member of view.party ?? []) {
+    const inventory = member.inventory;
+    if (!isRecord(inventory)) continue;
+    for (const entry of asArray(inventory.valuables)) {
+      if (!isRecord(entry)) continue;
+      const id = asString(entry.instance_id);
+      const name = ownValuableName(entry.name);
+      if (id !== undefined && idKind(id) === 'valuable' && name !== undefined) names[id] = name;
+    }
+  }
+  for (const pile of Object.values(view.piles ?? {})) {
+    const items = pile.items ?? [];
+    const contents = pile.contents ?? [];
+    if (items.length !== contents.length) continue;
+    contents.forEach((entry, index) => {
+      const name = ownValuableName(items[index]);
+      if (idKind(entry.item_id) === 'valuable' && name !== undefined) names[entry.item_id] = name;
+    });
+  }
+  return names;
+}
+
 /** Record item names and their plurals by ID. A built-in equipment ID keeps the noun osrlib states for it. */
 function registerItemNames(
   ctx: TextContext,
@@ -275,8 +326,8 @@ function registerItemNames(
  * already have, so groups from earlier encounters stay known.
  *
  * The view's own names win over the built-in catalog, so a custom class, a spell the adventure bundles, and an
- * area or a dungeon of the adventure read by the names their author gave them, without the referee view. A view
- * from before bxapi stated these names leaves the catalog to name them.
+ * area or a dungeon of the adventure read by the names their author gave them, without the referee view. With a
+ * view from an older bxapi that lacks these names, the catalog names them.
  */
 export function contextFromPlayerView(view: PlayerViewLike, base?: TextContext): TextContext {
   const ctx = cloneContext(base ?? emptyContext());
@@ -289,6 +340,11 @@ export function contextFromPlayerView(view: PlayerViewLike, base?: TextContext):
     registerInventory(ctx.items, member.inventory);
   }
   registerItemNames(ctx, view.item_names ?? {}, view.item_names_plural ?? {});
+  // `item_names` names a valuable by its kind, so its own name goes on top, with no plural: it is one thing.
+  for (const [id, name] of Object.entries(valuableNames(view))) {
+    ctx.items[id] = storedNoun(nounForId(id, name));
+    delete ctx.itemsPlural?.[id];
+  }
   for (const [id, name] of Object.entries(view.spell_names ?? {})) {
     if (name.trim() !== '') ctx.spells[id] = name;
   }

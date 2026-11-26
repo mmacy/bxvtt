@@ -1,5 +1,5 @@
 import type { EntryLabel, EntryNames, GameEvent, PlayerView } from '@bxvtt/shared/protocol';
-import { creatureNames } from '@bxvtt/shared/text';
+import { creatureNames, valuableNames } from '@bxvtt/shared/text';
 
 /**
  * What the players of a session have called each member, group, and monster so far. The server reads it from
@@ -57,7 +57,8 @@ export interface ItemNames {
 /**
  * Collects the item names for a command's feed entry from what a player can see: the player view from before the
  * command and the one from after it, whose `item_names` and `item_names_plural` name every item ID each view shows
- * (a pile's `contents` among them), and the `display_name` of each `item_identified` event. The view from after
+ * (a pile's `contents` among them), the own name of each valuable those views show (see `valuableNames`), and
+ * the `display_name` of each `item_identified` event. The view from after
  * wins, so an item identified and kept reads by its true name. An event's name fills in only an ID that neither
  * view names. An item identified and used up in the same command, such as a potion drunk before the party knew
  * it, keeps the masked name of the view from before, and the event's own line states its true name. The referee
@@ -71,6 +72,12 @@ export function itemNames(views: readonly PlayerView[], events: readonly GameEve
   for (const view of views) {
     for (const [id, name] of Object.entries(view.item_names ?? {})) names.one.set(id, name);
     for (const [id, name] of Object.entries(view.item_names_plural ?? {})) names.many.set(id, name);
+    // `item_names` names a gem or a piece of jewellery by its kind. The players see its own name in the inventory
+    // and in a pile, so that name wins, with no plural, because a named valuable is one thing.
+    for (const [id, name] of Object.entries(valuableNames(view))) {
+      names.one.set(id, name);
+      names.many.delete(id);
+    }
   }
   for (const event of events) {
     // An event stored before osrlib 2.8 has no display names.

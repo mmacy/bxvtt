@@ -1,7 +1,13 @@
 import { readFile } from 'node:fs/promises';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { GameEntry, GameState, RefereeState } from '@bxvtt/shared/protocol';
-import { describeGameEntry, emptyContext } from '@bxvtt/shared/text';
+import {
+  contextFromPlayerView,
+  describeGameEntry,
+  emptyContext,
+  itemList,
+  valuableNames,
+} from '@bxvtt/shared/text';
 import { findRepoRoot } from '../src/config';
 import type { TestConnection, TestServer, TestUser } from './helpers';
 import {
@@ -163,14 +169,62 @@ describe('what the party knows of the dungeon', () => {
     const entry = page.entries
       .filter((candidate): candidate is GameEntry => candidate.kind === 'game')
       .findLast((candidate) => candidate.command_type === 'take_treasure');
-    const items = entry?.names?.items ?? {};
+    if (entry === undefined) throw new Error('no take_treasure entry');
+    const items = entry.names?.items ?? {};
     expect(Object.keys(items).length).toBeGreaterThan(0);
+    // A valuable reads by its own name, which the inventory shows, and has no plural. Every other item reads
+    // by the view's item names.
+    const own = valuableNames(game.view);
     for (const [id, name] of Object.entries(items)) {
-      expect(name).toBe(game.view.item_names[id]);
-      expect(entry?.names?.items_plural?.[id]).toBe(game.view.item_names_plural[id]);
+      expect(name).toBe(own[id] ?? game.view.item_names[id]);
+      expect(entry.names?.items_plural?.[id]).toBe(
+        own[id] === undefined ? game.view.item_names_plural[id] : undefined,
+      );
     }
     expect(Object.values(items)).toContain('potion');
     expect(Object.values(items)).not.toContain('potion of healing');
+    expect(Object.values(items)).toContain('Silver altar candlestick');
+    const text = describeGameEntry(entry, emptyContext(), { only: 'player' })
+      .map((line) => line.text)
+      .join(' ');
+    expect(text).toMatch(/takes .*2 silver altar candlesticks|takes .*a silver altar candlestick/);
+    expect(text).not.toMatch(/jewellery/);
+  });
+
+  it('lists a dropped valuable in its pile by its own name', async () => {
+    const game = await alice.client.getGame(tableId);
+    const own = valuableNames(game.view);
+    const id = Object.entries(own).find(([, name]) => name === 'Silver altar candlestick')?.[0] ?? '';
+    expect(id).toMatch(/^valuable-\d+$/);
+    const carrier = game.view.party.find((member) => JSON.stringify(member.inventory).includes(`"${id}"`));
+    const dropped = await alice.client.sendCommand(tableId, {
+      command_type: 'drop_items',
+      character_id: carrier?.id,
+      item_ids: [id],
+    });
+    expect(dropped.accepted).toBe(true);
+    // The view names the dropped candlestick by its kind, and the pile shows its own name.
+    expect(dropped.game.view.item_names[id]).toBe('piece of jewellery');
+    expect(valuableNames(dropped.game.view)[id]).toBe('Silver altar candlestick');
+    const pile = Object.values(dropped.game.view.piles).find((entry) =>
+      entry.contents.some((content) => content.item_id === id),
+    );
+    expect(pile).toBeDefined();
+    const ctx = contextFromPlayerView(dropped.game.view);
+    expect(itemList(pile?.contents.map((content) => content.item_id) ?? [], ctx)).toContain(
+      'a silver altar candlestick',
+    );
+    const page = await alice.client.getFeed(tableId, { limit: 200 });
+    const entry = page.entries.findLast(
+      (candidate): candidate is GameEntry =>
+        candidate.kind === 'game' && candidate.command_type === 'drop_items',
+    );
+    if (entry === undefined) throw new Error('no drop_items entry');
+    expect(entry.names?.items[id]).toBe('Silver altar candlestick');
+    const text = describeGameEntry(entry, emptyContext(), { only: 'player' })
+      .map((line) => line.text)
+      .join(' ');
+    expect(text).toMatch(/a silver altar candlestick/);
   });
 
   it('names a potion that the party identifies by drinking it, though no view names it afterwards', async () => {
@@ -281,6 +335,30 @@ describe('what the party knows of the dungeon', () => {
     const texts = [...alice.received, ...aliceWs.messages.map((message) => JSON.stringify(message))];
     expect(findRefereeData(texts, HIDDEN)).toEqual([]);
   });
+
+  it("names the iron chest's moonstone and the prior's key in the feed when a player takes them", async () => {
+    // The party took the chest's contents only after the check above that nothing untaken reached Alice.
+    const current = await place(26, 17);
+    const chest = viewHere(current)?.features.find(
+      (feature) => feature.kind === 'treasure_cache' && feature.area_id === 'wardens_cell',
+    );
+    const taken = await alice.client.sendCommand(tableId, {
+      command_type: 'take_treasure',
+      feature_id: chest?.id,
+    });
+    expect(taken.accepted).toBe(true);
+    const page = await alice.client.getFeed(tableId, { limit: 200 });
+    const entry = page.entries.findLast(
+      (candidate): candidate is GameEntry =>
+        candidate.kind === 'game' && candidate.command_type === 'take_treasure',
+    );
+    if (entry === undefined) throw new Error('no take_treasure entry');
+    const text = describeGameEntry(entry, emptyContext(), { only: 'player' })
+      .map((line) => line.text)
+      .join(' ');
+    expect(text).toMatch(/takes the prior's iron key, a moonstone/);
+    expect(text).not.toMatch(/gem\b|jewellery/);
+  });
 });
 
 describe('a generated cache', () => {
@@ -315,6 +393,20 @@ describe('a generated cache', () => {
       });
       expect(taken.accepted).toBe(true);
       expect(viewHere(taken.game)?.features.filter((f) => f.kind === 'generated_cache')).toEqual([]);
+      // A generated gem is named only `Gem`, so it reads by its kind.
+      const valuables = taken.game.view.party.flatMap((member) => member.inventory.valuables);
+      expect(valuables.length).toBeGreaterThan(0);
+      expect(valuableNames(taken.game.view)).toEqual({});
+      const page = await alice.client.getFeed(table.id, { limit: 200 });
+      const entry = page.entries.findLast(
+        (candidate): candidate is GameEntry =>
+          candidate.kind === 'game' && candidate.command_type === 'take_treasure',
+      );
+      if (entry === undefined) throw new Error('no take_treasure entry');
+      const text = describeGameEntry(entry, emptyContext(), { only: 'player' })
+        .map((line) => line.text)
+        .join(' ');
+      expect(text).toMatch(new RegExp(`${valuables.length} gems`));
     } finally {
       await server.close();
     }

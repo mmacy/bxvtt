@@ -8,8 +8,12 @@ import {
   itemList,
   itemName,
   itemNoun,
+  extendContextWithNames,
   resolveItemNoun,
+  valuableNames,
+  type PlayerViewLike,
 } from './context';
+import { itemNounFromName, itemPhrase } from './catalog';
 import { describeEvent } from './events';
 import type { GameEvent } from './types';
 
@@ -129,5 +133,109 @@ describe('item names from bxapi', () => {
       template_id: 'unknown_template',
     } as GameEvent;
     expect(describeEvent(identified, emptyContext()).text).toMatch(/turns out to be something\.$/);
+  });
+});
+
+describe("a valuable's own name", () => {
+  /** A player view with Wren carrying two valuables, and a pile with two more and a torch. */
+  const view: PlayerViewLike = {
+    party: [
+      {
+        id: 'character-0003',
+        name: 'Wren',
+        inventory: {
+          valuables: [
+            {
+              instance_id: 'valuable-0001',
+              kind: 'jewellery',
+              name: 'Silver altar candlestick',
+              value_gp: 60,
+            },
+            { instance_id: 'valuable-0002', kind: 'gem', name: 'Gem', value_gp: 10 },
+            { instance_id: 'valuable-0005', kind: 'gem', name: '', value_gp: 10 },
+          ],
+        },
+      },
+    ],
+    item_names: {
+      'valuable-0001': 'piece of jewellery',
+      'valuable-0002': 'gem',
+      'valuable-0003': 'gem',
+      'valuable-0004': 'piece of jewellery',
+      'valuable-0005': 'gem',
+      torch: 'torch',
+    },
+    item_names_plural: {
+      'valuable-0001': 'pieces of jewellery',
+      'valuable-0002': 'gems',
+      'valuable-0003': 'gems',
+      'valuable-0004': 'pieces of jewellery',
+      'valuable-0005': 'gems',
+      torch: 'torches',
+    },
+    piles: {
+      'priory:1:3,4': {
+        items: ['torch×2', 'Moonstone', 'Jewellery'],
+        contents: [{ item_id: 'torch' }, { item_id: 'valuable-0003' }, { item_id: 'valuable-0004' }],
+      },
+    },
+  };
+
+  it('reads the own names from the inventory and the piles, and leaves out a name that is just the kind', () => {
+    expect(valuableNames(view)).toEqual({
+      'valuable-0001': 'Silver altar candlestick',
+      'valuable-0003': 'Moonstone',
+    });
+  });
+
+  it("skips a pile whose lists don't line up", () => {
+    const uneven: PlayerViewLike = {
+      piles: {
+        'priory:1:3,4': {
+          items: ['Moonstone'],
+          contents: [{ item_id: 'torch' }, { item_id: 'valuable-0003' }],
+        },
+      },
+    };
+    expect(valuableNames(uneven)).toEqual({});
+  });
+
+  it('names a valuable by its own name in the context, with no plural, and an unnamed one by its kind', () => {
+    const ctx = contextFromPlayerView(view);
+    expect(itemName('valuable-0001', ctx)).toBe('a silver altar candlestick');
+    expect(itemName('valuable-0003', ctx)).toBe('a moonstone');
+    expect(itemName('valuable-0002', ctx)).toBe('a gem');
+    expect(itemName('valuable-0004', ctx)).toBe('a piece of jewellery');
+    expect(itemName('valuable-0005', ctx)).toBe('a gem');
+    expect(ctx.itemsPlural?.['valuable-0001']).toBeUndefined();
+    expect(itemList(['valuable-0002', 'valuable-0005'], ctx)).toEqual(['2 gems']);
+  });
+
+  it("reads each sample adventure's valuables and keys as the content design asks", () => {
+    const names: Record<string, string> = {
+      'Silver altar candlestick': 'a silver altar candlestick',
+      Moonstone: 'a moonstone',
+      'Gilt psalter covers': 'a gilt psalter covers',
+      Bloodstone: 'a bloodstone',
+      "Abbot's gold ring": "the abbot's gold ring",
+      Sapphire: 'a sapphire',
+      'Silver chalice': 'a silver chalice',
+      Garnet: 'a garnet',
+      Topaz: 'a topaz',
+      "Prior's chain of office": "the prior's chain of office",
+      'Silver brooch': 'a silver brooch',
+      Amber: 'an amber',
+      "Prior's iron key": "the prior's iron key",
+      'Hand of Saint Corvane': 'the Hand of Saint Corvane',
+      'Tongue of the bell Mercy': 'a tongue of the bell Mercy',
+      "Miller Aske's strongbox": "Miller Aske's strongbox",
+    };
+    for (const [name, phrase] of Object.entries(names)) {
+      expect(itemPhrase(itemNounFromName(name)), name).toBe(phrase);
+      // The stored form reads the same again, as a feed entry's names do.
+      const ctx = extendContextWithNames(emptyContext(), { 'valuable-0001': name });
+      expect(itemName('valuable-0001', ctx), name).toBe(phrase);
+    }
+    expect(itemPhrase(itemNounFromName("Prior's iron key"), 2)).toBe("2 prior's iron keys");
   });
 });

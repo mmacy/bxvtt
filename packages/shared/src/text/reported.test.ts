@@ -145,7 +145,7 @@ describe('item names (reported)', () => {
       expect(describeEvent(acquired(['hand_of_saint_corvane'], 'treasure'), ctx).text).toBe(
         'Wren takes the Hand of Saint Corvane.',
       );
-      expect(itemName('priors_iron_key', ctx)).toBe("a prior's iron key");
+      expect(itemName('priors_iron_key', ctx)).toBe("the prior's iron key");
       expect(itemName('tongue_of_mercy', ctx)).toBe('a tongue of the bell Mercy');
       expect(itemName('valuable-0001', ctx)).toBe('the Jade Idol');
       expect(itemName('valuable-0002', ctx)).toBe('a silver torc');
@@ -167,7 +167,7 @@ describe('item names (reported)', () => {
       },
     });
     expect(itemName('hand_of_saint_corvane', ctx)).toBe('the Hand of Saint Corvane');
-    expect(itemName('priors_iron_key', ctx)).toBe("a prior's iron key");
+    expect(itemName('priors_iron_key', ctx)).toBe("the prior's iron key");
   });
 
   it('makes good nouns from catalog listings whatever names the caller passes', () => {
@@ -1228,7 +1228,7 @@ describe('the last QA run (F-102, F-103, F-204, F-208)', () => {
       origin: 'treasure',
     } as never;
     expect(describeEvent(take, ctx).text).toBe("Osric takes Miller Aske's strongbox and coins worth 73 gp.");
-    expect(itemPhrase(itemNounFromName("Prior's iron key"))).toBe("a prior's iron key");
+    expect(itemPhrase(itemNounFromName("Prior's iron key"))).toBe("the prior's iron key");
   });
 
   it('says that a share counts its coins rounded down, not that coins went missing (F-208)', () => {

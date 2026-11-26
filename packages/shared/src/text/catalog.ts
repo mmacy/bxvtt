@@ -24,6 +24,11 @@ export interface ItemNoun {
    */
   proper?: boolean;
   /**
+   * True for a common noun that takes `the` instead of `a` or `an`: a name an author wrote with a possessive in
+   * it, such as `prior's iron key`, which names one particular thing.
+   */
+  definite?: boolean;
+  /**
    * True for the noun of an item that nothing names: no entry in the player view's item names and none in the
    * built-in catalog. It reads `something` whatever the count, because the text never makes up a name from the
    * words of an item's ID.
@@ -229,12 +234,15 @@ export function itemNounFromName(name: string, options: ItemNameOptions = {}): I
   }
   if (definite || isTitleCase(text)) return { one: text, many: pluralize(text), proper: true };
   // A name that starts with a person's name of two or more words in the possessive, such as `Miller Aske's
-  // strongbox`, takes no article and keeps its capitals. One capitalized word in the possessive, as in `Prior's
-  // iron key`, reads as a common noun ("a prior's iron key"), because it is usually a title.
+  // strongbox`, takes no article and keeps its capitals.
   if (/^(?:\p{Lu}[\p{L}-]*\s+)+\p{Lu}[\p{L}-]*['’]s?\s/u.test(text)) {
     return { one: text, many: pluralize(text), noArticle: true };
   }
+  // Any other name, such as a valuable's `Moonstone`, reads as a common noun with its first letter in lower case:
+  // "a moonstone". A possessive in it, as in `Prior's iron key` or `Abbot's gold ring`, names one particular
+  // thing, so it takes `the`: "the prior's iron key".
   const one = lowerFirstWord(text);
+  if (/\p{L}['’]s\b/u.test(text)) return { one, many: pluralize(one), definite: true };
   return { one, many: pluralize(one) };
 }
 
@@ -250,7 +258,7 @@ export function itemPhrase(noun: ItemNoun, quantity = 1): string {
   if (noun.unnamed) return noun.one;
   if (quantity !== 1) return `${quantity} ${noun.many}`;
   if (noun.noArticle) return noun.one;
-  if (noun.proper) return `the ${noun.one}`;
+  if (noun.proper || noun.definite) return `the ${noun.one}`;
   return `${indefiniteArticle(noun.one)} ${noun.one}`;
 }
 
