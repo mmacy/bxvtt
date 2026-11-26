@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useRef, useState, useSyncExternalStore, type RefObject } from 'react';
 
 function subscribeMedia(query: string) {
   return (onChange: () => void) => {
@@ -52,9 +52,10 @@ export function useControllableState<T>(
 /**
  * Focus handlers for a Radix dialog that opens without a Radix trigger, such as a controlled
  * dialog or a command palette. Radix returns focus only to its own trigger; these handlers
- * return focus to whatever had it when the dialog opened.
+ * return focus to whatever had it when the dialog opened. When that element has left the page, such as a button
+ * the dialog's own action removed, focus goes to `fallback` if it's on the page.
  */
-export function useReturnFocus(enabled = true) {
+export function useReturnFocus(enabled = true, fallback?: RefObject<HTMLElement | null>) {
   trackFocus();
   const opener = useRef<HTMLElement | null>(null);
   return {
@@ -63,11 +64,13 @@ export function useReturnFocus(enabled = true) {
       opener.current = focusOrigin();
     },
     onCloseAutoFocus: (event: Event) => {
-      const target = opener.current;
-      if (!enabled || !target || !target.isConnected) return;
+      if (!enabled) return;
+      const recorded = opener.current;
+      opener.current = null;
+      const target = recorded?.isConnected ? recorded : fallback?.current;
+      if (!target || !target.isConnected) return;
       event.preventDefault();
       target.focus();
-      opener.current = null;
     },
   };
 }

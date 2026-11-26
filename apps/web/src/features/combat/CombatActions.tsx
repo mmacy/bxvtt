@@ -7,6 +7,7 @@ import {
   useEncounter,
   useGameMode,
   useParty,
+  useRevision,
   useSendDeclaration,
   useShortcut,
   useTableSettings,
@@ -15,7 +16,14 @@ import {
 import { ActionBarDivider, ActionBarItem, Button } from '@/ui';
 import { QUICK_ICONS, quickAction, quickTooltip, repeatTooltip, useRepeatLastRound } from './BattleBoard';
 import { memberCasts } from './casting';
-import { blockedNote, blockedReason, blockingMembers, memberGear, stealthLists } from './model';
+import {
+  blockedNote,
+  blockedReason,
+  blockingMembers,
+  currentProjection,
+  memberGear,
+  stealthLists,
+} from './model';
 import { useCombatPeople } from './people';
 import { useCombatUi } from './state';
 import { useEncounterCommands } from './useEncounterCommands';
@@ -226,6 +234,7 @@ function BattleActions() {
   const encounter = useEncounter();
   const party = useParty();
   const declarations = useDeclarations();
+  const projection = currentProjection(declarations, useRevision());
   const ctx = useTextContext();
   const people = useCombatPeople();
   const settings = useTableSettings();
@@ -249,7 +258,7 @@ function BattleActions() {
   const canBackStab =
     nextMember !== null &&
     encounter !== null &&
-    stealthLists(encounter, declarations?.projection).canBackStab.includes(nextMember.id);
+    stealthLists(encounter, projection).canBackStab.includes(nextMember.id);
   // While a round plays back, the bar offers nothing to declare yet.
   const quick =
     nextMember && !playing

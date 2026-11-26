@@ -214,7 +214,8 @@ export function PickUp() {
       {caches.map((cache) => (
         <CacheRow
           key={cache.id}
-          text={treasureRowText(cache, caches)}
+          // Numbered among every cache here, as the scene panel numbers them, so one cache has one name.
+          text={treasureRowText(cache, here?.caches ?? caches)}
           trapFound={cache.trapState === 'found'}
           busy={busy}
           canTake={canTake}

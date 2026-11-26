@@ -290,7 +290,7 @@ function conditionList(value: unknown): string[] {
  * The sheet of a party member, from the player view.
  *
  * @param member - The member's sheet.
- * @param ctx - Names for IDs, such as `scene.names`.
+ * @param ctx - Names for IDs, such as the player view's `item_names`.
  */
 export function sheetFromMember(member: MemberView, ctx?: TextContext): SheetModel {
   return {

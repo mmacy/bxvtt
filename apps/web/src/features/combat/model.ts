@@ -11,6 +11,7 @@ import type { BattleDeclaration, EncounterGroupView, EncounterView, MemberView }
 import type {
   DeclarationBody,
   DeclarationRefusal,
+  DeclarationsState,
   Member,
   RoundProjection,
   Seat,
@@ -467,11 +468,27 @@ export interface StealthLists {
 }
 
 /**
+ * The preview's projection when it was judged at the game's current revision, and otherwise `null`. The store
+ * applies the game and the declarations as separate frames, so just after a round resolves the new game can arrive
+ * beside the last round's projection. Until the declarations catch up, readers fall back to the encounter.
+ *
+ * @param declarations - The table's declarations state, or `null` when there is none.
+ * @param revision - The revision of the game the store holds, or `null` when there is no game.
+ */
+export function currentProjection(
+  declarations: DeclarationsState | null | undefined,
+  revision: number | null,
+): RoundProjection | null {
+  if (!declarations?.projection || declarations.revision !== revision) return null;
+  return declarations.projection;
+}
+
+/**
  * Who can hide and who can back-stab this round: the preview's lists, judged beside the planned declarations, when
  * the server has a projection, and otherwise the encounter's lists.
  *
  * @param encounter - The open encounter.
- * @param projection - `DeclarationsState.projection`, or `null` when there is none.
+ * @param projection - The projection `currentProjection` returns, or `null` when there is none.
  */
 export function stealthLists(
   encounter: EncounterView,

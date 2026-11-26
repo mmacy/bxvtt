@@ -262,7 +262,14 @@ export function useSpellDetail(spellId: string | null): SpellDetailResult {
       ? sessionSpellKey(tableId, sessionId, spellId)
       : null;
   const session = useCatalog<SpellTemplate>(sessionKey);
-  // A component that mounts after a failed load tries again, so "try again in a moment" works by reopening.
+  // A component that mounts after a failed load tries again, so "try again in a moment" works by reopening. That
+  // covers the whole spell catalog, which outside a game is the only source.
+  const triedCatalog = useRef(false);
+  useEffect(() => {
+    if (spellId === null || triedCatalog.current) return;
+    triedCatalog.current = true;
+    if (useCatalogStore.getState().entries[FULL_SPELLS]?.status === 'error') clearEntry(FULL_SPELLS);
+  }, [spellId]);
   const triedKey = useRef<string | null>(null);
   useEffect(() => {
     if (sessionKey === null || triedKey.current === sessionKey) return;

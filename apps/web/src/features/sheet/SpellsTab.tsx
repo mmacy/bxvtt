@@ -1,6 +1,6 @@
 import type { MemberView, PlayerView } from '@bxvtt/shared/bxapi';
 import { capitalizeFirst, ordinal, spellFormName, type TextContext } from '@bxvtt/shared/text';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState, type RefObject } from 'react';
 import {
   useParty,
   usePartyLocation,
@@ -187,6 +187,9 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
   const [preparing, setPreparing] = useState(false);
   const [casting, setCasting] = useState<{ spellId: string; reversed: boolean } | null>(null);
   const [learning, setLearning] = useState(false);
+  // Preparing the first spells, or casting the last copy of one, removes the button that opened the dialog, so
+  // focus returns to the section's heading.
+  const heading = useRef<HTMLHeadingElement>(null);
 
   const memorized = useMemo(() => {
     const groups = new Map<string, { spellId: string; reversed: boolean; count: number }>();
@@ -226,7 +229,7 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
       )}
       <section className={styles.section} aria-labelledby="spells-memorized">
         <div className={styles.sectionHeader}>
-          <h3 id="spells-memorized" className={styles.sectionTitle}>
+          <h3 id="spells-memorized" ref={heading} tabIndex={-1} className={styles.sectionTitle}>
             Memorized spells
           </h3>
           {canPrepare && memorized.length > 0 && prepareButton}
@@ -321,9 +324,17 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
       )}
 
       {preparing && (
-        <PrepareDialog member={member} model={model} levels={levels} onClose={() => setPreparing(false)} />
+        <PrepareDialog
+          member={member}
+          model={model}
+          levels={levels}
+          returnFocus={heading}
+          onClose={() => setPreparing(false)}
+        />
       )}
-      {casting && <CastDialog member={member} copy={casting} onClose={() => setCasting(null)} />}
+      {casting && (
+        <CastDialog member={member} copy={casting} returnFocus={heading} onClose={() => setCasting(null)} />
+      )}
       {learning && <LearnDialog member={member} levels={levels} onClose={() => setLearning(false)} />}
     </div>
   );
@@ -371,11 +382,13 @@ function PrepareDialog({
   member,
   model,
   levels,
+  returnFocus,
   onClose,
 }: {
   member: MemberView;
   model: SheetModel;
   levels: SpellLevels;
+  returnFocus: RefObject<HTMLElement | null>;
   onClose: () => void;
 }) {
   const ctx = useTextContext();
@@ -385,7 +398,9 @@ function PrepareDialog({
   const [hadMemorized] = useState(() => model.memorized.length > 0);
   const [counts, setCounts] = useState<Record<string, number>>(() => {
     const initial: Record<string, number> = {};
+    // A memorized copy of a spell bxapi doesn't list as preparable has no row here, so it starts uncounted.
     for (const copy of model.memorized) {
+      if (!member.preparable_spells.includes(copy.spellId)) continue;
       const key = formKey(copy.spellId, copy.reversed);
       initial[key] = (initial[key] ?? 0) + 1;
     }
@@ -410,21 +425,31 @@ function PrepareDialog({
       spells: member.preparable_spells.filter((id) => levels[id] === index + 1),
     }))
     .filter((group) => group.slots > 0 && group.spells.length > 0);
+  // A spell in the book chose its form when it was memorized, so only a book spell has a row for its reverse.
+  const reversedNameOf = (id: string) => (member.spell_book.includes(id) ? reversedNames[id] : undefined);
+  // The forms the dialog has a row for. The counts and the command cover these alone, so a spell that leaves the
+  // view while the dialog is open is never sent.
+  const shown = groups.flatMap(({ spells }) =>
+    spells.flatMap((id) => [
+      { spellId: id, reversed: false },
+      ...(reversedNameOf(id) === undefined ? [] : [{ spellId: id, reversed: true }]),
+    ]),
+  );
   const countOf = (id: string, reversed: boolean) => counts[formKey(id, reversed)] ?? 0;
   const chosenIn = (spells: readonly string[]) =>
-    spells.reduce((sum, id) => sum + countOf(id, false) + countOf(id, true), 0);
-  const chosenTotal = Object.values(counts).reduce((sum, n) => sum + n, 0);
+    shown
+      .filter((f) => spells.includes(f.spellId))
+      .reduce((sum, f) => sum + countOf(f.spellId, f.reversed), 0);
+  const chosenTotal = chosenIn(shown.map((f) => f.spellId));
   const setCount = (key: string, value: number) => setCounts((c) => ({ ...c, [key]: value }));
 
   const submit = async () => {
     setError(null);
-    const selections = Object.entries(counts).flatMap(([key, n]) => {
-      const [spellId, reversed] = key.split(':');
-      if (!spellId) return [];
-      return Array.from({ length: n }, () =>
-        reversed === 'true' ? { spell_id: spellId, reversed: true } : { spell_id: spellId },
-      );
-    });
+    const selections = shown.flatMap(({ spellId, reversed }) =>
+      Array.from({ length: countOf(spellId, reversed) }, () =>
+        reversed ? { spell_id: spellId, reversed: true } : { spell_id: spellId },
+      ),
+    );
     const result = await send(
       { command_type: 'prepare_spells', character_id: member.id, selections },
       { display: 'inline' },
@@ -440,6 +465,7 @@ function PrepareDialog({
         if (!open) onClose();
       }}
       title={`Prepare ${member.name}'s spells`}
+      returnFocus={returnFocus}
       description={
         hadMemorized ? `Your choices replace the spells ${member.name} has memorized now.` : undefined
       }
@@ -481,7 +507,7 @@ function PrepareDialog({
               <ul className={styles.pickList}>
                 {spells.map((id) => {
                   const name = nameOf(id, false, ctx);
-                  const reversedName = member.spell_book.includes(id) ? reversedNames[id] : undefined;
+                  const reversedName = reversedNameOf(id);
                   return (
                     <li key={id} className={styles.pickGroup}>
                       <div className={styles.pickRow}>
@@ -540,10 +566,12 @@ function modeLabels(
 function CastDialog({
   member,
   copy,
+  returnFocus,
   onClose,
 }: {
   member: MemberView;
   copy: { spellId: string; reversed: boolean };
+  returnFocus: RefObject<HTMLElement | null>;
   onClose: () => void;
 }) {
   const entry = useSpellDetail(copy.spellId);
@@ -602,6 +630,7 @@ function CastDialog({
         if (!open) onClose();
       }}
       title={`Cast ${name}`}
+      returnFocus={returnFocus}
       size="md"
       footer={
         <>

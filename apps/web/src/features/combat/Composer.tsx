@@ -7,7 +7,6 @@ import {
   memberName,
   monsterName,
   spellFormName,
-  spellName,
   type TextContext,
 } from '@bxvtt/shared/text';
 import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
@@ -16,6 +15,7 @@ import {
   loadCatalog,
   useDeclarations,
   useMonsterCatalog,
+  useRevision,
   useRulesEntry,
   useSendDeclaration,
   useSpellDetail,
@@ -39,6 +39,7 @@ import {
 import {
   attackDeclaration,
   carries,
+  currentProjection,
   liveGroups,
   memberDistance,
   memberGap,
@@ -166,7 +167,7 @@ export function Composer({
   const ctx = useTextContext();
   const { declare, pending } = useSendDeclaration();
   const turnsUndead = useTurnsUndead(member.class_id);
-  const lists = stealthLists(encounter, useDeclarations()?.projection);
+  const lists = stealthLists(encounter, currentProjection(useDeclarations(), useRevision()));
   const gazers = useGazeGroups(encounter);
   const spells = memorizedSpells(member);
   const usable = usableItems(gear);
@@ -198,7 +199,11 @@ export function Composer({
     usableTabs.includes(initial) ? initial : (usableTabs[0] ?? 'hold'),
   );
   const openSheet = useTableUi((s) => s.openCharacterSheet);
-  const [gaze, setGaze] = useState<GazeChoice>(current?.gaze_defense ?? 'none');
+  const hasMirror = carries(gear, 'mirror');
+  const [chosenGaze, setGaze] = useState<GazeChoice>(current?.gaze_defense ?? 'none');
+  // A saved mirror guard reads as no guard once the member no longer carries a mirror, since the list has no
+  // mirror to show and resending it would only be refused.
+  const gaze: GazeChoice = chosenGaze === 'mirror' && !hasMirror ? 'none' : chosenGaze;
   const [error, setError] = useState<string | null>(null);
 
   const submit = async (body: DeclarationBody) => {
@@ -209,7 +214,6 @@ export function Composer({
     else if (result.status === 'error') setError(result.message);
   };
 
-  const hasMirror = carries(gear, 'mirror');
   return (
     <section className={styles.composer} aria-label={`Declare for ${member.name}`}>
       <div className={styles.composerHead}>
@@ -584,8 +588,7 @@ function CastChoices({ member, encounter, ctx, pending, onSubmit }: ChoiceProps 
             icon="spell"
             onClick={() => setChoice(index)}
           >
-            {capitalize(spellName(spell.spellId, ctx))}
-            {spell.reversed ? ' (reversed)' : ''}
+            {capitalize(spellFormName(spell.spellId, spell.reversed, ctx))}
             {spell.copies > 1 ? ` ×${spell.copies}` : ''}
           </Button>
         ))}

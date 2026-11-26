@@ -15,8 +15,12 @@ import styles from './Dialog.module.css';
 export type InitialFocus = RefObject<HTMLElement | null> | 'content';
 
 /** Focus handlers that record the opener and then move focus as `initialFocus` asks. */
-function useOpenFocus(enabled: boolean, initialFocus: InitialFocus | undefined) {
-  const focus = useReturnFocus(enabled);
+function useOpenFocus(
+  enabled: boolean,
+  initialFocus: InitialFocus | undefined,
+  returnFocus?: RefObject<HTMLElement | null>,
+) {
+  const focus = useReturnFocus(enabled, returnFocus);
   return {
     onOpenAutoFocus: (event: Event) => {
       focus.onOpenAutoFocus();
@@ -57,6 +61,11 @@ export interface DialogProps {
   paper?: boolean;
   /** Which element takes focus on open. Defaults to the first focusable element. */
   initialFocus?: InitialFocus;
+  /**
+   * Which element takes focus on close when the element that opened the dialog has left the page, such as a
+   * button that the dialog's own action removed. Give a heading `tabIndex={-1}` to make it focusable.
+   */
+  returnFocus?: RefObject<HTMLElement | null>;
   className?: string;
 }
 
@@ -76,9 +85,10 @@ export function Dialog({
   hideClose = false,
   paper = false,
   initialFocus,
+  returnFocus,
   className,
 }: DialogProps) {
-  const focus = useOpenFocus(!trigger, initialFocus);
+  const focus = useOpenFocus(!trigger, initialFocus, returnFocus);
   return (
     <DialogPrimitive.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
       {trigger && <DialogPrimitive.Trigger asChild>{trigger}</DialogPrimitive.Trigger>}

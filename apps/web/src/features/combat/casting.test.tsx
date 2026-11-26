@@ -96,4 +96,73 @@ describe('a caster with nothing to cast', () => {
     ).toBeInTheDocument();
     expect(api.getSessionSpell).toHaveBeenCalledWith(store.getState().tableId, 'ember_dart');
   });
+
+  /** The battle fixture with Wren as a magic-user who has Light in her book, memorized in the form given. */
+  function lightCaster(reversed: boolean) {
+    const api = createFakeApi();
+    api.rules.mockImplementation(
+      async (path: string) => ({ id: path, abilities: [], progression: [] }) as never,
+    );
+    api.fullCatalog.mockResolvedValue({
+      catalog: 'spells',
+      total: 1,
+      items: [
+        {
+          id: 'light_mu',
+          name: 'Light',
+          spell_list: 'magic_user',
+          level: 1,
+          range: '120 feet',
+          duration: '6 turns',
+          intro: 'Light makes light.',
+          modes: [{ key: 'light', prose: 'Light makes light.', targeting: { mode: 'single' } }],
+          reversed_form: {
+            name: 'Darkness',
+            prose: '',
+            modes: [{ key: 'darkness', prose: 'Darkness makes dark.', targeting: { mode: 'single' } }],
+          },
+        },
+      ],
+    } as never);
+    const snapshot = fixtureSnapshot('battle', 'player');
+    const view = snapshot.game?.view;
+    const wren = view?.party.find((m) => m.name === 'Wren');
+    if (!view || !wren) throw new Error('No Wren.');
+    Object.assign(wren, {
+      class_id: 'magic_user',
+      spell_book: ['light_mu'],
+      spell_slots: [1, 0, 0, 0, 0, 0],
+      memorized_spells: [reversed ? { spell_id: 'light_mu', reversed: true } : { spell_id: 'light_mu' }],
+    });
+    view.spell_names = { ...view.spell_names, light_mu: 'Light' };
+    view.spell_levels = { ...view.spell_levels, light_mu: 1 };
+    view.reversed_spell_names = { ...view.reversed_spell_names, light_mu: 'Darkness' };
+    return { api, snapshot };
+  }
+
+  async function openCast(user: ReturnType<typeof renderWithTable>['user']) {
+    const row = screen.getAllByRole('listitem').find((li) => within(li).queryByText('Wren', { exact: true }));
+    if (!row) throw new Error('No row for Wren.');
+    await user.click(within(row).getByRole('button', { name: 'Actions' }));
+    await user.click(screen.getByRole('radio', { name: 'Cast' }));
+    return screen.getByRole('region', { name: 'Declare for Wren' });
+  }
+
+  it("names a magic-user's reversed copy by the reverse's own name", async () => {
+    const { api, snapshot } = lightCaster(true);
+    const { user } = renderWithTable(<BattleBoard />, { snapshot, api });
+    const composer = await openCast(user);
+    const spells = within(composer).getByRole('group', { name: 'Memorized spells' });
+    expect(within(spells).getByRole('button', { name: 'Darkness' })).toBeInTheDocument();
+    expect(spells).not.toHaveTextContent(/Light|reversed/);
+  });
+
+  it('offers a magic-user no reverse as a book spell is cast, since it was chosen when memorized', async () => {
+    const { api, snapshot } = lightCaster(false);
+    const { user } = renderWithTable(<BattleBoard />, { snapshot, api });
+    const composer = await openCast(user);
+    // The spell's details load before the form choice could show.
+    expect(await within(composer).findByText(/Light makes light\./)).toBeInTheDocument();
+    expect(within(composer).queryByRole('checkbox', { name: /reverse/ })).not.toBeInTheDocument();
+  });
 });

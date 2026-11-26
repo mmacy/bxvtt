@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot, type Snapshot } from '@/app/testing/fixtures';
 import { renderWithTable } from '@/app/testing/renderWithTable';
 import { addFeatureAtParty, addPileAtParty } from '@/app/testing/views';
+import { ScenePanel } from '../explore/ScenePanel';
 import { PickUp } from './Aftermath';
 
 /** The exploring fixture with a cache in reach on the party's cell, whose trap the party knows in `trapState`. */
@@ -60,6 +61,17 @@ describe('the aftermath pick-up', () => {
     const [first, second] = screen.getAllByRole('button', { name: 'Take' });
     expect(first).toHaveAccessibleDescription('Treasure 1 lies here.');
     expect(second).toHaveAccessibleDescription('Treasure 2 lies here.');
+  });
+
+  it('numbers a rolled treasure among every cache here, as the scene panel does', () => {
+    const snapshot = fixtureSnapshot('exploring', 'player');
+    addFeatureAtParty(snapshot, { id: 'feature:hoard', kind: 'generated_cache', emptied: true });
+    addFeatureAtParty(snapshot, { id: 'feature:hoard-2', kind: 'generated_cache' });
+    const aftermath = renderWithTable(<PickUp />, { snapshot });
+    expect(screen.getByRole('button', { name: 'Take' })).toHaveAccessibleDescription('Treasure 2 lies here.');
+    aftermath.unmount();
+    renderWithTable(<ScenePanel />, { snapshot });
+    expect(screen.getByRole('button', { name: 'Take' })).toHaveAccessibleDescription('Treasure 2 lies here.');
   });
 
   it('lists only the caches in reach that the party hasn’t emptied', () => {

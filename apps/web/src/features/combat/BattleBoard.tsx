@@ -1,5 +1,5 @@
 import type { EncounterView, MemberView } from '@bxvtt/shared/bxapi';
-import type { DeclarationBody, DeclarationsState, GameEntry } from '@bxvtt/shared/protocol';
+import type { DeclarationBody, DeclarationsState, GameEntry, RoundProjection } from '@bxvtt/shared/protocol';
 import { conditionLabel, groupName, joinList, memberName, type TextContext } from '@bxvtt/shared/text';
 import { useEffect, useId, useMemo, useState } from 'react';
 import {
@@ -52,6 +52,7 @@ import {
   repeatProblem,
   quickAttack,
   stealthLists,
+  currentProjection,
   type MemberGear,
 } from './model';
 import { useCombatPeople, type CombatPeople } from './people';
@@ -195,6 +196,7 @@ export function BattleBoard() {
   const party = useParty();
   const declarations = useDeclarations();
   const revision = useRevision();
+  const projection = currentProjection(declarations, revision);
   const ctx = useTextContext();
   const people = useCombatPeople();
   const reduce = useReduceMotion();
@@ -324,7 +326,7 @@ export function BattleBoard() {
         selected={composing}
         animate={!reduce}
         compact={collapsed || composing !== null}
-        planned={playback.track ? null : (declarations?.projection?.advance_feet ?? null)}
+        planned={playback.track ? null : (projection?.advance_feet ?? null)}
       />
 
       {(composing === null || playback.playing) && (
@@ -353,6 +355,7 @@ export function BattleBoard() {
                 member={member}
                 encounter={encounter}
                 declarations={declarations}
+                projection={projection}
                 gear={gears[member.id] ?? { wielded: [], items: [] }}
                 people={people}
                 ctx={ctx}
@@ -455,6 +458,8 @@ interface MemberRowProps {
   playing: boolean;
   encounter: EncounterView;
   declarations: DeclarationsState | null;
+  /** The preview's projection at the game's revision, or `null`. */
+  projection: RoundProjection | null;
   gear: MemberGear;
   people: CombatPeople;
   ctx: TextContext;
@@ -470,6 +475,7 @@ function MemberRow({
   playing,
   encounter,
   declarations,
+  projection,
   gear,
   people,
   ctx,
@@ -491,7 +497,7 @@ function MemberRow({
   const dead = shown ? shown.down && shown.conditions.includes('dead') : member.conditions.includes('dead');
   const down = shown ? shown.down || shown.hp <= 0 : dead || member.current_hp <= 0;
   const casts = memberCasts(member);
-  const canBackStab = stealthLists(encounter, declarations?.projection).canBackStab.includes(member.id);
+  const canBackStab = stealthLists(encounter, projection).canBackStab.includes(member.id);
   // While a round plays back, the row shows the beat on screen, so it offers nothing to declare yet.
   const suggestion =
     canAct && !declaration && !playing

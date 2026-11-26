@@ -472,15 +472,36 @@ describe('ScenePanel', () => {
       const { snapshot } = exploring();
       setRoomTrap(snapshot, state);
       renderWithTable(<ScenePanel />, { snapshot });
-      expect(screen.getByText(badge)).toBeInTheDocument();
+      const header = screen.getByRole('heading', { name: 'Gatehouse stair' }).closest('header');
+      if (!header) throw new Error('The panel has no header.');
+      expect(within(header).getByText(badge)).toBeInTheDocument();
       expect(screen.queryByText(/trap in this room/)).toBeNull();
       act(() => {
         vi.advanceTimersByTime(RECEDE_MS + 10);
       });
       expect(screen.queryByText(/A flight of worn steps/)).toBeNull();
-      expect(screen.getByText(badge)).toBeInTheDocument();
+      expect(within(header).getByText(badge)).toBeInTheDocument();
       // The room's trap isn't one of the things here.
       expect(screen.getByText('1 thing here')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('marks no trap beside the room’s name, open or folded, when the room has no trap the party knows', () => {
+    vi.useFakeTimers();
+    try {
+      const { snapshot } = exploring();
+      setRoomTrap(snapshot, null);
+      renderWithTable(<ScenePanel />, { snapshot });
+      const header = screen.getByRole('heading', { name: 'Gatehouse stair' }).closest('header');
+      if (!header) throw new Error('The panel has no header.');
+      expect(within(header).queryByText(/^Trap/)).toBeNull();
+      act(() => {
+        vi.advanceTimersByTime(RECEDE_MS + 10);
+      });
+      expect(screen.queryByText(/A flight of worn steps/)).toBeNull();
+      expect(within(header).queryByText(/^Trap/)).toBeNull();
     } finally {
       vi.useRealTimers();
     }

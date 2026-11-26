@@ -772,3 +772,114 @@ describe('BattleBoard', () => {
     expect(screen.getByRole('button', { name: 'Pause playback' })).toHaveFocus();
   });
 });
+
+describe('the composer sends only what it shows', () => {
+  /** The body of the last declaration the API received. */
+  function lastBody(api: FakeApi): Record<string, unknown> {
+    const call = api.declare.mock.calls.at(-1);
+    if (!call) throw new Error('Nothing was declared.');
+    return call[2] as Record<string, unknown>;
+  }
+
+  it('sends no back-stab once the lists drop the member and the Back-stab box goes', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = withLists({
+      encounter: { can_back_stab: [] },
+      projection: { can_back_stab: ['character-0002'] },
+    });
+    api.declare.mockResolvedValue(snapshot.declarations as DeclarationsState);
+    const { user, store } = renderWithTable(<BattleBoard />, { snapshot, api });
+    await user.click(within(row('Wren')).getByRole('button', { name: 'Actions' }));
+    const composer = screen.getByRole('region', { name: 'Declare for Wren' });
+    await user.click(within(composer).getByRole('radio', { name: 'Attack' }));
+    expect(within(composer).getByRole('checkbox', { name: 'Back-stab' })).toBeChecked();
+    const declarations = structuredClone(store.getState().declarations) as DeclarationsState;
+    if (declarations.projection) declarations.projection.can_back_stab = [];
+    act(() => store.getState().receive({ type: 'declarations', declarations }));
+    await waitFor(() =>
+      expect(within(composer).queryByRole('checkbox', { name: 'Back-stab' })).not.toBeInTheDocument(),
+    );
+    await user.click(within(composer).getByRole('button', { name: /the goblins/ }));
+    expect(lastBody(api).back_stab).not.toBe(true);
+  });
+
+  it('sends no back-stab after the player unchecks a saved one the lists no longer offer', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = withLists({ encounter: { can_back_stab: [] }, projection: { can_back_stab: [] } });
+    const declarations = snapshot.declarations as DeclarationsState;
+    declarations.declarations['character-0002'] = {
+      character_id: 'character-0002',
+      action: 'attack',
+      target_group_id: 'group-0001',
+      move: 'close',
+      back_stab: true,
+    } as never;
+    declarations.declared = [...declarations.declared, 'character-0002'];
+    api.declare.mockResolvedValue(declarations);
+    const { user } = renderWithTable(<BattleBoard />, { snapshot, api });
+    await user.click(within(row('Wren')).getByRole('button', { name: 'Change' }));
+    const composer = screen.getByRole('region', { name: 'Declare for Wren' });
+    await user.click(within(composer).getByRole('checkbox', { name: 'Back-stab' }));
+    await user.click(within(composer).getByRole('button', { name: /the goblins/ }));
+    expect(lastBody(api).back_stab).not.toBe(true);
+  });
+
+  it("starts at no guard when a saved mirror guard's member no longer carries a mirror", async () => {
+    const api = createFakeApi();
+    api.rules.mockImplementation(async (path: string) => {
+      if (path === 'monsters') return { items: [{ id: 'goblin' }], total: 1 } as never;
+      if (path === 'monsters/goblin')
+        return { abilities: [{ tag: 'petrification', params: { vector: 'gaze' } }] } as never;
+      if (path.startsWith('classes/')) return { id: path.slice(8), abilities: [] } as never;
+      return { abilities: [] } as never;
+    });
+    const snapshot = fixtureSnapshot('battle', 'player');
+    const declarations = snapshot.declarations as DeclarationsState;
+    declarations.declarations['character-0002'] = {
+      character_id: 'character-0002',
+      action: 'hold',
+      gaze_defense: 'mirror',
+    } as never;
+    declarations.declared = [...declarations.declared, 'character-0002'];
+    api.declare.mockResolvedValue(declarations);
+    const { user } = renderWithTable(<BattleBoard />, { snapshot, api });
+    await user.click(within(row('Wren')).getByRole('button', { name: 'Change' }));
+    const composer = screen.getByRole('region', { name: 'Declare for Wren' });
+    const guard = await within(composer).findByRole('combobox', { name: 'Guard against the gaze' });
+    expect(guard).toHaveTextContent('No guard');
+    await user.click(within(composer).getByRole('button', { name: 'Hold this round' }));
+    expect(lastBody(api)).toEqual({ action: 'hold' });
+  });
+});
+
+describe("the preview's projection after a round resolves", () => {
+  it("falls back to the encounter's lists and plans no places until the new round's declarations arrive", async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = withLists({
+      encounter: { can_back_stab: [] },
+      projection: { can_back_stab: ['character-0002'] },
+    });
+    const declarations = snapshot.declarations as DeclarationsState;
+    if (declarations.projection)
+      declarations.projection.advance_feet = {
+        ...declarations.projection.advance_feet,
+        'character-0001': 35,
+      };
+    const { user, store } = renderWithTable(<BattleBoard />, { snapshot, api });
+    expect(
+      screen.getAllByText(/^Brenna, .*will move to 35 feet past the party line$/).length,
+    ).toBeGreaterThan(0);
+    // The resolved round's game arrives before the declarations frame for the new round.
+    const game = store.getState().game;
+    if (!game) throw new Error('No game.');
+    act(() => store.getState().receive({ type: 'game', game: { ...game, revision: game.revision + 1 } }));
+    await waitFor(() => expect(screen.queryByText(/^Brenna, .*will move to/)).not.toBeInTheDocument());
+    await user.click(within(row('Wren')).getByRole('button', { name: 'Actions' }));
+    const composer = screen.getByRole('region', { name: 'Declare for Wren' });
+    await user.click(within(composer).getByRole('radio', { name: 'Attack' }));
+    expect(within(composer).queryByRole('checkbox', { name: 'Back-stab' })).not.toBeInTheDocument();
+  });
+});
