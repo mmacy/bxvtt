@@ -155,6 +155,10 @@ export function DisplaySection() {
           >
             The connection to the table dropped. Your last command didn't reach the server.
           </Banner>
+          <Banner tone="warning" announce="status">
+            Flarg is 30 feet from the goblins, too far for a melee attack. A forecast like this one waits for
+            a pause instead of interrupting a screen reader each time the view opens.
+          </Banner>
           <Banner tone="success">The party returned to town with 1,240 gp of treasure.</Banner>
           <Banner tone="info">
             Ruth is choosing the adventure. You can create a character while you wait.

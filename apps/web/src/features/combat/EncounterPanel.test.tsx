@@ -279,6 +279,35 @@ describe('CombatActions', () => {
     expect(api.resolveRound).not.toHaveBeenCalled();
   });
 
+  it("says the round waits for a changed action, not that it resolves now, when one won't work", () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('battle', 'player');
+    if (snapshot.table) snapshot.table.settings.auto_resolve = true;
+    const declarations = snapshot.declarations;
+    if (!declarations) throw new Error('No declarations in the fixture.');
+    declarations.declared = [...declarations.declarers];
+    for (const id of declarations.declarers)
+      declarations.declarations[id] ??= { action: 'hold', character_id: id } as never;
+    declarations.refusals = [
+      {
+        member_id: 'character-0002',
+        code: 'battle.declaration.hide_in_front_rank',
+        params: { character: 'character-0002' },
+      },
+    ];
+    renderWithTable(
+      <ActionBar aria-label="Party actions">
+        <CombatActions />
+      </ActionBar>,
+      { snapshot, api },
+    );
+    expect(
+      screen.getByText('Wren needs a different action before the round can resolve.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/The round resolves now/)).not.toBeInTheDocument();
+  });
+
   it('offers Resolve round when a refusal names a member who can no longer act', () => {
     const api = createFakeApi();
     stubRules(api);

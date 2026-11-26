@@ -39,7 +39,7 @@ test.describe('the map with the keyboard', () => {
     await expect(dungeonMap(ruth.page)).toBeFocused();
     await showKeyboardCursor(ruth.page);
     await expect(
-      mapAnnouncement(ruth.page, /the party's square\. Press Enter to choose this square/),
+      mapAnnouncement(ruth.page, /the party's square\..* Press Enter to choose this square/),
     ).toBeAttached();
     for (const key of ['ArrowUp', 'ArrowUp', 'ArrowRight']) await ruth.page.keyboard.press(key);
     await expect(
@@ -103,7 +103,7 @@ test.describe('the map with the keyboard', () => {
     await tools.getByRole('button', { name: 'Measure' }).click();
     await showKeyboardCursor(sam.page);
     await expect(
-      mapAnnouncement(sam.page, /the party's square\. Press Enter to measure from here\./),
+      mapAnnouncement(sam.page, /the party's square\..* Press Enter to measure from here\./),
     ).toBeAttached();
     await sam.page.keyboard.press('Enter');
     for (let step = 0; step < 3; step += 1) await sam.page.keyboard.press('ArrowUp');
@@ -128,7 +128,9 @@ test.describe('the map with the keyboard', () => {
     // A ping from the keyboard. The referee hears who pinged.
     await tools.getByRole('button', { name: 'Ping' }).click();
     await showKeyboardCursor(sam.page);
-    await expect(mapAnnouncement(sam.page, /the party's square\. Press Enter to ping here\./)).toBeAttached();
+    await expect(
+      mapAnnouncement(sam.page, /the party's square\..* Press Enter to ping here\./),
+    ).toBeAttached();
     await sam.page.keyboard.press('Enter');
     await expect(mapAnnouncement(ruth.page, /^Sam pinged the map\./)).toBeAttached();
   });
@@ -260,7 +262,7 @@ test.describe('map chrome', () => {
     // In a corridor below the chapter house, the folded bar's menu opens the door.
     await placeParty(ruth.client, table.id, { dungeon: 'priory', level: 1, x: 12, y: 15, facing: 'north' });
     await expect(scene.getByRole('heading', { name: 'On the way' })).toBeVisible();
-    const things = scene.getByRole('button', { name: /^\d+ features? here$/ });
+    const things = scene.getByRole('button', { name: /^\d+ things? here$/ });
     await expect(things).toBeVisible();
     await sam.page.screenshot({ path: `${SCREENS_DIR}/scene-folded.png` });
     await pickFromMenu(things, 'Door to the north', 'Open door');

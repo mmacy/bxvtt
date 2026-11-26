@@ -243,6 +243,25 @@ describe('BattleBoard', () => {
     expect(note.closest('[aria-live="polite"]')).not.toBeNull();
   });
 
+  it('forecasts in the composer that the action won’t work, as a polite status rather than an alert', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('battle', 'player');
+    const declarations = snapshot.declarations as DeclarationsState;
+    declarations.refusals = [
+      {
+        member_id: 'character-0001',
+        code: 'battle.declaration.not_in_front_rank',
+        params: { character: 'character-0001' },
+      },
+    ];
+    const { user } = renderWithTable(<BattleBoard />, { snapshot, api });
+    await user.click(within(row('Brenna')).getByRole('button', { name: 'Change' }));
+    const composer = screen.getByRole('region', { name: 'Declare for Brenna' });
+    expect(within(composer).getByRole('status')).toHaveTextContent(/Brenna isn't in the front rank/);
+    expect(within(composer).queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('lets the round resolve when a refusal names a member who can no longer act', () => {
     const api = createFakeApi();
     stubRules(api);

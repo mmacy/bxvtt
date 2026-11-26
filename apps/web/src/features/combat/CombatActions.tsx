@@ -17,7 +17,7 @@ import { ActionBarDivider, ActionBarItem, Button } from '@/ui';
 import { QUICK_ICONS, quickAction, quickTooltip, repeatTooltip, useRepeatLastRound } from './BattleBoard';
 import { useMemberCasts } from './casting';
 import { useClassAbilities } from './Composer';
-import { blockedReason, blockingMembers, memberGear } from './model';
+import { blockedNote, blockedReason, blockingMembers, memberGear } from './model';
 import { useCombatPeople } from './people';
 import { useCombatUi } from './state';
 import { useEncounterCommands } from './useEncounterCommands';
@@ -386,9 +386,10 @@ function BattleActions() {
         <span className={styles.barNote}>
           {waiting.length > 0
             ? `Waiting for ${joinList(waiting.map((id) => memberName(id, ctx)))} to declare.`
-            : auto
-              ? 'Everyone has declared. The round resolves now.'
-              : 'Everyone has declared. The caller or the referee resolves the round.'}
+            : (blockedNote(refused) ??
+              (auto
+                ? 'Everyone has declared. The round resolves now.'
+                : 'Everyone has declared. The caller or the referee resolves the round.'))}
         </span>
       )}
     </>

@@ -256,7 +256,12 @@ export function Composer({
         </div>
       )}
 
-      {refusals.length > 0 && <Banner tone="warning">{refusals.join(' ')}</Banner>}
+      {/* A forecast that shows each time the composer opens, so it waits for a pause instead of interrupting. */}
+      {refusals.length > 0 && (
+        <Banner tone="warning" announce="status">
+          {refusals.join(' ')}
+        </Banner>
+      )}
       {error && <Banner tone="danger">{error}</Banner>}
 
       <div className={styles.composerBody}>

@@ -677,6 +677,14 @@ export function blockedReason(names: readonly string[]): string | null {
     : `${joinList(names)} need different actions first.`;
 }
 
+/** That the round waits for the named members to change their actions, or `null` for no names. */
+export function blockedNote(names: readonly string[]): string | null {
+  if (names.length === 0) return null;
+  return names.length === 1
+    ? `${joinList(names)} needs a different action before the round can resolve.`
+    : `${joinList(names)} need different actions before the round can resolve.`;
+}
+
 // Spells -------------------------------------------------------------------------------------------------------
 
 /** The member's memorized spells, one entry per spell with a count of copies, in memorization order. */

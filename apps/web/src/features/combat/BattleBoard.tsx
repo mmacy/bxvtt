@@ -45,6 +45,7 @@ import {
   suggestAction,
   type Suggestion,
   type SuggestionFacts,
+  blockedNote,
   blockedReason,
   blockingMembers,
   refusalTexts,
@@ -701,11 +702,8 @@ export function roundStartNote(facts: {
   const resolver = caller ? `${caller} (the caller) or the referee` : 'the caller or the referee';
   let note: string;
   const names = Array.isArray(refused) ? refused : [];
-  if (names.length > 0)
-    note =
-      names.length === 1
-        ? `${joinList(names)} needs a different action before the round can resolve.`
-        : `${joinList(names)} need different actions before the round can resolve.`;
+  const blocked = blockedNote(names);
+  if (blocked !== null) note = blocked;
   else if (everyone && refused === true)
     note = "Everyone has declared, but one action won't work. Change it to go on.";
   else if (auto)
