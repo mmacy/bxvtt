@@ -1651,7 +1651,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
     case 'battle_ended':
       switch (event.code) {
         case 'battle.ended.victory':
-          return { text: 'The party wins the battle!', category: 'battle', tone: 'good', icon: 'flag' };
+          return { text: 'The party wins the battle.', category: 'battle', tone: 'good', icon: 'flag' };
         case 'battle.ended.fled':
           return { text: 'The party flees the battle.', category: 'battle', tone: 'info', icon: 'run' };
         case 'battle.ended.defeat':
@@ -1735,16 +1735,19 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
     case 'item_identified': {
       const kind = unidentifiedNoun(event.template_id);
       // osrlib 2.8 states the item's display name on the event. An older event reads by its template.
-      const real = withArticle(nonEmpty(event.display_name) ?? templateName(event.template_id, ctx));
+      const name = nonEmpty(event.display_name) ?? templateName(event.template_id, ctx);
+      const real = name === undefined ? 'something' : withArticle(name);
       return { text: `The ${kind} turns out to be ${real}.`, category: 'item', tone: 'good', icon: 'star' };
     }
     case 'curse_revealed': {
       const who = memberName(event.character_id, ctx);
-      const item = (ctx.items[event.instance_id] ?? templateName(event.template_id, ctx))
-        .replace(/,?\s*cursed\b/i, '')
-        .trim();
+      const name = ctx.items[event.instance_id] ?? templateName(event.template_id, ctx);
+      const item = name?.replace(/,?\s*cursed\b/i, '').trim();
       return {
-        text: `${possessive(who)} ${item} is cursed and cannot be removed.`,
+        text:
+          item === undefined
+            ? `Something ${who} carries is cursed and cannot be removed.`
+            : `${possessive(who)} ${item} is cursed and cannot be removed.`,
         category: 'item',
         tone: 'bad',
         icon: 'warning',
@@ -2066,13 +2069,16 @@ function normalizeUnit(unit: string): 'round' | 'turn' | 'day' {
   return unit === 'turn' || unit === 'day' ? unit : 'round';
 }
 
-/** The start of a rolled-treasure line, such as "Treasure is rolled for the chapel altar". */
+/** The start of a rolled-treasure line, such as "The referee rolls treasure for the chapel altar". */
 function rolledFor(ref: string): string {
-  return /^cache-\d+$/.test(ref) ? 'Treasure is rolled' : `Treasure is rolled for the ${prettifyId(ref)}`;
+  return /^cache-\d+$/.test(ref)
+    ? 'The referee rolls treasure'
+    : `The referee rolls treasure for the ${prettifyId(ref)}`;
 }
 
-function templateName(templateId: string, ctx: TextContext): string {
-  return ctx.items[templateId] ?? magicItemTemplateName(templateId) ?? lowerFirst(prettifyId(templateId));
+/** The name of an item template from the context or the built-in catalog, or undefined when nothing names it. */
+function templateName(templateId: string, ctx: TextContext): string | undefined {
+  return ctx.items[templateId] ?? magicItemTemplateName(templateId);
 }
 
 const UNIDENTIFIED_NOUNS: Record<string, string> = {

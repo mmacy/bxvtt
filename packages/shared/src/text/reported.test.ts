@@ -197,8 +197,8 @@ describe('item names (reported)', () => {
     expect(itemPhrase(resolveItemNoun('holy_water', ctx))).toBe('a vial of holy water');
     expect(itemPhrase(resolveItemNoun('moon_blade', ctx, { name: 'Moon blade' }))).toBe('a moon blade');
     expect(itemPhrase(resolveItemNoun('hand_of_saint_corvane', ctx))).toBe('the Hand of Saint Corvane');
-    expect(itemPhrase(resolveItemNoun('thieves_tools', ctx))).toBe("thieves' tools");
-    expect(itemPhrase(resolveItemNoun('thieves_tools', ctx), 2)).toBe("2 sets of thieves' tools");
+    expect(itemPhrase(resolveItemNoun('thieves_tools', ctx))).toBe('a set of thieves’ tools');
+    expect(itemPhrase(resolveItemNoun('thieves_tools', ctx), 2)).toBe('2 sets of thieves’ tools');
     expect(itemLabel(resolveItemNoun('chainmail', ctx))).toBe('Chainmail');
     expect(itemLabel(resolveItemNoun('leather', ctx))).toBe('Leather armour');
     expect(itemLabel(resolveItemNoun('plate_mail', ctx))).toBe('Plate mail');

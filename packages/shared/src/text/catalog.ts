@@ -23,40 +23,16 @@ export interface ItemNoun {
    * `the` instead of `a` or `an`.
    */
   proper?: boolean;
+  /**
+   * True for the noun of an item that nothing names: no entry in the player view's item names and none in the
+   * built-in catalog. It reads `something` whatever the count, because the text never makes up a name from the
+   * words of an item's ID.
+   */
+  unnamed?: boolean;
 }
 
-/**
- * Hand-written nouns for catalog entries whose printed name describes a lot or a pack, such as `Torches (6)`.
- * Each noun names one unit of the item as osrlib counts it in an inventory stack, so `6 torches` is one lot.
- */
-const ITEM_NOUN_OVERRIDES: Record<string, ItemNoun> = {
-  torch: { one: 'torch', many: 'torches' },
-  iron_spikes: { one: 'iron spike', many: 'iron spikes' },
-  rations_iron: { one: 'iron ration', many: 'iron rations' },
-  rations_standard: { one: 'standard ration', many: 'standard rations' },
-  oil_flask: { one: 'flask of oil', many: 'flasks of oil' },
-  holy_water: { one: 'vial of holy water', many: 'vials of holy water' },
-  hammer: { one: 'small hammer', many: 'small hammers' },
-  mirror: { one: 'steel mirror', many: 'steel mirrors' },
-  pole: { one: '10-foot pole', many: '10-foot poles' },
-  rope: { one: '50-foot rope', many: '50-foot ropes' },
-  sack_large: { one: 'large sack', many: 'large sacks' },
-  sack_small: { one: 'small sack', many: 'small sacks' },
-  stakes_and_mallet: { one: 'set of wooden stakes and a mallet', many: 'sets of wooden stakes and a mallet' },
-  thieves_tools: { one: "thieves' tools", many: "sets of thieves' tools", noArticle: true },
-  tinder_box: { one: 'tinder box', many: 'tinder boxes' },
-  wine: { one: 'pint of wine', many: 'pints of wine' },
-  wolfsbane: { one: 'bunch of wolfsbane', many: 'bunches of wolfsbane' },
-  arrows: { one: 'arrow', many: 'arrows' },
-  crossbow_bolts: { one: 'crossbow bolt', many: 'crossbow bolts' },
-  silver_tipped_arrow: { one: 'silver-tipped arrow', many: 'silver-tipped arrows' },
-  sling_stones: { one: 'sling stone', many: 'sling stones' },
-  leather: { one: 'suit of leather armour', many: 'suits of leather armour' },
-  chainmail: { one: 'suit of chainmail', many: 'suits of chainmail' },
-  plate_mail: { one: 'suit of plate mail', many: 'suits of plate mail' },
-  garlic: { one: 'clove of garlic', many: 'cloves of garlic' },
-  backpack: { one: 'backpack', many: 'backpacks' },
-};
+/** The noun of an item that nothing names. See `ItemNoun.unnamed`. */
+export const UNNAMED_ITEM: ItemNoun = { one: 'something', many: 'something', noArticle: true, unnamed: true };
 
 /** Lower-case a catalog name but keep acronyms such as ESP and numerals such as II. */
 export function lowerCatalogName(name: string): string {
@@ -73,17 +49,13 @@ const EQUIPMENT = new Map<string, ItemNoun>();
 const LOT_SIZES = new Map<string, number>();
 for (const entry of catalog.equipment) {
   LOT_SIZES.set(entry.id, entry.lot_size);
-  const override = ITEM_NOUN_OVERRIDES[entry.id];
-  if (override) {
-    EQUIPMENT.set(entry.id, override);
-    continue;
-  }
-  // osrlib states each item's display names. An entry without them reads by its printed name.
+  // osrlib states each item's display names, and the player view's `item_names` uses the same ones, so a
+  // catalog entry never has a name of its own here. An entry without display names reads by its printed name.
   const one = entry.display_name || lowerCatalogName(entry.name);
   EQUIPMENT.set(entry.id, { one, many: entry.display_name_plural || pluralize(one) });
 }
 
-/** Built-in equipment nouns by every spelling a caller might pass: the printed name and the curated nouns. */
+/** Built-in equipment nouns by every spelling a caller might pass: the printed name and osrlib's display names. */
 const EQUIPMENT_BY_NAME = new Map<string, ItemNoun>();
 for (const entry of catalog.equipment) {
   const noun = EQUIPMENT.get(entry.id);
@@ -227,7 +199,8 @@ export interface ItemNameOptions {
 
 /**
  * The noun for an item from any printed name: a catalog name, a lot name, a display name with an article, or a
- * name an adventure's author wrote. A built-in equipment name gets the curated noun whatever its spelling.
+ * name an adventure's author wrote. A built-in equipment name gets the noun osrlib states for it, whatever its
+ * spelling.
  *
  * ```ts
  * itemNounFromName('Torches (6)'); // { one: 'torch', many: 'torches' }
@@ -274,6 +247,7 @@ export function itemNounFromName(name: string, options: ItemNameOptions = {}): I
  * ```
  */
 export function itemPhrase(noun: ItemNoun, quantity = 1): string {
+  if (noun.unnamed) return noun.one;
   if (quantity !== 1) return `${quantity} ${noun.many}`;
   if (noun.noArticle) return noun.one;
   if (noun.proper) return `the ${noun.one}`;
@@ -290,11 +264,9 @@ export function itemPhrase(noun: ItemNoun, quantity = 1): string {
  * ```
  */
 export function itemLabel(noun: ItemNoun, quantity = 1): string {
+  if (noun.unnamed) return capitalizeFirst(noun.one);
   if (quantity !== 1) return `${quantity} ${noun.many}`;
-  const single = noun.one
-    .replace(/^suit of /i, '')
-    .replace(/^set of wooden stakes and a mallet$/i, 'wooden stakes and mallet');
-  return capitalizeFirst(single);
+  return capitalizeFirst(noun.one.replace(/^suit of /i, ''));
 }
 
 /**

@@ -19,6 +19,7 @@ import {
   magicItemTemplateNoun,
   monsterTemplateLabels,
   spellCatalogName,
+  UNNAMED_ITEM,
   type ItemNoun,
 } from './catalog';
 import { creatureNames } from './creatures';
@@ -80,7 +81,7 @@ export interface TextContext {
    * Item names by ID: `jade idol`, `potion`, `Hand of Saint Corvane`. Instance IDs and adventure item IDs go
    * here. The text layer reads every value through [`itemNounFromName`][itemNounFromName], so a value may also
    * be a printed name such as `Torches (6)` or a display name such as `a potion`. A built-in equipment ID always
-   * reads with its curated noun, whatever this record says.
+   * reads with the noun osrlib states for it, whatever this record says.
    */
   items: Record<string, string>;
   /**
@@ -238,7 +239,7 @@ function registerItemEntry(items: Record<string, string>, entry: unknown): void 
   if (isRecord(template)) {
     const id = asString(template.id);
     const name = asString(template.name);
-    // Catalog items already have curated nouns. An item from a custom adventure doesn't, so record its name.
+    // Catalog items already have the nouns osrlib states. An item from a custom adventure doesn't, so record its name.
     if (id && name && !equipmentNoun(id)) items[id] = storedNoun(itemNounFromName(name));
   }
 }
@@ -252,7 +253,7 @@ function registerInventory(items: Record<string, string>, inventory: unknown): v
   registerItemEntry(items, inventory.shield);
 }
 
-/** Record item names and their plurals by ID. A built-in equipment ID keeps its curated noun. */
+/** Record item names and their plurals by ID. A built-in equipment ID keeps the noun osrlib states for it. */
 function registerItemNames(
   ctx: TextContext,
   names: Readonly<Record<string, string>>,
@@ -530,7 +531,7 @@ export interface CatalogEntries {
  * Add names from catalog listings, such as the pages that `GET /v1/rules/spells` returns. Pass the entries as
  * the catalog prints them: an equipment lot name such as `Torches (6)` and a title-case magic item name such as
  * `Ring of Fire Resistance` both become nouns that read well in a sentence (`torch`, `ring of fire resistance`).
- * A built-in ID keeps its curated noun.
+ * A built-in ID keeps the noun osrlib states for it.
  */
 export function extendContextWithCatalog(ctx: TextContext, entries: CatalogEntries): TextContext {
   const next = cloneContext(ctx);
@@ -551,7 +552,7 @@ export function extendContextWithCatalog(ctx: TextContext, entries: CatalogEntri
 /**
  * Add display names by item ID, with their plurals when you have them, such as a player view's `item_names` and
  * `item_names_plural`: `{ 'magic-item-0001': 'potion', hand_of_saint_corvane: 'Hand of Saint Corvane' }`. Each
- * name becomes a noun that reads well in a sentence. A built-in equipment ID keeps its curated noun, an
+ * name becomes a noun that reads well in a sentence. A built-in equipment ID keeps the noun osrlib states for it, an
  * unidentified magic item keeps its masked name, and an adventure's proper name keeps its capitals.
  *
  * ```ts
@@ -699,12 +700,12 @@ export function extendContextWithEvents(ctx: TextContext, events: readonly Learn
           // Since osrlib 2.8, an identified item's event states its display names. An older event reads by the
           // built-in catalog, or by the words of its template ID.
           const noun = magicItemTemplateNoun(templateId);
-          const name = asString(event.display_name) ?? noun?.one ?? prettifyId(templateId);
+          const name = asString(event.display_name) ?? noun?.one;
           const plural = asString(event.display_name_plural) ?? noun?.many;
           const next = edit();
-          next.items[instanceId] = name;
-          if (plural !== undefined) (next.itemsPlural ??= {})[instanceId] = plural;
-          else delete next.itemsPlural?.[instanceId];
+          if (name !== undefined) next.items[instanceId] = name;
+          if (name !== undefined && plural !== undefined) (next.itemsPlural ??= {})[instanceId] = plural;
+          else if (name !== undefined) delete next.itemsPlural?.[instanceId];
         }
         break;
       }
@@ -949,20 +950,23 @@ export function groupIsSingle(group: GroupInfo): boolean | undefined {
  * The noun for an item ID, with its singular, its plural, and whether it is a proper name. This is the one place
  * the text layer names items, so use it wherever the interface names an item in a sentence or a list.
  *
- * It tries, in order: the curated noun of a built-in equipment ID (`torch`), the name in `ctx.items` (an
+ * It tries, in order: the noun osrlib states for a built-in equipment ID (`torch`), the name in `ctx.items` (an
  * adventure item, a valuable, or a magic item's masked or identified name), `name` (a printed name you have,
- * such as an inventory entry's `template.name`), a built-in magic item template, and the words of the ID.
+ * such as an inventory entry's `template.name`), and a built-in magic item template. When nothing names the
+ * item, the noun reads `something`, never the words of the ID, because an authored ID can say more than the
+ * item's display name does.
  *
  * ```ts
  * const noun = resolveItemNoun('torch', ctx); // { one: 'torch', many: 'torches' }
  * itemPhrase(noun, 6); // '6 torches'
  * resolveItemNoun('moon_blade', ctx, { name: 'Moon blade' }).one; // 'moon blade'
+ * itemName('moon_blade', emptyContext()); // 'something'
  * ```
  */
 export function resolveItemNoun(id: string, ctx: TextContext, options: { name?: string } = {}): ItemNoun {
   const kind = idKind(id);
-  const curated = kind === 'other' ? equipmentNoun(id) : undefined;
-  if (curated) return curated;
+  const stated = kind === 'other' ? equipmentNoun(id) : undefined;
+  if (stated) return stated;
   const fromContext = ctx.items[id];
   if (fromContext) {
     const noun = nounForId(id, fromContext);
@@ -975,8 +979,9 @@ export function resolveItemNoun(id: string, ctx: TextContext, options: { name?: 
   if (kind === 'valuable') return { one: 'gem or jewel', many: 'gems or jewels' };
   const magic = magicItemTemplateNoun(id);
   if (magic) return magic;
-  const words = prettifyId(id);
-  return { one: words, many: pluralize(words) };
+  // Nothing names the item. An authored ID can say more than the item's display name does, so the text never
+  // reads the ID's words.
+  return UNNAMED_ITEM;
 }
 
 /**
@@ -1007,13 +1012,21 @@ export interface ItemListOptions {
   lots?: boolean;
 }
 
-/** Describe a list of item IDs, one per unit, grouping repeats: `2 torches, a sword, and a rope`. */
+/**
+ * Describe a list of item IDs, one per unit, grouping repeats: `2 torches, a sword, and a rope`. The IDs that
+ * nothing names collapse into one entry at the end: `something`, or `something else` beside named items.
+ */
 export function itemList(ids: readonly string[], ctx: TextContext, options: ItemListOptions = {}): string[] {
   // Items count together by what they read as, so four unnamed valuables read `4 gems or jewels`.
   const order: string[] = [];
   const groups = new Map<string, { noun: ItemNoun; count: number }>();
+  let unnamed = false;
   for (const id of ids) {
     const noun = resolveItemNoun(id, ctx);
+    if (noun.unnamed === true) {
+      unnamed = true;
+      continue;
+    }
     const key = JSON.stringify([noun.one, noun.many, noun.proper === true]);
     const units = options.lots ? (equipmentLotSize(id) ?? 1) : 1;
     const known = groups.get(key);
@@ -1024,10 +1037,12 @@ export function itemList(ids: readonly string[], ctx: TextContext, options: Item
       known.count += units;
     }
   }
-  return order.map((key) => {
+  const phrases = order.map((key) => {
     const group = groups.get(key);
     return group === undefined ? '' : itemPhrase(group.noun, group.count);
   });
+  if (unnamed) phrases.push(phrases.length > 0 ? 'something else' : 'something');
+  return phrases;
 }
 
 /** Name of a spell, as the rules write it, which is a proper name: `Magic Missile`. */

@@ -634,11 +634,11 @@ const REST_KINDS: Record<string, { label: string; description: string }> = {
   },
   night: {
     label: 'A night',
-    description: 'Rest for a night (8 hours) so casters can prepare spells.',
+    description: 'Rest for a night so casters can prepare spells.',
   },
   day: {
     label: 'A full day',
-    description: 'Rest for a full day (24 hours) to recover hit points.',
+    description: 'Rest for a full day to recover hit points.',
   },
 };
 
