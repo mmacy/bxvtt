@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { request } from 'node:http';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { GameState, SpellTemplate, StoredCharacter } from '@bxvtt/shared/protocol';
 import type { TestServer, TestUser } from './helpers';
@@ -140,6 +141,31 @@ describe('the spells of a session', () => {
     expect(await response.json()).toMatchObject({ code: 'not_found', resource: 'spell' });
   });
 
+  it('refuses a dot segment as a spell ID, even when the client sends it unnormalized', async () => {
+    for (const segment of ['.', '..']) {
+      const answer = await new Promise<{ status: number; body: string }>((resolve, reject) => {
+        const url = new URL(server.url);
+        const call = request(
+          {
+            host: url.hostname,
+            port: url.port,
+            path: `/api/tables/${tableId}/game/rules/spells/${segment}`,
+            headers: { Authorization: `Bearer ${alice.token}` },
+          },
+          (response) => {
+            let body = '';
+            response.on('data', (chunk: Buffer) => (body += chunk.toString()));
+            response.on('end', () => resolve({ status: response.statusCode ?? 0, body }));
+          },
+        );
+        call.on('error', reject);
+        call.end();
+      });
+      expect(answer.status, segment).toBe(404);
+      expect(JSON.parse(answer.body), segment).toMatchObject({ code: 'not_found', resource: 'spell' });
+    }
+  });
+
   it('answers a non-member as for a table that does not exist', async () => {
     const outsider = await getSpell(server, stranger, tableId, 'ember_dart');
     const nowhere = await getSpell(server, stranger, 'tbl_doesnotexist0000000000', 'ember_dart');
@@ -159,5 +185,23 @@ describe('the spells of a session', () => {
     // A wrong-shaped ID tells a non-member nothing more.
     const bad = await getSpell(server, stranger, tableId, 'ember dart!');
     expect(await bad.json()).toMatchObject({ code: 'not_found', resource: 'table' });
+  });
+
+  it('answers for a session bxapi no longer has as the other game routes do, not as a missing spell', async () => {
+    const response = await fetch(`${BXAPI_URL}/v1/sessions/${encodeURIComponent(game.session_id)}`, {
+      method: 'DELETE',
+    });
+    expect(response.status).toBe(204);
+    const spell = await getSpell(server, alice, tableId, 'ember_dart');
+    const events = await fetch(`${server.url}/api/tables/${tableId}/game/events`, {
+      headers: { Authorization: `Bearer ${alice.token}` },
+    });
+    expect(spell.status).toBe(events.status);
+    const [spellBody, eventsBody] = [
+      (await spell.json()) as { code: string },
+      (await events.json()) as { code: string },
+    ];
+    expect(spellBody.code).toBe(eventsBody.code);
+    expect(spellBody).not.toMatchObject({ resource: 'spell' });
   });
 });

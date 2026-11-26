@@ -10,7 +10,7 @@ import type {
   RoundProjection,
   User,
 } from '@bxvtt/shared/protocol';
-import { ResolveRoundRequest, SaveDeclarationRequest } from '@bxvtt/shared/protocol';
+import { DeclarationBody, ResolveRoundRequest, SaveDeclarationRequest } from '@bxvtt/shared/protocol';
 import type { Context } from '../context';
 import { json, str } from '../db';
 import { ApiError, parseBody } from '../errors';
@@ -97,7 +97,11 @@ export class BattleService {
     )) {
       const memberId = str(row, 'member_id');
       if (!declarers.includes(memberId)) continue;
-      declarations[memberId] = json<BattleDeclaration>(row, 'declaration_json');
+      // A row stored before the server dropped unknown fields keeps only bxapi's fields, because every member
+      // reads the declarations.
+      const parsed = DeclarationBody.safeParse(json<unknown>(row, 'declaration_json'));
+      if (!parsed.success) continue;
+      declarations[memberId] = { ...parsed.data, character_id: memberId } as BattleDeclaration;
       declaredBy[memberId] = str(row, 'user_id');
     }
     return { declarations, declaredBy };
@@ -129,14 +133,20 @@ export class BattleService {
         `/v1/sessions/${encodeURIComponent(live.sessionId)}/battle-round/preview`,
         { declarations },
       );
+      const { can_hide: canHide, can_back_stab: canBackStab } = result;
+      // A preview from before osrlib 2.8 parses with no lists, which would read as "nobody can hide", and the
+      // client prefers the projection's lists. So such a preview counts as a failed one.
+      if (!Array.isArray(canHide) || !Array.isArray(canBackStab)) {
+        throw new Error('The battle round preview has no can_hide or can_back_stab.');
+      }
       preview = {
         key,
         refusals: previewRefusals(result.rejections, live.view.encounter?.declarers ?? []),
         projection: {
           advance_feet: result.advance_feet,
           front_rank: result.front_rank,
-          can_hide: result.can_hide ?? [],
-          can_back_stab: result.can_back_stab ?? [],
+          can_hide: canHide,
+          can_back_stab: canBackStab,
         },
         failedAt: null,
       };
@@ -229,7 +239,7 @@ export class BattleService {
    * @param user - The user in the member's seat, or a referee.
    * @param role - The user's role.
    * @param memberId - The member.
-   * @param declaration - The declaration.
+   * @param declaration - The declaration, parsed, so it holds only the fields bxapi defines.
    * @param requestId - The request ID, for bxapi's log.
    */
   async save(
@@ -237,7 +247,7 @@ export class BattleService {
     user: User,
     role: Role,
     memberId: string,
-    declaration: Record<string, unknown>,
+    declaration: DeclarationBody,
     requestId: string,
   ): Promise<DeclarationsState> {
     return this.game.locked(tableId, async () => {

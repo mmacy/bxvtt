@@ -20,9 +20,9 @@ export type {
 
 /**
  * A spell ID in a path, such as `magic_missile` or an adventure's own `ember_dart`: letters, digits, `_`, `.`, and
- * `-`, at most 100 characters.
+ * `-`, at most 100 characters. `.` and `..` alone don't count, because they name a path segment, not a spell.
  */
-export const SpellId = z.string().regex(/^[A-Za-z0-9_.-]{1,100}$/);
+export const SpellId = z.string().regex(/^(?!\.{1,2}$)[A-Za-z0-9_.-]{1,100}$/);
 
 /**
  * Path of `GET /api/tables/{table_id}/game/rules/spells/{spell_id}`. Any member of the table, player or referee,

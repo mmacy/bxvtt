@@ -58,9 +58,10 @@ export interface ItemNames {
  * Collects the item names for a command's feed entry from what a player can see: the player view from before the
  * command and the one from after it, whose `item_names` and `item_names_plural` name every item ID each view shows
  * (a pile's `contents` among them), and the `display_name` of each `item_identified` event. The view from after
- * wins, so an item identified by the command reads by its true name. An item that the command identified and used
- * up has its true name only on the event, so the event names an ID that no view names. The referee view is never
- * read, so a masked magic item keeps its masked name.
+ * wins, so an item identified and kept reads by its true name. An event's name fills in only an ID that neither
+ * view names. An item identified and used up in the same command, such as a potion drunk before the party knew
+ * it, keeps the masked name of the view from before, and the event's own line states its true name. The referee
+ * view is never read, so a masked magic item keeps its masked name.
  *
  * @param views - The player views, oldest first.
  * @param events - The events of the command.
@@ -72,11 +73,12 @@ export function itemNames(views: readonly PlayerView[], events: readonly GameEve
     for (const [id, name] of Object.entries(view.item_names_plural ?? {})) names.many.set(id, name);
   }
   for (const event of events) {
-    if (event.event_type !== 'item_identified' || event.display_name === '') continue;
+    // An event stored before osrlib 2.8 has no display names.
+    if (event.event_type !== 'item_identified' || !event.display_name) continue;
     for (const id of [event.instance_id, event.template_id]) {
       if (names.one.has(id)) continue;
       names.one.set(id, event.display_name);
-      if (event.display_name_plural !== '') names.many.set(id, event.display_name_plural);
+      if (event.display_name_plural) names.many.set(id, event.display_name_plural);
     }
   }
   return names;

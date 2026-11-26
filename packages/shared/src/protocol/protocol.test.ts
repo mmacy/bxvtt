@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  SpellId,
   ClientMessage,
   CreateUserRequest,
   DeclarationBody,
@@ -60,6 +61,24 @@ describe('request schemas', () => {
       expect(DeclarationBody.safeParse({ action }).success).toBe(true);
     }
     expect(DeclarationBody.safeParse({ action: 'dance' }).success).toBe(false);
+  });
+
+  it('keeps only the fields of a declaration that bxapi defines', () => {
+    const parsed = DeclarationBody.parse({
+      action: 'attack',
+      target_group_id: 'group-0001',
+      note: 'a secret',
+    });
+    expect(parsed).toEqual({ action: 'attack', target_group_id: 'group-0001' });
+  });
+
+  it('accepts a spell ID of letters, digits, and punctuation, but not a dot segment', () => {
+    for (const id of ['magic_missile', 'ember_dart', 'light-c', 'v1.2', '...']) {
+      expect(SpellId.safeParse(id).success, id).toBe(true);
+    }
+    for (const id of ['.', '..', '', 'ember dart', 'a/b', 'x'.repeat(101)]) {
+      expect(SpellId.safeParse(id).success, id).toBe(false);
+    }
   });
 });
 

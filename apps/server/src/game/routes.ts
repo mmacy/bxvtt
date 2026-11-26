@@ -121,8 +121,11 @@ export function registerGameRoutes(app: FastifyInstance, ctx: Context): void {
     } catch (error) {
       throw toApiError(error);
     }
-    // bxapi answers 404 for a spell the player view doesn't name, as for one that doesn't exist.
-    if (response.status === 404) notFound('spell', spellId);
+    // bxapi answers 404 with `resource: spell` for a spell the player view doesn't name, as for one that doesn't
+    // exist. Any other 404, such as a session that bxapi no longer has, fails as it does on the other game routes.
+    const problem = response.status === 404 ? toProblem(response) : null;
+    if (problem !== null && problem.body.resource === 'spell') notFound('spell', spellId);
+    if (problem !== null) throw toApiError(problem);
     const etag = response.headers.get('etag') ?? '';
     reply.header('Cache-Control', 'private, no-cache');
     if (etag !== '') reply.header('ETag', etag);
