@@ -226,7 +226,18 @@ def extract_catalog() -> dict:
             for item in load_magic_items().items
         ],
         "spells": [
-            {"id": spell.id, "name": spell.name, "list": str(getattr(spell.spell_list, "value", spell.spell_list)), "level": spell.level}
+            {
+                "id": spell.id,
+                "name": spell.name,
+                "list": str(getattr(spell.spell_list, "value", spell.spell_list)),
+                "level": spell.level,
+                "modes": {mode.key: mode.display_name for mode in spell.modes},
+                **(
+                    {"reversed_modes": {mode.key: mode.display_name for mode in spell.reversed_form.modes}}
+                    if spell.reversed_form is not None
+                    else {}
+                ),
+            }
             for spell in load_spells().spells
         ],
         "monsters": [

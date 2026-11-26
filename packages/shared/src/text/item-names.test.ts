@@ -137,78 +137,50 @@ describe('item names from bxapi', () => {
 });
 
 describe("a valuable's own name", () => {
-  /** A player view with Wren carrying two valuables, and a pile with two more and a torch. */
+  /** A player view with two named valuables, a rolled gem, and a torch. */
   const view: PlayerViewLike = {
-    party: [
-      {
-        id: 'character-0003',
-        name: 'Wren',
-        inventory: {
-          valuables: [
-            {
-              instance_id: 'valuable-0001',
-              kind: 'jewellery',
-              name: 'Silver altar candlestick',
-              value_gp: 60,
-            },
-            { instance_id: 'valuable-0002', kind: 'gem', name: 'Gem', value_gp: 10 },
-            { instance_id: 'valuable-0005', kind: 'gem', name: '', value_gp: 10 },
-          ],
-        },
-      },
-    ],
     item_names: {
       'valuable-0001': 'piece of jewellery',
       'valuable-0002': 'gem',
       'valuable-0003': 'gem',
-      'valuable-0004': 'piece of jewellery',
-      'valuable-0005': 'gem',
       torch: 'torch',
     },
     item_names_plural: {
       'valuable-0001': 'pieces of jewellery',
       'valuable-0002': 'gems',
       'valuable-0003': 'gems',
-      'valuable-0004': 'pieces of jewellery',
-      'valuable-0005': 'gems',
       torch: 'torches',
     },
-    piles: {
-      'priory:1:3,4': {
-        items: ['torch×2', 'Moonstone', 'Jewellery'],
-        contents: [{ item_id: 'torch' }, { item_id: 'valuable-0003' }, { item_id: 'valuable-0004' }],
-      },
-    },
+    valuable_names: { 'valuable-0001': "Prior's chain of office", 'valuable-0003': 'Moonstone' },
   };
 
-  it('reads the own names from the inventory and the piles, and leaves out a name that is just the kind', () => {
+  it("reads the own names from the view's valuable_names", () => {
     expect(valuableNames(view)).toEqual({
-      'valuable-0001': 'Silver altar candlestick',
+      'valuable-0001': "Prior's chain of office",
       'valuable-0003': 'Moonstone',
     });
-  });
-
-  it("skips a pile whose lists don't line up", () => {
-    const uneven: PlayerViewLike = {
-      piles: {
-        'priory:1:3,4': {
-          items: ['Moonstone'],
-          contents: [{ item_id: 'torch' }, { item_id: 'valuable-0003' }],
-        },
-      },
-    };
-    expect(valuableNames(uneven)).toEqual({});
+    expect(valuableNames({ item_names: { 'valuable-0002': 'gem' } })).toEqual({});
   });
 
   it('names a valuable by its own name in the context, with no plural, and an unnamed one by its kind', () => {
     const ctx = contextFromPlayerView(view);
-    expect(itemName('valuable-0001', ctx)).toBe('a silver altar candlestick');
+    expect(itemName('valuable-0001', ctx)).toBe("the prior's chain of office");
     expect(itemName('valuable-0003', ctx)).toBe('a moonstone');
     expect(itemName('valuable-0002', ctx)).toBe('a gem');
-    expect(itemName('valuable-0004', ctx)).toBe('a piece of jewellery');
-    expect(itemName('valuable-0005', ctx)).toBe('a gem');
     expect(ctx.itemsPlural?.['valuable-0001']).toBeUndefined();
-    expect(itemList(['valuable-0002', 'valuable-0005'], ctx)).toEqual(['2 gems']);
+    expect(itemList(['valuable-0002', 'valuable-0003', 'torch'], ctx)).toEqual([
+      'a gem',
+      'a moonstone',
+      'a torch',
+    ]);
+  });
+
+  it("reads a feed entry's recorded valuable names as the live view does", () => {
+    const ctx = extendContextWithEntryNames(emptyContext(), {
+      items: { 'valuable-0001': 'Silver altar candlestick', 'valuable-0002': 'gem' },
+    });
+    expect(itemName('valuable-0001', ctx)).toBe('a silver altar candlestick');
+    expect(itemName('valuable-0002', ctx)).toBe('a gem');
   });
 
   it("reads each sample adventure's valuables and keys as the content design asks", () => {

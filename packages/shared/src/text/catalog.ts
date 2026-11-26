@@ -300,6 +300,34 @@ export function spellCatalogName(id: string): string | undefined {
   return SPELLS.get(id);
 }
 
+/** The labels of a built-in spell's modes by mode key, for its normal form and for its reversed form. */
+interface SpellModeNames {
+  modes: Readonly<Partial<Record<string, string>>>;
+  reversed_modes?: Readonly<Partial<Record<string, string>>> | undefined;
+}
+
+const SPELL_MODES = new Map<string, SpellModeNames>(
+  catalog.spells.map((entry): [string, SpellModeNames] => [entry.id, entry]),
+);
+
+/**
+ * The label of each mode of a built-in spell's form, by mode key, as osrlib's `SpellMode.display_name` states
+ * it: `{ illuminate: 'Conjure light', blind: 'Blind a creature', cancel: 'Cancel darkness' }` for `light_mu`.
+ * A form with a single mode has one entry, labelled from its key, such as *fire ball*'s `Damage`.
+ *
+ * @param id - The spell ID.
+ * @param reversed - Whether the spell was cast in its reversed form.
+ * @returns The labels, or `undefined` for a spell the built-in catalog doesn't have, such as one an adventure
+ *   bundles, and for the reversed form of a spell that doesn't reverse.
+ */
+export function spellModeCatalogNames(
+  id: string,
+  reversed: boolean,
+): Readonly<Partial<Record<string, string>>> | undefined {
+  const entry = SPELL_MODES.get(id);
+  return reversed ? entry?.reversed_modes : entry?.modes;
+}
+
 /** Category of a built-in magic item template: `potion`, `scroll`, `wand`, `sword`, and so on. */
 export function magicItemCategory(id: string): string | undefined {
   return catalog.magic_items.find((entry) => entry.id === id)?.category;

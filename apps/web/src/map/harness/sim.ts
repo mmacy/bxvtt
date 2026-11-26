@@ -237,7 +237,6 @@ export function playerViewFrom(
     reversed_spell_names: {},
     item_names: {},
     item_names_plural: {},
-    // TODO(table-ruleset): bxapi on osrlib 2.9 added `valuable_names` to the player view.
     valuable_names: {},
     features_here: [],
     explored: [

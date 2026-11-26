@@ -50,6 +50,9 @@ const party = {
   ],
   encounter: { groups: [{ id: 'group-0001', label: 'goblin', label_plural: 'goblins', count: 3 }] },
   town_name: 'Threshold',
+  item_names: { 'valuable-0001': 'gem' },
+  item_names_plural: { 'valuable-0001': 'gems' },
+  valuable_names: { 'valuable-0001': 'Ruby' },
 };
 
 const ctx: TextContext = contextFromPlayerView(party);
@@ -819,6 +822,35 @@ describe('events', () => {
       'The potion turns out to be a potion of healing.',
       'Wren drinks a potion of healing.',
     ]);
+  });
+});
+
+describe("a spell's mode in the feed", () => {
+  const cast = (spellId: string, mode: string, reversed = false) =>
+    describeEvent(
+      {
+        event_type: 'spell_cast',
+        code: 'magic.cast.cast',
+        visibility: 'player',
+        caster_id: 'character-0004',
+        spell_id: spellId,
+        mode,
+        reversed,
+        target_ids: [],
+        manual: false,
+      } as never,
+      ctx,
+    ).detail;
+
+  it("names the mode by osrlib's label for the form that was cast", () => {
+    expect(cast('light_mu', 'blind', true)).toBe('Spell mode: Blind a creature.');
+    expect(cast('light_mu', 'cancel', true)).toBe('Spell mode: Cancel light.');
+    expect(cast('sleep', 'hd_budget')).toBe('Spell mode: Put creatures of 4 Hit Dice or lower to sleep.');
+  });
+
+  it("leaves out a form's only mode and a spell the built-in catalog doesn't have", () => {
+    expect(cast('fire_ball', 'damage')).toBeUndefined();
+    expect(cast('ember_dart', 'kill_green_slime')).toBeUndefined();
   });
 });
 

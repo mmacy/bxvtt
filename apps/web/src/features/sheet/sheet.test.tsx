@@ -353,7 +353,7 @@ function spellTemplate(
     feet?: number;
     duration?: string;
     reversed?: { name: string; mode: string };
-    modes?: Array<{ key: string; prose: string; targeting?: { mode: string } }>;
+    modes?: Array<{ key: string; display_name: string; prose: string; targeting?: { mode: string } }>;
     intro?: string;
   } = {},
 ) {
@@ -367,12 +367,21 @@ function spellTemplate(
       extra.feet === undefined ? { kind: 'special', feet: null } : { kind: 'feet', feet: extra.feet },
     duration: extra.duration ?? 'Instant',
     intro: extra.intro ?? `${name} does something.`,
-    modes: extra.modes ?? [{ key: id, prose: `${name} does something.`, targeting: { mode: 'single' } }],
+    modes: extra.modes ?? [
+      { key: id, display_name: name, prose: `${name} does something.`, targeting: { mode: 'single' } },
+    ],
     reversed_form: extra.reversed
       ? {
           name: extra.reversed.name,
           prose: '',
-          modes: [{ key: extra.reversed.mode, prose: '', targeting: { mode: 'single' } }],
+          modes: [
+            {
+              key: extra.reversed.mode,
+              display_name: extra.reversed.name,
+              prose: '',
+              targeting: { mode: 'single' },
+            },
+          ],
         }
       : null,
   };
@@ -431,6 +440,7 @@ function mageSnapshot(member: Partial<ViewMember> = {}) {
       class_id: 'magic_user',
       class_name: 'Magic-user',
       level: 2,
+      reverses_at: 'memorize',
       spell_slots: [2, 0, 0, 0, 0, 0],
       spell_book: ['sleep', 'light_mu'],
       preparable_spells: ['sleep', 'light_mu'],
@@ -456,6 +466,7 @@ describe('the spells tab, from the view', () => {
         class_id: 'cleric',
         class_name: 'Cleric',
         level: 2,
+        reverses_at: 'cast',
         spell_book: [],
         spell_slots: [1, 0, 0, 0, 0],
         preparable_spells: ['cure_light_wounds', 'lantern_ward'],
@@ -698,6 +709,7 @@ describe('the spells tab, from the view', () => {
         class_id: 'cleric',
         class_name: 'Cleric',
         level: 2,
+        reverses_at: 'cast',
         spell_book: [],
         spell_slots: [1, 0, 0, 0, 0],
         preparable_spells: ['lantern_ward'],
@@ -889,7 +901,44 @@ describe('the spells tab, from the view', () => {
     expect(within(dialog).queryByRole('checkbox', { name: /instead/ })).toBeNull();
   });
 
-  it('names the ways to cast a spell by the label before the colon, or by the first sentence', async () => {
+  it("follows the view's reverses_at for a custom class, whatever its spell book holds", async () => {
+    // A custom class that keeps a spell book but chooses the form when casting.
+    const { snapshot, caster } = mageSnapshot({
+      class_id: 'hedge_priest',
+      class_name: 'Hedge priest',
+      reverses_at: 'cast',
+    });
+    const { user } = renderWithTable(<CharacterSheet memberId={caster.id} onClose={() => {}} />, {
+      snapshot,
+      api: spellApi(),
+    });
+    await openSpells(user);
+    await user.click(screen.getByRole('button', { name: 'Prepare spells' }));
+    const prepare = await screen.findByRole('dialog', { name: "Prepare Wren's spells" });
+    expect(within(prepare).queryByText('Reversed')).toBeNull();
+    expect(within(prepare).queryByText('Darkness')).toBeNull();
+  });
+
+  it('offers a custom class that chooses the form when casting the reverse of a copy in its book', async () => {
+    const { snapshot, caster } = mageSnapshot({
+      class_id: 'hedge_priest',
+      class_name: 'Hedge priest',
+      reverses_at: 'cast',
+      memorized_spells: [{ spell_id: 'light_mu' }],
+    });
+    const { user } = renderWithTable(<CharacterSheet memberId={caster.id} onClose={() => {}} />, {
+      snapshot,
+      api: spellApi(),
+    });
+    await openSpells(user);
+    await user.click(screen.getByRole('button', { name: 'Cast' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Cast Light' });
+    expect(
+      await within(dialog).findByRole('checkbox', { name: 'Cast Darkness instead' }),
+    ).toBeInTheDocument();
+  });
+
+  it("names the ways to cast a spell by osrlib's labels", async () => {
     const { snapshot, caster } = mageSnapshot({ memorized_spells: [{ spell_id: 'light_mu' }] });
     const api = createFakeApi();
     api.fullCatalog.mockResolvedValue({
@@ -898,14 +947,21 @@ describe('the spells tab, from the view', () => {
       items: [
         spellTemplate('light_mu', 'Light', {
           modes: [
-            { key: 'conjure', prose: 'Conjuring light: In a 15’ radius.', targeting: { mode: 'single' } },
+            {
+              key: 'conjure',
+              display_name: 'Conjure light',
+              prose: 'Conjuring light: In a 15’ radius.',
+              targeting: { mode: 'single' },
+            },
             {
               key: 'blind',
+              display_name: 'Blind a creature',
               prose: 'Blinding a creature: By casting the spell upon its eyes.',
               targeting: { mode: 'single' },
             },
             {
               key: 'cancel',
+              display_name: 'Cancel darkness',
               prose: 'Cancelling darkness: Light may cancel a darkness spell.',
               targeting: { mode: 'single' },
             },
@@ -921,11 +977,11 @@ describe('the spells tab, from the view', () => {
     await user.click(await screen.findByRole('button', { name: 'Cast' }));
     const dialog = await screen.findByRole('dialog', { name: 'Cast Light' });
     const group = within(dialog).getByRole('radiogroup', { name: 'How to cast' });
-    for (const label of ['Conjuring light', 'Blinding a creature', 'Cancelling darkness'])
+    for (const label of ['Conjure light', 'Blind a creature', 'Cancel darkness'])
       expect(within(group).getByRole('radio', { name: label })).toBeInTheDocument();
     expect(within(group).getAllByRole('radio')).toHaveLength(3);
     // Focus starts on the chosen way to cast.
-    await waitFor(() => expect(within(group).getByRole('radio', { name: 'Conjuring light' })).toHaveFocus());
+    await waitFor(() => expect(within(group).getByRole('radio', { name: 'Conjure light' })).toHaveFocus());
   });
 
   it('opens the prepare dialog on its first count, and the learn dialog on the spell field', async () => {
@@ -986,6 +1042,7 @@ describe('the spells tab, from the view', () => {
         modes: [
           {
             key: 'dart',
+            display_name: 'Dart',
             prose:
               'A spark of glowing ember strikes one visible creature within range for 1d4 hit points of damage.',
           },

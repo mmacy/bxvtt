@@ -650,11 +650,9 @@ describe('spells to prepare', () => {
     );
   });
 
-  it('changes to "can prepare" after a night and opens the Spells tab', async () => {
-    const snapshot = withMage();
-    snapshot.feed.entries.push(
-      gameEntry(900, 'rest', [{ event_type: 'rested', code: 'exploration.rest.rested', kind: 'night' }]),
-    );
+  it('changes to "can prepare" once the view says so, and opens the Spells tab', async () => {
+    const snapshot = fixtureSnapshot('town', 'player');
+    makeCaster(snapshot, 'Tamsin', 'magic_user', { book: 1, slept: true });
     const { user } = setup(snapshot);
     expect((await screen.findAllByText('Tamsin can prepare spells now.')).length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByRole('button', { name: 'Rest for a night' })).not.toBeInTheDocument();

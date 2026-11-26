@@ -44,15 +44,32 @@ describe('a caster with nothing to cast', () => {
     wren.spell_slots = [1, 0, 0, 0, 0, 0];
     wren.preparable_spells = ['sleep'];
     wren.memorized_spells = [];
+    wren.needs_sleep_to_prepare = true;
     const { user } = renderWithTable(<BattleBoard />, { snapshot, api });
     const row = screen.getAllByRole('listitem').find((li) => within(li).queryByText('Wren', { exact: true }));
     if (!row) throw new Error('No row for Wren.');
     await user.click(within(row).getByRole('button', { name: 'Actions' }));
-    expect(await screen.findByText(noSpellsReason('Wren', false))).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "Wren has no spells memorized. Rest for a night, then prepare spells from the Spells tab on Wren's sheet.",
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'Cast' })).toBeDisabled();
     await user.click(screen.getByRole('button', { name: "Open Wren's spells" }));
     expect(useTableUi.getState().sheetMemberId).toBe(wren.id);
     expect(useTableUi.getState().sheetTab).toBe('spells');
+  });
+
+  it('tells a caster to rest only when the view says they have to sleep before preparing', () => {
+    expect(noSpellsReason('Wren', true, true)).toBe(
+      'Wren has cast every memorized spell. Rest for a night to prepare spells again.',
+    );
+    expect(noSpellsReason('Wren', true, false)).toBe(
+      "Wren has cast every memorized spell. Prepare spells from the Spells tab on Wren's sheet.",
+    );
+    expect(noSpellsReason('Wren', false, false)).toBe(
+      "Wren has no spells memorized. Prepare spells from the Spells tab on Wren's sheet.",
+    );
   });
 
   it('tells a caster who has cast every memorized spell from one who prepared nothing', () => {
@@ -115,11 +132,25 @@ describe('a caster with nothing to cast', () => {
           range: '120 feet',
           duration: '6 turns',
           intro: 'Light makes light.',
-          modes: [{ key: 'light', prose: 'Light makes light.', targeting: { mode: 'single' } }],
+          modes: [
+            {
+              key: 'light',
+              display_name: 'Light',
+              prose: 'Light makes light.',
+              targeting: { mode: 'single' },
+            },
+          ],
           reversed_form: {
             name: 'Darkness',
             prose: '',
-            modes: [{ key: 'darkness', prose: 'Darkness makes dark.', targeting: { mode: 'single' } }],
+            modes: [
+              {
+                key: 'darkness',
+                display_name: 'Darkness',
+                prose: 'Darkness makes dark.',
+                targeting: { mode: 'single' },
+              },
+            ],
           },
         },
       ],
@@ -130,6 +161,7 @@ describe('a caster with nothing to cast', () => {
     if (!view || !wren) throw new Error('No Wren.');
     Object.assign(wren, {
       class_id: 'magic_user',
+      reverses_at: 'memorize',
       spell_book: ['light_mu'],
       spell_slots: [1, 0, 0, 0, 0, 0],
       memorized_spells: [reversed ? { spell_id: 'light_mu', reversed: true } : { spell_id: 'light_mu' }],
@@ -157,8 +189,11 @@ describe('a caster with nothing to cast', () => {
     expect(spells).not.toHaveTextContent(/Light|reversed/);
   });
 
-  it('offers a magic-user no reverse as a book spell is cast, since it was chosen when memorized', async () => {
+  it('offers a magic-user no reverse as a spell is cast, since it was chosen when memorized', async () => {
     const { api, snapshot } = lightCaster(false);
+    // A custom arcane class with no spell book still chose the form when memorizing.
+    const wren = snapshot.game?.view.party.find((m) => m.name === 'Wren');
+    if (wren) wren.spell_book = [];
     const { user } = renderWithTable(<BattleBoard />, { snapshot, api });
     const composer = await openCast(user);
     // The spell's details load before the form choice could show.
@@ -166,7 +201,18 @@ describe('a caster with nothing to cast', () => {
     expect(within(composer).queryByRole('checkbox', { name: /reverse/ })).not.toBeInTheDocument();
   });
 
-  it("names Sleep's ways to cast by their targeting on the Cast tab", async () => {
+  it('offers a caster who reverses at casting the reverse, whatever their spell book holds', async () => {
+    const { api, snapshot } = lightCaster(false);
+    const wren = snapshot.game?.view.party.find((m) => m.name === 'Wren');
+    if (wren) wren.reverses_at = 'cast';
+    const { user } = renderWithTable(<BattleBoard />, { snapshot, api });
+    const composer = await openCast(user);
+    expect(
+      await within(composer).findByRole('checkbox', { name: 'Cast the reverse (Darkness)' }),
+    ).toBeInTheDocument();
+  });
+
+  it("names Sleep's ways to cast by osrlib's labels on the Cast tab", async () => {
     const api = createFakeApi();
     api.rules.mockImplementation(
       async (path: string) => ({ id: path, abilities: [], progression: [] }) as never,
@@ -188,11 +234,13 @@ describe('a caster with nothing to cast', () => {
           modes: [
             {
               key: 'single_4_plus',
+              display_name: 'Put a creature with 4+1 Hit Dice to sleep',
               prose: 'A single creature with 4+1 Hit Dice (see Hit point modifiers).',
               targeting: { mode: 'single' },
             },
             {
               key: 'hd_budget',
+              display_name: 'Put creatures of 4 Hit Dice or lower to sleep',
               prose: 'A total of 2d8 Hit Dice of creatures of 4 HD or lower each.',
               targeting: { mode: 'hd_budget' },
             },
@@ -218,7 +266,11 @@ describe('a caster with nothing to cast', () => {
     await user.click(within(row).getByRole('button', { name: 'Actions' }));
     await user.click(screen.getByRole('radio', { name: 'Cast' }));
     const modes = await screen.findByRole('radiogroup', { name: 'How to cast Sleep' });
-    expect(within(modes).getByRole('radio', { name: 'One creature' })).toBeInTheDocument();
-    expect(within(modes).getByRole('radio', { name: 'By hit dice' })).toBeInTheDocument();
+    expect(
+      within(modes).getByRole('radio', { name: 'Put a creature with 4+1 Hit Dice to sleep' }),
+    ).toBeInTheDocument();
+    expect(
+      within(modes).getByRole('radio', { name: 'Put creatures of 4 Hit Dice or lower to sleep' }),
+    ).toBeInTheDocument();
   });
 });

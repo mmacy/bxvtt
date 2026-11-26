@@ -638,8 +638,8 @@ function SpellTargets({
   const range = spellRangeFeet(spell.range_spec);
   const targeting = mode.targeting?.mode ?? null;
   const name = capitalize(spellFormName(spellId, reversed, ctx));
-  // A spell in the book had its form chosen when it was memorized. Any other is reversed as it's cast.
-  const choosesForm = spell.reversed_form && !memorizedReversed && !member.spell_book.includes(spellId);
+  // A divine caster chooses the form as they cast. An arcane caster chose it when memorizing the copy.
+  const choosesForm = spell.reversed_form && member.reverses_at === 'cast' && !memorizedReversed;
   const base: DeclarationBody = {
     action: 'cast',
     spell_id: spellId,

@@ -81,7 +81,7 @@ function StoredSheetDrawer({ characterId, name, color, onClose }: DrawerProps) {
       errorTitle: `Couldn't delete ${name}`,
     });
     if (result.ok) {
-      toast.success(`Deleted ${name}`, { description: 'Removed from every lobby roster.' });
+      toast.success(`Deleted ${name}`, { description: 'Removed from every party.' });
       await mine.refresh();
       onClose();
     }

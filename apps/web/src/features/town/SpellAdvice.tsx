@@ -1,24 +1,23 @@
 /**
  * The "spells to prepare" advice. A new caster has spells in the book (or a divine caster's slots) and nothing
  * memorized, and bxapi refuses a preparation until the party has slept. This module finds those members, says
- * whether the party has slept since each last prepared, and offers the short path: rest for a night, then open
+ * whether each has to sleep first or can prepare now, and offers the short path: rest for a night, then open
  * the caster's Spells tab.
  *
- * Who has spells to prepare comes from the view (`preparable_spells`), and whether a member has slept comes from
- * the feed's rest and preparation events. Nothing here decides whether a
+ * Everything comes from the view: who has spells to prepare (`preparable_spells`), who has to sleep first
+ * (`needs_sleep_to_prepare`), and who can prepare now (`can_prepare_now`). Nothing here decides whether a
  * preparation is legal. bxapi refuses one that isn't, and the sheet shows the reason.
  */
 import type { MemberView } from '@bxvtt/shared/bxapi';
-import type { FeedEntry } from '@bxvtt/shared/protocol';
 import { joinList } from '@bxvtt/shared/text';
 import { useMemo } from 'react';
-import { useFeed, useParty, useTableUi } from '@/app';
+import { useParty, useTableUi } from '@/app';
 import { Banner, Button } from '@/ui';
 import { usePartyAccess, useTownServices } from './hooks';
 import { memberStatus } from './members';
 import { useRest } from './RestAndPrepare';
 
-/** Members with spells to prepare, split by whether the party has slept since each last prepared. */
+/** Members with spells to prepare, split by whether each has to sleep first or can prepare now. */
 export interface SpellAdvice {
   /** Casters with nothing memorized who must wait for a night's sleep. */
   needRest: MemberView[];
@@ -27,46 +26,21 @@ export interface SpellAdvice {
 }
 
 /**
- * Whether the party has slept since a member last prepared spells, from the feed's events: a rest of a night or a
- * day that ran to its end, and a preparation by that member.
- *
- * @param feed - The feed entries, oldest first.
- * @param memberId - The caster.
- */
-export function hasSleptSincePreparing(feed: readonly FeedEntry[], memberId: string): boolean {
-  let sleptAt = -1;
-  let preparedAt = -1;
-  for (const entry of feed) {
-    if (entry.kind !== 'game') continue;
-    for (const event of entry.events) {
-      if (
-        event.event_type === 'rested' &&
-        event.code !== 'exploration.rest.interrupted' &&
-        (event.kind === 'night' || event.kind === 'day')
-      ) {
-        sleptAt = entry.seq;
-      } else if (event.event_type === 'spells_memorized' && event.caster_id === memberId) {
-        preparedAt = entry.seq;
-      }
-    }
-  }
-  return sleptAt > preparedAt;
-}
-
-/**
  * Finds the living members who have nothing memorized and spells that bxapi would let them prepare. A 1st-level
- * cleric and a magic-user with an empty book have none to prepare, so they're left out.
+ * cleric and a magic-user with an empty book have none to prepare, so they're left out. A member who has to sleep
+ * first needs a rest, and one whom bxapi would let prepare now can. A member who can do neither, such as one who
+ * can't act, is left out.
  *
  * @param party - The party in marching order.
- * @param feed - The feed entries, oldest first.
  */
-export function spellAdvice(party: readonly MemberView[], feed: readonly FeedEntry[]): SpellAdvice {
+export function spellAdvice(party: readonly MemberView[]): SpellAdvice {
   const needRest: MemberView[] = [];
   const canPrepare: MemberView[] = [];
   for (const member of party) {
     if (memberStatus(member).dead) continue;
     if (member.memorized_spells.length > 0 || member.preparable_spells.length === 0) continue;
-    (hasSleptSincePreparing(feed, member.id) ? canPrepare : needRest).push(member);
+    if (member.needs_sleep_to_prepare) needRest.push(member);
+    else if (member.can_prepare_now) canPrepare.push(member);
   }
   return { needRest, canPrepare };
 }
@@ -115,8 +89,7 @@ export function spellsForChecklist(advice: SpellAdvice): { detail: string; statu
 /** The spells-to-prepare advice for the open table. */
 export function useSpellAdvice(): SpellAdvice {
   const party = useParty();
-  const feed = useFeed();
-  return useMemo(() => spellAdvice(party, feed), [party, feed]);
+  return useMemo(() => spellAdvice(party), [party]);
 }
 
 /** The short path: a button that rests the party for a night, and a button that opens each caster's spells. */

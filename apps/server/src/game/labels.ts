@@ -1,5 +1,5 @@
 import type { EntryLabel, EntryNames, GameEvent, PlayerView } from '@bxvtt/shared/protocol';
-import { creatureNames, valuableNames } from '@bxvtt/shared/text';
+import { creatureNames } from '@bxvtt/shared/text';
 
 /**
  * What the players of a session have called each member, group, and monster so far. The server reads it from
@@ -57,7 +57,7 @@ export interface ItemNames {
 /**
  * Collects the item names for a command's feed entry from what a player can see: the player view from before the
  * command and the one from after it, whose `item_names` and `item_names_plural` name every item ID each view shows
- * (a pile's `contents` among them), the own name of each valuable those views show (see `valuableNames`), and
+ * (a pile's `contents` among them), the own name of each valuable those views show (`valuable_names`), and
  * the `display_name` of each `item_identified` event. The view from after
  * wins, so an item identified and kept reads by its true name. An event's name fills in only an ID that neither
  * view names. An item identified and used up in the same command, such as a potion drunk before the party knew
@@ -72,9 +72,9 @@ export function itemNames(views: readonly PlayerView[], events: readonly GameEve
   for (const view of views) {
     for (const [id, name] of Object.entries(view.item_names ?? {})) names.one.set(id, name);
     for (const [id, name] of Object.entries(view.item_names_plural ?? {})) names.many.set(id, name);
-    // `item_names` names a gem or a piece of jewellery by its kind. The players see its own name in the inventory
-    // and in a pile, so that name wins, with no plural, because a named valuable is one thing.
-    for (const [id, name] of Object.entries(valuableNames(view))) {
+    // `item_names` names a gem or a piece of jewellery by its kind, and `valuable_names` has the own name of each
+    // piece that has one. That name wins, with no plural, because a named valuable is one thing.
+    for (const [id, name] of Object.entries(view.valuable_names ?? {})) {
       names.one.set(id, name);
       names.many.delete(id);
     }

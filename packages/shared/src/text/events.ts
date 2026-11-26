@@ -7,7 +7,13 @@
  * events first, and joins an attack with the damage it dealt.
  */
 
-import { itemNounByName, magicItemCategory, magicItemTemplateName, monsterTemplateLabels } from './catalog';
+import {
+  itemNounByName,
+  magicItemCategory,
+  magicItemTemplateName,
+  monsterTemplateLabels,
+  spellModeCatalogNames,
+} from './catalog';
 import {
   areaName,
   countedLabel,
@@ -264,6 +270,18 @@ function goodsText(
 }
 
 /** Phrase for how a weapon is named in an attack: ` with a sword`, ` with its claw`, or nothing. */
+/**
+ * The label of the mode a spell was cast in, from osrlib's `SpellMode.display_name` in the built-in catalog, such
+ * as `Blind a creature` for the reverse of light. A form with a single mode has nothing to tell apart, so it has
+ * no label here. Neither has a spell the built-in catalog doesn't have, such as one an adventure bundles, because
+ * the text never reads the words of a mode's key.
+ */
+function spellModeName(spellId: string, reversed: boolean, mode: string): string | undefined {
+  const modes = spellModeCatalogNames(spellId, reversed);
+  if (modes === undefined || Object.keys(modes).length < 2) return undefined;
+  return modes[mode];
+}
+
 function attackWeapon(attackName: string, attackerId: string, ctx: TextContext): string {
   const name = attackName.trim();
   if (name === '' || name.toLowerCase() === 'weapon') return '';
@@ -833,9 +851,10 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
       }
       const at = event.target_ids.length > 0 ? ` at ${nameList(event.target_ids, ctx)}` : '';
       const manual = event.manual ? ' The referee adjudicates the effect.' : '';
+      const mode = spellModeName(event.spell_id, event.reversed === true, event.mode);
       return {
         text: `${caster} casts ${spell}${at}.${manual}`,
-        detail: `Spell mode: ${prettifyId(event.mode)}.`,
+        detail: mode === undefined ? undefined : `Spell mode: ${mode}.`,
         category: 'magic',
         tone: 'info',
         icon: 'spell',

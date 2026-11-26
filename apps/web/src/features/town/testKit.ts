@@ -135,13 +135,15 @@ export function partyWithPackItem(
  * Turns a party member into a caster with nothing memorized, with the spell fields bxapi's view states for one:
  * `spell_slots` at the member's level, and the book spells (`sleep`, then `spell-1` and on) as the spells it can
  * prepare. A 1st-level cleric has five empty slots and nothing to prepare, a 2nd-level cleric has one slot and the
- * cleric list to prepare from, and a custom class gets the slots and spells passed to it.
+ * cleric list to prepare from, and a custom class gets the slots and spells passed to it. A cleric chooses a
+ * spell's form when casting, and any other class when memorizing. The caster has to sleep before preparing,
+ * as in a new game, unless `slept` is true.
  */
 export function makeCaster(
   snapshot: Snapshot,
   memberName: string,
   classId: string,
-  options: { book?: number; level?: number; slots?: number[]; className?: string } = {},
+  options: { book?: number; level?: number; slots?: number[]; className?: string; slept?: boolean } = {},
 ): void {
   const member = snapshot.game?.view.party.find((candidate) => candidate.name === memberName);
   if (!member) throw new Error(`No member named ${memberName}.`);
@@ -162,6 +164,9 @@ export function makeCaster(
       ? ['cure_light_wounds', 'protection_from_evil']
       : book;
   member.learnable_spells = [];
+  member.reverses_at = divine ? 'cast' : 'memorize';
+  member.needs_sleep_to_prepare = options.slept !== true;
+  member.can_prepare_now = options.slept === true;
 }
 
 /** A feed entry for an accepted command whose events are the given ones. */

@@ -1,7 +1,7 @@
 /**
  * Whether a member can cast spells at their level, and why they have nothing to cast now, from the view (the
- * member's `spell_slots`, spell book, and memorized spells) and the feed (the member's last preparation and the
- * spells cast since).
+ * member's `spell_slots`, spell book, memorized spells, and `needs_sleep_to_prepare`) and the feed (the member's
+ * last preparation and the spells cast since).
  */
 import type { MemberView } from '@bxvtt/shared/bxapi';
 import type { FeedEntry } from '@bxvtt/shared/protocol';
@@ -39,11 +39,20 @@ export function castEverySpell(feed: readonly FeedEntry[], memberId: string): bo
   return prepared && castSince;
 }
 
-/** The reason text for a caster with nothing to cast. */
-export function noSpellsReason(name: string, spent: boolean): string {
-  return spent
-    ? `${name} has cast every memorized spell. Rest for a night to prepare spells again.`
-    : `${name} has no spells memorized. Rest for a night, then prepare spells from the Spells tab on ${name}'s sheet.`;
+/**
+ * The reason text for a caster with nothing to cast.
+ *
+ * @param name - The caster's name.
+ * @param spent - Whether the caster has cast every spell they prepared, from [`castEverySpell`][castEverySpell].
+ * @param needsSleep - The member's `needs_sleep_to_prepare`: whether they have to sleep before they can prepare.
+ */
+export function noSpellsReason(name: string, spent: boolean, needsSleep: boolean): string {
+  const what = spent ? `${name} has cast every memorized spell.` : `${name} has no spells memorized.`;
+  if (spent && needsSleep) return `${what} Rest for a night to prepare spells again.`;
+  const sheet = `from the Spells tab on ${name}'s sheet.`;
+  return needsSleep
+    ? `${what} Rest for a night, then prepare spells ${sheet}`
+    : `${what} Prepare spells ${sheet}`;
 }
 
 /** Whether a member casts, and why they have nothing to cast now. */
@@ -52,7 +61,8 @@ export function useCasting(member: MemberView): CastingState {
   return useMemo(() => {
     const caster = member.spell_slots.some((n) => n > 0) || member.spell_book.length > 0;
     if (!caster || memorizedSpells(member).length > 0) return { caster, reason: null };
-    return { caster, reason: noSpellsReason(member.name, castEverySpell(feed, member.id)) };
+    const spent = castEverySpell(feed, member.id);
+    return { caster, reason: noSpellsReason(member.name, spent, member.needs_sleep_to_prepare) };
   }, [member, feed]);
 }
 
