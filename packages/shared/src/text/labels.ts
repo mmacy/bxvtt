@@ -522,6 +522,11 @@ const BATTLE_ACTIONS: Record<string, { label: string; description: string }> = {
   },
   give_item: { label: 'Give an item', description: 'Hand an item to a party member within reach.' },
   turn_undead: { label: 'Turn undead', description: 'Present a holy symbol to drive off undead monsters.' },
+  hide: {
+    label: 'Hide',
+    description:
+      "Slip into the shadows to set up a back-stab. Only a character with thief skills who isn't in the front rank can hide, and the referee rolls in secret.",
+  },
   hold: { label: 'Hold', description: 'Stay where you are and do nothing this round.' },
 };
 

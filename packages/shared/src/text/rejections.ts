@@ -6,7 +6,9 @@
  * helps, what to do instead. `{name|format}` marks a param; see `template.ts` for the formats.
  *
  * The coverage test reads `data/codes.json`, which `tools/extract-codes.py` extracts from osrlib, and fails when
- * a code has no template here, or when a template uses a param that osrlib never passes with its code.
+ * a code has no template here, or when a template uses a param that osrlib never passes with its code. A refusal
+ * of a battle declaration also names the declaring member in `character`, which the extractor can't see, so
+ * [`DECLARATION_CODES`][DECLARATION_CODES] lists the codes that can carry it.
  */
 
 import type { components } from '../bxapi';
@@ -32,9 +34,26 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
     "{character|member} can't move this round. Attack in place or choose Hold.",
   'battle.declaration.cast_cannot_move':
     "{character|member} can't move and cast a spell in the same round. Clear the move or choose another action.",
-  'battle.declaration.invisible_target': "{target|entity} is invisible and can't be targeted.",
-  'battle.declaration.item_unusable':
-    "{item|itemcap} can't be used that way in battle. Attack with a weapon, or use a potion, scroll, wand, staff, or flask of oil.",
+  'battle.declaration.hide_in_front_rank':
+    "{character|member} will stand in the front rank this round, so they can't hide. Hide from a rank behind the front, or choose another action.",
+  'battle.declaration.hide_not_a_thief':
+    "{character|member} can't hide in shadows. Only a character with thief skills, such as a thief, can hide in battle.",
+  'battle.declaration.invisible_target': [
+    {
+      when: ['character', 'target'],
+      text: "{target|entity} is invisible, so {character|member} can't target it. Choose another target.",
+    },
+    { text: "{target|entity} is invisible and can't be targeted." },
+  ],
+  'battle.declaration.item_unusable': [
+    {
+      when: ['character'],
+      text: "{character|member} can't use {item|item} that way in battle. Attack with a weapon, or use a potion, scroll, wand, staff, or flask of oil.",
+    },
+    {
+      text: "{item|itemcap} can't be used that way in battle. Attack with a weapon, or use a potion, scroll, wand, staff, or flask of oil.",
+    },
+  ],
   'battle.declaration.member_out_of_reach':
     '{character|member} is too far from {target|entity}. Stay within 5 feet to hand over an item or touch an ally.',
   'battle.declaration.missing_move':
@@ -45,6 +64,11 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   'battle.declaration.no_mirror':
     "{character|member} isn't carrying a mirror. Avert eyes instead, or fight without gaze protection.",
   'battle.declaration.no_target': [
+    // An attack or a staff's strike names the group and the declaring member. A turning names the member alone.
+    {
+      when: ['character', 'group'],
+      text: 'No targets remain in {group|group} for {character|member} to strike. Choose another group.',
+    },
     { when: ['group'], text: 'No targets remain in {group|group}. Choose another group.' },
     {
       when: ['character'],
@@ -53,7 +77,7 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
     { text: 'No monsters remain to target.' },
   ],
   'battle.declaration.not_in_front_rank':
-    "{character|member} isn't in the front rank, so they can't attack in melee. Close with the monsters first, or use a missile weapon or spell.",
+    "{character|member} isn't in the front rank, so they can't reach the monsters in melee or with a touch. Close with the monsters first, or use a missile weapon or a spell with range.",
   'battle.declaration.replacement_unavailable':
     "{character|member} can't trade places with {replacement|member}. Choose a party member who can act and isn't falling back this round.",
   'battle.declaration.roster_mismatch': [
@@ -63,11 +87,31 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
     },
     { text: 'Declare an action for each party member who can act this round.' },
   ],
-  'battle.declaration.unknown_action': "{action|action} isn't a valid battle action.",
+  'battle.declaration.target_count': [
+    {
+      when: ['character', 'expected'],
+      text: '{character|possessive} action needs {expected|count:target}, but you chose {supplied|number}. Choose who drinks the potion, takes the item, or is touched by the staff.',
+    },
+    {
+      text: 'That action needs exactly one target. Choose who drinks the potion, takes the item, or is touched by the staff.',
+    },
+  ],
+  'battle.declaration.unknown_action': [
+    {
+      when: ['character'],
+      text: "{action|action} isn't a battle action {character|member} can take. Choose another action.",
+    },
+    { text: "{action|action} isn't a valid battle action." },
+  ],
   'battle.declaration.unknown_group':
     'The group {character|member} targeted is no longer in the fight. Choose another group.',
-  'battle.declaration.weapon_not_wielded':
-    "{item|itemcap} isn't equipped. Wield the weapon before attacking with it.",
+  'battle.declaration.weapon_not_wielded': [
+    {
+      when: ['character'],
+      text: "{character|member} isn't wielding {item|item}. Wield the weapon before attacking with it.",
+    },
+    { text: "{item|itemcap} isn't equipped. Wield the weapon before attacking with it." },
+  ],
   'battle.none_active': "The party isn't in a battle.",
 
   // Attacks ----------------------------------------------------------------------------------------------------
@@ -78,12 +122,24 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
       when: ['attacker', 'distance_feet'],
       text: '{attacker|entity} is {distance_feet|feet} from the target, out of range for that weapon. Move closer or choose another weapon.',
     },
+    {
+      when: ['character', 'distance_feet'],
+      text: '{character|member} is {distance_feet|feet} from the target, out of range for that weapon. Move closer or choose another weapon.',
+    },
     { text: 'The target is out of range for that weapon. Move closer or choose another weapon.' },
   ],
   'combat.attack.out_of_reach': [
     {
       when: ['attacker', 'distance_feet'],
       text: '{attacker|entity} is {distance_feet|feet} from the target, too far for a melee attack. Close in first, or use a missile weapon or spell.',
+    },
+    {
+      when: ['character', 'target', 'distance_feet'],
+      text: '{character|member} is {distance_feet|feet} from {target|entity}, too far to reach in melee. Close in first, or use a missile weapon or spell.',
+    },
+    {
+      when: ['character', 'distance_feet'],
+      text: '{character|member} is {distance_feet|feet} from the target, too far for a melee attack. Close in first, or use a missile weapon or spell.',
     },
     {
       when: ['target', 'distance_feet'],
@@ -169,7 +225,10 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   'exploration.feature.unknown': "That treasure isn't within reach here. Move to where it lies first.",
   'exploration.give.same_member':
     "{character|member} can't give items to themselves. Choose another party member.",
-  'exploration.item.not_carried': "That character doesn't have {item|carried}.",
+  'exploration.item.not_carried': [
+    { when: ['character'], text: "{character|member} doesn't have {item|carried}." },
+    { text: "That character doesn't have {item|carried}." },
+  ],
   'exploration.item.not_equipped': "{item|itemcap} isn't equipped right now.",
   'exploration.light.no_flame':
     '{character|member} has no tinder box, and no one in the party has an open flame to light from.',
@@ -210,8 +269,6 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   'exploration.trap.already_resolved': 'That trap has already sprung or been disarmed.',
   'exploration.trap.not_a_thief':
     "{character|member} isn't a thief. Only a thief can find and disarm treasure traps.",
-  'exploration.trap.not_found':
-    "The party hasn't found a trap on that cache. Have a thief check it for traps first.",
   'exploration.travel.not_at_entrance':
     'You can return to town only from the dungeon entrance. Walk back to the entrance first.',
 
@@ -242,16 +299,37 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
     'A character can wear at most two rings. Unequip a ring before putting on {item|item}.',
   'items.scroll.no_such_spell': "That scroll doesn't contain {spell|spell}.",
   'items.scroll.spent': '{item|itemcap} has no spells left.',
-  'items.scroll.wrong_caster':
-    "That character can't read {item|item}. Choose a caster whose class uses that kind of magic.",
+  'items.scroll.wrong_caster': [
+    {
+      when: ['character'],
+      text: "{character|member} can't read {item|item}. Choose a caster whose class uses that kind of magic.",
+    },
+    { text: "That character can't read {item|item}. Choose a caster whose class uses that kind of magic." },
+  ],
   'items.use.battle_only': 'You can use {item|item} only during a battle.',
-  'items.use.not_usable': "That character's class can't use {item|item}.",
-  'items.use.target_cannot_be_healed': "{target|member} can't be healed by {item|item} right now.",
+  'items.use.not_usable': [
+    { when: ['character'], text: "{character|possessive} class can't use {item|item}." },
+    { text: "That character's class can't use {item|item}." },
+  ],
+  'items.use.target_cannot_be_healed': "{target|entity} can't be healed by {item|item} right now.",
   'items.use.target_cannot_drink': "{target|member} can't act right now and can't drink {item|item}.",
-  'items.use.target_not_allowed':
-    "{target|entity} isn't in the party. You can give {item|item} only to a party member.",
+  'items.use.target_healed_today':
+    '{item|itemcap} has already healed {target|entity} today. A staff of healing can heal each creature only once a day.',
+  'items.use.target_not_allowed': [
+    {
+      when: ['character', 'target'],
+      text: "{target|entity} isn't in the party. {character|member} can give {item|item} only to a party member.",
+    },
+    { text: "{target|entity} isn't in the party. You can give {item|item} only to a party member." },
+  ],
   'items.use.target_required': 'Choose a target for {item|item}.',
-  'items.use.unknown_target': "That target isn't in the party or the encounter.",
+  'items.use.unknown_target': [
+    {
+      when: ['character'],
+      text: "The target {character|member} chose isn't in the party or the encounter. Choose another target.",
+    },
+    { text: "That target isn't in the party or the encounter." },
+  ],
 
   // Magic ------------------------------------------------------------------------------------------------------
   'magic.book.already_chosen': '{character|member} already has starting spells in their spell book.',
@@ -266,14 +344,31 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   'magic.cast.anti_magic_shell': 'An anti-magic shell blocks {caster|member} from casting spells.',
   'magic.cast.caster_incapacitated': "{caster|member} can't cast while {condition|condition}.",
   'magic.cast.caster_restrained': "{caster|member} can't cast while {restraint|restraint}.",
-  'magic.cast.not_memorized':
-    "That caster doesn't have {spell|spell} memorized{reversed|inreverse}. Casters memorize spells after a night's rest.",
+  'magic.cast.not_memorized': [
+    {
+      when: ['character'],
+      text: "{character|member} doesn't have {spell|spell} memorized{reversed|inreverse}. Casters memorize spells after a night's rest.",
+    },
+    {
+      text: "That caster doesn't have {spell|spell} memorized{reversed|inreverse}. Casters memorize spells after a night's rest.",
+    },
+  ],
   'magic.cast.not_reversible': '{spell|spellcap} has no reversed form.',
-  'magic.cast.out_of_range':
-    'The target is {distance_feet|feet} away, but {spell|spell} reaches only {range_feet|feet}.',
+  'magic.cast.out_of_range': [
+    {
+      when: ['character'],
+      text: 'The target is {distance_feet|feet} from {character|member}, but {spell|spell} reaches only {range_feet|feet}.',
+    },
+    { text: 'The target is {distance_feet|feet} away, but {spell|spell} reaches only {range_feet|feet}.' },
+  ],
   'magic.cast.silenced_area': "{caster|member} is standing in magical silence and can't cast spells.",
-  'magic.cast.target_count':
-    'This spell mode takes {expected|count:target}, but you chose {supplied|number}.',
+  'magic.cast.target_count': [
+    {
+      when: ['character'],
+      text: '{character|possessive} spell takes {expected|count:target} in this mode, but you chose {supplied|number}.',
+    },
+    { text: 'This spell mode takes {expected|count:target}, but you chose {supplied|number}.' },
+  ],
   'magic.cast.target_must_be_creature': 'Choose a creature to target with {spell|spell}, not a location.',
   'magic.cast.unknown_mode': [
     {
@@ -283,7 +378,15 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
     { text: "That spell doesn't support that mode. Choose one of the spell's available modes." },
   ],
   'magic.cast.unknown_spell': "{spell|spellcap} isn't available in this adventure.",
-  'magic.cast.unknown_target': "That target isn't in the party or the encounter.",
+  'magic.cast.unknown_target': [
+    {
+      when: ['character'],
+      text: "The target {character|member} chose has fallen or fled, or it isn't in this encounter. Choose another target.",
+    },
+    {
+      text: "That target isn't in the party or the encounter, or it has fallen or fled. Choose another target.",
+    },
+  ],
   'magic.memorize.divine_reverses_at_cast':
     'Clerics choose the reversed form when casting, not when memorizing. Memorize {spell|spell} in its normal form.',
   'magic.memorize.needs_sleep': "{character|member} needs a night's rest before preparing spells.",
@@ -313,7 +416,14 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
     "{character|member} can't leave their belongings to themselves. Choose another party member.",
 
   // Session ----------------------------------------------------------------------------------------------------
-  'session.command.member_incapacitated': "{character|member} can't act right now.",
+  'session.command.member_incapacitated': [
+    // A hand-over in battle names the giver as `character` and the recipient as `target`.
+    {
+      when: ['character', 'target'],
+      text: "{target|member} can't act right now, so {character|member} can't hand them anything.",
+    },
+    { text: "{character|member} can't act right now." },
+  ],
   'session.command.no_door': [
     { when: ['x', 'y'], text: 'The cell at ({x|number}, {y|number}) has no door on that side.' },
     { text: 'That cell has no door on that side.' },
@@ -327,7 +437,14 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   ],
   'session.command.unknown_item': "That item isn't available in this adventure.",
   'session.command.unknown_location': "{dungeon|dungeon} isn't a dungeon in this adventure.",
-  'session.command.unknown_member': "That character isn't in the party.",
+  'session.command.unknown_member': [
+    // A hand-over in battle names the giver as `character` and the recipient as `target`.
+    {
+      when: ['character', 'target'],
+      text: '{character|member} can hand items only to a member of the party. Choose another party member.',
+    },
+    { text: "That character isn't in the party." },
+  ],
   'session.command.unknown_monster': "That monster type isn't available in this adventure.",
   'session.command.unknown_objective': 'That quest has no such objective.',
   'session.command.unknown_quest': 'This adventure has no such quest.',
@@ -339,6 +456,44 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   'town.healing.no_effect': "{character|member} doesn't need {item|service} right now.",
   'town.sell.no_fixed_value': 'Merchants in town buy only gems and jewellery, not {item|item}.',
 };
+
+/**
+ * The codes that can refuse a battle declaration with the declaring member in their `character` param, which
+ * osrlib adds to every refusal of a declaration, including the kernel's checks that a declaration passes
+ * through. `data/codes.json` lists the params that osrlib's code passes directly, so the coverage test also
+ * allows `character` for these codes. A code that a declaration can return but that's missing here still reads
+ * well, just without the member's name.
+ *
+ * Two codes also name the recipient of a hand-over in `target`: `session.command.unknown_member` and
+ * `session.command.member_incapacitated`.
+ */
+export const DECLARATION_CODES: ReadonlySet<string> = new Set([
+  'battle.declaration.invisible_target',
+  'battle.declaration.item_unusable',
+  'battle.declaration.target_count',
+  'battle.declaration.unknown_action',
+  'battle.declaration.weapon_not_wielded',
+  'combat.attack.out_of_range',
+  'combat.attack.out_of_reach',
+  'exploration.item.not_carried',
+  'items.scroll.wrong_caster',
+  'items.use.not_usable',
+  'items.use.target_not_allowed',
+  'items.use.unknown_target',
+  'magic.cast.not_memorized',
+  'magic.cast.out_of_range',
+  'magic.cast.target_count',
+  'magic.cast.unknown_target',
+  'session.command.member_incapacitated',
+  'session.command.unknown_member',
+]);
+
+/** The params that a declaration adds to a code, beyond those `data/codes.json` lists. */
+export function declarationParams(code: string): readonly string[] {
+  if (code === 'session.command.member_incapacitated' || code === 'session.command.unknown_member')
+    return ['character', 'target'];
+  return DECLARATION_CODES.has(code) ? ['character'] : [];
+}
 
 /** Build a sentence from the words of a code that has no template: `items.equip.too_heavy` gives `Equip too heavy`. */
 export function fallbackRejectionText(code: string): string {

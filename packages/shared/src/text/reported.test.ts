@@ -800,7 +800,7 @@ describe('group labels that are proper names (sample adventures)', () => {
         } as never,
         loft,
       ).text,
-    ).toBe('Mag Corrie flees.');
+    ).toBe('Mag Corrie breaks and runs.');
     const morale = describeEvent(
       {
         event_type: 'morale_checked',

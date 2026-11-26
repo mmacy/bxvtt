@@ -25,6 +25,8 @@ import { capitalizeFirst, lowerFirst, placeInSentence, pluralize, prettifyId, wi
 export interface MemberInfo {
   name: string;
   classId?: string;
+  /** The class's name as the player view states it, such as `Fighter`, which is right for a custom class too. */
+  className?: string;
   level?: number;
 }
 
@@ -65,8 +67,13 @@ export interface TextContext {
    * reads with its curated noun, whatever this record says.
    */
   items: Record<string, string>;
-  /** Spell names by ID, without an article: `magic missile`. */
+  /** Spell names by ID, as the rules write them: `Magic Missile`. */
   spells: Record<string, string>;
+  /**
+   * The name of each spell's reversed form by spell ID, such as `Darkness` for `light_mu`, from the player view's
+   * `reversed_spell_names`. A spell the context doesn't list here reads as `the reversed form of Light`.
+   */
+  reversedSpells?: Record<string, string>;
   /** Area names by area ID, or by `dungeon:level:area`. */
   areas: Record<string, string>;
   /** Dungeon names by dungeon ID. */
@@ -155,13 +162,32 @@ export interface PlayerViewLike {
     id: string;
     name: string;
     class_id?: string;
+    class_name?: string;
     level?: number;
     inventory?: unknown;
   }>;
   encounter?: {
-    groups?: ReadonlyArray<{ id: string; label: string; label_plural?: string; count?: number }>;
+    groups?: ReadonlyArray<{
+      id: string;
+      label: string;
+      label_plural?: string;
+      count?: number;
+      members?: ReadonlyArray<{ id: string; status?: string }>;
+    }>;
   } | null;
   town_name?: string;
+  /** Spell names by spell ID, for every spell the view shows. */
+  spell_names?: Readonly<Record<string, string>>;
+  /** The names of the reversed forms of the spells in `spell_names` that have one. */
+  reversed_spell_names?: Readonly<Record<string, string>>;
+  /** The dungeons the party has entered, with their names. */
+  dungeons?: ReadonlyArray<{ id?: string; name?: string }>;
+  /** The party's map, with the areas it has entered on each level. */
+  explored?: ReadonlyArray<{
+    dungeon_id: string;
+    level_number: number;
+    areas?: ReadonlyArray<{ id?: string; name?: string }>;
+  }>;
 }
 
 /**
@@ -202,18 +228,40 @@ function registerInventory(items: Record<string, string>, inventory: unknown): v
 }
 
 /**
- * Build a context from a player view: the party members (name and class), the current monster groups, the
- * display names of magic items and valuables the party carries, and the town name. Pass `base` to add the
- * view's data to a context you already have, so groups from earlier encounters stay known.
+ * Build a context from a player view: the party members (name and class), the current monster groups and the
+ * monsters in them, the display names of magic items and valuables the party carries, the names of the spells,
+ * dungeons, and areas the view shows, and the town name. Pass `base` to add the view's data to a context you
+ * already have, so groups from earlier encounters stay known.
+ *
+ * The view's own names win over the built-in catalog, so a custom class, a spell the adventure bundles, and an
+ * area or a dungeon of the adventure read by the names their author gave them, without the referee view. A view
+ * from before bxapi stated these names leaves the catalog to name them.
  */
 export function contextFromPlayerView(view: PlayerViewLike, base?: TextContext): TextContext {
   const ctx = cloneContext(base ?? emptyContext());
   for (const member of view.party ?? []) {
     const info: MemberInfo = { name: member.name };
     if (member.class_id !== undefined) info.classId = member.class_id;
+    if (member.class_name) info.className = member.class_name;
     if (member.level !== undefined) info.level = member.level;
     ctx.members[member.id] = info;
     registerInventory(ctx.items, member.inventory);
+  }
+  for (const [id, name] of Object.entries(view.spell_names ?? {})) {
+    if (name.trim() !== '') ctx.spells[id] = name;
+  }
+  for (const [id, name] of Object.entries(view.reversed_spell_names ?? {})) {
+    if (name.trim() !== '') (ctx.reversedSpells ??= {})[id] = name;
+  }
+  for (const dungeon of view.dungeons ?? []) {
+    if (dungeon.id && dungeon.name) ctx.dungeons[dungeon.id] = dungeon.name;
+  }
+  for (const level of view.explored ?? []) {
+    for (const area of level.areas ?? []) {
+      if (!area.id || !area.name) continue;
+      ctx.areas[`${level.dungeon_id}:${level.level_number}:${area.id}`] = area.name;
+      if (!(area.id in ctx.areas)) ctx.areas[area.id] = area.name;
+    }
   }
   // While an encounter is open, its groups replace the groups of earlier encounters, so that a monster ID
   // with no known template can take the label of the one kind of monster in the fight. When no encounter is
@@ -226,9 +274,49 @@ export function contextFromPlayerView(view: PlayerViewLike, base?: TextContext):
     const size = Math.max(group.count ?? 0, earlier[group.id]?.size ?? 0, earlier[group.id]?.count ?? 0);
     if (size > 0) info.size = size;
     ctx.groups[group.id] = info;
+    // Each monster reads by its group's label, which is what the players see. A name the context already has,
+    // such as one from the referee view, stays.
+    for (const monster of group.members ?? []) {
+      if (ctx.monsters[monster.id] === undefined) {
+        ctx.monsters[monster.id] = { label: info.label, labelPlural: info.labelPlural };
+      }
+    }
   }
   if (view.town_name) ctx.townName = view.town_name;
   return ctx;
+}
+
+/**
+ * What the table calls each monster of an encounter, by monster ID: `Goblin 1`, `Goblin 2`, or the bare label
+ * of a monster that is the only one with its label, such as `Ogre` or `Mag Corrie`. Monsters count by label
+ * across every group in the order the groups list them, so a second group of goblins goes on from `Goblin 3`.
+ * Pass the player view's `encounter.groups`: each group's `members` lists its monsters, the fallen and fled
+ * included, so the numbers stay the same for the whole encounter. A group from a view without `members` adds
+ * nothing.
+ *
+ * ```ts
+ * const labels = encounterMonsterLabels(view.encounter?.groups ?? []);
+ * labels['monster-0002']; // 'Goblin 2'
+ * ```
+ */
+export function encounterMonsterLabels(
+  groups: ReadonlyArray<{ label: string; members?: ReadonlyArray<{ id: string }> }>,
+): Record<string, string> {
+  const totals = new Map<string, number>();
+  for (const group of groups) {
+    totals.set(group.label, (totals.get(group.label) ?? 0) + (group.members?.length ?? 0));
+  }
+  const labels: Record<string, string> = {};
+  const counted = new Map<string, number>();
+  for (const group of groups) {
+    const name = capitalizeFirst(group.label.trim() === '' ? 'monster' : group.label);
+    for (const monster of group.members ?? []) {
+      const number = (counted.get(group.label) ?? 0) + 1;
+      counted.set(group.label, number);
+      labels[monster.id] = (totals.get(group.label) ?? 0) > 1 ? `${name} ${number}` : name;
+    }
+  }
+  return labels;
 }
 
 /** Loose shape of the parts of a referee view that the context reads. A `RefereeView` from bxapi fits it. */
@@ -662,8 +750,10 @@ export function cloneContext(ctx: TextContext): TextContext {
     areas: { ...ctx.areas },
     dungeons: { ...ctx.dungeons },
   };
+  if (ctx.reversedSpells !== undefined) copy.reversedSpells = { ...ctx.reversedSpells };
   if (ctx.townName !== undefined) copy.townName = ctx.townName;
   if (ctx.triggers !== undefined) copy.triggers = { ...ctx.triggers };
+  if (ctx.flags !== undefined) copy.flags = { ...ctx.flags };
   return copy;
 }
 
@@ -678,8 +768,11 @@ export function mergeContexts(...contexts: readonly TextContext[]): TextContext 
     Object.assign(merged.spells, ctx.spells);
     Object.assign(merged.areas, ctx.areas);
     Object.assign(merged.dungeons, ctx.dungeons);
+    if (ctx.reversedSpells !== undefined)
+      merged.reversedSpells = { ...merged.reversedSpells, ...ctx.reversedSpells };
     if (ctx.townName !== undefined) merged.townName = ctx.townName;
     if (ctx.triggers !== undefined) merged.triggers = { ...merged.triggers, ...ctx.triggers };
+    if (ctx.flags !== undefined) merged.flags = { ...merged.flags, ...ctx.flags };
   }
   return merged;
 }
@@ -731,9 +824,14 @@ export function memberName(id: string | null | undefined, ctx: TextContext): str
   return isEntityId(id) ? entityName(id, ctx) : prettifyId(id);
 }
 
-/** The class of a member as a lower-case noun, when known: `thief`. */
+/**
+ * The class of a member as a lower-case noun, when known: `thief`. The player view's class name comes first, so a
+ * custom class reads by its own name.
+ */
 export function memberClass(id: string, ctx: TextContext): string | undefined {
-  const classId = ctx.members[id]?.classId;
+  const known = ctx.members[id];
+  if (known?.className) return known.className.toLowerCase();
+  const classId = known?.classId;
   return classId ? (classCatalogName(classId)?.toLowerCase() ?? prettifyId(classId)) : undefined;
 }
 
@@ -903,6 +1001,20 @@ export function itemList(ids: readonly string[], ctx: TextContext, options: Item
 export function spellName(id: string | null | undefined, ctx: TextContext): string {
   if (!id) return 'a spell';
   return ctx.spells[id] ?? spellCatalogName(id) ?? prettifyId(id);
+}
+
+/**
+ * Name of a spell in the form it was cast or memorized: its name, or for the reversed form, the reverse's own
+ * name when the context knows it (`Darkness`), and otherwise `the reversed form of Light`.
+ */
+export function spellFormName(
+  id: string | null | undefined,
+  reversed: boolean | null | undefined,
+  ctx: TextContext,
+): string {
+  if (reversed !== true) return spellName(id, ctx);
+  const reverse = id ? ctx.reversedSpells?.[id] : undefined;
+  return reverse ?? `the reversed form of ${spellName(id, ctx)}`;
 }
 
 /** Name of an area, when the context knows it, and otherwise a phrase built from the ID. */

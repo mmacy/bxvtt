@@ -59,6 +59,7 @@ const COIN_IDS = new Set(['pp', 'gp', 'ep', 'sp', 'cp']);
 export const TEMPLATE_FORMATS = [
   'raw',
   'member',
+  'possessive',
   'entity',
   'monster',
   'group',
@@ -137,6 +138,10 @@ function formatValue(value: ParamValue | undefined, format: string, ctx: TextCon
   switch (name) {
     case 'member':
       return memberName(text, ctx);
+    case 'possessive': {
+      const name = memberName(text, ctx);
+      return /s$/i.test(name) ? `${name}'` : `${name}'s`;
+    }
     case 'entity':
       return text ? entityName(text, ctx) : 'someone';
     case 'monster':

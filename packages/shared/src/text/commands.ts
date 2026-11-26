@@ -817,22 +817,22 @@ export const DECLARATION_FIELD_TEXT: Record<string, FieldText> = {
   spell_mode: field('Spell mode', "Which of the spell's uses to cast."),
   reversed: field('Reversed form', 'Cast the reversed form of the spell.'),
   targets: field(
-    'Spell targets',
-    'Who or what the spell is aimed at, when it does not target the whole group.',
+    'Targets',
+    'Who or what the spell is aimed at, when it does not target the whole group, or who drinks the potion, takes the item, or is touched by the staff.',
   ),
   move: field('Move', 'How this member moves this round.'),
   replacement_id: field(
     'Trade places with',
     'A member to trade marching-order places with, for a fighting withdrawal or retreat made alone.',
   ),
-  item_id: field('Item', 'The magic item to use, or the splash weapon to throw.'),
+  item_id: field('Item', 'The magic item to use, the splash weapon to throw, or the item to hand over.'),
   gaze_defense: field(
     'Guard against a gaze',
     "Avert your eyes or use a mirror to avoid a monster's gaze, with an attack penalty.",
   ),
   back_stab: field(
     'Back-stab',
-    "A thief's attack on an unaware monster from behind, with a bonus to hit and doubled damage.",
+    "A thief's attack on a monster that hasn't noticed them, with a bonus to hit and doubled damage. A thief can back-stab in the party's free round after it surprises the monsters, or while hiding.",
   ),
 };
 

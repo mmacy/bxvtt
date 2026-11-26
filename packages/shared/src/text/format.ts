@@ -240,6 +240,27 @@ export function formatCoins(coins: Coins, style: 'short' | 'long' = 'short'): st
   return parts.length === 0 ? (style === 'short' ? '0 gp' : 'no coins') : parts.join(', ');
 }
 
+/**
+ * The coins of a purse or an event as list items, highest denomination first, each with its full name:
+ * `{ gp: 3, sp: 4 }` gives `['3 gold pieces', '4 silver pieces']`. Coins of no denomination give an empty list.
+ * Join the items with other goods through `joinList`, so a list reads `a rope, 3 gold pieces, and 4 silver pieces`.
+ */
+export function coinParts(coins: Coins): string[] {
+  return COIN_ORDER.flatMap((denomination) => {
+    const amount = coins[denomination] ?? 0;
+    return amount === 0 ? [] : [`${formatInteger(amount)} ${coinName(denomination, amount)}`];
+  });
+}
+
+/**
+ * Describe coins in a sentence, highest denomination first: `39 copper pieces`, `3 gold pieces and 4 silver
+ * pieces`, or `no coins`.
+ */
+export function coinsPhrase(coins: Coins): string {
+  const parts = coinParts(coins);
+  return parts.length === 0 ? 'no coins' : joinList(parts);
+}
+
 /** Format a value in gold pieces: `120 gp`. */
 export function formatGold(gp: number): string {
   return `${formatInteger(gp)} gp`;
