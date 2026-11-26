@@ -11,6 +11,7 @@ import {
   useSendDeclaration,
   useShortcut,
   useTableSettings,
+  useTextContext,
 } from '@/app';
 import { ActionBarDivider, ActionBarItem, Button } from '@/ui';
 import { QUICK_ICONS, quickAction, quickTooltip, repeatTooltip, useRepeatLastRound } from './BattleBoard';
@@ -20,7 +21,6 @@ import { useCombatPeople } from './people';
 import { useCombatUi } from './state';
 import { useEncounterCommands } from './useEncounterCommands';
 import styles from './combat.module.css';
-import { useCombatText } from './text';
 
 /** Why Talk is unavailable when nobody in the party can act, so nobody can speak. */
 const NO_SPEAKER = 'No one in the party can act, so no one can talk to the monsters.';
@@ -228,7 +228,7 @@ function BattleActions() {
   const encounter = useEncounter();
   const party = useParty();
   const declarations = useDeclarations();
-  const ctx = useCombatText();
+  const ctx = useTextContext();
   const people = useCombatPeople();
   const settings = useTableSettings();
   const canResolve = useCanResolveRound();

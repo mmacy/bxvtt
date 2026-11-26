@@ -16,6 +16,7 @@ import {
   useRefereeLens,
   useRefereeState,
   useTableId,
+  useTextContext,
   type PlaybackMemberState,
   type PlaybackSpeed,
 } from '@/app';
@@ -33,7 +34,6 @@ import {
   type RoundDigest,
   type TrackState,
 } from './playback';
-import { useCombatText } from './text';
 import {
   beatLength,
   replay as replayTape,
@@ -57,7 +57,7 @@ export function useMonsterLookup(): MonsterGroupLookup {
   const referee = useRefereeState();
   const encounter = useEncounter();
   const learned = useCombatMemory((s) => s.monsterGroups);
-  const ctx = useCombatText();
+  const ctx = useTextContext();
   return useMemo(() => {
     const exact = new Map<string, string>();
     for (const group of referee?.encounter?.groups ?? []) {
@@ -170,7 +170,7 @@ export function usePlayback(options: PlaybackOptions): PlaybackView {
   const tableId = useTableId();
   const reduce = useReduceMotion();
   const lens = useRefereeLens();
-  const ctx = useCombatText();
+  const ctx = useTextContext();
   const lookup = useMonsterLookup();
   // Entries already in the feed when the overlay opens are history, not news.
   const [startSeq] = useState(() => options.afterSeq ?? feed.at(-1)?.seq ?? 0);

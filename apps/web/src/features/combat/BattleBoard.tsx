@@ -5,9 +5,9 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   battleRound,
   tokenClass,
+  useCaller,
   useCanDeclare,
   useCanResolveRound,
-  useCaller,
   useDeclarations,
   useEncounter,
   useFeed,
@@ -19,6 +19,7 @@ import {
   useTableId,
   useTableSettings,
   useTableStoreApi,
+  useTextContext,
 } from '@/app';
 import {
   Avatar,
@@ -56,7 +57,6 @@ import { MonsterRoster, RefereeActions } from './RefereeTools';
 import { useCombatUi } from './state';
 import { usePlayback, usePublishPlayback } from './usePlayback';
 import styles from './combat.module.css';
-import { useCombatText } from './text';
 
 const BATTLE_EVENTS = new Set([
   'battle_round',
@@ -142,7 +142,7 @@ export function useRepeatLastRound(): {
   const party = useParty();
   const declarations = useDeclarations();
   const memory = useCombatMemory((s) => s.declarations);
-  const ctx = useCombatText();
+  const ctx = useTextContext();
   const { declare } = useSendDeclaration();
   const round = declarations?.round ?? 0;
   const candidates = (memberIds: readonly string[]) =>
@@ -177,7 +177,7 @@ export function BattleBoard() {
   const party = useParty();
   const declarations = useDeclarations();
   const revision = useRevision();
-  const ctx = useCombatText();
+  const ctx = useTextContext();
   const people = useCombatPeople();
   const reduce = useReduceMotion();
   const lens = useRefereeLens();

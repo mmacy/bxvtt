@@ -19,6 +19,7 @@ import {
   useSendCommand,
   useTableId,
   useTableStoreApi,
+  useTextContext,
 } from '@/app';
 import {
   Badge,
@@ -52,7 +53,7 @@ import {
 } from './useEncounterCommands';
 import { ACCEPT_ALL, usePlayback } from './usePlayback';
 import styles from './combat.module.css';
-import { useCombatText, useEncounterCreatures } from './text';
+import { useEncounterCreatures } from './text';
 import { countBadge, countedGroup, groupHeading, theGroup, viewLabels } from './names';
 
 /** What each bearing means for the party's choices, from the `wait` and `parley` command documentation. */
@@ -85,7 +86,7 @@ export function EncounterPanel() {
   const party = useParty();
   const revision = useRevision();
   const tableId = useTableId();
-  const ctx = useCombatText();
+  const ctx = useTextContext();
   const lens = useRefereeLens();
   const store = useTableStoreApi();
   const opening = useEncounterOpening();

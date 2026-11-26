@@ -9,7 +9,6 @@ export * from './annotations';
 export * from './battle';
 export * from './characters';
 export * from './common';
-export * from './creatures';
 export * from './feed';
 export * from './game';
 export * from './health';

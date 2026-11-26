@@ -245,15 +245,47 @@ describe('BattleBoard', () => {
     expect(api.declare).toHaveBeenCalledWith(store.getState().tableId, 'character-0002', { action: 'hide' });
   });
 
-  it('offers no hide to a member the view leaves out of can_hide', async () => {
+  it('offers the hide to a thief the view leaves out of can_hide, and shows the refusal on her row', async () => {
     const api = createFakeApi();
     stubRules(api);
     const snapshot = fixtureSnapshot('battle', 'player');
     const encounter = snapshot.game?.view.encounter;
     if (encounter) encounter.can_hide = [];
-    const { user } = renderWithTable(<BattleBoard />, { snapshot, api });
+    const { user, store } = renderWithTable(<BattleBoard />, { snapshot, api });
     await user.click(within(row('Wren')).getByRole('button', { name: 'Actions' }));
     const composer = screen.getByRole('region', { name: 'Declare for Wren' });
+    await user.click(within(composer).getByRole('radio', { name: 'Hide' }));
+    await user.click(within(composer).getByRole('button', { name: 'Hide in shadows' }));
+    expect(api.declare).toHaveBeenCalledWith(store.getState().tableId, 'character-0002', { action: 'hide' });
+    // The server's preview refuses it while Wren would stand in the front rank, and the row says why.
+    const declarations = structuredClone(store.getState().declarations) as DeclarationsState;
+    declarations.declarations['character-0002'] = { character_id: 'character-0002', action: 'hide' } as never;
+    declarations.declared = [...declarations.declared, 'character-0002'];
+    declarations.refusals = [
+      {
+        member_id: 'character-0002',
+        code: 'battle.declaration.hide_in_front_rank',
+        params: { character: 'character-0002' },
+      },
+    ];
+    act(() => store.getState().receive({ type: 'declarations', declarations }));
+    await waitFor(() =>
+      expect(
+        within(row('Wren')).getAllByText(/Wren will stand in the front rank this round, so they can't hide/)
+          .length,
+      ).toBeGreaterThan(0),
+    );
+  });
+
+  it('offers no hide to a member without thief skills who is not in can_hide', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('battle', 'referee');
+    const encounter = snapshot.game?.view.encounter;
+    if (encounter) encounter.can_hide = [];
+    const { user } = renderWithTable(<BattleBoard />, { snapshot, api });
+    await user.click(within(row('Tamsin')).getByRole('button', { name: /Declare for Tamsin|Actions/ }));
+    const composer = screen.getByRole('region', { name: 'Declare for Tamsin' });
     expect(within(composer).queryByRole('radio', { name: 'Hide' })).not.toBeInTheDocument();
   });
 

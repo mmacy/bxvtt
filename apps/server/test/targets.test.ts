@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { isProblem } from '@bxvtt/shared/client';
 import type { BxvttProblemError } from '@bxvtt/shared/client';
 import type { GameState, RefereeState } from '@bxvtt/shared/protocol';
-import { creatureNames } from '@bxvtt/shared/protocol';
+import { creatureNames } from '@bxvtt/shared/text';
 import type { TestConnection, TestServer, TestUser } from './helpers';
 import {
   connect,

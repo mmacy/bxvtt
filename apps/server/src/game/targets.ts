@@ -38,8 +38,9 @@ function isCreature(value: unknown, known: ReadonlySet<string>): value is string
 
 /**
  * Finds the first target of a command or a declaration that names a monster or an NPC adventurer the player view
- * doesn't list. bxapi accepts any creature of the session in an out-of-battle `cast_spell` or `use_item`, so the
- * server checks a player's targets against the player view before it forwards them.
+ * doesn't list. bxapi accepts any creature of the session in an out-of-battle `cast_spell` or `use_item`
+ * (https://github.com/mmacy/osrlib-python/issues/317), so the server checks a player's targets against the player
+ * view before it forwards them.
  *
  * @param body - The command or the declaration.
  * @param fields - The fields that can name a target.

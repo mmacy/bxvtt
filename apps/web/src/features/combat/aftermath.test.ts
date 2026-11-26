@@ -23,6 +23,22 @@ describe('taking from the aftermath', () => {
     expect(takeOutcome([], emptyContext()).text).toBe('There was nothing to pick up.');
   });
 
+  it('counts coins worth less than 1 gp as something taken', () => {
+    const events: AnyEvent[] = [
+      {
+        event_type: 'item_acquired',
+        code: 'exploration.item.acquired',
+        character_id: 'character-0001',
+        item_ids: [],
+        coins_gp_value: 0,
+        coins: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 7 },
+      },
+    ];
+    const outcome = takeOutcome(events, emptyContext());
+    expect(outcome.tone).toBe('success');
+    expect(outcome.text).toMatch(/7 copper pieces|7 cp/);
+  });
+
   it('says who took what', () => {
     const events: AnyEvent[] = [
       {
@@ -30,6 +46,7 @@ describe('taking from the aftermath', () => {
         code: 'exploration.item.acquired',
         character_id: 'character-0001',
         item_ids: [],
+        // An event from before osrlib 2.7 states only the gp value.
         coins_gp_value: 2,
       },
     ];

@@ -1,5 +1,5 @@
 import type { GameEntry } from '@bxvtt/shared/protocol';
-import { describeEvents, joinList, type TextContext } from '@bxvtt/shared/text';
+import { coinParts, describeEvents, joinList, type Coins, type TextContext } from '@bxvtt/shared/text';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   cachesToTake,
@@ -12,6 +12,7 @@ import {
   useRevision,
   useParty,
   useSendCommand,
+  useTextContext,
   type TableStore,
 } from '@/app';
 import { Badge, Button, cx, Icon } from '@/ui';
@@ -22,7 +23,6 @@ import { useCombatPeople } from './people';
 import type { AnyEvent } from './playback';
 import { usePlayback, usePublishPlayback } from './usePlayback';
 import styles from './combat.module.css';
-import { useCombatText } from './text';
 
 export interface AftermathProps {
   /** The revision the fight ended at. The entry with this revision is the fight's last. */
@@ -38,7 +38,7 @@ export interface AftermathProps {
  */
 export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
   const feed = useFeed();
-  const ctx = useCombatText();
+  const ctx = useTextContext();
   const people = useCombatPeople();
   const reduce = useReduceMotion();
   const mode = useGameMode();
@@ -152,10 +152,10 @@ export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
 }
 
 /** Points the party at what it can pick up where it stands: dropped goods, or a treasure hoard. */
-function PickUp() {
+export function PickUp() {
   const here = useHere();
   const canTake = useCanSend('take_treasure');
-  const ctx = useCombatText();
+  const ctx = useTextContext();
   const { send, pendingType } = useSendCommand();
   const [outcome, setOutcome] = useState<{ tone: 'success' | 'info' | 'danger'; text: string } | null>(null);
   const caches = cachesToTake(here).filter((cache) => cache.reachable);
@@ -224,6 +224,16 @@ function PickUp() {
 }
 
 /**
+ * Whether an event acquired coins: any coin by denomination, which counts loot worth less than 1 gp, or the gp
+ * value when every coin count is zero, as in an event from before osrlib 2.7.
+ */
+function acquiredCoins(event: AnyEvent): boolean {
+  const coins = event.coins;
+  if (typeof coins === 'object' && coins !== null && coinParts(coins as Coins).length > 0) return true;
+  return typeof event.coins_gp_value === 'number' && event.coins_gp_value > 0;
+}
+
+/**
  * What a take answered: the lines that say who took what, or that there was nothing to take when nobody took
  * anything.
  */
@@ -234,8 +244,7 @@ export function takeOutcome(
   const took = events.some(
     (e) =>
       e.event_type === 'item_acquired' &&
-      ((Array.isArray(e.item_ids) && e.item_ids.length > 0) ||
-        (typeof e.coins_gp_value === 'number' && e.coins_gp_value > 0)),
+      ((Array.isArray(e.item_ids) && e.item_ids.length > 0) || acquiredCoins(e)),
   );
   if (!took) return { tone: 'info', text: 'There was nothing to pick up.' };
   const lines = describeEvents(

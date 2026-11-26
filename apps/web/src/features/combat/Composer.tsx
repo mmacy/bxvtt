@@ -5,6 +5,7 @@ import {
   formatFeet,
   joinList,
   memberName,
+  monsterName,
   spellName,
   type TextContext,
 } from '@bxvtt/shared/text';
@@ -16,6 +17,7 @@ import {
   useRulesEntry,
   useSendDeclaration,
   useTableUi,
+  useTextContext,
   type ClassDetail,
   type SpellDetail,
 } from '@/app';
@@ -37,7 +39,7 @@ import {
   type MemberGear,
 } from './model';
 import styles from './combat.module.css';
-import { useCombatText, useEncounterCreatures } from './text';
+import { useEncounterCreatures } from './text';
 import { useCasting } from './casting';
 import { countBadge, groupHeading, theGroup, viewLabels } from './names';
 
@@ -144,7 +146,7 @@ export function Composer({
   onDeclared,
   onClose,
 }: ComposerProps) {
-  const ctx = useCombatText();
+  const ctx = useTextContext();
   const { declare, pending } = useSendDeclaration();
   const abilities = useClassAbilities(member.class_id);
   const gazers = useGazeGroups(encounter);
@@ -162,9 +164,13 @@ export function Composer({
   if (usable.length > 0) tabs.push('item');
   if (gear.items.length > 0 && others.length > 0) tabs.push('give');
   if (abilities.turnUndead) tabs.push('turn');
-  // The view lists who can hide this round. A member who already declared a hide keeps the tab. A view from
-  // before osrlib 2.7 has no `can_hide` or `hiding`.
-  if ((encounter.can_hide ?? []).includes(member.id) || current?.action === 'hide') tabs.push('hide');
+  // Hide is offered to the members the view lists in `can_hide`, to a member who already declared a hide, and to
+  // a member the view gives thief skills. `can_hide` reads the battle as it stands, so a thief in the front rank
+  // isn't in it, though another member's declared move can make the hide work. The preview says when it won't.
+  // The `?? []` and `?? {}` cover test fixtures captured before osrlib 2.7.
+  const thiefSkills = Object.keys(member.thief_skills ?? {}).length > 0;
+  if ((encounter.can_hide ?? []).includes(member.id) || current?.action === 'hide' || thiefSkills)
+    tabs.push('hide');
   tabs.push('hold');
 
   const usableTabs = tabs.filter((t) => t !== 'cast' || spells.length > 0);
@@ -320,9 +326,10 @@ export function Composer({
         {tab === 'hide' && (
           <div className={styles.choiceRow}>
             <p className={styles.choiceHint}>
-              {member.name} slips into the shadows instead of acting. The referee rolls in secret, so you
-              won't know whether it worked. While hiding, {member.name} can back-stab from outside the front
-              rank.
+              {member.name} slips into the shadows instead of acting. {member.name} can't hide in the front
+              rank, and the board says at once if the declared moves would leave {member.name} there. The
+              referee rolls in secret, so you won't know whether the hide worked. While hiding, {member.name}{' '}
+              can back-stab from outside the front rank.
             </p>
             <Button
               size="sm"
@@ -785,7 +792,7 @@ function SpellTargets({
 }
 
 function targetName(id: string, ctx: TextContext): string {
-  return ctx.monsters[id]?.name ?? memberName(id, ctx);
+  return id.startsWith('character-') ? memberName(id, ctx) : monsterName(id, ctx);
 }
 
 function firstSentence(text: string): string {

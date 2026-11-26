@@ -1,5 +1,5 @@
 import type { EntryLabel, EntryNames, GameEvent, PlayerView } from '@bxvtt/shared/protocol';
-import { creatureNames } from '@bxvtt/shared/protocol';
+import { creatureNames } from '@bxvtt/shared/text';
 
 /**
  * What the players of a session have called each member, group, and monster so far. The server reads it from

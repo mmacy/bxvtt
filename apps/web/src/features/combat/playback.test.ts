@@ -396,4 +396,50 @@ describe('summarizeFight', () => {
     expect(summary.loot).toEqual(['coins worth 12 gp', 'a dagger']);
     expect(summary.fallen).toEqual(['Wren']);
   });
+
+  it('lists the exact coins of the loot, so copper alone still shows', () => {
+    const { view } = battle();
+    const loot = (coins: Record<string, number>, gp: number) =>
+      p({
+        event_type: 'loot_dropped',
+        code: 'encounter.loot.dropped',
+        item_ids: [],
+        coins_gp_value: gp,
+        coins,
+      });
+    const summary = summarizeFight(
+      [loot({ pp: 0, gp: 3, ep: 0, sp: 4, cp: 0 }, 3), loot({ pp: 0, gp: 0, ep: 0, sp: 0, cp: 39 }, 0)],
+      contextFromPlayerView(view),
+    );
+    expect(summary.loot).toEqual(['3 gold pieces', '4 silver pieces', '39 copper pieces']);
+  });
+
+  it('reports the experience a character gained when the one-level limit cut the award', () => {
+    const { view } = battle();
+    const summary = summarizeFight(
+      [
+        p({
+          event_type: 'xp_awarded',
+          code: 'session.xp.awarded',
+          character_id: 'character-0001',
+          award: 5000,
+          modified_award: 5000,
+          gained: 3999,
+          clamped: true,
+          level_after: 2,
+        }),
+        p({
+          event_type: 'xp_awarded',
+          code: 'session.xp.awarded',
+          character_id: 'character-0002',
+          award: 40,
+          modified_award: 44,
+          gained: null,
+          level_after: 1,
+        }),
+      ],
+      contextFromPlayerView(view),
+    );
+    expect(summary.awards.map((award) => award.xp)).toEqual([3999, 44]);
+  });
 });

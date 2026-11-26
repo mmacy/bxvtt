@@ -14,7 +14,6 @@ import {
   repeatProblem,
   usableItems,
 } from './model';
-import { encounterCreatures, withCreatureNames } from './text';
 
 function battle() {
   const snapshot = fixtureSnapshot('battle', 'player');
@@ -255,7 +254,7 @@ describe('monster targets by ID', () => {
         { id: 'monster-0002', status: 'alive' },
       ],
     });
-    const ctx = withCreatureNames(contextFromPlayerView(view), encounterCreatures(roster));
+    const ctx = contextFromPlayerView({ ...view, encounter: roster });
     expect(
       describeDeclaration({ action: 'cast', spell_id: 'magic_missile', targets: ['monster-0002'] }, ctx),
     ).toBe('Cast Magic Missile at Goblin 2');

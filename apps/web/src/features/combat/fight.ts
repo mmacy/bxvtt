@@ -16,7 +16,9 @@ import {
   countedLabel,
   isProperLabel,
   capitalizeFirst,
+  coinParts,
   prettifyId,
+  type Coins,
   type TextContext,
 } from '@bxvtt/shared/text';
 import type { AnyEvent } from './playback';
@@ -106,7 +108,8 @@ export function summarizeFight(events: readonly AnyEvent[], ctx: TextContext): F
   const awards: FightSummary['awards'] = [];
   const loot: string[] = [];
   const fallen: string[] = [];
-  let lootCoins = 0;
+  let lootGp = 0;
+  const lootCoins: Required<Coins> = { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 };
 
   const lootItems: string[] = [];
   for (const event of events) {
@@ -153,13 +156,22 @@ export function summarizeFight(events: readonly AnyEvent[], ctx: TextContext): F
         awards.push({
           memberId,
           name: memberName(memberId, learned),
-          xp: num(event, 'modified_award') ?? num(event, 'award') ?? 0,
+          // `gained` is what the character gained after the one-level limit. An event from before osrlib 2.7
+          // has none, and its award is what the character gained.
+          xp: num(event, 'gained') ?? num(event, 'modified_award') ?? num(event, 'award') ?? 0,
           levelAfter: num(event, 'level_after'),
         });
         break;
       }
       case 'loot_dropped': {
-        lootCoins += num(event, 'coins_gp_value') ?? 0;
+        lootGp += num(event, 'coins_gp_value') ?? 0;
+        const coins = event.coins;
+        if (typeof coins === 'object' && coins !== null) {
+          for (const denomination of Object.keys(lootCoins) as (keyof Coins)[]) {
+            const amount = (coins as Record<string, unknown>)[denomination];
+            if (typeof amount === 'number') lootCoins[denomination] += amount;
+          }
+        }
         const ids = Array.isArray(event.item_ids)
           ? event.item_ids.filter((i): i is string => typeof i === 'string')
           : [];
@@ -185,7 +197,10 @@ export function summarizeFight(events: readonly AnyEvent[], ctx: TextContext): F
         break;
     }
   }
-  if (lootCoins > 0) loot.push(`coins worth ${lootCoins} gp`);
+  // The exact coins, such as 39 copper pieces. An event from before osrlib 2.7 has only their value in gold.
+  const coinItems = coinParts(lootCoins);
+  if (coinItems.length > 0) loot.push(...coinItems);
+  else if (lootGp > 0) loot.push(`coins worth ${lootGp} gp`);
   loot.push(...itemList(lootItems, learned));
 
   const list = [...defeated.values()].map((d) => ({
