@@ -67,6 +67,30 @@ describe('DiceRoll', () => {
     expect(screen.getByText('Damage: rolled 3 on 1d8, total 5.')).toBeInTheDocument();
   });
 
+  it('marks a dropped die, leaves it out of the total, and names it in the announcement', () => {
+    const { container } = render(
+      <DiceRoll
+        label="Strength"
+        dice={[
+          { sides: 6, value: 5 },
+          { sides: 6, value: 4 },
+          { sides: 6, value: 3 },
+          { sides: 6, value: 1, dropped: true },
+        ]}
+        animate={false}
+      />,
+    );
+    expect(shownValues(container)).toEqual(['5', '4', '3', '1']);
+    const marked = Array.from(container.querySelectorAll('[data-dropped]')).map((el) =>
+      el.getAttribute('data-value'),
+    );
+    expect(marked).toEqual(['1']);
+    expect(screen.getByText('4d6')).toBeInTheDocument();
+    expect(
+      screen.getByText('Strength: rolled 5, 4, 3, and 1 on 4d6 and dropped the 1, total 12.'),
+    ).toBeInTheDocument();
+  });
+
   it('keeps rolling when the parent re-renders with a new array of the same dice', () => {
     const { container, rerender } = render(<DiceRoll dice={[{ sides: 6, value: 5 }]} />);
     act(() => vi.advanceTimersByTime(200));

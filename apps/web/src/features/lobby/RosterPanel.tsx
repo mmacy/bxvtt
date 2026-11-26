@@ -13,6 +13,7 @@ import {
 import { Button, EmptyState, IconButton, Skeleton, cx } from '@/ui';
 import { StoredCharacterCard } from '@/features/sheet';
 import { CharacterWizard } from '@/features/wizard';
+import { CreationRulesMark } from './CreationRulesMark';
 import styles from './lobby.module.css';
 
 /**
@@ -153,9 +154,11 @@ export function RosterPanel() {
                       owner ? { name: mine ? `${owner.name} (you)` : owner.name, color: owner.color } : null
                     }
                     actions={
-                      <>
+                      // The actions wrap on a narrow screen, so the referee's mark never widens the page.
+                      <div className={styles.rosterActions}>
                         {referee && (
                           <>
+                            <CreationRulesMark entry={entry} settings={table.settings} />
                             <IconButton
                               icon="arrow-up"
                               label={`Move ${entry.name} forward`}
@@ -191,7 +194,7 @@ export function RosterPanel() {
                             onClick={() => void remove(entry)}
                           />
                         )}
-                      </>
+                      </div>
                     }
                   />
                 </div>

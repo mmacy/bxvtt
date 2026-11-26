@@ -1,10 +1,10 @@
 export { LobbyPage } from './LobbyPage';
 export { TableSettingsForm } from './TableSettingsForm';
+export { TableRulesForm } from './TableRulesForm';
 export { InvitePanel, copyInviteLink, inviteLink } from './InvitePanel';
 export { MembersPanel } from './MembersPanel';
 export { RosterPanel, moveItem } from './RosterPanel';
 export { AdventurePicker, partyRecommendation } from './AdventurePicker';
-export { OPTIONAL_RULES, OptionalRules } from './OptionalRules';
-export type { RulesetChoices } from './OptionalRules';
+export { RULES_FOR_PLAY, matchStartingRuleset } from './rules';
 export { StartGamePanel, startChecks } from './StartGamePanel';
 export { useTableExit } from './TableExit';

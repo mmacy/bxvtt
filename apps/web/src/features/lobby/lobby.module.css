@@ -518,3 +518,52 @@
     order: -1;
   }
 }
+
+/* Rules */
+.rulesSection {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.rulesSectionHead {
+  display: grid;
+  gap: var(--space-0-5);
+  padding-top: var(--space-2);
+}
+
+.rerollsRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+@media (max-width: 560px) {
+  .ruleSelect {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ruleSelect > :last-child {
+    width: 100%;
+  }
+}
+
+/* The referee's mark on a roster character built under other rules */
+.markFocus {
+  display: inline-flex;
+  border-radius: var(--radius-sm);
+}
+
+.markLines {
+  display: grid;
+  gap: var(--space-0-5);
+}
+
+.rosterActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+}

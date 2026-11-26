@@ -9,6 +9,12 @@ export interface RolledDie {
   sides: DieSides;
   /** The result the server rolled. The animation always lands on this face. */
   value: number;
+  /**
+   * Marks a die the roll threw but didn't count, such as the die that 4d6 drop lowest drops. Take it from the
+   * server's answer. The die shows with less emphasis and a diagonal strike, leaves the default total, and the
+   * announcement names it.
+   */
+  dropped?: boolean;
 }
 
 export interface DiceRollProps {
@@ -167,13 +173,14 @@ export function DiceRoll({
     setPhase('settled');
   };
 
-  const sum = dice.reduce((acc, die) => acc + die.value, 0) + modifier;
+  const sum = dice.reduce((acc, die) => acc + (die.dropped ? 0 : die.value), 0) + modifier;
   const shownTotal = total ?? sum;
   const formula = formatDiceFormula(dice, modifier);
   const values = dice.map((die) => die.value);
+  const dropped = dice.filter((die) => die.dropped).map((die) => die.value);
   const announcement = `${label ? `${label}: ` : ''}rolled ${listJoin(values)} on ${formula}${
-    hideTotal ? '' : `, total ${shownTotal}`
-  }.`;
+    dropped.length > 0 ? ` and dropped the ${listJoin(dropped)}` : ''
+  }${hideTotal ? '' : `, total ${shownTotal}`}.`;
 
   return (
     <div
@@ -200,7 +207,7 @@ export function DiceRoll({
             const value = isLanded ? die.value : (faces[i] ?? die.value);
             const max = die.sides === 100 ? 100 : die.sides;
             const highlight =
-              highlightExtremes && isLanded && phase === 'settled'
+              highlightExtremes && !die.dropped && isLanded && phase === 'settled'
                 ? die.value === max
                   ? 'max'
                   : die.value === 1
@@ -214,10 +221,12 @@ export function DiceRoll({
                   styles.slot,
                   !isLanded && styles.tumbling,
                   isLanded && phase === 'rolling' && styles.landing,
+                  die.dropped && styles.dropped,
                 )}
                 style={{ '--i': i, '--land': `${landTime(i)}ms` } as CSSProperties}
                 data-value={value}
                 data-landed={isLanded}
+                data-dropped={die.dropped || undefined}
               >
                 <Die
                   sides={die.sides}

@@ -3,7 +3,8 @@ import { joinList } from '@bxvtt/shared/text';
 import { useState } from 'react';
 import { describeProblem, getApi, useTableStoreApi, type ProblemMessage } from '@/app';
 import { Banner, Button, Icon } from '@/ui';
-import type { RulesetChoices } from './OptionalRules';
+import { STARTING_RULESET_NAMES, matchStartingRuleset } from './rules';
+import { useStartingRulesets } from './startingRulesets';
 import styles from './lobby.module.css';
 
 /** What stops the game from starting, and what the referee should know first. */
@@ -64,26 +65,27 @@ export function startChecks(table: TableDetail, adventure: AdventureListing | nu
 export interface StartGamePanelProps {
   table: TableDetail;
   adventure: AdventureListing | null;
-  ruleset: RulesetChoices;
 }
 
-/** The referee's start button, with the checks that keep it off and the warnings worth a look. */
-export function StartGamePanel({ table, adventure, ruleset }: StartGamePanelProps) {
+/**
+ * The referee's start button, with the checks that keep it off and the warnings worth a look. The game plays by
+ * the table's stored rules, so the summary names them and the request sends none.
+ */
+export function StartGamePanel({ table, adventure }: StartGamePanelProps) {
   const store = useTableStoreApi();
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<ProblemMessage | null>(null);
   const { blockers, warnings } = startChecks(table, adventure);
-  const changedRules = Object.keys(ruleset).length;
+  const starting = useStartingRulesets();
+  const matched =
+    starting.items === null ? undefined : matchStartingRuleset(table.settings.ruleset, starting.items);
 
   const start = async () => {
     if (adventure === null) return;
     setBusy(true);
     setProblem(null);
     try {
-      const game = await getApi().startGame(table.id, {
-        adventure_id: adventure.id,
-        ...(changedRules > 0 ? { ruleset } : {}),
-      });
+      const game = await getApi().startGame(table.id, { adventure_id: adventure.id });
       store.getState().receiveGame(game);
     } catch (error) {
       setProblem(describeProblem(error));
@@ -98,13 +100,11 @@ export function StartGamePanel({ table, adventure, ruleset }: StartGamePanelProp
         <p className={styles.metaLine}>
           <span>
             {table.roster.length === 1 ? '1 character' : `${table.roster.length} characters`}
-            <span className="visually-hidden-inline">,</span>
+            {matched !== undefined && <span className="visually-hidden-inline">,</span>}
           </span>
-          <span>
-            {changedRules === 0
-              ? 'Standard rules'
-              : `${changedRules} optional ${changedRules === 1 ? 'rule' : 'rules'} changed`}
-          </span>
+          {matched !== undefined && (
+            <span>{matched === null ? 'Custom rules' : STARTING_RULESET_NAMES[matched]}</span>
+          )}
         </p>
       </div>
       {blockers.length > 0 && (

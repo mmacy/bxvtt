@@ -15,11 +15,13 @@ import { ProfileMenu, RulesReference } from '@/features/home';
 import { AdventurePicker } from './AdventurePicker';
 import { InvitePanel } from './InvitePanel';
 import { MembersPanel } from './MembersPanel';
-import { OptionalRules, type RulesetChoices } from './OptionalRules';
 import { RosterPanel } from './RosterPanel';
 import { LobbySaves } from './LobbySaves';
 import { StartGamePanel } from './StartGamePanel';
+import { TableRulesForm } from './TableRulesForm';
 import { TableSettingsForm } from './TableSettingsForm';
+import { STARTING_RULESET_NAMES, matchStartingRuleset } from './rules';
+import { useStartingRulesets } from './startingRulesets';
 import { useTableExit } from './TableExit';
 import styles from './lobby.module.css';
 
@@ -29,9 +31,9 @@ function suggested(adventures: AdventureListing[]): string | null {
 }
 
 /**
- * The lobby before the game starts: the people at the table, the invite link, the party in marching order,
- * and for the referee, the adventure, the settings, the optional rules, and the start button. A player sees the
- * same lobby read-only where they lack permission.
+ * The lobby before the game starts: the people at the table, the invite link, the party in marching order, the
+ * table's rules and settings, and for the referee, the adventure and the start button. A player sees the same
+ * lobby read-only where they lack permission.
  */
 export function LobbyPage({ banner }: { banner?: ReactNode }) {
   const table = useTableDetail();
@@ -41,7 +43,8 @@ export function LobbyPage({ banner }: { banner?: ReactNode }) {
   const [adventures, setAdventures] = useState<AdventureListing[] | null>(null);
   const [adventureError, setAdventureError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
-  const [ruleset, setRuleset] = useState<RulesetChoices>({});
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const starting = useStartingRulesets();
   const tableId = table?.id ?? null;
   const exit = useTableExit();
 
@@ -77,6 +80,20 @@ export function LobbyPage({ banner }: { banner?: ReactNode }) {
   const refereeNames = members.filter((m) => m.role === 'referee').map((m) => m.name);
   const adventure = adventures?.find((a) => a.id === selected) ?? null;
   const online = members.filter((m) => m.online).length;
+  const matched =
+    starting.items === null ? undefined : matchStartingRuleset(table.settings.ruleset, starting.items);
+  // The open panel's Select names the starting rules, so only the collapsed panel shows them.
+  const rulesMeta =
+    rulesOpen || matched === undefined
+      ? undefined
+      : matched === null
+        ? 'Custom'
+        : STARTING_RULESET_NAMES[matched];
+  const rulesPanel = (
+    <Panel title="Rules" meta={rulesMeta} collapsible open={rulesOpen} onOpenChange={setRulesOpen}>
+      <TableRulesForm showNote />
+    </Panel>
+  );
 
   return (
     <PageLayout
@@ -145,17 +162,17 @@ export function LobbyPage({ banner }: { banner?: ReactNode }) {
                     onChanged={loadAdventures}
                   />
                 </Panel>
-                <Panel title="Optional rules" collapsible defaultOpen={false}>
-                  <OptionalRules value={ruleset} onChange={setRuleset} />
-                </Panel>
+                {rulesPanel}
               </>
-            ) : null}
+            ) : (
+              rulesPanel
+            )}
           </div>
 
           <aside className={styles.side}>
             {referee ? (
               <Panel title="Start game">
-                <StartGamePanel table={table} adventure={adventure} ruleset={ruleset} />
+                <StartGamePanel table={table} adventure={adventure} />
                 <LobbySaves />
               </Panel>
             ) : (

@@ -13,13 +13,15 @@ export interface BadgeProps {
   appearance?: 'soft' | 'outline' | 'solid';
   icon?: IconName;
   children: ReactNode;
+  /** An id, so a control can name the badge in `aria-describedby`, such as "2 left" after **Roll again**. */
+  id?: string;
   className?: string;
 }
 
 /** A short status label, such as "Referee", "Caller", or "Away". */
-export function Badge({ tone = 'neutral', appearance = 'soft', icon, children, className }: BadgeProps) {
+export function Badge({ tone = 'neutral', appearance = 'soft', icon, children, id, className }: BadgeProps) {
   return (
-    <span className={cx(styles.badge, styles[tone], styles[appearance], className)}>
+    <span id={id} className={cx(styles.badge, styles[tone], styles[appearance], className)}>
       {icon && <Icon name={icon} size={12} />}
       {children}
     </span>

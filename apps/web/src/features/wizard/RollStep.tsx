@@ -1,8 +1,9 @@
 import type { AbilityTables, ClassSummary } from '@bxvtt/shared/bxapi';
+import type { CreationRules } from '@bxvtt/shared/protocol';
 import { abilityLabel, classLabel } from '@bxvtt/shared/text';
 import { useEffect, useState } from 'react';
 import { useReduceMotion } from '@/app';
-import { Badge, Button, DiceRoll, Icon, Skeleton, StatBox, Tooltip, formatModifier } from '@/ui';
+import { Badge, Button, DiceRoll, Skeleton, StatBox, Tooltip, formatModifier, type RolledDie } from '@/ui';
 import type { DraftRoll } from './draft';
 import { ABILITIES, headlineModifier, modifierLines, readScores, type Ability, type Scores } from './tables';
 import styles from './wizard.module.css';
@@ -10,11 +11,64 @@ import styles from './wizard.module.css';
 /** How long the wizard waits between one ability's roll and the next, in milliseconds. */
 const STAGGER_MS = 320;
 
+/** How the ability scores are rolled: 3d6, or the 4d6 drop lowest house rule. */
+export type AbilityScoreMethod = CreationRules['ability_score_method'];
+
+/** What the reroll row offers for a roll, from the rules recorded on it and the server's count of rolls. */
+export type RerollOffer =
+  /** Nothing: the table allows no rerolls, as B/X is written, or the wizard hasn't read the roll's rules yet. */
+  | { kind: 'none' }
+  /** Start again: bxapi says the scores are sub-par, and the table lets the player discard them. */
+  | { kind: 'sub_par' }
+  /** Roll again, with the rerolls left, or `null` for no limit. At 0 the button stays, unavailable. */
+  | { kind: 'reroll'; left: number | null };
+
+/**
+ * What the reroll row offers for a roll. bxapi decides whether the scores are sub-par, and the server counts the
+ * rerolls left, so this only reads their answers.
+ *
+ * @param roll - The draft's roll.
+ */
+export function rerollOffer(roll: DraftRoll): RerollOffer {
+  const rules = roll.rules;
+  const left = roll.rerolls_left;
+  if (rules === undefined || left === undefined) return { kind: 'none' };
+  if (rules.sub_par_restart && roll.rolls?.sub_par === true) return { kind: 'sub_par' };
+  // A table that allowed no rerolls when the player rolled shows nothing, unless the referee has allowed some since.
+  if (rules.ability_score_rerolls === 0 && left === 0) return { kind: 'none' };
+  return { kind: 'reroll', left };
+}
+
+/** Whether the offer lets the player roll new ability scores now. */
+export function offersNewScores(offer: RerollOffer): boolean {
+  return offer.kind === 'sub_par' || (offer.kind === 'reroll' && (offer.left === null || offer.left >= 1));
+}
+
+/**
+ * The dice of one ability as the kit plays them: the three that count, in the order bxapi threw them, then the
+ * die bxapi dropped, if any, marked.
+ *
+ * @param kept - The three dice that count.
+ * @param dropped - The dropped die, from bxapi's `dropped`.
+ */
+export function abilityDice(kept: readonly number[], dropped: number | undefined): RolledDie[] {
+  const dice: RolledDie[] = kept.map((value) => ({ sides: 6, value }));
+  if (dropped !== undefined) dice.push({ sides: 6, value: dropped, dropped: true });
+  return dice;
+}
+
+const REROLLS_LEFT_ID = 'wizard-rerolls-left';
+const SUB_PAR_ID = 'wizard-sub-par';
+
 export interface RollStepProps {
   roll: DraftRoll | null;
+  /**
+   * How the scores are rolled: the roll's recorded method, or before the first roll, the table's. It sets the
+   * text and the placeholders.
+   */
+  method: AbilityScoreMethod;
   /** Whether to play the dice for this roll. Off for a roll restored from an earlier visit. */
   animate: boolean;
-  rolls: number;
   rolling: boolean;
   onRoll: () => void;
   classes: ClassSummary[] | null;
@@ -47,6 +101,8 @@ function AbilityCell({
   ability,
   score,
   faces,
+  dropped,
+  method,
   shown,
   animate,
   tables,
@@ -54,8 +110,11 @@ function AbilityCell({
 }: {
   ability: Ability;
   score: number;
-  /** The three d6 results bxapi rolled for this ability, in the order it rolled them. */
+  /** The three d6 results that count for this ability, in the order bxapi rolled them. */
   faces: readonly [number, number, number] | undefined;
+  /** The die bxapi dropped for this ability, or `undefined` for none. */
+  dropped: number | undefined;
+  method: AbilityScoreMethod;
   shown: boolean;
   animate: boolean;
   tables: AbilityTables | null;
@@ -73,9 +132,10 @@ function AbilityCell({
       <div className={styles.diceSlot} aria-busy={shown && faces === undefined ? true : undefined}>
         {shown && faces ? (
           <DiceRoll
-            dice={faces.map((value) => ({ sides: 6, value }))}
+            dice={abilityDice(faces, dropped)}
             label={abilityLabel(ability)}
-            size={34}
+            // Four dice share the cell that three fill under 3d6, so each is smaller.
+            size={dropped === undefined ? 34 : 26}
             hideTotal
             highlightExtremes={false}
             animate={play}
@@ -88,12 +148,19 @@ function AbilityCell({
           <div className={styles.diceLoading} aria-hidden="true">
             <div className={styles.diceLoadingHeader}>
               <span className={styles.diceLoadingLabel}>{abilityLabel(ability)}</span>
-              <span className={styles.diceLoadingFormula}>3d6</span>
+              <span className={styles.diceLoadingFormula}>
+                {method === '4d6_drop_lowest' ? '4d6' : '3d6'}
+              </span>
             </div>
             <div className={styles.diceLoadingDice}>
-              <Skeleton shape="block" width={34} height={34} />
-              <Skeleton shape="block" width={34} height={34} />
-              <Skeleton shape="block" width={34} height={34} />
+              {Array.from({ length: method === '4d6_drop_lowest' ? 4 : 3 }, (_, index) => (
+                <Skeleton
+                  key={index}
+                  shape="block"
+                  width={method === '4d6_drop_lowest' ? 26 : 34}
+                  height={method === '4d6_drop_lowest' ? 26 : 34}
+                />
+              ))}
             </div>
           </div>
         ) : (
@@ -144,14 +211,19 @@ function AbilityCell({
 function AbilityRow({
   scores,
   dice,
+  dropped,
+  method,
   play,
   tables,
   waiting = false,
   onSettled,
 }: {
   scores: Scores | null;
-  /** The dice behind each score, from bxapi's roll. `null` until a restored draft has fetched them. */
+  /** The dice that count for each score, from bxapi's roll. `null` until a restored draft has fetched them. */
   dice: Record<string, readonly [number, number, number]> | null;
+  /** The die bxapi dropped for each score, empty for a 3d6 roll. */
+  dropped: Record<string, number>;
+  method: AbilityScoreMethod;
   play: boolean;
   tables: AbilityTables | null;
   waiting?: boolean;
@@ -173,6 +245,8 @@ function AbilityRow({
           ability={ability}
           score={scores?.[ability] ?? 0}
           faces={dice?.[ability]}
+          dropped={dropped[ability]}
+          method={method}
           shown={index < shownCount}
           animate={play}
           tables={tables}
@@ -183,11 +257,14 @@ function AbilityRow({
   );
 }
 
-/** Step 1: roll 3d6 for each ability, in order, and see which classes the scores allow. */
+/**
+ * Step 1: roll the ability scores in order, and see which classes the scores allow. The table's rules, as the
+ * server recorded them on the roll, decide whether the player can roll again.
+ */
 export function RollStep({
   roll,
+  method,
   animate,
-  rolls,
   rolling,
   onRoll,
   classes,
@@ -217,11 +294,20 @@ export function RollStep({
   if (!roll) {
     return (
       <div className={styles.stepBody}>
-        <AbilityRow scores={null} dice={null} play={false} tables={tables} waiting />
+        <AbilityRow
+          scores={null}
+          dice={null}
+          dropped={{}}
+          method={method}
+          play={false}
+          tables={tables}
+          waiting
+        />
         <div className={styles.rollCall}>
           <p className={styles.lead}>
-            You roll 3d6 in order from Strength to Charisma. Under B/X rules, you keep each score where it
-            falls and choose from the classes you qualify for.
+            {method === '4d6_drop_lowest'
+              ? 'You roll 4d6 for each ability in order from Strength to Charisma, and keep the highest three. You keep each score where it falls and choose from the classes you qualify for.'
+              : 'You roll 3d6 in order from Strength to Charisma. Under B/X rules, you keep each score where it falls and choose from the classes you qualify for.'}
           </p>
           <Button variant="primary" icon="dice" size="lg" loading={rolling} onClick={onRoll}>
             Roll ability scores
@@ -233,6 +319,7 @@ export function RollStep({
 
   const scores = readScores(roll.scores);
   const eligible = new Set(roll.eligible_class_ids);
+  const offer = rerollOffer(roll);
 
   return (
     <div className={styles.stepBody}>
@@ -240,6 +327,8 @@ export function RollStep({
         key={roll.id}
         scores={scores}
         dice={roll.rolls?.rolls ?? null}
+        dropped={roll.rolls?.dropped ?? {}}
+        method={method}
         play={play}
         tables={tables}
         onSettled={onLanded}
@@ -272,18 +361,42 @@ export function RollStep({
         </section>
       )}
 
-      <div className={styles.rerollRow}>
-        <Button variant="secondary" icon="refresh" loading={rolling} onClick={onRoll}>
-          Roll again
-        </Button>
-        <p className={styles.calmNote}>
-          <Icon name="info" size={14} />
-          <span>
-            {rolls > 1 ? `You have rolled ${rolls} times. ` : ''}You can reroll freely here, but check with
-            your referee first if your table limits rerolls.
-          </span>
-        </p>
-      </div>
+      {offer.kind === 'sub_par' && (
+        <div className={styles.rerollRow}>
+          <Button
+            variant="secondary"
+            icon="refresh"
+            loading={rolling}
+            aria-describedby={SUB_PAR_ID}
+            onClick={onRoll}
+          >
+            Start again
+          </Button>
+          <Badge id={SUB_PAR_ID} tone="warning">
+            Sub-par
+          </Badge>
+        </div>
+      )}
+      {offer.kind === 'reroll' && (
+        <div className={styles.rerollRow}>
+          <Button
+            variant="secondary"
+            icon="refresh"
+            loading={rolling}
+            disabled={offer.left === 0}
+            disabledReason="You've used all the rerolls your table allows."
+            aria-describedby={offer.left !== null && offer.left > 0 ? REROLLS_LEFT_ID : undefined}
+            onClick={onRoll}
+          >
+            Roll again
+          </Button>
+          {offer.left !== null && offer.left > 0 && (
+            <Badge id={REROLLS_LEFT_ID} tone="neutral">
+              {offer.left} left
+            </Badge>
+          )}
+        </div>
+      )}
     </div>
   );
 }

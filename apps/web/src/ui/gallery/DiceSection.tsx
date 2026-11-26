@@ -87,6 +87,22 @@ export function DiceSection() {
             </Row>
           </Stack>
         </Specimen>
+        <Specimen
+          title="A dropped die"
+          note="4d6 drop lowest: the server names the dropped die, which shows dimmed and struck through."
+        >
+          <DiceRoll
+            dice={[
+              { sides: 6, value: 5 },
+              { sides: 6, value: 4 },
+              { sides: 6, value: 3 },
+              { sides: 6, value: 1, dropped: true },
+            ]}
+            label="Strength"
+            size={56}
+            animate={false}
+          />
+        </Specimen>
         <Specimen title="In the feed" note="Smaller dice. Older entries pass animate={false}.">
           <Stack gap="md">
             <div className={styles.feedEntry}>

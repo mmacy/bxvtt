@@ -1,20 +1,28 @@
 import type { AbilityTables, EquipmentSummary } from '@bxvtt/shared/bxapi';
 import { BxvttProblemError } from '@bxvtt/shared/client';
 import type { CharacterRequest, CreationRules, Problem } from '@bxvtt/shared/protocol';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import type { ClassDetail, EquipmentDetail } from '@/app';
 import { createFakeApi } from '@/app/testing/renderWithTable';
 import catalog from './__fixtures__/catalog.json';
 import { continueBlock, type ContinueFacts } from './CharacterWizard';
 import { autoEquip } from './OutfitStep';
 import {
+  canRollNewScores,
+  draftKey,
   emptyDraft,
+  legacyDraftKey,
+  loadDraft,
   parseDraft,
   reconcileDraft,
   requestFromDraft,
+  rollBelongsTo,
+  saveDraft,
   startingRollRequest,
+  type DraftRoll,
   type WizardDraft,
 } from './draft';
+import { abilityDice, offersNewScores, rerollOffer } from './RollStep';
 import { applyKit } from './kits';
 import { lotSentence, rowSummary } from './shop';
 import { suggestName } from './names';
@@ -38,6 +46,14 @@ function problem(body: Partial<Problem>): BxvttProblemError {
 
 const SCORES = { str: 13, int: 9, wis: 10, dex: 12, con: 11, cha: 8 };
 
+const RULES: CreationRules = {
+  ability_score_method: '3d6',
+  hp_reroll_at_first_level: true,
+  max_hp_at_first_level: false,
+  ability_score_rerolls: 2,
+  sub_par_restart: false,
+};
+
 function draftWith(change: Partial<WizardDraft>): WizardDraft {
   return {
     ...emptyDraft(),
@@ -54,10 +70,16 @@ function draftWith(change: Partial<WizardDraft>): WizardDraft {
           con: [3, 2, 6],
           cha: [1, 1, 6],
         },
+        dropped: {},
+        sub_par: false,
       },
       eligible_class_ids: ['fighter', 'dwarf'],
       used: false,
       created_at: '',
+      table_id: 'tbl_test',
+      ability_score_method: '3d6',
+      rules: RULES,
+      rerolls_left: 2,
     },
     classId: 'fighter',
     ...change,
@@ -130,35 +152,93 @@ describe('parseDraft', () => {
   });
 });
 
-describe('reconcileDraft', () => {
-  // TODO(table-ruleset): the roll's recorded rules replace the re-roll option.
-  const rules: CreationRules = {
-    ability_score_method: '3d6',
-    hp_reroll_at_first_level: false,
-    max_hp_at_first_level: false,
-    ability_score_rerolls: 0,
-    sub_par_restart: false,
-  };
-  const none = { used: false, class_id: null, rules, gold_rolled: false };
+describe('drafts at a table', () => {
+  beforeEach(() => localStorage.clear());
 
-  it("takes the class and reroll option the server fixed, and clears the class's choices on a change", () => {
-    const draft = draftWith({ classId: 'dwarf', spells: ['sleep'], languages: ['elvish'], hpReroll: false });
-    const fixed = reconcileDraft(draft, {
-      ...none,
-      class_id: 'fighter',
-      rules: { ...rules, hp_reroll_at_first_level: true },
-      gold_rolled: true,
-    });
-    expect(fixed).toMatchObject({ classId: 'fighter', hpReroll: true, spells: [], languages: [] });
-    const same = draftWith({ classId: 'fighter', hpReroll: true, spells: ['sleep'] });
+  it('keeps one draft for each table', () => {
+    const draft = draftWith({ name: 'Wren' });
+    saveDraft('usr_a', 'tbl_test', draft);
+    expect(loadDraft('usr_a', 'tbl_test')).toEqual(draft);
+    expect(loadDraft('usr_a', 'tbl_other')).toBeNull();
+    expect(draftKey('usr_a', 'tbl_test')).not.toBe(draftKey('usr_a', 'tbl_other'));
+    saveDraft('usr_a', 'tbl_test', null);
+    expect(loadDraft('usr_a', 'tbl_test')).toBeNull();
+  });
+
+  it('takes the one draft from before tables once, and its roll belongs to no table', () => {
+    const {
+      table_id: _table,
+      rules: _rules,
+      rerolls_left: _left,
+      ability_score_method: _method,
+      ...old
+    } = draftWith({ name: 'Wren' }).roll ?? ({} as DraftRoll);
+    localStorage.setItem(
+      legacyDraftKey('usr_a'),
+      JSON.stringify({ ...draftWith({ name: 'Wren' }), roll: old }),
+    );
+    const loaded = loadDraft('usr_a', 'tbl_test');
+    expect(loaded?.name).toBe('Wren');
+    expect(loaded?.roll && rollBelongsTo(loaded.roll, 'tbl_test')).toBe(false);
+    expect(localStorage.getItem(legacyDraftKey('usr_a'))).toBeNull();
+    expect(loadDraft('usr_a', 'tbl_test')).toBeNull();
+  });
+});
+
+describe('the reroll row', () => {
+  const roll = draftWith({}).roll as DraftRoll;
+
+  it('offers Roll again with the rerolls the server says are left, and none at a table that allows none', () => {
+    expect(rerollOffer(roll)).toEqual({ kind: 'reroll', left: 2 });
+    expect(rerollOffer({ ...roll, rerolls_left: 0 })).toEqual({ kind: 'reroll', left: 0 });
     expect(
-      reconcileDraft(same, {
-        ...none,
-        class_id: 'fighter',
-        rules: { ...rules, hp_reroll_at_first_level: true },
-        gold_rolled: true,
-      }),
-    ).toBe(same);
+      rerollOffer({ ...roll, rerolls_left: null, rules: { ...RULES, ability_score_rerolls: null } }),
+    ).toEqual({ kind: 'reroll', left: null });
+    const strict = { ...roll, rerolls_left: 0, rules: { ...RULES, ability_score_rerolls: 0 } };
+    expect(rerollOffer(strict)).toEqual({ kind: 'none' });
+    // A referee who allows rerolls after the roll brings the button back.
+    expect(rerollOffer({ ...strict, rerolls_left: 1 })).toEqual({ kind: 'reroll', left: 1 });
+  });
+
+  it('offers Start again for a roll bxapi calls sub-par, only when the table allows it', () => {
+    const subPar = {
+      ...roll,
+      rerolls_left: 0,
+      rolls: { ...(roll.rolls as NonNullable<DraftRoll['rolls']>), sub_par: true },
+    };
+    expect(rerollOffer(subPar)).toEqual({ kind: 'reroll', left: 0 });
+    const allowed = { ...subPar, rules: { ...RULES, sub_par_restart: true } };
+    expect(rerollOffer(allowed)).toEqual({ kind: 'sub_par' });
+    expect(offersNewScores(rerollOffer(allowed))).toBe(true);
+    expect(offersNewScores(rerollOffer(subPar))).toBe(false);
+  });
+
+  it('lets the player start over only with rerolls left or no limit', () => {
+    expect(canRollNewScores(roll)).toBe(true);
+    expect(canRollNewScores({ ...roll, rerolls_left: 0 })).toBe(false);
+    expect(canRollNewScores({ ...roll, rerolls_left: null })).toBe(true);
+  });
+
+  it('shows the dropped die bxapi named after the three that count', () => {
+    expect(abilityDice([2, 6, 4], 1)).toEqual([
+      { sides: 6, value: 2 },
+      { sides: 6, value: 6 },
+      { sides: 6, value: 4 },
+      { sides: 6, value: 1, dropped: true },
+    ]);
+    expect(abilityDice([2, 6, 4], undefined)).toHaveLength(3);
+  });
+});
+
+describe('reconcileDraft', () => {
+  const none = { used: false, class_id: null, rules: RULES, gold_rolled: false };
+
+  it("takes the class the server fixed, and clears the class's choices on a change", () => {
+    const draft = draftWith({ classId: 'dwarf', spells: ['sleep'], languages: ['elvish'] });
+    const fixed = reconcileDraft(draft, { ...none, class_id: 'fighter', gold_rolled: true });
+    expect(fixed).toMatchObject({ classId: 'fighter', spells: [], languages: [] });
+    const same = draftWith({ classId: 'fighter', spells: ['sleep'] });
+    expect(reconcileDraft(same, { ...none, class_id: 'fighter', gold_rolled: true })).toBe(same);
   });
 
   it('returns to the hit points and gold step until both are rolled', () => {
@@ -174,7 +254,7 @@ describe('reconcileDraft', () => {
   });
 
   it('asks for the rolls with the fixed class, whatever the draft says', () => {
-    const draft = draftWith({ classId: 'dwarf', hpReroll: true, spells: ['sleep'] });
+    const draft = draftWith({ classId: 'dwarf', spells: ['sleep'] });
     expect(startingRollRequest(draft)).toEqual({
       class_id: 'dwarf',
       starting_spell_ids: ['sleep'],
@@ -343,6 +423,7 @@ describe('continueBlock', () => {
     rolled: true,
     eligible: ['fighter'],
     revealing: false,
+    canReroll: true,
     classId: 'fighter',
     adjust: 'idle',
     goldRolled: true,
@@ -353,6 +434,9 @@ describe('continueBlock', () => {
   it('says why each step blocks, and waits without a reason for the server or the dice', () => {
     expect(continueBlock({ ...facts, eligible: [] })).toEqual({
       reason: "These ability scores don't qualify for any class. Roll again.",
+    });
+    expect(continueBlock({ ...facts, eligible: [], canReroll: false })).toEqual({
+      reason: "These ability scores don't qualify for any class. Ask the referee to allow another reroll.",
     });
     expect(continueBlock({ ...facts, eligible: [], revealing: true })).toEqual({ reason: null });
     expect(continueBlock({ ...facts, step: 'class', classId: null })).toEqual({
