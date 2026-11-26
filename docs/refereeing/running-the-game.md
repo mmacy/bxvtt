@@ -11,7 +11,7 @@ During play, `bxapi` handles rules math and dice while you run the world, judge 
 
 ## What bxapi enforces and what you decide
 
-`bxapi` validates every command, rolls attacks, damage, saves, reactions, and morale, advances the clock, burns torches, checks for wandering monsters, and refuses illegal actions with an explanation sent privately to the acting player. You cannot override an individual die roll after `bxapi` rolls it.
+`bxapi` validates every command, rolls attacks, damage, saves, reactions, and morale, advances the clock, burns torches, checks for wandering monsters, and rejects illegal actions with an explanation sent privately to the acting player. You cannot override an individual die roll after `bxapi` rolls it.
 
 You decide everything outside strict mechanics:
 
@@ -41,12 +41,12 @@ With the **Referee lens** on, select **Referee** (`Alt+4`) in the dock. A persis
 
 | Tab | Section title | What you can do |
 | --- | --- | --- |
-| **Now** | **Here and now** | Answer what is here right now and act on it: inspect the current room's key, doors, traps, triggers, and wandering monster table, or manage active encounter monster HP and end the encounter via **End it**. |
+| **Now** | **Current location** | Answer what is here right now and act on it: inspect the current room's key, doors, traps, triggers, and wandering monster table, or manage active encounter monster HP and end the encounter with **End encounter**. |
 | **Act** | **Quick actions** | Open streamlined forms grouped under **Monsters** (moved first during encounters), **The party**, **Places and time**, and **Dice and records**. |
 | **Story** | **Quests, flags, and triggers** | Activate or complete quests, **Reveal** hidden objectives, **Mark complete** objectives, distribute quest rewards with **Give**, edit adventure flags, and inspect or **Mark fired** triggers. |
-| **Key** | **The adventure key** | Search every dungeon level's rooms by name, text, or monster, see **Party**, **Monsters**/**Cleared**, **Treasure**, **Trap**, and **Unvisited** badges, center the map on any room, or **Place the party here**. |
+| **Key** | **Adventure key** | Search every dungeon level's rooms by name, text, or monster, see **Party**, **Monsters**/**Cleared**, **Treasure**, **Trap**, and **Unvisited** badges, center the map on any room, or **Place party here**. |
 | **Roll** | **Generators** | Roll stateless **Treasure** (types A-V), **Monsters** (hit points), **Room** stocking, and **NPCs** parties. Rolls stay out of the game until you click **Give coins**, **Give**, **Spawn these**, **Spawn these monsters**, or **Spawn a party like this**, and **Same roll** repeats any result from its seed. |
-| **Log** | **The log behind the screen** | Inspect the complete `bxapi` event log, filtered to **Referee only** or **Everything**, by event category, or by search text, with expandable **Dice** breakdowns. |
+| **Log** | **Referee log** | Inspect the referee events in the game's event log, filtered to **Referee only** or **All events**, by event category (**All categories** by default), or by search text. |
 | **Notes** | **Private notes** | Write up to 50,000 characters of referee-only notes that save automatically 1.2 seconds after you stop typing (or immediately on `Ctrl+Enter` / `Cmd+Enter`) and persist with the table across games. |
 | **All** | **Every referee command** | Search and submit schema-driven forms for all 23 `bxapi` referee commands, sorted with currently legal commands first. |
 
@@ -56,37 +56,37 @@ With the **Referee lens** on, select **Referee** (`Alt+4`) in the dock. A persis
 
 When players talk their way past monsters or an encounter ends without a fight to the death:
 
-1. Open **Now** (or select **End the encounter** in **Act**, or expand **Monsters and referee tools** right on the encounter banner).
+1. Open **Now** (or select **End encounter** in **Act**, or expand **Monsters and referee tools** on the encounter panel).
 2. Choose how the encounter concludes:
-   - **The monsters and the party came to terms:** Settles the room's encounter permanently so those monsters do not reappear on future visits.
-   - **A parley for now:** Ends the encounter, but leaves the area unresolved so the monsters are still there if the party returns.
-   - **One side walked away:** Ends a standoff or calls off pursuit without marking the room cleared.
-3. Select **End the encounter**.
+   - **Came to terms (mark area resolved):** Settles the room's encounter permanently so those monsters do not reappear on future visits.
+   - **Temporary truce:** Ends the encounter, but leaves the area unresolved so the monsters are still there if the party returns.
+   - **Broke off:** Ends a standoff or calls off pursuit without marking the room cleared.
+3. Select **End encounter**.
 
 ### Award quest rewards, treasure, or experience
 
 Completing a quest in `bxapi` never transfers items, coins, or XP automatically. When the party fulfills a quest:
 
 1. Open **Story** (**Quests, flags, and triggers**) and expand the quest.
-2. Mark objectives or select **Complete the quest** if an automatic trigger has not already done so.
+2. Mark objectives or select **Complete quest** if an automatic trigger has not already done so.
 3. Choose the recipient beside each listed reward and select **Give**.
 
 For ad-hoc awards at any time, open **Act** (**Quick actions**) and use **Give or take coins**, **Give or take an item**, or **Award experience** (which can award XP to **Every living member** or one character). `bxapi` has no command to conjure new gems or jewellery directly, so grant their value in coins or let the party loot placed dungeon caches.
 
 ### Teleport the party and handle skipped triggers
 
-Moving the party with **Place the party** (in **Act** or via **Place the party here** in **Key**, or by right-clicking the referee map) teleports them without firing room-entry encounters or triggers. Immediately after placement in a keyed room, the panel displays **What walking in would do** with one-click buttons to **Spawn** the room's monsters, **Run the trigger**, or start, reveal, or complete matching quest objectives.
+Moving the party with **Place the party** (in **Act**, or via **Place party here** in **Key**, or by right-clicking the referee map) teleports them without firing room-entry encounters or triggers. Immediately after placement in a keyed room, the panel says that placing the party skips room-entry effects and offers one-click buttons to spawn the room's monsters (**Spawn** followed by the monsters' name), **Fire trigger**, or start, reveal, or complete matching quest objectives.
 
 ### Cover for an absent player
 
-Select **Seats and caller** in the **Table menu** and set each absent player's character to **Empty seat (the referee plays)** or assign them temporarily to another player. If the absent player was the caller, pick a new **Caller** in the same dialog. During a battle round, you can also declare for any character directly. The footer of the battle board lists who still has to declare, by player and character. Select **Resolve now** to resolve the round before everyone has declared: each character without a declaration holds that round, and bxvtt asks you to confirm first.
+Select **Seats and caller** in the **Table menu** and set each absent player's character to **Empty seat (referee controls)** or assign them temporarily to another player. If the absent player was the caller, pick a new **Caller** in the same dialog. During a battle round, you can also declare for any character directly. The footer of the battle board lists who still has to declare, by player and character. Select **Resolve now** to resolve the round before everyone has declared: each character without an action holds that round, an action that someone already chose is never replaced, and bxvtt asks you to confirm first. While a character's action won't work, **Resolve now** and **Resolve round** are unavailable until someone chooses a different action for that character.
 
 ### Fix a mistake
 
 Pick the lightest tool that corrects the error:
 
 - **Coins or items:** Use **Give or take coins** or **Give or take an item** in **Act**.
-- **Door state:** Toggle the door in **Now**, use **Change a door** in **Act**, or right-click the door on the referee map (**Set the door**).
+- **Door state:** Toggle the door in **Now**, use **Change a door** in **Act**, or right-click the door on the referee map (**Set door state**).
 - **Wrong room or square:** Use **Place the party** in **Act**.
 - **Clock:** **Advance time** moves the clock forward (without rolling wandering checks or counting as rest), whereas moving time backward requires restoring a save.
 - **Unintended battle or wipe:** Restore the most recent autosave.
@@ -97,12 +97,12 @@ Any table member can create a manual save (`Ctrl+S` / `Cmd+S`, or **Saves** in t
 
 As a referee, you can restore saves from three places:
 
-1. **Mid-game (**Table menu** > **Saves**):** Select **Restore** on any save. Leave **Save the current game first** checked so bxvtt creates a backup save of the current moment before switching sessions.
-2. **End screen (`Victory` or `The party has fallen`):** Select **Restore** beside one of the 3 most recent saves (or select **All N saves** to browse older ones).
-3. **Lobby (`Continue from a save`):** Select **Continue from a save** in **Start the game** when resuming between sessions.
+1. **Mid-game (**Table menu** > **Saves**):** Select **Restore** on any save. Leave **Save current game first** checked so bxvtt creates a backup save of the current moment before switching sessions.
+2. **End screen (`Victory` or `The party has fallen`):** Select **Restore** beside one of the 3 most recent saves (or select **All** followed by the number of saves, such as **All 12 saves**, to browse older ones).
+3. **Lobby (`Continue from a save`):** Select **Continue from a save** under **Start game** when resuming between sessions.
 
-Open the **More for** menu on any save row to **Rename**, **Export as a file** (downloads a `.bxsave.json` document, referee only), or **Delete**.
+Open the **More actions for** menu on any save row to **Rename**, **Export save** (downloads a `.bxsave.json` document, referee only), or **Delete**.
 
 ### Returning to the lobby resets roster characters
 
-Create a named save (`Ctrl+S` / `Cmd+S` or **Saves** in the **Table menu**) before ending an ongoing campaign session. Selecting **Return to the lobby** in the **Table menu** (or **Return the table to its lobby** on the end screen) ends the active session and brings everyone back to the lobby. Stored characters on the lobby roster retain their initial level-1 state as created; that session's saves store all experience, treasure, learned spells, and deaths from play. When you want to keep playing an ongoing campaign, always use **Continue from a save** rather than starting a fresh game from the lobby.
+Create a named save (`Ctrl+S` / `Cmd+S` or **Saves** in the **Table menu**) before ending an ongoing campaign session. Selecting **Return to lobby** in the **Table menu** (or on the end screen) ends the active session and brings everyone back to the lobby. Stored characters on the lobby roster retain their initial level-1 state as created; that session's saves store all experience, treasure, learned spells, and deaths from play. When you want to keep playing an ongoing campaign, always use **Continue from a save** rather than starting a fresh game from the lobby.

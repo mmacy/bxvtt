@@ -78,6 +78,7 @@ describe('RefereePanel', () => {
             character_id: 'character-0002',
             item_ids: [],
             coins_gp_value: 25,
+            coins: { pp: 0, gp: 25, ep: 0, sp: 0, cp: 0 },
             origin: 'grant',
           } as never,
         ],
@@ -103,7 +104,9 @@ describe('RefereePanel', () => {
         expect.any(Number),
       ),
     );
-    expect(await screen.findByText(/Wren/, { selector: '[role=status] p' })).toBeInTheDocument();
+    expect(await screen.findByText(/Wren/, { selector: '[role=status] p' })).toHaveTextContent(
+      '25 gold pieces',
+    );
   });
 
   it('shows bxapi’s refusal next to the form', async () => {

@@ -88,6 +88,7 @@ export type {
   SkeletonProps,
   EmptyStateProps,
   ProgressBarProps,
+  BannerAnnounce,
   BannerProps,
   BannerTone,
 } from './components/Feedback';

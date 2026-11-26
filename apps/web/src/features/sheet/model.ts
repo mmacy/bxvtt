@@ -10,10 +10,12 @@ import {
   emptyContext,
   itemLabel,
   magicItemTemplateName,
+  classLabel,
   pluralize,
   resolveItemNoun,
   type TextContext,
 } from '@bxvtt/shared/text';
+import { memberClassName } from '@/app';
 
 /** Coins by denomination. */
 export interface Purse {
@@ -70,6 +72,8 @@ export interface InventoryModel {
 export interface SheetModel {
   name: string;
   classId: string;
+  /** The class as the table reads it, such as `Fighter`. */
+  className: string;
   race: string;
   level: number;
   title: string | null;
@@ -292,6 +296,7 @@ export function sheetFromMember(member: MemberView, ctx?: TextContext): SheetMod
   return {
     name: member.name,
     classId: member.class_id,
+    className: memberClassName(member),
     race: member.race,
     level: member.level,
     title: member.title ?? null,
@@ -344,6 +349,7 @@ export function sheetFromStored(stored: StoredCharacter, xpNextLevel?: number | 
   return {
     name: character.name,
     classId: character.class_id,
+    className: classLabel(character.class_id),
     race: character.race,
     level: character.level,
     title: derived.level_title,

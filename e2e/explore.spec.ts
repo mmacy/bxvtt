@@ -191,11 +191,14 @@ test.describe('exploration', () => {
     const scene = scenePanel(sam.page);
     await openScene(sam.page);
 
-    // The warden's iron chest is trapped.
+    // The warden's iron chest is trapped, but the party hasn't found the trap, so the row doesn't say so.
     await place(26, 17, 'east');
-    await expect(scene.getByText('Treasure is within reach.')).toBeVisible();
-    await pickFromMenu(scene.getByRole('button', { name: 'Treasure' }), 'Take treasure');
-    await expect(scene.getByText('Treasure is within reach.')).toHaveCount(0);
+    const take = scene.getByRole('button', { name: 'Take', exact: true });
+    await expect(scene.getByText(/A heavy hasp holds the lid shut/)).toBeVisible();
+    await expect(scene.getByText('Trapped', { exact: true })).toHaveCount(0);
+    await expect(take).toHaveAccessibleDescription(/A heavy hasp holds the lid shut/);
+    await take.click();
+    await expect(take).toHaveCount(0);
     let lines = await feedLines(sam.page);
     expect(lines.join('\n')).toMatch(/trap/i);
     expect(lines.join('\n')).toMatch(/iron key/i);
@@ -209,9 +212,9 @@ test.describe('exploration', () => {
 
     // The chapel altar has no trap.
     await place(17, 12, 'east');
-    await expect(scene.getByText('Treasure is within reach.')).toBeVisible();
-    await pickFromMenu(scene.getByRole('button', { name: 'Treasure' }), 'Take treasure');
-    await expect(scene.getByText('Treasure is within reach.')).toHaveCount(0);
+    await expect(take).toBeVisible();
+    await take.click();
+    await expect(take).toHaveCount(0);
     lines = await feedLines(sam.page);
     expect(lines.join('\n')).toMatch(/holy water/i);
     expect(lines.join('\n')).toMatch(/candlestick/i);

@@ -2,8 +2,8 @@
  * Captures the WebSocket snapshots that web tests mount features with, from a real bxvtt server and bxapi.
  *
  * It plays one short game: a referee and a player make a table, put four characters on the roster, start The
- * Drowned Bell, enter the dungeon, meet monsters, and fight. At each stage it saves the snapshot that each
- * user's browser would receive, as `<stage>-<role>.json` next to this script.
+ * Drowned Bell, enter the dungeon, meet three goblins 30 feet away, and fight. At each stage it saves the snapshot
+ * that each user's browser would receive, as `<stage>-<role>.json` next to this script.
  *
  * Run it against a server that allows character seeds, so the characters come out the same each time:
  *
@@ -122,7 +122,7 @@ await capture('exploring');
 if (game.mode === 'exploring') {
   result = await referee.sendCommand(
     table.id,
-    { command_type: 'spawn_monsters', template_id: 'goblin', count_fixed: 3, distance_feet: 40 },
+    { command_type: 'spawn_monsters', template_id: 'goblin', count_fixed: 3, distance_feet: 30 },
     game.revision,
   );
   if (!result.accepted) throw new Error(`spawn_monsters was refused: ${JSON.stringify(result.rejections)}`);
@@ -137,7 +137,8 @@ const declarations = await player.getDeclarations(table.id);
 const target = game.view.encounter?.groups[0]?.id;
 const first = declarations?.declarers[0];
 if (first !== undefined && target !== undefined) {
-  await player.declare(table.id, first, { action: 'attack', target_group_id: target });
+  // Brenna closes the 30 feet and attacks, which the battle round preview accepts.
+  await player.declare(table.id, first, { action: 'attack', target_group_id: target, move: 'close' });
 }
 await capture('battle');
 console.log(`Table ${table.id} is in ${game.mode}.`);

@@ -28,7 +28,7 @@ export const STRUCTURAL_MARKERS = [
 
 /**
  * Text from referee-only fields of The Drowned Bell (`adventures/src/the-drowned-bell.mjs`): level guidance, the
- * referee's side of trigger narratives, cache descriptions, wandering monster tables, hidden objectives, and the
+ * referee's side of trigger narratives, the contents of caches, wandering monster tables, hidden objectives, and the
  * disguised monster's true name and intro.
  */
 export const BELL_MARKERS = [
@@ -40,11 +40,10 @@ export const BELL_MARKERS = [
   'Describe the bell: one note, felt through the soles of the feet',
   'The kobolds will talk if the party lets them',
   'The surviving goblins check morale at a penalty',
-  // Cache descriptions, which the scene never shows.
-  'Two silver candlesticks, two stoppered flasks of holy water',
-  'an old iron key whose bow is shaped like a bell',
-  'A greasy sack of coins taken from ferry passengers',
-  "The prior's treasure, sunk in the pool at his feet",
+  // The contents of caches the party hasn't taken. Cache descriptions reach players through the player view.
+  "Abbot's gold ring",
+  "Prior's chain of office",
+  'Moonstone',
   // A trap's referee instructions.
   'drops chest-deep into the water below',
   // Wandering monster tables.

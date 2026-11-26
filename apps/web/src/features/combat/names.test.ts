@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { countBadge, countedGroup, groupHeading, theGroup } from './names';
-import { targetLabel } from './text';
 
 describe('group labels', () => {
   const goblins = { label: 'goblin', plural: 'goblins', count: 3 };
@@ -22,25 +21,5 @@ describe('group labels', () => {
     expect(theGroup(clerk)).toBe('the ink-stained clerk');
     expect(countedGroup(clerk)).toBe('an ink-stained clerk');
     expect(countBadge(clerk)).toBeNull();
-  });
-});
-
-describe('target labels', () => {
-  const target = (handle: string, label: string, group: string) => ({
-    handle,
-    group_id: group,
-    label,
-    number: Number(label.split(' ').at(-1)),
-    defeated: false,
-    fled: false,
-  });
-
-  it('drop the number of a named individual who is the only one of that name', () => {
-    const targets = [
-      target('tgt_aaaaaaaaaaaaaaaa', 'Mag Corrie 1', 'group-0001'),
-      target('tgt_bbbbbbbbbbbbbbbb', 'Goblin 1', 'group-0002'),
-    ];
-    expect(targetLabel(targets[0]!, targets, 'Mag Corrie')).toBe('Mag Corrie');
-    expect(targetLabel(targets[1]!, targets, 'goblin')).toBe('Goblin 1');
   });
 });

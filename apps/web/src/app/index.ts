@@ -57,6 +57,8 @@ export type {
   SkipReason,
 } from './commands';
 export { useTextContext } from './text';
+export { cachesToTake, partyHere } from './here';
+export type { Cell, Here, HereFeature } from './here';
 export * from './rules';
 export { resetMyCharacters, useMyCharacters, useStoredCharacter } from './characters';
 export { useMapBus } from './mapBus';
@@ -83,7 +85,7 @@ export {
   useShortcut,
 } from './shortcuts';
 export type { ActionDefinition, ShortcutDefinition } from './shortcuts';
-export { tokenClass } from './display';
+export { memberClassName, tokenClass } from './display';
 export { STORAGE_KEYS, readStored, scopedStorage, writeStored } from './storage';
 export type { ScopedStorage, StorageArea } from './storage';
 export { toParamMap } from './params';

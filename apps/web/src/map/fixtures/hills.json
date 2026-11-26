@@ -23,6 +23,7 @@
         "id": "character-0001",
         "name": "Brenna",
         "class_id": "fighter",
+        "class_name": "Fighter",
         "level": 1,
         "current_hp": 5,
         "max_hp": 5,
@@ -188,6 +189,7 @@
         "id": "character-0002",
         "name": "Durin",
         "class_id": "dwarf",
+        "class_name": "Dwarf",
         "level": 1,
         "current_hp": 5,
         "max_hp": 5,
@@ -250,6 +252,7 @@
         "id": "character-0003",
         "name": "Elowen",
         "class_id": "elf",
+        "class_name": "Elf",
         "level": 1,
         "current_hp": 5,
         "max_hp": 5,
@@ -329,6 +332,7 @@
         "id": "character-0004",
         "name": "Wren",
         "class_id": "thief",
+        "class_name": "Thief",
         "level": 1,
         "current_hp": 3,
         "max_hp": 3,
@@ -3807,9 +3811,175 @@
             "door_open": null,
             "door_wedged": null
           }
-        }
+        },
+        "areas": [
+          {
+            "id": "sun-door-vestibule",
+            "name": "Vestibule of the Sun Door",
+            "description": "Drifted sand fans across a floor of cracked gypsum tiles. The walls hold a painted procession of mourners whose faces have been chiselled away, every one, down to the plaster. Over the inner arch, a single line of glyphs survives; weathered as it is, the sign for 'dawn' repeats three times.",
+            "cells": [
+              [21, 17],
+              [21, 14]
+            ]
+          },
+          {
+            "id": "hall-of-offerings",
+            "name": "Hall of Offerings",
+            "description": "Low stone tables line the walls, set with bowls, jars, and platters for a feast three hundred years stale. Everything edible is long since dust — and through the dust run fresh, small tracks in their hundreds.",
+            "cells": [[17, 17]]
+          },
+          {
+            "id": "processional-of-the-carriers",
+            "name": "Processional of the Carriers",
+            "description": "A pillared hall where the funeral procession once formed up. Eight niches hold eight stone biers, and on four of them the honored dead still lie in wrappings gone the color of old paper. The wrappings are moving.",
+            "cells": [[14, 12]]
+          },
+          {
+            "id": "robbers-camp",
+            "name": "The robbers' camp",
+            "description": "A cold camp in a corridor alcove: two bedrolls, a dead lantern, a scatter of date stones, and a game of knucklebones abandoned mid-throw. One bedroll is still occupied by its owner's boots. Nothing else of the owner remains.",
+            "cells": [[9, 16]]
+          },
+          {
+            "id": "chapel-of-the-first-dawn",
+            "name": "Chapel of the First Dawn",
+            "description": "The ceiling of this chapel is plastered midnight blue and set with gold-leaf stars; on the east wall, a painted sun crests painted hills. Below it stands a basalt altar, and webbing sheets the ceiling stars like cloud. On the altar rests a bronze disc with rays, no larger than a splayed hand — the sun taken down from its sky.",
+            "cells": [[10, 2]]
+          },
+          {
+            "id": "hall-of-the-weighing",
+            "name": "Hall of the Weighing",
+            "description": "The grandest room of the upper tomb: a seven-pillar hall whose west wall carries a mural of the Weighing — a heart on one scale-pan, a feather on the other, and a queue of the dead awaiting the verdict. High among the pillars hang leathery shapes the size of waterskins, stirring at the light.",
+            "cells": [[5, 14]]
+          },
+          {
+            "id": "embalmers-cell",
+            "name": "The embalmers' cell",
+            "description": "Stone benches, copper hooks, and shelves of natron jars: the room where the honored dead were made ready. The floor slopes to a drain, and a track of polished wear crosses the threshold — the path of something heavy, swung often.",
+            "cells": [[8, 8]]
+          },
+          {
+            "id": "servants-hall",
+            "name": "The servants' hall",
+            "description": "Sleeping shelves in tiers, a cold hearth, and a long table set for a meal no one living was meant to eat. Three of the household dead stand at their places, waiting, wrapped hands folded.",
+            "cells": [[7, 22]]
+          },
+          {
+            "id": "false-tomb",
+            "name": "The false tomb",
+            "description": "A burial chamber in miniature: painted walls, a modest stone sarcophagus, grave-goods arranged just so. It is staged — the paint is thinner here, the offerings are plaster fakes, and the sarcophagus lid has been made easy to shift. Everything about the room invites a robber to be satisfied and leave.",
+            "cells": [[8, 26]]
+          },
+          {
+            "id": "hall-of-the-watchers",
+            "name": "Hall of the Watchers",
+            "description": "Six full-harness soldiers of the old dynasty stand in wall niches flanking the way south, spears grounded, sockets forward. The dust on their shoulders is thick; the dust on their spear-blades is not.",
+            "cells": [[14, 23]]
+          },
+          {
+            "id": "descending-way",
+            "name": "The descending way",
+            "description": "The corridor narrows and begins to slope, cut deeper and truer than everything above it. The air warms with every step down, dry as an oven, and carries a smell of hot resin. On the walls, the sun-glyph repeats at eye height, over and over, like a word said until it loses meaning.",
+            "cells": [[10, 27]]
+          },
+          {
+            "id": "shrine-of-the-vulture",
+            "name": "Shrine of the Vulture",
+            "description": "A small shrine to the carrion-mother, she who takes the flesh so the name may last. Her basalt image spreads chipped wings over an offering bowl. The kindly-faced old goddess has been re-painted at some point — recently, in lamp-soot black — so that her painted eyes look toward the south. Toward the vault.",
+            "cells": [[30, 14]]
+          },
+          {
+            "id": "1",
+            "name": "crypt",
+            "description": "the skeleton is here",
+            "cells": [[20, 6]]
+          }
+        ],
+        "features": [
+          {
+            "id": "feature:73f78d64bd9b89d0fd1f07a84b41bf9311e31a506c1001444c4d848206672d20",
+            "kind": "treasure_cache",
+            "description": "Among the gnawed platters, three offering bowls of hammered silver still hold their tribute: a spill of tarnished coins fused by age into brittle clumps.",
+            "cell": [15, 17],
+            "area_id": "hall-of-offerings",
+            "trap_state": null
+          },
+          {
+            "id": "feature:5674fb0a52ecac0829cc6d8eeac4fc699d5e068f5bea52ea6614e757834c127f",
+            "kind": "treasure_cache",
+            "description": "The grave-goods of the honored dead lie beneath the biers in cedar boxes gone soft with age: coin-silver by the handful and two carnelians cut in the old flat style.",
+            "cell": [16, 11],
+            "area_id": "processional-of-the-carriers",
+            "trap_state": null
+          },
+          {
+            "id": "feature:46342913d64e5c245d1e8bc3e40783da45f6c42301f03dabd70a717a43ddbe50",
+            "kind": "treasure_cache",
+            "description": "A grave-robber's satchel, dropped in a hurry beside the bedrolls. It holds a pried-loose hoard of coins, a coil of good rope, and a crowbar with a bent claw.",
+            "cell": [9, 16],
+            "area_id": "robbers-camp",
+            "trap_state": null
+          },
+          {
+            "id": "feature:a34ec7c155b2e774bdce6917bd95f8e9ab7e1455a7fb10d97a32fc1e0fb1bf19",
+            "kind": "treasure_cache",
+            "description": "The bronze sun-seal lifts from a shallow socket in the altar top. In a hollow beneath it lie the dawn-priests' vestments: a gilded vulture pectoral on a chain, and a purse of electrum struck with the erased king's profile.",
+            "cell": [10, 1],
+            "area_id": "chapel-of-the-first-dawn",
+            "trap_state": null
+          },
+          {
+            "id": "feature:1031c28467abb742172a7b8ef158843cef6d6882359c4a05514a2b5b3544a361",
+            "kind": "treasure_cache",
+            "description": "The western alcove was bricked up and broken open again long ago. Behind the broken course, a tithe-chest holds temple silver and a moonstone the size of a thumbnail.",
+            "cell": [0, 14],
+            "area_id": "hall-of-the-weighing",
+            "trap_state": null
+          },
+          {
+            "id": "feature:abff68fd39ef53f1e3cc77305657fb7d5b2ddd1340e913443bce2e47820266fe",
+            "kind": "treasure_cache",
+            "description": "Four canopic jars stand in a wall niche, stoppered with wax. Three hold gems bedded in resin — payment sealed in with the organs, after the old custom. The fourth jar's lacquered clasp glints with something brighter than varnish.",
+            "cell": [6, 7],
+            "area_id": "embalmers-cell",
+            "trap_state": null
+          },
+          {
+            "id": "feature:c4669d2239a07245c01f12563bf68d331be645513a49185ef8f8e790062e6bd2",
+            "kind": "treasure_cache",
+            "description": "Under the head servant's shelf, a strongbox of copper-banded acacia holds the household purse: the wages of the dead, counted and never spent.",
+            "cell": [7, 22],
+            "area_id": "servants-hall",
+            "trap_state": null
+          },
+          {
+            "id": "feature:26b3847250b0f5e8c4736f1cb7b64507ab3eb6e36e7c8d8df8da4cafa49c6437",
+            "kind": "treasure_cache",
+            "description": "The sarcophagus holds a wax-and-linen king with a gilt-bronze crown on its brow — and, tucked beneath the false body like an afterthought, a slab of real silver coin and a funerary tablet dense with chiselled glyphs, its royal name intact.",
+            "cell": [7, 26],
+            "area_id": "false-tomb",
+            "trap_state": null
+          },
+          {
+            "id": "feature:d83c8bfa062a73367ce5183b847356047e03dfe76b1bd2a4a1ee9de2598857a3",
+            "kind": "treasure_cache",
+            "description": "The offering bowl holds a drift of silver left coin by coin over generations, green-black with age.",
+            "cell": [30, 13],
+            "area_id": "shrine-of-the-vulture",
+            "trap_state": null
+          }
+        ],
+        "transitions": [],
+        "entrance": [21, 14]
       }
     ],
+    "dungeons": [
+      {
+        "id": "dungeon-1",
+        "name": "The House of the Second Dawn"
+      }
+    ],
+    "can_travel_to_town": true,
     "piles": {},
     "emptied_caches": [],
     "effects": [
@@ -3819,6 +3989,10 @@
         "remaining_rounds": 359
       }
     ],
+    "spell_names": {
+      "sleep": "Sleep"
+    },
+    "reversed_spell_names": {},
     "fatigued": false,
     "exhausted": false,
     "deprivation": {},

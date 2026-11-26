@@ -1,12 +1,12 @@
 import type { MemberView } from '@bxvtt/shared/bxapi';
-import { capitalizeFirst, count, groupName } from '@bxvtt/shared/text';
+import { capitalizeFirst, count, creatureNames, groupName } from '@bxvtt/shared/text';
 import { useMemo, useState, type ReactNode } from 'react';
 import {
   useCanControlMember,
   useEncounter,
+  useHere,
   useParty,
   usePlayerView,
-  useScene,
   useSendCommand,
   useSpellCatalog,
   useTextContext,
@@ -119,7 +119,8 @@ export function InventoryTab({ member, model }: TabProps) {
   const light = useMemberCommand('light_source', member.id);
   const extinguish = useMemberCommand('extinguish_source', member.id);
   const view = usePlayerView();
-  const scene = useScene();
+  const ctx = useTextContext();
+  const here = useHere();
   const [transfer, setTransfer] = useState<{ mode: 'give' | 'drop'; entryKey: string | null } | null>(null);
   const [using, setUsing] = useState<InventoryEntry | null>(null);
 
@@ -259,7 +260,7 @@ export function InventoryTab({ member, model }: TabProps) {
               lights.map((effect, index) => (
                 <ConditionChip
                   key={`${effect.kind}-${index}`}
-                  label={effectLabel(effect.kind)}
+                  label={effectLabel(effect.kind, ctx)}
                   tone="boon"
                   icon="torch"
                   duration={effectRemaining(effect.remaining_rounds)}
@@ -300,7 +301,7 @@ export function InventoryTab({ member, model }: TabProps) {
                 Put out light
               </Button>
             )}
-            {light.legal && scene?.here?.pile && (
+            {light.legal && here?.pile && (
               <Button
                 size="sm"
                 variant="ghost"
@@ -345,7 +346,7 @@ export function InventoryTab({ member, model }: TabProps) {
                 icon="arrow-down"
                 disabled={!drop.permission.allowed}
                 disabledReason={drop.permission.reason}
-                tooltip="Leave items or coins in a pile on this square"
+                tooltip="Leave items or coins on this square"
                 onClick={() => setTransfer({ mode: 'drop', entryKey: null })}
               >
                 Drop
@@ -456,7 +457,7 @@ function TransferDialog({ mode, member, model, initialKey, onClose }: TransferPr
       description={
         mode === 'give'
           ? 'Choose items or coins to hand to another party member.'
-          : 'Dropped items stay in a pile on this square until someone picks them up.'
+          : 'Dropped goods stay on this square until someone picks them up.'
       }
       size="md"
       footer={
@@ -585,7 +586,14 @@ function UseItemDialog({
     ...party.filter((m) => m.id !== member.id).map((m) => ({ value: m.id, label: m.name })),
     ...(encounter?.groups ?? []).map((g) => ({ value: g.id, label: capitalizeFirst(groupName(g.id, ctx)) })),
   ];
-  const creatureOptions = targetOptions.filter((o) => o.value !== 'self');
+  // A scroll's spell goes at creatures by ID, as `cast_spell.targets` does: party members, and the living
+  // creatures the player view lists in the encounter.
+  const creatureOptions = [
+    ...party.map((m) => ({ value: m.id, label: m.name })),
+    ...creatureNames(encounter?.groups)
+      .filter((creature) => creature.status === 'alive')
+      .map((creature) => ({ value: creature.id, label: creature.name })),
+  ];
 
   const submit = async () => {
     setError(null);
@@ -668,7 +676,7 @@ function UseItemDialog({
             )}
             {creatureOptions.length > 0 && (
               <fieldset className={styles.section}>
-                <legend className={styles.slotLabel}>Spell targets</legend>
+                <legend className={styles.slotLabel}>Targets</legend>
                 {creatureOptions.map((o) => (
                   <Checkbox
                     key={o.value}

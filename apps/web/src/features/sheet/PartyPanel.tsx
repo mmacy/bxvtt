@@ -1,5 +1,5 @@
 import type { MemberView } from '@bxvtt/shared/bxapi';
-import { classLabel, conditionLabel } from '@bxvtt/shared/text';
+import { classInSentence, conditionLabel } from '@bxvtt/shared/text';
 import { useId, useMemo, useState, type DragEvent, type KeyboardEvent } from 'react';
 import {
   tokenClass,
@@ -13,11 +13,13 @@ import {
   lightTimeLeft,
   usePartyLight,
   type MemberLight,
+  memberClassName,
   usePlayerView,
   useSeats,
   useSendCommand,
   useTableUi,
   useTableUser,
+  useTextContext,
 } from '@/app';
 import {
   AcShield,
@@ -362,19 +364,20 @@ function lightRowText(light: MemberLight): string {
 }
 
 function MemberRow({ member, rank, color, controller, light, effects, onOpen }: MemberRowProps) {
+  const ctx = useTextContext();
   const dead = member.conditions.includes('dead');
   const down = member.current_hp <= 0;
   const conditions = member.conditions.filter((c) => c !== 'dead');
   const detailId = useId();
   const details = [
     controller ? controller.label : 'empty seat',
-    `level ${member.level} ${classLabel(member.class_id).toLowerCase()}`,
+    `level ${member.level} ${classInSentence(memberClassName(member))}`,
     `${member.current_hp} of ${member.max_hp} hit points`,
     `armour class ${member.armour_class}`,
     ...(dead ? ['dead'] : []),
     ...conditions.map((c) => conditionLabel(c).toLowerCase()),
     ...(light ? [lightRowText(light).toLowerCase()] : []),
-    ...effects.map((e) => effectLabel(e.kind).toLowerCase()),
+    ...effects.map((e) => effectLabel(e.kind, ctx).toLowerCase()),
   ];
   // Only the name is inside the button, so its accessible name is exactly the text it shows. The button's
   // hit area stretches over the whole row, and the rest of the row reaches screen readers as its description.
@@ -419,7 +422,7 @@ function MemberRow({ member, rank, color, controller, light, effects, onOpen }: 
             )}
           </span>
           <span className={styles.meta} aria-hidden="true">
-            Level {member.level} {classLabel(member.class_id).toLowerCase()}
+            Level {member.level} {classInSentence(memberClassName(member))}
           </span>
           {light && (
             <span className={styles.lightLine} aria-hidden="true">
@@ -444,7 +447,7 @@ function MemberRow({ member, rank, color, controller, light, effects, onOpen }: 
               {effects.map((e, i) => (
                 <ConditionChip
                   key={`${e.kind}-${i}`}
-                  label={effectLabel(e.kind)}
+                  label={effectLabel(e.kind, ctx)}
                   tone="magic"
                   duration={effectRemaining(e.remaining_rounds)}
                 />

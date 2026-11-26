@@ -26,7 +26,7 @@ The play layout targets viewports from `820px` wide upward; below `1100px`, the 
 ## Rules for feature code
 
 - Build all controls and surfaces from `@/ui` and tokens from `tokens.css` (`src/ui/README.md`).
-- Offer choices strictly from `game.commands`, `PlayerView`, `game.scene`, rules catalogs, and command JSON schemas, and display `bxapi` refusals in game terms via `@bxvtt/shared/text`.
+- Offer choices strictly from `game.commands`, `PlayerView`, `game.scene` (item names, room traps, and emptied caches), rules catalogs, and command JSON schemas, and display `bxapi` refusals in game terms via `@bxvtt/shared/text`.
 - Render user-entered strings (names, chat, notes, pin text, save labels) as React text nodes; never use `dangerouslySetInnerHTML`.
 - Read referee state only from the referee hooks (`useRefereeState()`, `useAdventureDocument()`, `useRefereeNotes()`), which return `null` whenever the user is a player or has turned off `refereeLens`.
 
@@ -48,7 +48,7 @@ The play layout targets viewports from `820px` wide upward; below `1100px`, the 
 Inside `TableProvider` (or `NoTableProvider` on screens outside a table):
 
 - **Table & membership:** `useTableId`, `useConnectionStatus`, `useConnectionError`, `useTableDetail`, `useTableSettings`, `useTableUser`, `useMyMembership`, `useMyRole`, `useIsReferee`, `useRefereeLens`, `useMembers`, `useMember`, `usePresence`, `useRejoinRequests`, `useDecideRejoin`.
-- **Active session:** `useGame`, `useGameMode`, `useShownMode` (retains combat mode while final round playback finishes before `EndScreen`), `useRevision`, `usePlayerView`, `useScene`, `usePartyLocation`, `useLegalCommands`, `useLegalCommand`, `useParty`, `usePartyMember`, `useSeats`, `useMySeats`, `useControllableMembers`, `useCaller`, `useEncounter`, `useBattleRound`, `useDeclarations`, `usePartyLight`.
+- **Active session:** `useGame`, `useGameMode`, `useShownMode` (retains combat mode while final round playback finishes before `EndScreen`), `useRevision`, `usePlayerView`, `useScene`, `useHere` (what the party perceives at its cell, from the player view and the scene), `usePartyLocation`, `useLegalCommands`, `useLegalCommand`, `useParty`, `usePartyMember`, `useSeats`, `useMySeats`, `useControllableMembers`, `useCaller`, `useEncounter`, `useBattleRound`, `useDeclarations`, `usePartyLight`.
 - **Referee, feed, notes, annotations, text:** `useRefereeState`, `useAdventureDocument`, `useRefereeNotes`, `useFeed`, `useOlderFeed`, `usePartyNotes`, `useAnnotations`, `usePings`, `useSendPing`, `useNotices`, `useTextContext`.
 - **Permission checks (`{ allowed, reason }`):** `useCanSend(commandType, memberId?)`, `useCanControlMember(memberId)`, `useCanActForParty()`, `useCanDeclare(memberId)`, `useCanResolveRound({ early })` (also exported as pure functions taking `usePermissionContext()`).
 

@@ -109,8 +109,8 @@ export type TrapState = 'hidden' | 'found' | 'sprung' | 'removed';
 
 export interface MapTrap {
   state: TrapState;
-  /** What springs it: walking in (`enter`) or opening (`open`). */
-  trigger: 'enter' | 'open';
+  /** What springs it: walking in (`enter`) or opening (`open`). `null` on a player's map, which doesn't know. */
+  trigger: 'enter' | 'open' | null;
   /** A short summary for the referee, like `"10' fall"` or `"1d6 damage"`. */
   summary: string;
 }
@@ -221,9 +221,9 @@ export const DEFAULT_LIGHT_RADIUS_FEET = 30;
 export interface PlayerMapExtras {
   transitions?: { kind: TransitionKind; x: number; y: number; side?: Direction | null }[];
   /**
-   * Areas the party has entered, such as the scene's `levels[].areas`. The map names each one at a label anchor
-   * clear of stairs and features, and the hover tooltip names the area under the pointer. Pass only what the
-   * party knows: the cells on its map and the name it was told.
+   * Areas the party has entered, such as the player view's `explored[].areas`. The map names each one at a label
+   * anchor clear of stairs and features, and the hover tooltip names the area under the pointer. Pass only what
+   * the party knows: the cells on its map and the name it was told.
    */
   areas?: { id: string; name: string; description?: string; cells: readonly (readonly [number, number])[] }[];
   features?: {

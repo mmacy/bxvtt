@@ -1,10 +1,10 @@
 /**
  * The keyboard cursor: a highlighted cell (or a side of a cell) that the arrow keys move in the tools that pick a
  * place, so the keyboard can do what a click does. This module holds the pure parts: moving the cursor, finding
- * its target, and the sentence a screen reader hears.
+ * its target, and the sentence a screen reader hears, which names what lies on the cell in the hover tooltip's words.
  */
-import { doorSummary } from './describe';
-import { DIRECTIONS, directionBetween, step, type Direction } from './geometry';
+import { describeTarget, doorSummary, type TargetDescription } from './describe';
+import { DIRECTIONS, cellKey, directionBetween, step, type Direction } from './geometry';
 import type { CellTarget, EdgeTarget } from './hit';
 import type { MapParty, MapEdge } from './model';
 import type { MapTool, Measurement } from './overlays';
@@ -127,6 +127,32 @@ function edgePhrase(edge: MapEdge | undefined): string {
   }
 }
 
+/** A tooltip's title and lines as spoken sentences, each ending in a full stop. */
+function spoken(description: TargetDescription): string {
+  return [description.title, ...description.lines]
+    .map((text) => text.trim())
+    .filter((text) => text !== '')
+    .map((text) => (/[.!?…]$/.test(text) ? text : `${text}.`))
+    .join(' ');
+}
+
+/**
+ * What lies on a cell, in the words of the hover tooltip for each thing: the treasure, dropped goods, and other
+ * features, then the stairs, trapdoor, or chute. An empty string when the cell holds none of them.
+ */
+export function cellContents(scene: Scene, x: number, y: number): string {
+  const key = cellKey(x, y);
+  const descriptions = [
+    ...(scene.featuresByCell.get(key) ?? []).map((feature) =>
+      describeTarget({ kind: 'feature', feature }, scene.map),
+    ),
+    ...(scene.transitionsByCell.get(key) ?? [])
+      .filter((transition) => transition.kind !== 'passage')
+      .map((transition) => describeTarget({ kind: 'transition', transition }, scene.map)),
+  ];
+  return descriptions.flatMap((description) => (description ? [spoken(description)] : [])).join(' ');
+}
+
 /** The measurement in words, such as "6 squares, 60 feet". */
 export function measurementText(m: Measurement): string {
   return `${squares(m.squares)}, ${m.feet} feet`;
@@ -140,7 +166,8 @@ export function describeCursor(
   measurement: Measurement | null = null,
 ): string {
   const party = scene.map.party;
-  const where = `${placePhrase(scene, cursor.x, cursor.y)}, ${positionPhrase(cursor.x, cursor.y, party)}.`;
+  const contents = cellContents(scene, cursor.x, cursor.y);
+  const where = `${placePhrase(scene, cursor.x, cursor.y)}, ${positionPhrase(cursor.x, cursor.y, party)}.${contents ? ` ${contents}` : ''}`;
   switch (tool) {
     case 'pick-cell':
       return `${where} Press Enter to choose this square, or Escape to cancel.`;

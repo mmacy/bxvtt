@@ -1,4 +1,4 @@
-import type { Scene } from '@bxvtt/shared/protocol';
+import type { ExploredLevelView } from '@bxvtt/shared/bxapi';
 import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import {
@@ -6,7 +6,7 @@ import {
   buildPlayerLevel,
   levelOptions,
   refereeSource,
-  sceneExtras,
+  viewExtras,
   wanderingTableName,
 } from './levels';
 
@@ -17,11 +17,13 @@ function exploring() {
   return game;
 }
 
-describe('sceneExtras', () => {
-  it('puts the scene’s stairs, caches, and features on the map, and an area-wide one at the area’s middle', () => {
-    const level: Scene['levels'][number] = {
+describe('viewExtras', () => {
+  it('puts the view’s stairs and features on the map, an area-wide one at the area’s middle, and marks emptied caches', () => {
+    const level: ExploredLevelView = {
       dungeon_id: 'priory',
       level_number: 1,
+      cells: [],
+      edges: {},
       areas: [
         {
           id: 'hall',
@@ -34,19 +36,31 @@ describe('sceneExtras', () => {
           ],
         },
       ],
-      transitions: [{ kind: 'stairs_down', position: [2, 0], side: null, leads: 'down' }],
-      traps: [],
-      caches: [
-        { id: 'chest', source: 'authored', area_id: 'hall', position: null, reachable: true, trap: null },
+      transitions: [{ kind: 'stairs_down', position: [2, 0], side: null }],
+      features: [
+        {
+          id: 'feature:chest',
+          kind: 'treasure_cache',
+          description: 'A chest.',
+          cell: null,
+          area_id: 'hall',
+          trap_state: null,
+        },
+        {
+          id: 'feature:statue',
+          kind: 'custom',
+          description: 'A statue.',
+          cell: [0, 0],
+          area_id: null,
+          trap_state: null,
+        },
       ],
-      features: [{ id: 'statue', kind: 'custom', description: 'A statue.', area_id: null, position: [0, 0] }],
-      piles: [],
     };
-    const extras = sceneExtras(level);
+    const extras = viewExtras(level, new Set(['feature:chest']));
     expect(extras.transitions).toEqual([{ kind: 'stairs_down', x: 2, y: 0, side: null }]);
     expect(extras.features).toEqual([
-      expect.objectContaining({ id: 'chest', kind: 'cache', x: 1, y: 0 }),
-      expect.objectContaining({ id: 'statue', kind: 'custom', x: 0, y: 0, description: 'A statue.' }),
+      expect.objectContaining({ id: 'feature:chest', kind: 'cache', x: 1, y: 0, emptied: true }),
+      expect.objectContaining({ id: 'feature:statue', kind: 'custom', x: 0, y: 0, description: 'A statue.' }),
     ]);
   });
 });
@@ -74,7 +88,20 @@ describe('buildPlayerLevel', () => {
     expect(map?.layer).toBe('player');
     expect(map?.party).toEqual({ x: 14, y: 22, facing: 'north' });
     // The fallen statue is a feature of the whole area, so it sits at the area's middle.
-    expect(map?.features.map((feature) => feature.id)).toContain('fallen_statue');
+    const statue = game.view.explored[0]?.features.find((feature) => feature.kind === 'custom');
+    const area = game.view.explored[0]?.areas.find((a) => a.id === statue?.area_id);
+    const middle = area ? areaCenterCell(area) : null;
+    expect(statue?.cell).toBeNull();
+    expect(middle).not.toBeNull();
+    expect(map?.features).toContainEqual(
+      expect.objectContaining({
+        id: statue?.id,
+        kind: 'custom',
+        x: middle?.[0],
+        y: middle?.[1],
+        description: expect.stringMatching(/Saint Corvane/),
+      }),
+    );
   });
 
   it('marks a door the table learned is locked', () => {
@@ -89,15 +116,32 @@ describe('buildPlayerLevel', () => {
     expect(door?.stuck).toBeNull();
   });
 
-  it('marks the entrance and names the entered areas from the scene', () => {
+  it('marks the entrance and names the entered areas from the player view', () => {
     const game = exploring();
-    const scene = structuredClone(game.scene);
-    const level = scene.levels[0];
-    if (!level) throw new Error('No scene level.');
-    level.entrance = [14, 23];
-    const map = buildPlayerLevel(game.view, scene, 'priory:1');
+    const map = buildPlayerLevel(game.view, game.scene, 'priory:1');
     expect(map?.entrance).toEqual([14, 23]);
     expect(map?.areas.map((area) => area.name)).toEqual(['Gatehouse stair']);
+  });
+
+  it('shows the trap state the party knows on a cache, without a trigger', () => {
+    const game = exploring();
+    const view = structuredClone(game.view);
+    const level = view.explored[0];
+    if (!level) throw new Error('No explored level.');
+    level.features.push({
+      id: 'feature:chest',
+      kind: 'treasure_cache',
+      description: '',
+      cell: [14, 22],
+      area_id: null,
+      trap_state: 'found',
+    });
+    const map = buildPlayerLevel(view, game.scene, 'priory:1');
+    expect(map?.features.find((feature) => feature.id === 'feature:chest')?.trap).toEqual({
+      state: 'found',
+      trigger: null,
+      summary: 'Treasure trap',
+    });
   });
 
   it('returns null for a level the party hasn’t mapped', () => {

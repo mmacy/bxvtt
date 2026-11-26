@@ -6,6 +6,7 @@ import { cartCount, cartLines, cartTotal, purchaseItemIds } from './cartLines';
 import { gaps, readinessChecklist } from './checklist';
 import { describeItem, lotSentence, type ShopItem } from './equipment';
 import { serviceReason } from './hooks';
+import { classLine } from './parts';
 import { describeChanges } from './RestAndPrepare';
 import { summarizeEntry } from './Glance';
 import { hasSleptSincePreparing, spellAdvice, spellAdviceText } from './SpellAdvice';
@@ -166,6 +167,15 @@ describe('members', () => {
     expect(neediestFirst(party).map((member) => member.name)).toEqual(['Tamsin', 'Osric', 'Wren', 'Brenna']);
     expect(memberStatus(wren)).toMatchObject({ hurt: true, dead: false });
     expect(memberStatus(osric).afflictions).toEqual(['Poisoned']);
+  });
+
+  it('names a member’s class as the view states it, and from the catalog for an older view', () => {
+    const brenna = structuredClone(fixtureSnapshot('town', 'player').game?.view.party[0]);
+    if (!brenna) throw new Error('No Brenna.');
+    expect(classLine({ ...brenna, class_id: 'fighter', class_name: '', level: 3 })).toBe('Fighter 3');
+    expect(classLine({ ...brenna, class_id: 'hollow_knight', class_name: 'Hollow knight', level: 3 })).toBe(
+      'Hollow knight 3',
+    );
   });
 
   it('reads the purse, the worn gear, and the pack', () => {

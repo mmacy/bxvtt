@@ -10,7 +10,7 @@ Use the right-hand dock and built-in rules compendium for communication, quest t
 
 ## Chat, whisper, and roll dice in the feed
 
-Open the **Feed** tab (`Alt+2`) to read and post to the table's chronological log of chat messages, dice rolls, game events, and system notices. Unread entries display a count on the tab and a **New since you last looked** divider in the stream.
+Open the **Feed** tab (`Alt+2`) to read and post to the table's chronological log of chat messages, dice rolls, game events, and system notices. Unread entries display a count on the tab and a **New entries** divider in the stream.
 
 ![The table feed showing party chat, a labeled d20 roll, and narrated combat events](../images/feed.webp)
 
@@ -33,19 +33,19 @@ Type `/` at the start of the message box to open command autocomplete, or send `
 To build rolls with buttons instead of typing formulas, select **Dice tray**:
 
 1. Click a die (`d4`, `d6`, `d8`, `d10`, `d12`, `d20`, or `d100`). Clicking the same die again adds another die (up to 20); clicking a different die switches die size.
-2. Adjust the **Dice** count and **Modifier** (`-99` to `+99`), and optionally fill in **What's it for?** (such as `to open the door`). Referees can also enable **Secret roll**.
+2. Adjust the number of dice (**Fewer dice** and **More dice**) and the **Modifier** (`-99` to `+99`), and optionally fill in the roll label (such as `Open stuck door`). Referees can also enable **Secret roll**.
 3. Select the **Roll** button showing your formula (for example, **Roll 1d20** or **Roll 2d6+1**).
 
 ### Filter and search the feed
 
-Use the segmented bar at the top of the feed to view **All**, **Chat**, **Rolls**, or **Game** entries (referees with the referee lens on also have a **Hidden from players** filter, shown as an eye icon, for secret rolls and referee events). Select **Search the feed** to filter loaded messages by text, or **Load older entries** at the top of the scroll area to page backward through earlier history.
+Use the segmented bar at the top of the feed to view **All**, **Chat**, **Rolls**, or **Game** entries (referees with the referee lens on also have a **Hidden from players** filter, shown as an eye icon, for secret rolls and referee events). Select **Search feed** to filter loaded messages by text, or scroll to the top and select **Load older entries** to page backward through earlier history.
 
 ## Track quests, chronicle entries, and shared notes
 
 Open the **Journal** tab (`Alt+3`) to switch among three sub-tabs:
 
 - **Quests:** Lists **Active quests** and **Completed** quests with their patron or quest-giver text and objective checklists. Hidden objectives appear automatically once discovered in play or revealed by the referee.
-- **Journal:** Displays the adventure's opening narrative and dated entries added by game events and the referee, sorted **In order** or **Newest first** on parchment.
+- **Journal:** Displays the adventure's opening narrative and dated entries added by game events and the referee, sorted **Oldest first** or **Newest first** on parchment.
 - **Notes:** Provides a shared **Party notes** scratchpad (up to 50,000 characters) editable by everyone at the table. Edits save automatically 1.2 seconds after you stop typing. If another member saves while you are typing, a conflict banner lets you choose **Keep mine**, **Take theirs**, or **See both** so neither edit is lost silently.
 
 ## Look up rules in the compendium

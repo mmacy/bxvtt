@@ -63,7 +63,7 @@ By default, bxvtt listens on `http://127.0.0.1:8660` and connects to `bxapi` at 
 
 ```text
 {"level":30,...,"msg":"Server listening at http://127.0.0.1:8660"}
-{"level":30,...,"bxapi":"http://127.0.0.1:8640","engine":"2.5.0","msg":"bxapi is reachable"}
+{"level":30,...,"bxapi":"http://127.0.0.1:8640","engine":"2.7.0","msg":"bxapi is reachable"}
 ```
 
 If the log reports `bxapi is unreachable` instead, verify that `bxapi` is running on port 8640 (or set `BXAPI_URL` before running `npm start`, such as `BXAPI_URL=http://127.0.0.1:8651 npm start`). You can also verify server health from another shell:
@@ -77,7 +77,7 @@ A healthy server returns JSON beginning with `{"status":"ok"`.
 ## 5. Create your first table
 
 1. Open [http://127.0.0.1:8660](http://127.0.0.1:8660) in your browser.
-2. Under **Pick your name**, enter the display name others at the table should see and select **Continue**. Your browser saves a sign-in token locally, with no password required.
+2. Under **Choose your name**, enter the display name others at the table should see and select **Continue**. Your browser saves a sign-in token locally, with no password required.
 3. Under **Create a table**, enter a name such as `Thursday at the Drowned Bell` and select **Create table**.
 
 You enter the lobby as the table's referee, with *The Drowned Bell* selected by default. A **table** is your group's persistent room (retaining members, notes, and saves across sessions), whereas a **game** is one active run of an adventure at that table.
@@ -85,4 +85,4 @@ You enter the lobby as the table's referee, with *The Drowned Bell* selected by 
 ## Next steps
 
 - **Invite friends over the internet:** A server on `127.0.0.1` is reachable only from your own machine. Follow [Play over the internet](share-online.md) to publish your table with `npm run share`.
-- **Play solo right now:** Select **Create a character** under **Your characters** to build a party, then select **Start the game**. Press `Shift+L` during play to turn off the **Referee lens** so you explore without map spoilers. See [Join a table and make a character](../playing/getting-started.md) and [Run the game behind the screen](../refereeing/running-the-game.md#play-solo).
+- **Play solo right now:** Select **Create a character** under **Your characters** to build a party, then select **Start game**. Press `Shift+L` during play to turn off the **Referee lens** so you explore without map spoilers. See [Join a table and make a character](../playing/getting-started.md) and [Run the game behind the screen](../refereeing/running-the-game.md#play-solo).

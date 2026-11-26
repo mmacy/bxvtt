@@ -179,7 +179,7 @@ export function battleBoard(page: Page): Locator {
 /** One party member's row on the battle board. */
 export function declarationRow(page: Page, name: string): Locator {
   return battleBoard(page)
-    .getByRole('list', { name: 'Declarations this round' })
+    .getByRole('list', { name: 'Actions this round' })
     .getByRole('listitem')
     .filter({ hasText: name });
 }

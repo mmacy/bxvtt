@@ -256,6 +256,52 @@ describe('the battlefield during playback', () => {
   });
 });
 
+describe('fleeing and escaping groups', () => {
+  const lookup = () => 'group-0001';
+  const fled = p({ event_type: 'monster_fled', code: 'battle.side.fled', group_id: 'group-0001' });
+  const escaped = p({ event_type: 'monster_escaped', code: 'battle.side.escaped', group_id: 'group-0001' });
+
+  it('keeps a fleeing group on the track until it escapes', () => {
+    const { encounter, party } = battle();
+    const start = trackFromView(encounter, party);
+    const running = applyEvent(start, fled, lookup);
+    expect(running.groups['group-0001']).toMatchObject({ fleeing: true, fled: false });
+    expect(applyEvent(running, escaped, lookup).groups['group-0001']).toMatchObject({
+      fleeing: true,
+      fled: true,
+    });
+  });
+
+  it('starts a group that the view shows running as fleeing', () => {
+    const { encounter, party } = battle();
+    if (!encounter) throw new Error('No encounter in the fixture.');
+    const running = { ...encounter, groups: encounter.groups.map((group) => ({ ...group, fleeing: true })) };
+    expect(trackFromView(running, party).groups['group-0001']?.fleeing).toBe(true);
+  });
+
+  it('sums up a group that got away as escaped, not as fleeing', () => {
+    expect(digestRound([fled, escaped], lookup)).toMatchObject({ fleeing: [], escaped: ['group-0001'] });
+  });
+});
+
+describe('a hide attempt', () => {
+  it('plays as a beat on the member, and never says whether it worked', () => {
+    const { view } = battle();
+    const hide = p({
+      event_type: 'hide_attempted',
+      code: 'battle.hide.attempted',
+      character_id: 'character-0002',
+    });
+    const beats = buildBeats([hide], contextFromPlayerView(view), {
+      includeReferee: false,
+      lookup: () => null,
+    });
+    expect(beats).toHaveLength(1);
+    expect(beats[0]?.focus).toEqual(['character-0002']);
+    expect(beats[0]?.pops).toEqual([{ tokenId: 'character-0002', kind: 'hide', text: 'Hiding' }]);
+  });
+});
+
 describe('digestRound', () => {
   it('sums up who acted first, the damage, the slain, and who flees', () => {
     const digest = digestRound(round, () => 'group-0001');
@@ -345,9 +391,55 @@ describe('summarizeFight', () => {
     const summary = summarizeFight(events, contextFromPlayerView(view));
     expect(summary.title).toBe('The goblins are beaten');
     expect(summary.rounds).toBe(3);
-    expect(summary.defeated.map((d) => d.text)).toEqual(['2 goblins slain', 'a goblin fled']);
-    expect(xpSentence(summary)).toBe('The defeated monsters are worth 15 XP to the party.');
+    expect(summary.defeated.map((d) => d.text)).toEqual(['2 goblins slain', 'a goblin escaped']);
+    expect(xpSentence(summary)).toBe('The defeated monsters are worth 15 experience points to the party.');
     expect(summary.loot).toEqual(['coins worth 12 gp', 'a dagger']);
     expect(summary.fallen).toEqual(['Wren']);
+  });
+
+  it('lists the exact coins of the loot, so copper alone still shows', () => {
+    const { view } = battle();
+    const loot = (coins: Record<string, number>, gp: number) =>
+      p({
+        event_type: 'loot_dropped',
+        code: 'encounter.loot.dropped',
+        item_ids: [],
+        coins_gp_value: gp,
+        coins,
+      });
+    const summary = summarizeFight(
+      [loot({ pp: 0, gp: 3, ep: 0, sp: 4, cp: 0 }, 3), loot({ pp: 0, gp: 0, ep: 0, sp: 0, cp: 39 }, 0)],
+      contextFromPlayerView(view),
+    );
+    expect(summary.loot).toEqual(['3 gold pieces', '4 silver pieces', '39 copper pieces']);
+  });
+
+  it('reports the experience a character gained when the one-level limit cut the award', () => {
+    const { view } = battle();
+    const summary = summarizeFight(
+      [
+        p({
+          event_type: 'xp_awarded',
+          code: 'session.xp.awarded',
+          character_id: 'character-0001',
+          award: 5000,
+          modified_award: 5000,
+          gained: 3999,
+          clamped: true,
+          level_after: 2,
+        }),
+        p({
+          event_type: 'xp_awarded',
+          code: 'session.xp.awarded',
+          character_id: 'character-0002',
+          award: 40,
+          modified_award: 44,
+          gained: null,
+          level_after: 1,
+        }),
+      ],
+      contextFromPlayerView(view),
+    );
+    expect(summary.awards.map((award) => award.xp)).toEqual([3999, 44]);
   });
 });

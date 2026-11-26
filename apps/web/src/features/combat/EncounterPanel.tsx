@@ -19,6 +19,7 @@ import {
   useSendCommand,
   useTableId,
   useTableStoreApi,
+  useTextContext,
 } from '@/app';
 import {
   Badge,
@@ -52,7 +53,7 @@ import {
 } from './useEncounterCommands';
 import { ACCEPT_ALL, usePlayback } from './usePlayback';
 import styles from './combat.module.css';
-import { targetLabel, useCombatText, useSceneTargets } from './text';
+import { useEncounterCreatures } from './text';
 import { countBadge, countedGroup, groupHeading, theGroup, viewLabels } from './names';
 
 /** What each bearing means for the party's choices, from the `wait` and `parley` command documentation. */
@@ -85,12 +86,14 @@ export function EncounterPanel() {
   const party = useParty();
   const revision = useRevision();
   const tableId = useTableId();
-  const ctx = useCombatText();
+  const ctx = useTextContext();
   const lens = useRefereeLens();
   const store = useTableStoreApi();
   const opening = useEncounterOpening();
   const commands = useEncounterCommands();
-  const playback = usePlayback({ accept: ACCEPT_ALL });
+  // Entries since the encounter began on this client are news, so a result that arrives while the panel's code
+  // loads still plays (#29). `usePlayback` reads `afterSeq` once, when the panel mounts.
+  const playback = usePlayback({ accept: ACCEPT_ALL, afterSeq: store.getState().modeStartSeq });
 
   useEffect(() => {
     if (revision !== null) recordSnapshot({ tableId, revision, encounter, party });
@@ -231,7 +234,7 @@ function GroupCard({ group }: { group: EncounterGroupView }) {
           )}
         </span>
         <span className={styles.groupMeta}>
-          {group.fled ? 'Fled' : `${formatFeet(group.distance_feet)} away`}
+          {group.fled ? 'Escaped' : `${formatFeet(group.distance_feet)} away`}
           {group.categories.length > 0 && ` · ${group.categories.map(capitalize).join(', ')}`}
         </span>
         {conditions.length > 0 && (
@@ -439,6 +442,9 @@ function PartyOptions({
     });
   }
   if (!commands.pursuit && commands.legal('turn_undead') && turners.length > 0) {
+    // The button opens for anyone who can act for one of the turners. Only a viewer who can act for none of them
+    // sees why, with the first turner's reason.
+    const ownTurner = turners.find((member) => commands.can('turn_undead', member.id).allowed);
     options.push({
       icon: 'class-cleric',
       label: 'Turn undead',
@@ -446,7 +452,9 @@ function PartyOptions({
         ? `Present a holy symbol. Any undead left standing attack at once.`
         : 'None of these monsters are undead.',
       disabledReason: undead
-        ? reasonFor(commands, 'turn_undead', turners[0]?.id)
+        ? ownTurner
+          ? null
+          : reasonFor(commands, 'turn_undead', turners[0]?.id)
         : 'None of these monsters are undead.',
       loading: busy('turn_undead'),
       popover:
@@ -474,7 +482,7 @@ function PartyOptions({
               ),
             }
           : undefined,
-      onClick: () => turners[0] && commands.turn(turners[0].id),
+      onClick: () => ownTurner && commands.turn(ownTurner.id),
     });
   }
 
@@ -566,7 +574,7 @@ function UseItemPopover({
   encounter: EncounterView;
   ctx: TextContext;
 }) {
-  const sceneTargets = useSceneTargets();
+  const creatures = useEncounterCreatures();
   const { send, pending } = useSendCommand();
   const [open, setOpen] = useState(false);
   const [memberId, setMemberId] = useState(members[0]?.id ?? '');
@@ -587,12 +595,9 @@ function UseItemPopover({
           ...encounter.groups
             .filter((g) => !g.fled && g.count > 0)
             .map((g) => ({ value: g.id, label: `At ${theGroup(viewLabels(g))}` })),
-          ...sceneTargets
-            .filter((t) => !t.defeated && !t.fled)
-            .map((t) => ({
-              value: t.handle,
-              label: `At ${targetLabel(t, sceneTargets, encounter.groups.find((g) => g.id === t.group_id)?.label)}`,
-            })),
+          ...creatures
+            .filter((creature) => creature.status === 'alive')
+            .map((creature) => ({ value: creature.id, label: `At ${creature.name}` })),
           ...encounter.declarers.map((id) => ({ value: id, label: `On ${memberName(id, ctx)}` })),
         ];
   const use = async () => {

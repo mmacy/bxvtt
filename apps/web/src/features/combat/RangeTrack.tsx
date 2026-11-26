@@ -22,6 +22,11 @@ export interface RangeTrackProps {
   animate: boolean;
   /** Shorter, for the collapsed board and the encounter panel. */
   compact?: boolean;
+  /**
+   * Where each member would stand once the round's declared moves are made, by member ID, from bxapi's preview.
+   * The track marks each place that differs from where the member stands now.
+   */
+  planned?: Readonly<Record<string, number>> | null;
 }
 
 const TOKEN = 32;
@@ -48,7 +53,11 @@ function lowerHeading(group: GroupLabels): string {
   return group.count === 1 ? group.label : (group.plural ?? group.label);
 }
 
-function memberLabel(member: TrackMember, meleeWith: readonly string[] = []): string {
+function memberLabel(
+  member: TrackMember,
+  meleeWith: readonly string[] = [],
+  planned: number | null = null,
+): string {
   const parts = [member.name, `${member.hp} of ${member.maxHp} hit points`];
   if (meleeWith.length > 0) parts.push(`in melee with ${joinList(meleeWith)}`);
   if (member.down) parts.push(member.conditions.includes('dead') ? 'dead' : 'unconscious');
@@ -58,12 +67,20 @@ function memberLabel(member: TrackMember, meleeWith: readonly string[] = []): st
     );
   for (const condition of member.conditions)
     if (condition !== 'dead') parts.push(conditionLabel(condition).toLowerCase());
+  if (planned !== null)
+    parts.push(
+      planned === 0
+        ? 'will move to the party line'
+        : planned > 0
+          ? `will move to ${formatFeet(planned)} past the party line`
+          : `will fall back to ${formatFeet(-planned)} behind the party line`,
+    );
   return parts.join(', ');
 }
 
 function groupLabel(group: TrackGroup, nearest: number | null): string {
   const parts = [countedGroup(trackLabels(group))];
-  if (group.fled) parts.push('fled');
+  if (group.fled) parts.push('escaped');
   else if (nearest !== null) parts.push(`${formatFeet(nearest)} from the nearest party member`);
   if (group.fleeing && !group.fled) parts.push('fleeing');
   for (const [condition, count] of Object.entries(group.conditions))
@@ -84,6 +101,7 @@ export function RangeTrack({
   selected = null,
   animate,
   compact = false,
+  planned = null,
 }: RangeTrackProps) {
   // How many each group had at its largest, so a group that was all slain is named in the right number.
   const tableId = useTableId();
@@ -107,10 +125,19 @@ export function RangeTrack({
   const present = groups.filter((g) => !g.fled && g.count > 0);
   const gone = groups.filter((g) => g.fled || g.count === 0);
 
+  // A planned place that differs from where the member stands now, or `null`.
+  const plannedFor = (member: TrackMember): number | null => {
+    const place = planned?.[member.id];
+    return place === undefined || place === (member.advance ?? 0) ? null : place;
+  };
   const advances = standing.map((m) => m.advance ?? 0);
+  const plannedPlaces = standing.flatMap((m) => {
+    const place = plannedFor(m);
+    return place === null ? [] : [place];
+  });
   const front = advances.length > 0 ? Math.max(...advances) : 0;
-  const low = Math.min(0, ...advances);
-  const high = Math.max(front + 10, ...present.map((g) => g.distance), 30);
+  const low = Math.min(0, ...advances, ...plannedPlaces);
+  const high = Math.max(front + 10, ...plannedPlaces, ...present.map((g) => g.distance), 30);
   const span = Math.max(high - low, 20);
   const step = tickStep(span);
   const min = Math.floor(low / step) * step;
@@ -165,12 +192,14 @@ export function RangeTrack({
   const popsFor = (id: string) => pops.filter((p) => p.tokenId === id);
   const focusSet = new Set(focus);
 
-  const memberStyle = (member: TrackMember, index: number, count: number): CSSProperties => {
+  const memberLeft = (member: TrackMember, index: number): string =>
+    at(member.advance ?? 0, -(TOKEN + Math.floor(index / rows) * (TOKEN + 4)));
+  const memberStyle = (member: TrackMember, index: number, count: number): { left: string; top: string } => {
     const column = Math.floor(index / rows);
     const row = index % rows;
     const inColumn = Math.min(rows, count - column * rows);
     return {
-      left: at(member.advance ?? 0, -(TOKEN + column * (TOKEN + 4))),
+      left: memberLeft(member, index),
       top: `calc(var(--center) + ${(row - (inColumn - 1) / 2) * ROW - TOKEN / 2}px)`,
     };
   };
@@ -239,6 +268,32 @@ export function RangeTrack({
         })}
 
         {[...stacks.entries()].flatMap(([, stack]) =>
+          stack.flatMap((member, index) => {
+            const place = plannedFor(member);
+            if (place === null) return [];
+            const style = memberStyle(member, index, stack.length);
+            const target = at(place, -TOKEN);
+            const color = colors[member.id];
+            return [
+              <span
+                key={`${member.id}-planned`}
+                className={styles.planned}
+                style={{ ...style, left: target, borderColor: color }}
+                aria-hidden="true"
+              >
+                <TokenPortrait
+                  name={member.name}
+                  characterClass={tokenClass(member.classId)}
+                  color={color}
+                  size={TOKEN}
+                  decorative
+                />
+              </span>,
+            ];
+          }),
+        )}
+
+        {[...stacks.entries()].flatMap(([, stack]) =>
           stack.map((member, index) => (
             <div
               key={member.id}
@@ -249,9 +304,11 @@ export function RangeTrack({
                 engaged.has(member.id) && styles.engaged,
               )}
               style={memberStyle(member, index, stack.length)}
-              title={memberLabel(member, meleeOf(member.id))}
+              title={memberLabel(member, meleeOf(member.id), plannedFor(member))}
             >
-              <span className="visually-hidden">{memberLabel(member, meleeOf(member.id))}</span>
+              <span className="visually-hidden">
+                {memberLabel(member, meleeOf(member.id), plannedFor(member))}
+              </span>
               <TokenPortrait
                 name={member.name}
                 characterClass={tokenClass(member.classId)}
@@ -297,7 +354,7 @@ export function RangeTrack({
                 <span className="visually-hidden">
                   {group.count === 0
                     ? `${capitalizeFirst(theGroup({ ...trackLabels(group), count: peaks[group.id] ?? 2 }))}, slain`
-                    : `${capitalizeFirst(theGroup(trackLabels(group)))}, fled`}
+                    : `${capitalizeFirst(theGroup(trackLabels(group)))}, escaped`}
                 </span>
                 <TokenPortrait
                   name={groupHeading(trackLabels(group))}
@@ -320,7 +377,7 @@ export function RangeTrack({
         </span>
         {gone.length > 0 && (
           <span className={styles.labelEnd}>
-            {gone.every((g) => g.count === 0) ? 'Slain' : gone.every((g) => g.fled) ? 'Fled' : 'Gone'}
+            {gone.every((g) => g.count === 0) ? 'Slain' : gone.every((g) => g.fled) ? 'Escaped' : 'Gone'}
           </span>
         )}
       </div>

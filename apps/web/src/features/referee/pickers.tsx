@@ -5,6 +5,7 @@
  */
 import type { MemberView } from '@bxvtt/shared/bxapi';
 import {
+  classInSentence,
   classLabel,
   itemTypeLabel,
   magicItemTemplateName,
@@ -16,6 +17,7 @@ import type { FullCatalog } from '@bxvtt/shared/protocol';
 import { useEffect, useMemo, useState } from 'react';
 import {
   getApi,
+  memberClassName,
   useEquipmentCatalog,
   useMagicItemCatalog,
   useMapBus,
@@ -35,8 +37,9 @@ function capital(text: string): string {
   return text.length === 0 ? text : text[0]?.toUpperCase() + text.slice(1);
 }
 
-function memberDescription(member: MemberView): string {
-  const parts = [`Level ${member.level} ${classLabel(member.class_id).toLowerCase()}`];
+/** What a party member picker shows under the name: the level and the class the view states, and whether the member is down. */
+export function memberDescription(member: MemberView): string {
+  const parts = [`Level ${member.level} ${classInSentence(memberClassName(member))}`];
   if (member.current_hp <= 0) parts.push('down');
   return parts.join(', ');
 }

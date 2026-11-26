@@ -19,9 +19,9 @@ You enter the lobby as the table's referee. The server requires at least one ref
 
 ## Invite players and manage members
 
-- **Share the invite link:** In **Invite players**, select **Copy** and send the link to your group (see [Play over the internet](../getting-started/share-online.md) when hosting remotely). Every member at the table can view the invite code, so treat it as group-visible. If a link leaks, select **Make a new link** to invalidate the previous code immediately.
-- **Change roles or remove members:** In **People at the table**, open **Actions for** any member to choose **Make a referee**, **Make a player** (disabled when only one referee remains), or **Remove from the table**. Removing a member disconnects them immediately and rotates the invite code so the old link cannot be reused. Manage removals in the lobby between games, because the play screen has no member removal menu.
-- **Approve returning players:** When a player opens your invite link from a new quick-tunnel URL or a different browser and chooses **I've played at this table before**, a banner appears at the top of your lobby or play screen: **Someone is asking to come back in as** followed by that member's name. Confirm with the player over voice or chat, then select **Let them in** (or **Not now** to decline). A referee can never approve a rejoin request for their personal account; if you might switch browsers, promote a co-referee beforehand.
+- **Share the invite link:** In **Invite players**, select **Copy** and send the link to your group (see [Play over the internet](../getting-started/share-online.md) when hosting remotely). Every member at the table can view the invite code, so treat it as group-visible. If a link leaks, select **Replace invite link** and confirm to invalidate the previous code immediately. Current members keep their places.
+- **Change roles or remove members:** In **People at the table**, open **Actions for** any member to choose **Make referee**, **Make player** (disabled when only one referee remains), or **Remove from table**. Removing a member disconnects them immediately and rotates the invite code so the old link cannot be reused. Manage removals in the lobby between games, because the play screen has no member removal menu.
+- **Approve returning players:** When a player opens your invite link from a new quick-tunnel URL or a different browser and chooses **I've played at this table before**, a banner appears at the top of your lobby or play screen: **Someone asked to rejoin as** followed by that member's name. Confirm with the player over voice or chat, then select **Approve** (or **Decline**). A referee can never approve a rejoin request for their personal account; if you might switch browsers, promote a co-referee beforehand.
 
 ## Leave or delete a table
 
@@ -38,13 +38,13 @@ Under **Adventure** (visible only to referees until play starts), choose which m
 
 - **The Drowned Bell** (`Sample`, selected by default): For 3-6 characters of level 1 across three dungeon levels.
 - **The Toll at Crookback Bridge** (`Sample`): For 4-6 characters of levels 1-2, playable in about an hour.
-- **The Barrow of the Forgotten King** (`Comes with bxapi`): Built-in barrow adventure included with `bxapi`.
+- **The Barrow of the Forgotten King** (`Built-in`): Barrow adventure that comes with `bxapi`.
 
-Selecting an adventure card expands its **Hooks** so you can read the setup to your players while they roll characters. To run your own module, select **Upload an adventure** and pick an `osrlib` JSON file up to 8 MB; `bxapi` validates the file before you select **Upload**. See [Included and custom adventures](../adventures/included-adventures.md).
+Selecting an adventure card expands its **Hooks** so you can read the setup to your players while they roll characters. To run your own module, select **Upload an adventure** and pick an `osrlib` JSON file up to 8 MB; `bxapi` validates the file before you select **Upload**. Players read each treasure's description as soon as the party sees it, so check that your own adventure's treasure descriptions name no contents and no traps. See [Included and custom adventures](../adventures/included-adventures.md).
 
 ## Choose optional rules
 
-Expand **Optional rules** before starting a new game (and decide **Reroll low first-level hit points** before players roll characters, since players must check the matching box in Step 2 of the character wizard). Select **Use the standard rules** at any time to reset everything to the defaults below.
+Expand **Optional rules** before starting a new game (and decide **Reroll low first-level hit points** before players roll characters, since players must check the matching box in Step 2 of the character wizard). When any rule differs from the defaults below, **Reset to standard rules** appears and restores them all.
 
 | Rule | Default | Effect |
 | --- | --- | --- |
@@ -59,7 +59,7 @@ Expand **Optional rules** before starting a new game (and decide **Reroll low fi
 | **Hunger and thirst penalties** | Off | Going without rations or water penalizes attack rolls, then movement, and then hit points. |
 | **Area spells catch allies** | On | Area spells such as *fireball* aimed at monsters engaged in melee can also strike allied front-liners. |
 | **Passage width limits melee** | On | Caps how many combatants can fight abreast in narrow passages (two side by side in a 10-foot corridor). |
-| **A failed trap removal springs the trap** | On | A thief who fails to disarm a treasure trap triggers it. |
+| **Failed trap removal springs the trap** | On | A thief who fails to disarm a treasure trap triggers it. |
 | **Reroll low first-level hit points** | Off | Rerolls a `1` or `2` on a character's first-level hit die. Tell players before they create characters so they check the matching box in the character wizard. |
 
 ## Configure table settings, seats, and the caller
@@ -68,15 +68,15 @@ Open **Table settings** in the lobby (or select **Table settings** in the **Tabl
 
 - **Who moves the party:** **The caller** (default, matching B/X procedure) or **Anyone with a character** (convenient for small or informal groups).
 - **Caller:** Pick a specific member or leave **No caller** (when a game starts with **No caller**, the owner of the first character in marching order becomes the caller automatically).
-- **Resolve battle rounds automatically:** On by default. Resolves each round as soon as every eligible character has declared. Turn off to have the caller or a referee trigger resolution manually.
+- **Resolve battle rounds automatically:** On by default. Resolves each round as soon as every eligible character has declared and the game checks that every action will work. If an action won't work, the round waits for that player to choose a different action. Turn off to have the caller or a referee trigger resolution manually.
 - **Save automatically:** On by default. Retains the 10 most recent autosaves across major transitions.
 
-When you start a game, bxvtt assigns each character's seat to the member who created that character, and you control any character whose seat is empty. During play, select **Seats and caller** in the **Table menu** to change the caller or reassign any character's seat (including **Empty seat (the referee plays)**).
+When you start a game, bxvtt assigns each character's seat to the member who created that character, and you control any character whose seat is empty. During play, select **Seats and caller** in the **Table menu** to change the caller or reassign any character's seat (including **Empty seat (referee controls)**).
 
 ## Start a new game or continue from a save
 
 1. Arrange the **Party** list into your group's starting marching order by dragging rows or clicking the forward and back buttons.
-2. Check **Start the game** in the side column for any non-blocking warnings (such as party size outside the adventure's recommendation or an online player without a character).
+2. Read the notes under **Start game** in the side column. Blocking notes (such as no characters in the party or no adventure chosen) keep the button unavailable, and warnings (such as an online player without a character) let you start anyway. 
 3. Choose how to enter play:
-   - **Start a brand-new run (`Start the game`):** Begins the selected adventure with every roster character in their initial level-1 state as created.
-   - **Resume an ongoing campaign (`Continue from a save`):** Shown whenever the table has saves from earlier sessions. Restores a saved session with all earned XP, treasure, spells, deaths, and dungeon progress intact (choose this rather than **Start the game** when continuing a multi-session campaign).
+   - **Start a brand-new run (`Start game`):** Begins the selected adventure with every roster character in their initial level-1 state as created.
+   - **Resume an ongoing campaign (`Continue from a save`):** Shown whenever the table has saves from earlier sessions. Restores a saved session with all earned XP, treasure, spells, deaths, and dungeon progress intact (choose this rather than **Start game** when continuing a multi-session campaign).

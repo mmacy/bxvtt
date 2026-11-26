@@ -8,9 +8,9 @@ import { RETIRED_USER_COLORS, USER_COLORS } from '@bxvtt/shared/protocol';
  * The version of the table layout. The server upgrades a database of an older version at startup with the
  * steps in {@link MIGRATIONS}, and refuses one of a newer version.
  */
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
-/** The table of monster target handles, which layout version 2 added. */
+/** The table of monster target handles, which layout version 2 added and version 7 dropped. */
 const TARGET_HANDLES = `
 CREATE TABLE target_handles (
   table_id TEXT NOT NULL REFERENCES tables(id) ON DELETE CASCADE,
@@ -56,6 +56,22 @@ ALTER TABLE ability_rolls ADD COLUMN hp_rolled_at TEXT;
 ALTER TABLE ability_rolls ADD COLUMN gold_rolled_at TEXT;
 `;
 
+/**
+ * Drops the two tables that layout version 7 retired. Players name a monster by the ID that bxapi's player view
+ * lists, so the server no longer stores a target handle for each monster. The declarations state carries bxapi's
+ * preview of the stored declarations, which gives the same rejections as resolving them, so the server no longer
+ * stores the refusals of the last attempt to resolve a round.
+ *
+ * It also deletes every stored battle declaration. A declaration saved before version 7 names a monster by its
+ * `tgt_` handle, which nothing can translate once the handles are gone, and a declaration lasts one round, so the
+ * players declare that round again.
+ */
+const VERSION_7 = `
+DROP TABLE IF EXISTS target_handles;
+DROP TABLE IF EXISTS battle_refusals;
+DELETE FROM declarations;
+`;
+
 /** The SQL that upgrades a database from the version before each key to that version. */
 const MIGRATIONS: Record<number, string> = {
   2: TARGET_HANDLES,
@@ -68,6 +84,7 @@ const MIGRATIONS: Record<number, string> = {
   ).join('\n'),
   5: BXAPI_GARBAGE,
   6: STARTING_ROLLS,
+  7: VERSION_7,
 };
 
 const SCHEMA = `
@@ -149,12 +166,6 @@ CREATE TABLE declarations (
   updated_at TEXT NOT NULL,
   PRIMARY KEY (table_id, session_id, member_id)
 );
-CREATE TABLE battle_refusals (
-  table_id TEXT PRIMARY KEY REFERENCES tables(id) ON DELETE CASCADE,
-  session_id TEXT NOT NULL,
-  revision INTEGER NOT NULL,
-  refusals_json TEXT NOT NULL
-);
 CREATE TABLE saves (
   id TEXT PRIMARY KEY,
   table_id TEXT NOT NULL REFERENCES tables(id) ON DELETE CASCADE,
@@ -218,7 +229,7 @@ CREATE TABLE samples (
   uploaded_at TEXT NOT NULL,
   PRIMARY KEY (file_name, content_hash)
 );
-${TARGET_HANDLES}${RETIRED_TOKENS}${BXAPI_GARBAGE}${STARTING_ROLLS}`;
+${RETIRED_TOKENS}${BXAPI_GARBAGE}${STARTING_ROLLS}`;
 
 /** A row as `node:sqlite` returns it. */
 export type Row = Record<string, SQLInputValue>;

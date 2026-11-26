@@ -3,6 +3,8 @@ import { emptyContext, contextFromPlayerView } from '@bxvtt/shared/text';
 import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import {
+  blockedReason,
+  blockingMembers,
   describeDeclaration,
   memberGear,
   membersInReach,
@@ -14,7 +16,6 @@ import {
   repeatProblem,
   usableItems,
 } from './model';
-import { withTargetLabels } from './text';
 
 function battle() {
   const snapshot = fixtureSnapshot('battle', 'player');
@@ -70,7 +71,7 @@ describe('planAttack', () => {
     if (!group) throw new Error('No group.');
     const plan = planAttack(brenna, encounter, group, memberGear(brenna, emptyContext()));
     expect(plan.kind).toBe('out_of_reach');
-    expect(plan.reason).toBe('Out of reach: 40 feet away, while Brenna moves 20 feet per round.');
+    expect(plan.reason).toBe('Out of reach: 30 feet away, while Brenna moves 20 feet per round.');
   });
 
   it('attacks where the member stands when they are in the group’s front rank', () => {
@@ -131,6 +132,16 @@ describe('quickAttack', () => {
 });
 
 describe('describeDeclaration', () => {
+  it('names a hide as the button the player pressed', () => {
+    const ctx = contextFromPlayerView(battle().view);
+    expect(describeDeclaration({ action: 'hide' }, ctx)).toBe('Hide in shadows');
+  });
+
+  it('names an action it has no phrase for by its label, never as "An action"', () => {
+    const ctx = contextFromPlayerView(battle().view);
+    expect(describeDeclaration({ action: 'some_new_action' } as never, ctx)).not.toBe('An action');
+  });
+
   it('names the group and the move', () => {
     const { view } = battle();
     const ctx = contextFromPlayerView(view);
@@ -185,7 +196,7 @@ describe('repeatProblem', () => {
         memberGear(brenna, ctx),
         ctx,
       ),
-    ).toBe('The goblins have fled.');
+    ).toBe('The goblins have escaped.');
     expect(repeatProblem({ action: 'hold' }, brenna, fled, memberGear(brenna, ctx), ctx)).toBeNull();
   });
 });
@@ -221,66 +232,82 @@ describe('refusalTexts', () => {
   });
 });
 
-describe('refusals that name no member', () => {
-  it('show on each candidate’s row', () => {
-    const { view } = battle();
-    const texts = refusalTexts(
-      [
-        {
-          member_id: null,
-          code: 'combat.attack.out_of_reach',
-          params: { distance_feet: 40 },
-          candidates: ['character-0001', 'character-0002'],
-        },
-      ],
-      contextFromPlayerView(view),
-    );
-    expect(texts.byMember['character-0001']?.[0]).toMatch(/^One of these declarations was refused: /);
-    expect(texts.byMember['character-0002']).toHaveLength(1);
-    expect(texts.general).toEqual([]);
+describe('blockingMembers', () => {
+  it('blocks the round for each current declarer that a refusal names, in declarer order', () => {
+    const refusals = [
+      { member_id: 'character-0002', code: 'battle.declaration.not_in_front_rank', params: {} },
+      { member_id: 'character-0001', code: 'combat.attack.out_of_reach', params: {} },
+    ];
+    expect(blockingMembers(refusals, ['character-0001', 'character-0002'])).toEqual([
+      'character-0001',
+      'character-0002',
+    ]);
   });
 
-  it('stay general when there are no candidates', () => {
+  it('ignores a refusal that names a member who is no longer a declarer, or no member', () => {
+    const refusals = [
+      { member_id: 'character-0004', code: 'combat.attack.out_of_reach', params: {} },
+      { member_id: null, code: 'combat.attack.out_of_reach', params: {} },
+    ];
+    expect(blockingMembers(refusals, ['character-0001', 'character-0002'])).toEqual([]);
+  });
+});
+
+describe('blockedReason', () => {
+  it('agrees in number with the names', () => {
+    expect(blockedReason([])).toBeNull();
+    expect(blockedReason(['Brenna'])).toBe('Brenna needs a different action first.');
+    expect(blockedReason(['Brenna', 'Wren'])).toBe('Brenna and Wren need different actions first.');
+  });
+});
+
+describe('refusals that name no member', () => {
+  it('stay general', () => {
     const { view } = battle();
     const texts = refusalTexts(
       [{ member_id: null, code: 'combat.attack.out_of_reach', params: { distance_feet: 40 } }],
       contextFromPlayerView(view),
     );
     expect(texts.general).toHaveLength(1);
+    expect(texts.byMember).toEqual({});
   });
 });
 
-describe('describeDeclaration for monsters a player can’t tell apart', () => {
-  it('counts them instead of listing each', () => {
+describe('describeDeclaration for several monsters', () => {
+  const missiles = {
+    action: 'cast',
+    spell_id: 'magic_missile',
+    targets: ['monster-0001', 'monster-0002'],
+  } as const;
+
+  it('names each monster the player view lists', () => {
     const { view } = battle();
-    const ctx = contextFromPlayerView(view);
-    expect(
-      describeDeclaration(
-        { action: 'cast', spell_id: 'magic_missile', targets: ['monster-0001', 'monster-0002'] },
-        ctx,
-      ),
-    ).toBe('Cast Magic Missile at 2 goblins');
+    expect(describeDeclaration(missiles, contextFromPlayerView(view))).toBe(
+      'Cast Magic Missile at Goblin 1 and Goblin 2',
+    );
+  });
+
+  it('counts monsters the player view doesn’t list, because a player can’t tell them apart', () => {
+    const { view, encounter } = battle();
+    const unlisted = withGroup(encounter, { members: [] });
+    expect(describeDeclaration(missiles, contextFromPlayerView({ ...view, encounter: unlisted }))).toBe(
+      'Cast Magic Missile at 2 goblins',
+    );
   });
 });
 
-describe('monster targets by handle', () => {
-  it('names a declared target by its label', () => {
-    const { view } = battle();
-    const ctx = withTargetLabels(contextFromPlayerView(view), [
-      {
-        handle: 'tgt_aaaaaaaaaaaaaaaa',
-        group_id: 'group-0001',
-        label: 'Goblin 2',
-        number: 2,
-        defeated: false,
-        fled: false,
-      },
-    ]);
+describe('monster targets by ID', () => {
+  it('names a declared target as the encounter numbers it', () => {
+    const { view, encounter } = battle();
+    const roster = withGroup(encounter, {
+      members: [
+        { id: 'monster-0001', status: 'defeated' },
+        { id: 'monster-0002', status: 'alive' },
+      ],
+    });
+    const ctx = contextFromPlayerView({ ...view, encounter: roster });
     expect(
-      describeDeclaration(
-        { action: 'cast', spell_id: 'magic_missile', targets: ['tgt_aaaaaaaaaaaaaaaa'] },
-        ctx,
-      ),
+      describeDeclaration({ action: 'cast', spell_id: 'magic_missile', targets: ['monster-0002'] }, ctx),
     ).toBe('Cast Magic Missile at Goblin 2');
   });
 });

@@ -25,6 +25,7 @@ import type {
 import type { EncounterView, MemberView } from '@bxvtt/shared/bxapi';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getApi, reportError } from '../api';
+import { partyHere, type Here } from '../here';
 import {
   canActForParty,
   canControlMember,
@@ -151,9 +152,16 @@ export function usePlayerView(): PlayerView | null {
   return useTableStore((s) => s.game?.view ?? null);
 }
 
-/** The scene: the areas, features, stairs, and found traps the party knows, with display names. */
+/** The scene: item names, the room traps the party knows, and the caches it emptied. */
 export function useScene(): Scene | null {
   return useTableStore((s) => s.game?.scene ?? null);
+}
+
+/** What the party perceives where it stands, from the player view and the scene, or `null` in town. */
+export function useHere(): Here | null {
+  const view = useTableStore((s) => s.game?.view ?? null);
+  const scene = useTableStore((s) => s.game?.scene ?? null);
+  return useMemo(() => (view === null ? null : partyHere(view, scene)), [view, scene]);
 }
 
 /** Where the party is: `{ kind: 'town' }` or a dungeon cell with its facing. */

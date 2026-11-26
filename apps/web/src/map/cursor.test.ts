@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  cellContents,
   cursorCell,
   cursorEdge,
   cycleSide,
@@ -82,6 +83,67 @@ describe('cursor announcements', () => {
     expect(measurementText(measure({ x: 0, y: 0 }, { x: 1.5, y: 0 }))).toBe('1 square, 10 feet');
     expect(describeCursor(player, { x: 16, y: 9, side: 'north' }, 'ruler', m)).toMatch(
       /^6 squares, 60 feet\. .* Press Enter to keep this measurement, or Escape to cancel\.$/,
+    );
+  });
+
+  it('names what lies on the cell in the hover tooltip’s words, so a keyboard user hears it too', () => {
+    const map = fromPlayerView(explored.view, undefined, {
+      extras: {
+        features: [
+          { id: 'feature:chest', kind: 'cache', x: 16, y: 15, description: 'An iron-bound chest.' },
+          { id: 'feature:satchel', kind: 'cache', x: 16, y: 14, emptied: true },
+        ],
+      },
+    });
+    if (!map) throw new Error('no player map');
+    const trapped = {
+      ...map,
+      features: map.features.map((feature) =>
+        feature.id === 'feature:chest'
+          ? { ...feature, trap: { state: 'found' as const, trigger: null, summary: 'Treasure trap' } }
+          : feature,
+      ),
+    };
+    const scene = new Scene(trapped);
+    expect(cellContents(scene, 16, 15)).toBe('Treasure. An iron-bound chest. Trapped.');
+    expect(describeCursor(scene, { x: 16, y: 14, side: 'north' }, 'ruler')).toMatch(
+      /, 1 square north of the party\. Emptied\. Press Enter to measure from here\.$/,
+    );
+    expect(describeCursor(scene, { x: 16, y: 15, side: 'north' }, 'ruler')).toMatch(
+      /the party's square\. Treasure\. An iron-bound chest\. Trapped\. Press Enter/,
+    );
+    expect(cellContents(scene, 16, 9)).toBe('');
+  });
+
+  it('tells a referee about a trap the party hasn’t found, with what it does', () => {
+    const [first, ...rest] = referee.map.features;
+    if (!first) throw new Error('no feature on the referee map');
+    const scene = new Scene({
+      ...referee.map,
+      features: [
+        { ...first, kind: 'cache', trap: { state: 'hidden', trigger: null, summary: '1d6 damage' } },
+        ...rest,
+      ],
+    });
+    expect(cellContents(scene, first.x, first.y)).toMatch(/Trap, not yet found\. 1d6 damage\./);
+  });
+
+  it('tells a referee what springs a trap, after its state and before what it does', () => {
+    const [first, ...rest] = referee.map.features;
+    if (!first) throw new Error('no feature on the referee map');
+    const sceneWith = (trigger: 'enter' | 'open') =>
+      new Scene({
+        ...referee.map,
+        features: [
+          { ...first, kind: 'cache', trap: { state: 'hidden', trigger, summary: '1d6 damage' } },
+          ...rest,
+        ],
+      });
+    expect(cellContents(sceneWith('enter'), first.x, first.y)).toMatch(
+      /Trap, not yet found\. Springs on entry\. 1d6 damage\./,
+    );
+    expect(cellContents(sceneWith('open'), first.x, first.y)).toMatch(
+      /Trap, not yet found\. Springs when opened\. 1d6 damage\./,
     );
   });
 });

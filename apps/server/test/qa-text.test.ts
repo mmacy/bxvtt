@@ -13,10 +13,7 @@ async function gameEntries(user: TestUser, tableId: string): Promise<GameEntry[]
 }
 
 /** The text of an entry for a player who has only the entry and the scene. */
-function narrate(
-  entry: GameEntry,
-  scene: { names: Record<string, string>; dungeon_names?: Record<string, string> },
-) {
+function narrate(entry: GameEntry, scene: { names: Record<string, string> }) {
   return describeGameEntry(entry, extendContextWithScene(emptyContext(), scene), { only: 'player' }).map(
     (line) => line.text,
   );
@@ -65,7 +62,7 @@ describe('text from the QA pass', () => {
       command_type: 'enter_dungeon',
       dungeon_id: 'priory',
     });
-    expect(entered.game.scene.dungeon_names).toEqual({ priory: "The priory on Corvane's Holm" });
+    expect(entered.game.view.dungeons).toEqual([{ id: 'priory', name: "The priory on Corvane's Holm" }]);
     const [entry] = (await gameEntries(alice, tableId)).slice(-1);
     if (entry === undefined) throw new Error('no game entry');
     expect(entry.names?.dungeons).toEqual({ priory: "The priory on Corvane's Holm" });
@@ -166,7 +163,7 @@ describe('text from the QA pass', () => {
     if (entry === undefined) throw new Error('no entry');
     const text = narrate(entry, awarded.game.scene).join(' ');
     expect(text).toContain(
-      `gains ${(gained ?? 0).toLocaleString('en-US')} experience points. One award raises`,
+      `gains ${(gained ?? 0).toLocaleString('en-US')} of the 5,000 experience points awarded.`,
     );
   });
 

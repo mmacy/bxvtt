@@ -111,7 +111,7 @@ const FIXED: Record<string, { title: string; detail: string }> = {
   },
   use_declarations: {
     title: 'Declare actions for the round first',
-    detail: 'Submit a declaration for each character, then resolve the round.',
+    detail: 'Declare an action for each character, then resolve the round.',
   },
   ability_roll_used: {
     title: 'You already used this ability roll',
@@ -167,6 +167,11 @@ const FIXED: Record<string, { title: string; detail: string }> = {
     title: 'The game server returned an unexpected response',
     detail: 'Try again. If it keeps happening, contact the server host.',
   },
+  save_unreadable: {
+    title: "This save can't be restored",
+    detail:
+      'The game was updated after this save was made, so it no longer loads. Restore a newer save, or start a new game from the lobby.',
+  },
   bxapi_unavailable: {
     title: "Can't reach the game service",
     detail:
@@ -190,8 +195,8 @@ const FIXED: Record<string, { title: string; detail: string }> = {
     detail: 'Reload the page. If it keeps happening, check that this address points to your bxvtt server.',
   },
   target_unknown: {
-    title: 'That target is no longer there',
-    detail: 'Choose a target again.',
+    title: "That target isn't in this fight",
+    detail: 'Choose another target.',
   },
   character_invalid: {
     title: "Those character choices aren't valid",

@@ -156,8 +156,9 @@ test.describe('feed', () => {
       await sam.page.waitForTimeout(800);
     }
     await place(26, 17, 'east');
-    await pickFromMenu(scene.getByRole('button', { name: 'Treasure' }), 'Take treasure');
-    await expect(scene.getByText('Treasure is within reach.')).toHaveCount(0);
+    const take = scene.getByRole('button', { name: 'Take', exact: true });
+    await take.click();
+    await expect(take).toHaveCount(0);
     await place(18, 15, 'north');
     await pickFromMenu(scene.getByRole('button', { name: 'Door' }), 'Open door');
     await expect(scene.getByText('A door to the north is open.')).toBeVisible();

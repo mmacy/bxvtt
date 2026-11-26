@@ -28,12 +28,11 @@ import { BattleService } from './battle';
 import type { CommandInfo } from './classify';
 import { CommandClassifier } from './classify';
 import { SaveService } from './saves';
-import { buildScene, eventItemIds, inventoryNames, templateNames } from './scene';
+import { buildScene, dungeonNames, eventItemIds, inventoryNames, templateNames } from './scene';
 import { readSeats, reconcileSeats, seatsFromRoster, writeSeats } from './seats';
 import type { LabelBook } from './labels';
 import { entryNames, learnLabels, newLabelBook } from './labels';
-import type { TargetBook } from './targets';
-import { emptyTargetBook, resolveHandles, syncTargets, toHandles } from './targets';
+import { unlistedTarget, withoutUnlistedCreatures } from './targets';
 
 /** What the server holds in memory about a table's game, at one revision. */
 export interface LiveGame {
@@ -52,8 +51,11 @@ export interface LiveGame {
   scene: Scene;
   /** Display names for item IDs that the party has seen, kept across revisions of the session. */
   names: Map<string, string>;
-  /** The monster target handles of the session, and the ones the scene lists at `revision`. */
-  targets: TargetBook;
+  /**
+   * The monster and NPC IDs of the session, from the referee view. The server refuses a player's target among
+   * them that the player view doesn't list, and removes such an ID from what a player receives.
+   */
+  creatures: Set<string>;
   /** What the players of the session have called each member, group, and monster, for feed entries. */
   labels: LabelBook;
 }
@@ -111,40 +113,37 @@ const TREASURE_COMMANDS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Refuses a player's treasure command that names a cache the scene doesn't show the party, as bxapi refuses a
- * cache that isn't there. Without this, a player could take a lair hoard the party hasn't found by guessing its
- * sequential `cache-NNNN` ID.
+ * Refuses a player's treasure command whose `feature_id` is neither `pile` nor a `feature:` handle from the player
+ * view. osrlib resolves a handle only against the features where the party stands, and refuses a hidden or emptied
+ * cache by handle or by raw ID. A player has no use for a raw ID, so the server answers it with osrlib's own
+ * rejection for an unknown feature and doesn't send it to bxapi.
  *
- * @param live - The game.
  * @param command - The command.
  * @returns The rejection, or `null` to send the command to bxapi.
  */
-function unseenTreasure(live: LiveGame, command: Command): Rejection | null {
+function rawFeatureId(command: Command): Rejection | null {
   if (!TREASURE_COMMANDS.has(command.command_type)) return null;
   const featureId = command.feature_id;
-  if (typeof featureId !== 'string' || featureId === 'pile') return null;
-  const here = live.scene.here;
-  if (here === null) return null;
-  if (here.caches.some((cache) => cache.id === featureId)) return null;
+  if (typeof featureId !== 'string' || featureId === 'pile' || featureId.startsWith('feature:')) return null;
   return { code: 'exploration.feature.unknown', params: { feature: featureId } };
 }
 
 /**
- * Makes a refused `remove_treasure_trap` on a cache the party can see read the same whether or not the cache is
- * trapped. osrlib answers `exploration.feature.unknown` for a cache with no trap and
- * `exploration.trap.not_found` for one whose trap nobody found, which would tell a player which caches are
- * trapped without a search.
+ * Refuses a player's command that aims at a monster or an NPC adventurer the player view doesn't list. bxapi
+ * accepts any creature of the session in an out-of-battle `cast_spell` or `use_item`, even one from an encounter
+ * that has ended (https://github.com/mmacy/osrlib-python/issues/317), so without this a player could hit a
+ * monster the party can't see. The rejection is the one osrlib gives a target that doesn't exist.
  *
+ * @param live - The game.
+ * @param info - The command's class, with the fields that can name a target.
  * @param command - The command.
- * @param outcome - bxapi's outcome, which this changes in place.
+ * @returns The rejection, or `null` to send the command to bxapi.
  */
-function maskTrapRejections(command: Command, outcome: CommandOutcome): void {
-  if (command.command_type !== 'remove_treasure_trap') return;
-  outcome.rejections = outcome.rejections.map((rejection) =>
-    rejection.code === 'exploration.feature.unknown'
-      ? { ...rejection, code: 'exploration.trap.not_found' }
-      : rejection,
-  );
+function unlistedCreature(live: LiveGame, info: CommandInfo, command: Command): Rejection | null {
+  const unlisted = unlistedTarget(command, info.targetFields, live.view, live.creatures);
+  if (unlisted === null) return null;
+  const code = unlisted.field === 'target_id' ? 'items.use.unknown_target' : 'magic.cast.unknown_target';
+  return { code, params: { target: unlisted.id } };
 }
 
 /**
@@ -229,7 +228,7 @@ export class GameService {
     );
     const previous = this.live.get(tableId);
     const names = previous?.sessionId === sessionId ? previous.names : new Map<string, string>();
-    const labels = previous?.sessionId === sessionId ? previous.labels : newLabelBook(this.ctx.db, sessionId);
+    const labels = previous?.sessionId === sessionId ? previous.labels : newLabelBook();
     const live: LiveGame = {
       tableId,
       sessionId,
@@ -240,9 +239,9 @@ export class GameService {
       legal: commands.commands,
       referee: null,
       refereeRevision: -1,
-      scene: { levels: [], here: null, names: {}, can_travel_to_town: false, targets: [] },
+      scene: { names: {}, room_traps: [], emptied_features: [] },
       names,
-      targets: emptyTargetBook(),
+      creatures: new Set(),
       labels,
     };
     if (info.revision === commands.revision) {
@@ -280,16 +279,16 @@ export class GameService {
       refereeView.adventure,
       this.equipment ?? new Map(),
     );
-    live.targets = syncTargets(this.ctx.db, live.tableId, live.sessionId, live.view, refereeView);
-    learnLabels(live.labels, live.view, refereeView);
-    live.scene = {
-      ...buildScene(
-        live.view,
-        { adventure: refereeView.adventure, dungeonState: refereeView.dungeon_state },
-        live.names,
-      ),
-      targets: live.targets.targets,
-    };
+    live.creatures = new Set([
+      ...refereeView.monsters.map((monster) => monster.id),
+      ...refereeView.npcs.flatMap((npc) => (typeof npc.id === 'string' ? [npc.id] : [])),
+    ]);
+    learnLabels(live.labels, live.view);
+    live.scene = buildScene(
+      live.view,
+      { adventure: refereeView.adventure, dungeonState: refereeView.dungeon_state },
+      live.names,
+    );
   }
 
   /**
@@ -623,8 +622,8 @@ export class GameService {
         );
       }
       this.checkPermission(live, user, role, info, command);
-      const resolved = resolveHandles(command, info.targetFields, live.targets, 'command');
-      const unseen = role === 'referee' ? null : unseenTreasure(live, command);
+      const unseen =
+        role === 'referee' ? null : (rawFeatureId(command) ?? unlistedCreature(live, info, command));
       if (unseen !== null) {
         return {
           accepted: false,
@@ -637,8 +636,7 @@ export class GameService {
           game: await this.project(live, role),
         };
       }
-      const outcome = await this.executeLocked(live, resolved, requestId, user.id);
-      if (role !== 'referee' && !outcome.accepted) maskTrapRejections(command, outcome);
+      const outcome = await this.executeLocked(live, command, requestId, user.id);
       if (outcome.accepted) {
         const actor = command[info.memberField ?? 'character_id'];
         await this.afterAcceptedLocked(live, outcome, {
@@ -656,8 +654,11 @@ export class GameService {
           : playerEvents(outcome.events, outcome.messages);
       return {
         accepted: outcome.accepted,
-        // A player names a monster by its target handle, so a rejection names it the same way.
-        rejections: role === 'referee' ? outcome.rejections : toHandles(outcome.rejections, live.targets),
+        // A player's copy names only the creatures that the player view lists.
+        rejections:
+          role === 'referee'
+            ? outcome.rejections
+            : withoutUnlistedCreatures(outcome.rejections, live.view, live.creatures),
         events: projected.events,
         messages: projected.messages,
         mode: outcome.mode,
@@ -836,46 +837,6 @@ export class GameService {
   }
 
   /**
-   * Sends bxapi a command that osrlib is certain to refuse, to learn its rejections, such as a battle round with
-   * a declaration that can't stand. The caller holds the table's lock. A refused command changes nothing in the
-   * session, so the probe adds nothing to the revision, the feed, or the session's logs, and it has its own
-   * `Idempotency-Key`, which nothing sends again. The server makes one attempt and gives up on any failure.
-   *
-   * If bxapi ever accepted a probe, the server would treat it as the accepted command it was, so the table
-   * still matches the session.
-   *
-   * @param live - The game.
-   * @param command - The command.
-   * @returns bxapi's outcome of a refused probe, or `null` when it failed or was accepted.
-   */
-  async probeLocked(live: LiveGame, command: Command): Promise<CommandOutcome | null> {
-    let outcome: CommandOutcome;
-    try {
-      outcome = await this.ctx.bxapi.request<CommandOutcome>(
-        'POST',
-        `/v1/sessions/${encodeURIComponent(live.sessionId)}/commands`,
-        {
-          rawBody: JSON.stringify(command),
-          query: { include: 'view', visibility: 'referee', expected_revision: live.revision },
-          idempotencyKey: randomUUID(),
-          requestId: 'probe',
-        },
-      );
-    } catch (error) {
-      this.ctx.log.warn({ err: error, table: live.tableId }, 'a probe of a refused command failed');
-      return null;
-    }
-    if (!outcome.accepted) return outcome;
-    this.ctx.log.error({ table: live.tableId, command: command.command_type }, 'bxapi accepted a probe');
-    await this.afterAcceptedLocked(live, outcome, {
-      userId: null,
-      commandType: command.command_type,
-      class: 'battle',
-    });
-    return null;
-  }
-
-  /**
    * Reloads the game after it changed behind the server's back, and sends everyone the new state.
    *
    * @param live - The game, which this updates in place.
@@ -964,7 +925,7 @@ export class GameService {
         clock_rounds: live.view.clock_rounds,
         names: entryNames(forPlayers.events, live.labels, live.names, {
           view: live.view,
-          dungeons: live.scene.dungeon_names,
+          dungeons: dungeonNames(live.view),
           actorId: meta.class === 'referee' ? null : meta.actorId,
         }),
         actor_id: meta.class === 'referee' ? null : (meta.actorId ?? null),
@@ -980,7 +941,7 @@ export class GameService {
         clock_rounds: live.view.clock_rounds,
         names: entryNames(outcome.events, live.labels, live.names, {
           view: live.view,
-          dungeons: live.scene.dungeon_names,
+          dungeons: dungeonNames(live.view),
           actorId: meta.actorId,
         }),
         actor_id: meta.actorId ?? null,
@@ -1079,7 +1040,7 @@ export class GameService {
   namesFor(tableId: string, sessionId: string, events: GameEvent[]): EntryNames | undefined {
     const live = this.live.get(tableId);
     if (live === undefined || live.sessionId !== sessionId) return undefined;
-    return entryNames(events, live.labels, live.names, { dungeons: live.scene.dungeon_names });
+    return entryNames(events, live.labels, live.names, { dungeons: dungeonNames(live.view) });
   }
 
   /**

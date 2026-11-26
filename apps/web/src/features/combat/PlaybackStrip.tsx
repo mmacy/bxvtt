@@ -56,6 +56,10 @@ export function digestChips(
     const one = group ? (group.count ?? 2) <= 1 : false;
     chips.push({ text: `${capitalizeFirst(name)} ${one ? 'is' : 'are'} fleeing`, tone: 'good' });
   }
+  for (const groupId of digest.escaped) {
+    const name = ctx.groups[groupId] ? groupName(groupId, ctx) : 'the monsters';
+    chips.push({ text: `${capitalizeFirst(name)} escaped`, tone: 'neutral' });
+  }
   return chips;
 }
 

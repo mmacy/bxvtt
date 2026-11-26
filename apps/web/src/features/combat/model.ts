@@ -10,6 +10,7 @@
 import type { BattleDeclaration, EncounterGroupView, EncounterView, MemberView } from '@bxvtt/shared/bxapi';
 import type { DeclarationBody, DeclarationRefusal, Member, Seat } from '@bxvtt/shared/protocol';
 import {
+  battleActionLabel,
   describeRejection,
   formatFeet,
   groupName,
@@ -545,8 +546,11 @@ export function describeDeclaration(
     case 'hold':
       text = 'Hold';
       break;
+    case 'hide':
+      text = 'Hide in shadows';
+      break;
     default:
-      text = 'An action';
+      text = d.action ? battleActionLabel(d.action) : 'An action';
   }
   if (d.gaze_defense === 'avert_eyes') text += ', averting eyes';
   if (d.gaze_defense === 'mirror') text += ', watching in a mirror';
@@ -574,7 +578,7 @@ export function repeatProblem(
   if (d.target_group_id) {
     const group = encounter?.groups.find((g) => g.id === d.target_group_id);
     if (!group || group.fled || group.count === 0) {
-      return `${capitalize(groupName(d.target_group_id, ctx))} ${group?.fled ? 'have fled' : 'are gone'}.`;
+      return `${capitalize(groupName(d.target_group_id, ctx))} ${group?.fled ? 'have escaped' : 'are gone'}.`;
     }
   }
   // An attack only repeats as it was: from where the member stands now, it must still be the same kind of attack.
@@ -630,7 +634,9 @@ export function seatOwner(
 // Refusals -----------------------------------------------------------------------------------------------------
 
 /**
- * The text of the last attempt's refusals, by member, and the refusals that name no member under `null`.
+ * The text of the refusals of the stored declarations, by member, and the refusals that name no member under
+ * `general`. The server previews the declarations as members declare, so these say what the session would
+ * refuse before anyone resolves the round.
  */
 export function refusalTexts(
   refusals: readonly DeclarationRefusal[],
@@ -638,28 +644,45 @@ export function refusalTexts(
 ): { byMember: Record<string, string[]>; general: string[] } {
   const byMember: Record<string, string[]> = {};
   const general: string[] = [];
-  const add = (memberId: string, text: string) => {
-    const list = byMember[memberId] ?? [];
-    if (!list.includes(text)) list.push(text);
-    byMember[memberId] = list;
-  };
   for (const refusal of refusals) {
     const text = describeRejection({ code: refusal.code, params: toParamMap(refusal.params) }, ctx);
-    const candidates = refusal.candidates ?? [];
-    if (refusal.member_id !== null) add(refusal.member_id, text);
-    else if (candidates.length === 1 && candidates[0]) add(candidates[0], text);
-    else if (candidates.length > 1)
-      for (const id of candidates) add(id, `One of these declarations was refused: ${lowerFirst(text)}`);
-    else if (!general.includes(text)) general.push(text);
+    if (refusal.member_id === null) {
+      if (!general.includes(text)) general.push(text);
+      continue;
+    }
+    const list = byMember[refusal.member_id] ?? [];
+    if (!list.includes(text)) list.push(text);
+    byMember[refusal.member_id] = list;
   }
   return { byMember, general };
 }
 
-function lowerFirst(text: string): string {
-  // Keep a sentence that starts with a name capitalized.
-  return /^(The|A|An|This|That|It|One|Every|No)\b/.test(text)
-    ? text.charAt(0).toLowerCase() + text.slice(1)
-    : text;
+/**
+ * The members whose stored declarations hold up the round, in the order of `declarers`: each current declarer
+ * that a refusal names. A refusal that names a member who can no longer act blocks nothing, because that member
+ * has no action left to change. The board's Resolve buttons and the action bar's read the same list.
+ */
+export function blockingMembers(
+  refusals: readonly DeclarationRefusal[],
+  declarers: readonly string[],
+): string[] {
+  return declarers.filter((id) => refusals.some((refusal) => refusal.member_id === id));
+}
+
+/** Why Resolve round is unavailable while the named members' actions won't work, or `null` for no names. */
+export function blockedReason(names: readonly string[]): string | null {
+  if (names.length === 0) return null;
+  return names.length === 1
+    ? `${joinList(names)} needs a different action first.`
+    : `${joinList(names)} need different actions first.`;
+}
+
+/** That the round waits for the named members to change their actions, or `null` for no names. */
+export function blockedNote(names: readonly string[]): string | null {
+  if (names.length === 0) return null;
+  return names.length === 1
+    ? `${joinList(names)} needs a different action before the round can resolve.`
+    : `${joinList(names)} need different actions before the round can resolve.`;
 }
 
 // Spells -------------------------------------------------------------------------------------------------------

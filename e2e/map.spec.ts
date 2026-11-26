@@ -39,7 +39,7 @@ test.describe('the map with the keyboard', () => {
     await expect(dungeonMap(ruth.page)).toBeFocused();
     await showKeyboardCursor(ruth.page);
     await expect(
-      mapAnnouncement(ruth.page, /the party's square\. Press Enter to choose this square/),
+      mapAnnouncement(ruth.page, /the party's square\..* Press Enter to choose this square/),
     ).toBeAttached();
     for (const key of ['ArrowUp', 'ArrowUp', 'ArrowRight']) await ruth.page.keyboard.press(key);
     await expect(
@@ -103,7 +103,7 @@ test.describe('the map with the keyboard', () => {
     await tools.getByRole('button', { name: 'Measure' }).click();
     await showKeyboardCursor(sam.page);
     await expect(
-      mapAnnouncement(sam.page, /the party's square\. Press Enter to measure from here\./),
+      mapAnnouncement(sam.page, /the party's square\..* Press Enter to measure from here\./),
     ).toBeAttached();
     await sam.page.keyboard.press('Enter');
     for (let step = 0; step < 3; step += 1) await sam.page.keyboard.press('ArrowUp');
@@ -128,7 +128,9 @@ test.describe('the map with the keyboard', () => {
     // A ping from the keyboard. The referee hears who pinged.
     await tools.getByRole('button', { name: 'Ping' }).click();
     await showKeyboardCursor(sam.page);
-    await expect(mapAnnouncement(sam.page, /the party's square\. Press Enter to ping here\./)).toBeAttached();
+    await expect(
+      mapAnnouncement(sam.page, /the party's square\..* Press Enter to ping here\./),
+    ).toBeAttached();
     await sam.page.keyboard.press('Enter');
     await expect(mapAnnouncement(ruth.page, /^Sam pinged the map\./)).toBeAttached();
   });
@@ -219,7 +221,7 @@ test.describe('map chrome', () => {
     const { sam, ruth } = await dungeonTable(crew, { seed: 1981 });
     const minimap = sam.page.getByRole('application', { name: MINIMAP });
     await expect(minimap).toBeVisible();
-    await sam.page.getByRole('button', { name: 'Hide minimap' }).click();
+    await sam.page.getByRole('button', { name: 'Collapse minimap' }).click();
     await expect(minimap).toHaveCount(0);
     const show = sam.page.getByRole('button', { name: 'Show minimap' });
     await expect(show).toBeVisible();
@@ -229,7 +231,7 @@ test.describe('map chrome', () => {
     await expect(show).toBeVisible();
     await show.click();
     await expect(minimap).toBeVisible();
-    await expect(sam.page.getByRole('button', { name: 'Hide minimap' })).toBeVisible();
+    await expect(sam.page.getByRole('button', { name: 'Collapse minimap' })).toBeVisible();
 
     // Below 1100 pixels the minimap starts folded, until the user unfolds it.
     await ruth.page.setViewportSize({ width: 1000, height: 800 });
@@ -250,7 +252,7 @@ test.describe('map chrome', () => {
     // A new area opens the card and announces the area as a sentence (D-203).
     await placeParty(ruth.client, table.id, { dungeon: 'priory', level: 1, x: 12, y: 12, facing: 'north' });
     await expect(scene.getByRole('heading', { name: 'Chapter house' })).toBeVisible();
-    await expect(scene.getByRole('button', { name: 'Hide description' })).toBeVisible();
+    await expect(scene.getByRole('button', { name: 'Collapse description' })).toBeVisible();
     await expect(scene.getByText('The party enters the chapter house.')).toBeAttached();
 
     // A press on the map folds it: the user has turned to the map.
@@ -260,7 +262,7 @@ test.describe('map chrome', () => {
     // In a corridor below the chapter house, the folded bar's menu opens the door.
     await placeParty(ruth.client, table.id, { dungeon: 'priory', level: 1, x: 12, y: 15, facing: 'north' });
     await expect(scene.getByRole('heading', { name: 'On the way' })).toBeVisible();
-    const things = scene.getByRole('button', { name: /^\d+ features? here$/ });
+    const things = scene.getByRole('button', { name: /^\d+ things? here$/ });
     await expect(things).toBeVisible();
     await sam.page.screenshot({ path: `${SCREENS_DIR}/scene-folded.png` });
     await pickFromMenu(things, 'Door to the north', 'Open door');

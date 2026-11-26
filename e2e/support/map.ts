@@ -71,7 +71,7 @@ export function scenePanel(page: Page): Locator {
 export async function openScene(page: Page): Promise<void> {
   const scene = scenePanel(page);
   await expect(scene).toBeVisible();
-  const hide = scene.getByRole('button', { name: 'Hide description' });
+  const hide = scene.getByRole('button', { name: 'Collapse description' });
   // The panel opens by itself on a new area, but only a press on its button keeps it open, so fold it first.
   if (await hide.isVisible()) await hide.click();
   await scene.getByRole('button', { name: 'Show description' }).click();

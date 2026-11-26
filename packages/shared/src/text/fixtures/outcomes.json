@@ -12026,5 +12026,3776 @@
       "encounter": null
     },
     "referee": { "monsters": [], "npcs": [] }
+  },
+  {
+    "id": "hiding#0",
+    "label": "award",
+    "command": { "command_type": "award_xp", "character_id": "character-0001", "amount": 5000 },
+    "outcome": {
+      "accepted": true,
+      "rejections": [],
+      "events": [
+        {
+          "code": "session.xp.awarded",
+          "visibility": "player",
+          "event_type": "xp_awarded",
+          "character_id": "character-0001",
+          "award": 5000,
+          "modified_award": 4500,
+          "level_after": 2,
+          "gained": 3999,
+          "clamped": true
+        },
+        {
+          "code": "session.level.gained",
+          "visibility": "player",
+          "event_type": "leveled_up",
+          "character_id": "character-0001",
+          "level_before": 1,
+          "level_after": 2,
+          "hp_gained": 3,
+          "hp_roll": 1,
+          "con_applied": true,
+          "title": "Warrior"
+        }
+      ],
+      "messages": [
+        "character-0001 gains 3999 XP (base 5000), now level 2. The rest is lost to the one-level limit.",
+        "character-0001 advances to level 2 (Warrior): +3 hp (rolled 1)."
+      ],
+      "mode": "town"
+    },
+    "view": {
+      "adventure_name": "The Barrow of the Forgotten King",
+      "adventure_description": "A plundered barrow outside town, and the idol the temple wants back.",
+      "town_name": "Threshold",
+      "town_description": "A walled market town at the edge of the moors.",
+      "town_services": ["equipment", "temple healing", "treasure buyers"],
+      "town_healing_prices": {
+        "cure_light_wounds": 25,
+        "cure_serious_wounds": 100,
+        "cure_disease": 150,
+        "neutralize_poison": 150,
+        "remove_curse": 200,
+        "raise_dead": 1500
+      },
+      "party": [
+        {
+          "id": "character-0001",
+          "name": "Brenna",
+          "class_id": "fighter",
+          "class_name": "Fighter",
+          "level": 2,
+          "current_hp": 8,
+          "max_hp": 8,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 90, "ep": 0, "sp": 0, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Warrior",
+          "xp": 3999,
+          "xp_next_level": 4000,
+          "scores": { "str": 7, "int": 11, "wis": 9, "dex": 8, "con": 17, "cha": 14 },
+          "effective_strength": 7,
+          "melee_modifier": -1,
+          "missile_modifier": -1,
+          "initiative_modifier": -1,
+          "hit_point_modifier": 2,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 1,
+          "open_doors_chance": 1,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 10,
+          "armour_class_ascending": 9,
+          "saves": { "death": 12, "wands": 13, "paralysis": 14, "breath": 15, "spells": 16 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        },
+        {
+          "id": "character-0002",
+          "name": "Wren",
+          "class_id": "thief",
+          "class_name": "Thief",
+          "level": 1,
+          "current_hp": 3,
+          "max_hp": 3,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 100, "ep": 0, "sp": 0, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Apprentice",
+          "xp": 0,
+          "xp_next_level": 1200,
+          "scores": { "str": 12, "int": 7, "wis": 12, "dex": 9, "con": 11, "cha": 16 },
+          "effective_strength": 12,
+          "melee_modifier": 0,
+          "missile_modifier": 0,
+          "initiative_modifier": 0,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 1,
+          "open_doors_chance": 2,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 9,
+          "armour_class_ascending": 10,
+          "saves": { "death": 13, "wands": 14, "paralysis": 13, "breath": 16, "spells": 15 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {
+            "climb_sheer_surfaces": 87,
+            "find_remove_treasure_traps": 10,
+            "hear_noise": 2,
+            "hide_in_shadows": 10,
+            "move_silently": 20,
+            "open_locks": 15,
+            "pick_pockets": 20
+          }
+        },
+        {
+          "id": "character-0003",
+          "name": "Tomas",
+          "class_id": "cleric",
+          "class_name": "Cleric",
+          "level": 1,
+          "current_hp": 4,
+          "max_hp": 4,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 70, "ep": 0, "sp": 0, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Acolyte",
+          "xp": 0,
+          "xp_next_level": 1500,
+          "scores": { "str": 13, "int": 11, "wis": 14, "dex": 14, "con": 10, "cha": 7 },
+          "effective_strength": 13,
+          "melee_modifier": 1,
+          "missile_modifier": 1,
+          "initiative_modifier": 1,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 1,
+          "npc_reaction_modifier": -1,
+          "open_doors_chance": 3,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 8,
+          "armour_class_ascending": 11,
+          "saves": { "death": 11, "wands": 12, "paralysis": 14, "breath": 16, "spells": 15 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        }
+      ],
+      "location": {
+        "kind": "town",
+        "dungeon_id": null,
+        "level_number": null,
+        "position": null,
+        "facing": null
+      },
+      "clock_rounds": 0,
+      "mode": "town",
+      "explored": [],
+      "dungeons": [],
+      "can_travel_to_town": false,
+      "piles": {},
+      "emptied_caches": [],
+      "effects": [],
+      "spell_names": {},
+      "reversed_spell_names": {},
+      "fatigued": false,
+      "exhausted": false,
+      "deprivation": {},
+      "journal": [],
+      "quests": [],
+      "encounter": null
+    },
+    "referee": null
+  },
+  {
+    "id": "hiding#1",
+    "label": "coins",
+    "command": {
+      "command_type": "grant_coins",
+      "character_id": "character-0002",
+      "coins": { "cp": 39, "sp": 4 }
+    },
+    "outcome": {
+      "accepted": true,
+      "rejections": [],
+      "events": [
+        {
+          "code": "exploration.item.acquired",
+          "visibility": "player",
+          "event_type": "item_acquired",
+          "character_id": "character-0002",
+          "item_ids": [],
+          "coins_gp_value": 0,
+          "coins": { "pp": 0, "gp": 0, "ep": 0, "sp": 4, "cp": 39 },
+          "origin": "grant"
+        }
+      ],
+      "messages": ["character-0002 acquires 4 sp and 39 cp in coin."],
+      "mode": "town"
+    },
+    "view": {
+      "adventure_name": "The Barrow of the Forgotten King",
+      "adventure_description": "A plundered barrow outside town, and the idol the temple wants back.",
+      "town_name": "Threshold",
+      "town_description": "A walled market town at the edge of the moors.",
+      "town_services": ["equipment", "temple healing", "treasure buyers"],
+      "town_healing_prices": {
+        "cure_light_wounds": 25,
+        "cure_serious_wounds": 100,
+        "cure_disease": 150,
+        "neutralize_poison": 150,
+        "remove_curse": 200,
+        "raise_dead": 1500
+      },
+      "party": [
+        {
+          "id": "character-0001",
+          "name": "Brenna",
+          "class_id": "fighter",
+          "class_name": "Fighter",
+          "level": 2,
+          "current_hp": 8,
+          "max_hp": 8,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 90, "ep": 0, "sp": 0, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Warrior",
+          "xp": 3999,
+          "xp_next_level": 4000,
+          "scores": { "str": 7, "int": 11, "wis": 9, "dex": 8, "con": 17, "cha": 14 },
+          "effective_strength": 7,
+          "melee_modifier": -1,
+          "missile_modifier": -1,
+          "initiative_modifier": -1,
+          "hit_point_modifier": 2,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 1,
+          "open_doors_chance": 1,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 10,
+          "armour_class_ascending": 9,
+          "saves": { "death": 12, "wands": 13, "paralysis": 14, "breath": 15, "spells": 16 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        },
+        {
+          "id": "character-0002",
+          "name": "Wren",
+          "class_id": "thief",
+          "class_name": "Thief",
+          "level": 1,
+          "current_hp": 3,
+          "max_hp": 3,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 100, "ep": 0, "sp": 4, "cp": 39 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Apprentice",
+          "xp": 0,
+          "xp_next_level": 1200,
+          "scores": { "str": 12, "int": 7, "wis": 12, "dex": 9, "con": 11, "cha": 16 },
+          "effective_strength": 12,
+          "melee_modifier": 0,
+          "missile_modifier": 0,
+          "initiative_modifier": 0,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 1,
+          "open_doors_chance": 2,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 9,
+          "armour_class_ascending": 10,
+          "saves": { "death": 13, "wands": 14, "paralysis": 13, "breath": 16, "spells": 15 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {
+            "climb_sheer_surfaces": 87,
+            "find_remove_treasure_traps": 10,
+            "hear_noise": 2,
+            "hide_in_shadows": 10,
+            "move_silently": 20,
+            "open_locks": 15,
+            "pick_pockets": 20
+          }
+        },
+        {
+          "id": "character-0003",
+          "name": "Tomas",
+          "class_id": "cleric",
+          "class_name": "Cleric",
+          "level": 1,
+          "current_hp": 4,
+          "max_hp": 4,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 70, "ep": 0, "sp": 0, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Acolyte",
+          "xp": 0,
+          "xp_next_level": 1500,
+          "scores": { "str": 13, "int": 11, "wis": 14, "dex": 14, "con": 10, "cha": 7 },
+          "effective_strength": 13,
+          "melee_modifier": 1,
+          "missile_modifier": 1,
+          "initiative_modifier": 1,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 1,
+          "npc_reaction_modifier": -1,
+          "open_doors_chance": 3,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 8,
+          "armour_class_ascending": 11,
+          "saves": { "death": 11, "wands": 12, "paralysis": 14, "breath": 16, "spells": 15 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        }
+      ],
+      "location": {
+        "kind": "town",
+        "dungeon_id": null,
+        "level_number": null,
+        "position": null,
+        "facing": null
+      },
+      "clock_rounds": 0,
+      "mode": "town",
+      "explored": [],
+      "dungeons": [],
+      "can_travel_to_town": false,
+      "piles": {},
+      "emptied_caches": [],
+      "effects": [],
+      "spell_names": {},
+      "reversed_spell_names": {},
+      "fatigued": false,
+      "exhausted": false,
+      "deprivation": {},
+      "journal": [],
+      "quests": [],
+      "encounter": null
+    },
+    "referee": null
+  },
+  {
+    "id": "hiding#2",
+    "label": "give",
+    "command": {
+      "command_type": "give_items",
+      "character_id": "character-0002",
+      "recipient_id": "character-0003",
+      "coins": { "sp": 4 }
+    },
+    "outcome": {
+      "accepted": true,
+      "rejections": [],
+      "events": [
+        {
+          "code": "exploration.item.given",
+          "visibility": "player",
+          "event_type": "items_given",
+          "character_id": "character-0002",
+          "recipient_id": "character-0003",
+          "item_ids": [],
+          "coins_gp_value": 0,
+          "coins": { "pp": 0, "gp": 0, "ep": 0, "sp": 4, "cp": 0 }
+        }
+      ],
+      "messages": ["character-0002 gives 4 sp in coin to character-0003."],
+      "mode": "town"
+    },
+    "view": {
+      "adventure_name": "The Barrow of the Forgotten King",
+      "adventure_description": "A plundered barrow outside town, and the idol the temple wants back.",
+      "town_name": "Threshold",
+      "town_description": "A walled market town at the edge of the moors.",
+      "town_services": ["equipment", "temple healing", "treasure buyers"],
+      "town_healing_prices": {
+        "cure_light_wounds": 25,
+        "cure_serious_wounds": 100,
+        "cure_disease": 150,
+        "neutralize_poison": 150,
+        "remove_curse": 200,
+        "raise_dead": 1500
+      },
+      "party": [
+        {
+          "id": "character-0001",
+          "name": "Brenna",
+          "class_id": "fighter",
+          "class_name": "Fighter",
+          "level": 2,
+          "current_hp": 8,
+          "max_hp": 8,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 90, "ep": 0, "sp": 0, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Warrior",
+          "xp": 3999,
+          "xp_next_level": 4000,
+          "scores": { "str": 7, "int": 11, "wis": 9, "dex": 8, "con": 17, "cha": 14 },
+          "effective_strength": 7,
+          "melee_modifier": -1,
+          "missile_modifier": -1,
+          "initiative_modifier": -1,
+          "hit_point_modifier": 2,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 1,
+          "open_doors_chance": 1,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 10,
+          "armour_class_ascending": 9,
+          "saves": { "death": 12, "wands": 13, "paralysis": 14, "breath": 15, "spells": 16 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        },
+        {
+          "id": "character-0002",
+          "name": "Wren",
+          "class_id": "thief",
+          "class_name": "Thief",
+          "level": 1,
+          "current_hp": 3,
+          "max_hp": 3,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 100, "ep": 0, "sp": 0, "cp": 39 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Apprentice",
+          "xp": 0,
+          "xp_next_level": 1200,
+          "scores": { "str": 12, "int": 7, "wis": 12, "dex": 9, "con": 11, "cha": 16 },
+          "effective_strength": 12,
+          "melee_modifier": 0,
+          "missile_modifier": 0,
+          "initiative_modifier": 0,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 1,
+          "open_doors_chance": 2,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 9,
+          "armour_class_ascending": 10,
+          "saves": { "death": 13, "wands": 14, "paralysis": 13, "breath": 16, "spells": 15 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {
+            "climb_sheer_surfaces": 87,
+            "find_remove_treasure_traps": 10,
+            "hear_noise": 2,
+            "hide_in_shadows": 10,
+            "move_silently": 20,
+            "open_locks": 15,
+            "pick_pockets": 20
+          }
+        },
+        {
+          "id": "character-0003",
+          "name": "Tomas",
+          "class_id": "cleric",
+          "class_name": "Cleric",
+          "level": 1,
+          "current_hp": 4,
+          "max_hp": 4,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 70, "ep": 0, "sp": 4, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Acolyte",
+          "xp": 0,
+          "xp_next_level": 1500,
+          "scores": { "str": 13, "int": 11, "wis": 14, "dex": 14, "con": 10, "cha": 7 },
+          "effective_strength": 13,
+          "melee_modifier": 1,
+          "missile_modifier": 1,
+          "initiative_modifier": 1,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 1,
+          "npc_reaction_modifier": -1,
+          "open_doors_chance": 3,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 8,
+          "armour_class_ascending": 11,
+          "saves": { "death": 11, "wands": 12, "paralysis": 14, "breath": 16, "spells": 15 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        }
+      ],
+      "location": {
+        "kind": "town",
+        "dungeon_id": null,
+        "level_number": null,
+        "position": null,
+        "facing": null
+      },
+      "clock_rounds": 0,
+      "mode": "town",
+      "explored": [],
+      "dungeons": [],
+      "can_travel_to_town": false,
+      "piles": {},
+      "emptied_caches": [],
+      "effects": [],
+      "spell_names": {},
+      "reversed_spell_names": {},
+      "fatigued": false,
+      "exhausted": false,
+      "deprivation": {},
+      "journal": [],
+      "quests": [],
+      "encounter": null
+    },
+    "referee": null
+  },
+  {
+    "id": "hiding#3",
+    "label": "enter",
+    "command": { "command_type": "enter_dungeon", "dungeon_id": "barrow" },
+    "outcome": {
+      "accepted": true,
+      "rejections": [],
+      "events": [
+        {
+          "code": "exploration.location.entered",
+          "visibility": "player",
+          "event_type": "location_entered",
+          "location_kind": "dungeon",
+          "location_id": "barrow",
+          "level_number": 1,
+          "dungeon_id": null,
+          "narrative": null,
+          "via": "entrance",
+          "transition_ref": null
+        },
+        {
+          "code": "session.quest.activated",
+          "visibility": "player",
+          "event_type": "quest_activated",
+          "quest_id": "the-idol",
+          "name": "The Jade Idol",
+          "narrative": "The temple wants the Jade Idol off the barrow king's altar and back on its own."
+        }
+      ],
+      "messages": [
+        "The party enters dungeon barrow (level 1).",
+        "A new quest: The Jade Idol. The temple wants the Jade Idol off the barrow king's altar and back on its own."
+      ],
+      "mode": "exploring"
+    },
+    "view": {
+      "adventure_name": "The Barrow of the Forgotten King",
+      "adventure_description": "A plundered barrow outside town, and the idol the temple wants back.",
+      "town_name": "Threshold",
+      "town_description": "A walled market town at the edge of the moors.",
+      "town_services": ["equipment", "temple healing", "treasure buyers"],
+      "town_healing_prices": {
+        "cure_light_wounds": 25,
+        "cure_serious_wounds": 100,
+        "cure_disease": 150,
+        "neutralize_poison": 150,
+        "remove_curse": 200,
+        "raise_dead": 1500
+      },
+      "party": [
+        {
+          "id": "character-0001",
+          "name": "Brenna",
+          "class_id": "fighter",
+          "class_name": "Fighter",
+          "level": 2,
+          "current_hp": 8,
+          "max_hp": 8,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 90, "ep": 0, "sp": 0, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Warrior",
+          "xp": 3999,
+          "xp_next_level": 4000,
+          "scores": { "str": 7, "int": 11, "wis": 9, "dex": 8, "con": 17, "cha": 14 },
+          "effective_strength": 7,
+          "melee_modifier": -1,
+          "missile_modifier": -1,
+          "initiative_modifier": -1,
+          "hit_point_modifier": 2,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 1,
+          "open_doors_chance": 1,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 10,
+          "armour_class_ascending": 9,
+          "saves": { "death": 12, "wands": 13, "paralysis": 14, "breath": 15, "spells": 16 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        },
+        {
+          "id": "character-0002",
+          "name": "Wren",
+          "class_id": "thief",
+          "class_name": "Thief",
+          "level": 1,
+          "current_hp": 3,
+          "max_hp": 3,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 100, "ep": 0, "sp": 0, "cp": 39 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Apprentice",
+          "xp": 0,
+          "xp_next_level": 1200,
+          "scores": { "str": 12, "int": 7, "wis": 12, "dex": 9, "con": 11, "cha": 16 },
+          "effective_strength": 12,
+          "melee_modifier": 0,
+          "missile_modifier": 0,
+          "initiative_modifier": 0,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 1,
+          "open_doors_chance": 2,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 9,
+          "armour_class_ascending": 10,
+          "saves": { "death": 13, "wands": 14, "paralysis": 13, "breath": 16, "spells": 15 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {
+            "climb_sheer_surfaces": 87,
+            "find_remove_treasure_traps": 10,
+            "hear_noise": 2,
+            "hide_in_shadows": 10,
+            "move_silently": 20,
+            "open_locks": 15,
+            "pick_pockets": 20
+          }
+        },
+        {
+          "id": "character-0003",
+          "name": "Tomas",
+          "class_id": "cleric",
+          "class_name": "Cleric",
+          "level": 1,
+          "current_hp": 4,
+          "max_hp": 4,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 70, "ep": 0, "sp": 4, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Acolyte",
+          "xp": 0,
+          "xp_next_level": 1500,
+          "scores": { "str": 13, "int": 11, "wis": 14, "dex": 14, "con": 10, "cha": 7 },
+          "effective_strength": 13,
+          "melee_modifier": 1,
+          "missile_modifier": 1,
+          "initiative_modifier": 1,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 1,
+          "npc_reaction_modifier": -1,
+          "open_doors_chance": 3,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 8,
+          "armour_class_ascending": 11,
+          "saves": { "death": 11, "wands": 12, "paralysis": 14, "breath": 16, "spells": 15 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        }
+      ],
+      "location": {
+        "kind": "dungeon",
+        "dungeon_id": "barrow",
+        "level_number": 1,
+        "position": [0, 0],
+        "facing": "north"
+      },
+      "clock_rounds": 120,
+      "mode": "exploring",
+      "explored": [
+        {
+          "dungeon_id": "barrow",
+          "level_number": 1,
+          "cells": [[0, 0]],
+          "edges": {
+            "0,0:north": { "kind": "wall", "door_open": null, "door_wedged": null },
+            "1,0:west": { "kind": "open", "door_open": null, "door_wedged": null },
+            "0,1:north": { "kind": "wall", "door_open": null, "door_wedged": null },
+            "0,0:west": { "kind": "wall", "door_open": null, "door_wedged": null }
+          },
+          "areas": [],
+          "features": [],
+          "transitions": [],
+          "entrance": [0, 0]
+        }
+      ],
+      "dungeons": [{ "id": "barrow", "name": "The Barrow" }],
+      "can_travel_to_town": true,
+      "piles": {},
+      "emptied_caches": [],
+      "effects": [],
+      "spell_names": {},
+      "reversed_spell_names": {},
+      "fatigued": false,
+      "exhausted": false,
+      "deprivation": {},
+      "journal": [
+        {
+          "text": "The temple wants the Jade Idol off the barrow king's altar and back on its own.",
+          "rounds": 120
+        }
+      ],
+      "quests": [
+        {
+          "id": "the-idol",
+          "name": "The Jade Idol",
+          "narrative": "The temple wants the Jade Idol off the barrow king's altar and back on its own.",
+          "speaker": "the temple almoner",
+          "objectives": [
+            { "id": "recover-idol", "name": "Recover the idol", "state": "incomplete" },
+            { "id": "return-home", "name": "Bring it home", "state": "incomplete" }
+          ]
+        }
+      ],
+      "encounter": null
+    },
+    "referee": null
+  },
+  {
+    "id": "hiding#5",
+    "label": "drop",
+    "command": { "command_type": "drop_items", "character_id": "character-0002", "coins": { "cp": 39 } },
+    "outcome": {
+      "accepted": true,
+      "rejections": [],
+      "events": [
+        {
+          "code": "exploration.item.dropped",
+          "visibility": "player",
+          "event_type": "items_dropped",
+          "character_id": "character-0002",
+          "item_ids": [],
+          "coins_gp_value": 0,
+          "coins": { "pp": 0, "gp": 0, "ep": 0, "sp": 0, "cp": 39 }
+        }
+      ],
+      "messages": ["character-0002 drops 39 cp in coin."],
+      "mode": "exploring"
+    },
+    "view": {
+      "adventure_name": "The Barrow of the Forgotten King",
+      "adventure_description": "A plundered barrow outside town, and the idol the temple wants back.",
+      "town_name": "Threshold",
+      "town_description": "A walled market town at the edge of the moors.",
+      "town_services": ["equipment", "temple healing", "treasure buyers"],
+      "town_healing_prices": {
+        "cure_light_wounds": 25,
+        "cure_serious_wounds": 100,
+        "cure_disease": 150,
+        "neutralize_poison": 150,
+        "remove_curse": 200,
+        "raise_dead": 1500
+      },
+      "party": [
+        {
+          "id": "character-0001",
+          "name": "Brenna",
+          "class_id": "fighter",
+          "class_name": "Fighter",
+          "level": 2,
+          "current_hp": 8,
+          "max_hp": 8,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 90, "ep": 0, "sp": 0, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Warrior",
+          "xp": 3999,
+          "xp_next_level": 4000,
+          "scores": { "str": 7, "int": 11, "wis": 9, "dex": 8, "con": 17, "cha": 14 },
+          "effective_strength": 7,
+          "melee_modifier": -1,
+          "missile_modifier": -1,
+          "initiative_modifier": -1,
+          "hit_point_modifier": 2,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 1,
+          "open_doors_chance": 1,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 10,
+          "armour_class_ascending": 9,
+          "saves": { "death": 12, "wands": 13, "paralysis": 14, "breath": 15, "spells": 16 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        },
+        {
+          "id": "character-0003",
+          "name": "Tomas",
+          "class_id": "cleric",
+          "class_name": "Cleric",
+          "level": 1,
+          "current_hp": 4,
+          "max_hp": 4,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 70, "ep": 0, "sp": 4, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Acolyte",
+          "xp": 0,
+          "xp_next_level": 1500,
+          "scores": { "str": 13, "int": 11, "wis": 14, "dex": 14, "con": 10, "cha": 7 },
+          "effective_strength": 13,
+          "melee_modifier": 1,
+          "missile_modifier": 1,
+          "initiative_modifier": 1,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 1,
+          "npc_reaction_modifier": -1,
+          "open_doors_chance": 3,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 8,
+          "armour_class_ascending": 11,
+          "saves": { "death": 11, "wands": 12, "paralysis": 14, "breath": 16, "spells": 15 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        },
+        {
+          "id": "character-0002",
+          "name": "Wren",
+          "class_id": "thief",
+          "class_name": "Thief",
+          "level": 1,
+          "current_hp": 3,
+          "max_hp": 3,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 100, "ep": 0, "sp": 0, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Apprentice",
+          "xp": 0,
+          "xp_next_level": 1200,
+          "scores": { "str": 12, "int": 7, "wis": 12, "dex": 9, "con": 11, "cha": 16 },
+          "effective_strength": 12,
+          "melee_modifier": 0,
+          "missile_modifier": 0,
+          "initiative_modifier": 0,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 1,
+          "open_doors_chance": 2,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 9,
+          "armour_class_ascending": 10,
+          "saves": { "death": 13, "wands": 14, "paralysis": 13, "breath": 16, "spells": 15 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {
+            "climb_sheer_surfaces": 87,
+            "find_remove_treasure_traps": 10,
+            "hear_noise": 2,
+            "hide_in_shadows": 10,
+            "move_silently": 20,
+            "open_locks": 15,
+            "pick_pockets": 20
+          }
+        }
+      ],
+      "location": {
+        "kind": "dungeon",
+        "dungeon_id": "barrow",
+        "level_number": 1,
+        "position": [0, 0],
+        "facing": "north"
+      },
+      "clock_rounds": 120,
+      "mode": "exploring",
+      "explored": [
+        {
+          "dungeon_id": "barrow",
+          "level_number": 1,
+          "cells": [[0, 0]],
+          "edges": {
+            "0,0:north": { "kind": "wall", "door_open": null, "door_wedged": null },
+            "1,0:west": { "kind": "open", "door_open": null, "door_wedged": null },
+            "0,1:north": { "kind": "wall", "door_open": null, "door_wedged": null },
+            "0,0:west": { "kind": "wall", "door_open": null, "door_wedged": null }
+          },
+          "areas": [],
+          "features": [],
+          "transitions": [],
+          "entrance": [0, 0]
+        }
+      ],
+      "dungeons": [{ "id": "barrow", "name": "The Barrow" }],
+      "can_travel_to_town": true,
+      "piles": {
+        "cell:barrow:1:0,0": {
+          "items": [],
+          "coins_gp_value": 0,
+          "coins": { "pp": 0, "gp": 0, "ep": 0, "sp": 0, "cp": 39 }
+        }
+      },
+      "emptied_caches": [],
+      "effects": [],
+      "spell_names": {},
+      "reversed_spell_names": {},
+      "fatigued": false,
+      "exhausted": false,
+      "deprivation": {},
+      "journal": [
+        {
+          "text": "The temple wants the Jade Idol off the barrow king's altar and back on its own.",
+          "rounds": 120
+        }
+      ],
+      "quests": [
+        {
+          "id": "the-idol",
+          "name": "The Jade Idol",
+          "narrative": "The temple wants the Jade Idol off the barrow king's altar and back on its own.",
+          "speaker": "the temple almoner",
+          "objectives": [
+            { "id": "recover-idol", "name": "Recover the idol", "state": "incomplete" },
+            { "id": "return-home", "name": "Bring it home", "state": "incomplete" }
+          ]
+        }
+      ],
+      "encounter": null
+    },
+    "referee": null
+  },
+  {
+    "id": "hiding#6",
+    "label": "spawn",
+    "command": {
+      "command_type": "spawn_monsters",
+      "template_id": "goblin",
+      "count_fixed": 3,
+      "distance_feet": 40
+    },
+    "outcome": {
+      "accepted": true,
+      "rejections": [],
+      "events": [
+        {
+          "code": "encounter.started",
+          "visibility": "player",
+          "event_type": "encounter_started",
+          "monster_name": "goblin",
+          "monster_name_plural": "goblins",
+          "count": 3,
+          "distance_feet": 40,
+          "party_surprised": true,
+          "monsters_surprised": true,
+          "group_labels": ["goblin"],
+          "group_labels_plural": ["goblins"],
+          "group_counts": [3]
+        },
+        {
+          "code": "encounter.stance.changed",
+          "visibility": "player",
+          "event_type": "stance_changed",
+          "stance": "indifferent"
+        }
+      ],
+      "messages": [
+        "Encounter: 3 goblins at 40'; the party is surprised; the monsters are surprised.",
+        "The monsters' bearing: indifferent."
+      ],
+      "mode": "encounter"
+    },
+    "view": {
+      "adventure_name": "The Barrow of the Forgotten King",
+      "adventure_description": "A plundered barrow outside town, and the idol the temple wants back.",
+      "town_name": "Threshold",
+      "town_description": "A walled market town at the edge of the moors.",
+      "town_services": ["equipment", "temple healing", "treasure buyers"],
+      "town_healing_prices": {
+        "cure_light_wounds": 25,
+        "cure_serious_wounds": 100,
+        "cure_disease": 150,
+        "neutralize_poison": 150,
+        "remove_curse": 200,
+        "raise_dead": 1500
+      },
+      "party": [
+        {
+          "id": "character-0001",
+          "name": "Brenna",
+          "class_id": "fighter",
+          "class_name": "Fighter",
+          "level": 2,
+          "current_hp": 8,
+          "max_hp": 8,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 90, "ep": 0, "sp": 0, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Warrior",
+          "xp": 3999,
+          "xp_next_level": 4000,
+          "scores": { "str": 7, "int": 11, "wis": 9, "dex": 8, "con": 17, "cha": 14 },
+          "effective_strength": 7,
+          "melee_modifier": -1,
+          "missile_modifier": -1,
+          "initiative_modifier": -1,
+          "hit_point_modifier": 2,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 1,
+          "open_doors_chance": 1,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 10,
+          "armour_class_ascending": 9,
+          "saves": { "death": 12, "wands": 13, "paralysis": 14, "breath": 15, "spells": 16 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        },
+        {
+          "id": "character-0003",
+          "name": "Tomas",
+          "class_id": "cleric",
+          "class_name": "Cleric",
+          "level": 1,
+          "current_hp": 4,
+          "max_hp": 4,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 70, "ep": 0, "sp": 4, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Acolyte",
+          "xp": 0,
+          "xp_next_level": 1500,
+          "scores": { "str": 13, "int": 11, "wis": 14, "dex": 14, "con": 10, "cha": 7 },
+          "effective_strength": 13,
+          "melee_modifier": 1,
+          "missile_modifier": 1,
+          "initiative_modifier": 1,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 1,
+          "npc_reaction_modifier": -1,
+          "open_doors_chance": 3,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 8,
+          "armour_class_ascending": 11,
+          "saves": { "death": 11, "wands": 12, "paralysis": 14, "breath": 16, "spells": 15 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        },
+        {
+          "id": "character-0002",
+          "name": "Wren",
+          "class_id": "thief",
+          "class_name": "Thief",
+          "level": 1,
+          "current_hp": 3,
+          "max_hp": 3,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 100, "ep": 0, "sp": 0, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Apprentice",
+          "xp": 0,
+          "xp_next_level": 1200,
+          "scores": { "str": 12, "int": 7, "wis": 12, "dex": 9, "con": 11, "cha": 16 },
+          "effective_strength": 12,
+          "melee_modifier": 0,
+          "missile_modifier": 0,
+          "initiative_modifier": 0,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 1,
+          "open_doors_chance": 2,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 9,
+          "armour_class_ascending": 10,
+          "saves": { "death": 13, "wands": 14, "paralysis": 13, "breath": 16, "spells": 15 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {
+            "climb_sheer_surfaces": 87,
+            "find_remove_treasure_traps": 10,
+            "hear_noise": 2,
+            "hide_in_shadows": 10,
+            "move_silently": 20,
+            "open_locks": 15,
+            "pick_pockets": 20
+          }
+        }
+      ],
+      "location": {
+        "kind": "dungeon",
+        "dungeon_id": "barrow",
+        "level_number": 1,
+        "position": [0, 0],
+        "facing": "north"
+      },
+      "clock_rounds": 120,
+      "mode": "encounter",
+      "explored": [
+        {
+          "dungeon_id": "barrow",
+          "level_number": 1,
+          "cells": [[0, 0]],
+          "edges": {
+            "0,0:north": { "kind": "wall", "door_open": null, "door_wedged": null },
+            "1,0:west": { "kind": "open", "door_open": null, "door_wedged": null },
+            "0,1:north": { "kind": "wall", "door_open": null, "door_wedged": null },
+            "0,0:west": { "kind": "wall", "door_open": null, "door_wedged": null }
+          },
+          "areas": [],
+          "features": [],
+          "transitions": [],
+          "entrance": [0, 0]
+        }
+      ],
+      "dungeons": [{ "id": "barrow", "name": "The Barrow" }],
+      "can_travel_to_town": false,
+      "piles": {
+        "cell:barrow:1:0,0": {
+          "items": [],
+          "coins_gp_value": 0,
+          "coins": { "pp": 0, "gp": 0, "ep": 0, "sp": 0, "cp": 39 }
+        }
+      },
+      "emptied_caches": [],
+      "effects": [],
+      "spell_names": {},
+      "reversed_spell_names": {},
+      "fatigued": false,
+      "exhausted": false,
+      "deprivation": {},
+      "journal": [
+        {
+          "text": "The temple wants the Jade Idol off the barrow king's altar and back on its own.",
+          "rounds": 120
+        }
+      ],
+      "quests": [
+        {
+          "id": "the-idol",
+          "name": "The Jade Idol",
+          "narrative": "The temple wants the Jade Idol off the barrow king's altar and back on its own.",
+          "speaker": "the temple almoner",
+          "objectives": [
+            { "id": "recover-idol", "name": "Recover the idol", "state": "incomplete" },
+            { "id": "return-home", "name": "Bring it home", "state": "incomplete" }
+          ]
+        }
+      ],
+      "encounter": {
+        "groups": [
+          {
+            "id": "group-0001",
+            "label": "goblin",
+            "label_plural": "goblins",
+            "family_id": "goblin",
+            "categories": ["person"],
+            "count": 3,
+            "distance_feet": 40,
+            "visible_conditions": [],
+            "condition_counts": {},
+            "fled": false,
+            "fleeing": false,
+            "member_distance_feet": {},
+            "front_rank": [],
+            "lit": null,
+            "seen_by": [],
+            "members": [
+              { "id": "monster-0001", "status": "alive" },
+              { "id": "monster-0002", "status": "alive" },
+              { "id": "monster-0003", "status": "alive" }
+            ]
+          }
+        ],
+        "stance": "indifferent",
+        "in_battle": false,
+        "battle_round": null,
+        "pursuit_gap_feet": null,
+        "declarers": ["character-0001", "character-0003", "character-0002"],
+        "front_rank": ["character-0001", "character-0003"],
+        "immobile": [],
+        "reloading": [],
+        "can_hide": [],
+        "hiding": [],
+        "advance_feet": {},
+        "formation_width": 2,
+        "party_free_round": false
+      }
+    },
+    "referee": null
+  },
+  {
+    "id": "hiding#8",
+    "label": "bad hide",
+    "command": {
+      "command_type": "resolve_battle_round",
+      "declarations": [
+        { "character_id": "character-0001", "action": "hide" },
+        { "character_id": "character-0002", "action": "hold" },
+        { "character_id": "character-0003", "action": "hold" }
+      ]
+    },
+    "outcome": {
+      "accepted": false,
+      "rejections": [
+        { "code": "battle.declaration.hide_not_a_thief", "params": { "character": "character-0001" } }
+      ],
+      "events": [],
+      "messages": [],
+      "mode": "battle"
+    },
+    "view": {
+      "adventure_name": "The Barrow of the Forgotten King",
+      "adventure_description": "A plundered barrow outside town, and the idol the temple wants back.",
+      "town_name": "Threshold",
+      "town_description": "A walled market town at the edge of the moors.",
+      "town_services": ["equipment", "temple healing", "treasure buyers"],
+      "town_healing_prices": {
+        "cure_light_wounds": 25,
+        "cure_serious_wounds": 100,
+        "cure_disease": 150,
+        "neutralize_poison": 150,
+        "remove_curse": 200,
+        "raise_dead": 1500
+      },
+      "party": [
+        {
+          "id": "character-0001",
+          "name": "Brenna",
+          "class_id": "fighter",
+          "class_name": "Fighter",
+          "level": 2,
+          "current_hp": 8,
+          "max_hp": 8,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 90, "ep": 0, "sp": 0, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Warrior",
+          "xp": 3999,
+          "xp_next_level": 4000,
+          "scores": { "str": 7, "int": 11, "wis": 9, "dex": 8, "con": 17, "cha": 14 },
+          "effective_strength": 7,
+          "melee_modifier": -1,
+          "missile_modifier": -1,
+          "initiative_modifier": -1,
+          "hit_point_modifier": 2,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 1,
+          "open_doors_chance": 1,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 10,
+          "armour_class_ascending": 9,
+          "saves": { "death": 12, "wands": 13, "paralysis": 14, "breath": 15, "spells": 16 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        },
+        {
+          "id": "character-0003",
+          "name": "Tomas",
+          "class_id": "cleric",
+          "class_name": "Cleric",
+          "level": 1,
+          "current_hp": 4,
+          "max_hp": 4,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 70, "ep": 0, "sp": 4, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Acolyte",
+          "xp": 0,
+          "xp_next_level": 1500,
+          "scores": { "str": 13, "int": 11, "wis": 14, "dex": 14, "con": 10, "cha": 7 },
+          "effective_strength": 13,
+          "melee_modifier": 1,
+          "missile_modifier": 1,
+          "initiative_modifier": 1,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 1,
+          "npc_reaction_modifier": -1,
+          "open_doors_chance": 3,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 8,
+          "armour_class_ascending": 11,
+          "saves": { "death": 11, "wands": 12, "paralysis": 14, "breath": 16, "spells": 15 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        },
+        {
+          "id": "character-0002",
+          "name": "Wren",
+          "class_id": "thief",
+          "class_name": "Thief",
+          "level": 1,
+          "current_hp": 3,
+          "max_hp": 3,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 100, "ep": 0, "sp": 0, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Apprentice",
+          "xp": 0,
+          "xp_next_level": 1200,
+          "scores": { "str": 12, "int": 7, "wis": 12, "dex": 9, "con": 11, "cha": 16 },
+          "effective_strength": 12,
+          "melee_modifier": 0,
+          "missile_modifier": 0,
+          "initiative_modifier": 0,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 1,
+          "open_doors_chance": 2,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 9,
+          "armour_class_ascending": 10,
+          "saves": { "death": 13, "wands": 14, "paralysis": 13, "breath": 16, "spells": 15 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {
+            "climb_sheer_surfaces": 87,
+            "find_remove_treasure_traps": 10,
+            "hear_noise": 2,
+            "hide_in_shadows": 10,
+            "move_silently": 20,
+            "open_locks": 15,
+            "pick_pockets": 20
+          }
+        }
+      ],
+      "location": {
+        "kind": "dungeon",
+        "dungeon_id": "barrow",
+        "level_number": 1,
+        "position": [0, 0],
+        "facing": "north"
+      },
+      "clock_rounds": 120,
+      "mode": "battle",
+      "explored": [
+        {
+          "dungeon_id": "barrow",
+          "level_number": 1,
+          "cells": [[0, 0]],
+          "edges": {
+            "0,0:north": { "kind": "wall", "door_open": null, "door_wedged": null },
+            "1,0:west": { "kind": "open", "door_open": null, "door_wedged": null },
+            "0,1:north": { "kind": "wall", "door_open": null, "door_wedged": null },
+            "0,0:west": { "kind": "wall", "door_open": null, "door_wedged": null }
+          },
+          "areas": [],
+          "features": [],
+          "transitions": [],
+          "entrance": [0, 0]
+        }
+      ],
+      "dungeons": [{ "id": "barrow", "name": "The Barrow" }],
+      "can_travel_to_town": false,
+      "piles": {
+        "cell:barrow:1:0,0": {
+          "items": [],
+          "coins_gp_value": 0,
+          "coins": { "pp": 0, "gp": 0, "ep": 0, "sp": 0, "cp": 39 }
+        }
+      },
+      "emptied_caches": [],
+      "effects": [],
+      "spell_names": {},
+      "reversed_spell_names": {},
+      "fatigued": false,
+      "exhausted": false,
+      "deprivation": {},
+      "journal": [
+        {
+          "text": "The temple wants the Jade Idol off the barrow king's altar and back on its own.",
+          "rounds": 120
+        }
+      ],
+      "quests": [
+        {
+          "id": "the-idol",
+          "name": "The Jade Idol",
+          "narrative": "The temple wants the Jade Idol off the barrow king's altar and back on its own.",
+          "speaker": "the temple almoner",
+          "objectives": [
+            { "id": "recover-idol", "name": "Recover the idol", "state": "incomplete" },
+            { "id": "return-home", "name": "Bring it home", "state": "incomplete" }
+          ]
+        }
+      ],
+      "encounter": {
+        "groups": [
+          {
+            "id": "group-0001",
+            "label": "goblin",
+            "label_plural": "goblins",
+            "family_id": "goblin",
+            "categories": ["person"],
+            "count": 3,
+            "distance_feet": 40,
+            "visible_conditions": [],
+            "condition_counts": {},
+            "fled": false,
+            "fleeing": false,
+            "member_distance_feet": { "character-0001": 40, "character-0003": 40, "character-0002": 40 },
+            "front_rank": [],
+            "lit": false,
+            "seen_by": [],
+            "members": [
+              { "id": "monster-0001", "status": "alive" },
+              { "id": "monster-0002", "status": "alive" },
+              { "id": "monster-0003", "status": "alive" }
+            ]
+          }
+        ],
+        "stance": "indifferent",
+        "in_battle": true,
+        "battle_round": 0,
+        "pursuit_gap_feet": null,
+        "declarers": ["character-0001", "character-0003", "character-0002"],
+        "front_rank": ["character-0001", "character-0003"],
+        "immobile": [],
+        "reloading": [],
+        "can_hide": ["character-0002"],
+        "hiding": [],
+        "advance_feet": { "character-0001": 0, "character-0003": 0, "character-0002": 0 },
+        "formation_width": 2,
+        "party_free_round": false
+      }
+    },
+    "referee": null
+  },
+  {
+    "id": "hiding#9",
+    "label": "target count",
+    "command": {
+      "command_type": "resolve_battle_round",
+      "declarations": [
+        { "character_id": "character-0001", "action": "hold" },
+        { "character_id": "character-0003", "action": "hold" },
+        {
+          "character_id": "character-0002",
+          "action": "give_item",
+          "item_id": "torch",
+          "targets": ["character-0001", "character-0003"]
+        }
+      ]
+    },
+    "outcome": {
+      "accepted": false,
+      "rejections": [
+        {
+          "code": "battle.declaration.target_count",
+          "params": { "character": "character-0002", "expected": 1, "supplied": 2 }
+        }
+      ],
+      "events": [],
+      "messages": [],
+      "mode": "battle"
+    },
+    "view": {
+      "adventure_name": "The Barrow of the Forgotten King",
+      "adventure_description": "A plundered barrow outside town, and the idol the temple wants back.",
+      "town_name": "Threshold",
+      "town_description": "A walled market town at the edge of the moors.",
+      "town_services": ["equipment", "temple healing", "treasure buyers"],
+      "town_healing_prices": {
+        "cure_light_wounds": 25,
+        "cure_serious_wounds": 100,
+        "cure_disease": 150,
+        "neutralize_poison": 150,
+        "remove_curse": 200,
+        "raise_dead": 1500
+      },
+      "party": [
+        {
+          "id": "character-0001",
+          "name": "Brenna",
+          "class_id": "fighter",
+          "class_name": "Fighter",
+          "level": 2,
+          "current_hp": 8,
+          "max_hp": 8,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 90, "ep": 0, "sp": 0, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Warrior",
+          "xp": 3999,
+          "xp_next_level": 4000,
+          "scores": { "str": 7, "int": 11, "wis": 9, "dex": 8, "con": 17, "cha": 14 },
+          "effective_strength": 7,
+          "melee_modifier": -1,
+          "missile_modifier": -1,
+          "initiative_modifier": -1,
+          "hit_point_modifier": 2,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 1,
+          "open_doors_chance": 1,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 10,
+          "armour_class_ascending": 9,
+          "saves": { "death": 12, "wands": 13, "paralysis": 14, "breath": 15, "spells": 16 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        },
+        {
+          "id": "character-0003",
+          "name": "Tomas",
+          "class_id": "cleric",
+          "class_name": "Cleric",
+          "level": 1,
+          "current_hp": 4,
+          "max_hp": 4,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 70, "ep": 0, "sp": 4, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Acolyte",
+          "xp": 0,
+          "xp_next_level": 1500,
+          "scores": { "str": 13, "int": 11, "wis": 14, "dex": 14, "con": 10, "cha": 7 },
+          "effective_strength": 13,
+          "melee_modifier": 1,
+          "missile_modifier": 1,
+          "initiative_modifier": 1,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 1,
+          "npc_reaction_modifier": -1,
+          "open_doors_chance": 3,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 8,
+          "armour_class_ascending": 11,
+          "saves": { "death": 11, "wands": 12, "paralysis": 14, "breath": 16, "spells": 15 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        },
+        {
+          "id": "character-0002",
+          "name": "Wren",
+          "class_id": "thief",
+          "class_name": "Thief",
+          "level": 1,
+          "current_hp": 3,
+          "max_hp": 3,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 100, "ep": 0, "sp": 0, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Apprentice",
+          "xp": 0,
+          "xp_next_level": 1200,
+          "scores": { "str": 12, "int": 7, "wis": 12, "dex": 9, "con": 11, "cha": 16 },
+          "effective_strength": 12,
+          "melee_modifier": 0,
+          "missile_modifier": 0,
+          "initiative_modifier": 0,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 1,
+          "open_doors_chance": 2,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 9,
+          "armour_class_ascending": 10,
+          "saves": { "death": 13, "wands": 14, "paralysis": 13, "breath": 16, "spells": 15 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {
+            "climb_sheer_surfaces": 87,
+            "find_remove_treasure_traps": 10,
+            "hear_noise": 2,
+            "hide_in_shadows": 10,
+            "move_silently": 20,
+            "open_locks": 15,
+            "pick_pockets": 20
+          }
+        }
+      ],
+      "location": {
+        "kind": "dungeon",
+        "dungeon_id": "barrow",
+        "level_number": 1,
+        "position": [0, 0],
+        "facing": "north"
+      },
+      "clock_rounds": 120,
+      "mode": "battle",
+      "explored": [
+        {
+          "dungeon_id": "barrow",
+          "level_number": 1,
+          "cells": [[0, 0]],
+          "edges": {
+            "0,0:north": { "kind": "wall", "door_open": null, "door_wedged": null },
+            "1,0:west": { "kind": "open", "door_open": null, "door_wedged": null },
+            "0,1:north": { "kind": "wall", "door_open": null, "door_wedged": null },
+            "0,0:west": { "kind": "wall", "door_open": null, "door_wedged": null }
+          },
+          "areas": [],
+          "features": [],
+          "transitions": [],
+          "entrance": [0, 0]
+        }
+      ],
+      "dungeons": [{ "id": "barrow", "name": "The Barrow" }],
+      "can_travel_to_town": false,
+      "piles": {
+        "cell:barrow:1:0,0": {
+          "items": [],
+          "coins_gp_value": 0,
+          "coins": { "pp": 0, "gp": 0, "ep": 0, "sp": 0, "cp": 39 }
+        }
+      },
+      "emptied_caches": [],
+      "effects": [],
+      "spell_names": {},
+      "reversed_spell_names": {},
+      "fatigued": false,
+      "exhausted": false,
+      "deprivation": {},
+      "journal": [
+        {
+          "text": "The temple wants the Jade Idol off the barrow king's altar and back on its own.",
+          "rounds": 120
+        }
+      ],
+      "quests": [
+        {
+          "id": "the-idol",
+          "name": "The Jade Idol",
+          "narrative": "The temple wants the Jade Idol off the barrow king's altar and back on its own.",
+          "speaker": "the temple almoner",
+          "objectives": [
+            { "id": "recover-idol", "name": "Recover the idol", "state": "incomplete" },
+            { "id": "return-home", "name": "Bring it home", "state": "incomplete" }
+          ]
+        }
+      ],
+      "encounter": {
+        "groups": [
+          {
+            "id": "group-0001",
+            "label": "goblin",
+            "label_plural": "goblins",
+            "family_id": "goblin",
+            "categories": ["person"],
+            "count": 3,
+            "distance_feet": 40,
+            "visible_conditions": [],
+            "condition_counts": {},
+            "fled": false,
+            "fleeing": false,
+            "member_distance_feet": { "character-0001": 40, "character-0003": 40, "character-0002": 40 },
+            "front_rank": [],
+            "lit": false,
+            "seen_by": [],
+            "members": [
+              { "id": "monster-0001", "status": "alive" },
+              { "id": "monster-0002", "status": "alive" },
+              { "id": "monster-0003", "status": "alive" }
+            ]
+          }
+        ],
+        "stance": "indifferent",
+        "in_battle": true,
+        "battle_round": 0,
+        "pursuit_gap_feet": null,
+        "declarers": ["character-0001", "character-0003", "character-0002"],
+        "front_rank": ["character-0001", "character-0003"],
+        "immobile": [],
+        "reloading": [],
+        "can_hide": ["character-0002"],
+        "hiding": [],
+        "advance_feet": { "character-0001": 0, "character-0003": 0, "character-0002": 0 },
+        "formation_width": 2,
+        "party_free_round": false
+      }
+    },
+    "referee": null
+  },
+  {
+    "id": "hiding#10",
+    "label": "hide",
+    "command": {
+      "command_type": "resolve_battle_round",
+      "declarations": [
+        { "character_id": "character-0001", "action": "hold" },
+        { "character_id": "character-0002", "action": "hide" },
+        { "character_id": "character-0003", "action": "hold" }
+      ]
+    },
+    "outcome": {
+      "accepted": true,
+      "rejections": [],
+      "events": [
+        { "code": "battle.round.started", "visibility": "player", "event_type": "battle_round", "round": 1 },
+        {
+          "code": "combat.initiative.rolled",
+          "visibility": "player",
+          "event_type": "initiative_rolled",
+          "mode": "side",
+          "entries": [
+            { "key": "party", "rolls": [4], "modifier": 0, "total": 4 },
+            { "key": "monsters", "rolls": [5], "modifier": 0, "total": 5 }
+          ],
+          "order": ["group-0001", "character-0001", "character-0002", "character-0003"]
+        },
+        {
+          "code": "battle.group.moved",
+          "visibility": "player",
+          "event_type": "group_moved",
+          "group_id": "group-0001",
+          "distance_feet": 20
+        },
+        {
+          "code": "battle.hide.attempted",
+          "visibility": "player",
+          "event_type": "hide_attempted",
+          "character_id": "character-0002"
+        }
+      ],
+      "messages": [
+        "Battle round 1 begins.",
+        "Initiative (side): party 4, monsters 5. Order: group-0001, character-0001, character-0002, character-0003.",
+        "group-0001 is now 20' away.",
+        "character-0002 tries to hide in the shadows."
+      ],
+      "mode": "battle"
+    },
+    "view": {
+      "adventure_name": "The Barrow of the Forgotten King",
+      "adventure_description": "A plundered barrow outside town, and the idol the temple wants back.",
+      "town_name": "Threshold",
+      "town_description": "A walled market town at the edge of the moors.",
+      "town_services": ["equipment", "temple healing", "treasure buyers"],
+      "town_healing_prices": {
+        "cure_light_wounds": 25,
+        "cure_serious_wounds": 100,
+        "cure_disease": 150,
+        "neutralize_poison": 150,
+        "remove_curse": 200,
+        "raise_dead": 1500
+      },
+      "party": [
+        {
+          "id": "character-0001",
+          "name": "Brenna",
+          "class_id": "fighter",
+          "class_name": "Fighter",
+          "level": 2,
+          "current_hp": 8,
+          "max_hp": 8,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 90, "ep": 0, "sp": 0, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Warrior",
+          "xp": 3999,
+          "xp_next_level": 4000,
+          "scores": { "str": 7, "int": 11, "wis": 9, "dex": 8, "con": 17, "cha": 14 },
+          "effective_strength": 7,
+          "melee_modifier": -1,
+          "missile_modifier": -1,
+          "initiative_modifier": -1,
+          "hit_point_modifier": 2,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 1,
+          "open_doors_chance": 1,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 10,
+          "armour_class_ascending": 9,
+          "saves": { "death": 12, "wands": 13, "paralysis": 14, "breath": 15, "spells": 16 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        },
+        {
+          "id": "character-0003",
+          "name": "Tomas",
+          "class_id": "cleric",
+          "class_name": "Cleric",
+          "level": 1,
+          "current_hp": 4,
+          "max_hp": 4,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 70, "ep": 0, "sp": 4, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Acolyte",
+          "xp": 0,
+          "xp_next_level": 1500,
+          "scores": { "str": 13, "int": 11, "wis": 14, "dex": 14, "con": 10, "cha": 7 },
+          "effective_strength": 13,
+          "melee_modifier": 1,
+          "missile_modifier": 1,
+          "initiative_modifier": 1,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 1,
+          "npc_reaction_modifier": -1,
+          "open_doors_chance": 3,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 8,
+          "armour_class_ascending": 11,
+          "saves": { "death": 11, "wands": 12, "paralysis": 14, "breath": 16, "spells": 15 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        },
+        {
+          "id": "character-0002",
+          "name": "Wren",
+          "class_id": "thief",
+          "class_name": "Thief",
+          "level": 1,
+          "current_hp": 3,
+          "max_hp": 3,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 100, "ep": 0, "sp": 0, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Apprentice",
+          "xp": 0,
+          "xp_next_level": 1200,
+          "scores": { "str": 12, "int": 7, "wis": 12, "dex": 9, "con": 11, "cha": 16 },
+          "effective_strength": 12,
+          "melee_modifier": 0,
+          "missile_modifier": 0,
+          "initiative_modifier": 0,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 1,
+          "open_doors_chance": 2,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 9,
+          "armour_class_ascending": 10,
+          "saves": { "death": 13, "wands": 14, "paralysis": 13, "breath": 16, "spells": 15 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {
+            "climb_sheer_surfaces": 87,
+            "find_remove_treasure_traps": 10,
+            "hear_noise": 2,
+            "hide_in_shadows": 10,
+            "move_silently": 20,
+            "open_locks": 15,
+            "pick_pockets": 20
+          }
+        }
+      ],
+      "location": {
+        "kind": "dungeon",
+        "dungeon_id": "barrow",
+        "level_number": 1,
+        "position": [0, 0],
+        "facing": "north"
+      },
+      "clock_rounds": 121,
+      "mode": "battle",
+      "explored": [
+        {
+          "dungeon_id": "barrow",
+          "level_number": 1,
+          "cells": [[0, 0]],
+          "edges": {
+            "0,0:north": { "kind": "wall", "door_open": null, "door_wedged": null },
+            "1,0:west": { "kind": "open", "door_open": null, "door_wedged": null },
+            "0,1:north": { "kind": "wall", "door_open": null, "door_wedged": null },
+            "0,0:west": { "kind": "wall", "door_open": null, "door_wedged": null }
+          },
+          "areas": [],
+          "features": [],
+          "transitions": [],
+          "entrance": [0, 0]
+        }
+      ],
+      "dungeons": [{ "id": "barrow", "name": "The Barrow" }],
+      "can_travel_to_town": false,
+      "piles": {
+        "cell:barrow:1:0,0": {
+          "items": [],
+          "coins_gp_value": 0,
+          "coins": { "pp": 0, "gp": 0, "ep": 0, "sp": 0, "cp": 39 }
+        }
+      },
+      "emptied_caches": [],
+      "effects": [],
+      "spell_names": {},
+      "reversed_spell_names": {},
+      "fatigued": false,
+      "exhausted": false,
+      "deprivation": {},
+      "journal": [
+        {
+          "text": "The temple wants the Jade Idol off the barrow king's altar and back on its own.",
+          "rounds": 120
+        }
+      ],
+      "quests": [
+        {
+          "id": "the-idol",
+          "name": "The Jade Idol",
+          "narrative": "The temple wants the Jade Idol off the barrow king's altar and back on its own.",
+          "speaker": "the temple almoner",
+          "objectives": [
+            { "id": "recover-idol", "name": "Recover the idol", "state": "incomplete" },
+            { "id": "return-home", "name": "Bring it home", "state": "incomplete" }
+          ]
+        }
+      ],
+      "encounter": {
+        "groups": [
+          {
+            "id": "group-0001",
+            "label": "goblin",
+            "label_plural": "goblins",
+            "family_id": "goblin",
+            "categories": ["person"],
+            "count": 3,
+            "distance_feet": 20,
+            "visible_conditions": [],
+            "condition_counts": {},
+            "fled": false,
+            "fleeing": false,
+            "member_distance_feet": { "character-0001": 20, "character-0003": 20, "character-0002": 20 },
+            "front_rank": [],
+            "lit": false,
+            "seen_by": [],
+            "members": [
+              { "id": "monster-0001", "status": "alive" },
+              { "id": "monster-0002", "status": "alive" },
+              { "id": "monster-0003", "status": "alive" }
+            ]
+          }
+        ],
+        "stance": "indifferent",
+        "in_battle": true,
+        "battle_round": 1,
+        "pursuit_gap_feet": null,
+        "declarers": ["character-0001", "character-0003", "character-0002"],
+        "front_rank": ["character-0001", "character-0003"],
+        "immobile": [],
+        "reloading": [],
+        "can_hide": ["character-0002"],
+        "hiding": ["character-0002"],
+        "advance_feet": { "character-0001": 0, "character-0003": 0, "character-0002": 0 },
+        "formation_width": 2,
+        "party_free_round": false
+      }
+    },
+    "referee": null
+  },
+  {
+    "id": "hiding#11",
+    "label": "round 0",
+    "command": {
+      "command_type": "resolve_battle_round",
+      "declarations": [
+        {
+          "character_id": "character-0001",
+          "action": "attack",
+          "target_group_id": "group-0001",
+          "move": "close"
+        },
+        {
+          "character_id": "character-0003",
+          "action": "attack",
+          "target_group_id": "group-0001",
+          "move": "close"
+        },
+        {
+          "character_id": "character-0002",
+          "action": "attack",
+          "target_group_id": "group-0001",
+          "move": "close",
+          "back_stab": true
+        }
+      ]
+    },
+    "outcome": {
+      "accepted": true,
+      "rejections": [],
+      "events": [
+        { "code": "battle.round.started", "visibility": "player", "event_type": "battle_round", "round": 2 },
+        {
+          "code": "combat.initiative.rolled",
+          "visibility": "player",
+          "event_type": "initiative_rolled",
+          "mode": "side",
+          "entries": [
+            { "key": "party", "rolls": [2], "modifier": 0, "total": 2 },
+            { "key": "monsters", "rolls": [4], "modifier": 0, "total": 4 }
+          ],
+          "order": ["group-0001", "character-0001", "character-0003", "character-0002"]
+        },
+        {
+          "code": "battle.group.moved",
+          "visibility": "player",
+          "event_type": "group_moved",
+          "group_id": "group-0001",
+          "distance_feet": 5
+        },
+        {
+          "code": "combat.attack.hit",
+          "visibility": "player",
+          "event_type": "attack_rolled",
+          "attacker_id": "monster-0001",
+          "defender_id": "character-0001",
+          "attack_name": "weapon",
+          "roll": 15,
+          "modifier": 0,
+          "total": 15,
+          "required": 9,
+          "defender_ac": 10,
+          "natural": null,
+          "back_stab": false
+        },
+        {
+          "code": "combat.damage.dealt",
+          "visibility": "player",
+          "event_type": "damage_dealt",
+          "target_id": "character-0001",
+          "attacker_id": "monster-0001",
+          "amount": 3,
+          "rolls": [3],
+          "keys": [],
+          "non_regenerable": false
+        },
+        {
+          "code": "combat.attack.missed",
+          "visibility": "player",
+          "event_type": "attack_rolled",
+          "attacker_id": "monster-0002",
+          "defender_id": "character-0003",
+          "attack_name": "weapon",
+          "roll": 1,
+          "modifier": 0,
+          "total": 1,
+          "required": 11,
+          "defender_ac": 8,
+          "natural": null,
+          "back_stab": false
+        },
+        {
+          "code": "combat.attack.missed",
+          "visibility": "player",
+          "event_type": "attack_rolled",
+          "attacker_id": "character-0001",
+          "defender_id": "monster-0001",
+          "attack_name": "unarmed",
+          "roll": 12,
+          "modifier": -1,
+          "total": 11,
+          "required": 13,
+          "defender_ac": 6,
+          "natural": null,
+          "back_stab": false
+        },
+        {
+          "code": "combat.attack.missed",
+          "visibility": "player",
+          "event_type": "attack_rolled",
+          "attacker_id": "character-0003",
+          "defender_id": "monster-0001",
+          "attack_name": "unarmed",
+          "roll": 5,
+          "modifier": 1,
+          "total": 6,
+          "required": 13,
+          "defender_ac": 6,
+          "natural": null,
+          "back_stab": false
+        },
+        {
+          "code": "combat.attack.missed",
+          "visibility": "player",
+          "event_type": "attack_rolled",
+          "attacker_id": "character-0002",
+          "defender_id": "monster-0001",
+          "attack_name": "unarmed",
+          "roll": 11,
+          "modifier": 0,
+          "total": 11,
+          "required": 13,
+          "defender_ac": 6,
+          "natural": null,
+          "back_stab": false
+        }
+      ],
+      "messages": [
+        "Battle round 2 begins.",
+        "Initiative (side): party 2, monsters 4. Order: group-0001, character-0001, character-0003, character-0002.",
+        "group-0001 is now 5' away.",
+        "monster-0001 hits character-0001 with weapon: rolled 15+0 = 15, needing 9.",
+        "character-0001 takes 3 damage from monster-0001.",
+        "monster-0002 misses character-0003 with weapon: rolled 1+0 = 1, needing 11.",
+        "character-0001 misses monster-0001 with unarmed: rolled 12-1 = 11, needing 13.",
+        "character-0003 misses monster-0001 with unarmed: rolled 5+1 = 6, needing 13.",
+        "character-0002 misses monster-0001 with unarmed: rolled 11+0 = 11, needing 13."
+      ],
+      "mode": "battle"
+    },
+    "view": {
+      "adventure_name": "The Barrow of the Forgotten King",
+      "adventure_description": "A plundered barrow outside town, and the idol the temple wants back.",
+      "town_name": "Threshold",
+      "town_description": "A walled market town at the edge of the moors.",
+      "town_services": ["equipment", "temple healing", "treasure buyers"],
+      "town_healing_prices": {
+        "cure_light_wounds": 25,
+        "cure_serious_wounds": 100,
+        "cure_disease": 150,
+        "neutralize_poison": 150,
+        "remove_curse": 200,
+        "raise_dead": 1500
+      },
+      "party": [
+        {
+          "id": "character-0001",
+          "name": "Brenna",
+          "class_id": "fighter",
+          "class_name": "Fighter",
+          "level": 2,
+          "current_hp": 5,
+          "max_hp": 8,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 90, "ep": 0, "sp": 0, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Warrior",
+          "xp": 3999,
+          "xp_next_level": 4000,
+          "scores": { "str": 7, "int": 11, "wis": 9, "dex": 8, "con": 17, "cha": 14 },
+          "effective_strength": 7,
+          "melee_modifier": -1,
+          "missile_modifier": -1,
+          "initiative_modifier": -1,
+          "hit_point_modifier": 2,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 1,
+          "open_doors_chance": 1,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 10,
+          "armour_class_ascending": 9,
+          "saves": { "death": 12, "wands": 13, "paralysis": 14, "breath": 15, "spells": 16 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        },
+        {
+          "id": "character-0003",
+          "name": "Tomas",
+          "class_id": "cleric",
+          "class_name": "Cleric",
+          "level": 1,
+          "current_hp": 4,
+          "max_hp": 4,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 70, "ep": 0, "sp": 4, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Acolyte",
+          "xp": 0,
+          "xp_next_level": 1500,
+          "scores": { "str": 13, "int": 11, "wis": 14, "dex": 14, "con": 10, "cha": 7 },
+          "effective_strength": 13,
+          "melee_modifier": 1,
+          "missile_modifier": 1,
+          "initiative_modifier": 1,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 1,
+          "npc_reaction_modifier": -1,
+          "open_doors_chance": 3,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 8,
+          "armour_class_ascending": 11,
+          "saves": { "death": 11, "wands": 12, "paralysis": 14, "breath": 16, "spells": 15 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        },
+        {
+          "id": "character-0002",
+          "name": "Wren",
+          "class_id": "thief",
+          "class_name": "Thief",
+          "level": 1,
+          "current_hp": 3,
+          "max_hp": 3,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 100, "ep": 0, "sp": 0, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Apprentice",
+          "xp": 0,
+          "xp_next_level": 1200,
+          "scores": { "str": 12, "int": 7, "wis": 12, "dex": 9, "con": 11, "cha": 16 },
+          "effective_strength": 12,
+          "melee_modifier": 0,
+          "missile_modifier": 0,
+          "initiative_modifier": 0,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 1,
+          "open_doors_chance": 2,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 9,
+          "armour_class_ascending": 10,
+          "saves": { "death": 13, "wands": 14, "paralysis": 13, "breath": 16, "spells": 15 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {
+            "climb_sheer_surfaces": 87,
+            "find_remove_treasure_traps": 10,
+            "hear_noise": 2,
+            "hide_in_shadows": 10,
+            "move_silently": 20,
+            "open_locks": 15,
+            "pick_pockets": 20
+          }
+        }
+      ],
+      "location": {
+        "kind": "dungeon",
+        "dungeon_id": "barrow",
+        "level_number": 1,
+        "position": [0, 0],
+        "facing": "north"
+      },
+      "clock_rounds": 122,
+      "mode": "battle",
+      "explored": [
+        {
+          "dungeon_id": "barrow",
+          "level_number": 1,
+          "cells": [[0, 0]],
+          "edges": {
+            "0,0:north": { "kind": "wall", "door_open": null, "door_wedged": null },
+            "1,0:west": { "kind": "open", "door_open": null, "door_wedged": null },
+            "0,1:north": { "kind": "wall", "door_open": null, "door_wedged": null },
+            "0,0:west": { "kind": "wall", "door_open": null, "door_wedged": null }
+          },
+          "areas": [],
+          "features": [],
+          "transitions": [],
+          "entrance": [0, 0]
+        }
+      ],
+      "dungeons": [{ "id": "barrow", "name": "The Barrow" }],
+      "can_travel_to_town": false,
+      "piles": {
+        "cell:barrow:1:0,0": {
+          "items": [],
+          "coins_gp_value": 0,
+          "coins": { "pp": 0, "gp": 0, "ep": 0, "sp": 0, "cp": 39 }
+        }
+      },
+      "emptied_caches": [],
+      "effects": [],
+      "spell_names": {},
+      "reversed_spell_names": {},
+      "fatigued": false,
+      "exhausted": false,
+      "deprivation": {},
+      "journal": [
+        {
+          "text": "The temple wants the Jade Idol off the barrow king's altar and back on its own.",
+          "rounds": 120
+        }
+      ],
+      "quests": [
+        {
+          "id": "the-idol",
+          "name": "The Jade Idol",
+          "narrative": "The temple wants the Jade Idol off the barrow king's altar and back on its own.",
+          "speaker": "the temple almoner",
+          "objectives": [
+            { "id": "recover-idol", "name": "Recover the idol", "state": "incomplete" },
+            { "id": "return-home", "name": "Bring it home", "state": "incomplete" }
+          ]
+        }
+      ],
+      "encounter": {
+        "groups": [
+          {
+            "id": "group-0001",
+            "label": "goblin",
+            "label_plural": "goblins",
+            "family_id": "goblin",
+            "categories": ["person"],
+            "count": 3,
+            "distance_feet": 5,
+            "visible_conditions": [],
+            "condition_counts": {},
+            "fled": false,
+            "fleeing": false,
+            "member_distance_feet": { "character-0001": 5, "character-0003": 5, "character-0002": 5 },
+            "front_rank": ["character-0001", "character-0003"],
+            "lit": false,
+            "seen_by": [],
+            "members": [
+              { "id": "monster-0001", "status": "alive" },
+              { "id": "monster-0002", "status": "alive" },
+              { "id": "monster-0003", "status": "alive" }
+            ]
+          }
+        ],
+        "stance": "indifferent",
+        "in_battle": true,
+        "battle_round": 2,
+        "pursuit_gap_feet": null,
+        "declarers": ["character-0001", "character-0003", "character-0002"],
+        "front_rank": ["character-0001", "character-0003"],
+        "immobile": [],
+        "reloading": [],
+        "can_hide": ["character-0002"],
+        "hiding": [],
+        "advance_feet": { "character-0001": 0, "character-0003": 0, "character-0002": 0 },
+        "formation_width": 2,
+        "party_free_round": false
+      }
+    },
+    "referee": null
+  },
+  {
+    "id": "hiding#12",
+    "label": "round 1",
+    "command": {
+      "command_type": "resolve_battle_round",
+      "declarations": [
+        {
+          "character_id": "character-0001",
+          "action": "attack",
+          "target_group_id": "group-0001",
+          "move": "close"
+        },
+        {
+          "character_id": "character-0003",
+          "action": "attack",
+          "target_group_id": "group-0001",
+          "move": "close"
+        },
+        {
+          "character_id": "character-0002",
+          "action": "attack",
+          "target_group_id": "group-0001",
+          "move": "close",
+          "back_stab": false
+        }
+      ]
+    },
+    "outcome": {
+      "accepted": false,
+      "rejections": [
+        { "code": "battle.declaration.not_in_front_rank", "params": { "character": "character-0002" } }
+      ],
+      "events": [],
+      "messages": [],
+      "mode": "battle"
+    },
+    "view": {
+      "adventure_name": "The Barrow of the Forgotten King",
+      "adventure_description": "A plundered barrow outside town, and the idol the temple wants back.",
+      "town_name": "Threshold",
+      "town_description": "A walled market town at the edge of the moors.",
+      "town_services": ["equipment", "temple healing", "treasure buyers"],
+      "town_healing_prices": {
+        "cure_light_wounds": 25,
+        "cure_serious_wounds": 100,
+        "cure_disease": 150,
+        "neutralize_poison": 150,
+        "remove_curse": 200,
+        "raise_dead": 1500
+      },
+      "party": [
+        {
+          "id": "character-0001",
+          "name": "Brenna",
+          "class_id": "fighter",
+          "class_name": "Fighter",
+          "level": 2,
+          "current_hp": 5,
+          "max_hp": 8,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 90, "ep": 0, "sp": 0, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Warrior",
+          "xp": 3999,
+          "xp_next_level": 4000,
+          "scores": { "str": 7, "int": 11, "wis": 9, "dex": 8, "con": 17, "cha": 14 },
+          "effective_strength": 7,
+          "melee_modifier": -1,
+          "missile_modifier": -1,
+          "initiative_modifier": -1,
+          "hit_point_modifier": 2,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 1,
+          "open_doors_chance": 1,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 10,
+          "armour_class_ascending": 9,
+          "saves": { "death": 12, "wands": 13, "paralysis": 14, "breath": 15, "spells": 16 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        },
+        {
+          "id": "character-0003",
+          "name": "Tomas",
+          "class_id": "cleric",
+          "class_name": "Cleric",
+          "level": 1,
+          "current_hp": 4,
+          "max_hp": 4,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 70, "ep": 0, "sp": 4, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Acolyte",
+          "xp": 0,
+          "xp_next_level": 1500,
+          "scores": { "str": 13, "int": 11, "wis": 14, "dex": 14, "con": 10, "cha": 7 },
+          "effective_strength": 13,
+          "melee_modifier": 1,
+          "missile_modifier": 1,
+          "initiative_modifier": 1,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 1,
+          "npc_reaction_modifier": -1,
+          "open_doors_chance": 3,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 8,
+          "armour_class_ascending": 11,
+          "saves": { "death": 11, "wands": 12, "paralysis": 14, "breath": 16, "spells": 15 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        },
+        {
+          "id": "character-0002",
+          "name": "Wren",
+          "class_id": "thief",
+          "class_name": "Thief",
+          "level": 1,
+          "current_hp": 3,
+          "max_hp": 3,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 100, "ep": 0, "sp": 0, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "neutral",
+          "title": "Apprentice",
+          "xp": 0,
+          "xp_next_level": 1200,
+          "scores": { "str": 12, "int": 7, "wis": 12, "dex": 9, "con": 11, "cha": 16 },
+          "effective_strength": 12,
+          "melee_modifier": 0,
+          "missile_modifier": 0,
+          "initiative_modifier": 0,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 1,
+          "open_doors_chance": 2,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 9,
+          "armour_class_ascending": 10,
+          "saves": { "death": 13, "wands": 14, "paralysis": 13, "breath": 16, "spells": 15 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_neutral", "common"],
+          "spell_book": [],
+          "thief_skills": {
+            "climb_sheer_surfaces": 87,
+            "find_remove_treasure_traps": 10,
+            "hear_noise": 2,
+            "hide_in_shadows": 10,
+            "move_silently": 20,
+            "open_locks": 15,
+            "pick_pockets": 20
+          }
+        }
+      ],
+      "location": {
+        "kind": "dungeon",
+        "dungeon_id": "barrow",
+        "level_number": 1,
+        "position": [0, 0],
+        "facing": "north"
+      },
+      "clock_rounds": 122,
+      "mode": "battle",
+      "explored": [
+        {
+          "dungeon_id": "barrow",
+          "level_number": 1,
+          "cells": [[0, 0]],
+          "edges": {
+            "0,0:north": { "kind": "wall", "door_open": null, "door_wedged": null },
+            "1,0:west": { "kind": "open", "door_open": null, "door_wedged": null },
+            "0,1:north": { "kind": "wall", "door_open": null, "door_wedged": null },
+            "0,0:west": { "kind": "wall", "door_open": null, "door_wedged": null }
+          },
+          "areas": [],
+          "features": [],
+          "transitions": [],
+          "entrance": [0, 0]
+        }
+      ],
+      "dungeons": [{ "id": "barrow", "name": "The Barrow" }],
+      "can_travel_to_town": false,
+      "piles": {
+        "cell:barrow:1:0,0": {
+          "items": [],
+          "coins_gp_value": 0,
+          "coins": { "pp": 0, "gp": 0, "ep": 0, "sp": 0, "cp": 39 }
+        }
+      },
+      "emptied_caches": [],
+      "effects": [],
+      "spell_names": {},
+      "reversed_spell_names": {},
+      "fatigued": false,
+      "exhausted": false,
+      "deprivation": {},
+      "journal": [
+        {
+          "text": "The temple wants the Jade Idol off the barrow king's altar and back on its own.",
+          "rounds": 120
+        }
+      ],
+      "quests": [
+        {
+          "id": "the-idol",
+          "name": "The Jade Idol",
+          "narrative": "The temple wants the Jade Idol off the barrow king's altar and back on its own.",
+          "speaker": "the temple almoner",
+          "objectives": [
+            { "id": "recover-idol", "name": "Recover the idol", "state": "incomplete" },
+            { "id": "return-home", "name": "Bring it home", "state": "incomplete" }
+          ]
+        }
+      ],
+      "encounter": {
+        "groups": [
+          {
+            "id": "group-0001",
+            "label": "goblin",
+            "label_plural": "goblins",
+            "family_id": "goblin",
+            "categories": ["person"],
+            "count": 3,
+            "distance_feet": 5,
+            "visible_conditions": [],
+            "condition_counts": {},
+            "fled": false,
+            "fleeing": false,
+            "member_distance_feet": { "character-0001": 5, "character-0003": 5, "character-0002": 5 },
+            "front_rank": ["character-0001", "character-0003"],
+            "lit": false,
+            "seen_by": [],
+            "members": [
+              { "id": "monster-0001", "status": "alive" },
+              { "id": "monster-0002", "status": "alive" },
+              { "id": "monster-0003", "status": "alive" }
+            ]
+          }
+        ],
+        "stance": "indifferent",
+        "in_battle": true,
+        "battle_round": 2,
+        "pursuit_gap_feet": null,
+        "declarers": ["character-0001", "character-0003", "character-0002"],
+        "front_rank": ["character-0001", "character-0003"],
+        "immobile": [],
+        "reloading": [],
+        "can_hide": ["character-0002"],
+        "hiding": [],
+        "advance_feet": { "character-0001": 0, "character-0003": 0, "character-0002": 0 },
+        "formation_width": 2,
+        "party_free_round": false
+      }
+    },
+    "referee": null
+  },
+  {
+    "id": "turning#1",
+    "label": "spawn",
+    "command": {
+      "command_type": "spawn_monsters",
+      "template_id": "skeleton",
+      "count_fixed": 2,
+      "distance_feet": 60
+    },
+    "outcome": {
+      "accepted": true,
+      "rejections": [],
+      "events": [
+        {
+          "code": "encounter.started",
+          "visibility": "player",
+          "event_type": "encounter_started",
+          "monster_name": "skeleton",
+          "monster_name_plural": "skeletons",
+          "count": 2,
+          "distance_feet": 60,
+          "party_surprised": false,
+          "monsters_surprised": false,
+          "group_labels": ["skeleton"],
+          "group_labels_plural": ["skeletons"],
+          "group_counts": [2]
+        },
+        {
+          "code": "encounter.stance.changed",
+          "visibility": "player",
+          "event_type": "stance_changed",
+          "stance": "uncertain"
+        }
+      ],
+      "messages": ["Encounter: 2 skeletons at 60'.", "The monsters' bearing: uncertain."],
+      "mode": "encounter"
+    },
+    "view": {
+      "adventure_name": "The Barrow of the Forgotten King",
+      "adventure_description": "A plundered barrow outside town, and the idol the temple wants back.",
+      "town_name": "Threshold",
+      "town_description": "A walled market town at the edge of the moors.",
+      "town_services": ["equipment", "temple healing", "treasure buyers"],
+      "town_healing_prices": {
+        "cure_light_wounds": 25,
+        "cure_serious_wounds": 100,
+        "cure_disease": 150,
+        "neutralize_poison": 150,
+        "remove_curse": 200,
+        "raise_dead": 1500
+      },
+      "party": [
+        {
+          "id": "character-0001",
+          "name": "Tomas",
+          "class_id": "cleric",
+          "class_name": "Cleric",
+          "level": 1,
+          "current_hp": 6,
+          "max_hp": 6,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 120, "ep": 0, "sp": 0, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "lawful",
+          "title": "Acolyte",
+          "xp": 0,
+          "xp_next_level": 1500,
+          "scores": { "str": 15, "int": 11, "wis": 13, "dex": 9, "con": 10, "cha": 13 },
+          "effective_strength": 15,
+          "melee_modifier": 1,
+          "missile_modifier": 0,
+          "initiative_modifier": 0,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 1,
+          "npc_reaction_modifier": 1,
+          "open_doors_chance": 3,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 9,
+          "armour_class_ascending": 10,
+          "saves": { "death": 11, "wands": 12, "paralysis": 14, "breath": 16, "spells": 15 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_lawful", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        },
+        {
+          "id": "character-0002",
+          "name": "Brenna",
+          "class_id": "fighter",
+          "class_name": "Fighter",
+          "level": 1,
+          "current_hp": 1,
+          "max_hp": 1,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 120, "ep": 0, "sp": 0, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "lawful",
+          "title": "Veteran",
+          "xp": 0,
+          "xp_next_level": 2000,
+          "scores": { "str": 8, "int": 13, "wis": 11, "dex": 7, "con": 9, "cha": 11 },
+          "effective_strength": 8,
+          "melee_modifier": -1,
+          "missile_modifier": -1,
+          "initiative_modifier": -1,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 0,
+          "open_doors_chance": 1,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 10,
+          "armour_class_ascending": 9,
+          "saves": { "death": 12, "wands": 13, "paralysis": 14, "breath": 15, "spells": 16 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_lawful", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        }
+      ],
+      "location": {
+        "kind": "dungeon",
+        "dungeon_id": "barrow",
+        "level_number": 1,
+        "position": [0, 0],
+        "facing": "north"
+      },
+      "clock_rounds": 120,
+      "mode": "encounter",
+      "explored": [
+        {
+          "dungeon_id": "barrow",
+          "level_number": 1,
+          "cells": [[0, 0]],
+          "edges": {
+            "0,0:north": { "kind": "wall", "door_open": null, "door_wedged": null },
+            "1,0:west": { "kind": "open", "door_open": null, "door_wedged": null },
+            "0,1:north": { "kind": "wall", "door_open": null, "door_wedged": null },
+            "0,0:west": { "kind": "wall", "door_open": null, "door_wedged": null }
+          },
+          "areas": [],
+          "features": [],
+          "transitions": [],
+          "entrance": [0, 0]
+        }
+      ],
+      "dungeons": [{ "id": "barrow", "name": "The Barrow" }],
+      "can_travel_to_town": false,
+      "piles": {},
+      "emptied_caches": [],
+      "effects": [],
+      "spell_names": {},
+      "reversed_spell_names": {},
+      "fatigued": false,
+      "exhausted": false,
+      "deprivation": {},
+      "journal": [
+        {
+          "text": "The temple wants the Jade Idol off the barrow king's altar and back on its own.",
+          "rounds": 120
+        }
+      ],
+      "quests": [
+        {
+          "id": "the-idol",
+          "name": "The Jade Idol",
+          "narrative": "The temple wants the Jade Idol off the barrow king's altar and back on its own.",
+          "speaker": "the temple almoner",
+          "objectives": [
+            { "id": "recover-idol", "name": "Recover the idol", "state": "incomplete" },
+            { "id": "return-home", "name": "Bring it home", "state": "incomplete" }
+          ]
+        }
+      ],
+      "encounter": {
+        "groups": [
+          {
+            "id": "group-0001",
+            "label": "skeleton",
+            "label_plural": "skeletons",
+            "family_id": "skeleton",
+            "categories": ["undead"],
+            "count": 2,
+            "distance_feet": 60,
+            "visible_conditions": [],
+            "condition_counts": {},
+            "fled": false,
+            "fleeing": false,
+            "member_distance_feet": {},
+            "front_rank": [],
+            "lit": null,
+            "seen_by": [],
+            "members": [
+              { "id": "monster-0001", "status": "alive" },
+              { "id": "monster-0002", "status": "alive" }
+            ]
+          }
+        ],
+        "stance": "uncertain",
+        "in_battle": false,
+        "battle_round": null,
+        "pursuit_gap_feet": null,
+        "declarers": ["character-0001", "character-0002"],
+        "front_rank": ["character-0001", "character-0002"],
+        "immobile": [],
+        "reloading": [],
+        "can_hide": [],
+        "hiding": [],
+        "advance_feet": {},
+        "formation_width": 2,
+        "party_free_round": false
+      }
+    },
+    "referee": null
+  },
+  {
+    "id": "turning#3",
+    "label": "round 0",
+    "command": {
+      "command_type": "resolve_battle_round",
+      "declarations": [
+        { "character_id": "character-0001", "action": "turn_undead" },
+        { "character_id": "character-0002", "action": "move", "move": "fighting_withdrawal" }
+      ]
+    },
+    "outcome": {
+      "accepted": true,
+      "rejections": [],
+      "events": [
+        { "code": "battle.round.started", "visibility": "player", "event_type": "battle_round", "round": 1 },
+        {
+          "code": "combat.initiative.rolled",
+          "visibility": "player",
+          "event_type": "initiative_rolled",
+          "mode": "side",
+          "entries": [
+            { "key": "party", "rolls": [3], "modifier": 0, "total": 3 },
+            { "key": "monsters", "rolls": [2], "modifier": 0, "total": 2 }
+          ],
+          "order": ["character-0001", "character-0002", "group-0001"]
+        },
+        {
+          "code": "battle.member.moved",
+          "visibility": "player",
+          "event_type": "member_moved",
+          "character_id": "character-0002",
+          "move": "fighting_withdrawal",
+          "advance_feet": -20,
+          "group_id": "group-0001",
+          "distance_feet": 80
+        },
+        {
+          "code": "magic.turning.turned",
+          "visibility": "player",
+          "event_type": "undead_turned",
+          "caster_id": "character-0001",
+          "roll": 7,
+          "hd_pool": 9,
+          "types": [{ "template_id": "skeleton", "column": "1", "outcome": "turn", "threshold": 7 }],
+          "affected_ids": ["monster-0001", "monster-0002"]
+        },
+        {
+          "code": "effects.condition.gained",
+          "visibility": "player",
+          "event_type": "condition_gained",
+          "target_id": "monster-0001",
+          "condition": "turned",
+          "effect_id": "effect-0001"
+        },
+        {
+          "code": "effects.condition.gained",
+          "visibility": "player",
+          "event_type": "condition_gained",
+          "target_id": "monster-0002",
+          "condition": "turned",
+          "effect_id": "effect-0002"
+        },
+        {
+          "code": "battle.group.moved",
+          "visibility": "player",
+          "event_type": "group_moved",
+          "group_id": "group-0001",
+          "distance_feet": 120
+        }
+      ],
+      "messages": [
+        "Battle round 1 begins.",
+        "Initiative (side): party 3, monsters 2. Order: character-0001, character-0002, group-0001.",
+        "character-0002 falls back to 80' from group-0001.",
+        "character-0001 presents the holy symbol (rolled 7, 9 HD affected): the undead are turned.",
+        "monster-0001 is turned.",
+        "monster-0002 is turned.",
+        "group-0001 is now 120' away."
+      ],
+      "mode": "battle"
+    },
+    "view": {
+      "adventure_name": "The Barrow of the Forgotten King",
+      "adventure_description": "A plundered barrow outside town, and the idol the temple wants back.",
+      "town_name": "Threshold",
+      "town_description": "A walled market town at the edge of the moors.",
+      "town_services": ["equipment", "temple healing", "treasure buyers"],
+      "town_healing_prices": {
+        "cure_light_wounds": 25,
+        "cure_serious_wounds": 100,
+        "cure_disease": 150,
+        "neutralize_poison": 150,
+        "remove_curse": 200,
+        "raise_dead": 1500
+      },
+      "party": [
+        {
+          "id": "character-0001",
+          "name": "Tomas",
+          "class_id": "cleric",
+          "class_name": "Cleric",
+          "level": 1,
+          "current_hp": 6,
+          "max_hp": 6,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 120, "ep": 0, "sp": 0, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "lawful",
+          "title": "Acolyte",
+          "xp": 0,
+          "xp_next_level": 1500,
+          "scores": { "str": 15, "int": 11, "wis": 13, "dex": 9, "con": 10, "cha": 13 },
+          "effective_strength": 15,
+          "melee_modifier": 1,
+          "missile_modifier": 0,
+          "initiative_modifier": 0,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 1,
+          "npc_reaction_modifier": 1,
+          "open_doors_chance": 3,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 9,
+          "armour_class_ascending": 10,
+          "saves": { "death": 11, "wands": 12, "paralysis": 14, "breath": 16, "spells": 15 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_lawful", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        },
+        {
+          "id": "character-0002",
+          "name": "Brenna",
+          "class_id": "fighter",
+          "class_name": "Fighter",
+          "level": 1,
+          "current_hp": 1,
+          "max_hp": 1,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 120, "ep": 0, "sp": 0, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "lawful",
+          "title": "Veteran",
+          "xp": 0,
+          "xp_next_level": 2000,
+          "scores": { "str": 8, "int": 13, "wis": 11, "dex": 7, "con": 9, "cha": 11 },
+          "effective_strength": 8,
+          "melee_modifier": -1,
+          "missile_modifier": -1,
+          "initiative_modifier": -1,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 0,
+          "open_doors_chance": 1,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 10,
+          "armour_class_ascending": 9,
+          "saves": { "death": 12, "wands": 13, "paralysis": 14, "breath": 15, "spells": 16 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_lawful", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        }
+      ],
+      "location": {
+        "kind": "dungeon",
+        "dungeon_id": "barrow",
+        "level_number": 1,
+        "position": [0, 0],
+        "facing": "north"
+      },
+      "clock_rounds": 121,
+      "mode": "battle",
+      "explored": [
+        {
+          "dungeon_id": "barrow",
+          "level_number": 1,
+          "cells": [[0, 0]],
+          "edges": {
+            "0,0:north": { "kind": "wall", "door_open": null, "door_wedged": null },
+            "1,0:west": { "kind": "open", "door_open": null, "door_wedged": null },
+            "0,1:north": { "kind": "wall", "door_open": null, "door_wedged": null },
+            "0,0:west": { "kind": "wall", "door_open": null, "door_wedged": null }
+          },
+          "areas": [],
+          "features": [],
+          "transitions": [],
+          "entrance": [0, 0]
+        }
+      ],
+      "dungeons": [{ "id": "barrow", "name": "The Barrow" }],
+      "can_travel_to_town": false,
+      "piles": {},
+      "emptied_caches": [],
+      "effects": [],
+      "spell_names": {},
+      "reversed_spell_names": {},
+      "fatigued": false,
+      "exhausted": false,
+      "deprivation": {},
+      "journal": [
+        {
+          "text": "The temple wants the Jade Idol off the barrow king's altar and back on its own.",
+          "rounds": 120
+        }
+      ],
+      "quests": [
+        {
+          "id": "the-idol",
+          "name": "The Jade Idol",
+          "narrative": "The temple wants the Jade Idol off the barrow king's altar and back on its own.",
+          "speaker": "the temple almoner",
+          "objectives": [
+            { "id": "recover-idol", "name": "Recover the idol", "state": "incomplete" },
+            { "id": "return-home", "name": "Bring it home", "state": "incomplete" }
+          ]
+        }
+      ],
+      "encounter": {
+        "groups": [
+          {
+            "id": "group-0001",
+            "label": "skeleton",
+            "label_plural": "skeletons",
+            "family_id": "skeleton",
+            "categories": ["undead"],
+            "count": 2,
+            "distance_feet": 120,
+            "visible_conditions": ["turned"],
+            "condition_counts": { "turned": 2 },
+            "fled": false,
+            "fleeing": false,
+            "member_distance_feet": { "character-0001": 120, "character-0002": 140 },
+            "front_rank": [],
+            "lit": false,
+            "seen_by": [],
+            "members": [
+              { "id": "monster-0001", "status": "alive" },
+              { "id": "monster-0002", "status": "alive" }
+            ]
+          }
+        ],
+        "stance": "uncertain",
+        "in_battle": true,
+        "battle_round": 1,
+        "pursuit_gap_feet": null,
+        "declarers": ["character-0001", "character-0002"],
+        "front_rank": ["character-0001"],
+        "immobile": [],
+        "reloading": [],
+        "can_hide": [],
+        "hiding": [],
+        "advance_feet": { "character-0001": 0, "character-0002": -20 },
+        "formation_width": 2,
+        "party_free_round": false
+      }
+    },
+    "referee": null
+  },
+  {
+    "id": "turning#4",
+    "label": "round 1",
+    "command": {
+      "command_type": "resolve_battle_round",
+      "declarations": [
+        { "character_id": "character-0001", "action": "move", "move": "fighting_withdrawal" },
+        { "character_id": "character-0002", "action": "move", "move": "fighting_withdrawal" }
+      ]
+    },
+    "outcome": {
+      "accepted": true,
+      "rejections": [],
+      "events": [
+        { "code": "battle.round.started", "visibility": "player", "event_type": "battle_round", "round": 2 },
+        {
+          "code": "combat.initiative.rolled",
+          "visibility": "player",
+          "event_type": "initiative_rolled",
+          "mode": "side",
+          "entries": [
+            { "key": "party", "rolls": [1], "modifier": 0, "total": 1 },
+            { "key": "monsters", "rolls": [5], "modifier": 0, "total": 5 }
+          ],
+          "order": ["group-0001", "character-0001", "character-0002"]
+        },
+        {
+          "code": "battle.group.moved",
+          "visibility": "player",
+          "event_type": "group_moved",
+          "group_id": "group-0001",
+          "distance_feet": 180
+        },
+        {
+          "code": "battle.side.escaped",
+          "visibility": "player",
+          "event_type": "monster_escaped",
+          "group_id": "group-0001"
+        },
+        { "code": "battle.ended.victory", "visibility": "player", "event_type": "battle_ended" },
+        {
+          "code": "battle.monster.defeated",
+          "visibility": "player",
+          "event_type": "monster_defeated",
+          "monster_id": "monster-0001",
+          "template_id": "skeleton",
+          "outcome": "routed",
+          "xp": 10
+        },
+        {
+          "code": "battle.monster.defeated",
+          "visibility": "player",
+          "event_type": "monster_defeated",
+          "monster_id": "monster-0002",
+          "template_id": "skeleton",
+          "outcome": "routed",
+          "xp": 10
+        },
+        {
+          "code": "effects.condition.removed",
+          "visibility": "player",
+          "event_type": "condition_removed",
+          "target_id": "monster-0001",
+          "condition": "turned",
+          "effect_id": "effect-0001"
+        },
+        {
+          "code": "effects.condition.removed",
+          "visibility": "player",
+          "event_type": "condition_removed",
+          "target_id": "monster-0002",
+          "condition": "turned",
+          "effect_id": "effect-0002"
+        },
+        {
+          "code": "encounter.ended",
+          "visibility": "player",
+          "event_type": "encounter_ended",
+          "outcome": "victory"
+        }
+      ],
+      "messages": [
+        "Battle round 2 begins.",
+        "Initiative (side): party 1, monsters 5. Order: group-0001, character-0001, character-0002.",
+        "group-0001 is now 180' away.",
+        "group-0001 gets away.",
+        "The battle is won.",
+        "monster-0001 (skeleton) is routed.",
+        "monster-0002 (skeleton) is routed.",
+        "monster-0001 is no longer turned.",
+        "monster-0002 is no longer turned.",
+        "The encounter ends (victory)."
+      ],
+      "mode": "exploring"
+    },
+    "view": {
+      "adventure_name": "The Barrow of the Forgotten King",
+      "adventure_description": "A plundered barrow outside town, and the idol the temple wants back.",
+      "town_name": "Threshold",
+      "town_description": "A walled market town at the edge of the moors.",
+      "town_services": ["equipment", "temple healing", "treasure buyers"],
+      "town_healing_prices": {
+        "cure_light_wounds": 25,
+        "cure_serious_wounds": 100,
+        "cure_disease": 150,
+        "neutralize_poison": 150,
+        "remove_curse": 200,
+        "raise_dead": 1500
+      },
+      "party": [
+        {
+          "id": "character-0001",
+          "name": "Tomas",
+          "class_id": "cleric",
+          "class_name": "Cleric",
+          "level": 1,
+          "current_hp": 6,
+          "max_hp": 6,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 120, "ep": 0, "sp": 0, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "lawful",
+          "title": "Acolyte",
+          "xp": 0,
+          "xp_next_level": 1500,
+          "scores": { "str": 15, "int": 11, "wis": 13, "dex": 9, "con": 10, "cha": 13 },
+          "effective_strength": 15,
+          "melee_modifier": 1,
+          "missile_modifier": 0,
+          "initiative_modifier": 0,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 1,
+          "npc_reaction_modifier": 1,
+          "open_doors_chance": 3,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 9,
+          "armour_class_ascending": 10,
+          "saves": { "death": 11, "wands": 12, "paralysis": 14, "breath": 16, "spells": 15 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_lawful", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        },
+        {
+          "id": "character-0002",
+          "name": "Brenna",
+          "class_id": "fighter",
+          "class_name": "Fighter",
+          "level": 1,
+          "current_hp": 1,
+          "max_hp": 1,
+          "conditions": [],
+          "inventory": {
+            "items": [],
+            "purse": { "pp": 0, "gp": 120, "ep": 0, "sp": 0, "cp": 0 },
+            "valuables": [],
+            "worn_armour": null,
+            "shield": null,
+            "wielded": [],
+            "rings": []
+          },
+          "memorized_spells": [],
+          "encounter_rate_feet": 40,
+          "race": "human",
+          "alignment": "lawful",
+          "title": "Veteran",
+          "xp": 0,
+          "xp_next_level": 2000,
+          "scores": { "str": 8, "int": 13, "wis": 11, "dex": 7, "con": 9, "cha": 11 },
+          "effective_strength": 8,
+          "melee_modifier": -1,
+          "missile_modifier": -1,
+          "initiative_modifier": -1,
+          "hit_point_modifier": 0,
+          "magic_save_modifier": 0,
+          "npc_reaction_modifier": 0,
+          "open_doors_chance": 1,
+          "thac0": 19,
+          "attack_bonus": 0,
+          "armour_class": 10,
+          "armour_class_ascending": 9,
+          "saves": { "death": 12, "wands": 13, "paralysis": 14, "breath": 15, "spells": 16 },
+          "movement_rate_feet": 120,
+          "languages": ["alignment_lawful", "common"],
+          "spell_book": [],
+          "thief_skills": {}
+        }
+      ],
+      "location": {
+        "kind": "dungeon",
+        "dungeon_id": "barrow",
+        "level_number": 1,
+        "position": [0, 0],
+        "facing": "north"
+      },
+      "clock_rounds": 180,
+      "mode": "exploring",
+      "explored": [
+        {
+          "dungeon_id": "barrow",
+          "level_number": 1,
+          "cells": [[0, 0]],
+          "edges": {
+            "0,0:north": { "kind": "wall", "door_open": null, "door_wedged": null },
+            "1,0:west": { "kind": "open", "door_open": null, "door_wedged": null },
+            "0,1:north": { "kind": "wall", "door_open": null, "door_wedged": null },
+            "0,0:west": { "kind": "wall", "door_open": null, "door_wedged": null }
+          },
+          "areas": [],
+          "features": [],
+          "transitions": [],
+          "entrance": [0, 0]
+        }
+      ],
+      "dungeons": [{ "id": "barrow", "name": "The Barrow" }],
+      "can_travel_to_town": true,
+      "piles": {},
+      "emptied_caches": [],
+      "effects": [],
+      "spell_names": {},
+      "reversed_spell_names": {},
+      "fatigued": false,
+      "exhausted": false,
+      "deprivation": {},
+      "journal": [
+        {
+          "text": "The temple wants the Jade Idol off the barrow king's altar and back on its own.",
+          "rounds": 120
+        }
+      ],
+      "quests": [
+        {
+          "id": "the-idol",
+          "name": "The Jade Idol",
+          "narrative": "The temple wants the Jade Idol off the barrow king's altar and back on its own.",
+          "speaker": "the temple almoner",
+          "objectives": [
+            { "id": "recover-idol", "name": "Recover the idol", "state": "incomplete" },
+            { "id": "return-home", "name": "Bring it home", "state": "incomplete" }
+          ]
+        }
+      ],
+      "encounter": null
+    },
+    "referee": null
   }
 ]

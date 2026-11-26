@@ -15,10 +15,11 @@ import {
 } from '@bxvtt/shared/text';
 import { useMemo, useState } from 'react';
 import {
+  cachesToTake,
   useCommandSchema,
+  useHere,
   useLegalCommand,
   usePlayerView,
-  useScene,
   useSpellCatalog,
   useTextContext,
   type GameCommand,
@@ -230,7 +231,7 @@ function memberOptions(
 
 function FieldInput({ commandType, field, value, values, onChange, can, actingField }: FieldInputProps) {
   const view = usePlayerView();
-  const scene = useScene();
+  const here = useHere();
   const ctx = useTextContext();
   const text = commandFieldText(commandType, field.name);
   const party = view?.party ?? [];
@@ -252,8 +253,7 @@ function FieldInput({ commandType, field, value, values, onChange, can, actingFi
       );
     }
     case 'feature': {
-      const here = scene?.here;
-      const options: SelectOption[] = (here?.caches ?? []).map((cache, index, all) => ({
+      const options: SelectOption[] = cachesToTake(here).map((cache, index, all) => ({
         value: cache.id,
         label: all.length > 1 ? `Treasure ${index + 1}` : 'Treasure here',
       }));

@@ -59,6 +59,30 @@ describe('reduceServerMessage', () => {
     expect(state.feedHasOlder).toBe(true);
   });
 
+  it('remembers the newest feed entry at the first snapshot and at each change of mode', () => {
+    const snapshot = fixtureSnapshot('encounter', 'player');
+    const newest = snapshot.feed.entries.at(-1)?.seq ?? 0;
+    const game = snapshot.game;
+    if (!game) throw new Error('The fixture has no game.');
+    let state = apply(initialTableData(snapshot.table.id), snapshot);
+    expect(state.modeStartSeq).toBe(newest);
+
+    // A result in the same mode is news to the encounter panel, however late the panel mounts.
+    state = apply(state, { type: 'feed', entry: chat(newest + 1) });
+    state = apply(state, { type: 'game', game: withRevision(game, game.revision + 1) });
+    expect(state.modeStartSeq).toBe(newest);
+    state = apply(state, { ...snapshot, feed: { entries: [chat(newest + 1)], has_more: false } });
+    expect(state.modeStartSeq).toBe(newest);
+
+    // The battle begins, so the entries until then are history to the battle's panels.
+    state = apply(state, { type: 'feed', entry: chat(newest + 2) });
+    state = apply(state, {
+      type: 'game',
+      game: { ...withRevision(game, game.revision + 2), mode: 'battle' },
+    });
+    expect(state.modeStartSeq).toBe(newest + 2);
+  });
+
   it('replaces presence, the table, declarations, and notes wholesale', () => {
     const snapshot = fixtureSnapshot('battle', 'player');
     let state = dataFromSnapshot(snapshot);

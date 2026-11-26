@@ -616,6 +616,20 @@
   align-self: center;
 }
 
+.sceneRowButtons {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* A line of text with a status badge after it, such as a treasure's description and "Trapped". */
+.sceneLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-1-5);
+}
+
 .sceneSub {
   color: var(--color-text-muted);
   font-size: var(--text-xs);

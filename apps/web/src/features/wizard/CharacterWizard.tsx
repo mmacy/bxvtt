@@ -43,7 +43,7 @@ import { applyKit, cartPhrase } from './kits';
 import { OutfitStep, cartCost, type GoldState } from './OutfitStep';
 import { ReviewStep } from './ReviewStep';
 import { RollStep } from './RollStep';
-import { checkChoices, explainCreationError, explainInvalid, type WizardProblem } from './server';
+import { checkChoices, fetchRoll, explainCreationError, explainInvalid, type WizardProblem } from './server';
 import { StartingRollsStep } from './StartingRollsStep';
 import {
   casterNextStep,
@@ -256,6 +256,37 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
     };
   }, [statusFor]);
   const hitPointsRolled = status !== null && status.class_id !== null;
+
+  // A draft saved before bxapi returned the dice has the scores but not the dice. The wizard fetches the roll
+  // again to fill them in, and the roll step shows placeholders until they arrive. Nothing else needs the dice.
+  const diceFor = draft.roll !== null && draft.roll.rolls === undefined ? draft.roll.id : null;
+  useEffect(() => {
+    if (diceFor === null) return;
+    let cancelled = false;
+    fetchRoll(getApi(), diceFor).then(
+      (fetched) => {
+        if (cancelled) return;
+        setDraft((d) =>
+          d.roll?.id === diceFor && d.roll.rolls === undefined
+            ? { ...d, roll: { ...d.roll, rolls: fetched.rolls } }
+            : d,
+        );
+      },
+      (error: unknown) => {
+        if (cancelled) return;
+        const explained = explainCreationError(error);
+        if (explained.step === 'roll') {
+          // The server has no such roll for this user anymore, so the draft starts again from new scores.
+          setDraft((d) => (d.roll?.id === diceFor ? withoutRoll(d) : d));
+          setProblem(explained);
+        }
+        // Any other failure, such as being offline, keeps the draft and the placeholders.
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [diceFor]);
 
   // The dice of the rolls already made. The server returns the same dice every time it's asked.
   const [dice, setDice] = useState<{ rollId: string; rolls: StartingRolls } | null>(null);

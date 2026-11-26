@@ -7,7 +7,7 @@
  * events first, and joins an attack with the damage it dealt.
  */
 
-import { itemNounByName, magicItemCategory, magicItemTemplateName } from './catalog';
+import { itemNounByName, magicItemCategory, magicItemTemplateName, monsterTemplateLabels } from './catalog';
 import {
   areaName,
   countedLabel,
@@ -23,13 +23,17 @@ import {
   idKind,
   itemList,
   itemName,
+  memberClass,
   memberName,
+  spellFormName,
   spellName,
   type LearnableEvent,
   type TextContext,
 } from './context';
 import {
   capitalizeFirst,
+  classInSentence,
+  coinParts,
   count,
   formatDice,
   formatDiceTotal,
@@ -47,6 +51,7 @@ import {
   signed,
   toRounds,
   withArticle,
+  type Coins,
   type TimeUnitName,
 } from './format';
 import { removeDashes, humanizeMessage } from './humanize';
@@ -100,6 +105,7 @@ const KNOWN_EVENT_TYPES = new Set([
   'group_moved',
   'healing_applied',
   'healing_purchased',
+  'hide_attempted',
   'hit_points_reported',
   'hoard_generated',
   'initiative_rolled',
@@ -123,6 +129,7 @@ const KNOWN_EVENT_TYPES = new Set([
   'member_removed',
   'member_withdrew',
   'monster_defeated',
+  'monster_escaped',
   'monster_fled',
   'monster_revived',
   'monsters_left_behind',
@@ -216,10 +223,15 @@ function coinsText(gp: number): string {
   return `${formatGold(gp)} in coin`;
 }
 
-/** A spell's name, or `the reversed form of` it, for narration. */
-function spellForm(spellId: string, reversed: boolean | null | undefined, ctx: TextContext): string {
-  const name = spellName(spellId, ctx);
-  return reversed === true ? `the reversed form of ${name}` : name;
+/**
+ * The exact coins an event moved, as list items such as `39 copper pieces`, from the `coins` that osrlib 2.7
+ * added. An older event has no `coins`, or has coins of no denomination when bxapi loads it from an older log, so
+ * this gives `undefined` for coins of no denomination, and the event's text falls back to `coins_gp_value`.
+ */
+function exactCoins(coins: Coins | null | undefined): string[] | undefined {
+  if (coins === null || coins === undefined || typeof coins !== 'object') return undefined;
+  const parts = coinParts(coins);
+  return parts.length === 0 ? undefined : parts;
 }
 
 /** An amount of game time with its real length, in a sentence: `3 turns, or 30 minutes`. */
@@ -231,16 +243,23 @@ function durationPhrase(amount: number, unit: TimeUnitName): string {
 /** How experienced an NPC party is, by bxapi's `party_kind`. */
 const NPC_PARTY_LEVELS: Record<string, string> = { basic: 'low-level', expert: 'higher-level' };
 
+/**
+ * The items and coins an event moved: `a rope, 3 gold pieces, and 4 silver pieces`. The coins come from the
+ * event's exact `coins` when it has them, and otherwise from `coins_gp_value`, the worth in whole gold pieces.
+ */
 function goodsText(
   itemIds: readonly string[],
+  coins: Coins | null | undefined,
   gp: number,
   ctx: TextContext,
   options: { lots?: boolean; worth?: boolean } = {},
 ): string {
   const parts = itemList(itemIds, ctx, options);
-  if (gp > 0) parts.push(options.worth === true ? `coins worth ${formatGold(gp)}` : coinsText(gp));
-  // osrlib writes these events only when goods moved, and counts coins in whole gold pieces, so goods with no
-  // items and no gold are a few coins worth less than 1 gp, such as one member's share of 48 cp.
+  const exact = exactCoins(coins);
+  if (exact !== undefined) parts.push(...exact);
+  else if (gp > 0) parts.push(options.worth === true ? `coins worth ${formatGold(gp)}` : coinsText(gp));
+  // osrlib writes these events only when goods moved. An event from before osrlib 2.7 counts coins in whole gold
+  // pieces, so goods with no items and no gold are a few coins worth less than 1 gp, such as a share of 48 cp.
   return parts.length === 0 ? 'a few coins' : joinList(parts);
 }
 
@@ -321,8 +340,11 @@ function effectTarget(targetRef: string, ctx: TextContext): string {
   return entityName(targetRef, ctx);
 }
 
+/** The thief skills, whose chances bxapi states as percentages rolled on d100. Every other chance is in 6. */
+const PERCENTILE_KINDS = new Set(['open_locks', 'treasure_traps', 'hide_in_shadows', 'move_silently']);
+
 function dieAgainst(kind: string, roll: number | null | undefined, chance: number): string {
-  const percentile = kind === 'open_locks' || kind === 'treasure_traps';
+  const percentile = PERCENTILE_KINDS.has(kind);
   if (roll === null || roll === undefined)
     return `No die rolled. The chance was ${percentile ? `${chance}%` : `${chance} in 6`}.`;
   return percentile
@@ -332,6 +354,16 @@ function dieAgainst(kind: string, roll: number | null | undefined, chance: numbe
 
 const DETECTION_ACTIONS: Record<string, { verb: string; pass: string; fail: string }> = {
   listening: { verb: 'listens at the door', pass: 'and the roll succeeds', fail: 'and the roll fails' },
+  hide_in_shadows: {
+    verb: 'tries to hide in shadows',
+    pass: 'and the roll succeeds',
+    fail: 'and the roll fails',
+  },
+  move_silently: {
+    verb: 'tries to move silently',
+    pass: 'and the roll succeeds',
+    fail: 'and the roll fails',
+  },
   secret_doors: {
     verb: 'searches for secret doors',
     pass: 'and the roll succeeds',
@@ -774,7 +806,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
     // Magic -----------------------------------------------------------------------------------------------------
     case 'spells_memorized': {
       const caster = entityName(event.caster_id, ctx);
-      const labels = event.prepared.map((spell) => spellForm(spell.spell_id, spell.reversed, ctx));
+      const labels = event.prepared.map((spell) => spellFormName(spell.spell_id, spell.reversed, ctx));
       const grouped = new Map<string, number>();
       for (const label of labels) grouped.set(label, (grouped.get(label) ?? 0) + 1);
       const list = [...grouped.entries()].map(([label, n]) => (n === 1 ? label : `${n} copies of ${label}`));
@@ -788,7 +820,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
     }
     case 'spell_cast': {
       const caster = entityName(event.caster_id, ctx);
-      const spell = spellForm(event.spell_id, event.reversed, ctx);
+      const spell = spellFormName(event.spell_id, event.reversed, ctx);
       const party = isParty(event.caster_id, ctx);
       if (event.code === 'magic.cast.no_effect') {
         return {
@@ -812,7 +844,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
     }
     case 'spell_disrupted': {
       const caster = entityName(event.caster_id, ctx);
-      const spell = spellForm(event.spell_id, event.reversed, ctx);
+      const spell = spellFormName(event.spell_id, event.reversed, ctx);
       const party = isParty(event.caster_id, ctx);
       const detail = event.reason ? describeRejection({ code: event.reason, params: {} }, ctx) : undefined;
       const text =
@@ -830,8 +862,17 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
     }
     case 'declaration_fizzled': {
       const actor = entityName(event.actor_id, ctx);
-      const detail = describeRejection({ code: event.reason, params: {} }, ctx);
       const party = isParty(event.actor_id, ctx);
+      // The reason is the code of the check that failed. The event's own fields name who and what it was about, as
+      // the params of a refusal of the same declaration would: the declaring member, the item, and the member the
+      // item was for. A melee attack's reason reads without them, as the group is already in the text.
+      const reasonParams: Record<string, string> = {};
+      if (event.code !== 'battle.melee.fizzled') {
+        reasonParams.character = event.actor_id;
+        if (event.item_id) reasonParams.item = event.item_id;
+        if (event.target_id) reasonParams.target = event.target_id;
+      }
+      const detail = describeRejection({ code: event.reason, params: reasonParams }, ctx);
       if (event.code === 'battle.melee.fizzled') {
         const group = event.group_id ? groupName(event.group_id, ctx) : 'the group';
         const known = event.group_id ? ctx.groups[event.group_id] : undefined;
@@ -864,6 +905,30 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
           ids: [event.actor_id],
         };
       }
+      if (event.code === 'magic.potion.fizzled') {
+        const potion = event.item_id ? itemName(event.item_id, ctx) : 'the potion';
+        const drinker = event.target_id ? memberName(event.target_id, ctx) : 'another party member';
+        return {
+          text: `${actor} can't get ${potion} to ${drinker} and keeps it.`,
+          detail,
+          category: 'item',
+          tone: party ? 'bad' : 'good',
+          icon: 'potion',
+          ids: [event.actor_id, event.target_id],
+        };
+      }
+      if (event.code === 'battle.give.fizzled') {
+        const item = event.item_id ? itemName(event.item_id, ctx) : 'the item';
+        const recipient = event.target_id ? memberName(event.target_id, ctx) : 'another party member';
+        return {
+          text: `${actor} can't hand ${item} to ${recipient} and keeps it.`,
+          detail,
+          category: 'item',
+          tone: party ? 'bad' : 'good',
+          icon: 'chest',
+          ids: [event.actor_id, event.target_id],
+        };
+      }
       return {
         text: `${possessive(actor)} attempt to turn undead fizzles.`,
         detail,
@@ -875,7 +940,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
     }
     case 'spell_forgotten':
       return {
-        text: `${entityName(event.caster_id, ctx)} forgets ${spellForm(event.spell_id, event.reversed, ctx)}.`,
+        text: `${entityName(event.caster_id, ctx)} forgets ${spellFormName(event.spell_id, event.reversed, ctx)}.`,
         category: 'magic',
         tone: 'bad',
         icon: 'book',
@@ -903,7 +968,9 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
           : '';
       const types = event.types
         .map((entry) => {
-          const label = prettifyId(entry.template_id);
+          // Only a built-in template names what the players saw. An adventure's own template can disguise the
+          // creature, so its ID never reaches the text. Each entry starts a clause, so it starts with a capital.
+          const label = capitalizeFirst(monsterTemplateLabels(entry.template_id)?.label ?? 'undead');
           const needed =
             entry.threshold !== null && entry.threshold !== undefined ? `, needed ${entry.threshold}` : '';
           return `${label}: ${TURNING_OUTCOMES[entry.outcome] ?? prettifyId(entry.outcome)}${needed}`;
@@ -1076,7 +1143,14 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
         detail,
         category: 'exploration',
         tone: 'info',
-        icon: event.kind === 'listening' ? 'ear' : event.kind === 'open_locks' ? 'lock' : 'search',
+        icon:
+          event.kind === 'listening'
+            ? 'ear'
+            : event.kind === 'open_locks'
+              ? 'lock'
+              : event.kind === 'hide_in_shadows' || event.kind === 'move_silently'
+                ? 'step'
+                : 'search',
         ids: [event.character_id],
       };
     }
@@ -1161,15 +1235,18 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
             : event.origin === 'treasure'
               ? 'takes'
               : 'gets';
-      // A share of treasure counts its coins by their worth in whole gold pieces, rounded down. osrlib shares out
-      // every coin of each kind and gives the odd ones to the front of the marching order, so nothing is lost,
-      // although the rounded shares can add up to less than the haul.
-      const share = event.origin === 'treasure' && event.coins_gp_value > 0;
+      // osrlib shares out every coin of each kind and gives the odd ones to the front of the marching order. An
+      // event from before osrlib 2.7 counts a share's coins by their worth in whole gold pieces, rounded down, so
+      // the rounded shares can add up to less than the haul.
+      const exact = exactCoins(event.coins) !== undefined;
+      const share = event.origin === 'treasure' && (exact || event.coins_gp_value > 0);
       return {
         // A purchase lists one ID per lot, so two lots of torches are 12 torches.
-        text: `${who} ${verb} ${goodsText(event.item_ids, event.coins_gp_value, ctx, { lots: event.origin === 'purchase', worth: share })}.`,
+        text: `${who} ${verb} ${goodsText(event.item_ids, event.coins, event.coins_gp_value, ctx, { lots: event.origin === 'purchase', worth: share })}.`,
         detail: share
-          ? 'Coins count by their worth in whole gold pieces, rounded down. Every coin is shared out, and the odd ones go to the front of the marching order.'
+          ? exact
+            ? 'Every coin is shared out, and the odd ones go to the front of the marching order.'
+            : 'Coins count by their worth in whole gold pieces, rounded down. Every coin is shared out, and the odd ones go to the front of the marching order.'
           : undefined,
         category: event.origin === 'treasure' ? 'treasure' : 'item',
         tone: 'good',
@@ -1188,7 +1265,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
       };
     case 'items_dropped':
       return {
-        text: `${memberName(event.character_id, ctx)} drops ${goodsText(event.item_ids, event.coins_gp_value, ctx)}.`,
+        text: `${memberName(event.character_id, ctx)} drops ${goodsText(event.item_ids, event.coins, event.coins_gp_value, ctx)}.`,
         category: 'item',
         tone: 'neutral',
         icon: 'chest',
@@ -1197,7 +1274,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
       };
     case 'items_left_behind':
       return {
-        text: `The party can't carry it all, so ${goodsText(event.item_ids, event.coins_gp_value, ctx)} stays where it lies.`,
+        text: `The party can't carry it all and leaves behind ${goodsText(event.item_ids, event.coins, event.coins_gp_value, ctx)}.`,
         category: 'item',
         tone: 'info',
         icon: 'chest',
@@ -1205,7 +1282,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
       };
     case 'items_given':
       return {
-        text: `${memberName(event.character_id, ctx)} gives ${goodsText(event.item_ids, event.coins_gp_value, ctx)} to ${memberName(event.recipient_id, ctx)}.`,
+        text: `${memberName(event.character_id, ctx)} gives ${goodsText(event.item_ids, event.coins, event.coins_gp_value, ctx)} to ${memberName(event.recipient_id, ctx)}.`,
         category: 'item',
         tone: 'neutral',
         icon: 'chest',
@@ -1425,13 +1502,15 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
             icon: 'rest',
           };
     case 'loot_dropped': {
-      // osrlib sends this event only when the fallen dropped something, and it rounds the coins down to whole
-      // gold pieces. An event with no items and 0 gp is a few coins worth less than 1 gp, never an empty pile.
-      const onlySmallCoins = event.item_ids.length === 0 && event.coins_gp_value === 0;
+      // osrlib sends this event only when the fallen dropped something. An event from before osrlib 2.7 counts
+      // the coins in whole gold pieces, rounded down, so one with no items and 0 gp is a few coins worth less
+      // than 1 gp, never an empty pile. A newer event states the coins exactly.
+      const onlySmallCoins =
+        event.item_ids.length === 0 && event.coins_gp_value === 0 && exactCoins(event.coins) === undefined;
       return {
         text: onlySmallCoins
           ? 'The fallen leave a few coins behind.'
-          : `The fallen leave behind ${goodsText(event.item_ids, event.coins_gp_value, ctx)}.`,
+          : `The fallen leave behind ${goodsText(event.item_ids, event.coins, event.coins_gp_value, ctx)}.`,
         detail: onlySmallCoins ? 'The coins are worth less than 1 gp.' : undefined,
         category: 'treasure',
         tone: 'good',
@@ -1461,7 +1540,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
       };
     case 'spell_declared':
       return {
-        text: `${entityName(event.caster_id, ctx)} begins casting ${spellForm(event.spell_id, event.reversed, ctx)}.`,
+        text: `${entityName(event.caster_id, ctx)} begins casting ${spellFormName(event.spell_id, event.reversed, ctx)}.`,
         category: 'magic',
         tone: 'info',
         icon: 'spell',
@@ -1499,11 +1578,32 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
         ids: [event.character_id, event.replacement_id],
       };
     }
-    case 'monster_fled':
+    case 'hide_attempted': {
+      // The players see the member slip away, but not whether the monsters noticed. The roll is the referee's.
+      const who = memberName(event.character_id, ctx);
       return {
-        text: `${capitalizeFirst(groupName(event.group_id, ctx))} ${groupIsPlural(event.group_id, ctx) ? 'flee' : 'flees'}.`,
+        text: `${who} slips into the shadows to hide.`,
+        detail: 'The referee rolls for the hide in secret.',
+        category: 'battle',
+        tone: 'info',
+        icon: 'step',
+        ids: [event.character_id],
+      };
+    }
+    case 'monster_fled':
+      // The group breaks and runs, but it is still in the battle until it gets far enough away.
+      return {
+        text: `${capitalizeFirst(groupName(event.group_id, ctx))} ${groupIsPlural(event.group_id, ctx) ? 'break and run' : 'breaks and runs'}.`,
         category: 'battle',
         tone: 'good',
+        icon: 'run',
+        ids: [event.group_id],
+      };
+    case 'monster_escaped':
+      return {
+        text: `${capitalizeFirst(groupName(event.group_id, ctx))} ${groupIsPlural(event.group_id, ctx) ? 'escape' : 'escapes'}.`,
+        category: 'battle',
+        tone: 'info',
         icon: 'run',
         ids: [event.group_id],
       };
@@ -1563,14 +1663,23 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
     // Treasure and items ---------------------------------------------------------------------------------------
     case 'hoard_generated': {
       const bits: string[] = [];
-      if (event.coins_gp_value > 0) bits.push(`${formatGold(event.coins_gp_value)} in coin`);
+      const exact = exactCoins(event.coins);
+      if (exact !== undefined) bits.push(...exact);
+      else if (event.coins_gp_value > 0) bits.push(`${formatGold(event.coins_gp_value)} in coin`);
       if (event.valuable_ids.length > 0) bits.push(count(event.valuable_ids.length, 'valuable'));
       if (event.magic_item_ids.length > 0) bits.push(count(event.magic_item_ids.length, 'magic item'));
-      const types =
-        event.treasure_types.length > 0 ? `Treasure types: ${event.treasure_types.join(', ')}.` : undefined;
+      const details = [
+        ...(event.treasure_types.length > 0 ? [`Treasure types: ${event.treasure_types.join(', ')}.`] : []),
+        // Coins of several kinds, or of a kind other than gold, also read by their worth in gold.
+        ...(exact !== undefined &&
+        (exact.length > 1 || (event.coins.gp ?? 0) === 0) &&
+        event.coins_gp_value > 0
+          ? [`The coins are worth ${formatGold(event.coins_gp_value)}.`]
+          : []),
+      ];
       return {
-        text: `Treasure is rolled for ${cacheName(event.cache_ref)}: ${bits.length === 0 ? 'nothing' : joinList(bits)}.`,
-        detail: types,
+        text: `${rolledFor(event.cache_ref)}: ${bits.length === 0 ? 'nothing' : joinList(bits)}.`,
+        detail: details.length > 0 ? details.join(' ') : undefined,
         category: 'treasure',
         tone: 'info',
         icon: 'chest',
@@ -1711,10 +1820,17 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
       };
     }
     case 'monsters_spawned': {
-      const label = ctx.monsters[event.monster_ids[0] ?? '']?.label ?? templateLabel(event.template_id);
+      // bxapi states the template's display names. An event from before osrlib 2.7 has empty names, so it reads by
+      // what the context knows of the monsters, or by the template's ID.
+      const known = ctx.monsters[event.monster_ids[0] ?? ''];
+      const label = nonEmpty(event.display_name) ?? known?.label ?? templateLabel(event.template_id);
+      const plural =
+        (nonEmpty(event.display_name) !== undefined
+          ? nonEmpty(event.display_name_plural)
+          : known?.labelPlural) ?? pluralize(label);
       const n = event.monster_ids.length;
       return {
-        text: `The referee spawns ${countedLabel(label, pluralize(label), n)}.`,
+        text: `The referee spawns ${countedLabel(label, plural, n)}.`,
         category: 'referee',
         tone: 'info',
         icon: 'monsters',
@@ -1724,18 +1840,26 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
     }
     case 'xp_awarded': {
       const who = memberName(event.character_id, ctx);
-      const adjusted =
-        event.award !== event.modified_award
-          ? `Base award ${formatInteger(event.award)}, adjusted to ${formatInteger(event.modified_award)}.`
-          : undefined;
+      // `gained` is what the character really gained. An event from before osrlib 2.7 has no `gained`, so it
+      // reports the adjusted award.
+      const gained = typeof event.gained === 'number' ? event.gained : event.modified_award;
+      const clamped = typeof event.gained === 'number' && event.clamped === true;
+      const parts = [
+        ...(event.award !== event.modified_award
+          ? [`Base award ${formatInteger(event.award)}, adjusted to ${formatInteger(event.modified_award)}.`]
+          : []),
+        ...(clamped ? [LEVEL_LIMIT] : []),
+      ];
       return {
-        text: `${who} gains ${formatInteger(event.modified_award)} experience points.`,
-        detail: adjusted,
+        text: clamped
+          ? `${who} gains ${formatInteger(gained)} of the ${formatInteger(event.modified_award)} experience points awarded.`
+          : `${who} gains ${formatInteger(gained)} experience points.`,
+        detail: parts.length > 0 ? parts.join(' ') : undefined,
         category: 'xp',
         tone: 'good',
         icon: 'star',
         ids: [event.character_id],
-        amount: event.modified_award,
+        amount: gained,
       };
     }
     case 'leveled_up': {
@@ -1849,7 +1973,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
     }
     case 'items_removed':
       return {
-        text: `${memberName(event.character_id, ctx)} loses ${goodsText(event.item_ids, event.coins_gp_value, ctx)}.`,
+        text: `${memberName(event.character_id, ctx)} loses ${goodsText(event.item_ids, event.coins, event.coins_gp_value, ctx)}.`,
         category: 'item',
         tone: 'bad',
         icon: 'chest',
@@ -1858,7 +1982,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
       };
     case 'member_added':
       return {
-        text: `${event.name}, a level ${event.level} ${classLabel(event.class_id).toLowerCase()}, joins the party.`,
+        text: `${event.name}, a level ${event.level} ${memberClass(event.character_id, ctx) ?? classInSentence(classLabel(event.class_id))}, joins the party.`,
         category: 'system',
         tone: 'good',
         icon: 'party',
@@ -1901,15 +2025,30 @@ function groupIsPlural(groupId: string, ctx: TextContext): boolean {
 }
 
 /**
- * Who the party meets when an encounter starts. osrlib's event names only the first group and counts every
- * monster, so the text lists each group the context knows, when their sizes add up to the event's count: "Mag
- * Corrie and Mag's bodyguard", "2 goblins and a hobgoblin". Otherwise it reads the event alone, and a proper
- * name with company reads "Mag Corrie and 2 others".
+ * Who the party meets when an encounter starts: "Mag Corrie and Mag's bodyguard", "2 goblins and a hobgoblin".
+ * An event from osrlib 2.7 or later names each group. An older event names only the first group and counts every
+ * monster, so the text lists each group the context knows, when their sizes add up to the event's count.
+ * Otherwise it reads the event alone, and a proper name with company reads "Mag Corrie and 2 others".
  */
 function encounterCompany(
-  event: { monster_name: string; monster_name_plural?: string; count: number },
+  event: {
+    monster_name: string;
+    monster_name_plural?: string;
+    count: number;
+    group_labels?: readonly string[];
+    group_labels_plural?: readonly string[];
+    group_counts?: readonly number[];
+  },
   ctx: TextContext,
 ): string {
+  const labels = event.group_labels ?? [];
+  if (labels.length > 0 && labels.length === (event.group_counts ?? []).length) {
+    return joinList(
+      labels.map((label, index) =>
+        countedLabel(label, event.group_labels_plural?.[index], event.group_counts?.[index] ?? 1),
+      ),
+    );
+  }
   const groups = Object.values(ctx.groups).filter((group) => group.count !== undefined && group.count > 0);
   const total = groups.reduce((sum, group) => sum + (group.count ?? 0), 0);
   if (groups.length > 0 && total === event.count) {
@@ -1926,8 +2065,9 @@ function normalizeUnit(unit: string): 'round' | 'turn' | 'day' {
   return unit === 'turn' || unit === 'day' ? unit : 'round';
 }
 
-function cacheName(ref: string): string {
-  return /^cache-\d+$/.test(ref) ? 'a treasure cache' : `the ${prettifyId(ref)} cache`;
+/** The start of a rolled-treasure line, such as "Treasure is rolled for the chapel altar". */
+function rolledFor(ref: string): string {
+  return /^cache-\d+$/.test(ref) ? 'Treasure is rolled' : `Treasure is rolled for the ${prettifyId(ref)}`;
 }
 
 function templateName(templateId: string, ctx: TextContext): string {
@@ -1955,6 +2095,10 @@ function unidentifiedNoun(templateId: string): string {
 
 function templateLabel(templateId: string): string {
   return lowerFirst(prettifyId(templateId));
+}
+
+function nonEmpty(text: string | null | undefined): string | undefined {
+  return typeof text === 'string' && text.trim() !== '' ? text : undefined;
 }
 
 function describeLocation(
@@ -2355,6 +2499,9 @@ export function describeGameEntry(
   );
 }
 
+/** Why a member gained less than the award, as bxapi's `clamped` field defines it. */
+const LEVEL_LIMIT = 'One award can raise a character only one level.';
+
 /**
  * Tells what a member kept of an award that osrlib capped: one award raises a character at most one level, and
  * the rest is lost. osrlib's event states the award before the cap, and the entry's `xp_gained` what the member
@@ -2373,7 +2520,8 @@ function cappedAwards(lines: EventLine[], entry: GameEntryLike, ctx: TextContext
     if (kept === undefined || line.amount === undefined || kept >= line.amount) return line;
     return {
       ...line,
-      text: `${memberName(memberId, ctx)} gains ${formatInteger(kept)} experience points. One award raises a character only one level, so the rest is lost.`,
+      text: `${memberName(memberId, ctx)} gains ${formatInteger(kept)} of the ${formatInteger(line.amount)} experience points awarded.`,
+      detail: line.detail ? `${line.detail} ${LEVEL_LIMIT}` : LEVEL_LIMIT,
       amount: kept,
     };
   });

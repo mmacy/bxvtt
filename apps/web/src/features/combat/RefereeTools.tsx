@@ -39,7 +39,7 @@ export function MonsterRoster({ encounter }: { encounter: EncounterView | null }
         const monsters = group.monster_ids
           .map((id, index) => ({ index, monster: referee.monsters.find((m) => m.id === id) }))
           .filter((m) => m.monster !== undefined);
-        const status = group.fled ? 'Fled' : group.fleeing ? 'Fleeing' : null;
+        const status = group.fled ? 'Escaped' : group.fleeing ? 'Fleeing' : null;
         const moraleCount = typeof passed[group.id] === 'number' ? (passed[group.id] as number) : null;
         return (
           <div key={group.id} className={styles.rosterGroup}>
@@ -163,7 +163,7 @@ export function RefereeActions() {
           ending === 'parley'
             ? 'The encounter ends peacefully, such as after paying a toll or striking a bargain.'
             : 'The encounter ends because one side walked away or broke off the chase.'
-        } Monsters already slain, fled, or turned still count as defeated, while monsters left standing award no experience.`}
+        } Monsters already slain, escaped, or turned still count as defeated, while monsters left standing award no experience.`}
         confirmLabel="End encounter"
         onConfirm={end}
       >

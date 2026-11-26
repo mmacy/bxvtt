@@ -1,5 +1,5 @@
 import { capitalizeFirst, magicItemTemplateName, prettifyId } from '@bxvtt/shared/text';
-import { useRefereeState } from '@/app';
+import { useRefereeState, useTextContext } from '@/app';
 import { Badge, Banner } from '@/ui';
 import { compactDuration, effectLabel } from './actions';
 import { RuleLink } from './RuleLink';
@@ -50,6 +50,7 @@ function magicFacts(inventory: unknown): MagicFact[] {
  */
 export function RefereeNotes({ memberId }: { memberId: string }) {
   const referee = useRefereeState();
+  const ctx = useTextContext();
   if (referee === null) return null;
   const character = referee.party.members.find((m) => m.id === memberId);
   if (!character) return null;
@@ -87,7 +88,7 @@ export function RefereeNotes({ memberId }: { memberId: string }) {
               : 'permanent';
           return (
             <li key={effect.effect_id}>
-              {effectLabel(kind)}: {left}
+              {effectLabel(kind, ctx)}: {left}
             </li>
           );
         })}

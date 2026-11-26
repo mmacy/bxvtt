@@ -99,7 +99,7 @@ test.describe('resilience', () => {
     await expect(board).toBeVisible();
     await reload(sam.page);
     await expect(board).toBeVisible();
-    const declarations = sam.page.getByRole('list', { name: 'Declarations this round' });
+    const declarations = sam.page.getByRole('list', { name: 'Actions this round' });
     await expect(declarations.getByRole('listitem').filter({ hasText: 'Flarg' })).toContainText(/hold/i);
   });
 

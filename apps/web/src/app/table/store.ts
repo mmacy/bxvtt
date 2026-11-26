@@ -26,7 +26,6 @@ import type {
 import {
   contextFromPlayerView,
   emptyContext,
-  extendContextWithCatalog,
   extendContextWithNames,
   type TextContext,
 } from '@bxvtt/shared/text';
@@ -85,6 +84,13 @@ export interface TableData {
   declarations: DeclarationsState | null;
   /** The feed entries this client has, oldest first. */
   feed: readonly FeedEntry[];
+  /**
+   * The `seq` of the newest feed entry this client had when the game's mode last changed, as this client saw it:
+   * at the first snapshot, its newest entry, and at a game state with another mode, the newest entry then.
+   * Entries after it are news to a panel of that mode, such as the encounter panel, even when the panel mounts
+   * later than the snapshot because its code is still loading.
+   */
+  modeStartSeq: number;
   /** Whether older feed entries exist on the server than the first one here. */
   feedHasOlder: boolean;
   /** Annotations by level key (`dungeon_id:level_number`). */
@@ -161,6 +167,7 @@ export function initialTableData(tableId: string): TableData {
     game: null,
     declarations: null,
     feed: [],
+    modeStartSeq: 0,
     feedHasOlder: false,
     annotations: {},
     notes: { party: null, referee: null },
@@ -187,24 +194,15 @@ export function newerGame(current: GameState | null, incoming: GameState | null)
 }
 
 /**
- * Builds the player-visible text context for a game state: names from the player view, the area names of the
- * scene, and the scene's item names, on top of the previous context. Every name goes through the text layer's own
- * functions, which keep its curated nouns: the scene names `Torches (6)` for a torch, and the context still says
- * "a torch".
+ * Builds the player-visible text context for a game state: names from the player view (party, spells, dungeons,
+ * and entered areas) and the scene's item names, on top of the previous context. Every name goes through the text
+ * layer's own functions, which keep its curated nouns: the scene names `Torches (6)` for a torch, and the context
+ * still says "a torch".
  */
 export function buildBaseTextContext(previous: TextContext, game: GameState | null): TextContext {
   if (game === null) return previous;
-  let ctx = contextFromPlayerView(game.view, previous);
-  const areas: { id: string; name: string }[] = [];
-  for (const level of game.scene.levels) {
-    for (const area of level.areas) {
-      areas.push({ id: area.id, name: area.name });
-      areas.push({ id: `${level.dungeon_id}:${level.level_number}:${area.id}`, name: area.name });
-    }
-  }
-  if (areas.length > 0) ctx = extendContextWithCatalog(ctx, { areas });
-  if (Object.keys(game.scene.names).length > 0) ctx = extendContextWithNames(ctx, game.scene.names);
-  return ctx;
+  const ctx = contextFromPlayerView(game.view, previous);
+  return Object.keys(game.scene.names).length > 0 ? extendContextWithNames(ctx, game.scene.names) : ctx;
 }
 
 function exploredKeys(game: GameState | null): Set<string> {
@@ -245,6 +243,19 @@ function roleFromTable(table: TableDetail, userId: string | undefined, fallback:
 let noticeCounter = 0;
 
 /**
+ * The `modeStartSeq` after a new game state: the newest entry of `feed` when the mode changed or this is the
+ * first snapshot's game, and the old value otherwise.
+ */
+function modeStartSeq(
+  state: Pick<TableData, 'game' | 'modeStartSeq' | 'ready'>,
+  game: GameState | null,
+  feed: readonly FeedEntry[],
+): number {
+  if (state.ready && state.game?.mode === game?.mode) return state.modeStartSeq;
+  return feed.at(-1)?.seq ?? 0;
+}
+
+/**
  * Computes the change one server message makes to the table state. It never mutates `state`.
  *
  * @param state - The current state.
@@ -265,6 +276,7 @@ export function reduceServerMessage(
       const game = message.game;
       const annotations: Record<string, LevelAnnotations> = {};
       if (message.annotations !== null) annotations[levelKey(message.annotations)] = message.annotations;
+      const feed = catchingUp ? mergeFeed(state.feed, message.feed.entries) : [...message.feed.entries];
       return {
         ready: true,
         user: message.user,
@@ -274,7 +286,8 @@ export function reduceServerMessage(
         online: message.presence.online,
         game,
         declarations: message.declarations,
-        feed: catchingUp ? mergeFeed(state.feed, message.feed.entries) : [...message.feed.entries],
+        feed,
+        modeStartSeq: modeStartSeq(state, game, feed),
         feedHasOlder: catchingUp ? state.feedHasOlder : message.feed.has_more,
         annotations,
         notes: { party: message.notes.party, referee: message.notes.referee },
@@ -294,6 +307,7 @@ export function reduceServerMessage(
       if (game === state.game) return {};
       return {
         game,
+        modeStartSeq: modeStartSeq(state, game, state.feed),
         baseTextContext: buildBaseTextContext(state.baseTextContext, game),
         annotations: pruneAnnotations(state.annotations, state.game, game),
       };
@@ -369,6 +383,7 @@ export function createTableStore(
       if (game === state.game) return;
       set({
         game,
+        modeStartSeq: modeStartSeq(state, game, state.feed),
         baseTextContext: buildBaseTextContext(state.baseTextContext, game),
         annotations: pruneAnnotations(state.annotations, state.game, game),
       });

@@ -6,8 +6,8 @@
  * needs the caller or a referee, and a member command lists only the members the viewer controls. Whether the
  * action works is bxapi's decision, and its refusal explains why.
  */
-import type { MemberView } from '@bxvtt/shared/bxapi';
-import type { PlayerView, Scene, SceneCache, SceneTransition } from '@bxvtt/shared/protocol';
+import type { MemberView, TransitionView } from '@bxvtt/shared/bxapi';
+import type { PlayerView } from '@bxvtt/shared/protocol';
 import {
   directionLabel,
   itemPhrase,
@@ -17,7 +17,7 @@ import {
   searchKindLabel,
   type TextContext,
 } from '@bxvtt/shared/text';
-import type { GameCommand } from '@/app';
+import { cachesToTake, type GameCommand, type Here, type HereFeature } from '@/app';
 import type { Direction } from '@/map';
 import type { IconName, MenuEntry } from '@/ui';
 import type { ExploreSendOptions } from './useExploreSend';
@@ -29,7 +29,8 @@ export const DIRECTIONS: readonly Direction[] = ['north', 'east', 'south', 'west
 /** What the builders read. */
 export interface ActionContext {
   view: PlayerView;
-  scene: Scene | null;
+  /** What the party perceives where it stands, from `useHere`. */
+  here: Here | null;
   /** Whether the viewer may send the command now, for the member when it names one. */
   can: (commandType: string, memberId?: string) => boolean;
   /** Sends a command. */
@@ -307,76 +308,102 @@ export function lightUnavailableReason(
   return none;
 }
 
-/** A name for a cache in a list of caches. */
-export function cacheLabel(cache: SceneCache, caches: readonly SceneCache[]): string {
-  if (caches.length <= 1) return 'Treasure';
-  return `Treasure ${caches.indexOf(cache) + 1}`;
+/** How many characters of a treasure's description name it in a menu. */
+const SNIPPET_LENGTH = 40;
+
+/**
+ * A short name for a treasure in a menu: the first 40 characters of its description, with an ellipsis when the
+ * description is longer, or `null` for a rolled treasure, which has no description.
+ */
+export function cacheSnippet(cache: Pick<HereFeature, 'description'>): string | null {
+  const text = cache.description.trim();
+  if (text === '') return null;
+  if (text.length <= SNIPPET_LENGTH) return text;
+  return `${text.slice(0, SNIPPET_LENGTH).trimEnd()}…`;
 }
 
-/** The actions for one cache the party can see. */
-export function cacheEntries(ctx: ActionContext, cache: SceneCache, label: string): MenuEntry[] {
+/** The take action for one treasure, or `null` when the party can't reach it or the viewer can't send it. */
+export function cacheTakeEntry(
+  ctx: ActionContext,
+  cache: HereFeature,
+): Extract<MenuEntry, { type?: 'item' }> | null {
+  if (!cache.reachable || !ctx.can('take_treasure')) return null;
+  return {
+    label: 'Take treasure',
+    icon: 'coins',
+    onSelect: () => ctx.run({ command_type: 'take_treasure', feature_id: cache.id }),
+  };
+}
+
+/** The actions for one treasure other than taking it: giving it all to one member, and checking or disarming. */
+export function cacheMoreEntries(ctx: ActionContext, cache: HereFeature): MenuEntry[] {
   const entries: MenuEntry[] = [];
   const living = livingMembers(ctx.view.party);
-  if (cache.reachable && ctx.can('take_treasure')) {
+  if (cache.reachable && ctx.can('take_treasure') && living.length > 1) {
     entries.push({
-      label: label === 'Treasure' ? 'Take treasure' : `Take ${label.toLowerCase()}`,
-      icon: 'coins',
-      onSelect: () => ctx.run({ command_type: 'take_treasure', feature_id: cache.id }),
+      type: 'submenu',
+      label: 'Give all to one member',
+      icon: 'user',
+      items: living.map((member) => ({
+        label: member.name,
+        onSelect: () =>
+          ctx.run({ command_type: 'take_treasure', feature_id: cache.id, recipient_id: member.id }),
+      })),
     });
-    if (living.length > 1) {
-      entries.push({
-        type: 'submenu',
-        label: 'Give all to one member',
-        icon: 'user',
-        items: living.map((member) => ({
-          label: member.name,
-          onSelect: () =>
-            ctx.run({ command_type: 'take_treasure', feature_id: cache.id, recipient_id: member.id }),
-        })),
-      });
-    }
   }
   const thieves = (command: string) =>
     actors(ctx, command, (member) => hasThiefSkill(member, 'find_remove_treasure_traps'));
-  if (cache.trap === null || cache.trap.state === 'found') {
-    if (cache.trap === null) {
-      entries.push(
-        ...perMember(
-          ctx,
-          'Check for traps',
-          'trap',
-          thieves('inspect_treasure'),
-          (member) => ({ command_type: 'inspect_treasure', feature_id: cache.id, character_id: member.id }),
-          (member) => ({ nothingText: `${member.name} finds no trap.` }),
-        ),
-      );
-    } else {
-      entries.push(
-        ...perMember(ctx, 'Disarm trap', 'trap', thieves('remove_treasure_trap'), (member) => ({
-          command_type: 'remove_treasure_trap',
-          feature_id: cache.id,
-          character_id: member.id,
-        })),
-      );
-    }
+  if (cache.trapState === null) {
+    entries.push(
+      ...perMember(
+        ctx,
+        'Check for traps',
+        'trap',
+        thieves('inspect_treasure'),
+        (member) => ({ command_type: 'inspect_treasure', feature_id: cache.id, character_id: member.id }),
+        (member) => ({ nothingText: `${member.name} finds no trap.` }),
+      ),
+    );
+  } else if (cache.trapState === 'found') {
+    entries.push(
+      ...perMember(ctx, 'Disarm trap', 'trap', thieves('remove_treasure_trap'), (member) => ({
+        command_type: 'remove_treasure_trap',
+        feature_id: cache.id,
+        character_id: member.id,
+      })),
+    );
   }
   return entries;
 }
 
+/** Every action for one treasure the party can see, with taking it first. */
+export function cacheEntries(ctx: ActionContext, cache: HereFeature): MenuEntry[] {
+  const take = cacheTakeEntry(ctx, cache);
+  return [...(take ? [take] : []), ...cacheMoreEntries(ctx, cache)];
+}
+
+/**
+ * The pick-up action for goods dropped on the party's cell, or `null` when the viewer can't send it. The action
+ * bar's Treasure menu shows its label. The scene panel's row already names the goods, so its button reads "Pick up"
+ * and keeps the label as its accessible name.
+ */
+export function pileTakeEntry(ctx: ActionContext): Extract<MenuEntry, { type?: 'item' }> | null {
+  if (!ctx.can('take_treasure')) return null;
+  return {
+    label: 'Pick up dropped goods',
+    icon: 'coins',
+    onSelect: () => ctx.run({ command_type: 'take_treasure', feature_id: 'pile' }),
+  };
+}
+
 /** The actions for goods dropped on the party's cell. */
 export function pileEntries(ctx: ActionContext): MenuEntry[] {
-  if (!ctx.can('take_treasure')) return [];
-  return [
-    {
-      label: 'Pick up dropped goods',
-      icon: 'coins',
-      onSelect: () => ctx.run({ command_type: 'take_treasure', feature_id: 'pile' }),
-    },
-  ];
+  const take = pileTakeEntry(ctx);
+  return take ? [take] : [];
 }
 
 /** The button text for taking a transition. */
-export function transitionAction(transition: Pick<SceneTransition, 'kind' | 'leads'>): string {
+export function transitionAction(transition: Pick<TransitionView, 'kind'>): string {
   switch (transition.kind) {
     case 'stairs_down':
       return 'Go down the stairs';
@@ -391,37 +418,30 @@ export function transitionAction(transition: Pick<SceneTransition, 'kind' | 'lea
   }
 }
 
-/** A short description of a transition: what it is and which way it leads. */
-export function transitionDescription(transition: Pick<SceneTransition, 'kind' | 'leads'>): string {
-  const thing =
-    transition.kind === 'stairs_down' || transition.kind === 'stairs_up'
-      ? 'Stairs'
-      : transition.kind === 'trapdoor'
-        ? 'A trapdoor'
-        : transition.kind === 'chute'
-          ? 'A chute'
-          : 'A passage';
-  const plural = thing === 'Stairs';
-  switch (transition.leads) {
-    case 'up':
-      return `${thing} ${plural ? 'lead' : 'leads'} up.`;
-    case 'down':
-      return `${thing} ${plural ? 'lead' : 'leads'} down.`;
-    case 'same_level':
-      return `${thing} ${plural ? 'lead' : 'leads'} elsewhere on this level.`;
-    case 'elsewhere':
-      return `${thing} ${plural ? 'lead' : 'leads'} to another area.`;
+/** A short description of a transition, from its kind alone. The party doesn't know where it leads. */
+export function transitionDescription(transition: Pick<TransitionView, 'kind'>): string {
+  switch (transition.kind) {
+    case 'stairs_down':
+      return 'Stairs lead down.';
+    case 'stairs_up':
+      return 'Stairs lead up.';
+    case 'trapdoor':
+      return "There's a trapdoor here.";
+    case 'chute':
+      return 'A chute slopes down into the dark.';
+    case 'passage':
+      return "There's a passage here.";
   }
 }
 
 /** The transitions on the party's cell that `use_stairs` takes. */
-export function stairsHere(scene: Scene | null): SceneTransition[] {
-  return (scene?.here?.transitions ?? []).filter((transition) => transition.kind !== 'passage');
+export function stairsHere(here: Here | null): TransitionView[] {
+  return (here?.transitions ?? []).filter((transition) => transition.kind !== 'passage');
 }
 
 /** The action for taking the transition on the party's cell. */
 export function stairsEntries(ctx: ActionContext): MenuEntry[] {
-  const [transition] = stairsHere(ctx.scene);
+  const [transition] = stairsHere(ctx.here);
   if (!transition || !ctx.can('use_stairs')) return [];
   return [
     {
@@ -451,30 +471,28 @@ export function turnEntries(ctx: ActionContext): MenuEntry[] {
 
 /** Every treasure action for what lies on or around the party's cell. */
 export function treasureEntries(ctx: ActionContext): MenuEntry[] {
-  const here = ctx.scene?.here;
+  const here = ctx.here;
   if (!here) return [];
+  const shown = cachesToTake(here);
   const caches: MenuEntry[] = [];
-  for (const cache of here.caches) {
-    const label = cacheLabel(cache, here.caches);
-    const items = cacheEntries(ctx, cache, label);
+  for (const cache of shown) {
+    const items = cacheEntries(ctx, cache);
     if (items.length === 0) continue;
-    if (here.caches.length > 1) caches.push({ type: 'label', label });
+    if (shown.length > 1) caches.push({ type: 'label', label: cacheSnippet(cache) ?? 'Treasure' });
     caches.push(...items);
   }
   const goods = here.pile ? pileEntries(ctx) : [];
   // With both here, each group carries its name: "Treasure" for a cache, "Dropped goods" for a pile.
   if (caches.length > 0 && goods.length > 0) {
-    const named =
-      here.caches.length > 1 ? caches : [{ type: 'label' as const, label: 'Treasure' }, ...caches];
+    const named = shown.length > 1 ? caches : [{ type: 'label' as const, label: 'Treasure' }, ...caches];
     return [...named, { type: 'separator' }, { type: 'label', label: 'Dropped goods' }, ...goods];
   }
   return [...caches, ...goods];
 }
 
 /** The name of the bar's treasure menu, by what lies here: "Treasure", "Dropped goods", or both. */
-export function treasureMenuLabel(scene: Scene | null): string {
-  const here = scene?.here;
-  const caches = (here?.caches.length ?? 0) > 0;
+export function treasureMenuLabel(here: Here | null): string {
+  const caches = cachesToTake(here).length > 0;
   const pile = here?.pile === true;
   if (caches && pile) return 'Treasure and dropped goods';
   return pile ? 'Dropped goods' : 'Treasure';

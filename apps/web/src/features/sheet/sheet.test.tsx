@@ -1,4 +1,5 @@
 import type { CommandResult, StoredCharacter } from '@bxvtt/shared/protocol';
+import { emptyContext } from '@bxvtt/shared/text';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { resetMyCharacters } from '@/app';
@@ -10,6 +11,7 @@ import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { createFakeApi, renderWithTable } from '@/app/testing/renderWithTable';
 import { CharacterSheet } from './CharacterSheet';
 import { entryRule } from './InventoryTab';
+import { effectLabel } from './actions';
 import { readInventory } from './model';
 import { PartyPanel, moveTo } from './PartyPanel';
 import { spellDuration, withoutPointers } from './spellText';
@@ -414,5 +416,77 @@ describe('a caster with nothing memorized', () => {
     await user.click(await screen.findByRole('button', { name: /^No spells memorized for Wren/ }));
     expect(useTableUi.getState().sheetMemberId).toBe(wren.id);
     expect(useTableUi.getState().sheetTab).toBe('spells');
+  });
+});
+
+describe('names the player view states', () => {
+  /** The exploring snapshot with Brenna as a member of a class the adventure wrote. */
+  function customClassSnapshot() {
+    const snapshot = fixtureSnapshot('exploring', 'player');
+    const party = snapshot.game?.view.party ?? [];
+    const brenna = party[0];
+    if (!brenna) throw new Error('no Brenna');
+    party[0] = { ...brenna, class_id: 'hollow_knight', class_name: 'Hollow knight' };
+    return { snapshot, brenna: party[0] };
+  }
+
+  it('shows a custom class on the sheet and in the party panel', async () => {
+    const { snapshot, brenna } = customClassSnapshot();
+    renderWithTable(<CharacterSheet memberId={brenna.id} onClose={() => {}} />, { snapshot });
+    expect(await screen.findByRole('button', { name: 'hollow knight' })).toBeInTheDocument();
+  });
+
+  it('describes a party row with the view’s class name', () => {
+    const { snapshot } = customClassSnapshot();
+    renderWithTable(<PartyPanel />, { snapshot });
+    const row = screen.getAllByRole('button', { description: /Opens the character sheet/ })[0];
+    expect(row).toHaveAccessibleDescription(/level \d+ hollow knight/);
+  });
+
+  it('keeps the capitals of a proper name inside a custom class name', () => {
+    const { snapshot } = customClassSnapshot();
+    const party = snapshot.game?.view.party ?? [];
+    const brenna = party[0];
+    if (!brenna) throw new Error('no Brenna');
+    party[0] = { ...brenna, class_name: 'Warlock of Sarn' };
+    renderWithTable(<PartyPanel />, { snapshot });
+    const row = screen.getAllByRole('button', { description: /Opens the character sheet/ })[0];
+    expect(row).toHaveAccessibleDescription(/level \d+ warlock of Sarn/);
+  });
+
+  it('names a spell the adventure bundles, and the reverse of a spell, from the view', async () => {
+    const snapshot = fixtureSnapshot('exploring', 'player');
+    const view = snapshot.game?.view;
+    const wren = view?.party[1];
+    if (!view || !wren) throw new Error('no Wren');
+    view.party[1] = {
+      ...wren,
+      class_id: 'magic_user',
+      spell_book: ['ember_lash', 'light_mu'],
+      memorized_spells: [{ spell_id: 'light_mu', reversed: true }, { spell_id: 'ember_lash' }],
+    };
+    view.spell_names = { ember_lash: 'Ember Lash', light_mu: 'Light' };
+    view.reversed_spell_names = { light_mu: 'Darkness' };
+    const { user } = renderWithTable(<CharacterSheet memberId={wren.id} onClose={() => {}} />, {
+      snapshot,
+    });
+    await user.click(await screen.findByRole('tab', { name: 'Spells' }));
+    const memorized = await screen.findByRole('heading', { name: 'Memorized spells' });
+    const section = memorized.closest('section');
+    if (!section) throw new Error('no section');
+    expect(within(section).getByText('Ember Lash')).toBeInTheDocument();
+    expect(within(section).getByText('Darkness')).toBeInTheDocument();
+    expect(within(section).queryByText(/ember_lash|light_mu/i)).toBeNull();
+    const book = screen.getByRole('heading', { name: 'Spell book' }).closest('section');
+    if (!book) throw new Error('no book');
+    expect(within(book).getByText('Ember Lash')).toBeInTheDocument();
+  });
+
+  it('names an effect that is a spell by the view’s spell name', () => {
+    const ctx = emptyContext();
+    ctx.spells.ember_lash = 'Ember Lash';
+    expect(effectLabel('ember_lash', ctx)).toBe('Ember Lash');
+    expect(effectLabel('light', ctx)).toBe('Light');
+    expect(effectLabel('protection_from_evil')).toBe('Protection from evil');
   });
 });

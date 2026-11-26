@@ -5,6 +5,7 @@ import {
   formatFeet,
   joinList,
   memberName,
+  monsterName,
   spellName,
   type TextContext,
 } from '@bxvtt/shared/text';
@@ -16,6 +17,7 @@ import {
   useRulesEntry,
   useSendDeclaration,
   useTableUi,
+  useTextContext,
   type ClassDetail,
   type SpellDetail,
 } from '@/app';
@@ -23,7 +25,6 @@ import { Banner, Button, Card, Checkbox, cx, Icon, SegmentedControl, Select, typ
 import {
   attackDeclaration,
   carries,
-  describeDeclaration,
   liveGroups,
   memberDistance,
   memberGap,
@@ -37,11 +38,11 @@ import {
   type MemberGear,
 } from './model';
 import styles from './combat.module.css';
-import { targetLabel, useCombatText, useSceneTargets } from './text';
+import { useEncounterCreatures } from './text';
 import { useCasting } from './casting';
 import { countBadge, groupHeading, theGroup, viewLabels } from './names';
 
-export type ComposerTab = 'attack' | 'cast' | 'move' | 'item' | 'give' | 'turn' | 'hold';
+export type ComposerTab = 'attack' | 'cast' | 'move' | 'item' | 'give' | 'turn' | 'hide' | 'hold';
 
 const TAB_LABELS: Record<ComposerTab, { label: string; icon: IconName }> = {
   attack: { label: 'Attack', icon: 'weapon-sword' },
@@ -50,12 +51,13 @@ const TAB_LABELS: Record<ComposerTab, { label: string; icon: IconName }> = {
   item: { label: 'Item', icon: 'potion' },
   give: { label: 'Give', icon: 'hand' },
   turn: { label: 'Turn undead', icon: 'class-cleric' },
+  hide: { label: 'Hide', icon: 'eye-off' },
   hold: { label: 'Hold', icon: 'pause' },
 };
 
 /** The class abilities that offer a choice in battle, read from the class catalog. */
-export function useClassAbilities(classId: string): { turnUndead: boolean; backStab: boolean } {
-  const entry = useRulesEntry<ClassDetail>(`classes/${classId}`);
+export function useClassAbilities(classId: string | null): { turnUndead: boolean; backStab: boolean } {
+  const entry = useRulesEntry<ClassDetail>(classId === null ? null : `classes/${classId}`);
   return useMemo(() => {
     const tags = new Set((entry.data?.abilities ?? []).map((ability) => ability.tag));
     return { turnUndead: tags.has('turn_undead'), backStab: tags.has('back_stab') };
@@ -143,7 +145,7 @@ export function Composer({
   onDeclared,
   onClose,
 }: ComposerProps) {
-  const ctx = useCombatText();
+  const ctx = useTextContext();
   const { declare, pending } = useSendDeclaration();
   const abilities = useClassAbilities(member.class_id);
   const gazers = useGazeGroups(encounter);
@@ -161,6 +163,11 @@ export function Composer({
   if (usable.length > 0) tabs.push('item');
   if (gear.items.length > 0 && others.length > 0) tabs.push('give');
   if (abilities.turnUndead) tabs.push('turn');
+  // Hide is offered to the members the view lists in `can_hide`, to a member who already declared a hide, and to
+  // a member the view gives thief skills. `can_hide` reads the battle as it stands, so a thief in the front rank
+  // isn't in it, though another member's declared move can make the hide work. The preview says when it won't.
+  const thiefSkills = Object.keys(member.thief_skills).length > 0;
+  if (encounter.can_hide.includes(member.id) || current?.action === 'hide' || thiefSkills) tabs.push('hide');
   tabs.push('hold');
 
   const usableTabs = tabs.filter((t) => t !== 'cast' || spells.length > 0);
@@ -209,15 +216,6 @@ export function Composer({
         </Button>
       </div>
 
-      <p className={styles.composerHint}>
-        <Icon name="info" size={14} />
-        <span>
-          {current
-            ? `${member.name} has declared: ${describeDeclaration(current, ctx, gear)}. Choose another action to change it before the round resolves.`
-            : `Choosing an action declares it for ${member.name} this round. You can change it until the round resolves.`}
-        </span>
-      </p>
-
       {casting.reason && (
         <div className={styles.noSpells}>
           <Icon name="spell" size={14} />
@@ -258,8 +256,9 @@ export function Composer({
         </div>
       )}
 
+      {/* A forecast that shows each time the composer opens, so it waits for a pause instead of interrupting. */}
       {refusals.length > 0 && (
-        <Banner tone="danger" title="Declaration refused">
+        <Banner tone="warning" announce="status">
           {refusals.join(' ')}
         </Banner>
       )}
@@ -313,6 +312,22 @@ export function Composer({
         {tab === 'turn' && (
           <TurnChoice member={member} encounter={encounter} pending={pending} onSubmit={submit} />
         )}
+        {tab === 'hide' && (
+          <div className={styles.choiceRow}>
+            <p className={styles.choiceHint}>
+              {member.name} slips into the shadows to set up a back-stab. The referee rolls in secret.
+            </p>
+            <Button
+              size="sm"
+              variant="secondary"
+              icon="eye-off"
+              loading={pending}
+              onClick={() => void submit({ action: 'hide' })}
+            >
+              Hide in shadows
+            </Button>
+          </div>
+        )}
         {tab === 'hold' && (
           <div className={styles.choiceRow}>
             <p className={styles.choiceHint}>{member.name} stays put and does nothing this round.</p>
@@ -346,6 +361,8 @@ function tabFor(action: string | undefined): ComposerTab | null {
       return 'give';
     case 'turn_undead':
       return 'turn';
+    case 'hide':
+      return 'hide';
     case 'hold':
       return 'hold';
     default:
@@ -448,8 +465,12 @@ function AttackChoices({
   onSubmit,
 }: ChoiceProps & { gear: MemberGear; backStab: boolean; current: DeclarationBody | null }) {
   const [weaponId, setWeaponId] = useState<string>('auto');
-  const [stab, setStab] = useState(false);
-  const canStab = backStab && encounter.party_free_round;
+  // The class catalog says who has the back-stab ability, and the view lists who is hiding. Whether a back-stab
+  // works this round is bxapi's to say, and the board shows its reason when one won't.
+  const hiding = encounter.hiding.includes(member.id);
+  const canStab = backStab || hiding;
+  // A hiding member starts on a back-stab, the reason to hide, and a saved back-stab starts checked.
+  const [stab, setStab] = useState(hiding || current?.back_stab === true);
   // A back-stab is a melee attack, so it takes the wielded melee weapon unless the player chose one.
   const melee = gear.wielded.find((w) => w.melee)?.id ?? null;
   const chosen = weaponId !== 'auto' ? weaponId : stab && canStab ? melee : null;
@@ -476,7 +497,7 @@ function AttackChoices({
           {canStab && (
             <Checkbox
               label="Back-stab"
-              description="The monsters are unaware this round: +4 to hit and double damage in melee."
+              description={`Strike a monster that hasn't noticed ${member.name}.`}
               checked={stab}
               onCheckedChange={setStab}
             />
@@ -571,7 +592,7 @@ function SpellTargets({
   onSubmit,
 }: ChoiceProps & { spellId: string; memorizedReversed: boolean; ctx: TextContext }) {
   const entry = useRulesEntry<SpellDetail>(`spells/${spellId}`);
-  const sceneTargets = useSceneTargets();
+  const creatures = useEncounterCreatures();
   const spell = entry.data;
   const modes = spell?.modes ?? [];
   const [modeKey, setModeKey] = useState<string | null>(null);
@@ -606,11 +627,10 @@ function SpellTargets({
 
   const living = encounter.declarers;
   const groupsById = new Map(liveGroups(encounter).map((g) => [g.id, g]));
-  // Every monster the party can single out, by the handle the scene gives it. The server swaps the handle for
-  // the monster when the round resolves.
-  const monsters = sceneTargets.flatMap((target) => {
-    const group = groupsById.get(target.group_id);
-    return group && !target.defeated && !target.fled ? [{ target, group }] : [];
+  // Every living monster the player view lists, by its ID.
+  const monsters = creatures.flatMap((creature) => {
+    const group = groupsById.get(creature.group_id);
+    return group && creature.status === 'alive' ? [{ creature, group }] : [];
   });
 
   return (
@@ -713,13 +733,13 @@ function SpellTargets({
           {atMonsters && monsters.length > 0 && (
             <div className={styles.chipGroup} role="group" aria-label="Monsters">
               <span className={styles.chipLabel}>Monsters</span>
-              {monsters.map(({ target, group }) => {
+              {monsters.map(({ creature, group }) => {
                 const distance = memberDistance(group, member.id);
                 const tooFar = range !== null && distance > range;
-                const chosen = targets.includes(target.handle);
+                const chosen = targets.includes(creature.id);
                 return (
                   <Button
-                    key={target.handle}
+                    key={creature.id}
                     size="sm"
                     variant={chosen ? 'primary' : 'ghost'}
                     aria-pressed={chosen}
@@ -729,9 +749,9 @@ function SpellTargets({
                         ? `Out of range: ${formatFeet(distance)} away, but ${name} only reaches ${formatFeet(range)}.`
                         : null
                     }
-                    onClick={() => toggle(target.handle)}
+                    onClick={() => toggle(creature.id)}
                   >
-                    {targetLabel(target, sceneTargets, group.label)}
+                    {creature.name}
                   </Button>
                 );
               })}
@@ -760,7 +780,7 @@ function SpellTargets({
 }
 
 function targetName(id: string, ctx: TextContext): string {
-  return ctx.monsters[id]?.name ?? memberName(id, ctx);
+  return id.startsWith('character-') ? memberName(id, ctx) : monsterName(id, ctx);
 }
 
 function firstSentence(text: string): string {

@@ -8,8 +8,8 @@ import {
   getApi,
   useAdventureDocument,
   usePermissionContext,
+  useHere,
   usePlayerView,
-  useScene,
   useTableId,
   useTableStore,
   useTableStoreApi,
@@ -21,12 +21,13 @@ import { learnFromFeed, observeLocation, useLorePart, useLoreStore, type Lore } 
 import { useExploreSend } from './useExploreSend';
 
 /**
- * The context the action builders read: the view, the scene, the permission check, and a `run` that sends
+ * The context the action builders read: the view, what the party perceives where it stands, the permission
+ * check, and a `run` that sends
  * through {@link useExploreSend}. `null` before the game loads.
  */
 export function useActionContext(): ActionContext | null {
   const view = usePlayerView();
-  const scene = useScene();
+  const here = useHere();
   const permissions = usePermissionContext();
   const { send } = useExploreSend();
   const text = useTextContext();
@@ -40,14 +41,14 @@ export function useActionContext(): ActionContext | null {
         ? null
         : {
             view,
-            scene,
+            here,
             can,
             text,
             run: (command, options) => {
               void send(command, options);
             },
           },
-    [view, scene, can, send, text],
+    [view, here, can, send, text],
   );
 }
 
@@ -97,14 +98,15 @@ const listings = new Map<string, Promise<Record<string, string>>>();
 
 /**
  * The names of the dungeons of the table's adventure, by dungeon ID. A referee with the lens on reads them from
- * the adventure document. Everyone else reads them from the table's adventure list, which holds only what a
- * player may know before play.
+ * the adventure document. Everyone else reads them from the table's adventure list, which lists only what a
+ * player may know before play, and from the dungeons the player view lists as entered.
  */
 export function useDungeonNames(): Record<string, string> {
   const tableId = useTableId();
   const adventureId = useTableStore((s) => s.game?.adventure_id ?? null);
   const adventureName = useTableStore((s) => s.game?.adventure_name ?? null);
   const document = useAdventureDocument().data;
+  const entered = useTableStore((s) => s.game?.view.dungeons);
   const [listed, setListed] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -140,9 +142,10 @@ export function useDungeonNames(): Record<string, string> {
 
   return useMemo(() => {
     const names = { ...listed };
+    for (const dungeon of entered ?? []) names[dungeon.id] = dungeon.name;
     for (const dungeon of adventureDungeons(document)?.dungeons ?? []) names[dungeon.id] = dungeon.name;
     return names;
-  }, [listed, document]);
+  }, [listed, entered, document]);
 }
 
 /**
@@ -159,11 +162,7 @@ export function levelLabel(
   return dungeons.size > 1 && name ? `${name}, level ${option.levelNumber}` : `Level ${option.levelNumber}`;
 }
 
-/**
- * Whether the party can go back to town from where it stands, as the scene states it: it is exploring and stands
- * on the level's entrance.
- */
+/** Whether the party can go back to town from where it stands, as the player view states it. */
 export function useCanTravelToTown(): boolean {
-  const scene = useScene();
-  return scene?.can_travel_to_town ?? scene?.here?.at_entrance ?? false;
+  return useTableStore((s) => s.game?.view.can_travel_to_town ?? false);
 }

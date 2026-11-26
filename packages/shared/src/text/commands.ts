@@ -96,20 +96,20 @@ export const COMMAND_INFO: Record<string, CommandInfo> = {
   inspect_treasure: play(
     'Check treasure for traps',
     'Inspect',
-    'check a treasure cache for traps',
-    'Have a thief check a treasure cache for traps. This takes one turn.',
+    'check treasure for traps',
+    'Have a thief check a treasure for traps. This takes one turn.',
   ),
   remove_treasure_trap: play(
     'Disarm a treasure trap',
     'Disarm',
     'disarm a treasure trap',
-    'Have a thief disarm a known trap on a treasure cache. This takes one turn.',
+    'Have a thief disarm a trap the party found on a treasure. This takes one turn.',
   ),
   take_treasure: play(
     'Take treasure',
     'Take',
     'take treasure',
-    'Collect coins and items from a treasure cache or dropped pile. This takes one turn.',
+    'Collect coins and items from a treasure or from dropped goods. This takes one turn.',
   ),
   drop_items: play(
     'Drop items',
@@ -289,7 +289,7 @@ export const COMMAND_INFO: Record<string, CommandInfo> = {
     'identify an item',
     "Reveal a magic item's true name and properties.",
   ),
-  roll_dice: referee('Roll dice', 'Roll', 'roll dice', 'Roll dice in the session log.'),
+  roll_dice: referee('Roll dice', 'Roll', 'roll dice', 'Roll dice in the game log.'),
   mark_trigger_fired: referee(
     'Mark a trigger fired',
     'Mark fired',
@@ -306,7 +306,7 @@ export const COMMAND_INFO: Record<string, CommandInfo> = {
     'Record a note',
     'Record',
     'record a note',
-    'Record a private referee note in the session log.',
+    'Record a private referee note in the game log.',
   ),
   activate_quest: referee(
     'Activate a quest',
@@ -438,7 +438,7 @@ export const DEFAULT_FIELD_TEXT: Record<string, FieldText> = {
   ),
   character_id: field('Character', 'The party member who performs this action.'),
   recipient_id: field('Recipient', 'The party member who receives the goods.'),
-  feature_id: field('Treasure', 'Which treasure cache to use, or dropped goods on this square.'),
+  feature_id: field('Treasure', 'Which treasure to use, or dropped goods on this square.'),
   item_id: field('Item', 'Choose which item to use.'),
   item_ids: field('Items', 'The items to use. Repeat an item once for each unit.'),
   coins: field('Coins', 'How many coins of each kind.'),
@@ -511,7 +511,7 @@ export const DEFAULT_FIELD_TEXT: Record<string, FieldText> = {
     'Temple cleric level',
     'Cleric level for the temple spell. Leave blank to use the minimum level required.',
   ),
-  declarations: field('Declarations', 'One action declaration for each party member who can act this round.'),
+  declarations: field('Actions', 'One action for each party member who can act this round.'),
 };
 
 /** Field text that differs from the default for one command. */
@@ -568,17 +568,17 @@ export const COMMAND_FIELD_TEXT: Record<string, Record<string, FieldText>> = {
     ),
   },
   inspect_treasure: {
-    character_id: field('Who inspects', 'A thief. Each thief gets one attempt per cache.'),
-    feature_id: field('Cache', 'The cache to check for a trap.'),
+    character_id: field('Who inspects', 'A thief. Each thief gets one attempt per treasure.'),
+    feature_id: field('Treasure', 'The treasure to check for a trap.'),
   },
   remove_treasure_trap: {
     character_id: field('Who disarms the trap', 'A thief. A failed attempt can set the trap off.'),
-    feature_id: field('Cache', 'The trapped cache to disarm. The party has to find the trap first.'),
+    feature_id: field('Treasure', 'The trapped treasure to disarm. The party has to find the trap first.'),
   },
   take_treasure: {
     feature_id: field(
-      'Cache or pile',
-      'The treasure cache to empty, or the pile of goods dropped on this square.',
+      'Treasure or dropped goods',
+      'The treasure to empty, or the goods dropped on this square.',
     ),
     recipient_id: field(
       'Who takes it',
@@ -682,10 +682,7 @@ export const COMMAND_FIELD_TEXT: Record<string, Record<string, FieldText>> = {
   },
   turn_undead: { character_id: field('Who presents the symbol', 'Usually a cleric.') },
   resolve_battle_round: {
-    declarations: field(
-      'Declarations',
-      'One action declaration for each party member who can act this round.',
-    ),
+    declarations: field('Actions', 'One action for each party member who can act this round.'),
   },
   grant_item: {
     character_id: field('Receiver', 'The member who receives the item.'),
@@ -792,7 +789,7 @@ export const COMMAND_FIELD_TEXT: Record<string, Record<string, FieldText>> = {
   add_member: {
     character: field(
       'Character',
-      'The character joining the party, with no active conditions or session items.',
+      'The character joining the party, with no active conditions or items from another game.',
     ),
   },
   remove_member: {
@@ -809,7 +806,7 @@ export const COMMAND_FIELD_TEXT: Record<string, Record<string, FieldText>> = {
 
 /** Text for the fields of a battle declaration, the entries of `resolve_battle_round.declarations`. */
 export const DECLARATION_FIELD_TEXT: Record<string, FieldText> = {
-  character_id: field('Member', 'Whose declaration this is.'),
+  character_id: field('Member', 'Whose action this is.'),
   action: field('Action', 'What this member does this round.'),
   target_group_id: field('Target group', 'Which monster group the action is aimed at.'),
   weapon_id: field('Weapon', 'Choose which wielded weapon to use, or leave blank for your primary weapon.'),
@@ -817,22 +814,22 @@ export const DECLARATION_FIELD_TEXT: Record<string, FieldText> = {
   spell_mode: field('Spell mode', "Which of the spell's uses to cast."),
   reversed: field('Reversed form', 'Cast the reversed form of the spell.'),
   targets: field(
-    'Spell targets',
-    'Who or what the spell is aimed at, when it does not target the whole group.',
+    'Targets',
+    'Who the spell, potion, item, or staff is for. Leave it empty for a spell aimed at a whole group.',
   ),
   move: field('Move', 'How this member moves this round.'),
   replacement_id: field(
     'Trade places with',
     'A member to trade marching-order places with, for a fighting withdrawal or retreat made alone.',
   ),
-  item_id: field('Item', 'The magic item to use, or the splash weapon to throw.'),
+  item_id: field('Item', 'The magic item to use, the splash weapon to throw, or the item to hand over.'),
   gaze_defense: field(
     'Guard against a gaze',
     "Avert your eyes or use a mirror to avoid a monster's gaze, with an attack penalty.",
   ),
   back_stab: field(
     'Back-stab',
-    "A thief's attack on an unaware monster from behind, with a bonus to hit and doubled damage.",
+    "Strike a monster that hasn't noticed the thief, after the party surprises the monsters or from hiding.",
   ),
 };
 

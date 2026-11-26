@@ -2,7 +2,7 @@
 
 bxvtt is a browser-based virtual tabletop for the 1981 B/X (Basic and Expert) fantasy adventure rules. A referee and players connect in their browsers to share one dungeon map, marching order, chat feed, and party. The [bxapi](https://github.com/mmacy/bxapi) rules engine enforces the B/X rules, rolls every die, and stores characters, adventures, sessions, and saves, while bxvtt provides the multiplayer table around it.
 
-![A party of four exploring the first level of The Drowned Bell beside the marching order panel](docs/images/explore.webp)
+![A party of four exploring the first level of The Drowned Bell, with the scene panel open on a treasure and the marching order beside the map](docs/images/explore.webp)
 
 - **Invited to play at someone's table?** You do not install anything. Open your referee's link in a desktop browser and read [Join a table and make a character](docs/playing/getting-started.md).
 - **Running a game or playing solo?** Follow [Quickstart](#quickstart) below to launch `bxapi` and `bxvtt` locally, then [Play over the internet](#play-over-the-internet) to invite friends.
@@ -69,7 +69,7 @@ bxvtt is a browser-based virtual tabletop for the 1981 B/X (Basic and Expert) fa
 3. Open [http://127.0.0.1:8660](http://127.0.0.1:8660) in your browser (not the `trycloudflare.com` URL, so your referee sign-in persists across tunnel restarts). Under **Create a table**, enter a table name and the **Host key**, then select **Create table**.
 4. In **Invite players**, select **Copy** and replace `http://127.0.0.1:8660` in the copied link with your `https://*.trycloudflare.com` URL (for example, `https://example-words-here.trycloudflare.com/join/ABCD1-EFGH2-JKLM3-NPQR4`). Send that link to your players; they open it, enter a name, and join without needing the host key.
 
-Press `Ctrl+C` to close the tunnel when the session ends. When the tunnel URL changes on your next session, send returning players the updated `https://<new-tunnel>.trycloudflare.com/join/<code>` link: they select **I've played at this table before** on that page, and a referee selects **Let them in** to restore their seats and characters. See [Play over the internet](docs/getting-started/share-online.md).
+Press `Ctrl+C` to close the tunnel when the session ends. When the tunnel URL changes on your next session, send returning players the updated `https://<new-tunnel>.trycloudflare.com/join/<code>` link: they select **I've played at this table before** on that page, and a referee selects **Approve** to restore their seats and characters. See [Play over the internet](docs/getting-started/share-online.md).
 
 ## Documentation
 

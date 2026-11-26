@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { ClientMessage, CreateUserRequest, parseRollCommand, PostFeedRequest, USER_COLORS } from './index';
+import {
+  ClientMessage,
+  CreateUserRequest,
+  DeclarationBody,
+  parseRollCommand,
+  PostFeedRequest,
+  USER_COLORS,
+} from './index';
 
 describe('parseRollCommand', () => {
   it('reads /roll and /r with a comment', () => {
@@ -46,6 +53,13 @@ describe('request schemas', () => {
       ClientMessage.safeParse({ type: 'ping', dungeon_id: 'barrow', level_number: 1, x: 1e9, y: 0 }).success,
     ).toBe(false);
     expect(ClientMessage.safeParse({ type: 'shout' }).success).toBe(false);
+  });
+
+  it("accepts every action of bxapi's battle declaration, including a thief's hide", () => {
+    for (const action of ['attack', 'cast', 'turn_undead', 'move', 'use_item', 'give_item', 'hide', 'hold']) {
+      expect(DeclarationBody.safeParse({ action }).success).toBe(true);
+    }
+    expect(DeclarationBody.safeParse({ action: 'dance' }).success).toBe(false);
   });
 });
 

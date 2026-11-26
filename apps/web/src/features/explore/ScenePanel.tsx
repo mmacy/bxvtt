@@ -1,19 +1,41 @@
-import type { GameEvent, SceneHere, SceneTrap } from '@bxvtt/shared/protocol';
+import type { GameEvent } from '@bxvtt/shared/protocol';
 import { describeEvent, directionLabel, type TextContext } from '@bxvtt/shared/text';
 import { useEffect, useId, useState, type ReactNode } from 'react';
-import { UNKEYED_PLACE_TITLE, scopedStorage, usePlayerView, useScene, useTextContext } from '@/app';
-import { Button, DropdownMenu, Icon, IconButton, Parchment, cx, type IconName, type MenuEntry } from '@/ui';
 import {
-  cacheEntries,
-  cacheLabel,
+  UNKEYED_PLACE_TITLE,
+  cachesToTake,
+  scopedStorage,
+  useHere,
+  usePlayerView,
+  useTextContext,
+  type Here,
+  type HereFeature,
+} from '@/app';
+import {
+  Badge,
+  Button,
+  DropdownMenu,
+  Icon,
+  IconButton,
+  Parchment,
+  cx,
+  type BadgeTone,
+  type IconName,
+  type MenuEntry,
+} from '@/ui';
+import {
+  cacheMoreEntries,
+  cacheSnippet,
+  cacheTakeEntry,
   doorEntries,
   doorsHere,
   joinGroups,
-  pileEntries,
+  pileTakeEntry,
   stairsHere,
   transitionAction,
   transitionDescription,
   treasureEntries,
+  type ActionContext,
 } from './actions';
 import { useActionContext, useSessionDoors } from './hooks';
 import { doorLoreKey } from './levels';
@@ -23,15 +45,19 @@ import styles from './explore.module.css';
 /**
  * The sentence the feed uses for entering an area, such as "The party enters the kitchen.", from the text layer.
  */
-export function enteredText(areaId: string, here: SceneHere, ctx: TextContext): string {
+export function enteredText(
+  areaId: string,
+  here: Pick<Here, 'dungeonId' | 'levelNumber'>,
+  ctx: TextContext,
+): string {
   const event = {
     event_type: 'location_entered',
     code: 'exploration.location.entered',
     visibility: 'player',
     location_kind: 'area',
     location_id: areaId,
-    level_number: here.level_number,
-    dungeon_id: here.dungeon_id,
+    level_number: here.levelNumber,
+    dungeon_id: here.dungeonId,
     narrative: null,
     via: null,
     transition_ref: null,
@@ -49,24 +75,45 @@ export const RECEDE_MS = 10_000;
 const prefs = scopedStorage('explore');
 const PINNED_KEY = 'scene.pinned';
 
-/** The count on the folded bar: "1 feature here", "3 features here". */
+/** The count on the folded bar: "1 thing here", "3 things here". */
 export function thingsHere(count: number): string {
-  return count === 1 ? '1 feature here' : `${count} features here`;
+  return count === 1 ? '1 thing here' : `${count} things here`;
 }
 
-/** What a known trap means to the party, in one sentence. */
-export function trapSentence(trap: Pick<SceneTrap, 'kind' | 'trigger' | 'state'>): string {
-  const prep = trap.kind === 'treasure' ? 'on the treasure' : 'in this room';
-  switch (trap.state) {
+type KnownTrapState = 'found' | 'sprung' | 'removed';
+
+/** What a known trap in the party's room means to the party, in one sentence. */
+export function roomTrapSentence(state: KnownTrapState): string {
+  switch (state) {
     case 'found':
-      return trap.trigger === 'enter'
-        ? `You found a trap ${prep}. The trap springs when someone enters.`
-        : `You found a trap ${prep}. The trap springs when opened.`;
+      return 'The party found a trap in this room.';
     case 'sprung':
-      return `A trap ${prep} has already sprung.`;
+      return 'The trap in this room has sprung.';
     case 'removed':
-      return `A trap ${prep} has been disarmed.`;
+      return 'The trap in this room is disarmed.';
   }
+}
+
+/** The badge beside a treasure whose trap the party knows about. */
+export function treasureTrapBadge(state: KnownTrapState): {
+  label: string;
+  tone: BadgeTone;
+  icon?: IconName;
+} {
+  switch (state) {
+    case 'found':
+      return { label: 'Trapped', tone: 'warning', icon: 'trap' };
+    case 'sprung':
+      return { label: 'Trap sprung', tone: 'neutral' };
+    case 'removed':
+      return { label: 'Trap disarmed', tone: 'neutral' };
+  }
+}
+
+/** The accessible name of a treasure's More menu, which differs for each treasure when several lie here. */
+export function treasureMoreLabel(cache: Pick<HereFeature, 'description'>, count: number): string {
+  const snippet = count > 1 ? cacheSnippet(cache) : null;
+  return snippet === null ? 'More for this treasure' : `More for ${snippet}`;
 }
 
 interface RowProps {
@@ -87,8 +134,6 @@ function Row({ icon, children, action, tone }: RowProps) {
 }
 
 const MENU_HELP = {
-  Treasure: 'Choose what to do with the treasure',
-  'Dropped goods': 'Choose what to do with the dropped goods',
   Door: 'Choose what to do with this door',
 } as const;
 
@@ -117,13 +162,72 @@ function Actions({ entries, label }: { entries: MenuEntry[]; label: keyof typeof
   );
 }
 
+/** The dropped goods row's button. Its visible label is short, and its accessible name says what it picks up. */
+function PickUpButton({ ctx }: { ctx: ActionContext }) {
+  const take = pileTakeEntry(ctx);
+  if (!take) return null;
+  return (
+    <Button size="sm" variant="secondary" aria-label={take.label} onClick={() => take.onSelect?.()}>
+      Pick up
+    </Button>
+  );
+}
+
+/**
+ * One treasure where the party stands: its description, the trap the party knows about, and its actions. Take
+ * is a button of its own, and the rest of the actions sit in the More menu.
+ */
+function TreasureRow({ cache, count, ctx }: { cache: HereFeature; count: number; ctx: ActionContext }) {
+  const descriptionId = useId();
+  const take = cacheTakeEntry(ctx, cache);
+  const more = cacheMoreEntries(ctx, cache);
+  const badge = cache.trapState ? treasureTrapBadge(cache.trapState) : null;
+  const action =
+    take || more.length > 0 ? (
+      <div className={styles.sceneRowButtons}>
+        {take && (
+          <Button
+            size="sm"
+            variant="secondary"
+            aria-describedby={descriptionId}
+            onClick={() => take.onSelect?.()}
+          >
+            Take
+          </Button>
+        )}
+        {more.length > 0 && (
+          <DropdownMenu
+            align="end"
+            items={more}
+            trigger={
+              <IconButton icon="more" size="sm" variant="ghost" label={treasureMoreLabel(cache, count)} />
+            }
+          />
+        )}
+      </div>
+    ) : undefined;
+  return (
+    <Row icon="chest" action={action}>
+      <span className={styles.sceneLine}>
+        <span id={descriptionId}>{cache.description || 'Treasure lies here.'}</span>
+        {badge && (
+          <Badge tone={badge.tone} icon={badge.icon}>
+            {badge.label}
+          </Badge>
+        )}
+      </span>
+      {!cache.reachable && <span className={styles.sceneSub}>Step closer to reach it.</span>}
+    </Row>
+  );
+}
+
 /**
  * What the party perceives where it stands, as a referee would read it aloud: the area's name and description,
  * then what's here (stairs, treasure, dropped goods, doors, features, and known traps), each with its action.
  * In a corridor it says so. It announces a new area to screen readers without moving focus.
  */
 export function ScenePanel() {
-  const scene = useScene();
+  const here = useHere();
   const view = usePlayerView();
   const ctx = useActionContext();
   const ctxText = useTextContext();
@@ -133,7 +237,6 @@ export function ScenePanel() {
   const [fresh, setFresh] = useState(false);
   const [announcement, setAnnouncement] = useState('');
   const bodyId = useId();
-  const here = scene?.here ?? null;
   const area = here?.area ?? null;
   const areaId = area?.id ?? null;
   const cell = here ? here.position.join(',') : null;
@@ -181,9 +284,10 @@ export function ScenePanel() {
 
   if (here === null || view === null || ctx === null) return null;
   const facing = view.location.kind === 'dungeon' ? view.location.facing : null;
-  const key = levelKey(here.dungeon_id, here.level_number);
+  const key = levelKey(here.dungeonId, here.levelNumber);
   const [x, y] = here.position;
-  const stairs = stairsHere(scene);
+  const stairs = stairsHere(here);
+  const caches = cachesToTake(here);
   const passages = here.transitions.filter(
     (transition): transition is typeof transition & { side: 'north' | 'east' | 'south' | 'west' } =>
       transition.kind === 'passage' &&
@@ -193,12 +297,12 @@ export function ScenePanel() {
         transition.side === 'west'),
   );
   const doors = doorsHere(view);
-  const traps = here.traps.filter((trap) => trap.kind === 'room');
+  const traps = here.roomTrap ? [here.roomTrap] : [];
   const title = area?.name ?? UNNAMED_PLACE;
   const count =
     stairs.length +
     passages.length +
-    here.caches.length +
+    caches.length +
     (here.pile ? 1 : 0) +
     doors.length +
     here.features.length +
@@ -207,7 +311,7 @@ export function ScenePanel() {
     stairs.length > 0 && ctx.can('use_stairs')
       ? [
           {
-            label: transitionAction(stairs[0] ?? { kind: 'stairs_down', leads: 'down' }),
+            label: transitionAction(stairs[0] ?? { kind: 'stairs_down' }),
             icon: 'stairs' as const,
             onSelect: () => ctx.run({ command_type: 'use_stairs' }),
           },
@@ -267,7 +371,7 @@ export function ScenePanel() {
         )}
         <IconButton
           icon={open ? 'minimize' : 'maximize'}
-          label={open ? 'Hide description' : 'Show description'}
+          label={open ? 'Collapse description' : 'Show description'}
           size="sm"
           aria-expanded={open}
           aria-controls={bodyId}
@@ -286,7 +390,7 @@ export function ScenePanel() {
           ) : (
             <p className={styles.sceneCorridor}>You are in an unnamed passage between rooms.</p>
           )}
-          <ul className={styles.sceneList} aria-label="Features here">
+          <ul className={styles.sceneList} aria-label="Things here">
             {stairs.map((transition) => (
               <Row
                 key={`${transition.kind}-${transition.position.join(',')}`}
@@ -327,27 +431,11 @@ export function ScenePanel() {
                 {`A passage leads through the ${directionLabel(passage.side).toLowerCase()} wall.`}
               </Row>
             ))}
-            {here.caches.map((cache) => {
-              const label = cacheLabel(cache, here.caches);
-              return (
-                <Row
-                  key={cache.id}
-                  icon="chest"
-                  action={<Actions entries={cacheEntries(ctx, cache, label)} label="Treasure" />}
-                >
-                  <span>
-                    {cache.reachable
-                      ? here.caches.length > 1
-                        ? `${label} is within reach.`
-                        : 'Treasure is within reach.'
-                      : `${label} lies elsewhere in this room.`}
-                  </span>
-                  {cache.trap && <span className={styles.sceneSub}>{trapSentence(cache.trap)}</span>}
-                </Row>
-              );
-            })}
+            {caches.map((cache) => (
+              <TreasureRow key={cache.id} cache={cache} count={caches.length} ctx={ctx} />
+            ))}
             {here.pile && (
-              <Row icon="coins" action={<Actions entries={pileEntries(ctx)} label="Dropped goods" />}>
+              <Row icon="coins" action={<PickUpButton ctx={ctx} />}>
                 Dropped goods lie here.
               </Row>
             )}
@@ -388,9 +476,13 @@ export function ScenePanel() {
                 {feature.description}
               </Row>
             ))}
-            {traps.map((trap, index) => (
-              <Row key={`trap-${index}`} icon="trap" tone={trap.state === 'found' ? 'warning' : undefined}>
-                {trapSentence(trap)}
+            {traps.map((trap) => (
+              <Row
+                key={`trap-${trap.area_id}`}
+                icon="trap"
+                tone={trap.state === 'found' ? 'warning' : undefined}
+              >
+                {roomTrapSentence(trap.state)}
               </Row>
             ))}
           </ul>
