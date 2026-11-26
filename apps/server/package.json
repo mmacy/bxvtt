@@ -1,7 +1,7 @@
 {
   "name": "@bxvtt/server",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "dev": "BXAPI_URL=${BXAPI_URL:-http://127.0.0.1:8651} tsx watch --disable-warning=ExperimentalWarning src/main.ts",

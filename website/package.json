@@ -1,7 +1,7 @@
 {
   "name": "bxvtt-website",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Docusaurus site for the bxvtt documentation in ../docs.",
   "scripts": {
     "start": "docusaurus start --port 3010",

@@ -12,7 +12,7 @@ When the referee starts or restores a game, the play screen opens for everyone a
 ## Tour the play screen
 
 - **Top bar:** Displays the table name, mode badge (**In town**, **Exploring**, **Encounter**, **Battle**, **Game over**, or **Victory**), game clock (such as `Day 1, 00:30`, plus the round counter in battle), online avatars, and the **Table menu**. Use **Hide table panels** / **Show table panels** at the right end to collapse or expand the dock (on windows narrower than 1100 pixels, the dock becomes a drawer opened with **Open table panels**).
-- **Tool rail (left):** Contains the dungeon map tools (shown while in a dungeon) and, at the bottom, **Rules reference** (`B`). Under the rail, **Docs** opens this documentation in a new tab, and the line below it shows the bxvtt version, such as `v0.2.0`. Every other screen shows the same two items in its bottom left corner.
+- **Tool rail (left):** Contains the dungeon map tools (shown while in a dungeon) and, at the bottom, **Rules reference** (`B`). Under the rail, **Docs** opens this documentation in a new tab, and the line below it shows the bxvtt version, such as `v0.3.0`. Every other screen shows the same two items in its bottom left corner.
 - **Stage (center):** Displays the active scene for the current game mode: town services, the dungeon map, an encounter prompt, the battle board, or the end-of-adventure summary.
 - **Action bar (bottom):** Displays who the caller is alongside contextual actions for the current mode. On narrower screens, buttons condense to icons and excess items move into **More actions**.
 - **Dock (right):** Contains the **Party** (`Alt+1`), **Feed** (`Alt+2`), and **Journal** (`Alt+3`) tabs, plus **Referee** (`Alt+4`) for referees with the referee lens enabled.
