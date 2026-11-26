@@ -4,6 +4,8 @@ import { emptyContext, contextFromPlayerView } from '@bxvtt/shared/text';
 import { describe, expect, it } from 'vitest';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import {
+  spellModeOptions,
+  spellRangeText,
   blockedReason,
   blockingMembers,
   describeDeclaration,
@@ -386,5 +388,35 @@ describe('repeating last round after the situation changed', () => {
         ctx,
       ),
     ).toBe('Brenna is no longer in reach of the goblins.');
+  });
+});
+
+describe('spellModeOptions', () => {
+  it('names a mode by the label before its colon, and otherwise by its first sentence', () => {
+    expect(
+      spellModeOptions([
+        { key: 'heal', prose: 'Healing a living subject: Restores 1d6+1 hit points (see Healing).' },
+        { key: 'cure', prose: 'Curing paralysis: Cures paralysis.' },
+        { key: 'plain', prose: 'Light may cancel a darkness spell. It lasts a while.' },
+      ]),
+    ).toEqual([
+      { value: 'heal', label: 'Healing a living subject' },
+      { value: 'cure', label: 'Curing paralysis' },
+      { value: 'plain', label: 'Light may cancel a darkness spell.' },
+    ]);
+  });
+
+  it('falls back to the key for a mode with no prose', () => {
+    expect(spellModeOptions([{ key: 'dart', prose: '' }])).toEqual([{ value: 'dart', label: 'dart' }]);
+  });
+});
+
+describe('spellRangeText', () => {
+  it('writes a distance in feet as the catalog does, and keeps any other range', () => {
+    expect(spellRangeText({ range: '60 feet', range_spec: { kind: 'feet', feet: 60 } })).toBe('60’');
+    expect(spellRangeText({ range: '120’', range_spec: { kind: 'feet', feet: 120 } })).toBe('120’');
+    expect(spellRangeText({ range: 'The caster', range_spec: { kind: 'caster', feet: null } })).toBe(
+      'The caster',
+    );
   });
 });

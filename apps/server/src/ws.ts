@@ -198,7 +198,9 @@ export function registerWebSocket(app: FastifyInstance, ctx: Context): void {
         ctx.hub.activate(target, await buildSnapshot(ctx, target.tableId, owner, feedAfter));
       } catch (error) {
         request.log.warn({ err: error, table: target.tableId }, 'could not build a snapshot');
-        fail('bxapi_unavailable', "Couldn't load the game state right now. Reconnecting shortly.");
+        // An engine that is too old stays too old until the host updates it, so the browser learns that cause.
+        if (error instanceof ApiError && error.code === 'bxapi_outdated') fail(error.code, error.message);
+        else fail('bxapi_unavailable', "Couldn't load the game state right now. Reconnecting shortly.");
         socket.close(WS_CLOSE_CODES.try_again_later, 'snapshot failed');
       }
     };

@@ -552,9 +552,21 @@ describe('BattleBoard', () => {
     expect(within(composer).getByRole('button', { name: /^Close in on/ })).toHaveAccessibleDescription(
       'Already in melee.',
     );
-    expect(within(composer).getByRole('button', { name: 'Retreat' })).toHaveAccessibleDescription(
-      'Turn and run at full speed.',
-    );
+    const retreat = within(composer).getByRole('button', { name: 'Retreat' });
+    // The member's movement rate is in the note, so the tile's number slot holds only distances.
+    expect(retreat).toHaveAccessibleDescription('Turn and run, 30 feet a round.');
+    expect(retreat).toHaveTextContent(/^RetreatTurn and run, 30 feet a round\.$/);
+    // The trade-places choice has a visible label, and its options are the members.
+    const trade = within(composer).getByRole('combobox', { name: 'Trade places with' });
+    expect(within(composer).getByText('Trade places with')).toBeVisible();
+    await user.click(trade);
+    expect((await screen.findAllByRole('option')).map((o) => o.textContent)).toEqual([
+      'No one',
+      'Brenna',
+      'Osric',
+      'Tamsin',
+    ]);
+    await user.keyboard('{Escape}');
     await user.click(within(row('Tamsin')).getByRole('button', { name: /Declare for Tamsin|Actions/ }));
     composer = screen.getByRole('region', { name: 'Declare for Tamsin' });
     await user.click(within(composer).getByRole('radio', { name: 'Move' }));

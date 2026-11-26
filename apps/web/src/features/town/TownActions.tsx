@@ -143,21 +143,21 @@ export function TownActions() {
   };
   const restItems: MenuEntry[] = [
     {
-      label: 'Rest one turn',
+      label: 'Rest for one turn',
       icon: 'hourglass',
       disabled: !restAccess.allowed || pending,
       disabledReason: restAccess.allowed ? null : restAccess.explanation,
       onSelect: () => restNow('turn'),
     },
     {
-      label: 'Rest a night',
+      label: 'Rest for a night',
       icon: 'moon',
       disabled: !restAccess.allowed || pending,
       disabledReason: restAccess.allowed ? null : restAccess.explanation,
       onSelect: () => restNow('night'),
     },
     {
-      label: 'Rest a full day',
+      label: 'Rest for a full day',
       icon: 'sun',
       disabled: !restAccess.allowed || pending,
       disabledReason: restAccess.allowed ? null : restAccess.explanation,

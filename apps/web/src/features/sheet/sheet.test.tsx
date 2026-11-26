@@ -348,7 +348,14 @@ describe('combat playback', () => {
 function spellTemplate(
   id: string,
   name: string,
-  extra: { range?: string; duration?: string; reversed?: { name: string; mode: string } } = {},
+  extra: {
+    range?: string;
+    feet?: number;
+    duration?: string;
+    reversed?: { name: string; mode: string };
+    modes?: Array<{ key: string; prose: string; targeting?: { mode: string } }>;
+    intro?: string;
+  } = {},
 ) {
   return {
     id,
@@ -356,9 +363,11 @@ function spellTemplate(
     spell_list: 'magic_user',
     level: 1,
     range: extra.range ?? '60 feet',
+    range_spec:
+      extra.feet === undefined ? { kind: 'special', feet: null } : { kind: 'feet', feet: extra.feet },
     duration: extra.duration ?? 'Instant',
-    intro: `${name} does something.`,
-    modes: [{ key: id, prose: `${name} does something.`, targeting: { mode: 'single' } }],
+    intro: extra.intro ?? `${name} does something.`,
+    modes: extra.modes ?? [{ key: id, prose: `${name} does something.`, targeting: { mode: 'single' } }],
     reversed_form: extra.reversed
       ? {
           name: extra.reversed.name,
@@ -603,7 +612,8 @@ describe('the spells tab, from the view', () => {
     expect(learn).toHaveAccessibleDescription('Choose a spell first.');
     await user.click(within(dialog).getByRole('combobox', { name: 'Spell' }));
     const option = await screen.findByRole('option', { name: /Ember Dart/ });
-    expect(option).toHaveTextContent('1st level');
+    // Every spell on the list is 1st level, so no option repeats it.
+    expect(option).not.toHaveTextContent('1st level');
     await user.click(option);
     await user.click(within(dialog).getByRole('button', { name: 'Learn Ember Dart' }));
     await waitFor(() =>
@@ -716,7 +726,14 @@ describe('the spells tab, from the view', () => {
     expect(dialog).not.toHaveAccessibleDescription(/round/);
     const cast = within(dialog).getByRole('button', { name: 'Cast' });
     expect(cast).toHaveAccessibleDescription('Choose a target first.');
+    // With one way to cast and one target, focus starts on Target.
+    await waitFor(() => expect(within(dialog).getByRole('combobox', { name: 'Target' })).toHaveFocus());
     await user.click(await within(dialog).findByRole('checkbox', { name: 'Cast Lantern Snuff instead' }));
+    // The title names the form the checkbox chose.
+    expect(screen.getByRole('dialog', { name: 'Cast Lantern Snuff' })).toBe(dialog);
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Cast Lantern Snuff instead' }));
+    expect(screen.getByRole('dialog', { name: 'Cast Lantern Ward' })).toBe(dialog);
+    await user.click(within(dialog).getByRole('checkbox', { name: 'Cast Lantern Snuff instead' }));
     await user.click(within(dialog).getByRole('combobox', { name: 'Target' }));
     await user.click(await screen.findByRole('option', { name: 'Brenna' }));
     await user.click(within(dialog).getByRole('button', { name: 'Cast' }));
@@ -870,6 +887,127 @@ describe('the spells tab, from the view', () => {
     // The spell's details load before the form choice could show.
     await within(dialog).findByText('Light does something.');
     expect(within(dialog).queryByRole('checkbox', { name: /instead/ })).toBeNull();
+  });
+
+  it('names the ways to cast a spell by the label before the colon, or by the first sentence', async () => {
+    const { snapshot, caster } = mageSnapshot({ memorized_spells: [{ spell_id: 'light_mu' }] });
+    const api = createFakeApi();
+    api.fullCatalog.mockResolvedValue({
+      catalog: 'spells',
+      total: 1,
+      items: [
+        spellTemplate('light_mu', 'Light', {
+          modes: [
+            { key: 'conjure', prose: 'Conjuring light: In a 15’ radius.', targeting: { mode: 'area' } },
+            { key: 'blind', prose: 'Blinding a creature: By casting the spell upon its eyes.' },
+            { key: 'cancel', prose: 'Light may cancel a darkness spell. It lasts a while.' },
+          ],
+        }),
+      ],
+    } as never);
+    const { user } = renderWithTable(<CharacterSheet memberId={caster.id} onClose={() => {}} />, {
+      snapshot,
+      api,
+    });
+    await openSpells(user);
+    await user.click(await screen.findByRole('button', { name: 'Cast' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Cast Light' });
+    const group = within(dialog).getByRole('radiogroup', { name: 'How to cast' });
+    for (const label of ['Conjuring light', 'Blinding a creature', 'Light may cancel a darkness spell.'])
+      expect(within(group).getByRole('radio', { name: label })).toBeInTheDocument();
+    expect(within(group).getAllByRole('radio')).toHaveLength(3);
+    // Focus starts on the chosen way to cast.
+    await waitFor(() => expect(within(group).getByRole('radio', { name: 'Conjuring light' })).toHaveFocus());
+  });
+
+  it('opens the prepare dialog on its first count, and the learn dialog on the spell field', async () => {
+    const { snapshot, caster } = mageSnapshot({ learnable_spells: ['ember_dart'] });
+    if (snapshot.game) {
+      snapshot.game.view.spell_names.ember_dart = 'Ember Dart';
+      snapshot.game.view.spell_levels.ember_dart = 1;
+    }
+    const { user } = renderWithTable(<CharacterSheet memberId={caster.id} onClose={() => {}} />, {
+      snapshot,
+      api: spellApi(),
+    });
+    await openSpells(user);
+    await user.click(screen.getByRole('button', { name: 'Prepare spells' }));
+    const prepare = await screen.findByRole('dialog', { name: "Prepare Wren's spells" });
+    await waitFor(() =>
+      expect(within(prepare).getByRole('spinbutton', { name: 'Copies of Sleep' })).toHaveFocus(),
+    );
+    await user.click(within(prepare).getByRole('button', { name: 'Cancel' }));
+    await user.click(screen.getByRole('button', { name: 'Learn a spell' }));
+    const learn = await screen.findByRole('dialog', { name: 'Learn a spell' });
+    await waitFor(() => expect(within(learn).getByRole('combobox', { name: 'Spell' })).toHaveFocus());
+  });
+
+  it('names each option’s level in the learn dialog only when the list spans levels', async () => {
+    const { snapshot, caster } = mageSnapshot({ learnable_spells: ['ember_dart', 'web'] });
+    if (snapshot.game) {
+      Object.assign(snapshot.game.view.spell_names, { ember_dart: 'Ember Dart', web: 'Web' });
+      Object.assign(snapshot.game.view.spell_levels, { ember_dart: 1, web: 2 });
+    }
+    const { user } = renderWithTable(<CharacterSheet memberId={caster.id} onClose={() => {}} />, {
+      snapshot,
+      api: spellApi(),
+    });
+    await openSpells(user);
+    await user.click(screen.getByRole('button', { name: 'Learn a spell' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Learn a spell' });
+    await user.click(within(dialog).getByRole('combobox', { name: 'Spell' }));
+    expect(await screen.findByRole('option', { name: /Ember Dart/ })).toHaveTextContent('1st level');
+    expect(screen.getByRole('option', { name: /Web/ })).toHaveTextContent('2nd level');
+  });
+
+  it('prints a bundled spell’s range as the catalog does, and leaves out a summary the text repeats', async () => {
+    const { snapshot, caster } = mageSnapshot({
+      spell_book: ['ember_dart'],
+      preparable_spells: ['ember_dart'],
+    });
+    if (snapshot.game) {
+      snapshot.game.view.spell_names.ember_dart = 'Ember Dart';
+      snapshot.game.view.spell_levels.ember_dart = 1;
+    }
+    const api = spellApi();
+    api.getSessionSpell.mockResolvedValue(
+      spellTemplate('ember_dart', 'Ember Dart', {
+        range: '60 feet',
+        feet: 60,
+        intro: 'A spark of glowing ember strikes one visible creature within range.',
+        modes: [
+          {
+            key: 'dart',
+            prose:
+              'A spark of glowing ember strikes one visible creature within range for 1d4 hit points of damage.',
+          },
+        ],
+      }) as never,
+    );
+    const { user } = renderWithTable(<CharacterSheet memberId={caster.id} onClose={() => {}} />, {
+      snapshot,
+      api,
+    });
+    await openSpells(user);
+    expect(await screen.findByText('1st level · Range: 60’ · Instant')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'About Ember Dart' }));
+    expect(await screen.findByText(/for 1d4 hit points of damage\.$/)).toBeInTheDocument();
+    expect(
+      screen.queryByText('A spark of glowing ember strikes one visible creature within range.'),
+    ).toBeNull();
+    expect(screen.getByText('60’')).toBeInTheDocument();
+  });
+
+  it('puts the info button at the top right of both kinds of card', async () => {
+    const { snapshot, caster } = mageSnapshot({ memorized_spells: [{ spell_id: 'sleep' }] });
+    const { user } = renderWithTable(<CharacterSheet memberId={caster.id} onClose={() => {}} />, {
+      snapshot,
+      api: spellApi(),
+    });
+    await openSpells(user);
+    for (const info of screen.getAllByRole('button', { name: /^About / })) {
+      expect(info.closest('[class*="spellTop"]')).not.toBeNull();
+    }
   });
 
   it('marks the caster in the party panel while the party is in town', async () => {

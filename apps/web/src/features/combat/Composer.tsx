@@ -46,7 +46,8 @@ import {
   membersInReach,
   memorizedSpells,
   planAttack,
-  spellModeLabel,
+  spellModeOptions,
+  spellRangeText,
   spellRangeFeet,
   stealthLists,
   usableItems,
@@ -645,11 +646,7 @@ function SpellTargets({
     spell_mode: mode.key,
     ...(reversed ? { reversed: true } : {}),
   };
-  const labels = modes.map((m) => spellModeLabel(m.targeting?.mode));
-  const modeOptions = modes.map((m, i) => ({
-    value: m.key,
-    label: labels.filter((l) => l === labels[i]).length > 1 ? `${labels[i]} ${i + 1}` : (labels[i] ?? m.key),
-  }));
+  const modeOptions = spellModeOptions(modes);
   const single = targeting === 'single';
   // A spell that harms or hinders goes at monsters, and any other at the party. The session still checks it.
   const effect = mode.effect?.kind ?? null;
@@ -669,7 +666,7 @@ function SpellTargets({
   return (
     <div className={styles.choiceStack}>
       <p className={styles.choiceHint}>
-        {spell.range}
+        {spellRangeText(spell)}
         {form?.duration ? ` · ${form.duration}` : ''} · {firstSentence(mode.prose || spell.intro)}
       </p>
       {(modes.length > 1 || choosesForm) && (
@@ -884,8 +881,7 @@ function MoveChoices({
         <Tile
           icon="footprints"
           title="Retreat"
-          meta={formatFeet(rate, 'short')}
-          note="Turn and run at full speed."
+          note={`Turn and run, ${rate} feet a round.`}
           disabledReason={stuck}
           label="Retreat"
           selected={moving === 'retreat'}
@@ -895,17 +891,18 @@ function MoveChoices({
       </div>
       {others.length > 0 && (
         <div className={styles.optionRow}>
-          <Select
-            size="sm"
-            className={styles.compactSelect}
-            aria-label="Trade places with"
-            value={replacement}
-            onValueChange={setReplacement}
-            options={[
-              { value: 'none', label: 'Withdraw without trading places' },
-              ...others.map((id) => ({ value: id, label: `Trade places with ${memberName(id, ctx)}` })),
-            ]}
-          />
+          <Field label="Trade places with">
+            <Select
+              size="sm"
+              className={styles.compactSelect}
+              value={replacement}
+              onValueChange={setReplacement}
+              options={[
+                { value: 'none', label: 'No one' },
+                ...others.map((id) => ({ value: id, label: memberName(id, ctx) })),
+              ]}
+            />
+          </Field>
         </div>
       )}
     </div>

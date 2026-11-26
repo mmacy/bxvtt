@@ -25,9 +25,9 @@ import {
   Select,
   Skeleton,
 } from '@/ui';
-import { spellModeLabel } from '../combat/model';
+import { spellModeOptions, spellRangeText } from '../combat/model';
 import { useMemberCommand } from './actions';
-import { firstSentence, spellDuration, spellRange, withoutPointers } from './spellText';
+import { spellDuration, spellRange, withoutPointers } from './spellText';
 import { RuleLink } from './RuleLink';
 import type { SheetModel } from './model';
 import styles from './sheet.module.css';
@@ -65,7 +65,7 @@ export function SpellDetailBody({ spellId }: { spellId: string }) {
         <dt>Level</dt>
         <dd>{ordinal(levels[spellId] ?? spell.level)}</dd>
         <dt>Range</dt>
-        <dd>{spell.range}</dd>
+        <dd>{spellRangeText(spell)}</dd>
         <dt>Duration</dt>
         <dd>{spell.duration}</dd>
         {spell.reversed_form && (
@@ -75,7 +75,7 @@ export function SpellDetailBody({ spellId }: { spellId: string }) {
           </>
         )}
       </dl>
-      {spell.intro && <p className={styles.detailProse}>{withoutPointers(spell.intro)}</p>}
+      {showIntro(spell) && <p className={styles.detailProse}>{withoutPointers(spell.intro)}</p>}
       {spell.modes.map((mode) => (
         <p key={mode.key} className={styles.detailProse}>
           {withoutPointers(mode.prose)}
@@ -83,6 +83,18 @@ export function SpellDetailBody({ spellId }: { spellId: string }) {
       ))}
     </div>
   );
+}
+
+/**
+ * Whether a spell's details show its summary: it has one, and no mode's text starts with the same words, as an
+ * adventure's own spell often does.
+ */
+function showIntro(spell: { intro: string; modes: ReadonlyArray<{ prose: string }> }): boolean {
+  const summary = withoutPointers(spell.intro)
+    .replace(/[.!?]+$/, '')
+    .trim();
+  if (summary === '') return false;
+  return !spell.modes.some((mode) => withoutPointers(mode.prose).startsWith(summary));
 }
 
 function SpellInfo({ spellId, name }: { spellId: string; name: string }) {
@@ -118,7 +130,8 @@ function SpellMeta({ spellId, levels }: { spellId: string; levels: SpellLevels }
   return (
     <span className={styles.spellMeta}>
       {ordinal(level)} level
-      {detail.data && ` · ${spellRange(detail.data.range)} · ${spellDuration(detail.data.duration)}`}
+      {detail.data &&
+        ` · ${spellRange(spellRangeText(detail.data))} · ${spellDuration(detail.data.duration)}`}
     </span>
   );
 }
@@ -254,11 +267,14 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
                 <div key={`${copy.spellId}:${copy.reversed}`} className={styles.spellCard}>
                   <div className={styles.spellTop}>
                     <SpellCardName spellId={copy.spellId} name={name} />
-                    {copy.count > 1 && <Badge tone="magic">×{copy.count}</Badge>}
+                    <span className={styles.spellTopEnd}>
+                      {copy.count > 1 && <Badge tone="magic">×{copy.count}</Badge>}
+                      <SpellInfo spellId={copy.spellId} name={name} />
+                    </span>
                   </div>
                   <SpellMeta spellId={copy.spellId} levels={levels} />
-                  <div className={styles.spellActions}>
-                    {cast.legal && (
+                  {cast.legal && (
+                    <div className={styles.spellActions}>
                       <Button
                         size="sm"
                         variant="secondary"
@@ -269,9 +285,8 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
                       >
                         Cast
                       </Button>
-                    )}
-                    <SpellInfo spellId={copy.spellId} name={name} />
-                  </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -312,7 +327,9 @@ export function SpellsTab({ member, model }: { member: MemberView; model: SheetM
                   <div key={id} className={styles.spellCard}>
                     <div className={styles.spellTop}>
                       <SpellCardName spellId={id} name={name} />
-                      <SpellInfo spellId={id} name={name} />
+                      <span className={styles.spellTopEnd}>
+                        <SpellInfo spellId={id} name={name} />
+                      </span>
                     </div>
                     <SpellMeta spellId={id} levels={levels} />
                   </div>
@@ -466,6 +483,7 @@ function PrepareDialog({
       }}
       title={`Prepare ${member.name}'s spells`}
       returnFocus={returnFocus}
+      initialFocus={PREPARE_FOCUS}
       description={
         hadMemorized ? `Your choices replace the spells ${member.name} has memorized now.` : undefined
       }
@@ -547,20 +565,10 @@ function PrepareDialog({
   );
 }
 
-/**
- * The label for each way to cast a spell: the targeting in words, as the battle composer names it, and the first
- * sentence of its prose for two ways that share a label.
- */
-function modeLabels(
-  modes: ReadonlyArray<{ key: string; prose: string; targeting?: { mode?: string } | null }>,
-) {
-  const labels = modes.map((mode) => spellModeLabel(mode.targeting?.mode));
-  return modes.map((mode, index) => {
-    const label = labels[index] ?? 'Cast';
-    const shared = labels.filter((l) => l === label).length > 1;
-    return { value: mode.key, label: shared && mode.prose ? firstSentence(mode.prose) : label };
-  });
-}
+/** The dialogs' first controls: a count, a way to cast or a target, and the spell to learn. */
+const PREPARE_FOCUS = { selector: '[role="spinbutton"]' };
+const CAST_FOCUS = { selector: '[role="radio"][data-state="checked"], [role="combobox"]' };
+const LEARN_FOCUS = { selector: '[role="combobox"]' };
 
 /** Casts a memorized spell outside battle, with its usage and targets. */
 function CastDialog({
@@ -601,7 +609,8 @@ function CastDialog({
     ...party.map((m) => ({ value: m.id, label: m.id === member.id ? `${m.name} (self)` : m.name })),
     ...(cell ? [{ value: cell, label: 'Where the party stands' }] : []),
   ];
-  const name = nameOf(copy.spellId, copy.reversed, ctx);
+  // The title names the form being cast, so it follows the "instead" checkbox.
+  const name = nameOf(copy.spellId, reversed, ctx);
   const needsTarget = mode !== undefined && targeting !== 'self' && targets.length === 0;
 
   const submit = async () => {
@@ -631,6 +640,7 @@ function CastDialog({
       }}
       title={`Cast ${name}`}
       returnFocus={returnFocus}
+      initialFocus={CAST_FOCUS}
       size="md"
       footer={
         <>
@@ -676,7 +686,7 @@ function CastDialog({
               aria-label="How to cast"
               value={mode?.key}
               onValueChange={setModeKey}
-              options={modeLabels(modes)}
+              options={spellModeOptions(modes)}
             />
           </Field>
         )}
@@ -726,14 +736,16 @@ function LearnDialog({
   const { send, pending } = useSendCommand();
   const [spellId, setSpellId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const options = member.learnable_spells
+  const spells = member.learnable_spells
     .map((id) => ({ id, name: nameOf(id, false, ctx), level: levels[id] }))
-    .sort((a, b) => (a.level ?? 0) - (b.level ?? 0) || a.name.localeCompare(b.name))
-    .map((s) => ({
-      value: s.id,
-      label: s.name,
-      description: s.level === undefined ? undefined : `${ordinal(s.level)} level`,
-    }));
+    .sort((a, b) => (a.level ?? 0) - (b.level ?? 0) || a.name.localeCompare(b.name));
+  // The combobox can't group its options, so each one names its level only when the list spans levels.
+  const oneLevel = new Set(spells.map((s) => s.level)).size <= 1;
+  const options = spells.map((s) => ({
+    value: s.id,
+    label: s.name,
+    description: oneLevel || s.level === undefined ? undefined : `${ordinal(s.level)} level`,
+  }));
   const chosen = spellId !== null && member.learnable_spells.includes(spellId) ? spellId : null;
 
   const submit = async () => {
@@ -754,6 +766,7 @@ function LearnDialog({
         if (!open) onClose();
       }}
       title="Learn a spell"
+      initialFocus={LEARN_FOCUS}
       description={`Choose a spell to write into ${member.name}'s spell book.`}
       size="md"
       footer={

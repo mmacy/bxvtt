@@ -2,6 +2,7 @@
  * Plain-language descriptions of map targets, for the hover tooltip and for screen readers. They
  * describe what the map data says. They never say whether an action would succeed.
  */
+import { capitalizeFirst } from '@bxvtt/shared/text';
 import type { MapTarget } from './hit';
 import type { LevelMap, MapDoor, MapFeature, MapTransition, MapTrap } from './model';
 
@@ -24,19 +25,16 @@ function humanize(text: string): string {
 }
 
 /**
- * A door's state as a phrase, such as "closed, locked". A referee reads why a gated door won't open, and a player
- * reads only that it won't.
- *
- * @param door - The door.
- * @param referee - Whether the phrase is for the referee's map.
+ * A door's state as a phrase, such as "closed, locked". Only a referee's map knows whether a gate guards a door,
+ * because the player view doesn't say.
  */
-export function doorSummary(door: MapDoor, referee: boolean): string {
+export function doorSummary(door: MapDoor): string {
   const parts: string[] = [door.open ? 'open' : 'closed'];
   if (door.wedged) parts.push('wedged with a spike');
   if (door.locked) parts.push('locked');
   if (door.unlocked) parts.push('unlocked');
   if (door.stuck) parts.push('stuck');
-  if (door.gated) parts.push(referee ? 'opens only when its condition is met' : "won't open yet");
+  if (door.gated) parts.push('opens only when its condition is met');
   return parts.join(', ');
 }
 
@@ -107,9 +105,7 @@ export function describeTarget(target: MapTarget, map: LevelMap): TargetDescript
       if (edge.kind === 'door' && edge.door) {
         const hidden = edge.door.secret && edge.door.discovered === false;
         title = edge.door.secret ? (hidden ? 'Secret door, not found' : 'Secret door, found') : 'Door';
-        lines.push(
-          hidden ? 'Appears as a wall to players.' : humanize(doorSummary(edge.door, referee)) + '.',
-        );
+        lines.push(hidden ? 'Appears as a wall to players.' : humanize(doorSummary(edge.door)) + '.');
       } else if (edge.kind === 'passage') {
         title = 'Passage';
         lines.push('Leads through the wall.');
@@ -124,10 +120,9 @@ export function describeTarget(target: MapTarget, map: LevelMap): TargetDescript
       const lines: string[] = [];
       if (f.description) lines.push(f.description);
       if (f.contents.length > 0) {
-        // A player reads a pile one entry per line. A referee reads what a cache holds on one labeled line.
-        if (!referee) lines.push(...f.contents);
-        else if (f.kind === 'cache' || f.kind === 'generated_cache')
-          lines.push(`Holds: ${f.contents.join(', ')}`);
+        // Everyone reads a pile one entry per line. A referee reads what a cache holds on one labeled line.
+        if (f.kind === 'pile') lines.push(...f.contents.map((entry) => capitalizeFirst(entry)));
+        else if (referee) lines.push(`Holds: ${f.contents.join(', ')}`);
         else lines.push(f.contents.join(', '));
       }
       if (f.trap) lines.push(...trapLines(f.trap, referee));
@@ -143,8 +138,8 @@ export function describeTarget(target: MapTarget, map: LevelMap): TargetDescript
         const sameLevel = t.to.dungeonId === map.dungeonId && t.to.levelNumber === map.levelNumber;
         lines.push(sameLevel ? 'Leads elsewhere on this level.' : `Leads to level ${t.to.levelNumber}.`);
       }
-      if (t.gated)
-        lines.push(referee ? 'Opens only when its condition is met.' : 'Something blocks the way.');
+      // Only a referee's map knows whether a gate guards a transition.
+      if (t.gated) lines.push('Opens only when its condition is met.');
       return { title: TRANSITION_NAMES[t.kind], lines };
     }
     case 'cell': {

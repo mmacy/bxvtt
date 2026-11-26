@@ -61,17 +61,23 @@ describe('the feature tooltip', () => {
     expect(refereeNotesLine('Short.')).toBe('Referee notes: Short.');
   });
 
-  it('shows a player a pile one entry per line, and never a referee notes line', () => {
+  it('shows a pile the same on both layers: its title, then one capitalized line per entry', () => {
     const pile = feature({
       id: 'pile@0,0',
       kind: 'pile',
-      contents: ['30 gold pieces', 'a torch'],
-      refereeNotes: 'x',
+      contents: ['10 gold pieces', 'a set of thieves’ tools', 'a torch'],
     });
-    expect(describeFeature(pile, playerMap)).toEqual({
+    const expected = {
       title: 'Dropped goods',
-      lines: ['30 gold pieces', 'a torch'],
-    });
+      lines: ['10 gold pieces', 'A set of thieves’ tools', 'A torch'],
+    };
+    expect(describeFeature(pile, playerMap)).toEqual(expected);
+    expect(describeFeature(pile, refereeMap)).toEqual(expected);
+  });
+
+  it('never shows a player a referee notes line', () => {
+    const chest = feature({ description: 'A chest.', refereeNotes: 'Holds the key.' });
+    expect(describeFeature(chest, playerMap)?.lines).toEqual(['A chest.']);
   });
 
   it('names a construction trick for the referee, and only something odd for the players', () => {
@@ -97,16 +103,13 @@ describe('gated ways', () => {
     known: true,
   };
 
-  it('tells the referee a gate opens on its condition, and a player only that something blocks the way', () => {
+  it('tells the referee a gate opens on its condition', () => {
     expect(describeTarget({ kind: 'transition', transition: stairs }, refereeMap)?.lines).toEqual([
       'Opens only when its condition is met.',
     ]);
-    expect(describeTarget({ kind: 'transition', transition: stairs }, playerMap)?.lines).toEqual([
-      'Something blocks the way.',
-    ]);
   });
 
-  it('says a gated door opens only on its condition to the referee, and won’t open yet to a player', () => {
+  it('says a gated door opens only on its condition', () => {
     const door = {
       open: false,
       wedged: false,
@@ -129,6 +132,5 @@ describe('gated ways', () => {
         map,
       );
     expect(target(refereeMap)?.lines).toEqual(['Closed, opens only when its condition is met.']);
-    expect(target(playerMap)?.lines).toEqual(["Closed, won't open yet."]);
   });
 });

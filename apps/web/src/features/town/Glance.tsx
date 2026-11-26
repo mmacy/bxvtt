@@ -121,8 +121,18 @@ export function PartyGlance() {
   );
 }
 
-/** The "ready for the dungeon?" advice, with a button that sends you shopping for what is missing. */
-export function ChecklistPanel({ onShop }: { onShop?: (search: string) => void }) {
+/**
+ * The "ready for the dungeon?" advice, with a button that sends you shopping for what is missing. Pass
+ * `spellBanner` where the spells banner shows the same advice above, and the spells line keeps only its title and
+ * status, so the advice and its buttons appear once.
+ */
+export function ChecklistPanel({
+  onShop,
+  spellBanner = false,
+}: {
+  onShop?: (search: string) => void;
+  spellBanner?: boolean;
+}) {
   const party = useParty();
   const services = useTownServices();
   const setSection = useTownUi((s) => s.setSection);
@@ -152,9 +162,11 @@ export function ChecklistPanel({ onShop }: { onShop?: (search: string) => void }
                   {line.status ? `: ${line.status}` : line.covered ? ': carried' : ': missing'}
                 </span>
               </span>
-              <span className={styles.checkDetail}>{line.detail}</span>
+              {!(spellBanner && line.key === 'spells') && (
+                <span className={styles.checkDetail}>{line.detail}</span>
+              )}
             </div>
-            {line.key === 'spells' && (
+            {line.key === 'spells' && !spellBanner && (
               <div className={styles.checkActions}>
                 <SpellActions advice={advice} />
               </div>

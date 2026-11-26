@@ -442,7 +442,8 @@ describe('rest and preparation', () => {
   it("counts a caster's spells and opens a 1st-level cleric's spells, though he has no slots yet", async () => {
     const { user } = setup();
     await user.click(screen.getByRole('tab', { name: 'Rest and prepare' }));
-    // The fighters aren't casters, so their rows say nothing about spells.
+    // The line names the class as the sheet does. The fighters aren't casters, so their rows say nothing about
+    // spells.
     expect(await screen.findAllByText(/, none memorized$/)).toHaveLength(1);
     expect(screen.queryByText(/in spell book/)).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: "Open Osric's spells" }));
@@ -485,6 +486,36 @@ describe('the action bar', () => {
     expect(screen.getByRole('tab', { name: 'Treasure buyers', selected: true })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /^Outfitter/ }));
     expect(screen.getByRole('tab', { name: 'Outfitter', selected: true })).toBeInTheDocument();
+  });
+});
+
+describe('the action bar rest menu', () => {
+  it('names each rest as the rest panel does', async () => {
+    const api = createFakeApi();
+    stubCatalog(api, ADVENTURES);
+    const { user } = renderWithTable(
+      <ActionBar aria-label="Party actions">
+        <TownActions />
+      </ActionBar>,
+      { snapshot: fixtureSnapshot('town', 'player'), api },
+    );
+    await user.click(screen.getByRole('button', { name: /^Rest/ }));
+    const items = await screen.findAllByRole('menuitem');
+    expect(items.map((item) => item.textContent)).toEqual(
+      expect.arrayContaining(['Rest for one turn', 'Rest for a night', 'Rest for a full day']),
+    );
+  });
+});
+
+describe('the rest panel caster line', () => {
+  it('writes the level and class as the sheet does', async () => {
+    const snapshot = fixtureSnapshot('town', 'player');
+    makeCaster(snapshot, 'Tamsin', 'magic_user', { book: 1, className: 'Magic-User' });
+    const { user } = setup(snapshot);
+    await user.click(screen.getByRole('tab', { name: 'Rest and prepare' }));
+    expect(
+      await screen.findByText('Level 1 magic-user, 1 in spell book, none memorized'),
+    ).toBeInTheDocument();
   });
 });
 
@@ -604,7 +635,9 @@ describe('spells to prepare', () => {
     const game = store.getState().game;
     if (!game) throw new Error('No game.');
     expect((await screen.findAllByText('Spells to prepare')).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText(REST).length).toBeGreaterThanOrEqual(2);
+    // The banner says it, and the checklist line below it names the advice without repeating it.
+    expect(screen.getAllByText(REST)).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'Rest for a night' })).toHaveLength(1);
     expect(screen.queryByText('Ready')).not.toBeInTheDocument();
     api.sendCommand.mockResolvedValue(accepted(game));
     await user.click(screen.getAllByRole('button', { name: 'Rest for a night' })[0] as HTMLElement);
@@ -637,6 +670,26 @@ describe('spells to prepare', () => {
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText(REST)).toBeInTheDocument();
     expect(within(dialog).getByText('Tinder box')).toBeInTheDocument();
+  });
+
+  it('keeps the checklist line to its title and status under the banner, and gives it in full elsewhere', async () => {
+    const { user } = setup(withMage());
+    const checklist = (await screen.findByRole('heading', { name: 'Ready for the dungeon?' })).closest(
+      'section',
+    );
+    if (!checklist) throw new Error('no checklist');
+    expect(within(checklist).getByText('Spells to prepare')).toBeInTheDocument();
+    expect(within(checklist).getByText(": Tamsin needs a night's rest")).toBeInTheDocument();
+    expect(within(checklist).queryByText(REST)).toBeNull();
+    expect(within(checklist).queryByRole('button', { name: 'Rest for a night' })).toBeNull();
+    // The outfitter has no banner, so its checklist gives the advice in full.
+    await user.click(screen.getByRole('tab', { name: 'Outfitter' }));
+    const outfitter = (await screen.findByRole('heading', { name: 'Ready for the dungeon?' })).closest(
+      'section',
+    );
+    if (!outfitter) throw new Error('no checklist');
+    expect(within(outfitter).getByText(REST)).toBeInTheDocument();
+    expect(within(outfitter).getByRole('button', { name: 'Rest for a night' })).toBeInTheDocument();
   });
 
   it('says nothing about a new first-level cleric', async () => {

@@ -486,7 +486,8 @@ export function DungeonMap(props: DungeonMapProps) {
           font: '13px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif',
           pointerEvents: 'none',
           whiteSpace: 'pre-line',
-          zIndex: 2,
+          // Above every overlay a screen puts over the map, such as the wandering monsters chip.
+          zIndex: 'var(--z-tooltip)',
         }}
       >
         <div style={{ fontWeight: 650 }} />

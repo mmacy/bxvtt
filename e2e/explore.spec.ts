@@ -226,8 +226,9 @@ test.describe('exploration', () => {
     await expect(take).toHaveCount(0);
     lines = await feedLines(sam.page);
     expect(lines.join('\n')).toMatch(/2 vials of holy water/i);
-    // The player view names a gem or a piece of jewellery by its kind (`PlayerView.item_names`).
-    expect(lines.join('\n')).toMatch(/takes a piece of jewellery/);
+    // The feed names a piece of jewellery by its own name, which the player view shows in the taker's inventory.
+    expect(lines.join('\n')).toMatch(/takes a silver altar candlestick/);
+    expect(lines.join('\n')).not.toMatch(/piece of jewellery/);
     // The potion isn't identified, so the feed uses its masked name and doesn't say what it is.
     expect(lines.join('\n')).toMatch(/takes a potion\b/);
     expect(lines.join('\n')).not.toMatch(/potion of healing/i);

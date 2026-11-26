@@ -15,7 +15,7 @@ import { Accordion, Banner, Button, EmptyState, Icon, Panel, type IconName } fro
 import { commandInfo, count } from '@bxvtt/shared/text';
 import { CommandForm } from './CommandForm';
 import { usePartyAccess } from './hooks';
-import { MemberToken, PlaceHeader, classLine } from './parts';
+import { MemberToken, PlaceHeader, levelClassLine } from './parts';
 import { placeName } from './services';
 import { readFields } from './schemaForm';
 import { useTownUi } from './townUi';
@@ -176,7 +176,7 @@ function SheetPanel() {
               <div className={styles.memberText}>
                 <span className={styles.memberName}>{member.name}</span>
                 <span className={styles.memberMeta}>
-                  {classLine(member)}
+                  {levelClassLine(member)}
                   {spellLine(member)}
                 </span>
               </div>

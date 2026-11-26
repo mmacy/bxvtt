@@ -87,15 +87,17 @@ describe('a bxapi whose engine is older than 2.8.0', () => {
     expect(health.status).toBe('degraded');
     expect(health.bxapi.reachable).toBe(true);
     expect(health.bxapi.error).toBe(
-      "bxapi runs osrlib 2.7.0, and bxvtt needs 2.8.0 or later, so games can't run. If you host this server, update bxapi and restart it. Otherwise, ask the server host to update it.",
+      'bxapi runs osrlib 2.7.0, and bxvtt needs 2.8.0 or later. If you host this server, update bxapi and restart it. Otherwise, ask the server host to update it.',
     );
     const anonymous = await new BxvttClient({ baseUrl: server.url }).health();
     expect(anonymous.status).toBe('degraded');
     expect(anonymous.bxapi.meta).toBeNull();
-    expect(anonymous.bxapi.error).not.toContain('2.7.0');
+    expect(anonymous.bxapi.error).toBe(
+      "The game service isn't set up correctly. Ask the server host to fix it.",
+    );
   });
 
-  it('refuses a command and a declaration as when bxapi is unreachable, and sends bxapi nothing', async () => {
+  it('refuses a command and a declaration with bxapi_outdated, and sends bxapi nothing', async () => {
     setEngine('2.7.0');
     await healthFor(server, alice);
     const recorder = recordBxapi(server);
@@ -103,13 +105,14 @@ describe('a bxapi whose engine is older than 2.8.0', () => {
       const command = await alice.client
         .sendCommand(tableId, { command_type: 'rest', kind: 'night' })
         .catch((error: BxvttProblemError) => error);
-      expect(isProblem(command, 'bxapi_unavailable')).toBe(true);
+      expect(isProblem(command, 'bxapi_outdated')).toBe(true);
+      expect((command as BxvttProblemError).status).toBe(503);
       const declaration = await alice.client
         .declare(tableId, 'character-0001', { action: 'hold' })
         .catch((error: BxvttProblemError) => error);
-      expect(isProblem(declaration, 'bxapi_unavailable')).toBe(true);
+      expect(isProblem(declaration, 'bxapi_outdated')).toBe(true);
       expect(recorder.calls.filter((call) => call.method === 'POST')).toEqual([]);
-      // A browser that connects gets the error it gets while bxapi is down, and no game state.
+      // A browser that connects gets the same code, and no game state.
       const connection = new TableConnection({
         url: server.wsUrl,
         token: alice.token,
@@ -122,7 +125,7 @@ describe('a bxapi whose engine is older than 2.8.0', () => {
       const failed = connection.next('error', () => true, 5000);
       connection.connect();
       try {
-        expect(await failed).toMatchObject({ code: 'bxapi_unavailable' });
+        expect(await failed).toMatchObject({ code: 'bxapi_outdated' });
         expect(messages.some((message) => message.type === 'snapshot')).toBe(false);
       } finally {
         connection.close();

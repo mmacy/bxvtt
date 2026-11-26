@@ -51,7 +51,7 @@ export function versionAtLeast(version: string, minimum: string): boolean {
  */
 export function engineTooOldMessage(engineVersion: string): string | null {
   if (versionAtLeast(engineVersion, MIN_ENGINE_VERSION)) return null;
-  return `bxapi runs osrlib ${engineVersion}, and bxvtt needs ${MIN_ENGINE_VERSION} or later, so games can't run. If you host this server, update bxapi and restart it. Otherwise, ask the server host to update it.`;
+  return `bxapi runs osrlib ${engineVersion}, and bxvtt needs ${MIN_ENGINE_VERSION} or later. If you host this server, update bxapi and restart it. Otherwise, ask the server host to update it.`;
 }
 
 /**
@@ -111,7 +111,7 @@ export function publicHealth(health: Health): Health {
         health.bxapi.error === null
           ? null
           : health.bxapi.reachable
-            ? "The game service isn't set up for this server, so games can't run. Ask the server host to check it."
+            ? "The game service isn't set up correctly. Ask the server host to fix it."
             : "The server can't reach the game service right now. Ask the server host to check it.",
     },
   };

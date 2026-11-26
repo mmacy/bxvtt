@@ -777,3 +777,41 @@ export function spellModeLabel(targeting: string | null | undefined): string {
       return 'Cast';
   }
 }
+
+/** One way to cast a spell, as a spell template states it. */
+export interface SpellModeLike {
+  key: string;
+  prose: string;
+}
+
+/**
+ * The option label for each way to cast a spell. A spell mode has no name field, so the label comes from its
+ * prose: the text before the colon when the prose starts with a label and a colon ("Conjuring light: In a 15’
+ * radius." gives "Conjuring light"), and otherwise its first sentence.
+ *
+ * @param modes - The modes of the spell form being cast.
+ */
+export function spellModeOptions(modes: readonly SpellModeLike[]): Array<{ value: string; label: string }> {
+  return modes.map((mode) => ({ value: mode.key, label: spellModeName(mode.prose) || mode.key }));
+}
+
+function spellModeName(prose: string): string {
+  const text = prose.replace(/\s*\(see\b[^)]*\)/gi, '').trim();
+  const line = text.split('\n')[0] ?? '';
+  const sentence = (/^(.*?[.!?])(\s|$)/.exec(line)?.[1] ?? line).trim();
+  const colon = sentence.indexOf(':');
+  return colon > 0 ? sentence.slice(0, colon).trim() : sentence;
+}
+
+/**
+ * A spell's range as the rules catalog writes it, such as "120’", from the structured `range_spec` when it's a
+ * distance in feet. An adventure's own spell can write the same range as "120 feet", so the catalog and the game's
+ * spells read alike. Any other range keeps its own text, such as "The caster".
+ */
+export function spellRangeText(spell: {
+  range: string;
+  range_spec?: { kind: string; feet?: number | null } | null;
+}): string {
+  const spec = spell.range_spec;
+  return spec?.kind === 'feet' && typeof spec.feet === 'number' ? `${spec.feet}’` : spell.range;
+}

@@ -177,6 +177,10 @@ const FIXED: Record<string, { title: string; detail: string }> = {
     detail:
       "The server can't reach the game service. Ask the server host to start the game service, then try again.",
   },
+  bxapi_outdated: {
+    title: 'The game service is out of date',
+    detail: "Games can't run until it's updated. Ask the server host to update the game service.",
+  },
   bxapi_storage_full: {
     title: 'Server storage is full',
     detail:

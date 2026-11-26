@@ -35,9 +35,9 @@ describe('a feature in the area key', () => {
     expect(within(altar).getByText('Players read')).toBeInTheDocument();
     const notes = within(altar).getByRole('region', { name: 'Referee notes' });
     expect(within(notes).getByText('Referee notes')).toBeInTheDocument();
-    expect(
-      within(notes).getByText('The clay bottle wrapped in the altar cloth holds the potion of healing.'),
-    ).toBeInTheDocument();
+    const written = findArea(adventure, 'chapel')?.area.features.find((f) => f.id === 'chapel_altar');
+    expect(written?.referee_notes).not.toBe('');
+    expect(within(notes).getByText(written?.referee_notes ?? '')).toBeInTheDocument();
     expect(within(altar).getByText('Still here')).toBeInTheDocument();
   });
 

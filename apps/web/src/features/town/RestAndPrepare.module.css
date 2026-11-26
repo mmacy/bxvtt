@@ -115,6 +115,18 @@
   }
 }
 
+/* At phone width (the kit's 640 px breakpoint), each rest's button goes under its heading and hint, full width. */
+@container town (max-width: 640px) {
+  .restOption {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .restOption > :last-child {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
+
 .explain {
   margin: var(--space-3) 0 0;
   color: var(--color-text-muted);

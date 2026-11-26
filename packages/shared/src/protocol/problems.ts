@@ -116,6 +116,11 @@ export const PROBLEM_CODES = {
   /** 503: bxvtt can't reach bxapi. Start bxapi and try again. */
   bxapi_unavailable: 503,
   /**
+   * 503: bxapi answers, but its rules engine is older than bxvtt needs, so the server serves no game: no command,
+   * declaration, or game state. The host updates bxapi and restarts it. `GET /api/health` states the versions.
+   */
+  bxapi_outdated: 503,
+  /**
    * 507: bxapi's storage for bxvtt is full, so nothing new can be stored: no character, game, command, or save.
    * Waiting doesn't help. Extra members: `used_bytes` and `max_bytes`. A referee frees space by deleting old
    * tables and saves, and the host can raise the limit with bxapi's `BXAPI_MAX_CLIENT_BYTES`.

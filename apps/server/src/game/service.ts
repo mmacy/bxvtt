@@ -170,19 +170,19 @@ export class GameService {
   }
 
   /**
-   * Refuses game work while bxapi's engine is older than `MIN_ENGINE_VERSION`, as the server refuses it while
-   * bxapi is unreachable: with `bxapi_unavailable`, so no command, declaration, or game state goes through. The
-   * server reads the version at startup and whenever it checks its health. Until a check succeeds, this asks
-   * bxapi once, so a command doesn't cost a call of its own after that.
+   * Refuses game work while bxapi's engine is older than `MIN_ENGINE_VERSION`, with `bxapi_outdated`, so no
+   * command, declaration, or game state goes through. The server reads the version at startup and whenever it
+   * checks its health. Until a check succeeds, this asks bxapi once, so a command doesn't cost a call of its own
+   * after that.
    *
-   * @throws ApiError `bxapi_unavailable` when the engine is too old.
+   * @throws ApiError `bxapi_outdated` (503) when the engine is too old.
    */
   async requireEngine(): Promise<void> {
     if (!this.ctx.engine.checked) await checkHealth(this.ctx);
     if (this.ctx.engine.tooOld) {
       throw new ApiError(
-        'bxapi_unavailable',
-        "The game service is out of date, so games can't run. Ask the server host to update it.",
+        'bxapi_outdated',
+        "The game service is out of date. Games can't run until the server host updates it.",
       );
     }
   }

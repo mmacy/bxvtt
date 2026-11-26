@@ -216,7 +216,7 @@ Every HTTP error returns an RFC 9457 `application/problem+json` object containin
 - **429:** `rate_limited` (with `Retry-After`)
 - **500:** `internal_error`
 - **502:** `bxapi_error`, `save_unreadable` (`bxapi` can't read the save to restore, because its rules engine was updated after the save was made), `invalid_response` (synthesized by SDK when a 2xx body is not JSON)
-- **503:** `bxapi_unavailable`, `server_unavailable` (synthesized by SDK when a proxy/tunnel returns non-JSON 502/503/504)
+- **503:** `bxapi_unavailable` (the server can't reach `bxapi`), `bxapi_outdated` (`bxapi` runs an `osrlib` older than 2.8.0, so the server serves no game until the host updates it; the WebSocket `error` message uses the same code), `server_unavailable` (synthesized by SDK when a proxy/tunnel returns non-JSON 502/503/504)
 - **507:** `bxapi_storage_full` (includes `used_bytes` and `max_bytes`)
 
 ## Key server protocols

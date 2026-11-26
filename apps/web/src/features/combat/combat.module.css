@@ -1013,26 +1013,37 @@
   color: var(--color-text-muted);
 }
 
-/* A treasure's description on one line, with the "Trapped" badge after it. */
+/*
+ * A treasure's icon and description. Its basis is the text's full width, so a description too long to share a
+ * line with the controls takes the line, wraps inside it, and pushes the controls to the next line.
+ */
 .pickUpLineGroup {
   display: flex;
-  flex: 1 1 200px;
-  align-items: center;
-  gap: var(--space-1-5);
+  flex: 1 1 auto;
+  align-items: flex-start;
+  gap: var(--space-2);
   min-width: 0;
 }
 
-.pickUpBadge {
+.pickUpIcon {
   flex: none;
+  margin-top: var(--space-0-5);
 }
 
 .pickUpLine {
   min-width: 0;
-  overflow: hidden;
   font-size: var(--text-sm);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
   color: var(--color-text-strong);
+}
+
+/* The "Trapped" badge and the Take button, at the end of the line or on their own line. */
+.pickUpControls {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1-5);
+  margin-left: auto;
 }
 
 /* The action bar. */

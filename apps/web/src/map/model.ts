@@ -5,6 +5,7 @@
  * A builder only translates what bxapi reports. It never decides what the party could see or do.
  */
 import type { components } from '@bxvtt/shared/bxapi';
+import { coinParts } from '@bxvtt/shared/text';
 import {
   CELL_FEET,
   DIRECTIONS,
@@ -622,10 +623,11 @@ export function fromRefereeView(level: LevelSpec, state: DungeonState, options: 
   for (const [cellReference, pile] of Object.entries(state.piles)) {
     const cell = cellOfRef(cellReference, dungeonId, levelNumber);
     if (!cell) continue;
-    const contents = pile.items.map((item) => name(item.item_id, item.quantity));
+    // Coins first, as the player's map lists a pile.
+    const contents = coinParts(pile.coins);
+    for (const item of pile.items) contents.push(name(item.item_id, item.quantity));
     for (const item of pile.magic_items) contents.push(name(item.template_id, item.quantity));
     for (const valuable of pile.valuables) contents.push(valuable.name || valuable.kind);
-    contents.push(...coinLines(pile.coins));
     features.push(pileFeature(cell, contents, known.has(cellKey(cell[0], cell[1])), ''));
   }
 
@@ -806,7 +808,8 @@ function pileFeature(
     y: cell[1],
     areaWide: false,
     areaId: null,
-    description: 'Dropped goods.',
+    // The tooltip's title names the pile, so it has no description to repeat it.
+    description: '',
     emptied: false,
     found: null,
     trap: null,

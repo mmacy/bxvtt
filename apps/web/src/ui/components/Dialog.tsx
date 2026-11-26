@@ -8,11 +8,12 @@ import { Tooltip } from './Popover';
 import styles from './Dialog.module.css';
 
 /**
- * Which element takes focus when a dialog or drawer opens: a ref to an element inside it, or `'content'` for the
- * window itself, so a screen reader starts at the title and no control looks selected. By default Radix focuses
- * the first focusable element.
+ * Which element takes focus when a dialog or drawer opens: a ref to an element inside it, `'content'` for the
+ * window itself, so a screen reader starts at the title and no control looks selected, or `{ selector }` for the
+ * first element inside the window that matches a CSS selector, for a kit control that takes no ref. When the
+ * selector matches nothing, Radix focuses the first focusable element, as it does by default.
  */
-export type InitialFocus = RefObject<HTMLElement | null> | 'content';
+export type InitialFocus = RefObject<HTMLElement | null> | 'content' | { selector: string };
 
 /** Focus handlers that record the opener and then move focus as `initialFocus` asks. */
 function useOpenFocus(
@@ -32,7 +33,12 @@ function useOpenFocus(
         }
         return;
       }
-      const target = initialFocus.current;
+      const target =
+        'selector' in initialFocus
+          ? event.currentTarget instanceof HTMLElement
+            ? event.currentTarget.querySelector<HTMLElement>(initialFocus.selector)
+            : null
+          : initialFocus.current;
       if (target) {
         event.preventDefault();
         target.focus({ preventScroll: true });

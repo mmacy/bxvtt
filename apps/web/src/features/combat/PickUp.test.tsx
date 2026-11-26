@@ -36,6 +36,14 @@ describe('the aftermath pick-up', () => {
     expect(screen.queryByRole('button', { name: 'Take' })).toBeNull();
   });
 
+  it('shows the whole description once, as the visible text the Take button points at', () => {
+    renderWithTable(<PickUp />, { snapshot: withChest('found') });
+    const [text, ...copies] = screen.getAllByText('An iron-bound chest.');
+    expect(copies).toEqual([]);
+    expect(text).not.toHaveAttribute('aria-hidden');
+    expect(screen.getByRole('button', { name: 'Take anyway' })).toHaveAttribute('aria-describedby', text?.id);
+  });
+
   it.each(['sprung', 'removed', null] as const)('offers Take when the trap state is %s', (state) => {
     renderWithTable(<PickUp />, { snapshot: withChest(state) });
     expect(screen.getByRole('button', { name: 'Take' })).toHaveAccessibleDescription('An iron-bound chest.');

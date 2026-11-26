@@ -227,7 +227,7 @@ export function PickUp() {
 }
 
 /**
- * One treasure the party can take where it stands: its description on one line, and the take button. When the
+ * One treasure the party can take where it stands: its description in full, and the take button. When the
  * party has found a trap on it, a "Trapped" badge sits beside the text and the button reads "Take anyway", so the
  * player decides. The client never says whether a trap exists before the party finds it.
  */
@@ -245,35 +245,34 @@ function CacheRow({
   canTake: { allowed: boolean; reason: string | null };
   onTake: () => void;
 }) {
-  const fullId = useId();
+  const textId = useId();
+  // The text wraps in full. When it's too long to share a line, the badge and the button move to the next line.
   return (
     <div className={styles.pickUpRow}>
-      <Icon name="chest" size={16} />
       <span className={styles.pickUpLineGroup}>
-        <span className={styles.pickUpLine} aria-hidden="true">
+        <Icon name="chest" size={16} className={styles.pickUpIcon} />
+        <span id={textId} className={styles.pickUpLine}>
           {text}
         </span>
-        {/* The visible line may be cut off, so the button's description is the full text. */}
-        <span id={fullId} className="visually-hidden">
-          {text}
-        </span>
+      </span>
+      <span className={styles.pickUpControls}>
         {trapFound && (
-          <Badge tone="warning" icon="trap" className={styles.pickUpBadge}>
+          <Badge tone="warning" icon="trap">
             Trapped
           </Badge>
         )}
+        <Button
+          size="sm"
+          variant="secondary"
+          loading={busy}
+          disabled={!canTake.allowed}
+          disabledReason={canTake.reason}
+          aria-describedby={textId}
+          onClick={onTake}
+        >
+          {trapFound ? 'Take anyway' : 'Take'}
+        </Button>
       </span>
-      <Button
-        size="sm"
-        variant="secondary"
-        loading={busy}
-        disabled={!canTake.allowed}
-        disabledReason={canTake.reason}
-        aria-describedby={fullId}
-        onClick={onTake}
-      >
-        {trapFound ? 'Take anyway' : 'Take'}
-      </Button>
     </div>
   );
 }

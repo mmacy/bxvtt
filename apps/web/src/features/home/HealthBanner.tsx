@@ -3,15 +3,29 @@ import { useEffect, useState } from 'react';
 import { getApi } from '@/app';
 import { Banner, Button } from '@/ui';
 
-type HealthState = { kind: 'checking' } | { kind: 'ok' } | { kind: 'no-bxapi' } | { kind: 'no-server' };
+type HealthState =
+  | { kind: 'checking' }
+  | { kind: 'ok' }
+  | { kind: 'no-bxapi' }
+  | { kind: 'no-server' }
+  /** bxapi answers, but the server can't run games with it. `detail` is the server's sentence for the cause. */
+  | { kind: 'misconfigured'; outdated: boolean; detail: string };
 
-function classify(health: Health): HealthState {
-  return health.bxapi.reachable ? { kind: 'ok' } : { kind: 'no-bxapi' };
+/**
+ * What the health says. For a reachable bxapi, the server states one of two causes: a key with the player role,
+ * or an engine older than bxvtt needs. A signed-in user's health has `meta`, so a referee key with an error means
+ * the engine is out of date. An anonymous reader's health has no `meta` and a general sentence.
+ */
+export function classify(health: Health): HealthState {
+  const { reachable, meta, error } = health.bxapi;
+  if (!reachable) return { kind: 'no-bxapi' };
+  if (error === null) return { kind: 'ok' };
+  return { kind: 'misconfigured', outdated: meta !== null && meta.role === 'referee', detail: error };
 }
 
 /**
- * Checks the server's health when the page loads, and explains what is wrong when the server or bxapi is down.
- * It shows nothing while everything works.
+ * Checks the server's health when the page loads, and explains what is wrong when the server is down, bxapi is
+ * down, or bxapi can't run games. It shows nothing while everything works.
  */
 export function HealthBanner() {
   const [state, setState] = useState<HealthState>({ kind: 'checking' });
@@ -46,6 +60,17 @@ export function HealthBanner() {
       <Banner tone="danger" title="The game service isn't running" actions={retry}>
         The server is running, but it can&apos;t reach the game service. Ask the server host to start the game
         service, then check again.
+      </Banner>
+    );
+  }
+  if (state.kind === 'misconfigured') {
+    return (
+      <Banner
+        tone="danger"
+        title={state.outdated ? 'The game service is out of date' : "Games can't run on this server"}
+        actions={retry}
+      >
+        {state.detail}
       </Banner>
     );
   }
