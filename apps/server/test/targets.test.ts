@@ -12,6 +12,7 @@ import {
   findRefereeData,
   findUnshownCreatureIds,
   received,
+  recordBxapi,
   startServer,
 } from './helpers';
 
@@ -34,13 +35,7 @@ async function barrowTable(): Promise<{
   commandCalls: () => number;
 }> {
   const server = await startServer();
-  let calls = 0;
-  const bxapi = server.server.ctx.bxapi;
-  const original = bxapi.request.bind(bxapi);
-  bxapi.request = (async (method: string, path: string, options?: Parameters<typeof original>[2]) => {
-    if (method === 'POST' && path.endsWith('/commands')) calls += 1;
-    return original(method, path, options);
-  }) as typeof bxapi.request;
+  const recorder = recordBxapi(server);
   const referee = await createUser(server, 'Rhea');
   const alice = await createUser(server, 'Alice');
   const tableId = (await createTable(referee, [alice])).id;
@@ -58,7 +53,15 @@ async function barrowTable(): Promise<{
   await alice.client.addToRoster(tableId, mage.id);
   const aliceWs = await connect(server, alice, tableId);
   const game = await referee.client.startGame(tableId, { adventure_id: 'builtin-barrow', seed: 7 });
-  return { server, referee, alice, tableId, aliceWs, game, commandCalls: () => calls };
+  return {
+    server,
+    referee,
+    alice,
+    tableId,
+    aliceWs,
+    game,
+    commandCalls: () => recorder.posts('/commands').length,
+  };
 }
 
 /** Rests, prepares *magic missile*, and walks into the barrow's guard room, where two goblins wait. */

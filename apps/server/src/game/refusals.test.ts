@@ -34,7 +34,7 @@ describe('attributing refusals', () => {
     expect(
       attributeRefusals(
         [
-          { code: 'battle.declaration.roster_mismatch' },
+          { code: 'battle.declaration.roster_mismatch', params: {} },
           { code: 'x', params: { character: 'character-0009' } },
         ],
         declarers,

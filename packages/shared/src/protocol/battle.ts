@@ -80,9 +80,16 @@ export const DeclarationsState = z.object({
   refusals: z.array(DeclarationRefusal),
   /**
    * Where everyone would stand once the stored declarations' moves are made, or `null` when nobody has declared
-   * or the preview failed. Optional in the type so that older fixtures still compile.
+   * or the preview failed.
    */
-  projection: RoundProjection.nullable().optional(),
+  projection: RoundProjection.nullable(),
+  /**
+   * Whether bxapi's preview of the stored declarations failed, so `refusals` is empty because the server couldn't
+   * check the declarations, not because they would work. The server asks bxapi again when it next builds this
+   * state, at least a few seconds later, such as when a member declares, clears a declaration, or reloads.
+   * Optional in the type so that the web fixtures captured before it compile. This server always sends it.
+   */
+  preview_unavailable: z.boolean().optional(),
 });
 /** The declarations for the current battle round. */
 export type DeclarationsState = z.infer<typeof DeclarationsState>;

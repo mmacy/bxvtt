@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { DeclarationsState, GameState } from '@bxvtt/shared/protocol';
+import { contextFromPlayerView, describeRejection, type ParamMap } from '@bxvtt/shared/text';
 import { findRepoRoot } from '../src/config';
 import type { TestConnection, TestServer, TestUser } from './helpers';
 import {
@@ -96,6 +97,7 @@ describe('previewing the declarations of a battle round', () => {
   it('stores a declaration the session would refuse, and names the member and the reason at once', async () => {
     const before = commandCalls;
     const state = await alice.client.declare(tableId, 'character-0001', { action: 'hide' });
+    expect(state.preview_unavailable).toBe(false);
     expect(state.declared).toEqual(['character-0001']);
     expect(state.declarations['character-0001']).toMatchObject({ action: 'hide' });
     expect(codes(state)).toEqual([['character-0001', 'battle.declaration.hide_in_front_rank']]);
@@ -147,12 +149,16 @@ describe('previewing the declarations of a battle round', () => {
       }),
     ]);
     const forPlayer = await alice.client.getDeclarations(tableId);
-    expect(forPlayer?.refusals).toEqual([
-      expect.objectContaining({
-        member_id: 'character-0003',
-        params: expect.objectContaining({ target: null }),
-      }),
-    ]);
+    const refusal = forPlayer?.refusals[0];
+    expect(forPlayer?.refusals).toHaveLength(1);
+    expect(refusal).toMatchObject({ member_id: 'character-0003', code: forReferee.refusals[0]?.code });
+    // The hidden ID leaves the params, so the player's text takes the wording without a target.
+    expect(refusal?.params).not.toHaveProperty('target');
+    const text = describeRejection(
+      { code: refusal?.code ?? '', params: refusal?.params as ParamMap },
+      contextFromPlayerView(game.view),
+    );
+    expect(text).not.toMatch(/null|monster-/i);
     expect(forPlayer?.declarations['character-0003']?.targets).toEqual([]);
     expect(JSON.stringify(forPlayer)).not.toContain('monster-0099');
   });
@@ -187,6 +193,8 @@ describe('previewing the declarations of a battle round', () => {
       expect(state.declared).toEqual(['character-0001']);
       expect(state.refusals).toEqual([]);
       expect(state.projection).toBeNull();
+      // The state says the declarations went unchecked, so the board doesn't read "no problems" into it.
+      expect(state.preview_unavailable).toBe(true);
     } finally {
       previewFails = false;
     }

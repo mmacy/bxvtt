@@ -65,9 +65,9 @@ export function unlistedTarget(
 }
 
 /**
- * Makes a value safe to send a player: a monster or NPC ID that the player view doesn't list leaves its list, or
- * becomes `null` elsewhere. A declaration that a referee aimed at a creature the party can't see, or a refusal
- * that names one, reaches a player without the ID.
+ * Makes a value safe to send a player: a monster or NPC ID that the player view doesn't list leaves its list or
+ * its object. A declaration that a referee aimed at a creature the party can't see, or a refusal that names one,
+ * reaches a player without the ID, and the refusal's text reads as if bxapi had left the param out.
  *
  * @param value - A declaration, a refusal, or any JSON value. It isn't changed.
  * @param view - The player view.
@@ -81,7 +81,11 @@ export function withoutUnlistedCreatures<T>(value: T, view: PlayerView, known: R
     if (hidden(current)) return null;
     if (Array.isArray(current)) return current.filter((entry) => !hidden(entry)).map(strip);
     if (typeof current === 'object' && current !== null) {
-      return Object.fromEntries(Object.entries(current).map(([key, entry]) => [key, strip(entry)]));
+      return Object.fromEntries(
+        Object.entries(current)
+          .filter(([, entry]) => !hidden(entry))
+          .map(([key, entry]) => [key, strip(entry)]),
+      );
     }
     return current;
   };

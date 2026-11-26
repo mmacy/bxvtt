@@ -1,10 +1,5 @@
+import type { Rejection } from '@bxvtt/shared/bxapi';
 import type { DeclarationRefusal } from '@bxvtt/shared/protocol';
-
-/** A rejection as bxapi returns it. */
-export interface RoundRejection {
-  code: string;
-  params?: Record<string, unknown> | null;
-}
 
 /**
  * Says whose declaration each rejection of a refused battle round is about. Since osrlib 2.7, every rejection of
@@ -16,11 +11,11 @@ export interface RoundRejection {
  * @returns One refusal for each rejection, in bxapi's order.
  */
 export function attributeRefusals(
-  rejections: readonly RoundRejection[],
+  rejections: readonly Rejection[],
   declarers: readonly string[],
 ): DeclarationRefusal[] {
   return rejections.map((rejection) => {
-    const params = rejection.params ?? {};
+    const params = rejection.params;
     const character = params.character;
     return {
       member_id: typeof character === 'string' && declarers.includes(character) ? character : null,
@@ -37,7 +32,7 @@ export function attributeRefusals(
  * @param declarers - The members who must declare this round, in marching order.
  */
 export function previewRefusals(
-  rejections: Readonly<Record<string, readonly RoundRejection[]>>,
+  rejections: Readonly<Record<string, readonly Rejection[]>>,
   declarers: readonly string[],
 ): DeclarationRefusal[] {
   const order = [...declarers, ...Object.keys(rejections).filter((id) => !declarers.includes(id))];
@@ -45,7 +40,7 @@ export function previewRefusals(
     (rejections[memberId] ?? []).map((rejection) => ({
       member_id: memberId,
       code: rejection.code,
-      params: rejection.params ?? {},
+      params: rejection.params,
     })),
   );
 }

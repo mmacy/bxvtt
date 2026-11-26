@@ -43,7 +43,12 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
       when: ['character', 'target'],
       text: "{target|entity} is invisible, so {character|member} can't target it. Choose another target.",
     },
-    { text: "{target|entity} is invisible and can't be targeted." },
+    { when: ['target'], text: "{target|entity} is invisible and can't be targeted." },
+    {
+      when: ['character'],
+      text: "That target is invisible, so {character|member} can't target it. Choose another target.",
+    },
+    { text: "That target is invisible and can't be targeted. Choose another target." },
   ],
   'battle.declaration.item_unusable': [
     {
@@ -315,8 +320,15 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   ],
   'items.use.target_cannot_be_healed': "{target|entity} can't be healed by {item|item} right now.",
   'items.use.target_cannot_drink': "{target|member} can't act right now and can't drink {item|item}.",
-  'items.use.target_healed_today':
-    '{item|itemcap} has already healed {target|entity} today. A staff of healing can heal each creature only once a day.',
+  'items.use.target_healed_today': [
+    {
+      when: ['target'],
+      text: '{item|itemcap} has already healed {target|entity} today. A staff of healing can heal each creature only once a day.',
+    },
+    {
+      text: '{item|itemcap} has already healed that creature today. A staff of healing can heal each creature only once a day.',
+    },
+  ],
   'items.use.target_not_allowed': [
     {
       when: ['character', 'target'],

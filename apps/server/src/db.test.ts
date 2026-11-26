@@ -50,7 +50,7 @@ describe('the database layout', () => {
     db.close();
   });
 
-  it('drops the target handles and battle refusals of a version 6 database and keeps its other rows', () => {
+  it('drops the target handles, battle refusals, and declarations of a version 6 database and keeps its other rows', () => {
     new Database(dir).close();
     const raw = new DatabaseSync(join(dir, 'bxvtt.db'));
     raw.exec(`CREATE TABLE target_handles (
@@ -75,6 +75,9 @@ describe('the database layout', () => {
         VALUES ('tbl_1', 'T', 'code', 'caller', 1, 1, 'usr_1', 'now');
       INSERT INTO target_handles VALUES ('tbl_1', 'ses_1', 'k', 'monster-0001', 'tgt_AAAAAAAAAAAAAAAA', 'goblin', 1);
       INSERT INTO battle_refusals VALUES ('tbl_1', 'ses_1', 3, '[]');
+      INSERT INTO declarations (table_id, session_id, member_id, round, declaration_json, user_id, updated_at)
+        VALUES ('tbl_1', 'ses_1', 'character-0001', 1,
+          '{"character_id":"character-0001","action":"cast","targets":["tgt_AAAAAAAAAAAAAAAA"]}', 'usr_1', 'now');
       PRAGMA user_version = 6;`);
     raw.close();
     const db = new Database(dir);
@@ -85,6 +88,8 @@ describe('the database layout', () => {
     expect(db.get("SELECT count(*) AS n FROM sqlite_master WHERE name = 'battle_refusals'")).toEqual({
       n: 0,
     });
+    // A declaration from before version 7 names a monster by a handle that no longer exists.
+    expect(db.get('SELECT count(*) AS n FROM declarations')).toEqual({ n: 0 });
     expect(db.get("SELECT name FROM tables WHERE id = 'tbl_1'")).toEqual({ name: 'T' });
     db.close();
   });

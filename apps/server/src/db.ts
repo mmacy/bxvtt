@@ -61,10 +61,15 @@ ALTER TABLE ability_rolls ADD COLUMN gold_rolled_at TEXT;
  * lists, so the server no longer stores a target handle for each monster. The declarations state carries bxapi's
  * preview of the stored declarations, which gives the same rejections as resolving them, so the server no longer
  * stores the refusals of the last attempt to resolve a round.
+ *
+ * It also deletes every stored battle declaration. A declaration saved before version 7 names a monster by its
+ * `tgt_` handle, which nothing can translate once the handles are gone, and a declaration lasts one round, so the
+ * players declare that round again.
  */
 const VERSION_7 = `
 DROP TABLE IF EXISTS target_handles;
 DROP TABLE IF EXISTS battle_refusals;
+DELETE FROM declarations;
 `;
 
 /** The SQL that upgrades a database from the version before each key to that version. */

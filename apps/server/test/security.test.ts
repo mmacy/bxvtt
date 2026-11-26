@@ -14,6 +14,7 @@ import {
   createUser,
   findRefereeData,
   received,
+  recordBxapi,
   startServer,
   viewHere,
   waitFor,
@@ -530,13 +531,8 @@ describe('treasure the party has not found', () => {
       location: { kind: 'dungeon', dungeon_id: 'barrow', level_number: 1, position: [4, 0], facing: 'east' },
     });
     const before = await player.client.getGame(tableId);
-    const bxapi = server.server.ctx.bxapi;
-    const sent: string[] = [];
-    const originalPost = bxapi.post.bind(bxapi);
-    bxapi.post = async <T>(path: string, body: unknown, options = {}) => {
-      if (path.endsWith('/commands')) sent.push(JSON.stringify(body));
-      return originalPost<T>(path, body, options);
-    };
+    // The command pipeline calls `bxapi.request` with a raw body, so the recorder wraps `request`.
+    const recorder = recordBxapi(server);
     try {
       for (const command of ['take_treasure', 'inspect_treasure', 'remove_treasure_trap']) {
         const refused = await player.client.sendCommand(tableId, {
@@ -544,15 +540,17 @@ describe('treasure the party has not found', () => {
           character_id: 'character-0001',
           feature_id: 'idol_shrine',
         });
+        // Checked first, so a server that forwards the raw ID fails here, whatever bxapi answers.
+        expect(recorder.posts('/commands')).toEqual([]);
         expect(refused.accepted).toBe(false);
         expect(refused.rejections).toEqual([
           { code: 'exploration.feature.unknown', params: { feature: 'idol_shrine' } },
         ]);
         expect(refused.revision).toBe(before.revision);
       }
-      expect(sent).toEqual([]);
+      expect(recorder.posts('/commands')).toEqual([]);
     } finally {
-      bxapi.post = originalPost;
+      recorder.stop();
     }
     // A referee may still name the cache by its raw ID.
     const inspected = await referee.client.sendCommand(tableId, {

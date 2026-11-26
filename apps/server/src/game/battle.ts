@@ -170,6 +170,7 @@ export class BattleService {
       declared_by: declaredBy,
       refusals: preview?.refusals ?? [],
       projection: preview?.projection ?? null,
+      preview_unavailable: preview?.failedAt != null,
     };
   }
 
@@ -446,6 +447,7 @@ export class BattleService {
         declared_by: {},
         refusals: [],
         projection: null,
+        preview_unavailable: false,
       }
     );
   }

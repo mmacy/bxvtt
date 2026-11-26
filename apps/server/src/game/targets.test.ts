@@ -61,7 +61,7 @@ describe('player targets', () => {
       action: 'cast',
       spell_id: 'sleep',
       targets: ['monster-0001'],
-      note: { target: null },
+      note: {},
     });
     expect(declaration.targets).toEqual(['monster-0001', 'monster-0003']);
   });

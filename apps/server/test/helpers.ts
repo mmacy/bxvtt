@@ -386,3 +386,41 @@ export function viewHere(game: GameState): {
   );
   return { level, area, features };
 }
+
+/** One request the server sent bxapi. */
+export interface BxapiCall {
+  method: string;
+  path: string;
+  /** The JSON body as sent, from `body` or `rawBody`, or `undefined` for none. */
+  body: string | undefined;
+}
+
+/**
+ * Records every request the server sends bxapi, from now until `stop`. It wraps `BxapiClient.request`, which every
+ * call goes through: `get` and `post` call it, and the command pipeline calls it directly with `rawBody`. A test
+ * that wraps `post` alone never sees a command.
+ *
+ * @param server - The test server.
+ * @returns The calls so far, a count of POSTs whose path ends with a suffix, and `stop` to unwrap.
+ */
+export function recordBxapi(server: TestServer): {
+  calls: BxapiCall[];
+  posts: (suffix: string) => BxapiCall[];
+  stop: () => void;
+} {
+  const bxapi = server.server.ctx.bxapi;
+  const original = bxapi.request;
+  const calls: BxapiCall[] = [];
+  bxapi.request = (async (method: string, path: string, options?: Parameters<typeof original>[2]) => {
+    const body = options?.rawBody ?? (options?.body === undefined ? undefined : JSON.stringify(options.body));
+    calls.push({ method, path, body });
+    return original.call(bxapi, method, path, options);
+  }) as typeof bxapi.request;
+  return {
+    calls,
+    posts: (suffix) => calls.filter((call) => call.method === 'POST' && call.path.endsWith(suffix)),
+    stop: () => {
+      bxapi.request = original;
+    },
+  };
+}
