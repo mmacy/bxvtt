@@ -36,7 +36,14 @@ export const DeclarationRefusal = z.object({
 /** One reason the session would refuse a stored declaration. */
 export type DeclarationRefusal = z.infer<typeof DeclarationRefusal>;
 
-/** Where everyone would stand once the round's declared moves are made, from bxapi's battle round preview. */
+/**
+ * Where everyone would stand once the round's declared moves are made, and who could still hide or back-stab, from
+ * bxapi's battle round preview.
+ *
+ * The web client offers Hide and Back-stab from `can_hide` and `can_back_stab` here when a projection exists, and
+ * from `view.encounter.can_hide` and `view.encounter.can_back_stab` otherwise, such as before anyone declares or
+ * when the preview failed.
+ */
 export const RoundProjection = z.object({
   /**
    * Each living member's place on the range track after the declared moves, in feet forward of the party line,
@@ -48,6 +55,16 @@ export const RoundProjection = z.object({
    * declared moves, as in `view.encounter.groups[].front_rank`.
    */
   front_rank: z.record(z.string(), z.array(MemberId)),
+  /**
+   * The declarers who could declare `hide` beside the other stored declarations, in marching order, each judged
+   * as if the hide took the place of their own declaration. From the preview's `can_hide`.
+   */
+  can_hide: z.array(MemberId),
+  /**
+   * The declarers who could declare an `attack` with `back_stab` beside the other stored declarations, in
+   * marching order. From the preview's `can_back_stab`.
+   */
+  can_back_stab: z.array(MemberId),
 });
 /** Where everyone would stand once the round's declared moves are made. */
 export type RoundProjection = z.infer<typeof RoundProjection>;

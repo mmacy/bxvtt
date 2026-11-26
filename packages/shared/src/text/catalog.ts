@@ -78,8 +78,9 @@ for (const entry of catalog.equipment) {
     EQUIPMENT.set(entry.id, override);
     continue;
   }
-  const one = lowerCatalogName(entry.name);
-  EQUIPMENT.set(entry.id, { one, many: pluralize(one) });
+  // osrlib states each item's display names. An entry without them reads by its printed name.
+  const one = entry.display_name || lowerCatalogName(entry.name);
+  EQUIPMENT.set(entry.id, { one, many: entry.display_name_plural || pluralize(one) });
 }
 
 /** Built-in equipment nouns by every spelling a caller might pass: the printed name and the curated nouns. */
@@ -93,12 +94,22 @@ for (const entry of catalog.equipment) {
   }
 }
 
-const MAGIC_ITEMS = new Map<string, string>(
-  catalog.magic_items.map((entry) => [entry.id, lowerCatalogName(entry.name)]),
+/** The noun of a built-in magic item template, from osrlib's display names. */
+function magicItemNoun(entry: (typeof catalog.magic_items)[number]): ItemNoun {
+  const one = entry.display_name || lowerCatalogName(entry.name);
+  return { one, many: entry.display_name_plural || pluralize(one) };
+}
+const MAGIC_ITEMS = new Map<string, ItemNoun>(
+  catalog.magic_items.map((entry) => [entry.id, magicItemNoun(entry)]),
 );
-const MAGIC_ITEMS_BY_NAME = new Map<string, string>(
-  catalog.magic_items.map((entry) => [entry.name.toLowerCase(), lowerCatalogName(entry.name)]),
-);
+const MAGIC_ITEMS_BY_NAME = new Map<string, ItemNoun>();
+for (const entry of catalog.magic_items) {
+  const noun = magicItemNoun(entry);
+  for (const spelling of [entry.name, noun.one]) {
+    if (!MAGIC_ITEMS_BY_NAME.has(spelling.toLowerCase()))
+      MAGIC_ITEMS_BY_NAME.set(spelling.toLowerCase(), noun);
+  }
+}
 const SPELLS = new Map<string, string>(
   // A spell's name is a proper name, written as the rules write it: `Sleep`, `Magic Missile`.
   catalog.spells.map((entry) => [entry.id, entry.name]),
@@ -236,7 +247,7 @@ export function itemNounFromName(name: string, options: ItemNameOptions = {}): I
   const known = EQUIPMENT_BY_NAME.get(text.toLowerCase());
   if (known) return known;
   const magic = MAGIC_ITEMS_BY_NAME.get(text.toLowerCase());
-  if (magic) return { one: magic, many: pluralize(magic) };
+  if (magic) return magic;
   const lot = nounFromLotName(text);
   if (lot) return options.catalog ? { one: lot.one.toLowerCase(), many: lot.many.toLowerCase() } : lot;
   if (options.catalog) {
@@ -296,6 +307,11 @@ export function itemNounByName(name: string): ItemNoun {
 
 /** Lower-case name of a built-in magic item template, such as `potion of healing`. */
 export function magicItemTemplateName(id: string): string | undefined {
+  return MAGIC_ITEMS.get(id)?.one;
+}
+
+/** Singular and plural nouns of a built-in magic item template, as osrlib states them: `pair of boots of speed`. */
+export function magicItemTemplateNoun(id: string): ItemNoun | undefined {
   return MAGIC_ITEMS.get(id);
 }
 

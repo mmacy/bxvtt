@@ -48,8 +48,11 @@ const view = {
 };
 const base = contextFromPlayerView(view);
 
-/** `game.scene.names` as the bxvtt server sends it: catalog lot names, masked names, and authored names. */
-const sceneNames: Record<string, string> = {
+/**
+ * Item names as a feed entry stored them before osrlib 2.8, from the scene the server sent then: catalog lot names,
+ * masked names with their articles, and authored names. Such stored entries must still read well.
+ */
+const storedNames: Record<string, string> = {
   torch: 'Torches (6)',
   holy_water: 'Holy water (vial)',
   chainmail: 'Chainmail',
@@ -65,10 +68,10 @@ const sceneNames: Record<string, string> = {
   'valuable-0002': 'Silver torc',
 };
 
-/** The client's workaround: it copies `scene.names` into `ctx.items` with the article stripped. */
+/** The client's old workaround: it copied the stored names into `ctx.items` with the article stripped. */
 function copiedByHand(ctx: TextContext): TextContext {
   const items = { ...ctx.items };
-  for (const [id, name] of Object.entries(sceneNames)) items[id] = stripArticle(name);
+  for (const [id, name] of Object.entries(storedNames)) items[id] = stripArticle(name);
   return { ...ctx, items };
 }
 
@@ -84,8 +87,8 @@ const acquired = (itemIds: string[], origin: string, characterId = 'character-00
 
 describe('item names (reported)', () => {
   const contexts: [string, TextContext][] = [
-    ['scene names copied into ctx.items', copiedByHand(base)],
-    ['extendContextWithNames', extendContextWithNames(base, sceneNames)],
+    ['stored names copied into ctx.items', copiedByHand(base)],
+    ['extendContextWithNames', extendContextWithNames(base, storedNames)],
   ];
 
   describe.each(contexts)('with %s', (_label, ctx) => {
@@ -188,7 +191,7 @@ describe('item names (reported)', () => {
 
   it('gives the client one noun for an inventory entry', () => {
     // The combat and sheet models named items with `equipmentNoun(id)?.one ?? itemName(id, ctx).toLowerCase()`.
-    const ctx = extendContextWithNames(base, sceneNames);
+    const ctx = extendContextWithNames(base, storedNames);
     expect(resolveItemNoun('torch', ctx)).toEqual(equipmentNoun('torch'));
     expect(itemPhrase(resolveItemNoun('torch', ctx), 6)).toBe('6 torches');
     expect(itemPhrase(resolveItemNoun('holy_water', ctx))).toBe('a vial of holy water');

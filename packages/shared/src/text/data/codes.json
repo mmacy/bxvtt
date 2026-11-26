@@ -1,35 +1,35 @@
 {
-  "osrlib_version": "2.7.0",
+  "osrlib_version": "2.8.0",
   "rejections": {
     "battle.declaration.back_stab_no_ability": {
       "params": ["character"],
       "param_sets": [["character"]],
-      "sources": ["crawl/battle.py:2862"]
+      "sources": ["crawl/battle.py:2940"]
     },
     "battle.declaration.back_stab_not_attack": {
       "params": ["character"],
       "param_sets": [["character"]],
-      "sources": ["crawl/battle.py:2860"]
+      "sources": ["crawl/battle.py:2938"]
     },
     "battle.declaration.back_stab_not_melee": {
       "params": ["character"],
       "param_sets": [["character"]],
-      "sources": ["crawl/battle.py:2972"]
+      "sources": ["crawl/battle.py:3050"]
     },
     "battle.declaration.back_stab_target_aware": {
       "params": ["character"],
       "param_sets": [["character"]],
-      "sources": ["crawl/battle.py:2864"]
+      "sources": ["crawl/battle.py:2942"]
     },
     "battle.declaration.cannot_move": {
       "params": ["character"],
       "param_sets": [["character"]],
-      "sources": ["crawl/battle.py:2949", "crawl/battle.py:2967"]
+      "sources": ["crawl/battle.py:3027", "crawl/battle.py:3045"]
     },
     "battle.declaration.cast_cannot_move": {
       "params": ["character"],
       "param_sets": [["character"]],
-      "sources": ["crawl/battle.py:2749"]
+      "sources": ["crawl/battle.py:2827"]
     },
     "battle.declaration.hide_in_front_rank": {
       "params": ["character"],
@@ -44,12 +44,12 @@
     "battle.declaration.invisible_target": {
       "params": ["target"],
       "param_sets": [["target"]],
-      "sources": ["crawl/battle.py:3119"]
+      "sources": ["crawl/battle.py:3191"]
     },
     "battle.declaration.item_unusable": {
       "params": ["item"],
       "param_sets": [["item"]],
-      "sources": ["crawl/battle.py:2965", "crawl/battle.py:2995", "crawl/battle.py:3313"]
+      "sources": ["crawl/battle.py:3043", "crawl/battle.py:3073", "crawl/battle.py:3385"]
     },
     "battle.declaration.member_out_of_reach": {
       "params": ["character", "target"],
@@ -59,31 +59,31 @@
     "battle.declaration.missing_move": {
       "params": ["character"],
       "param_sets": [["character"]],
-      "sources": ["crawl/battle.py:2943"]
+      "sources": ["crawl/battle.py:3021"]
     },
     "battle.declaration.missing_spell": {
       "params": ["character"],
       "param_sets": [["character"]],
-      "sources": ["crawl/battle.py:3015"]
+      "sources": ["crawl/battle.py:3093"]
     },
     "battle.declaration.move_not_combinable": {
       "params": ["character"],
       "param_sets": [["character"]],
-      "sources": ["crawl/battle.py:2750"]
+      "sources": ["crawl/battle.py:2828"]
     },
     "battle.declaration.no_mirror": {
       "params": ["character"],
       "param_sets": [["character"]],
-      "sources": ["crawl/battle.py:3767"]
+      "sources": ["crawl/battle.py:3837"]
     },
     "battle.declaration.no_target": {
       "params": ["character", "group"],
       "param_sets": [["character"], ["group"]],
       "sources": [
-        "crawl/battle.py:2957",
-        "crawl/battle.py:3001",
-        "crawl/battle.py:3011",
-        "crawl/battle.py:3309"
+        "crawl/battle.py:3035",
+        "crawl/battle.py:3079",
+        "crawl/battle.py:3089",
+        "crawl/battle.py:3381"
       ]
     },
     "battle.declaration.not_in_front_rank": {
@@ -94,78 +94,78 @@
     "battle.declaration.replacement_unavailable": {
       "params": ["character", "replacement"],
       "param_sets": [["character", "replacement"]],
-      "sources": ["crawl/battle.py:2803", "crawl/battle.py:2828"]
+      "sources": ["crawl/battle.py:2881", "crawl/battle.py:2906"]
     },
     "battle.declaration.roster_mismatch": {
       "params": ["declared", "expected"],
       "param_sets": [["declared", "expected"]],
-      "sources": ["crawl/battle.py:3826"]
+      "sources": ["crawl/battle.py:3896"]
     },
     "battle.declaration.target_count": {
       "params": ["character", "expected", "supplied"],
       "param_sets": [["character", "expected", "supplied"]],
-      "sources": ["crawl/battle.py:2695"]
+      "sources": ["crawl/battle.py:2773"]
     },
     "battle.declaration.unknown_action": {
       "params": ["action"],
       "param_sets": [["action"]],
-      "sources": ["crawl/battle.py:3043"]
+      "sources": ["crawl/battle.py:3121"]
     },
     "battle.declaration.unknown_group": {
       "params": ["character"],
       "param_sets": [["character"]],
       "sources": [
-        "crawl/battle.py:2947",
-        "crawl/battle.py:2954",
-        "crawl/battle.py:2998",
-        "crawl/battle.py:3091",
-        "crawl/battle.py:3303"
+        "crawl/battle.py:3025",
+        "crawl/battle.py:3032",
+        "crawl/battle.py:3076",
+        "crawl/battle.py:3170",
+        "crawl/battle.py:3375"
       ]
     },
     "battle.declaration.weapon_not_wielded": {
       "params": ["item"],
       "param_sets": [["item"]],
-      "sources": ["crawl/battle.py:2961"]
+      "sources": ["crawl/battle.py:3039"]
     },
     "battle.none_active": {
       "params": [],
       "param_sets": [[]],
-      "sources": ["crawl/battle.py:3822"]
+      "sources": ["crawl/battle.py:3892"]
     },
     "combat.attack.attacker_blind": {
       "params": ["attacker"],
       "param_sets": [["attacker"]],
-      "sources": ["core/combat.py:1322"]
+      "sources": ["core/combat.py:1324"]
     },
     "combat.attack.attacker_incapacitated": {
       "params": ["attacker", "condition"],
       "param_sets": [["attacker", "condition"]],
-      "sources": ["core/combat.py:1315"]
+      "sources": ["core/combat.py:1317"]
     },
     "combat.attack.out_of_range": {
       "params": ["attacker", "distance_feet"],
       "param_sets": [["attacker", "distance_feet"]],
-      "sources": ["core/combat.py:1328"]
+      "sources": ["core/combat.py:1330"]
     },
     "combat.attack.out_of_reach": {
       "params": ["attacker", "distance_feet", "target"],
       "param_sets": [["distance_feet"], ["attacker", "distance_feet"], ["distance_feet", "target"]],
-      "sources": ["core/combat.py:1339", "crawl/battle.py:1983", "crawl/battle.py:3391"]
+      "sources": ["core/combat.py:1341", "crawl/battle.py:1983", "crawl/battle.py:3461"]
     },
     "combat.attack.reload": {
       "params": ["attacker"],
       "param_sets": [["attacker"]],
-      "sources": ["core/combat.py:1335"]
+      "sources": ["core/combat.py:1337"]
     },
     "combat.breath.exhausted": {
       "params": ["monster", "uses_per_day"],
       "param_sets": [["monster", "uses_per_day"]],
-      "sources": ["core/combat.py:3898"]
+      "sources": ["core/combat.py:3902"]
     },
     "combat.breath.no_breath_weapon": {
       "params": ["monster"],
       "param_sets": [["monster"]],
-      "sources": ["core/combat.py:3894"]
+      "sources": ["core/combat.py:3898"]
     },
     "creation.adjustment.above_cap": {
       "params": ["ability", "amount", "score"],
@@ -262,7 +262,7 @@
     "encounter.spawn.mid_pursuit": {
       "params": [],
       "param_sets": [[]],
-      "sources": ["crawl/session.py:2841"]
+      "sources": ["crawl/session.py:2890"]
     },
     "encounter.turning.mid_pursuit": {
       "params": [],
@@ -349,7 +349,7 @@
     "exploration.give.same_member": {
       "params": ["character"],
       "param_sets": [["character"]],
-      "sources": ["crawl/_items.py:75", "crawl/battle.py:3420"]
+      "sources": ["crawl/_items.py:75", "crawl/battle.py:3490"]
     },
     "exploration.item.not_carried": {
       "params": ["item"],
@@ -363,7 +363,7 @@
         "crawl/_light.py:201",
         "crawl/_light.py:203",
         "crawl/_light.py:205",
-        "crawl/_magic_items.py:680",
+        "crawl/_magic_items.py:692",
         "crawl/_town.py:75"
       ]
     },
@@ -460,62 +460,62 @@
     "items.coins.insufficient": {
       "params": ["character", "coin"],
       "param_sets": [["character", "coin"]],
-      "sources": ["crawl/session.py:2436"]
+      "sources": ["crawl/session.py:2484"]
     },
     "items.curse.stuck": {
       "params": ["item"],
       "param_sets": [["item"]],
-      "sources": ["core/items.py:3150", "crawl/_items.py:48"]
+      "sources": ["core/items.py:3420", "crawl/_items.py:48"]
     },
     "items.device.inert": {
       "params": ["item"],
       "param_sets": [["item"]],
-      "sources": ["crawl/_magic_items.py:606", "crawl/battle.py:3296"]
+      "sources": ["crawl/_magic_items.py:618", "crawl/battle.py:3368"]
     },
     "items.equip.armour_forbidden": {
       "params": ["class"],
       "param_sets": [["class"]],
-      "sources": ["core/items.py:3243"]
+      "sources": ["core/items.py:3513"]
     },
     "items.equip.armour_not_allowed": {
       "params": ["class", "item"],
       "param_sets": [["class", "item"]],
-      "sources": ["core/items.py:3246"]
+      "sources": ["core/items.py:3516"]
     },
     "items.equip.not_equippable": {
       "params": ["item"],
       "param_sets": [["item"]],
-      "sources": ["core/items.py:3076", "core/items.py:3080", "core/items.py:3083", "core/items.py:3256"]
+      "sources": ["core/items.py:3346", "core/items.py:3350", "core/items.py:3353", "core/items.py:3526"]
     },
     "items.equip.not_usable": {
       "params": ["item"],
       "param_sets": [["item"]],
-      "sources": ["core/items.py:3088"]
+      "sources": ["core/items.py:3358"]
     },
     "items.equip.shield_forbidden": {
       "params": ["class"],
       "param_sets": [["class"]],
-      "sources": ["core/items.py:3236"]
+      "sources": ["core/items.py:3506"]
     },
     "items.equip.two_handed_with_shield": {
       "params": ["class", "item"],
       "param_sets": [["class"], ["item"]],
-      "sources": ["core/items.py:3111", "core/items.py:3240"]
+      "sources": ["core/items.py:3381", "core/items.py:3510"]
     },
     "items.equip.weapon_forbidden": {
       "params": ["class", "item"],
       "param_sets": [["class", "item"]],
-      "sources": ["core/items.py:3104"]
+      "sources": ["core/items.py:3374"]
     },
     "items.equip.weapon_not_allowed": {
       "params": ["class", "item"],
       "param_sets": [["class", "item"]],
-      "sources": ["core/items.py:3102"]
+      "sources": ["core/items.py:3372"]
     },
     "items.purchase.insufficient_funds": {
       "params": ["cost_gp", "item"],
       "param_sets": [["cost_gp"], ["cost_gp", "item"]],
-      "sources": ["core/items.py:2928", "crawl/_town.py:51", "crawl/_town.py:156"]
+      "sources": ["core/items.py:3198", "crawl/_town.py:51", "crawl/_town.py:156"]
     },
     "items.purchase.not_stocked": {
       "params": ["item"],
@@ -525,72 +525,72 @@
     "items.remove.not_carried": {
       "params": ["character", "item"],
       "param_sets": [["character", "item"]],
-      "sources": ["crawl/session.py:2378"]
+      "sources": ["crawl/session.py:2426"]
     },
     "items.ring.hands_full": {
       "params": ["item"],
       "param_sets": [["item"]],
-      "sources": ["core/items.py:3073"]
+      "sources": ["core/items.py:3343"]
     },
     "items.scroll.no_such_spell": {
       "params": ["spell"],
       "param_sets": [["spell"]],
-      "sources": ["crawl/_magic_items.py:418", "crawl/battle.py:3257"]
+      "sources": ["crawl/_magic_items.py:427", "crawl/battle.py:3329"]
     },
     "items.scroll.spent": {
       "params": ["item"],
       "param_sets": [["item"]],
-      "sources": ["crawl/_magic_items.py:415", "crawl/battle.py:3254"]
+      "sources": ["crawl/_magic_items.py:424", "crawl/battle.py:3326"]
     },
     "items.scroll.wrong_caster": {
       "params": ["item"],
       "param_sets": [["item"]],
       "sources": [
-        "crawl/_magic_items.py:427",
-        "crawl/_magic_items.py:432",
-        "crawl/battle.py:3265",
-        "crawl/battle.py:3269"
+        "crawl/_magic_items.py:436",
+        "crawl/_magic_items.py:441",
+        "crawl/battle.py:3337",
+        "crawl/battle.py:3341"
       ]
     },
     "items.use.battle_only": {
       "params": ["item"],
       "param_sets": [["item"]],
-      "sources": ["crawl/_magic_items.py:618"]
+      "sources": ["crawl/_magic_items.py:630"]
     },
     "items.use.not_usable": {
       "params": ["item"],
       "param_sets": [["item"]],
-      "sources": ["crawl/_magic_items.py:604", "crawl/_magic_items.py:692", "crawl/battle.py:3294"]
+      "sources": ["crawl/_magic_items.py:616", "crawl/_magic_items.py:704", "crawl/battle.py:3366"]
     },
     "items.use.target_cannot_be_healed": {
       "params": ["item", "target"],
       "param_sets": [["item", "target"]],
-      "sources": ["crawl/_magic_items.py:177"]
+      "sources": ["crawl/_magic_items.py:186"]
     },
     "items.use.target_cannot_drink": {
       "params": ["item", "target"],
       "param_sets": [["item", "target"]],
-      "sources": ["crawl/_magic_items.py:152"]
+      "sources": ["crawl/_magic_items.py:159"]
     },
     "items.use.target_healed_today": {
       "params": ["item", "target"],
       "param_sets": [["item", "target"]],
-      "sources": ["crawl/_magic_items.py:184"]
+      "sources": ["crawl/_magic_items.py:193"]
     },
     "items.use.target_not_allowed": {
       "params": ["item", "target"],
       "param_sets": [["item", "target"]],
-      "sources": ["crawl/_magic_items.py:148"]
+      "sources": ["crawl/_magic_items.py:155"]
     },
     "items.use.target_required": {
       "params": ["item"],
       "param_sets": [["item"]],
-      "sources": ["crawl/_magic_items.py:613"]
+      "sources": ["crawl/_magic_items.py:625"]
     },
     "items.use.unknown_target": {
       "params": ["target"],
       "param_sets": [["target"]],
-      "sources": ["crawl/_magic_items.py:174", "crawl/_magic_items.py:616", "crawl/battle.py:3370"]
+      "sources": ["crawl/_magic_items.py:183", "crawl/_magic_items.py:628"]
     },
     "magic.book.already_chosen": {
       "params": ["character"],
@@ -600,7 +600,7 @@
     "magic.book.capacity_exceeded": {
       "params": ["capacity", "spell", "spell_level"],
       "param_sets": [["capacity", "spell", "spell_level"]],
-      "sources": ["core/spells.py:1639"]
+      "sources": ["core/spells.py:1701"]
     },
     "magic.book.capacity_mismatch": {
       "params": ["capacity", "chosen", "spell_level"],
@@ -610,103 +610,98 @@
     "magic.book.duplicate": {
       "params": ["spell"],
       "param_sets": [["spell"]],
-      "sources": ["core/character.py:1313", "core/spells.py:1632"]
+      "sources": ["core/character.py:1313", "core/spells.py:1696"]
     },
     "magic.book.not_arcane": {
       "params": ["class"],
       "param_sets": [["class"]],
-      "sources": ["core/character.py:1306", "core/spells.py:1620"]
+      "sources": ["core/character.py:1306", "core/spells.py:1670"]
     },
     "magic.book.unknown_spell": {
       "params": ["spell"],
       "param_sets": [["spell"]],
-      "sources": ["core/character.py:1319", "core/spells.py:1624", "crawl/_spells.py:65"]
+      "sources": ["core/character.py:1319", "core/spells.py:1674", "crawl/_spells.py:64"]
     },
     "magic.book.wrong_list": {
       "params": ["list", "spell"],
       "param_sets": [["list", "spell"]],
-      "sources": ["core/character.py:1323", "core/spells.py:1628"]
+      "sources": ["core/character.py:1323", "core/spells.py:1694"]
     },
     "magic.cast.anti_magic_shell": {
       "params": ["caster"],
       "param_sets": [["caster"]],
-      "sources": ["core/spells.py:2063"]
+      "sources": ["core/spells.py:2145"]
     },
     "magic.cast.caster_incapacitated": {
       "params": ["caster", "condition"],
       "param_sets": [["caster", "condition"]],
-      "sources": ["core/spells.py:2048"]
+      "sources": ["core/spells.py:2130"]
     },
     "magic.cast.caster_restrained": {
       "params": ["caster", "restraint"],
       "param_sets": [["caster", "restraint"]],
-      "sources": ["core/spells.py:2055"]
+      "sources": ["core/spells.py:2137"]
     },
     "magic.cast.not_memorized": {
       "params": ["reversed", "spell"],
       "param_sets": [["reversed", "spell"]],
-      "sources": ["core/spells.py:2071", "crawl/_spells.py:94", "crawl/battle.py:3031"]
+      "sources": ["core/spells.py:2153", "crawl/_spells.py:126", "crawl/battle.py:3109"]
     },
     "magic.cast.not_reversible": {
       "params": ["spell"],
       "param_sets": [["spell"]],
-      "sources": ["core/spells.py:2065"]
+      "sources": ["core/spells.py:2147"]
     },
     "magic.cast.out_of_range": {
       "params": ["distance_feet", "range_feet", "spell"],
       "param_sets": [["distance_feet", "range_feet", "spell"]],
-      "sources": ["core/spells.py:2114"]
+      "sources": ["core/spells.py:2196"]
     },
     "magic.cast.silenced_area": {
       "params": ["caster"],
       "param_sets": [["caster"]],
-      "sources": ["crawl/_spells.py:79", "crawl/battle.py:3021"]
+      "sources": ["crawl/_spells.py:111", "crawl/battle.py:3099"]
     },
     "magic.cast.target_count": {
       "params": ["expected", "mode", "supplied"],
       "param_sets": [["expected", "mode", "supplied"]],
       "sources": [
-        "core/spells.py:2077",
-        "core/spells.py:2081",
-        "core/spells.py:2088",
-        "core/spells.py:2095",
-        "core/spells.py:2099"
+        "core/spells.py:2159",
+        "core/spells.py:2163",
+        "core/spells.py:2170",
+        "core/spells.py:2177",
+        "core/spells.py:2181"
       ]
     },
     "magic.cast.target_must_be_creature": {
       "params": ["mode", "spell", "target"],
       "param_sets": [["mode", "spell", "target"]],
-      "sources": ["core/spells.py:2103"]
+      "sources": ["core/spells.py:2185"]
     },
     "magic.cast.unknown_mode": {
       "params": ["mode", "spell"],
       "param_sets": [["mode"], ["mode", "spell"]],
-      "sources": ["core/spells.py:2069", "crawl/battle.py:3079"]
+      "sources": ["core/spells.py:2151", "crawl/battle.py:3158"]
     },
     "magic.cast.unknown_spell": {
       "params": ["spell"],
       "param_sets": [["spell"]],
-      "sources": ["crawl/_spells.py:77", "crawl/battle.py:3019"]
+      "sources": ["crawl/_spells.py:109", "crawl/battle.py:3097"]
     },
     "magic.cast.unknown_target": {
       "params": ["target"],
       "param_sets": [["target"]],
-      "sources": [
-        "crawl/_magic_items.py:443",
-        "crawl/_spells.py:88",
-        "crawl/battle.py:3111",
-        "crawl/battle.py:3116"
-      ]
+      "sources": ["crawl/_magic_items.py:451", "crawl/_spells.py:119", "crawl/battle.py:3188"]
     },
     "magic.memorize.divine_reverses_at_cast": {
       "params": ["spell"],
       "param_sets": [["spell"]],
-      "sources": ["core/spells.py:1408"]
+      "sources": ["core/spells.py:1441"]
     },
     "magic.memorize.needs_sleep": {
       "params": ["character"],
       "param_sets": [["character"]],
-      "sources": ["crawl/_spells.py:43"]
+      "sources": ["crawl/_spells.py:45"]
     },
     "magic.memorize.not_a_caster": {
       "params": ["class"],
@@ -716,17 +711,17 @@
     "magic.memorize.not_in_book": {
       "params": ["spell"],
       "param_sets": [["spell"]],
-      "sources": ["core/spells.py:1413"]
+      "sources": ["core/spells.py:1444"]
     },
     "magic.memorize.not_reversible": {
       "params": ["spell"],
       "param_sets": [["spell"]],
-      "sources": ["core/spells.py:1416"]
+      "sources": ["core/spells.py:1446"]
     },
     "magic.memorize.slots_exceeded": {
       "params": ["selected", "slots", "spell_level"],
       "param_sets": [["selected", "slots", "spell_level"]],
-      "sources": ["core/spells.py:1424"]
+      "sources": ["core/spells.py:1408"]
     },
     "magic.memorize.unknown_spell": {
       "params": ["spell"],
@@ -736,57 +731,57 @@
     "magic.memorize.wrong_list": {
       "params": ["list", "spell"],
       "param_sets": [["list", "spell"]],
-      "sources": ["core/spells.py:1400"]
+      "sources": ["core/spells.py:1437"]
     },
     "magic.turning.caster_incapacitated": {
       "params": ["caster", "condition"],
       "param_sets": [["caster", "condition"]],
-      "sources": ["core/spells.py:3818"]
+      "sources": ["core/spells.py:3900"]
     },
     "magic.turning.not_a_turner": {
       "params": ["class"],
       "param_sets": [["class"]],
-      "sources": ["core/spells.py:3813"]
+      "sources": ["core/spells.py:3895"]
     },
     "party.add.carries_instances": {
       "params": ["item", "name"],
       "param_sets": [["item", "name"]],
-      "sources": ["crawl/session.py:2460"]
+      "sources": ["crawl/session.py:2508"]
     },
     "party.add.id_assigned": {
       "params": ["character"],
       "param_sets": [["character"]],
-      "sources": ["crawl/session.py:2451"]
+      "sources": ["crawl/session.py:2499"]
     },
     "party.add.under_effects": {
       "params": ["name"],
       "param_sets": [["name"]],
-      "sources": ["crawl/session.py:2453"]
+      "sources": ["crawl/session.py:2501"]
     },
     "party.remove.carries_quest_item": {
       "params": ["character", "item"],
       "param_sets": [["character", "item"]],
-      "sources": ["crawl/session.py:2501"]
+      "sources": ["crawl/session.py:2550"]
     },
     "party.remove.last_standing": {
       "params": ["character"],
       "param_sets": [["character"]],
-      "sources": ["crawl/session.py:2492"]
+      "sources": ["crawl/session.py:2541"]
     },
     "party.remove.same_member": {
       "params": ["character"],
       "param_sets": [["character"]],
-      "sources": ["crawl/session.py:2488"]
+      "sources": ["crawl/session.py:2537"]
     },
     "session.command.member_incapacitated": {
       "params": ["character"],
       "param_sets": [["character"]],
-      "sources": ["crawl/_party_members.py:16", "crawl/session.py:2490"]
+      "sources": ["crawl/_party_members.py:17", "crawl/session.py:2539"]
     },
     "session.command.no_door": {
       "params": ["x", "y"],
       "param_sets": [["x", "y"]],
-      "sources": ["crawl/session.py:2928"]
+      "sources": ["crawl/session.py:2977"]
     },
     "session.command.no_living_members": {
       "params": [],
@@ -796,17 +791,17 @@
     "session.command.out_of_bounds": {
       "params": [],
       "param_sets": [[]],
-      "sources": ["crawl/session.py:2976"]
+      "sources": ["crawl/session.py:3025"]
     },
     "session.command.quest_state": {
       "params": ["objective", "quest", "state"],
       "param_sets": [["objective", "quest", "state"]],
-      "sources": ["crawl/session.py:2712"]
+      "sources": ["crawl/session.py:2761"]
     },
     "session.command.unknown_item": {
       "params": ["item"],
       "param_sets": [["item"]],
-      "sources": ["crawl/_town.py:46", "crawl/session.py:2320", "crawl/session.py:2913"]
+      "sources": ["crawl/_town.py:46", "crawl/session.py:2368", "crawl/session.py:2962"]
     },
     "session.command.unknown_location": {
       "params": ["dungeon"],
@@ -814,45 +809,45 @@
       "sources": [
         "crawl/_movement.py:168",
         "crawl/_movement.py:171",
-        "crawl/session.py:2922",
-        "crawl/session.py:2974"
+        "crawl/session.py:2971",
+        "crawl/session.py:3023"
       ]
     },
     "session.command.unknown_member": {
       "params": ["character"],
       "param_sets": [["character"]],
       "sources": [
-        "crawl/_party_members.py:14",
+        "crawl/_party_members.py:15",
         "crawl/_town.py:139",
-        "crawl/session.py:2308",
-        "crawl/session.py:2339",
+        "crawl/session.py:2356",
         "crawl/session.py:2387",
-        "crawl/session.py:2428",
-        "crawl/session.py:2480",
-        "crawl/session.py:2486",
-        "crawl/session.py:2642",
-        "crawl/session.py:2910"
+        "crawl/session.py:2435",
+        "crawl/session.py:2476",
+        "crawl/session.py:2529",
+        "crawl/session.py:2535",
+        "crawl/session.py:2691",
+        "crawl/session.py:2959"
       ]
     },
     "session.command.unknown_monster": {
       "params": ["template"],
       "param_sets": [["template"]],
-      "sources": ["crawl/session.py:2837"]
+      "sources": ["crawl/session.py:2886"]
     },
     "session.command.unknown_objective": {
       "params": ["objective", "quest"],
       "param_sets": [["objective", "quest"]],
-      "sources": ["crawl/session.py:2706"]
+      "sources": ["crawl/session.py:2755"]
     },
     "session.command.unknown_quest": {
       "params": ["quest"],
       "param_sets": [["quest"]],
-      "sources": ["crawl/session.py:2700"]
+      "sources": ["crawl/session.py:2749"]
     },
     "session.command.wrong_mode": {
       "params": ["command", "mode"],
       "param_sets": [["command", "mode"]],
-      "sources": ["crawl/session.py:1274"]
+      "sources": ["crawl/session.py:1321"]
     },
     "town.healing.caster_level_out_of_range": {
       "params": ["caster_level", "item", "maximum", "minimum"],
@@ -1273,7 +1268,9 @@
       "codes": ["items.item.identified"],
       "fields": {
         "instance_id": "<class 'str'>",
-        "template_id": "<class 'str'>"
+        "template_id": "<class 'str'>",
+        "display_name": "<class 'str'>",
+        "display_name_plural": "<class 'str'>"
       }
     },
     "item_used": {

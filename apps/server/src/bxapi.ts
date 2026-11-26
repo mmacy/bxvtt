@@ -190,7 +190,7 @@ function toUnreachable(error: unknown): BxapiUnreachable {
 }
 
 /** Converts an error response into {@link BxapiProblem}. */
-function toProblem(response: BxapiRawResponse): BxapiProblem {
+export function toProblem(response: BxapiRawResponse): BxapiProblem {
   const body =
     typeof response.body === 'object' && response.body !== null && 'code' in response.body
       ? (response.body as BxapiProblemBody)

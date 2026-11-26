@@ -48,6 +48,51 @@ export function learnLabels(book: LabelBook, view: PlayerView): void {
   }
 }
 
+/** What to call one and several of each item, by item ID, from what a player can see. */
+export interface ItemNames {
+  one: Map<string, string>;
+  many: Map<string, string>;
+}
+
+/**
+ * Collects the item names for a command's feed entry from what a player can see: the player view from before the
+ * command and the one from after it, whose `item_names` and `item_names_plural` name every item ID each view shows
+ * (a pile's `contents` among them), and the `display_name` of each `item_identified` event. The view from after
+ * wins, so an item identified by the command reads by its true name. An item that the command identified and used
+ * up has its true name only on the event, so the event names an ID that no view names. The referee view is never
+ * read, so a masked magic item keeps its masked name.
+ *
+ * @param views - The player views, oldest first.
+ * @param events - The events of the command.
+ */
+export function itemNames(views: readonly PlayerView[], events: readonly GameEvent[] = []): ItemNames {
+  const names: ItemNames = { one: new Map(), many: new Map() };
+  for (const view of views) {
+    for (const [id, name] of Object.entries(view.item_names ?? {})) names.one.set(id, name);
+    for (const [id, name] of Object.entries(view.item_names_plural ?? {})) names.many.set(id, name);
+  }
+  for (const event of events) {
+    if (event.event_type !== 'item_identified' || event.display_name === '') continue;
+    for (const id of [event.instance_id, event.template_id]) {
+      if (names.one.has(id)) continue;
+      names.one.set(id, event.display_name);
+      if (event.display_name_plural !== '') names.many.set(id, event.display_name_plural);
+    }
+  }
+  return names;
+}
+
+/**
+ * The names of the dungeons the party has entered, by dungeon ID, from the player view.
+ *
+ * @param view - The player view.
+ */
+export function dungeonNames(view: PlayerView): Record<string, string> {
+  const names: Record<string, string> = {};
+  for (const dungeon of view.dungeons) if (dungeon.name) names[dungeon.id] = dungeon.name;
+  return names;
+}
+
 /** Every string in a JSON value. */
 function strings(value: unknown, into: Set<string>): Set<string> {
   if (typeof value === 'string') into.add(value);
@@ -62,15 +107,23 @@ function strings(value: unknown, into: Set<string>): Set<string> {
  *
  * @param events - The events of one copy of a feed entry.
  * @param book - The session's labels.
- * @param items - The item names the party knows, as in `scene.names`.
+ * @param items - The item names a player can see, from {@link itemNames}.
+ * @param context - The player view after the command, the dungeon names, and the member who acted.
  */
 export function entryNames(
   events: readonly GameEvent[],
   book: LabelBook,
-  items: ReadonlyMap<string, string>,
+  items: ItemNames,
   context: { view?: PlayerView; dungeons?: Readonly<Record<string, string>>; actorId?: string | null } = {},
 ): EntryNames {
-  const names: EntryNames = { members: {}, groups: {}, monsters: {}, items: {}, dungeons: {} };
+  const names: EntryNames = {
+    members: {},
+    groups: {},
+    monsters: {},
+    items: {},
+    items_plural: {},
+    dungeons: {},
+  };
   // The member who acted, whom the events may leave out, such as the speaker of a talk.
   const actor = context.actorId == null ? undefined : book.members.get(context.actorId);
   if (context.actorId != null && actor !== undefined) names.members[context.actorId] = actor;
@@ -91,8 +144,10 @@ export function entryNames(
     if (group !== undefined && names.groups[id] === undefined) names.groups[id] = group;
     const monster = book.monsters.get(id);
     if (monster !== undefined) names.monsters[id] = monster;
-    const item = items.get(id);
+    const item = items.one.get(id);
     if (item !== undefined) names.items[id] = item;
+    const plural = items.many.get(id);
+    if (plural !== undefined && names.items_plural !== undefined) names.items_plural[id] = plural;
     const dungeon = context.dungeons?.[id];
     if (dungeon !== undefined && names.dungeons !== undefined) names.dungeons[id] = dungeon;
   }

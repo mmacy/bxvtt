@@ -1,7 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { isProblem } from '@bxvtt/shared/client';
-import type { BxvttProblemError } from '@bxvtt/shared/client';
-import type { GameState, RefereeState } from '@bxvtt/shared/protocol';
+import type { GameState, RefereeState, ServerMessage } from '@bxvtt/shared/protocol';
 import { creatureNames } from '@bxvtt/shared/text';
 import type { TestConnection, TestServer, TestUser } from './helpers';
 import {
@@ -12,7 +10,6 @@ import {
   findRefereeData,
   findUnshownCreatureIds,
   received,
-  recordBxapi,
   startServer,
 } from './helpers';
 
@@ -24,7 +21,7 @@ function creatureIds(referee: RefereeState): string[] {
   ];
 }
 
-/** Starts a barrow game for a fighter and a magic-user who knows *magic missile*, with a counter of bxapi commands. */
+/** Starts a barrow game for a fighter and a magic-user who knows *magic missile*. */
 async function barrowTable(): Promise<{
   server: TestServer;
   referee: TestUser;
@@ -32,10 +29,8 @@ async function barrowTable(): Promise<{
   tableId: string;
   aliceWs: TestConnection;
   game: GameState;
-  commandCalls: () => number;
 }> {
   const server = await startServer();
-  const recorder = recordBxapi(server);
   const referee = await createUser(server, 'Rhea');
   const alice = await createUser(server, 'Alice');
   const tableId = (await createTable(referee, [alice])).id;
@@ -53,15 +48,7 @@ async function barrowTable(): Promise<{
   await alice.client.addToRoster(tableId, mage.id);
   const aliceWs = await connect(server, alice, tableId);
   const game = await referee.client.startGame(tableId, { adventure_id: 'builtin-barrow', seed: 7 });
-  return {
-    server,
-    referee,
-    alice,
-    tableId,
-    aliceWs,
-    game,
-    commandCalls: () => recorder.posts('/commands').length,
-  };
+  return { server, referee, alice, tableId, aliceWs, game };
 }
 
 /** Rests, prepares *magic missile*, and walks into the barrow's guard room, where two goblins wait. */
@@ -85,10 +72,53 @@ async function meetGoblins(alice: TestUser, tableId: string): Promise<GameState>
   return state;
 }
 
+/** A cast of *magic missile* by the magic-user at one target. */
+function castAt(target: string) {
+  return {
+    command_type: 'cast_spell',
+    character_id: 'character-0002',
+    spell_id: 'magic_missile',
+    mode: 'missiles',
+    targets: [target],
+  };
+}
+
+/**
+ * What a player received, with one ID written as `TARGET`, so two answers to the same request with different
+ * IDs compare equal exactly when nothing but the echoed ID tells them apart.
+ */
+function withoutId(value: unknown, id: string): string {
+  return JSON.stringify(value).replaceAll(`"${id}"`, '"TARGET"');
+}
+
+/**
+ * Sends the same request twice, once naming a creature that exists but that the player view doesn't list, and
+ * once naming an ID that doesn't exist, and returns what the player received each time: the HTTP body and the
+ * WebSocket messages that arrived while the request ran.
+ */
+async function bothAnswers(
+  ws: TestConnection,
+  hidden: string,
+  missing: string,
+  send: (target: string) => Promise<unknown>,
+): Promise<{ hidden: string; missing: string; body: unknown }> {
+  const answer = async (target: string) => {
+    const start = ws.messages.length;
+    const body = await send(target);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    const messages: ServerMessage[] = ws.messages
+      .slice(start)
+      .filter((message) => message.type !== 'presence');
+    return { text: withoutId({ body, messages }, target), body };
+  };
+  const first = await answer(hidden);
+  const second = await answer(missing);
+  return { hidden: first.text, missing: second.text, body: first.body };
+}
+
 /**
  * A player's magic-user casts *magic missile* at one goblin by the ID the player view lists, in battle in the
- * barrow's guard room. A player receives a monster's ID only where bxapi's player view or a player event shows
- * it, and the server refuses a player's target that the player view doesn't list.
+ * barrow's guard room. A player receives a monster's ID only where bxapi's player view or a player event shows it.
  */
 describe('monster targets for players', () => {
   let server: TestServer;
@@ -108,8 +138,7 @@ describe('monster targets for players', () => {
     await server.close();
   });
 
-  it('sends no scene targets, and lists no creatures outside an encounter', () => {
-    expect(game.scene).not.toHaveProperty('targets');
+  it('lists no creatures outside an encounter', () => {
     expect(creatureNames(game.view.encounter?.groups)).toEqual([]);
   });
 
@@ -169,36 +198,20 @@ describe('monster targets for players', () => {
     expect(game.mode).toBe('battle');
   });
 
-  it("refuses a player's declaration aimed at a creature the player view doesn't list", async () => {
-    const declaration = await alice.client
-      .declare(tableId, 'character-0002', {
-        action: 'cast',
-        spell_id: 'magic_missile',
-        spell_mode: 'missiles',
-        targets: ['monster-0099'],
-      })
-      .catch((error: BxvttProblemError) => error);
-    expect(isProblem(declaration, 'target_unknown')).toBe(true);
-    expect((declaration as BxvttProblemError).problem).toMatchObject({
-      field: 'declaration.targets',
-      id: 'monster-0099',
-    });
-    const stored = await alice.client.getDeclarations(tableId);
-    expect(stored?.declarations['character-0002']).toBeUndefined();
-  });
-
-  it("shows a player a referee's declaration without the creatures the player view doesn't list", async () => {
-    const listed = goblins[0] ?? '';
-    const forReferee = await referee.client.declare(tableId, 'character-0002', {
+  it("stores a player's declaration at an ID the player view doesn't list, and the preview refuses it", async () => {
+    const declared = await alice.client.declare(tableId, 'character-0002', {
       action: 'cast',
       spell_id: 'magic_missile',
       spell_mode: 'missiles',
-      targets: [listed, 'monster-0099'],
+      targets: ['monster-0099'],
     });
-    expect(forReferee.declarations['character-0002']?.targets).toEqual([listed, 'monster-0099']);
-    const forPlayer = await alice.client.getDeclarations(tableId);
-    expect(forPlayer?.declarations['character-0002']?.targets).toEqual([listed]);
-    await referee.client.clearDeclaration(tableId, 'character-0002');
+    expect(declared.declarations['character-0002']?.targets).toEqual(['monster-0099']);
+    expect(declared.refusals).toContainEqual({
+      member_id: 'character-0002',
+      code: 'magic.cast.unknown_target',
+      params: expect.objectContaining({ target: 'monster-0099' }),
+    });
+    await alice.client.clearDeclaration(tableId, 'character-0002');
   });
 
   it('never sends a player a creature ID before the player view or a player event shows it, or any referee data', async () => {
@@ -206,6 +219,7 @@ describe('monster targets for players', () => {
     await alice.client.getFeed(tableId, { limit: 200 });
     const ids = creatureIds(await referee.client.getRefereeState(tableId));
     expect(ids).toEqual(expect.arrayContaining(goblins));
+    expect(ids).not.toContain('monster-0099');
     const http = alice.received;
     const ws = aliceWs.messages.map((message) => JSON.stringify(message));
     expect(findUnshownCreatureIds(http, ids)).toEqual([]);
@@ -215,23 +229,51 @@ describe('monster targets for players', () => {
 });
 
 /**
- * After an encounter ends, the player view lists none of its monsters. bxapi still accepts an out-of-battle
- * `cast_spell` at one of them, so the server refuses it for a player.
+ * Since osrlib 2.8, a command or a declaration can name only a party member or a creature of the open encounter's
+ * groups that haven't fled, and bxapi refuses every other ID, one that exists and one that doesn't, with the same
+ * rejection. These tests send bxapi, through the bxvtt server with no target check of its own, a creature that
+ * exists but that the player view doesn't list (a goblin from an encounter that ended) and an ID that doesn't
+ * exist, in each mode, and check that a player receives the same answer for both, apart from the ID the player
+ * sent. A difference would let a player probe which creatures exist.
  */
-describe('monster targets after an encounter ends', () => {
+describe('a creature the player view does not list', () => {
   let server: TestServer;
   let referee: TestUser;
   let alice: TestUser;
   let tableId: string;
   let aliceWs: TestConnection;
-  let commandCalls: () => number;
-  let goblins: string[] = [];
+  /** A goblin from the first encounter, which exists after the encounter ends. */
+  let hidden = '';
+  /** The first encounter's goblin group. */
+  let hiddenGroup = '';
+  let wand = '';
+  const missing = 'monster-0099';
+  const missingGroup = 'group-0099';
 
   beforeAll(async () => {
-    ({ server, referee, alice, tableId, aliceWs, commandCalls } = await barrowTable());
+    ({ server, referee, alice, tableId, aliceWs } = await barrowTable());
     const met = await meetGoblins(alice, tableId);
-    goblins = met.view.encounter?.groups[0]?.members.map((member) => member.id) ?? [];
-    expect(goblins.length).toBeGreaterThan(0);
+    const group = met.view.encounter?.groups[0];
+    hidden = group?.members[0]?.id ?? '';
+    hiddenGroup = group?.id ?? '';
+    expect(hidden).toMatch(/^monster-\d+$/);
+    const granted = await referee.client.sendCommand(tableId, {
+      command_type: 'grant_item',
+      character_id: 'character-0002',
+      item_id: 'wand_of_cold',
+    });
+    expect(granted.accepted).toBe(true);
+    wand = Object.keys(granted.game.view.item_names).find((id) => /^magic-item-\d+$/.test(id)) ?? '';
+    expect(wand).not.toBe('');
+    const ended = await referee.client.sendCommand(tableId, {
+      command_type: 'end_encounter',
+      outcome: 'departed',
+    });
+    expect(ended.accepted).toBe(true);
+    expect(ended.game.view.encounter).toBeNull();
+    const ids = creatureIds(await referee.client.getRefereeState(tableId));
+    expect(ids).toContain(hidden);
+    expect(ids).not.toContain(missing);
   });
 
   afterAll(async () => {
@@ -239,44 +281,97 @@ describe('monster targets after an encounter ends', () => {
     await server.close();
   });
 
-  it("refuses a player's cast at a monster the player view no longer lists, and sends nothing to bxapi", async () => {
-    const ended = await referee.client.sendCommand(tableId, {
-      command_type: 'end_encounter',
-      outcome: 'departed',
-    });
-    expect(ended.accepted).toBe(true);
-    expect(ended.game.view.encounter).toBeNull();
-    const survivor = goblins[0] ?? '';
-    const cast = {
-      command_type: 'cast_spell',
-      character_id: 'character-0002',
-      spell_id: 'magic_missile',
-      mode: 'missiles',
-      targets: [survivor],
-    };
-    const before = commandCalls();
-    const refused = await alice.client.sendCommand(tableId, cast, ended.revision);
-    expect(refused.accepted).toBe(false);
-    expect(refused.rejections).toEqual([{ code: 'magic.cast.unknown_target', params: { target: survivor } }]);
-    expect(refused.revision).toBe(ended.revision);
-    expect(commandCalls()).toBe(before);
-    // bxapi itself accepts the same cast from the referee, so the check on the server is what stops a player.
-    const accepted = await referee.client.sendCommand(tableId, cast, ended.revision);
-    expect(accepted.accepted).toBe(true);
-    expect(accepted.events.find((event) => event.event_type === 'spell_cast')).toMatchObject({
-      target_ids: [survivor],
+  it('gets the same refusal for a cast while exploring', async () => {
+    const cast = await bothAnswers(aliceWs, hidden, missing, (target) =>
+      alice.client.sendCommand(tableId, castAt(target)),
+    );
+    expect(cast.hidden).toBe(cast.missing);
+    expect(cast.body).toMatchObject({
+      accepted: false,
+      rejections: [{ code: 'magic.cast.unknown_target', params: { target: hidden } }],
     });
   });
 
-  it('sends the player no creature ID before the player view showed it', async () => {
+  it("refuses the referee's identical cast, because osrlib 2.8 checks the target itself", async () => {
+    const refused = await referee.client.sendCommand(tableId, castAt(hidden));
+    expect(refused.accepted).toBe(false);
+    expect(refused.rejections).toEqual([{ code: 'magic.cast.unknown_target', params: { target: hidden } }]);
+  });
+
+  it('gets the same answer for a cast and a device in an open encounter', async () => {
+    const spawned = await referee.client.sendCommand(tableId, {
+      command_type: 'spawn_monsters',
+      template_id: 'goblin',
+      count_fixed: 1,
+      distance_feet: 60,
+    });
+    expect(spawned.accepted).toBe(true);
+    expect(spawned.game.mode).toBe('encounter');
+    const listed = spawned.game.view.encounter?.groups.flatMap((group) => group.members.map((m) => m.id));
+    expect(listed).not.toContain(hidden);
+    const cast = await bothAnswers(aliceWs, hidden, missing, (target) =>
+      alice.client.sendCommand(tableId, castAt(target)),
+    );
+    expect(cast.hidden).toBe(cast.missing);
+    // Before the battle, a spell or a device isn't legal at all, so the mode refuses both.
+    expect(cast.body).toMatchObject({
+      accepted: false,
+      rejections: [{ code: 'session.command.wrong_mode' }],
+    });
+    const device = await bothAnswers(aliceWs, hiddenGroup, missingGroup, (target) =>
+      alice.client.sendCommand(tableId, {
+        command_type: 'use_item',
+        character_id: 'character-0002',
+        item_id: wand,
+        target_id: target,
+      }),
+    );
+    expect(device.hidden).toBe(device.missing);
+    expect(device.body).toMatchObject({ accepted: false });
+  });
+
+  it('gets the same declarations state, preview refusal, and round refusal in a battle', async () => {
+    const engaged = await alice.client.sendCommand(tableId, { command_type: 'engage_battle' });
+    expect(engaged.accepted).toBe(true);
+    await referee.client.updateTable(tableId, { settings: { auto_resolve: false } });
+    await alice.client.declare(tableId, 'character-0001', { action: 'hold' });
+    const declaration = (target: string) =>
+      alice.client.declare(tableId, 'character-0002', {
+        action: 'cast',
+        spell_id: 'magic_missile',
+        spell_mode: 'missiles',
+        targets: [target],
+      });
+    const declared = await bothAnswers(aliceWs, hidden, missing, declaration);
+    expect(declared.hidden).toBe(declared.missing);
+    expect(declared.body).toMatchObject({
+      refusals: [{ member_id: 'character-0002', code: 'magic.cast.unknown_target' }],
+    });
+    const resolved = await bothAnswers(aliceWs, hidden, missing, async (target) => {
+      await declaration(target);
+      return alice.client.resolveRound(tableId);
+    });
+    expect(resolved.hidden).toBe(resolved.missing);
+    expect(resolved.body).toMatchObject({ accepted: false });
+    const device = await bothAnswers(aliceWs, hiddenGroup, missingGroup, (target) =>
+      alice.client.declare(tableId, 'character-0002', {
+        action: 'use_item',
+        item_id: wand,
+        target_id: target,
+      }),
+    );
+    expect(device.hidden).toBe(device.missing);
+    expect(device.body).toMatchObject({
+      refusals: [{ member_id: 'character-0002', code: 'battle.declaration.unknown_group' }],
+    });
+    await alice.client.clearDeclaration(tableId, 'character-0002');
+  });
+
+  it('sends the player no creature ID before the player view showed it, and no referee data', async () => {
     const ids = creatureIds(await referee.client.getRefereeState(tableId));
-    // The rejection echoes the ID that Alice sent, which the view had shown her while the encounter was open.
+    const ws = aliceWs.messages.map((message) => JSON.stringify(message));
     expect(findUnshownCreatureIds(alice.received, ids)).toEqual([]);
-    expect(
-      findUnshownCreatureIds(
-        aliceWs.messages.map((message) => JSON.stringify(message)),
-        ids,
-      ),
-    ).toEqual([]);
+    expect(findUnshownCreatureIds(ws, ids)).toEqual([]);
+    expect(findRefereeData([...alice.received, ...ws])).toEqual([]);
   });
 });

@@ -1734,7 +1734,8 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
     }
     case 'item_identified': {
       const kind = unidentifiedNoun(event.template_id);
-      const real = withArticle(templateName(event.template_id, ctx));
+      // osrlib 2.8 states the item's display name on the event. An older event reads by its template.
+      const real = withArticle(nonEmpty(event.display_name) ?? templateName(event.template_id, ctx));
       return { text: `The ${kind} turns out to be ${real}.`, category: 'item', tone: 'good', icon: 'star' };
     }
     case 'curse_revealed': {

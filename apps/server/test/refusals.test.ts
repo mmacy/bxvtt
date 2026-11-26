@@ -101,6 +101,8 @@ describe('previewing the declarations of a battle round', () => {
     expect(state.declared).toEqual(['character-0001']);
     expect(state.declarations['character-0001']).toMatchObject({ action: 'hide' });
     expect(codes(state)).toEqual([['character-0001', 'battle.declaration.hide_in_front_rank']]);
+    // The preview judges a hide where everyone would stand, so Tess can't hide from the front rank.
+    expect(state.projection?.can_hide).toEqual([]);
     expect(state.projection?.advance_feet).toEqual({
       'character-0001': 0,
       'character-0002': 0,
@@ -126,6 +128,11 @@ describe('previewing the declarations of a battle round', () => {
     expect(state.refusals).toEqual([]);
     expect(state.projection?.advance_feet['character-0002']).toBe(25);
     expect(state.projection?.front_rank[group()]).toEqual(['character-0002']);
+    // Brenna's close puts Tess behind the front rank, so the preview offers her a hide that the encounter view
+    // doesn't list yet.
+    expect(state.projection?.can_hide).toEqual(['character-0001']);
+    expect(game.view.encounter?.can_hide).toEqual([]);
+    expect(Array.isArray(state.projection?.can_back_stab)).toBe(true);
   });
 
   it('reads the same state twice with one preview', async () => {
@@ -135,7 +142,7 @@ describe('previewing the declarations of a battle round', () => {
     expect(previewCalls).toBe(before);
   });
 
-  it("shows a player a preview rejection without a creature the player view doesn't list", async () => {
+  it("shows a player the same preview rejection as the referee for a creature the player view doesn't list", async () => {
     const forReferee = await referee.client.declare(tableId, 'character-0003', {
       action: 'cast',
       spell_id: 'magic_missile',
@@ -148,19 +155,19 @@ describe('previewing the declarations of a battle round', () => {
         params: expect.objectContaining({ target: 'monster-0099' }),
       }),
     ]);
+    // The party plans together, so a player reads the referee's declaration and bxapi's refusal as they are.
+    // osrlib 2.8 refuses an ID the party can't see as it refuses one that doesn't exist, so neither tells a
+    // player anything.
     const forPlayer = await alice.client.getDeclarations(tableId);
+    expect(forPlayer?.refusals).toEqual(forReferee.refusals);
     const refusal = forPlayer?.refusals[0];
-    expect(forPlayer?.refusals).toHaveLength(1);
-    expect(refusal).toMatchObject({ member_id: 'character-0003', code: forReferee.refusals[0]?.code });
-    // The hidden ID leaves the params, so the player's text takes the wording without a target.
-    expect(refusal?.params).not.toHaveProperty('target');
+    expect(refusal?.code).toBe('magic.cast.unknown_target');
     const text = describeRejection(
       { code: refusal?.code ?? '', params: refusal?.params as ParamMap },
       contextFromPlayerView(game.view),
     );
     expect(text).not.toMatch(/null|monster-/i);
-    expect(forPlayer?.declarations['character-0003']?.targets).toEqual([]);
-    expect(JSON.stringify(forPlayer)).not.toContain('monster-0099');
+    expect(forPlayer?.declarations['character-0003']?.targets).toEqual(['monster-0099']);
   });
 
   it('names the refused member from params.character when a round is resolved anyway, with one bxapi call', async () => {
@@ -213,6 +220,5 @@ describe('previewing the declarations of a battle round', () => {
     ).toEqual([]);
     const texts = [...alice.received, ...aliceWs.messages.map((message) => JSON.stringify(message))];
     expect(findRefereeData(texts)).toEqual([]);
-    expect(texts.some((text) => text.includes('monster-0099'))).toBe(false);
   });
 });

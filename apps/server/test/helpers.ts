@@ -244,6 +244,8 @@ export const REFEREE_MARKERS = [
   '"treasure_snapshot_cp"',
   '"defeated_monsters"',
   '"monster_ids"',
+  '"feature_handles"',
+  '"referee_notes"',
   'hoard_generated',
   'surprise_rolled',
   'reaction_rolled',

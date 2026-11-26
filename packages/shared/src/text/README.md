@@ -32,17 +32,16 @@ for (const line of describeEvents(outcome.events, ctx, { messages: outcome.messa
 
 ## Carry `TextContext` forward across commands
 
-`contextFromPlayerView(view)` reads the names the player view states: each member's `class_name`, `spell_names` and `reversed_spell_names`, the entered `dungeons`, the entered `areas` of each `explored` level, and the monsters in each encounter group's `members`, which it names with `creatureNames`. These names win over the built-in catalog, so a custom class, a spell the adventure bundles, a dungeon, and an area read correctly without the referee view. A view from before bxapi stated these names leaves the catalog to name them.
+`contextFromPlayerView(view)` reads the names the player view states: each member's `class_name`, `item_names` and `item_names_plural`, `spell_names` and `reversed_spell_names`, the entered `dungeons`, the entered `areas` of each `explored` level, and the monsters in each encounter group's `members`, which it names with `creatureNames`. These names win over the built-in catalog, so a custom class, a spell the adventure bundles, a dungeon, and an area read correctly without the referee view. A view from before bxapi stated these names leaves the catalog to name them.
 
 Always pass the previous `TextContext` as the second argument to `contextFromPlayerView(nextView, prevCtx)` after describing an outcome so names of consumed potions or defeated monster groups remain available after leaving the live view:
 
 | Function | Added names |
 | --- | --- |
-| `extendContextWithScene(ctx, scene)` | `scene.names` (item/magic-item/valuable display names). Dungeon and area names come from the player view. |
-| `extendContextWithNames(ctx, names)` | Item names keyed by ID, normalized into singular/plural nouns while keeping masked names (`a potion`) and proper capitalization (`Hand of Saint Corvane`). |
+| `extendContextWithNames(ctx, names, plurals)` | Item names keyed by ID, and their plurals when you have them, normalized into nouns while keeping masked names (`potion`) and proper capitalization (`Hand of Saint Corvane`). |
 | `extendContextWithCatalog(ctx, entries)` | Rules catalog entries (`/v1/rules/equipment`, `magic-items`, `spells`, `monsters`) missing from `data/catalog.json`. |
 | `extendContextWithEntryNames(ctx, entry.names)` | Snapshot names stored on a historical feed `game` entry, including what the table called each monster (`Goblin 2`) in `names.monsters[id].name` (`describeGameEntry` applies this automatically). |
-| `extendContextWithEvents(ctx, events)` | Newly identified items, newly joined party members, and defeated monsters not already named (preserving disguised group labels). |
+| `extendContextWithEvents(ctx, events)` | Newly identified items, by the event's `display_name` and `display_name_plural`, newly joined party members, and defeated monsters not already named (preserving disguised group labels). |
 | `extendContextWithReferee(ctx, refereeView)` | Referee-only monster templates, NPCs, areas, dungeons, triggers, and flag descriptions. |
 
 To format a historical `game` feed entry, call `describeGameEntry(entry, ctx, { only: 'player' })`.

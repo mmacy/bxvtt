@@ -102,13 +102,6 @@ export const PROBLEM_CODES = {
   character_invalid: 422,
   /** 422 (from bxapi): the roster's characters can't form a party. */
   party_invalid: 422,
-  /**
-   * 422: a player's battle declaration names a monster or an NPC adventurer that the player view doesn't list in
-   * `view.encounter.groups[].members`, for example one from an encounter that has ended. Extra members: `field`,
-   * the field that names it, such as `declaration.targets`, and `id`, the ID as sent. Pick a target from the
-   * player view's encounter.
-   */
-  target_unknown: 422,
   /** 429: too many requests from this address. The `Retry-After` header and the `retry_after` member give the seconds to wait. */
   rate_limited: 429,
   /** 500: a bug in bxvtt. The server logs the cause. */

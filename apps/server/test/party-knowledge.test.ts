@@ -1,9 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { Adventure } from '@bxvtt/shared/bxapi';
-import type { GameState, PlayerView, RefereeState } from '@bxvtt/shared/protocol';
+import type { GameEntry, GameState, RefereeState } from '@bxvtt/shared/protocol';
+import { describeGameEntry, emptyContext } from '@bxvtt/shared/text';
 import { findRepoRoot } from '../src/config';
-import { emptiedFeatureHandles } from '../src/game/scene';
 import type { TestConnection, TestServer, TestUser } from './helpers';
 import {
   connect,
@@ -33,30 +32,46 @@ const HIDDEN = [
 ];
 
 /**
- * Checks that the scene's room traps are traps the party knows about, in areas the player view lists as entered.
+ * The room traps a player's view states, as `dungeon:level:area` references with their states. The view lists
+ * only areas the party entered.
+ *
+ * @param game - The game state a player received.
+ */
+function roomTraps(game: GameState): Map<string, string> {
+  const traps = new Map<string, string>();
+  for (const level of game.view.explored) {
+    for (const area of level.areas) {
+      if (area.trap_state != null) {
+        traps.set(`${level.dungeon_id}:${level.level_number}:${area.id}`, area.trap_state);
+      }
+    }
+  }
+  return traps;
+}
+
+/**
+ * Checks that every room trap the player view states is one the party found or sprang, by the referee state. A
+ * room never reads `removed`, because no command removes a room trap.
  *
  * @param game - The game state a player received.
  * @param referee - The referee state at the same revision.
  */
 function expectRoomTrapsWithinKnowledge(game: GameState, referee: RefereeState): void {
   const state = referee.dungeon_state;
-  for (const trap of game.scene.room_traps) {
-    const ref = `${trap.dungeon_id}:${trap.level_number}:${trap.area_id}`;
-    const known =
-      trap.state === 'removed'
-        ? state.removed_traps
-        : trap.state === 'sprung'
-          ? state.sprung_traps
-          : state.found_traps;
-    expect(known ?? []).toContain(ref);
-    const level = game.view.explored.find(
-      (entry) => entry.dungeon_id === trap.dungeon_id && entry.level_number === trap.level_number,
-    );
-    expect(level?.areas.map((area) => area.id)).toContain(trap.area_id);
+  for (const [ref, trapState] of roomTraps(game)) {
+    expect(['found', 'sprung']).toContain(trapState);
+    expect((trapState === 'sprung' ? state.sprung_traps : state.found_traps) ?? []).toContain(ref);
   }
 }
 
-describe('the scene', () => {
+/** The emptied flags of the treasure caches a player's view lists, by handle. */
+function emptiedCaches(game: GameState): string[] {
+  return game.view.explored.flatMap((level) =>
+    level.features.filter((feature) => feature.emptied).map((feature) => feature.id),
+  );
+}
+
+describe('what the party knows of the dungeon', () => {
   let server: TestServer;
   let referee: TestUser;
   let alice: TestUser;
@@ -107,30 +122,98 @@ describe('the scene', () => {
     await server.close();
   });
 
-  it('has only names in town', async () => {
+  it('shows no emptied cache and no room trap in town', async () => {
     const town = await alice.client.getGame(tableId);
-    expect(town.scene).toEqual({ names: expect.any(Object), room_traps: [], emptied_features: [] });
+    expect(town).not.toHaveProperty('scene');
+    expect(emptiedCaches(town)).toEqual([]);
+    expect(roomTraps(town).size).toBe(0);
   });
 
-  it('lists a cache by its handle, and lists the handle as emptied once a player takes it', async () => {
+  it('marks a cache emptied once a player takes it, and bxapi refuses to take it again', async () => {
     await alice.client.sendCommand(tableId, { command_type: 'enter_dungeon', dungeon_id: 'priory' });
     const game = await place(17, 12);
     const altar = viewHere(game)?.features.find(
       (feature) => feature.kind === 'treasure_cache' && feature.area_id === 'chapel',
     );
     expect(altar?.id).toMatch(/^feature:/);
-    expect(game.scene.emptied_features).toEqual([]);
+    expect(game.view.features_here).toContain(altar?.id);
+    expect(emptiedCaches(game)).toEqual([]);
     const taken = await alice.client.sendCommand(tableId, {
       command_type: 'take_treasure',
       feature_id: altar?.id,
     });
     expect(taken.accepted).toBe(true);
-    expect(taken.game.scene.emptied_features).toEqual([altar?.id]);
+    expect(emptiedCaches(taken.game)).toEqual([altar?.id]);
     // The party's new things have names, and the potion keeps its masked name.
-    const names = Object.values(taken.game.scene.names);
-    expect(names).toContain('a potion');
+    const names = Object.values(taken.game.view.item_names);
+    expect(names).toContain('potion');
     expect(names.some((name) => /holy water/i.test(name))).toBe(true);
-    expect(names).not.toContain('Potion of healing');
+    expect(names).not.toContain('potion of healing');
+    const again = await alice.client.sendCommand(tableId, {
+      command_type: 'take_treasure',
+      feature_id: altar?.id,
+    });
+    expect(again.accepted).toBe(false);
+    expect(again.rejections.map((rejection) => rejection.code)).toEqual(['exploration.feature.emptied']);
+  });
+
+  it('names the items of a feed entry from the player view, with their plurals', async () => {
+    const game = await alice.client.getGame(tableId);
+    const page = await alice.client.getFeed(tableId, { limit: 200 });
+    const entry = page.entries
+      .filter((candidate): candidate is GameEntry => candidate.kind === 'game')
+      .findLast((candidate) => candidate.command_type === 'take_treasure');
+    const items = entry?.names?.items ?? {};
+    expect(Object.keys(items).length).toBeGreaterThan(0);
+    for (const [id, name] of Object.entries(items)) {
+      expect(name).toBe(game.view.item_names[id]);
+      expect(entry?.names?.items_plural?.[id]).toBe(game.view.item_names_plural[id]);
+    }
+    expect(Object.values(items)).toContain('potion');
+    expect(Object.values(items)).not.toContain('potion of healing');
+  });
+
+  it('names a potion that the party identifies by drinking it, though no view names it afterwards', async () => {
+    const game = await alice.client.getGame(tableId);
+    const potion = Object.entries(game.view.item_names).find(([, name]) => name === 'potion')?.[0] ?? '';
+    const drinker = game.view.party.find((member) =>
+      JSON.stringify(member.inventory).includes(`"${potion}"`),
+    );
+    expect(drinker).toBeDefined();
+    const drunk = await alice.client.sendCommand(tableId, {
+      command_type: 'use_item',
+      character_id: drinker?.id,
+      item_id: potion,
+    });
+    expect(drunk.accepted).toBe(true);
+    expect(drunk.game.view.item_names[potion]).toBeUndefined();
+    const page = await alice.client.getFeed(tableId, { limit: 200 });
+    const entry = page.entries.findLast(
+      (candidate): candidate is GameEntry =>
+        candidate.kind === 'game' && candidate.command_type === 'use_item',
+    );
+    if (entry === undefined) throw new Error('no use_item entry');
+    // The view from before the command names the potion as the party knew it.
+    expect(entry.names?.items[potion]).toBe('potion');
+    const text = describeGameEntry(entry, emptyContext(), { only: 'player' })
+      .map((line) => line.text)
+      .join(' ');
+    expect(text).toMatch(/turns out to be a potion of healing/);
+    expect(text).not.toMatch(/magic-item-\d/);
+  });
+
+  it("gives the referee every feature's handle, so the referee's tools send what players send", async () => {
+    const state = await referee.client.getRefereeState(tableId);
+    const game = await alice.client.getGame(tableId);
+    const shown = game.view.explored.flatMap((level) => level.features.map((feature) => feature.id));
+    const handles = Object.values(state.feature_handles);
+    expect(shown.length).toBeGreaterThan(0);
+    for (const handle of shown) expect(handles).toContain(handle);
+    // The referee knows every authored feature, found or not, which the players' map doesn't show.
+    expect(handles.length).toBeGreaterThan(shown.length);
+    const refereeGame = await referee.client.getGame(tableId);
+    expect(refereeGame.referee?.feature_handles).toEqual(state.feature_handles);
+    expect(game.referee).toBeNull();
   });
 
   it('draws an undiscovered secret door as a wall', async () => {
@@ -172,9 +255,8 @@ describe('the scene', () => {
     const known = [
       ...(state.dungeon_state.found_traps ?? []),
       ...(state.dungeon_state.sprung_traps ?? []),
-      ...(state.dungeon_state.removed_traps ?? []),
     ].includes('priory:1:scriptorium');
-    expect(searched.game.scene.room_traps.some((trap) => trap.area_id === 'scriptorium')).toBe(known);
+    expect(roomTraps(searched.game).has('priory:1:scriptorium')).toBe(known);
   });
 
   it('tells two caches of one room apart, and lists only the one the party emptied', async () => {
@@ -190,75 +272,14 @@ describe('the scene', () => {
       feature_id: chest?.id,
     });
     expect(taken.accepted).toBe(true);
-    expect(taken.game.scene.emptied_features).toContain(chest?.id);
-    expect(taken.game.scene.emptied_features).not.toContain(casket?.id);
+    expect(emptiedCaches(taken.game)).toContain(chest?.id);
+    expect(emptiedCaches(taken.game)).not.toContain(casket?.id);
   });
 
-  it('never sends a player an unfound trap, the contents of an untaken cache, or a secret door', async () => {
+  it('never sends a player an unfound trap, the contents of an untaken cache, a secret door, or the referee feature handles', async () => {
     await alice.client.getGame(tableId);
     const texts = [...alice.received, ...aliceWs.messages.map((message) => JSON.stringify(message))];
     expect(findRefereeData(texts, HIDDEN)).toEqual([]);
-  });
-});
-
-describe('emptied cache handles', () => {
-  /** A level with two authored caches that look the same to the party. */
-  const adventure = {
-    dungeons: [
-      {
-        id: 'd',
-        levels: [
-          {
-            number: 1,
-            features: [],
-            areas: [
-              {
-                id: 'vault',
-                features: [
-                  { id: 'left', kind: 'treasure_cache', description: 'A chest.', cell: null },
-                  { id: 'right', kind: 'treasure_cache', description: 'A chest.', cell: null },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  } as unknown as Adventure;
-
-  const view = (emptied: string[]) =>
-    ({
-      emptied_caches: emptied,
-      explored: [
-        {
-          dungeon_id: 'd',
-          level_number: 1,
-          features: [
-            {
-              id: 'feature:a',
-              kind: 'treasure_cache',
-              description: 'A chest.',
-              cell: null,
-              area_id: 'vault',
-            },
-            {
-              id: 'feature:b',
-              kind: 'treasure_cache',
-              description: 'A chest.',
-              cell: null,
-              area_id: 'vault',
-            },
-          ],
-        },
-      ],
-    }) as unknown as PlayerView;
-
-  it('lists neither of two identical caches until both are emptied', () => {
-    expect(emptiedFeatureHandles(view(['d:1:left']), adventure)).toEqual([]);
-    expect(emptiedFeatureHandles(view(['d:1:left', 'd:1:right']), adventure)).toEqual([
-      'feature:a',
-      'feature:b',
-    ]);
   });
 });
 

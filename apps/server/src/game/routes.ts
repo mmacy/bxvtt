@@ -1,10 +1,17 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { EventPage } from '@bxvtt/shared/protocol';
-import { CommandRequest, EventsQuery, StartGameRequest, UpdateSeatRequest } from '@bxvtt/shared/protocol';
-import { callBxapi } from '../bxapi';
+import {
+  CommandRequest,
+  EventsQuery,
+  SessionSpellParams,
+  StartGameRequest,
+  UpdateSeatRequest,
+} from '@bxvtt/shared/protocol';
+import { callBxapi, toApiError, toProblem } from '../bxapi';
 import type { Context } from '../context';
 import { ApiError, notFound, parseBody, parseQuery } from '../errors';
+import { etagMatches } from '../rules';
 import { readSeats } from './seats';
 
 /** The path parameters of a table route. */
@@ -14,7 +21,7 @@ const SeatParams = z.object({ tableId: z.string(), memberId: z.string() });
 
 /**
  * Registers the game routes under `/api/tables/{table_id}/game`: start, read, and end a game, send commands, read
- * events, the referee state and adventure, and seats.
+ * events, the referee state and adventure, the session's spells, and seats.
  *
  * @param app - The Fastify instance.
  * @param ctx - The server's services.
@@ -90,6 +97,40 @@ export function registerGameRoutes(app: FastifyInstance, ctx: Context): void {
       return reply.status(304).send();
     }
     return reply.type('application/json').send(document.body);
+  });
+
+  app.get('/api/tables/:tableId/game/rules/spells/:spellId', async (request, reply) => {
+    const { tableId } = TableParams.parse(request.params);
+    // A non-member learns nothing, not even whether the spell ID has a valid shape.
+    tables.requireMember(tableId, ctx.auth.user(request));
+    const params = SessionSpellParams.safeParse(request.params);
+    if (!params.success) notFound('spell', String((request.params as { spellId?: unknown }).spellId));
+    const { spellId } = params.data;
+    const live = await game.require(tableId);
+    const ifNoneMatch = request.headers['if-none-match'];
+    let response;
+    try {
+      response = await ctx.bxapi.raw(
+        'GET',
+        `/v1/sessions/${encodeURIComponent(live.sessionId)}/rules/spells/${encodeURIComponent(spellId)}`,
+        {
+          headers: typeof ifNoneMatch === 'string' ? { 'If-None-Match': ifNoneMatch } : {},
+          requestId: request.id,
+        },
+      );
+    } catch (error) {
+      throw toApiError(error);
+    }
+    // bxapi answers 404 for a spell the player view doesn't name, as for one that doesn't exist.
+    if (response.status === 404) notFound('spell', spellId);
+    const etag = response.headers.get('etag') ?? '';
+    reply.header('Cache-Control', 'private, no-cache');
+    if (etag !== '') reply.header('ETag', etag);
+    if (response.status === 304 || (response.status === 200 && etagMatches(ifNoneMatch, etag))) {
+      return reply.status(304).send();
+    }
+    if (response.status !== 200) throw toApiError(toProblem(response));
+    return reply.type('application/json').send(JSON.stringify(response.body));
   });
 
   app.put('/api/tables/:tableId/game/seats/:memberId', async (request) => {

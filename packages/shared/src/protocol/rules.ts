@@ -5,10 +5,36 @@ import type {
   NpcPartyResponse,
   paths,
   RoomResponse,
+  SpellTemplate,
   TreasureResponse,
 } from '../bxapi';
 
-export type { DiceRollResponse, MonstersResponse, NpcPartyResponse, RoomResponse, TreasureResponse };
+export type {
+  DiceRollResponse,
+  MonstersResponse,
+  NpcPartyResponse,
+  RoomResponse,
+  SpellTemplate,
+  TreasureResponse,
+};
+
+/**
+ * A spell ID in a path, such as `magic_missile` or an adventure's own `ember_dart`: letters, digits, `_`, `.`, and
+ * `-`, at most 100 characters.
+ */
+export const SpellId = z.string().regex(/^[A-Za-z0-9_.-]{1,100}$/);
+
+/**
+ * Path of `GET /api/tables/{table_id}/game/rules/spells/{spell_id}`. Any member of the table, player or referee,
+ * may read it. It returns bxapi's `SpellTemplate` for a spell that the game's player view names in
+ * `spell_names`, from the session's own catalog, so it answers for a spell the adventure bundles, which
+ * `GET /api/rules/spells/{spell_id}` doesn't. A spell the player view doesn't name gets 404 `not_found`, as an ID
+ * that no catalog has does. The response carries an `ETag`, and a request with a matching `If-None-Match` gets
+ * 304.
+ */
+export const SessionSpellParams = z.object({ tableId: z.string(), spellId: SpellId });
+/** Path of `GET /api/tables/{table_id}/game/rules/spells/{spell_id}`. */
+export type SessionSpellParams = z.infer<typeof SessionSpellParams>;
 
 /** A seed for a stateless roll: an integer from 0 to 2^53 - 1. */
 const Seed = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);

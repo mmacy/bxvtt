@@ -12,7 +12,6 @@ import type {
   RefereeState,
   Rejection,
   Role,
-  Scene,
   StartGameRequest,
   User,
 } from '@bxvtt/shared/protocol';
@@ -28,11 +27,9 @@ import { BattleService } from './battle';
 import type { CommandInfo } from './classify';
 import { CommandClassifier } from './classify';
 import { SaveService } from './saves';
-import { buildScene, dungeonNames, eventItemIds, inventoryNames, templateNames } from './scene';
 import { readSeats, reconcileSeats, seatsFromRoster, writeSeats } from './seats';
 import type { LabelBook } from './labels';
-import { entryNames, learnLabels, newLabelBook } from './labels';
-import { unlistedTarget, withoutUnlistedCreatures } from './targets';
+import { dungeonNames, entryNames, itemNames, learnLabels, newLabelBook } from './labels';
 
 /** What the server holds in memory about a table's game, at one revision. */
 export interface LiveGame {
@@ -47,15 +44,6 @@ export interface LiveGame {
   /** The dynamic referee state at `refereeRevision`, or `null` before the server read it. */
   referee: RefereeState | null;
   refereeRevision: number;
-  /** The scene at `revision`, which every member receives. */
-  scene: Scene;
-  /** Display names for item IDs that the party has seen, kept across revisions of the session. */
-  names: Map<string, string>;
-  /**
-   * The monster and NPC IDs of the session, from the referee view. The server refuses a player's target among
-   * them that the player view doesn't list, and removes such an ID from what a player receives.
-   */
-  creatures: Set<string>;
   /** What the players of the session have called each member, group, and monster, for feed entries. */
   labels: LabelBook;
 }
@@ -129,24 +117,6 @@ function rawFeatureId(command: Command): Rejection | null {
 }
 
 /**
- * Refuses a player's command that aims at a monster or an NPC adventurer the player view doesn't list. bxapi
- * accepts any creature of the session in an out-of-battle `cast_spell` or `use_item`, even one from an encounter
- * that has ended (https://github.com/mmacy/osrlib-python/issues/317), so without this a player could hit a
- * monster the party can't see. The rejection is the one osrlib gives a target that doesn't exist.
- *
- * @param live - The game.
- * @param info - The command's class, with the fields that can name a target.
- * @param command - The command.
- * @returns The rejection, or `null` to send the command to bxapi.
- */
-function unlistedCreature(live: LiveGame, info: CommandInfo, command: Command): Rejection | null {
-  const unlisted = unlistedTarget(command, info.targetFields, live.view, live.creatures);
-  if (unlisted === null) return null;
-  const code = unlisted.field === 'target_id' ? 'items.use.unknown_target' : 'magic.cast.unknown_target';
-  return { code, params: { target: unlisted.id } };
-}
-
-/**
  * Runs the table's games: the bxapi session behind each table, the command pipeline, the projections each role
  * receives, seats, and the battle and save services.
  */
@@ -154,7 +124,6 @@ export class GameService {
   private readonly live = new Map<string, LiveGame>();
   private readonly mutex = new KeyedMutex();
   private readonly adventureCache = new Map<string, { etag: string; body: string }>();
-  private equipment: Map<string, string> | null = null;
   /** The command classifier. */
   readonly classifier: CommandClassifier;
   /** The battle declarations. */
@@ -227,7 +196,6 @@ export class GameService {
       ]),
     );
     const previous = this.live.get(tableId);
-    const names = previous?.sessionId === sessionId ? previous.names : new Map<string, string>();
     const labels = previous?.sessionId === sessionId ? previous.labels : newLabelBook();
     const live: LiveGame = {
       tableId,
@@ -239,56 +207,16 @@ export class GameService {
       legal: commands.commands,
       referee: null,
       refereeRevision: -1,
-      scene: { names: {}, room_traps: [], emptied_features: [] },
-      names,
-      creatures: new Set(),
       labels,
     };
     if (info.revision === commands.revision) {
       live.referee = refereeState(refereeView);
       live.refereeRevision = live.revision;
     }
-    await this.deriveScene(live, refereeView, []);
+    learnLabels(live.labels, live.view);
     this.live.set(tableId, live);
     reconcileSeats(this.ctx.db, tableId, sessionId, view);
     return live;
-  }
-
-  /**
-   * Rebuilds the scene of a game from the referee view and the player events of the last command.
-   *
-   * @param live - The game, which this updates in place.
-   * @param refereeView - bxapi's referee view at the game's revision.
-   * @param events - The player events of the command that led here.
-   */
-  private async deriveScene(live: LiveGame, refereeView: RefereeView, events: GameEvent[]): Promise<void> {
-    if (this.equipment === null) {
-      try {
-        const page = await this.ctx.rules.json<{ items: { id: string; name: string }[] }>(
-          'equipment?limit=200',
-        );
-        this.equipment = new Map(page.items.map((item) => [item.id, item.name]));
-      } catch (error) {
-        this.ctx.log.warn({ err: error }, 'could not read the equipment names');
-      }
-    }
-    inventoryNames(live.view, live.names);
-    templateNames(
-      [...eventItemIds(events), ...live.names.keys()],
-      live.names,
-      refereeView.adventure,
-      this.equipment ?? new Map(),
-    );
-    live.creatures = new Set([
-      ...refereeView.monsters.map((monster) => monster.id),
-      ...refereeView.npcs.flatMap((npc) => (typeof npc.id === 'string' ? [npc.id] : [])),
-    ]);
-    learnLabels(live.labels, live.view);
-    live.scene = buildScene(
-      live.view,
-      { adventure: refereeView.adventure, dungeonState: refereeView.dungeon_state },
-      live.names,
-    );
   }
 
   /**
@@ -341,7 +269,6 @@ export class GameService {
       commands,
       seats: readSeats(this.ctx.db, live.tableId, live.sessionId),
       caller_user_id: this.ctx.tables.settings(live.tableId).caller_user_id,
-      scene: live.scene,
       referee: role === 'referee' ? await this.refereeFor(live) : null,
     };
   }
@@ -622,8 +549,7 @@ export class GameService {
         );
       }
       this.checkPermission(live, user, role, info, command);
-      const unseen =
-        role === 'referee' ? null : (rawFeatureId(command) ?? unlistedCreature(live, info, command));
+      const unseen = role === 'referee' ? null : rawFeatureId(command);
       if (unseen !== null) {
         return {
           accepted: false,
@@ -654,11 +580,9 @@ export class GameService {
           : playerEvents(outcome.events, outcome.messages);
       return {
         accepted: outcome.accepted,
-        // A player's copy names only the creatures that the player view lists.
-        rejections:
-          role === 'referee'
-            ? outcome.rejections
-            : withoutUnlistedCreatures(outcome.rejections, live.view, live.creatures),
+        // osrlib refuses a target that the player view doesn't list as it refuses an ID that doesn't exist, and
+        // a rejection names only what the command named, so a player's copy is bxapi's.
+        rejections: outcome.rejections,
         events: projected.events,
         messages: projected.messages,
         mode: outcome.mode,
@@ -878,17 +802,8 @@ export class GameService {
     live.ended = outcome.ended;
     if (outcome.view !== undefined) live.view = outcome.view;
     live.referee = null;
+    learnLabels(live.labels, live.view);
     const forPlayers = playerEvents(outcome.events, outcome.messages);
-    try {
-      const refereeView = await this.ctx.bxapi.get<RefereeView>(
-        `/v1/sessions/${encodeURIComponent(live.sessionId)}/referee-view`,
-      );
-      live.referee = refereeState(refereeView);
-      live.refereeRevision = live.revision;
-      await this.deriveScene(live, refereeView, forPlayers.events);
-    } catch (error) {
-      this.ctx.log.warn({ err: error, table: live.tableId }, 'could not read the referee view for the scene');
-    }
     try {
       const commands = await this.ctx.bxapi.get<SessionCommands>(
         `/v1/sessions/${encodeURIComponent(live.sessionId)}/commands`,
@@ -923,11 +838,16 @@ export class GameService {
         events: forPlayers.events,
         messages: forPlayers.messages,
         clock_rounds: live.view.clock_rounds,
-        names: entryNames(forPlayers.events, live.labels, live.names, {
-          view: live.view,
-          dungeons: dungeonNames(live.view),
-          actorId: meta.class === 'referee' ? null : meta.actorId,
-        }),
+        names: entryNames(
+          forPlayers.events,
+          live.labels,
+          itemNames([previous, live.view], forPlayers.events),
+          {
+            view: live.view,
+            dungeons: dungeonNames(live.view),
+            actorId: meta.class === 'referee' ? null : meta.actorId,
+          },
+        ),
         actor_id: meta.class === 'referee' ? null : (meta.actorId ?? null),
         xp_gained: xpGained,
       },
@@ -939,7 +859,7 @@ export class GameService {
         events: outcome.events,
         messages: outcome.messages,
         clock_rounds: live.view.clock_rounds,
-        names: entryNames(outcome.events, live.labels, live.names, {
+        names: entryNames(outcome.events, live.labels, itemNames([previous, live.view], outcome.events), {
           view: live.view,
           dungeons: dungeonNames(live.view),
           actorId: meta.actorId,
@@ -1040,7 +960,9 @@ export class GameService {
   namesFor(tableId: string, sessionId: string, events: GameEvent[]): EntryNames | undefined {
     const live = this.live.get(tableId);
     if (live === undefined || live.sessionId !== sessionId) return undefined;
-    return entryNames(events, live.labels, live.names, { dungeons: dungeonNames(live.view) });
+    return entryNames(events, live.labels, itemNames([live.view], events), {
+      dungeons: dungeonNames(live.view),
+    });
   }
 
   /**
