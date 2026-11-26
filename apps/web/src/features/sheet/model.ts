@@ -10,6 +10,7 @@ import {
   emptyContext,
   itemLabel,
   magicItemTemplateName,
+  classLabel,
   pluralize,
   resolveItemNoun,
   type TextContext,
@@ -70,6 +71,8 @@ export interface InventoryModel {
 export interface SheetModel {
   name: string;
   classId: string;
+  /** The class as the table reads it, such as `Fighter`. */
+  className: string;
   race: string;
   level: number;
   title: string | null;
@@ -283,6 +286,15 @@ function conditionList(value: unknown): string[] {
 }
 
 /**
+ * The name of a party member's class, such as `Fighter`. The player view states it from the class definition
+ * the character uses, so it is right for a class the adventure or the referee wrote. The catalog names the class
+ * only for a view from before bxapi stated it.
+ */
+export function memberClassName(member: Pick<MemberView, 'class_id' | 'class_name'>): string {
+  return member.class_name || classLabel(member.class_id);
+}
+
+/**
  * The sheet of a party member, from the player view.
  *
  * @param member - The member's sheet.
@@ -292,6 +304,7 @@ export function sheetFromMember(member: MemberView, ctx?: TextContext): SheetMod
   return {
     name: member.name,
     classId: member.class_id,
+    className: memberClassName(member),
     race: member.race,
     level: member.level,
     title: member.title ?? null,
@@ -344,6 +357,7 @@ export function sheetFromStored(stored: StoredCharacter, xpNextLevel?: number | 
   return {
     name: character.name,
     classId: character.class_id,
+    className: classLabel(character.class_id),
     race: character.race,
     level: character.level,
     title: derived.level_title,

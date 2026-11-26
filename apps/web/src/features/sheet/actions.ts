@@ -3,7 +3,14 @@
  * send it for this member, and names for effects.
  */
 import type { LegalCommand } from '@bxvtt/shared/protocol';
-import { ROUNDS_PER_DAY, ROUNDS_PER_TURN, capitalizeFirst, count, prettifyId } from '@bxvtt/shared/text';
+import {
+  ROUNDS_PER_DAY,
+  ROUNDS_PER_TURN,
+  capitalizeFirst,
+  count,
+  prettifyId,
+  type TextContext,
+} from '@bxvtt/shared/text';
 import { useCanSend, useLegalCommand, type Permission } from '@/app';
 
 /** A member command as the sheet offers it. */
@@ -50,8 +57,17 @@ const EFFECT_KINDS: Record<string, string> = {
   potion: 'Potion',
 };
 
-/** A name for an effect kind, such as `light` or `protection_from_evil`. */
-export function effectLabel(kind: string): string {
+/**
+ * A name for an effect kind, such as `light` or `protection_from_evil`. A spell's effect has the spell's ID as its
+ * kind, and the player view names that spell, including a spell the adventure bundles, so a name in `ctx` comes
+ * first.
+ *
+ * @param kind - The effect's kind.
+ * @param ctx - The table's text context, which holds the spell names the player view states.
+ */
+export function effectLabel(kind: string, ctx?: TextContext): string {
+  const spell = ctx?.spells[kind];
+  if (spell) return capitalizeFirst(spell);
   return EFFECT_KINDS[kind] ?? capitalizeFirst(prettifyId(kind).toLowerCase());
 }
 

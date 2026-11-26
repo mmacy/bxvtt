@@ -1,9 +1,9 @@
 /** Small pieces that several parts of the town share: seat owners, member choosers, and the purse line. */
 import type { MemberView } from '@bxvtt/shared/bxapi';
-import { classLabel } from '@bxvtt/shared/text';
 import type { ReactNode } from 'react';
 import { tokenClass, useMembers, useSeats } from '@/app';
 import { Avatar, CoinPurse, Icon, TokenPortrait, cx, type IconName, type TokenSize } from '@/ui';
+import { memberClassName } from '../sheet/model';
 import { readPurse } from './inventory';
 import { memberStatus } from './members';
 import styles from './parts.module.css';
@@ -55,7 +55,7 @@ export function MemberToken({ member, size = 40 }: { member: MemberView; size?: 
 
 /** The class and level line under a name: "Fighter 1". */
 export function classLine(member: MemberView): string {
-  return `${classLabel(member.class_id)} ${member.level}`;
+  return `${memberClassName(member)} ${member.level}`;
 }
 
 /** A member's purse as coins. */

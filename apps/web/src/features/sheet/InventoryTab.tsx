@@ -1,6 +1,5 @@
 import type { MemberView } from '@bxvtt/shared/bxapi';
-import { creatureNames } from '@bxvtt/shared/protocol';
-import { capitalizeFirst, count, groupName } from '@bxvtt/shared/text';
+import { capitalizeFirst, count, creatureNames, groupName } from '@bxvtt/shared/text';
 import { useMemo, useState, type ReactNode } from 'react';
 import {
   useCanControlMember,
@@ -120,6 +119,7 @@ export function InventoryTab({ member, model }: TabProps) {
   const light = useMemberCommand('light_source', member.id);
   const extinguish = useMemberCommand('extinguish_source', member.id);
   const view = usePlayerView();
+  const ctx = useTextContext();
   const here = useHere();
   const [transfer, setTransfer] = useState<{ mode: 'give' | 'drop'; entryKey: string | null } | null>(null);
   const [using, setUsing] = useState<InventoryEntry | null>(null);
@@ -260,7 +260,7 @@ export function InventoryTab({ member, model }: TabProps) {
               lights.map((effect, index) => (
                 <ConditionChip
                   key={`${effect.kind}-${index}`}
-                  label={effectLabel(effect.kind)}
+                  label={effectLabel(effect.kind, ctx)}
                   tone="boon"
                   icon="torch"
                   duration={effectRemaining(effect.remaining_rounds)}
@@ -676,7 +676,7 @@ function UseItemDialog({
             )}
             {creatureOptions.length > 0 && (
               <fieldset className={styles.section}>
-                <legend className={styles.slotLabel}>Spell targets</legend>
+                <legend className={styles.slotLabel}>Targets</legend>
                 {creatureOptions.map((o) => (
                   <Checkbox
                     key={o.value}

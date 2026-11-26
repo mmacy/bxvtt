@@ -1,6 +1,5 @@
 import type { SaveEntry } from '@bxvtt/shared/protocol';
 import {
-  classLabel,
   conditionLabel,
   SECONDS_PER_ROUND,
   count,
@@ -23,6 +22,7 @@ import {
   useTableUi,
 } from '@/app';
 import { Badge, Banner, Button, ConfirmDialog, HpBar, SectionLabel, Skeleton, TokenPortrait } from '@/ui';
+import { memberClassName } from '../sheet/model';
 import styles from './table.module.css';
 
 /** How many recent saves the end screen lists. The saves dialog lists every one. */
@@ -278,7 +278,7 @@ export function EndScreen() {
                   <p className={styles.saveTitle}>{member.name}</p>
                   <p className={styles.endMeta}>
                     <span>
-                      Level {member.level} {classLabel(member.class_id).toLowerCase()}
+                      Level {member.level} {memberClassName(member).toLowerCase()}
                       <span className="visually-hidden-inline">,</span>
                     </span>
                     <span>{formatInteger(member.xp)} XP</span>

@@ -27,6 +27,7 @@ import {
   type EdgePick,
 } from '@/app';
 import { Button, Combobox, Select, type ComboboxOption, type SelectOption } from '@/ui';
+import { memberClassName } from '../sheet/model';
 import { allLevels, type Adventure, type CharacterSheet } from './model/adventure';
 import { patternText, templateLabel } from './model/describe';
 
@@ -35,8 +36,9 @@ function capital(text: string): string {
   return text.length === 0 ? text : text[0]?.toUpperCase() + text.slice(1);
 }
 
-function memberDescription(member: MemberView): string {
-  const parts = [`Level ${member.level} ${classLabel(member.class_id).toLowerCase()}`];
+/** What a party member picker shows under the name: the level and the class the view states, and whether the member is down. */
+export function memberDescription(member: MemberView): string {
+  const parts = [`Level ${member.level} ${memberClassName(member).toLowerCase()}`];
   if (member.current_hp <= 0) parts.push('down');
   return parts.join(', ');
 }
