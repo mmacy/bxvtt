@@ -1074,8 +1074,9 @@ export interface paths {
          *       `encounter.groups[i].members` in `targets`. Use an entry whose `status` is `"alive"`.
          *     - **Treasure caches (`inspect_treasure`, `remove_treasure_trap`, `take_treasure`):** Pass the opaque
          *       `explored[i].features[j].id` as `feature_id` for a feature on the party's current cell. The handle starts with
-         *       `feature:`. Don't parse it or use an authored adventure ID as a substitute. A player can use the handle without
-         *       reading the referee view.
+         *       `feature:`. Don't parse it. A player can use the handle without reading the referee view. osrlib also accepts the
+         *       feature's authored ID from the adventure document, a legacy form for a referee tool, and resolves either form
+         *       only among the features at the party's location.
          *
          *     When osrlib refuses a command under the B/X rules, this operation still returns HTTP 200 with `accepted` set to
          *     `false` and rule `rejections`, leaving the session and `revision` unchanged. When accepted, the server persists
