@@ -1,5 +1,5 @@
 {
-  "osrlib_version": "2.8.0",
+  "osrlib_version": "2.9.0",
   "rejections": {
     "battle.declaration.back_stab_no_ability": {
       "params": ["character"],
@@ -210,27 +210,27 @@
     "creation.class.requirements_not_met": {
       "params": ["ability", "class", "minimum", "score"],
       "param_sets": [["ability", "class", "minimum", "score"]],
-      "sources": ["core/character.py:1126"]
+      "sources": ["core/character.py:1265"]
     },
     "creation.languages.duplicate_choice": {
       "params": ["language"],
       "param_sets": [["language"]],
-      "sources": ["core/character.py:1246"]
+      "sources": ["core/character.py:1398"]
     },
     "creation.languages.duplicates_native": {
       "params": ["language"],
       "param_sets": [["language"]],
-      "sources": ["core/character.py:1252"]
+      "sources": ["core/character.py:1404"]
     },
     "creation.languages.not_available": {
       "params": ["language"],
       "param_sets": [["language"]],
-      "sources": ["core/character.py:1250"]
+      "sources": ["core/character.py:1402"]
     },
     "creation.languages.too_many": {
       "params": ["allowed", "chosen"],
       "param_sets": [["allowed", "chosen"]],
-      "sources": ["core/character.py:1233"]
+      "sources": ["core/character.py:1385"]
     },
     "encounter.evade.already_evading": {
       "params": [],
@@ -595,153 +595,153 @@
     "magic.book.already_chosen": {
       "params": ["character"],
       "param_sets": [["character"]],
-      "sources": ["core/character.py:1402"]
+      "sources": ["core/character.py:1554"]
     },
     "magic.book.capacity_exceeded": {
       "params": ["capacity", "spell", "spell_level"],
       "param_sets": [["capacity", "spell", "spell_level"]],
-      "sources": ["core/spells.py:1701"]
+      "sources": ["core/spells.py:1765"]
     },
     "magic.book.capacity_mismatch": {
       "params": ["capacity", "chosen", "spell_level"],
       "param_sets": [["capacity", "chosen", "spell_level"]],
-      "sources": ["core/character.py:1333"]
+      "sources": ["core/character.py:1485"]
     },
     "magic.book.duplicate": {
       "params": ["spell"],
       "param_sets": [["spell"]],
-      "sources": ["core/character.py:1313", "core/spells.py:1696"]
+      "sources": ["core/character.py:1465", "core/spells.py:1760"]
     },
     "magic.book.not_arcane": {
       "params": ["class"],
       "param_sets": [["class"]],
-      "sources": ["core/character.py:1306", "core/spells.py:1670"]
+      "sources": ["core/character.py:1458", "core/spells.py:1734"]
     },
     "magic.book.unknown_spell": {
       "params": ["spell"],
       "param_sets": [["spell"]],
-      "sources": ["core/character.py:1319", "core/spells.py:1674", "crawl/_spells.py:64"]
+      "sources": ["core/character.py:1471", "core/spells.py:1738", "crawl/_spells.py:100"]
     },
     "magic.book.wrong_list": {
       "params": ["list", "spell"],
       "param_sets": [["list", "spell"]],
-      "sources": ["core/character.py:1323", "core/spells.py:1694"]
+      "sources": ["core/character.py:1475", "core/spells.py:1758"]
     },
     "magic.cast.anti_magic_shell": {
       "params": ["caster"],
       "param_sets": [["caster"]],
-      "sources": ["core/spells.py:2145"]
+      "sources": ["core/spells.py:2209"]
     },
     "magic.cast.caster_incapacitated": {
       "params": ["caster", "condition"],
       "param_sets": [["caster", "condition"]],
-      "sources": ["core/spells.py:2130"]
+      "sources": ["core/spells.py:2194"]
     },
     "magic.cast.caster_restrained": {
       "params": ["caster", "restraint"],
       "param_sets": [["caster", "restraint"]],
-      "sources": ["core/spells.py:2137"]
+      "sources": ["core/spells.py:2201"]
     },
     "magic.cast.not_memorized": {
       "params": ["reversed", "spell"],
       "param_sets": [["reversed", "spell"]],
-      "sources": ["core/spells.py:2153", "crawl/_spells.py:126", "crawl/battle.py:3109"]
+      "sources": ["core/spells.py:2217", "crawl/_spells.py:162", "crawl/battle.py:3109"]
     },
     "magic.cast.not_reversible": {
       "params": ["spell"],
       "param_sets": [["spell"]],
-      "sources": ["core/spells.py:2147"]
+      "sources": ["core/spells.py:2211"]
     },
     "magic.cast.out_of_range": {
       "params": ["distance_feet", "range_feet", "spell"],
       "param_sets": [["distance_feet", "range_feet", "spell"]],
-      "sources": ["core/spells.py:2196"]
+      "sources": ["core/spells.py:2260"]
     },
     "magic.cast.silenced_area": {
       "params": ["caster"],
       "param_sets": [["caster"]],
-      "sources": ["crawl/_spells.py:111", "crawl/battle.py:3099"]
+      "sources": ["crawl/_spells.py:147", "crawl/battle.py:3099"]
     },
     "magic.cast.target_count": {
       "params": ["expected", "mode", "supplied"],
       "param_sets": [["expected", "mode", "supplied"]],
       "sources": [
-        "core/spells.py:2159",
-        "core/spells.py:2163",
-        "core/spells.py:2170",
-        "core/spells.py:2177",
-        "core/spells.py:2181"
+        "core/spells.py:2223",
+        "core/spells.py:2227",
+        "core/spells.py:2234",
+        "core/spells.py:2241",
+        "core/spells.py:2245"
       ]
     },
     "magic.cast.target_must_be_creature": {
       "params": ["mode", "spell", "target"],
       "param_sets": [["mode", "spell", "target"]],
-      "sources": ["core/spells.py:2185"]
+      "sources": ["core/spells.py:2249"]
     },
     "magic.cast.unknown_mode": {
       "params": ["mode", "spell"],
       "param_sets": [["mode"], ["mode", "spell"]],
-      "sources": ["core/spells.py:2151", "crawl/battle.py:3158"]
+      "sources": ["core/spells.py:2215", "crawl/battle.py:3158"]
     },
     "magic.cast.unknown_spell": {
       "params": ["spell"],
       "param_sets": [["spell"]],
-      "sources": ["crawl/_spells.py:109", "crawl/battle.py:3097"]
+      "sources": ["crawl/_spells.py:145", "crawl/battle.py:3097"]
     },
     "magic.cast.unknown_target": {
       "params": ["target"],
       "param_sets": [["target"]],
-      "sources": ["crawl/_magic_items.py:451", "crawl/_spells.py:119", "crawl/battle.py:3188"]
+      "sources": ["crawl/_magic_items.py:451", "crawl/_spells.py:155", "crawl/battle.py:3188"]
     },
     "magic.memorize.divine_reverses_at_cast": {
       "params": ["spell"],
       "param_sets": [["spell"]],
-      "sources": ["core/spells.py:1441"]
+      "sources": ["core/spells.py:1505"]
     },
     "magic.memorize.needs_sleep": {
       "params": ["character"],
       "param_sets": [["character"]],
-      "sources": ["crawl/_spells.py:45"]
+      "sources": ["crawl/_spells.py:69"]
     },
     "magic.memorize.not_a_caster": {
       "params": ["class"],
       "param_sets": [["class"]],
-      "sources": ["core/spells.py:1388"]
+      "sources": ["core/spells.py:1473"]
     },
     "magic.memorize.not_in_book": {
       "params": ["spell"],
       "param_sets": [["spell"]],
-      "sources": ["core/spells.py:1444"]
+      "sources": ["core/spells.py:1508"]
     },
     "magic.memorize.not_reversible": {
       "params": ["spell"],
       "param_sets": [["spell"]],
-      "sources": ["core/spells.py:1446"]
+      "sources": ["core/spells.py:1510"]
     },
     "magic.memorize.slots_exceeded": {
       "params": ["selected", "slots", "spell_level"],
       "param_sets": [["selected", "slots", "spell_level"]],
-      "sources": ["core/spells.py:1408"]
+      "sources": ["core/spells.py:1456"]
     },
     "magic.memorize.unknown_spell": {
       "params": ["spell"],
       "param_sets": [["spell"]],
-      "sources": ["core/spells.py:1396"]
+      "sources": ["core/spells.py:1444"]
     },
     "magic.memorize.wrong_list": {
       "params": ["list", "spell"],
       "param_sets": [["list", "spell"]],
-      "sources": ["core/spells.py:1437"]
+      "sources": ["core/spells.py:1501"]
     },
     "magic.turning.caster_incapacitated": {
       "params": ["caster", "condition"],
       "param_sets": [["caster", "condition"]],
-      "sources": ["core/spells.py:3900"]
+      "sources": ["core/spells.py:3964"]
     },
     "magic.turning.not_a_turner": {
       "params": ["class"],
       "param_sets": [["class"]],
-      "sources": ["core/spells.py:3895"]
+      "sources": ["core/spells.py:3959"]
     },
     "party.add.carries_instances": {
       "params": ["item", "name"],

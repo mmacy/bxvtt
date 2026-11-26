@@ -1731,637 +1731,1030 @@
       "id": "animate_dead",
       "name": "Animate Dead",
       "list": "magic_user",
-      "level": 5
+      "level": 5,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "anti_magic_shell",
       "name": "Anti-Magic Shell",
       "list": "magic_user",
-      "level": 6
+      "level": 6,
+      "modes": {
+        "shell": "Shell"
+      }
     },
     {
       "id": "bless",
       "name": "Bless",
       "list": "cleric",
-      "level": 2
+      "level": 2,
+      "modes": {
+        "battle": "Bless allies in battle",
+        "ritual": "Bless a ritual"
+      },
+      "reversed_modes": {
+        "battle": "Battle"
+      }
     },
     {
       "id": "charm_monster",
       "name": "Charm Monster",
       "list": "magic_user",
-      "level": 4
+      "level": 4,
+      "modes": {
+        "individual": "Charm an individual",
+        "group": "Charm a group"
+      }
     },
     {
       "id": "charm_person",
       "name": "Charm Person",
       "list": "magic_user",
-      "level": 1
+      "level": 1,
+      "modes": {
+        "charm": "Charm"
+      }
     },
     {
       "id": "clairvoyance",
       "name": "Clairvoyance",
       "list": "magic_user",
-      "level": 3
+      "level": 3,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "cloudkill",
       "name": "Cloudkill",
       "list": "magic_user",
-      "level": 5
+      "level": 5,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "commune",
       "name": "Commune",
       "list": "cleric",
-      "level": 5
+      "level": 5,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "confusion",
       "name": "Confusion",
       "list": "magic_user",
-      "level": 4
+      "level": 4,
+      "modes": {
+        "confuse": "Confuse"
+      }
     },
     {
       "id": "conjure_elemental",
       "name": "Conjure Elemental",
       "list": "magic_user",
-      "level": 5
+      "level": 5,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "contact_higher_plane",
       "name": "Contact Higher Plane",
       "list": "magic_user",
-      "level": 5
+      "level": 5,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "continual_light_c",
       "name": "Continual Light",
       "list": "cleric",
-      "level": 3
+      "level": 3,
+      "modes": {
+        "illuminate": "Conjure light",
+        "blind": "Blind a creature",
+        "cancel": "Cancel darkness"
+      },
+      "reversed_modes": {
+        "darken": "Conjure darkness",
+        "blind": "Blind a creature",
+        "cancel": "Cancel light"
+      }
     },
     {
       "id": "continual_light_mu",
       "name": "Continual Light",
       "list": "magic_user",
-      "level": 2
+      "level": 2,
+      "modes": {
+        "illuminate": "Conjure light",
+        "blind": "Blind a creature",
+        "cancel": "Cancel darkness"
+      },
+      "reversed_modes": {
+        "darken": "Conjure darkness",
+        "blind": "Blind a creature",
+        "cancel": "Cancel light"
+      }
     },
     {
       "id": "control_weather",
       "name": "Control Weather",
       "list": "magic_user",
-      "level": 6
+      "level": 6,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "create_food",
       "name": "Create Food",
       "list": "cleric",
-      "level": 5
+      "level": 5,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "create_water",
       "name": "Create Water",
       "list": "cleric",
-      "level": 4
+      "level": 4,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "cure_disease",
       "name": "Cure Disease",
       "list": "cleric",
-      "level": 3
+      "level": 3,
+      "modes": {
+        "cure": "Cure a subject of any disease",
+        "kill_green_slime": "Kill green slime"
+      },
+      "reversed_modes": {
+        "afflict": "Afflict"
+      }
     },
     {
       "id": "cure_light_wounds",
       "name": "Cure Light Wounds",
       "list": "cleric",
-      "level": 1
+      "level": 1,
+      "modes": {
+        "heal": "Heal a living subject",
+        "cure_paralysis": "Cure paralysis"
+      },
+      "reversed_modes": {
+        "harm": "Harm"
+      }
     },
     {
       "id": "cure_serious_wounds",
       "name": "Cure Serious Wounds",
       "list": "cleric",
-      "level": 4
+      "level": 4,
+      "modes": {
+        "heal": "Heal"
+      },
+      "reversed_modes": {
+        "harm": "Harm"
+      }
     },
     {
       "id": "death_spell",
       "name": "Death Spell",
       "list": "magic_user",
-      "level": 6
+      "level": 6,
+      "modes": {
+        "kill": "Kill"
+      }
     },
     {
       "id": "detect_evil_c",
       "name": "Detect Evil",
       "list": "cleric",
-      "level": 1
+      "level": 1,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "detect_evil_mu",
       "name": "Detect Evil",
       "list": "magic_user",
-      "level": 2
+      "level": 2,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "detect_invisible",
       "name": "Detect Invisible",
       "list": "magic_user",
-      "level": 2
+      "level": 2,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "detect_magic_c",
       "name": "Detect Magic",
       "list": "cleric",
-      "level": 1
+      "level": 1,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "detect_magic_mu",
       "name": "Detect Magic",
       "list": "magic_user",
-      "level": 1
+      "level": 1,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "dimension_door",
       "name": "Dimension Door",
       "list": "magic_user",
-      "level": 4
+      "level": 4,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "disintegrate",
       "name": "Disintegrate",
       "list": "magic_user",
-      "level": 6
+      "level": 6,
+      "modes": {
+        "kill": "Kill"
+      }
     },
     {
       "id": "dispel_evil",
       "name": "Dispel Evil",
       "list": "cleric",
-      "level": 5
+      "level": 5,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "dispel_magic",
       "name": "Dispel Magic",
       "list": "magic_user",
-      "level": 3
+      "level": 3,
+      "modes": {
+        "dispel": "Dispel"
+      }
     },
     {
       "id": "esp",
       "name": "ESP",
       "list": "magic_user",
-      "level": 2
+      "level": 2,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "feeblemind",
       "name": "Feeblemind",
       "list": "magic_user",
-      "level": 5
+      "level": 5,
+      "modes": {
+        "feeblemind": "Feeblemind"
+      }
     },
     {
       "id": "find_traps",
       "name": "Find Traps",
       "list": "cleric",
-      "level": 2
+      "level": 2,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "fire_ball",
       "name": "Fire Ball",
       "list": "magic_user",
-      "level": 3
+      "level": 3,
+      "modes": {
+        "damage": "Damage"
+      }
     },
     {
       "id": "floating_disc",
       "name": "Floating Disc",
       "list": "magic_user",
-      "level": 1
+      "level": 1,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "fly",
       "name": "Fly",
       "list": "magic_user",
-      "level": 3
+      "level": 3,
+      "modes": {
+        "grant": "Grant"
+      }
     },
     {
       "id": "geas",
       "name": "Geas",
       "list": "magic_user",
-      "level": 6
+      "level": 6,
+      "modes": {
+        "cast": "Cast"
+      },
+      "reversed_modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "growth_of_animal",
       "name": "Growth of Animal",
       "list": "cleric",
-      "level": 3
+      "level": 3,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "growth_of_plants",
       "name": "Growth of Plants",
       "list": "magic_user",
-      "level": 4
+      "level": 4,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "hallucinatory_terrain",
       "name": "Hallucinatory Terrain",
       "list": "magic_user",
-      "level": 4
+      "level": 4,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "haste",
       "name": "Haste",
       "list": "magic_user",
-      "level": 3
+      "level": 3,
+      "modes": {
+        "haste": "Haste"
+      }
     },
     {
       "id": "hold_monster",
       "name": "Hold Monster",
       "list": "magic_user",
-      "level": 5
+      "level": 5,
+      "modes": {
+        "individual": "Hold an individual",
+        "group": "Hold a group"
+      }
     },
     {
       "id": "hold_person_c",
       "name": "Hold Person",
       "list": "cleric",
-      "level": 2
+      "level": 2,
+      "modes": {
+        "individual": "Hold an individual",
+        "group": "Hold a group"
+      }
     },
     {
       "id": "hold_person_mu",
       "name": "Hold Person",
       "list": "magic_user",
-      "level": 3
+      "level": 3,
+      "modes": {
+        "individual": "Hold an individual",
+        "group": "Hold a group"
+      }
     },
     {
       "id": "hold_portal",
       "name": "Hold Portal",
       "list": "magic_user",
-      "level": 1
+      "level": 1,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "infravision",
       "name": "Infravision",
       "list": "magic_user",
-      "level": 3
+      "level": 3,
+      "modes": {
+        "grant": "Grant"
+      }
     },
     {
       "id": "insect_plague",
       "name": "Insect Plague",
       "list": "cleric",
-      "level": 5
+      "level": 5,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "invisibility",
       "name": "Invisibility",
       "list": "magic_user",
-      "level": 2
+      "level": 2,
+      "modes": {
+        "invisibility": "Invisibility"
+      }
     },
     {
       "id": "invisibility_10_radius",
       "name": "Invisibility 10’ Radius",
       "list": "magic_user",
-      "level": 3
+      "level": 3,
+      "modes": {
+        "invisibility": "Invisibility"
+      }
     },
     {
       "id": "invisible_stalker",
       "name": "Invisible Stalker",
       "list": "magic_user",
-      "level": 6
+      "level": 6,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "knock",
       "name": "Knock",
       "list": "magic_user",
-      "level": 2
+      "level": 2,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "know_alignment",
       "name": "Know Alignment",
       "list": "cleric",
-      "level": 2
+      "level": 2,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "levitate",
       "name": "Levitate",
       "list": "magic_user",
-      "level": 2
+      "level": 2,
+      "modes": {
+        "grant": "Grant"
+      }
     },
     {
       "id": "light_c",
       "name": "Light",
       "list": "cleric",
-      "level": 1
+      "level": 1,
+      "modes": {
+        "illuminate": "Conjure light",
+        "blind": "Blind a creature",
+        "cancel": "Cancel darkness"
+      },
+      "reversed_modes": {
+        "darken": "Conjure darkness",
+        "blind": "Blind a creature",
+        "cancel": "Cancel light"
+      }
     },
     {
       "id": "light_mu",
       "name": "Light",
       "list": "magic_user",
-      "level": 1
+      "level": 1,
+      "modes": {
+        "illuminate": "Conjure light",
+        "blind": "Blind a creature",
+        "cancel": "Cancel darkness"
+      },
+      "reversed_modes": {
+        "darken": "Conjure darkness",
+        "blind": "Blind a creature",
+        "cancel": "Cancel light"
+      }
     },
     {
       "id": "lightning_bolt",
       "name": "Lightning Bolt",
       "list": "magic_user",
-      "level": 3
+      "level": 3,
+      "modes": {
+        "damage": "Damage"
+      }
     },
     {
       "id": "locate_object_c",
       "name": "Locate Object",
       "list": "cleric",
-      "level": 3
+      "level": 3,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "locate_object_mu",
       "name": "Locate Object",
       "list": "magic_user",
-      "level": 2
+      "level": 2,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "lower_water",
       "name": "Lower Water",
       "list": "magic_user",
-      "level": 6
+      "level": 6,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "magic_jar",
       "name": "Magic Jar",
       "list": "magic_user",
-      "level": 5
+      "level": 5,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "magic_missile",
       "name": "Magic Missile",
       "list": "magic_user",
-      "level": 1
+      "level": 1,
+      "modes": {
+        "missiles": "Missiles"
+      }
     },
     {
       "id": "massmorph",
       "name": "Massmorph",
       "list": "magic_user",
-      "level": 4
+      "level": 4,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "mirror_image",
       "name": "Mirror Image",
       "list": "magic_user",
-      "level": 2
+      "level": 2,
+      "modes": {
+        "images": "Images"
+      }
     },
     {
       "id": "move_earth",
       "name": "Move Earth",
       "list": "magic_user",
-      "level": 6
+      "level": 6,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "neutralize_poison",
       "name": "Neutralize Poison",
       "list": "cleric",
-      "level": 4
+      "level": 4,
+      "modes": {
+        "neutralize": "Neutralize poison on a character",
+        "items": "Remove poison from an item"
+      }
     },
     {
       "id": "part_water",
       "name": "Part Water",
       "list": "magic_user",
-      "level": 6
+      "level": 6,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "pass_wall",
       "name": "Pass-Wall",
       "list": "magic_user",
-      "level": 5
+      "level": 5,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "phantasmal_force",
       "name": "Phantasmal Force",
       "list": "magic_user",
-      "level": 2
+      "level": 2,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "polymorph_others",
       "name": "Polymorph Others",
       "list": "magic_user",
-      "level": 4
+      "level": 4,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "polymorph_self",
       "name": "Polymorph Self",
       "list": "magic_user",
-      "level": 4
+      "level": 4,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "projected_image",
       "name": "Projected Image",
       "list": "magic_user",
-      "level": 6
+      "level": 6,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "protection_from_evil_10_radius_c",
       "name": "Protection from Evil 10’ Radius",
       "list": "cleric",
-      "level": 4
+      "level": 4,
+      "modes": {
+        "ward": "Ward"
+      }
     },
     {
       "id": "protection_from_evil_10_radius_mu",
       "name": "Protection from Evil 10’ Radius",
       "list": "magic_user",
-      "level": 3
+      "level": 3,
+      "modes": {
+        "ward": "Ward"
+      }
     },
     {
       "id": "protection_from_evil_c",
       "name": "Protection from Evil",
       "list": "cleric",
-      "level": 1
+      "level": 1,
+      "modes": {
+        "ward": "Ward"
+      }
     },
     {
       "id": "protection_from_evil_mu",
       "name": "Protection from Evil",
       "list": "magic_user",
-      "level": 1
+      "level": 1,
+      "modes": {
+        "ward": "Ward"
+      }
     },
     {
       "id": "protection_from_normal_missiles",
       "name": "Protection from Normal Missiles",
       "list": "magic_user",
-      "level": 3
+      "level": 3,
+      "modes": {
+        "ward": "Ward"
+      }
     },
     {
       "id": "purify_food_and_water",
       "name": "Purify Food and Water",
       "list": "cleric",
-      "level": 1
+      "level": 1,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "quest",
       "name": "Quest",
       "list": "cleric",
-      "level": 5
+      "level": 5,
+      "modes": {
+        "cast": "Cast"
+      },
+      "reversed_modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "raise_dead",
       "name": "Raise Dead",
       "list": "cleric",
-      "level": 5
+      "level": 5,
+      "modes": {
+        "restore_life": "Restore life",
+        "destroy_undead": "Destroy undead"
+      },
+      "reversed_modes": {
+        "kill": "Kill"
+      }
     },
     {
       "id": "read_languages",
       "name": "Read Languages",
       "list": "magic_user",
-      "level": 1
+      "level": 1,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "read_magic",
       "name": "Read Magic",
       "list": "magic_user",
-      "level": 1
+      "level": 1,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "reincarnation",
       "name": "Reincarnation",
       "list": "magic_user",
-      "level": 6
+      "level": 6,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "remove_curse_c",
       "name": "Remove Curse",
       "list": "cleric",
-      "level": 3
+      "level": 3,
+      "modes": {
+        "cast": "Cast"
+      },
+      "reversed_modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "remove_curse_mu",
       "name": "Remove Curse",
       "list": "magic_user",
-      "level": 4
+      "level": 4,
+      "modes": {
+        "cast": "Cast"
+      },
+      "reversed_modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "remove_fear",
       "name": "Remove Fear",
       "list": "cleric",
-      "level": 1
+      "level": 1,
+      "modes": {
+        "remove": "Remove"
+      },
+      "reversed_modes": {
+        "frighten": "Frighten"
+      }
     },
     {
       "id": "resist_cold",
       "name": "Resist Cold",
       "list": "cleric",
-      "level": 1
+      "level": 1,
+      "modes": {
+        "resist": "Resist"
+      }
     },
     {
       "id": "resist_fire",
       "name": "Resist Fire",
       "list": "cleric",
-      "level": 2
+      "level": 2,
+      "modes": {
+        "resist": "Resist"
+      }
     },
     {
       "id": "shield",
       "name": "Shield",
       "list": "magic_user",
-      "level": 1
+      "level": 1,
+      "modes": {
+        "shield": "Shield"
+      }
     },
     {
       "id": "silence_15_radius",
       "name": "Silence 15’ Radius",
       "list": "cleric",
-      "level": 2
+      "level": 2,
+      "modes": {
+        "creature": "Silence a creature",
+        "area": "Silence an area"
+      }
     },
     {
       "id": "sleep",
       "name": "Sleep",
       "list": "magic_user",
-      "level": 1
+      "level": 1,
+      "modes": {
+        "single_4_plus": "Put a creature with 4+1 Hit Dice to sleep",
+        "hd_budget": "Put creatures of 4 Hit Dice or lower to sleep"
+      }
     },
     {
       "id": "snake_charm",
       "name": "Snake Charm",
       "list": "cleric",
-      "level": 2
+      "level": 2,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "speak_with_animals",
       "name": "Speak with Animals",
       "list": "cleric",
-      "level": 2
+      "level": 2,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "speak_with_plants",
       "name": "Speak with Plants",
       "list": "cleric",
-      "level": 4
+      "level": 4,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "sticks_to_snakes",
       "name": "Sticks to Snakes",
       "list": "cleric",
-      "level": 4
+      "level": 4,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "stone_to_flesh",
       "name": "Stone to Flesh",
       "list": "magic_user",
-      "level": 6
+      "level": 6,
+      "modes": {
+        "restore": "Restore"
+      },
+      "reversed_modes": {
+        "petrify": "Petrify"
+      }
     },
     {
       "id": "striking",
       "name": "Striking",
       "list": "cleric",
-      "level": 3
+      "level": 3,
+      "modes": {
+        "enchant": "Enchant"
+      }
     },
     {
       "id": "telekinesis",
       "name": "Telekinesis",
       "list": "magic_user",
-      "level": 5
+      "level": 5,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "teleport",
       "name": "Teleport",
       "list": "magic_user",
-      "level": 5
+      "level": 5,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "transmute_rock_to_mud",
       "name": "Transmute Rock to Mud",
       "list": "magic_user",
-      "level": 5
+      "level": 5,
+      "modes": {
+        "cast": "Cast"
+      },
+      "reversed_modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "ventriloquism",
       "name": "Ventriloquism",
       "list": "magic_user",
-      "level": 1
+      "level": 1,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "wall_of_fire",
       "name": "Wall of Fire",
       "list": "magic_user",
-      "level": 4
+      "level": 4,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "wall_of_ice",
       "name": "Wall of Ice",
       "list": "magic_user",
-      "level": 4
+      "level": 4,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "wall_of_stone",
       "name": "Wall of Stone",
       "list": "magic_user",
-      "level": 5
+      "level": 5,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "water_breathing",
       "name": "Water Breathing",
       "list": "magic_user",
-      "level": 3
+      "level": 3,
+      "modes": {
+        "grant": "Grant"
+      }
     },
     {
       "id": "web",
       "name": "Web",
       "list": "magic_user",
-      "level": 2
+      "level": 2,
+      "modes": {
+        "entangle": "Entangle"
+      }
     },
     {
       "id": "wizard_eye",
       "name": "Wizard Eye",
       "list": "magic_user",
-      "level": 4
+      "level": 4,
+      "modes": {
+        "cast": "Cast"
+      }
     },
     {
       "id": "wizard_lock",
       "name": "Wizard Lock",
       "list": "magic_user",
-      "level": 2
+      "level": 2,
+      "modes": {
+        "cast": "Cast"
+      }
     }
   ],
   "monsters": [

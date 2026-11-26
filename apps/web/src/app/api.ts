@@ -62,8 +62,8 @@ const FIXED: Record<string, { title: string; detail: string }> = {
   },
   referee_command: { title: 'Only a referee can do that', detail: 'Ask the referee at your table.' },
   not_found: {
-    title: 'That item is no longer here',
-    detail: 'Someone might have removed it. Reload the page to get the latest table state.',
+    title: "That's no longer here",
+    detail: 'Someone might have removed it. Reload the page to see the table as it is now.',
   },
   invite_invalid: {
     title: "That invite code isn't valid",
@@ -75,7 +75,7 @@ const FIXED: Record<string, { title: string; detail: string }> = {
   },
   game_active: {
     title: 'A game is in progress',
-    detail: 'You cannot change lobby setup during play. Ask the referee to return to the lobby first.',
+    detail: "You can't change that during a game. Ask the referee to return to the lobby first.",
   },
   no_game: {
     title: 'No game is in progress',
@@ -120,7 +120,15 @@ const FIXED: Record<string, { title: string; detail: string }> = {
   ability_roll_locked: {
     title: 'Your class is fixed for these ability scores',
     detail:
-      'You rolled hit points for these ability scores, which fixed your class and the reroll option. To play another class, roll new ability scores.',
+      'You rolled hit points for these ability scores, which fixed your class. To play another class, roll new ability scores.',
+  },
+  ability_rerolls_used: {
+    title: "You've used all your rerolls",
+    detail: 'Continue with the ability scores you rolled last, or ask the referee to allow another reroll.',
+  },
+  ability_roll_superseded: {
+    title: 'You rolled newer ability scores',
+    detail: 'Only your newest ability scores count, so continue with those.',
   },
   hit_points_not_rolled: {
     title: 'Roll your hit points first',
@@ -141,7 +149,7 @@ const FIXED: Record<string, { title: string; detail: string }> = {
   },
   content_too_large: {
     title: 'That file or message is too large',
-    detail: 'Adventure files can be up to 8 MB, while other requests can be up to 64 KB.',
+    detail: 'An adventure file can be up to 8 MB, and anything else you send can be up to 64 KB.',
   },
   unsupported_media_type: {
     title: 'Unsupported request format',

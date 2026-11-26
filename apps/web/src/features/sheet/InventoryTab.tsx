@@ -668,7 +668,7 @@ function UseItemDialog({
                   placeholder="Default usage"
                   options={spell.data.modes.map((m) => ({
                     value: m.key,
-                    label: capitalizeFirst(m.key.replaceAll('_', ' ')),
+                    label: m.display_name,
                     description: withoutPointers(m.prose),
                   }))}
                 />

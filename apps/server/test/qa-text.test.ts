@@ -34,6 +34,8 @@ describe('text from the QA pass', () => {
     );
     referee = await createUser(server, 'Rhea');
     alice = await createUser(server, 'Alice');
+    // Alice rolls her characters at a table of their own, before the tables the tests play at.
+    await createTable(referee, [alice], 'Characters');
     for (const [name, seed] of [
       ['Brenna', 60],
       ['Mira', 61],

@@ -5,6 +5,7 @@ import type { TestConnection, TestServer, TestUser } from './helpers';
 import {
   connect,
   createCharacter,
+  createFromRoll,
   createTable,
   createUser,
   findRefereeData,
@@ -35,15 +36,18 @@ async function barrowTable(): Promise<{
   const alice = await createUser(server, 'Alice');
   const tableId = (await createTable(referee, [alice])).id;
   const fighter = await createCharacter(alice, 'Brenna', 'fighter', 11);
-  const mage = await alice.client.createCharacter({
-    name: 'Mira',
-    class_id: 'magic_user',
-    alignment: 'neutral',
-    starting_spell_ids: ['magic_missile'],
-    purchases: [{ item_id: 'dagger' }],
-    equip_item_ids: ['dagger'],
-    seed: 12,
-  });
+  const mage = await createFromRoll(
+    alice,
+    {
+      name: 'Mira',
+      class_id: 'magic_user',
+      alignment: 'neutral',
+      starting_spell_ids: ['magic_missile'],
+      purchases: [{ item_id: 'dagger' }],
+      equip_item_ids: ['dagger'],
+    },
+    12,
+  );
   await alice.client.addToRoster(tableId, fighter.id);
   await alice.client.addToRoster(tableId, mage.id);
   const aliceWs = await connect(server, alice, tableId);

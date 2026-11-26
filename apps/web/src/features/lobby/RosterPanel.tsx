@@ -13,6 +13,7 @@ import {
 import { Button, EmptyState, IconButton, Skeleton, cx } from '@/ui';
 import { StoredCharacterCard } from '@/features/sheet';
 import { CharacterWizard } from '@/features/wizard';
+import { CreationRulesMark } from './CreationRulesMark';
 import styles from './lobby.module.css';
 
 /**
@@ -152,8 +153,11 @@ export function RosterPanel() {
                     owner={
                       owner ? { name: mine ? `${owner.name} (you)` : owner.name, color: owner.color } : null
                     }
+                    status={
+                      referee ? <CreationRulesMark entry={entry} settings={table.settings} /> : undefined
+                    }
                     actions={
-                      <>
+                      <div className={styles.rosterActions}>
                         {referee && (
                           <>
                             <IconButton
@@ -191,7 +195,7 @@ export function RosterPanel() {
                             onClick={() => void remove(entry)}
                           />
                         )}
-                      </>
+                      </div>
                     }
                   />
                 </div>

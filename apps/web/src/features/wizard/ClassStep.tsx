@@ -8,7 +8,7 @@ import {
   withArticle,
 } from '@bxvtt/shared/text';
 import { tokenClass, type ClassDetail } from '@/app';
-import { Accordion, Badge, Banner, Checkbox, Skeleton, TokenPortrait, cx, formatModifier } from '@/ui';
+import { Accordion, Badge, Banner, Skeleton, TokenPortrait, cx, formatModifier } from '@/ui';
 import { requirementGap } from './RollStep';
 import { xpModifierFor, type Scores } from './tables';
 import { RuleLink } from '../sheet/RuleLink';
@@ -169,14 +169,16 @@ export interface ClassStepProps {
   eligible: readonly string[];
   classId: string | null;
   onSelect: (classId: string) => void;
-  hpReroll: boolean;
-  onHpReroll: (value: boolean) => void;
   equipment: readonly EquipmentSummary[] | null;
   /**
-   * Whether the player rolled hit points from these ability scores, which fixes `classId` and `hpReroll`. The
-   * other classes and the reroll option are then unavailable.
+   * Whether the player rolled hit points from these ability scores, which fixes `classId`. The other classes are
+   * then unavailable.
    */
   locked?: boolean;
+  /** Whether the roll's rules took the maximum hit points instead of rolling them. */
+  maxHitPoints?: boolean;
+  /** Whether the wizard offers Start over, because the table lets the player roll new ability scores. */
+  canStartOver?: boolean;
 }
 
 /** Step 2: choose a class, with the facts a new player needs and the reason a class is out of reach. */
@@ -186,10 +188,10 @@ export function ClassStep({
   eligible,
   classId,
   onSelect,
-  hpReroll,
-  onHpReroll,
   equipment,
   locked = false,
+  maxHitPoints = false,
+  canStartOver = true,
 }: ClassStepProps) {
   const selected = useClassDetail(classId ? classId : null);
   if (classes === null) return <Skeleton shape="block" height={360} />;
@@ -204,8 +206,10 @@ export function ClassStep({
           title={`Your class is fixed as ${withArticle(classLabel(classId).toLowerCase())}`}
         >
           <span id={LOCK_NOTE_ID}>
-            You rolled hit points for these ability scores, which fixed your class and the reroll option. To
-            play another class, select Start over and roll new ability scores.
+            {maxHitPoints
+              ? 'You took the maximum hit points for these ability scores, which fixed your class.'
+              : 'You rolled hit points for these ability scores, which fixed your class.'}
+            {canStartOver && ' To play another class, choose Start over and roll new ability scores.'}
           </span>
         </Banner>
       )}
@@ -249,17 +253,6 @@ export function ClassStep({
           )}
         </section>
       )}
-      <Checkbox
-        label="Reroll a first hit die of 1 or 2"
-        description={
-          locked
-            ? 'Your hit points are rolled, so this option stays as it was when you rolled them.'
-            : 'Enable this optional house rule only if your referee uses it at your table.'
-        }
-        checked={hpReroll}
-        onCheckedChange={onHpReroll}
-        disabled={locked}
-      />
     </div>
   );
 }

@@ -43,7 +43,25 @@
 }
 
 .slot {
+  position: relative;
   display: inline-flex;
+}
+
+/* A die the roll didn't count: dimmed, and struck through so the mark doesn't depend on colour. */
+.dropped {
+  opacity: 0.6;
+}
+
+.dropped::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: -8%;
+  width: 116%;
+  height: var(--border-hair);
+  background: var(--color-die-ink);
+  transform: rotate(-45deg);
+  pointer-events: none;
 }
 
 .tumbling {

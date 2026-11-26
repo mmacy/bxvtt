@@ -650,17 +650,34 @@ describe('spells to prepare', () => {
     );
   });
 
-  it('changes to "can prepare" after a night and opens the Spells tab', async () => {
-    const snapshot = withMage();
-    snapshot.feed.entries.push(
-      gameEntry(900, 'rest', [{ event_type: 'rested', code: 'exploration.rest.rested', kind: 'night' }]),
-    );
+  it('changes to "can prepare" once the view says so, and opens the Spells tab', async () => {
+    const snapshot = fixtureSnapshot('town', 'player');
+    // Sam plays Wren.
+    makeCaster(snapshot, 'Wren', 'magic_user', { book: 1, slept: true });
     const { user } = setup(snapshot);
-    expect((await screen.findAllByText('Tamsin can prepare spells now.')).length).toBeGreaterThanOrEqual(1);
+    expect((await screen.findAllByText('Wren can prepare spells now.')).length).toBeGreaterThanOrEqual(1);
     expect(screen.queryByRole('button', { name: 'Rest for a night' })).not.toBeInTheDocument();
-    await user.click(screen.getAllByRole('button', { name: "Open Tamsin's spells" })[0] as HTMLElement);
-    expect(useTableUi.getState().sheetMemberId).toBe('character-0004');
+    await user.click(screen.getAllByRole('button', { name: "Open Wren's spells" })[0] as HTMLElement);
+    expect(useTableUi.getState().sheetMemberId).toBe('character-0002');
     expect(useTableUi.getState().sheetTab).toBe('spells');
+  });
+
+  it("names another player's caster as a reminder, without a button for spells only they can prepare", async () => {
+    const snapshot = fixtureSnapshot('town', 'player');
+    // Ruth plays Tamsin, so Sam reads the reminder and gets no button for her spells.
+    makeCaster(snapshot, 'Tamsin', 'magic_user', { book: 1, slept: true });
+    setup(snapshot);
+    expect((await screen.findAllByText('Tamsin can prepare spells now.')).length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByRole('button', { name: "Open Tamsin's spells" })).not.toBeInTheDocument();
+  });
+
+  it('offers a referee a button for every caster', async () => {
+    const snapshot = fixtureSnapshot('town', 'referee');
+    makeCaster(snapshot, 'Wren', 'magic_user', { book: 1, slept: true });
+    setup(snapshot);
+    expect(
+      (await screen.findAllByRole('button', { name: "Open Wren's spells" })).length,
+    ).toBeGreaterThanOrEqual(1);
   });
 
   it('lists it with the other advice in the set-out dialog', async () => {

@@ -122,9 +122,9 @@ If storage reaches 100%, `bxapi` rejects writes and bxvtt returns HTTP 507 `bxap
 
 5. Start `bxapi`, then start `bxvtt`.
 
-This version of bxvtt needs a `bxapi` built on `osrlib` 2.8.0 or later (`bxapi` `main` from its pull request 58 onward), so run the `git pull` in step 3 before you start the new bxvtt. bxvtt checks the engine version when it starts, every 10 minutes, and on every health request. With an older engine, it logs an error and serves no game until you update `bxapi`. See ["The game service is out of date"](#the-game-service-is-out-of-date).
+This version of bxvtt needs a `bxapi` built on `osrlib` 2.9.0 or later (`bxapi` `main` from its pull request 60 onward), so run the `git pull` in step 3 before you start the new bxvtt. bxvtt checks the engine version when it starts, every 10 minutes, and on every health request. With an older engine, it logs an error, and it serves no game and rolls no ability scores until you update `bxapi`. See ["The game service is out of date"](#the-game-service-is-out-of-date).
 
-On startup, bxvtt migrates older SQLite schemas forward automatically and refuses to open a database created by a newer schema version. Schema version 7 drops the `target_handles` and `battle_refusals` tables, which bxvtt no longer uses, and clears stored battle declarations, so players redeclare in a round that was in progress. Keep your pre-update backup until you verify your next session.
+On startup, bxvtt migrates older SQLite schemas forward automatically and refuses to open a database created by a newer schema version. Schema version 8 stores each table's rules and ties ability rolls to tables. Every existing table gets the **Standard B/X** rules with the hit die reroll turned on, so that reroll is on for every new character until a referee changes it, and an ability roll that a player made before the update no longer counts, so the player rolls again. Schema version 7 dropped the `target_handles` and `battle_refusals` tables, which bxvtt no longer uses, and cleared stored battle declarations, so players redeclared in a round that was in progress. Keep your pre-update backup until you verify your next session.
 
 ## Troubleshoot common issues
 
@@ -134,7 +134,7 @@ bxvtt is running, but it cannot reach `bxapi` at `BXAPI_URL` (`http://127.0.0.1:
 
 ### "The game service is out of date"
 
-bxvtt reaches `bxapi`, but `bxapi` runs an `osrlib` older than 2.8.0. The startup log has an error entry such as `"engine":"2.7.0","msg":"bxapi runs osrlib 2.7.0, and bxvtt needs 2.8.0 or later. ..."`, and bxvtt refuses every game request until you update `bxapi`:
+bxvtt reaches `bxapi`, but `bxapi` runs an `osrlib` older than 2.9.0. The startup log has an error entry such as `"engine":"2.8.0","msg":"bxapi runs osrlib 2.8.0, and bxvtt needs 2.9.0 or later. ..."`, and bxvtt refuses every game request and every ability roll until you update `bxapi`:
 
 - **Signed-in users** see a banner on the home page titled **The game service is out of date**, which states the version `bxapi` runs and the version bxvtt needs.
 - **Visitors without a profile** see the same title with "Games can't run until it's updated. Ask the server host to update the game service."

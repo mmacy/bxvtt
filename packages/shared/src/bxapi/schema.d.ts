@@ -492,8 +492,8 @@ export interface paths {
          *
          *     osrlib rolls the six ability scores and applies your class, adjustment, spell, language, and equipment choices in
          *     order, returning the `character`, `derived` stats, and every individual die in `rolls` (`ability_rolls`,
-         *     `hit_point_roll`, and `gold_roll`). Both `player` and `referee` keys may pass `seed` to reproduce a character, or
-         *     omit it to draw a new seed.
+         *     `hit_point_roll`, and `gold_roll`). The `ruleset` decides how osrlib rolls the scores and the hit points. Both
+         *     `player` and `referee` keys may pass `seed` to reproduce a character, or omit it to draw a new seed.
          *
          *     Because the character isn't stored, it has `id` set to `null` and cannot be passed in `character_ids` to
          *     `POST /v1/sessions`. To store a character for play, call `POST /v1/characters` instead. This operation rolls new
@@ -630,12 +630,22 @@ export interface paths {
         put?: never;
         /**
          * Roll ability scores
-         * @description Roll six 3d6 ability scores with osrlib, store the roll, and return the scores, their dice, and eligible classes.
+         * @description Roll six ability scores with osrlib, store the roll, and return the scores, their dice, and eligible classes.
          *
          *     Display `scores` and `eligible_class_ids` to the player. A client that animates the dice shows `rolls.rolls`, the
-         *     three d6 osrlib rolled for each score. Then pass `id` as `ability_roll_id` to `POST /v1/characters` along with
-         *     the player's class, alignment, and equipment choices. The request body is optional: players send no body, whereas
-         *     a referee may pass `seed`.
+         *     three d6 that count toward each score. Then pass `id` as `ability_roll_id` to `POST /v1/characters` along with
+         *     the player's class, alignment, and equipment choices. The request body is optional: with no body, osrlib rolls
+         *     3d6 for each score from a seed the server draws. A referee may pass `seed`.
+         *
+         *     To roll under a table's house rules, pass the table's `ruleset`. With `ability_score_method` set to
+         *     `4d6_drop_lowest`, osrlib rolls four d6 for each score and drops the lowest, and `rolls.dropped` has the dropped
+         *     die of each ability. The server stores the method with the roll and returns it as `ability_score_method`. Send
+         *     the same `ruleset` when you preview or create the character, because a request whose ruleset has another method
+         *     gets 409 `ability_roll_ruleset_mismatch`.
+         *
+         *     `rolls.sub_par` tells you whether the scores are sub-par under the B/X rules, which let a referee allow the
+         *     player to discard such a character and roll again. osrlib only reports it, and the server accepts a sub-par roll
+         *     like any other.
          *
          *     The server stores the roll's seed privately and derives the character's hit points and starting gold from that
          *     same seed when `POST /v1/characters` consumes the roll. Retrying `POST /v1/characters` after a 422
@@ -663,6 +673,9 @@ export interface paths {
         /**
          * Get an ability roll
          * @description Return a stored ability roll: its six `scores`, the dice in `rolls`, `eligible_class_ids`, and `used`.
+         *
+         *     `ability_score_method` is the method the roll was made with, and the dice in `rolls` are the ones the roll's
+         *     first response showed.
          *
          *     Use this endpoint to resume character creation after a page reload. When `used` is `false`, pass `id` as
          *     `ability_roll_id` to `POST /v1/characters`. When `used` is `true`, the roll has already created a character and
@@ -705,11 +718,16 @@ export interface paths {
          *     - A choice that `POST /v1/characters` refuses gets the same 422 `character_invalid` here, with the same members,
          *       and the roll stays unused.
          *
-         *     For one roll, `hit_point_roll` and `gold_roll` change only when `class_id` or `hp_reroll_at_first_level` changes.
-         *     The `adjustment`, `starting_spell_ids`, `extra_languages`, `name`, `alignment`, `purchases`, and `equip_item_ids`
-         *     change neither roll. So once the player has chosen a class and the reroll option, you can show the hit points and
-         *     gold and let the player make every other choice without the dice changing. A different class or reroll option can
-         *     change the gold as well as the hit points.
+         *     For one roll, `gold_roll` changes only when `class_id` or the ruleset's `hp_reroll_at_first_level` changes, and
+         *     `hit_point_roll` changes only with those two and the ruleset's `max_hp_at_first_level`. The `adjustment`,
+         *     `starting_spell_ids`, `extra_languages`, `name`, `alignment`, `purchases`, and `equip_item_ids` change neither
+         *     roll. So once the player has chosen a class under the table's ruleset, you can show the hit points and gold and
+         *     let the player make every other choice without the dice changing. A different class or reroll option can change
+         *     the gold as well as the hit points.
+         *
+         *     Send the `ruleset` you sent to `POST /v1/ability-rolls` for this roll. A ruleset with another
+         *     `ability_score_method` than the roll's gets 409 `ability_roll_ruleset_mismatch`, and so does a request with no
+         *     `ruleset` for a roll made with `4d6_drop_lowest`.
          *
          *     The response has no `seed`, because the roll's seed stays private, and no `id`, because the server stores no
          *     character. `character.id` is `null`. A `player` key and a `referee` key can both call this operation.
@@ -747,7 +765,10 @@ export interface paths {
          *
          *     When `ability_roll_id` (from `POST /v1/ability-rolls`) is provided, the character uses those scores, draws hit
          *     points and starting gold from that roll's seed, and marks the roll `used` in the same transaction. Without
-         *     `ability_roll_id`, the server rolls ability scores first. osrlib then validates and applies choices in order:
+         *     `ability_roll_id`, the server rolls ability scores first, with the `ability_score_method` of `ruleset`. The
+         *     ruleset's `hp_reroll_at_first_level` and `max_hp_at_first_level` decide the hit point roll either way. With an
+         *     `ability_roll_id`, send the `ruleset` you sent for the roll, because another `ability_score_method` than the
+         *     roll's gets 409 `ability_roll_ruleset_mismatch`. osrlib then validates and applies choices in order:
          *     class requirements, ability `adjustment`, `starting_spell_ids`, hit point roll, `extra_languages`, starting gold
          *     roll, `purchases`, and `equip_item_ids`. Creation stops at the first invalid step with 422 `character_invalid`
          *     and stores nothing.
@@ -1170,9 +1191,12 @@ export interface paths {
          *       `feature_id` from where the party stands. It's empty outside `exploring` mode.
          *     - `spell_names`, `reversed_spell_names`, and `spell_levels`: the name and level of every spell ID the view
          *       shows. Each member's `spell_slots`, `preparable_spells`, and `learnable_spells` give what a `prepare_spells` or
-         *       `learn_spell` dialog offers that member.
+         *       `learn_spell` dialog offers that member. A member's `can_prepare_now` says whether the session accepts a
+         *       `prepare_spells` from them now, `needs_sleep_to_prepare` says whether they have to sleep first, and
+         *       `reverses_at` says whether they choose a reversible spell's form at `"memorize"` or at `"cast"`.
          *     - `item_names` and `item_names_plural`: what to call each item ID the view shows, in a member's `inventory` or
-         *       in the `contents` of a pile in `piles`.
+         *       in the `contents` of a pile in `piles`. `valuable_names` has the own name of each gem or piece of jewellery
+         *       that has one, keyed by its instance ID.
          *     - `encounter`: active encounter state, or `null`. Pass `declarers` to build `resolve_battle_round`, and pass a
          *       group's `id` as `target_group_id` for attacks, `close`, thrown splash items, and `area` or `hd_budget` spells
          *       (such as `fire_ball` and `sleep`). Each group also has `members` with individual `"monster-NNNN"` or
@@ -1206,7 +1230,7 @@ export interface paths {
          *     the built-in ones. This operation reads the session's own catalog, osrlib's `GameSession.effective_spells`, so
          *     it also answers for a spell the adventure adds. Use `level` and `spell_list` to place a spell from a member's
          *     `spell_book` in a `prepare_spells` dialog, and the `key` of each entry in `modes` as the `mode` of a `cast_spell`
-         *     command.
+         *     command. Show a mode's `display_name` as its label.
          *
          *     The operation serves the spells in `spell_names` and no others: the ones in a member's `spell_book`,
          *     `memorized_spells`, `preparable_spells`, or `learnable_spells`, and the ones behind an effect on a member. So it
@@ -1536,8 +1560,19 @@ export interface components {
                 [key: string]: number;
             };
             /**
-             * @description osrlib's `AbilityScoreRolls` behind `scores`: each score's total and its three d6 results in the order
-             *     osrlib rolled them, the same as `rolls.ability_rolls` on `POST /v1/ability-rolls/{roll_id}/preview`.
+             * Ability Score Method
+             * @description How osrlib rolled the scores: `"3d6"` or `"4d6_drop_lowest"`, from the `ability_score_method` of the
+             *     `ruleset` that `POST /v1/ability-rolls` received. A preview or a creation from this roll needs a `ruleset`
+             *     with the same method.
+             * @enum {string}
+             */
+            ability_score_method: "3d6" | "4d6_drop_lowest";
+            /**
+             * @description osrlib's `AbilityScoreRolls` behind `scores`, the same as `rolls.ability_rolls` on
+             *     `POST /v1/ability-rolls/{roll_id}/preview`. `rolls.rolls` has the three d6 that count toward each score, in
+             *     the order osrlib rolled them. `rolls.dropped` has the die that a `4d6_drop_lowest` roll dropped for each
+             *     ability, and it's empty for a `3d6` roll. `rolls.sub_par` is `true` when the scores are sub-par under the B/X
+             *     rule that lets a referee allow a new roll: every score is 8 or less, or two or more scores are 5 or less.
              */
             rolls: components["schemas"]["AbilityScoreRolls"];
             /**
@@ -1571,6 +1606,15 @@ export interface components {
              *     Omit `seed` (or send no body) to let the server draw one.
              */
             seed?: number | null;
+            /**
+             * @description Optional rules for the roll, as osrlib's `Ruleset`. Send the ruleset of the table the
+             *     character is for, the one you pass to `POST /v1/sessions`. The roll reads one field,
+             *     `ability_score_method`: `"3d6"` (the default) rolls three d6 for each score, and
+             *     `"4d6_drop_lowest"` rolls four and drops the lowest. The server stores the method with the roll.
+             *     Send the same ruleset when you preview or create the character from the roll. Omit or set to
+             *     `null` for the rules as written.
+             */
+            ruleset?: components["schemas"]["Ruleset"] | null;
         };
         /**
          * AbilityScore
@@ -1584,20 +1628,24 @@ export interface components {
          *
          *     `roll_ability_scores` returns one, and
          *     `create_character` includes one in its result. Pass
-         *     `scores` to `validate_class_choice`. Frozen.
+         *     `scores` to `validate_class_choice`, and read
+         *     `sub_par` to find out whether a referee may let the player start again. Frozen.
          */
         AbilityScoreRolls: {
             /**
              * Scores
-             * @description The total of each ability's three dice, keyed by `AbilityScore`. All six
-             *     abilities are present, each from 3 to 18.
+             * @description The total of each ability's three counted dice, keyed by `AbilityScore`.
+             *     All six abilities are present, each from 3 to 18.
              */
             scores: {
                 [key: string]: number;
             };
             /**
              * Rolls
-             * @description The three d6 results behind each score, keyed the same way, in the order they were rolled.
+             * @description The three d6 results that count towards each score, keyed the same way, in the order they were thrown.
+             *
+             *     Each score is the sum of its three dice. With the `"4d6_drop_lowest"` method, the die dropped
+             *     from an ability's four is in `dropped` instead, and the other three keep their order here.
              */
             rolls: {
                 [key: string]: [
@@ -1606,6 +1654,40 @@ export interface components {
                     number
                 ];
             };
+            /**
+             * Dropped
+             * @description The die that didn't count towards each score, keyed the same way.
+             *
+             *     A `"4d6_drop_lowest"` roll has an entry for all six abilities: the lowest of the four dice, or the
+             *     first of them thrown when two or more tie for lowest. A `"3d6"` roll drops nothing, so this is
+             *     empty, and so is a roll that osrlib 2.8.0 or earlier recorded. Read an ability with no entry as one
+             *     with no die dropped. To show all four dice of an ability, show its three `rolls` and this die.
+             * @default {}
+             */
+            dropped: {
+                [key: string]: number;
+            };
+            /**
+             * Sub Par
+             * @description Whether `scores` are sub-par, so that a referee may let the player discard the character and start again.
+             *
+             *     The SRD's "Sub-Par Characters" rule says: "If you roll a character with very poor ability scores—for example an
+             *     8 or less in every score or an extremely low rating in more than one ability—the referee may allow you to
+             *     discard the character and start again." It's true when every score is 8 or less, or when two or more scores
+             *     are 5 or less, as `scores_are_sub_par` decides.
+             *
+             *     The value is computed from `scores` each time you read it, so it's right for a roll that osrlib 2.8.0 or
+             *     earlier recorded too. It's in `model_dump()` and in the JSON, so a client that receives the roll as a document
+             *     can read it there. When you parse a document, a `sub_par` key in it is ignored.
+             *
+             *     It answers for the scores as rolled, before the adjustment step, so the `ability_rolls` of a
+             *     `CharacterCreationResult` says whether the character was
+             *     sub-par as rolled, whatever the adjustment changed afterwards. With the `"4d6_drop_lowest"` method, it's
+             *     decided by the three dice that count. osrlib only reports it. Whether the referee allows the discard is your
+             *     game's choice, so `Ruleset` has no flag for it, and
+             *     `create_character` never refuses or rerolls sub-par scores.
+             */
+            readonly sub_par: boolean;
         };
         /**
          * AbilityTables
@@ -4477,8 +4559,8 @@ export interface components {
              * Purchases
              * @description Starting equipment bought in list order from rolled starting gold (3d6 x 10 gp). To show the
              *     player their gold before they shop, call `POST /v1/ability-rolls/{roll_id}/preview` with the
-             *     same roll, class, and `hp_reroll_at_first_level`, and read `rolls.gold_roll.total`. The
-             *     purchases don't change the gold roll.
+             *     same roll, class, and `ruleset`, and read `rolls.gold_roll.total`. The purchases don't change
+             *     the gold roll.
              * @default []
              */
             purchases: components["schemas"]["Purchase"][];
@@ -4490,11 +4572,19 @@ export interface components {
              */
             equip_item_ids: string[];
             /**
-             * Hp Reroll At First Level
-             * @description Whether to reroll a first-level hit die result of 1 or 2. Defaults to `false`.
-             * @default false
+             * @description Optional rules for the creation rolls, as osrlib's `Ruleset`. Send the ruleset of the table
+             *     the character is for, the one you pass to `POST /v1/sessions`. Creation reads three of its
+             *     fields, and the others change nothing here:
+             *
+             *     - `ability_score_method`: `"3d6"` (the default) or `"4d6_drop_lowest"`. With an ability roll,
+             *       it must be the method the roll was made with, or the request gets 409
+             *       `ability_roll_ruleset_mismatch`.
+             *     - `hp_reroll_at_first_level`: reroll a first-level hit die that shows 1 or 2.
+             *     - `max_hp_at_first_level`: count the first-level hit die as its maximum.
+             *
+             *     Omit or set to `null` for the rules as written.
              */
-            hp_reroll_at_first_level: boolean;
+            ruleset?: components["schemas"]["Ruleset"] | null;
         };
         /**
          * CharacterRequest
@@ -4541,8 +4631,8 @@ export interface components {
              * Purchases
              * @description Starting equipment bought in list order from rolled starting gold (3d6 x 10 gp). To show the
              *     player their gold before they shop, call `POST /v1/ability-rolls/{roll_id}/preview` with the
-             *     same roll, class, and `hp_reroll_at_first_level`, and read `rolls.gold_roll.total`. The
-             *     purchases don't change the gold roll.
+             *     same roll, class, and `ruleset`, and read `rolls.gold_roll.total`. The purchases don't change
+             *     the gold roll.
              * @default []
              */
             purchases: components["schemas"]["Purchase"][];
@@ -4554,11 +4644,19 @@ export interface components {
              */
             equip_item_ids: string[];
             /**
-             * Hp Reroll At First Level
-             * @description Whether to reroll a first-level hit die result of 1 or 2. Defaults to `false`.
-             * @default false
+             * @description Optional rules for the creation rolls, as osrlib's `Ruleset`. Send the ruleset of the table
+             *     the character is for, the one you pass to `POST /v1/sessions`. Creation reads three of its
+             *     fields, and the others change nothing here:
+             *
+             *     - `ability_score_method`: `"3d6"` (the default) or `"4d6_drop_lowest"`. With an ability roll,
+             *       it must be the method the roll was made with, or the request gets 409
+             *       `ability_roll_ruleset_mismatch`.
+             *     - `hp_reroll_at_first_level`: reroll a first-level hit die that shows 1 or 2.
+             *     - `max_hp_at_first_level`: count the first-level hit die as its maximum.
+             *
+             *     Omit or set to `null` for the rules as written.
              */
-            hp_reroll_at_first_level: boolean;
+            ruleset?: components["schemas"]["Ruleset"] | null;
             /**
              * Ability Roll Id
              * @description Unused ability roll `id` from `POST /v1/ability-rolls` to take scores, hit points, and
@@ -5603,9 +5701,18 @@ export interface components {
          * @description Dice rolled by osrlib while creating a first-level character.
          */
         CreationRolls: {
-            /** @description Six ability scores as rolled (3d6 each) before any `adjustment`, with the three dice for each. */
+            /**
+             * @description Six ability scores as rolled, before any `adjustment`, with the three dice that count toward
+             *     each in `rolls`. With the `4d6_drop_lowest` method, `dropped` has the fourth die of each
+             *     ability, and it's empty for a `3d6` roll. `sub_par` is `true` when the scores as rolled are
+             *     sub-par under the B/X rule that lets a referee allow a new roll.
+             */
             ability_rolls: components["schemas"]["AbilityScoreRolls"];
-            /** @description First-level hit point roll, including any rerolled dice and the Constitution modifier. */
+            /**
+             * @description First-level hit point roll, including any rerolled dice and the Constitution modifier.
+             *     `maximized` is `true` when the ruleset's `max_hp_at_first_level` set the hit points to the hit
+             *     die's size plus the modifier, and `rolls` still lists every die thrown.
+             */
             hit_point_roll: components["schemas"]["HitPointRoll"];
             /** @description Starting gold roll (3d6 x 10 gp). Its `total` is the gold pieces before `purchases`. */
             gold_roll: components["schemas"]["RollResult"];
@@ -10076,8 +10183,8 @@ export interface components {
              * Purchases
              * @description Starting equipment bought in list order from rolled starting gold (3d6 x 10 gp). To show the
              *     player their gold before they shop, call `POST /v1/ability-rolls/{roll_id}/preview` with the
-             *     same roll, class, and `hp_reroll_at_first_level`, and read `rolls.gold_roll.total`. The
-             *     purchases don't change the gold roll.
+             *     same roll, class, and `ruleset`, and read `rolls.gold_roll.total`. The purchases don't change
+             *     the gold roll.
              * @default []
              */
             purchases: components["schemas"]["Purchase"][];
@@ -10089,11 +10196,19 @@ export interface components {
              */
             equip_item_ids: string[];
             /**
-             * Hp Reroll At First Level
-             * @description Whether to reroll a first-level hit die result of 1 or 2. Defaults to `false`.
-             * @default false
+             * @description Optional rules for the creation rolls, as osrlib's `Ruleset`. Send the ruleset of the table
+             *     the character is for, the one you pass to `POST /v1/sessions`. Creation reads three of its
+             *     fields, and the others change nothing here:
+             *
+             *     - `ability_score_method`: `"3d6"` (the default) or `"4d6_drop_lowest"`. With an ability roll,
+             *       it must be the method the roll was made with, or the request gets 409
+             *       `ability_roll_ruleset_mismatch`.
+             *     - `hp_reroll_at_first_level`: reroll a first-level hit die that shows 1 or 2.
+             *     - `max_hp_at_first_level`: count the first-level hit die as its maximum.
+             *
+             *     Omit or set to `null` for the rules as written.
              */
-            hp_reroll_at_first_level: boolean;
+            ruleset?: components["schemas"]["Ruleset"] | null;
             /**
              * Seed
              * @description Optional seed (0 to 2^53 - 1) for all creation rolls. Any caller may pass `seed` to reproduce
@@ -10778,14 +10893,27 @@ export interface components {
              * @description Every die result, before the CON modifier, in the order thrown.
              *
              *     With the `hp_reroll_at_first_level` option of `Ruleset` on, the 1s and 2s that were
-             *     thrown again are here too, and the last entry is the die that counts. Otherwise there's one entry.
+             *     thrown again are here too, and the last entry is the die that counts. Otherwise there's one entry. The
+             *     `max_hp_at_first_level` option doesn't change what's thrown, so with both options on, the 1s and 2s set aside and
+             *     the last die are all here, and `maximized` says the hit points come from the die's size instead.
              */
             rolls: number[];
             /**
              * Hit Points
-             * @description The hit points the character starts with: the last die plus the CON modifier, and at least 1.
+             * @description The hit points the character starts with, and at least 1.
+             *
+             *     They're the last die plus the CON modifier, or with `maximized` true, the hit die's size plus the CON modifier.
              */
             hit_points: number;
+            /**
+             * Maximized
+             * @description Whether the hit die counted as its maximum, because `max_hp_at_first_level` was on in the ruleset.
+             *
+             *     When it's true, `hit_points` is the die's size plus the CON modifier, whatever the last entry of `rolls` shows, so
+             *     a client can say why. It's false for a roll that osrlib 2.8.0 or earlier recorded.
+             * @default false
+             */
+            maximized: boolean;
         };
         /**
          * HitPointsReportedEvent
@@ -14096,6 +14224,75 @@ export interface components {
              */
             learnable_spells: string[];
             /**
+             * Reverses At
+             * @description When the member chooses the form of a spell that reverses: `"memorize"`, `"cast"`, or `null` for a
+             *     class that casts nothing.
+             *
+             *     It comes from the kind of caster the class is, as
+             *     `caster_profile` reads it from
+             *     `Character.definition`, so it's right for a custom class
+             *     too, whatever its spell list and whether or not the member has a spell book. The OSE SRD says of arcane
+             *     casters that "The normal or reversed form of a spell must be selected when the spell is memorized", and
+             *     of divine casters that they "can cast the reversed version of a spell by speaking the words and
+             *     performing the gestures backwards when it is cast."
+             *
+             *     - `"memorize"`, for an arcane caster: a `PrepareSpells` may
+             *       select the reversed form of a spell that has an entry in
+             *       `PlayerView.reversed_spell_names`, and each
+             *       memorized copy is cast in the form its `reversed` in `memorized_spells` gives.
+             *     - `"cast"`, for a divine caster: the session refuses a reversed selection with
+             *       `magic.memorize.divine_reverses_at_cast`, and every memorized copy of a spell that reverses can be cast
+             *       in either form, with the `reversed` of `CastSpell` or of a `cast`
+             *       `BattleDeclaration`.
+             *
+             *     So offer a reversed copy in a prepare dialog only when it's `"memorize"`, and offer both forms of a
+             *     memorized copy in a cast dialog only when it's `"cast"`.
+             */
+            reverses_at?: ("memorize" | "cast") | null;
+            /**
+             * Can Prepare Now
+             * @description Whether the session accepts a `PrepareSpells` from the member
+             *     now, with selections that fit `preparable_spells` and `spell_slots`. Read it to offer or withhold a
+             *     prepare dialog.
+             *
+             *     It's false exactly when one of the refusals that belong to the moment applies to the member:
+             *
+             *     - `session.command.wrong_mode`: the session isn't in town or exploring.
+             *     - `session.command.member_incapacitated`: the member can't act.
+             *     - `magic.memorize.needs_sleep`: the party hasn't slept since the member last prepared, which
+             *       `needs_sleep_to_prepare` gives by itself.
+             *
+             *     It's also false for a class that casts nothing, which the session refuses with
+             *     `magic.memorize.not_a_caster`. It doesn't depend on the slots, so it's true for a 1st-level cleric who
+             *     has slept, whose `preparable_spells` is empty and who can prepare only an empty selection.
+             *
+             *     The session reads the moment from its own state, never from the event log, so the field is right in a
+             *     session restored from a save. A `Rest`, a `PrepareSpells`, an encounter,
+             *     or a condition can change it, so read the view again after each command.
+             * @default false
+             */
+            can_prepare_now: boolean;
+            /**
+             * Needs Sleep To Prepare
+             * @description Whether the member has to sleep before they can prepare spells again. Read it to tell the table which
+             *     casters need a night's rest.
+             *
+             *     It's true exactly when the party hasn't slept since the member last prepared, the rule by which the
+             *     session refuses a `PrepareSpells` with
+             *     `magic.memorize.needs_sleep`. So it's true for every caster in a new session, before the party's first
+             *     sleep, and for a caster who has prepared, until the party sleeps again. A `night` or `day`
+             *     `Rest` that a wandering encounter doesn't interrupt is sleep. The OSE SRD
+             *     says "A spell caster can memorize new spells once a day, after an uninterrupted night’s sleep."
+             *
+             *     It reads the party's sleeps and the member's last preparation alone. During an encounter or a battle,
+             *     and while the member can't act, the session refuses the command with `session.command.wrong_mode` or
+             *     `session.command.member_incapacitated` before it checks the sleep, and this field still says whether the
+             *     member will need to sleep. It's false for a class that casts nothing, which the session refuses with
+             *     `magic.memorize.not_a_caster` whether or not the party has slept.
+             * @default false
+             */
+            needs_sleep_to_prepare: boolean;
+            /**
              * Thief Skills
              * @description The member's chance at each thief skill at their level, keyed by the skill field names of
              *     `ThiefSkillRow`, like `"open_locks"` and `"move_silently"`.
@@ -14210,7 +14407,7 @@ export interface components {
             api_version: string;
             /**
              * Engine Version
-             * @description Installed osrlib rules engine version string, such as `"2.8.0"`.
+             * @description Installed osrlib rules engine version string, such as `"2.9.0"`.
              */
             engine_version: string;
             /**
@@ -16958,7 +17155,10 @@ export interface components {
          *
          *     You get these from `PileView.contents`. Look `item_id` up
          *     in `PlayerView.item_names` and
-         *     `PlayerView.item_names_plural` to name it.
+         *     `PlayerView.item_names_plural` to name it. A gem or
+         *     piece of jewellery that has a name of its own has it in
+         *     `PlayerView.valuable_names` too. Show that name as
+         *     written, with no article.
          */
         PileItemView: {
             /**
@@ -17321,7 +17521,9 @@ export interface components {
              *     - The instance id of a gem or a piece of jewellery, like `"valuable-0007"`. Its name is its kind,
              *       `"gem"` or `"piece of jewellery"`. The players see everything else about it from the moment
              *       they take it, its own name and its value in gold pieces included, in the inventory's
-             *       `valuables`.
+             *       `valuables`. A piece that has a name of its own, like `"Prior's chain of office"`, has it in
+             *       `valuable_names` under the same id. Show that name as written, with no article, in place of
+             *       the kind.
              *
              *     It names no item whose id the view doesn't show. The player-visible item events, like
              *     `ItemAcquiredEvent`, name items by the same ids. An
@@ -17348,6 +17550,30 @@ export interface components {
              * @default {}
              */
             item_names_plural: {
+                [key: string]: string;
+            };
+            /**
+             * Valuable Names
+             * @description The own name of each gem and piece of jewellery that has one, keyed by its instance id, like
+             *     `{"valuable-0007": "Prior's chain of office"}`. Show it as written, with no article: "Sam takes
+             *     Prior's chain of office." For an id that isn't a key, use the kind in `item_names`, with an
+             *     article: "Sam takes a gem."
+             *
+             *     A piece has a name of its own when its `name` is neither empty nor the plain name that treasure
+             *     generation gives its kind, `"Gem"` or `"Jewellery"`. So a piece an adventure places in a cache
+             *     with a named `ValuableSpec` is a key, and neither a piece
+             *     the session rolls on the treasure tables nor a placed piece whose `name` is empty is a key.
+             *
+             *     The keys are the instance ids of those pieces in the members'
+             *     `inventory` `valuables` and in the
+             *     `contents` of the known piles. Each value is the name that
+             *     the inventory's `valuables` give the piece, and the string at the same place in the pile's
+             *     `items`. A piece in a pile the party doesn't know, or in a
+             *     cache the party hasn't emptied, isn't a key, as it isn't one in `item_names`. Every key here is
+             *     also a key in `item_names`.
+             * @default {}
+             */
+            valuable_names: {
                 [key: string]: string;
             };
             /**
@@ -17414,9 +17640,9 @@ export interface components {
          *       session has ended.
          *     - `session.command.unknown_member` - `character_id` matches no party member.
          *     - `session.command.member_incapacitated` - the member can't act.
+         *     - `magic.memorize.not_a_caster` - the member's class casts no spells.
          *     - `magic.memorize.needs_sleep` - the party hasn't slept since this caster's last
          *       preparation.
-         *     - `magic.memorize.not_a_caster` - the member's class casts no spells.
          *     - `magic.memorize.unknown_spell` - a selection matches no spell in the session's
          *       catalog.
          *     - `magic.memorize.wrong_list` - a selection isn't on the caster's spell list.
@@ -19621,7 +19847,10 @@ export interface components {
             name: string;
             /**
              * Prose
-             * @description The SRD text for the reverse.
+             * @description The SRD text for the reverse, all of it.
+             *
+             *     Each of the reverse's `modes` has the part of this text that covers that mode as its own
+             *     `prose`.
              * @default
              */
             prose: string;
@@ -19810,10 +20039,11 @@ export interface components {
          *     unknown field name raises a pydantic `ValidationError`, so a misspelled flag fails
          *     instead of doing nothing.
          *
-         *     Each flag is one of two kinds. An optional rule is an alternative the SRD prints
+         *     Each flag is one of three kinds. An optional rule is an alternative the SRD prints
          *     beside its standard procedure, and osrlib's default is the book's. An adaptation is a
          *     default osrlib supplies where the tabletop game leaves the decision to a human
-         *     referee. [The adaptations register](https://mmacy.github.io/osrlib-python/adaptations/)
+         *     referee. A house rule is a change the SRD doesn't print, and its default is the SRD's
+         *     procedure. [The adaptations register](https://mmacy.github.io/osrlib-python/adaptations/)
          *     gives the reasoning behind each one.
          */
         Ruleset: {
@@ -19827,6 +20057,38 @@ export interface components {
              * @default false
              */
             hp_reroll_at_first_level: boolean;
+            /**
+             * Max Hp At First Level
+             * @description Count a first-level character's hit die as its maximum. A house rule, off by default.
+             *
+             *     The SRD doesn't print this rule. Its character creation has you roll the class's hit die. Turn
+             *     the flag on and a first-level character's hit points are the hit die's size plus the CON
+             *     modifier, and at least 1, so a fighter with CON 7 starts with 8 - 1 = 7.
+             *     `roll_hit_points` still throws the dice it throws with
+             *     the flag off, so the creation stream ends in the same place and the starting gold roll after it is
+             *     the same. With `hp_reroll_at_first_level` also on, a die showing 1 or 2 is still thrown again and
+             *     `HitPointRoll.rolls` lists every die, but the
+             *     reroll can't change the hit points. The flag affects only the hit points rolled at character
+             *     creation. `level_up` rolls each later level's hit die as usual.
+             * @default false
+             */
+            max_hp_at_first_level: boolean;
+            /**
+             * Ability Score Method
+             * @description How a new character's ability scores are rolled. `"3d6"` by default, the SRD's method.
+             *
+             *     `"4d6_drop_lowest"` is a house rule, not an SRD rule. With it, each ability throws four d6 and
+             *     the lowest die doesn't count, so the score is the sum of the other three, from 3 to 18.
+             *     `create_character` passes the method to
+             *     `roll_ability_scores`, and the result lists the
+             *     dropped die of each ability in
+             *     `AbilityScoreRolls.dropped`. The method
+             *     affects only the characters you create. The NPC adventurers that encounters generate always
+             *     roll 3d6.
+             * @default 3d6
+             * @enum {string}
+             */
+            ability_score_method: "3d6" | "4d6_drop_lowest";
             /**
              * @description Which system tracks carried weight and sets movement rate. Basic by default.
              *
@@ -21212,9 +21474,32 @@ export interface components {
              *
              *     Pass it as `mode` to `cast_spell` and
              *     `validate_cast`. A spell with a single usage still has a
-             *     mode, like *fire ball*'s `"damage"`.
+             *     mode, like *fire ball*'s `"damage"`. To show a mode to a player, use `display_name`.
              */
             key: string;
+            /**
+             * Display Name
+             * @description A short label for the mode, like `"Blind a creature"`. Show it where a player chooses one of a form's modes.
+             *
+             *     The label says what the caster does, as an instruction in sentence case with no closing punctuation:
+             *     `"Conjure light"`, `"Cancel darkness"`, and `"Hold a group"`. In the built-in catalog, no two modes of one
+             *     form have the same label, in the normal form or in the reverse, so a cast dialog can list a form's
+             *     modes by label alone. A built-in label comes from the lead-in that the OSE SRD prints before the
+             *     usage, like "Blinding a creature:". A mode whose page prints no lead-in, or a lead-in that names a
+             *     situation rather than an action, like *bless*'s "Battle:", has a label written for it from the
+             *     page's words, like `"Bless allies in battle"` and the reverse of *light*'s `"Conjure darkness"`.
+             *
+             *     When you write a mode and leave the label out, or give one that is empty or only spaces, the
+             *     mode gets a label made from its key: each run of underscores becomes one space, the spaces at
+             *     either end are dropped, and the first letter becomes a capital, so `"darken"` is labelled
+             *     `"Darken"` and `"kill_green_slime"` is labelled `"Kill green slime"`. A key made only of
+             *     underscores is its own label, so a label is never empty. A spell you wrote for an earlier osrlib
+             *     loads this way, with a label on every mode. A spell with a single mode has nothing to choose
+             *     between, so the built-in catalog gives that mode the label from its key too, like *fire ball*'s
+             *     `"Damage"`. For a form with one mode, show the spell's name and not the mode's label.
+             * @default
+             */
+            display_name: string;
             /**
              * @description Who the mode can affect and how many, as a `TargetingSpec`.
              *
@@ -21243,6 +21528,10 @@ export interface components {
              * @description The SRD text for this usage.
              *
              *     Show it to the player. For a manual mode, it's all the information osrlib has about the result.
+             *     In the built-in catalog, no two modes of one form have the same prose. Where the page describes
+             *     several usages in one passage, like the reverse of *light*, each mode's prose is the part of
+             *     the passage that covers that usage, and the whole passage is the form's own prose, such as
+             *     `ReversedForm.prose`.
              * @default
              */
             prose: string;
@@ -28126,6 +28415,7 @@ export interface operations {
             };
             /**
              * @description - `ability_roll_used`: A character was already created from this roll, so `POST /v1/characters` would refuse it too. Create a new roll with `POST /v1/ability-rolls`.
+             *     - `ability_roll_ruleset_mismatch`: The `ability_score_method` of the request's `ruleset` isn't the method the roll was made with, which the problem's `ability_score_method` names. A request with no `ruleset` asks for `3d6`. Send the ruleset you sent to `POST /v1/ability-rolls` for this roll, or create a new roll. The roll stays unused.
              *     - `idempotency_key_in_progress`: The first request with this `Idempotency-Key` is still running. Wait the 1 second in the `Retry-After` header and retry.
              *     - `idempotency_key_interrupted`: The server failed or stopped while handling the first request with this `Idempotency-Key` and has no record of whether it took effect. Inspect the target resource first. If the change didn't take effect, send the request again with a new key.
              */
@@ -28420,6 +28710,7 @@ export interface operations {
             };
             /**
              * @description - `ability_roll_used`: A character was already created from `ability_roll_id`. Deleting that character doesn't reset the roll. Create a new roll with `POST /v1/ability-rolls`.
+             *     - `ability_roll_ruleset_mismatch`: The `ability_score_method` of the request's `ruleset` isn't the method the roll was made with, which the problem's `ability_score_method` names. A request with no `ruleset` asks for `3d6`. Send the ruleset you sent to `POST /v1/ability-rolls` for this roll, or create a new roll. The roll stays unused.
              *     - `idempotency_key_in_progress`: The first request with this `Idempotency-Key` is still running. Wait the 1 second in the `Retry-After` header and retry.
              *     - `idempotency_key_interrupted`: The server failed or stopped while handling the first request with this `Idempotency-Key` and has no record of whether it took effect. Inspect the target resource first. If the change didn't take effect, send the request again with a new key.
              */

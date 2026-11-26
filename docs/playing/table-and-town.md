@@ -62,7 +62,7 @@ Select **Treasure buyers** (`M`) to appraise and sell gems and jewellery in the 
 
 ### Rest and prepare spells
 
-When a caster in the party has nothing memorized and could prepare spells, the town square shows a **Spells to prepare** banner. It names who needs a night's rest before preparing spells and who can prepare spells now, with a **Rest for a night** button and an **Open** button for each caster who can prepare (such as **Open Mazpar's spells**). While the banner shows, the **Spells to prepare** line of the readiness checklist shows only its status.
+When a caster in the party has nothing memorized and could prepare spells, the town square shows a **Spells to prepare** banner. It names who needs a night's rest before preparing spells and who can prepare spells now, as the game reports for each caster, with a **Rest for a night** button and an **Open** button for each caster who can prepare (such as **Open Mazpar's spells**). While the banner shows, the **Spells to prepare** line of the readiness checklist shows only its status.
 
 Select **Rest and prepare** (or press `Shift+R` for the quick rest menu) and choose a rest:
 
@@ -88,20 +88,20 @@ Select any character in the **Party** tab to open their character sheet in a sid
 
 ### Prepare, learn, and cast spells
 
-The **Spells** tab lists **Memorized spells** first. A **Slots** row shows each spell level's slots and how many are filled, such as **1st level 1 of 2**. Each memorized spell has a card with its level, range, and duration, a **×2** badge when more than one copy is memorized, an **About** button for its full description, and a **Cast** button. A character with slots but nothing memorized shows **No spells memorized**, and a caster without slots yet, such as a 1st-level cleric, shows **No spell slots yet**.
+The **Spells** tab lists **Memorized spells** first. A **Slots** row shows each spell level's slots and how many are filled, such as **1st level 1 of 2**. Each memorized spell has a card with its level, range, and duration, a **×2** badge when more than one copy is memorized, an **About** button for its full description, and a **Cast** button. A character with slots but nothing memorized shows **No spells memorized**, and a caster without slots yet, such as a 1st-level cleric, shows **No spell slots yet**. When a caster has nothing memorized, the reason that **Cast** gives says to rest for a night first only if the caster needs sleep before preparing, and otherwise says to prepare spells from this tab.
 
 To prepare spells:
 
 ![The prepare dialog for Mazpar, a level 1 magic-user, with Sleep chosen under 1st-level spells and 1 of 1 slots chosen, beside the Spells tab showing one empty 1st-level slot](../images/spells-prepare.webp)
 
 1. Select **Prepare spells**. The dialog groups the spells the character can prepare by level, such as **1st-level spells**, and shows how many of that level's slots you have chosen, such as **1 of 2**.
-2. Use the count beside each spell to choose how many copies to memorize. A spell with a reversed form has a second row with a **Reversed** badge, for a caster who chooses the form when memorizing. When a level's slots are full, its counts can't go higher and say "No 1st-level slots left."
+2. Use the count beside each spell to choose how many copies to memorize. A spell with a reversed form has a second row with a **Reversed** badge, for a caster whose class chooses the form when memorizing, such as a magic-user. When a level's slots are full, its counts can't go higher and say "No 1st-level slots left."
 3. Select **Prepare spells**. Your choices replace the spells the character has memorized now.
 
 If the game refuses, for example because the party hasn't rested since the character last prepared, the dialog shows why.
 
 A caster who keeps a spell book also has a **Spell book** section. Select **Learn a spell**, choose a spell in **Spell**, read its details, and select **Learn** followed by its name to write it into the book. When the character can't learn a spell now, the button is unavailable and says so.
 
-To cast a memorized spell outside battle, select **Cast** on its card. When the spell can be cast more than one way, choose how in **How to cast**. Each way reads by what it targets, such as **One creature** or **By hit dice**, or, when two ways target alike, by the label that starts its description, such as **Conjuring light**. Then choose the target in **Target**, such as a party member or **Where the party stands**. A caster who chooses a spell's form when casting sees a **Cast** followed by the reversed spell's name and **instead** checkbox, and the dialog's title follows that choice. Select **Cast**.
+To cast a memorized spell outside battle, select **Cast** on its card. When the spell can be cast more than one way, choose how in **How to cast**. Each way has a label from the game's spell catalog, such as **Blind a creature** or **Put creatures of 4 Hit Dice or lower to sleep**. A spell form with only one way shows the spell's name. Then choose the target in **Target**, such as a party member or **Where the party stands**. A caster whose class chooses a spell's form when casting, such as a cleric, sees a **Cast** followed by the reversed spell's name and **instead** checkbox, and the dialog's title follows that choice. Select **Cast**.
 
 An adventure can add spells of its own. They appear on the tab, in the dialogs, and in the **About** details like any other spell, but their names don't link to the rules compendium, which lists only the standard spells.

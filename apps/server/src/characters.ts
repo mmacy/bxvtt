@@ -1,26 +1,30 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import type { AbilityRoll, CharacterSummary, StoredCharacter, User } from '@bxvtt/shared/protocol';
+import type { CharacterSummary, StoredCharacter, User } from '@bxvtt/shared/protocol';
 import {
   AbilityRollRequest,
   CharacterCheckRequest,
+  CharacterPreviewRequest,
   CharacterRequest,
   StartingRollRequest,
 } from '@bxvtt/shared/protocol';
+import { AbilityRollStore } from './ability-rolls';
 import { rateLimited } from './auth';
 import { callBxapi } from './bxapi';
 import { CharacterChecker } from './character-check';
-import { StartingRollKeeper } from './starting-rolls';
+import { creationRulesOf } from './rulesets';
+import { bxapiChoices, StartingRollKeeper } from './starting-rolls';
 import type { Context } from './context';
 import type { Row } from './db';
 import { num, str } from './db';
 import { ApiError, notFound, parseBody } from './errors';
-import { now } from './ids';
 
 /** The path parameters of a character route. */
 const CharacterParams = z.object({ characterId: z.string() });
 /** The path parameters of an ability roll route. */
 const RollParams = z.object({ rollId: z.string() });
+/** The path parameters of a table's ability roll route. */
+const TableRollParams = z.object({ tableId: z.string() });
 
 /**
  * Records which user owns each stored bxapi character and ability roll. bxapi has no users, so the server
@@ -103,41 +107,43 @@ function checkSeed(ctx: Context, seed: number | undefined): void {
 export function registerCharacterRoutes(app: FastifyInstance, ctx: Context): void {
   const { db, bxapi } = ctx;
 
-  app.post('/api/ability-rolls', async (request, reply) => {
+  const abilityRolls = new AbilityRollStore(ctx);
+
+  // Any member may roll, in the lobby or during a game. The roll belongs to the table and keeps its rules.
+  app.post('/api/tables/:tableId/ability-rolls', async (request, reply) => {
     const user = ctx.auth.user(request);
+    const { tableId } = TableRollParams.parse(request.params);
+    ctx.tables.requireMember(tableId, user);
     const body = parseBody(AbilityRollRequest, request);
     checkSeed(ctx, body.seed);
-    const roll = await callBxapi(() =>
-      bxapi.post<AbilityRoll>('/v1/ability-rolls', body, { requestId: request.id }),
-    );
-    db.run(
-      'INSERT INTO ability_rolls (id, owner_user_id, created_at) VALUES (?, ?, ?)',
-      roll.id,
-      user.id,
-      now(),
-    );
-    return reply.status(201).send(roll);
+    await ctx.game.requireEngine();
+    return reply.status(201).send(await abilityRolls.roll(tableId, user, body, request.id));
+  });
+
+  app.get('/api/tables/:tableId/ability-rolls/current', async (request) => {
+    const user = ctx.auth.user(request);
+    const { tableId } = TableRollParams.parse(request.params);
+    ctx.tables.requireMember(tableId, user);
+    return abilityRolls.readNewest(tableId, user.id);
   });
 
   app.get('/api/ability-rolls/:rollId', async (request) => {
     const user = ctx.auth.user(request);
     const { rollId } = RollParams.parse(request.params);
-    if (
-      db.get('SELECT 1 FROM ability_rolls WHERE id = ? AND owner_user_id = ?', rollId, user.id) === undefined
-    ) {
-      notFound('ability roll', rollId);
-    }
-    return callBxapi(() => bxapi.get<AbilityRoll>(`/v1/ability-rolls/${encodeURIComponent(rollId)}`));
+    return abilityRolls.read(rollId, user.id);
   });
 
   app.post('/api/characters/preview', async (request) => {
     ctx.auth.user(request);
-    const body = parseBody(CharacterRequest, request);
-    const { ability_roll_id: _roll, ...choices } = body;
+    const body = parseBody(CharacterPreviewRequest, request);
+    // bxapi takes the first-level re-roll only inside `ruleset`, and it refuses the old top-level flag.
+    const { ability_roll_id: _roll, hp_reroll_at_first_level: _reroll, ...choices } = body;
+    // An older engine refuses the ruleset fields that a preview can carry.
+    await ctx.game.requireEngine();
     return callBxapi(() => bxapi.post('/v1/generate/character', choices, { requestId: request.id }));
   });
 
-  const startingRolls = new StartingRollKeeper(ctx);
+  const startingRolls = new StartingRollKeeper(ctx, abilityRolls);
   const checker = new CharacterChecker(startingRolls);
 
   /** Takes one bxapi preview from the user's limit for character checks and starting rolls. */
@@ -173,24 +179,15 @@ export function registerCharacterRoutes(app: FastifyInstance, ctx: Context): voi
   app.post('/api/characters/check', async (request) => {
     const user = ctx.auth.user(request);
     const body = parseBody(CharacterCheckRequest, request);
-    checkSeed(ctx, body.seed);
-    if (
-      db.get(
-        'SELECT 1 FROM ability_rolls WHERE id = ? AND owner_user_id = ?',
-        body.ability_roll_id,
-        user.id,
-      ) === undefined
-    ) {
-      notFound('ability roll', body.ability_roll_id);
-    }
+    abilityRolls.record(body.ability_roll_id, user.id);
     takePreview(user.id, 'You are checking character choices too quickly. Wait a moment and try again.');
     return checker.check(user, body, request.id);
   });
 
+  // A character comes from the user's newest open roll at a table, under the rules recorded on the roll.
   app.post('/api/characters', async (request, reply) => {
     const user = ctx.auth.user(request);
     const body = parseBody(CharacterRequest, request);
-    checkSeed(ctx, body.seed);
     const owned = num(
       db.get('SELECT count(*) AS n FROM characters WHERE owner_user_id = ?', user.id) ?? { n: 0 },
       'n',
@@ -201,22 +198,33 @@ export function registerCharacterRoutes(app: FastifyInstance, ctx: Context): voi
         `You already have ${owned} characters, which is the limit per player. Delete a character you no longer play.`,
       );
     }
-    // A creation from an ability roll keeps the class and reroll option its hit points were rolled with. A refused
-    // purchase leaves the roll unused, so buying before the gold is rolled would reveal the gold.
-    if (body.ability_roll_id !== undefined) startingRolls.guard(body.ability_roll_id, user.id, body);
+    // The creation keeps the class its hit points were rolled for. A refused purchase leaves the roll unused, so
+    // buying before the gold is rolled would reveal the gold.
+    const record = startingRolls.guard(body.ability_roll_id, user.id, body);
     const character = await callBxapi(() =>
-      bxapi.post<StoredCharacter>('/v1/characters', body, { requestId: request.id }),
+      abilityRolls.closingIfUsed(record, () =>
+        bxapi.post<StoredCharacter>(
+          '/v1/characters',
+          { ...bxapiChoices(body, record), ability_roll_id: record.id },
+          { requestId: request.id },
+        ),
+      ),
     );
-    db.run(
-      'INSERT INTO characters (id, owner_user_id, name, class_id, level, max_hp, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      character.id,
-      user.id,
-      character.name,
-      character.class_id,
-      character.level,
-      character.character.max_hp,
-      character.created_at,
-    );
+    db.transaction(() => {
+      db.run(
+        `INSERT INTO characters (id, owner_user_id, name, class_id, level, max_hp, created_at, creation_rules_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        character.id,
+        user.id,
+        character.name,
+        character.class_id,
+        character.level,
+        character.character.max_hp,
+        character.created_at,
+        JSON.stringify(creationRulesOf(record.rules)),
+      );
+      abilityRolls.markUsed(record, character.id);
+    });
     request.log.info({ character: character.id, user: user.id }, 'character created');
     return reply.status(201).send(character);
   });

@@ -24,6 +24,11 @@
   color: var(--color-text-muted);
 }
 
+.status {
+  display: flex;
+  margin-top: var(--space-1);
+}
+
 .owner {
   color: var(--color-text-subtle);
 }

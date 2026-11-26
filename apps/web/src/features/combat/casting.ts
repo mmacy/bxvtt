@@ -39,11 +39,15 @@ export function castEverySpell(feed: readonly FeedEntry[], memberId: string): bo
   return prepared && castSince;
 }
 
-/** The reason text for a caster with nothing to cast. */
+/**
+ * The reason text for a caster with nothing to cast. Only the battle composer shows it, and during a battle the
+ * player can neither rest nor prepare spells, so it states the cause alone.
+ *
+ * @param name - The caster's name.
+ * @param spent - Whether the caster has cast every spell they prepared, from [`castEverySpell`][castEverySpell].
+ */
 export function noSpellsReason(name: string, spent: boolean): string {
-  return spent
-    ? `${name} has cast every memorized spell. Rest for a night to prepare spells again.`
-    : `${name} has no spells memorized. Rest for a night, then prepare spells from the Spells tab on ${name}'s sheet.`;
+  return spent ? `${name} has cast every memorized spell.` : `${name} has no spells memorized.`;
 }
 
 /** Whether a member casts, and why they have nothing to cast now. */
@@ -52,7 +56,8 @@ export function useCasting(member: MemberView): CastingState {
   return useMemo(() => {
     const caster = member.spell_slots.some((n) => n > 0) || member.spell_book.length > 0;
     if (!caster || memorizedSpells(member).length > 0) return { caster, reason: null };
-    return { caster, reason: noSpellsReason(member.name, castEverySpell(feed, member.id)) };
+    const spent = castEverySpell(feed, member.id);
+    return { caster, reason: noSpellsReason(member.name, spent) };
   }, [member, feed]);
 }
 

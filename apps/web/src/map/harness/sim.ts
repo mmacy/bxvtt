@@ -237,6 +237,7 @@ export function playerViewFrom(
     reversed_spell_names: {},
     item_names: {},
     item_names_plural: {},
+    valuable_names: {},
     features_here: [],
     explored: [
       {

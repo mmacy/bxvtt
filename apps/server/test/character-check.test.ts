@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { isProblem } from '@bxvtt/shared/client';
 import type { AbilityRoll, CharacterCheckRequest } from '@bxvtt/shared/protocol';
 import type { TestServer, TestUser } from './helpers';
-import { createUser, startServer } from './helpers';
+import { createTable, createUser, startServer } from './helpers';
 
 /** Counts the server's calls to bxapi, by path. */
 function countCalls(server: TestServer): { count: (pattern: RegExp) => number } {
@@ -16,20 +16,35 @@ function countCalls(server: TestServer): { count: (pattern: RegExp) => number } 
   return { count: (pattern) => paths.filter((path) => pattern.test(path)).length };
 }
 
+/** Records the body of each POST the server sends bxapi from now on. */
+function countBodies(server: TestServer): { path: string; body: unknown }[] {
+  const bxapi = server.server.ctx.bxapi;
+  const original = bxapi.post.bind(bxapi);
+  const sent: { path: string; body: unknown }[] = [];
+  bxapi.post = (async (path: string, body: unknown, options?: Parameters<typeof original>[2]) => {
+    sent.push({ path, body });
+    return original(path, body, options);
+  }) as typeof bxapi.post;
+  return sent;
+}
+
 describe('the character check', () => {
   let server: TestServer;
   let alice: TestUser;
   let bob: TestUser;
   let roll: AbilityRoll;
+  let tableId: string;
   let calls: { count: (pattern: RegExp) => number };
 
   beforeAll(async () => {
     server = await startServer();
     alice = await createUser(server, 'Alice');
     bob = await createUser(server, 'Bob');
+    tableId = (await createTable(alice, [bob])).id;
+    await alice.client.updateTable(tableId, { settings: { ability_score_rerolls: null } });
     calls = countCalls(server);
     // Seed 5 qualifies for a fighter and gives 110 gp.
-    roll = await alice.client.rollAbilities({ seed: 5 });
+    roll = await alice.client.rollAbilities(tableId, { seed: 5 });
     expect(roll.eligible_class_ids).toContain('fighter');
   });
 
@@ -103,13 +118,20 @@ describe('the character check', () => {
     await expect(alice.client.checkCharacter(body({ class_id: other }))).rejects.toSatisfy(
       (error) => isProblem(error, 'ability_roll_locked') && error.problem.class_id === 'fighter',
     );
-    await expect(alice.client.checkCharacter(body({ hp_reroll_at_first_level: true }))).rejects.toSatisfy(
-      (error) => isProblem(error, 'ability_roll_locked'),
+  });
+
+  it('checks with the ruleset recorded on the roll, whatever rule the body names', async () => {
+    const recorder = countBodies(server);
+    await alice.client.checkCharacter(
+      body({ hp_reroll_at_first_level: false, ruleset: { encumbrance: 'none' } }),
     );
+    const sent = recorder.find((call) => call.path.endsWith('/preview'));
+    expect(sent?.body).toMatchObject({ ruleset: { hp_reroll_at_first_level: true, encumbrance: 'basic' } });
+    expect(sent?.body).not.toHaveProperty('hp_reroll_at_first_level');
   });
 
   it('checks any eligible class before the hit points are rolled', async () => {
-    const fresh = await alice.client.rollAbilities({ seed: 9 });
+    const fresh = await alice.client.rollAbilities(tableId, { seed: 9 });
     const ineligible = ['magic_user', 'cleric', 'fighter', 'thief', 'dwarf', 'elf', 'halfling'].find(
       (id) => !fresh.eligible_class_ids.includes(id),
     );
@@ -122,6 +144,10 @@ describe('the character check', () => {
       expect(wrongClass.valid).toBe(false);
       expect(wrongClass.problem?.rejections?.[0]?.code).toMatch(/^creation\.class\./);
     }
+    // The new roll supersedes the first one.
+    await expect(alice.client.checkCharacter(body())).rejects.toSatisfy(
+      (error) => isProblem(error, 'ability_roll_superseded') && error.problem.roll_id === fresh.id,
+    );
     for (const classId of fresh.eligible_class_ids.slice(0, 2)) {
       const check = await alice.client.checkCharacter({
         ...body(),
@@ -137,7 +163,7 @@ describe('the character check', () => {
     await expect(bob.client.checkCharacter(body())).rejects.toSatisfy((error) =>
       isProblem(error, 'not_found'),
     );
-    const used = await alice.client.rollAbilities({ seed: 99 });
+    const used = await alice.client.rollAbilities(tableId, { seed: 99 });
     const usedClass = used.eligible_class_ids[0] ?? 'fighter';
     await alice.client.createCharacter({
       name: 'Done',
@@ -175,7 +201,8 @@ describe('the character check rate limit', () => {
 
   it('limits how fast one user checks characters and rolls hit points', async () => {
     const alice = await createUser(server, 'Alice');
-    const roll = await alice.client.rollAbilities({ seed: 5 });
+    const table = await alice.client.createTable({ name: 'Limits' });
+    const roll = await alice.client.rollAbilities(table.id, { seed: 5 });
     const request: CharacterCheckRequest = {
       name: 'X',
       class_id: roll.eligible_class_ids[0] ?? 'fighter',

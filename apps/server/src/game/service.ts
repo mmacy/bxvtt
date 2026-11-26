@@ -370,11 +370,13 @@ export class GameService {
       if (roster.length === 0)
         throw new ApiError('roster_empty', 'Add at least one character to the party roster before starting.');
       let adventure = await this.ctx.adventures.resolve(tableId, request.adventure_id);
+      // The game plays by the table's stored ruleset, which bxapi fixes for the session.
+      const { ruleset } = this.ctx.tables.settings(tableId);
       const body = (bxapiId: string) => ({
         adventure_id: bxapiId,
         character_ids: roster.map((entry) => entry.character_id),
         ...(request.name === undefined ? {} : { name: request.name }),
-        ...(request.ruleset === undefined ? {} : { ruleset: request.ruleset }),
+        ruleset,
         ...(request.seed === undefined ? {} : { seed: request.seed }),
       });
       let session: SessionInfo;

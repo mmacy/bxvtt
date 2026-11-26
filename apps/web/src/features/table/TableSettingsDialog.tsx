@@ -1,8 +1,9 @@
 import { useIsReferee, useTableUi } from '@/app';
-import { Dialog } from '@/ui';
-import { TableSettingsForm } from '@/features/lobby';
+import { Dialog, Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui';
+import { TableRulesForm, TableSettingsForm } from '@/features/lobby';
+import styles from './table.module.css';
 
-/** The table settings during play: the lobby's settings form in a dialog. */
+/** The table settings during play: the lobby's two settings forms, the table and the rules, on two tabs. */
 export function TableSettingsDialog() {
   const open = useTableUi((s) => s.settingsOpen);
   const setOpen = useTableUi((s) => s.setSettingsOpen);
@@ -14,12 +15,26 @@ export function TableSettingsDialog() {
       title="Table settings"
       description={
         referee
-          ? 'Changes apply immediately for everyone at the table.'
-          : 'Only the referee can change these settings.'
+          ? 'Everyone at the table sees each change at once.'
+          : 'Only a referee can change these settings.'
       }
-      size="md"
+      size="lg"
+      className={styles.settingsDialog}
     >
-      {open && <TableSettingsForm showName />}
+      {open && (
+        <Tabs defaultValue="table">
+          <TabsList aria-label="Table settings" className={styles.settingsTabs}>
+            <TabsTrigger value="table">Table</TabsTrigger>
+            <TabsTrigger value="rules">Rules</TabsTrigger>
+          </TabsList>
+          <TabsContent value="table" className={styles.settingsTab}>
+            <TableSettingsForm showName />
+          </TabsContent>
+          <TabsContent value="rules" className={styles.settingsTab}>
+            <TableRulesForm />
+          </TabsContent>
+        </Tabs>
+      )}
     </Dialog>
   );
 }

@@ -14,11 +14,12 @@ import styles from './lobby.module.css';
 const NO_CALLER = 'none';
 
 /**
- * The table's settings: who controls the party, the caller, automatic round resolution, and autosave. A
- * referee changes them, and each change applies at once. A player sees them read-only. The lobby and the play
- * screen's settings dialog both render it.
+ * The table part of the table's settings: who controls the party, the caller, automatic round resolution, and
+ * autosave. A referee changes them, and each change applies at once. A player sees them read-only. The lobby and
+ * the play screen's settings dialog both render it. The rules are in `TableRulesForm`.
  *
- * @param props.showName - Also shows the table name field, for the settings dialog.
+ * @param props.showName - Also shows the table name field, for the settings dialog. The dialog's description
+ *   says who can change the settings, so the form leaves out its note for a player.
  */
 export function TableSettingsForm({ showName = false }: { showName?: boolean }) {
   const table = useTableDetail();
@@ -34,7 +35,7 @@ export function TableSettingsForm({ showName = false }: { showName?: boolean }) 
   const update = async (body: UpdateTableRequest, success?: string) => {
     const result = await run(() => getApi().updateTable(table.id, body), {
       success,
-      errorTitle: "Couldn't update table settings",
+      errorTitle: "Couldn't change the table settings",
     });
     if (result.ok) store.getState().receiveTable(result.value);
   };
@@ -49,7 +50,7 @@ export function TableSettingsForm({ showName = false }: { showName?: boolean }) 
   };
 
   const callerOptions = [
-    { value: NO_CALLER, label: 'No caller' },
+    { value: NO_CALLER, label: 'Not chosen' },
     ...table.members.map((member) => ({ value: member.user_id, label: member.name })),
   ];
 
@@ -98,14 +99,12 @@ export function TableSettingsForm({ showName = false }: { showName?: boolean }) 
             {
               value: 'caller',
               label: 'The caller',
-              description:
-                'One designated player speaks for the party and controls movement, doors, and searches.',
+              description: 'One player speaks for the party and controls movement, doors, and searches.',
             },
             {
               value: 'anyone',
               label: 'Anyone with a character',
-              description:
-                'Any seated player can move the party, which works well for small or casual groups.',
+              description: 'Every player with a character can move the party, open doors, and search.',
             },
           ]}
         />
@@ -113,7 +112,7 @@ export function TableSettingsForm({ showName = false }: { showName?: boolean }) 
 
       <Field
         label="Caller"
-        hint="If no caller is chosen before the game starts, the player with the character in rank 1 becomes the caller."
+        hint="When the game starts without a caller, the player whose character leads the marching order becomes the caller."
         disabled={readOnly}
       >
         <Select
@@ -127,22 +126,24 @@ export function TableSettingsForm({ showName = false }: { showName?: boolean }) 
       </Field>
 
       <Switch
-        label="Resolve battle rounds automatically"
-        description="Resolve each round as soon as every eligible character declares an action. When off, the caller or referee resolves each round manually."
+        label="Resolve rounds automatically"
+        description="A battle round resolves as soon as every character who can act has declared, instead of waiting for the caller or referee."
         checked={settings.auto_resolve}
-        disabled={readOnly || pending}
+        // A player reads the switches at full contrast. A referee's hold while a change is on its way.
+        readOnly={readOnly || pending}
         labelPosition="start"
         onCheckedChange={(checked) => void update({ settings: { auto_resolve: checked } })}
       />
       <Switch
         label="Save automatically"
-        description="Save the game automatically when the party enters a dungeon, changes levels, encounters monsters, or returns to town (up to 10 recent autosaves)."
+        description={`The game saves when the party enters a dungeon, changes levels, encounters monsters, or returns to town, and keeps the newest ${LIMITS.autosaves}.`}
         checked={settings.autosave}
-        disabled={readOnly || pending}
+        // A player reads the switches at full contrast. A referee's hold while a change is on its way.
+        readOnly={readOnly || pending}
         labelPosition="start"
         onCheckedChange={(checked) => void update({ settings: { autosave: checked } })}
       />
-      {readOnly && !showName && <p className={styles.note}>Only the referee can change these settings.</p>}
+      {readOnly && !showName && <p className={styles.note}>Only a referee can change these settings.</p>}
     </div>
   );
 }

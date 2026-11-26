@@ -1,0 +1,71 @@
+{
+  "fields": {
+    "hp_reroll_at_first_level": {
+      "type": "boolean",
+      "default": false
+    },
+    "max_hp_at_first_level": {
+      "type": "boolean",
+      "default": false
+    },
+    "ability_score_method": {
+      "type": "string",
+      "enum": ["3d6", "4d6_drop_lowest"],
+      "default": "3d6"
+    },
+    "encumbrance": {
+      "type": "string",
+      "enum": ["none", "basic", "detailed"],
+      "default": "basic"
+    },
+    "variable_weapon_damage": {
+      "type": "boolean",
+      "default": true
+    },
+    "individual_initiative": {
+      "type": "boolean",
+      "default": false
+    },
+    "thac0_arithmetic": {
+      "type": "boolean",
+      "default": false
+    },
+    "weapon_reload": {
+      "type": "boolean",
+      "default": false
+    },
+    "hd5_counts_as_magical": {
+      "type": "boolean",
+      "default": false
+    },
+    "magic_item_death_save": {
+      "type": "boolean",
+      "default": true
+    },
+    "xp_award_timing": {
+      "type": "string",
+      "enum": ["on_return", "immediate"],
+      "default": "on_return"
+    },
+    "deprivation_penalties": {
+      "type": "boolean",
+      "default": false
+    },
+    "aoe_friendly_fire": {
+      "type": "boolean",
+      "default": true
+    },
+    "formation_width_limit": {
+      "type": "boolean",
+      "default": true
+    },
+    "failed_trap_removal_springs": {
+      "type": "boolean",
+      "default": true
+    },
+    "back_stab_needs_both_skills": {
+      "type": "boolean",
+      "default": true
+    }
+  }
+}

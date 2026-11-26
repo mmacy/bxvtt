@@ -22,11 +22,11 @@ import type { StepId } from './draft';
  *
  * @param api - The API client.
  * @param body - The choices, with `ability_roll_id`.
- * @throws `not_found` for a roll the user doesn't have, `ability_roll_used`, or `rate_limited`.
+ * @throws `not_found` for a roll the user doesn't have, `ability_roll_used`, `ability_roll_superseded`, or
+ *   `rate_limited`.
  */
 export function checkChoices(api: BxvttClient, body: CharacterRequest): Promise<CharacterCheck> {
-  const { ability_roll_id: rollId, ...rest } = body;
-  return api.checkCharacter({ ...rest, ability_roll_id: rollId ?? '' });
+  return api.checkCharacter(body);
 }
 
 /**
@@ -47,7 +47,27 @@ export interface WizardProblem {
   step: StepId | null;
   title: string;
   sentences: string[];
+  /** `info` for news the player did nothing to cause. Defaults to `warning`. */
+  tone?: 'warning' | 'info';
 }
+
+/** What {@link explainCreationError} needs to know about the wizard. */
+export interface ExplainOptions {
+  /** Names for the IDs in rejections. */
+  ctx?: TextContext;
+  /**
+   * Whether the wizard offers Start over, because the table lets the player roll new ability scores. Defaults
+   * to `true`.
+   */
+  canStartOver?: boolean;
+}
+
+/** The refusal for an ability roll that already made a character, or that a later character closed. */
+export const ROLL_USED_PROBLEM: WizardProblem = {
+  step: 'roll',
+  title: 'You already made a character from these ability scores',
+  sentences: ['Each roll of ability scores makes one character. Roll new ability scores to make another.'],
+};
 
 /** Codes that say an ability can't move in that direction at all. */
 const BLOCKED = new Set([
@@ -149,17 +169,12 @@ export function explainInvalid(problem: Problem, ctx: TextContext = emptyContext
  * Explains any error from creating or checking a character.
  *
  * @param error - The value from a `catch`.
- * @param ctx - Names for the IDs in rejections.
+ * @param options - Names for the IDs in rejections, and whether the wizard offers Start over.
  */
-export function explainCreationError(error: unknown, ctx?: TextContext): WizardProblem {
+export function explainCreationError(error: unknown, options: ExplainOptions = {}): WizardProblem {
+  const { ctx, canStartOver = true } = options;
   if (isProblem(error, 'character_invalid')) return explainInvalid(error.problem, ctx);
-  if (isProblem(error, 'ability_roll_used')) {
-    return {
-      step: 'roll',
-      title: 'You already used this ability roll',
-      sentences: ['Each ability roll can create one character. Roll new ability scores to create another.'],
-    };
-  }
+  if (isProblem(error, 'ability_roll_used')) return ROLL_USED_PROBLEM;
   if (isProblem(error, 'not_found')) {
     return {
       step: 'roll',
@@ -174,9 +189,9 @@ export function explainCreationError(error: unknown, ctx?: TextContext): WizardP
       title: 'Your class is fixed for these ability scores',
       sentences: [
         classId === undefined
-          ? 'You already rolled hit points for these ability scores, which fixed your class and the reroll option.'
-          : `You already rolled hit points as ${withArticle(classLabel(classId).toLowerCase())}, which fixed your class and the reroll option.`,
-        'To play another class, select Start over and roll new ability scores.',
+          ? 'You already rolled hit points for these ability scores, which fixed your class.'
+          : `You already rolled hit points as ${withArticle(classLabel(classId).toLowerCase())}, which fixed your class.`,
+        ...(canStartOver ? ['To play another class, choose Start over and roll new ability scores.'] : []),
       ],
     };
   }

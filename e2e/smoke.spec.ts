@@ -64,7 +64,7 @@ async function createWithWizard(actor: Actor, choices: WizardChoices): Promise<v
       .getByRole('listitem')
       .filter({ hasText: choices.name }),
   ).toBeVisible();
-  await page.context().unroute('**/api/ability-rolls');
+  await page.context().unroute('**/api/tables/*/ability-rolls');
 }
 
 /**
@@ -143,7 +143,7 @@ async function castSleep(page: Page, name: string, group: string) {
   await composer.getByRole('radio', { name: 'Cast' }).click();
   await composer
     .getByRole('radiogroup', { name: 'How to cast Sleep' })
-    .getByRole('radio', { name: 'By hit dice' })
+    .getByRole('radio', { name: 'Put creatures of 4 Hit Dice or lower to sleep' })
     .click();
   await declaring(page, () => composer.getByRole('button', { name: `Cast sleep at ${group}` }).click());
 }

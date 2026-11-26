@@ -30,6 +30,8 @@ describe('the lair hoard of the drain warren', () => {
     server = await startServer({}, { 'the-drowned-bell.json': bell });
     referee = await createUser(server, 'Rhea');
     alice = await createUser(server, 'Alice');
+    // Alice rolls her characters at a table of their own, before the tables the tests play at.
+    await createTable(referee, [alice], 'Characters');
     for (let i = 0; i < 4; i += 1) {
       characterIds.push((await createCharacter(alice, `Fighter ${i + 1}`, 'fighter', 60 + i)).id);
     }

@@ -87,13 +87,12 @@ export type GameState = z.infer<typeof GameState>;
 
 /**
  * Body of `POST /api/tables/{table_id}/game`: start a game from the roster. Referee only. `adventure_id` is an
- * `id` from the table's adventure list. `ruleset` holds osrlib's optional rule switches. `seed` makes the
- * session's dice repeatable.
+ * `id` from the table's adventure list. The game plays by the table's stored ruleset (`settings.ruleset`). `seed`
+ * makes the session's dice repeatable.
  */
 export const StartGameRequest = z.strictObject({
   adventure_id: z.string().min(1).max(200),
   name: displayString(200).optional(),
-  ruleset: z.record(z.string(), z.unknown()).optional(),
   seed: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).optional(),
 });
 /** Body of `POST /api/tables/{table_id}/game`. */

@@ -17,6 +17,17 @@
   cursor: not-allowed;
 }
 
+/* Read-only: only the control dims, so the label and description stay easy to read. */
+.readOnly .checkbox,
+.readOnly .switch {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.readOnly .label {
+  cursor: default;
+}
+
 .text {
   display: flex;
   flex-direction: column;

@@ -13,7 +13,7 @@ import {
 import { SCREENS_DIR } from './support/env';
 import { expect, test } from './support/fixtures';
 import { stagedTable, type Stage } from './support/states';
-import { openTable } from './support/table';
+import { createCharacter, openTable } from './support/table';
 
 async function shoot(page: Page, label: string): Promise<void> {
   await page.screenshot({ path: `${SCREENS_DIR}/a11y-${label}.png` });
@@ -179,6 +179,8 @@ test.describe('axe finds no serious or critical violations', () => {
       .first()
       .click();
     await check('settings');
+    await page.getByRole('dialog', { name: 'Table settings' }).getByRole('tab', { name: 'Rules' }).click();
+    await check('settings-rules');
     await page.keyboard.press('Escape');
 
     expect(found).toEqual([]);
@@ -234,6 +236,61 @@ test.describe('axe on the screens added in the fix round', () => {
     await page.waitForTimeout(600);
     await shoot(page, 'lobby-continue');
     expect(describeViolations(await seriousViolations(page, testInfo, 'lobby-continue'))).toEqual([]);
+  });
+});
+
+test.describe('axe on the table rules', () => {
+  test('the Rules panel, a roster mark, and a 4d6 roll', async ({ crew }, testInfo) => {
+    const staged = await stagedTable(crew, 'lobby');
+    const { ruth, sam, tableId } = staged;
+    // Wren comes from another table, and the house rules make the rest of the party's creation rules differ.
+    const elsewhere = await sam.client.createTable({ name: 'Sam alone' });
+    const other = await createCharacter(sam.client, { name: 'Wren', classId: 'thief' }, elsewhere.id);
+    await sam.client.addToRoster(tableId, other.id);
+    await ruth.client.updateTable(tableId, {
+      settings: {
+        ruleset: { ability_score_method: '4d6_drop_lowest', max_hp_at_first_level: true },
+        ability_score_rerolls: 2,
+        sub_par_restart: true,
+      },
+    });
+    const found: string[] = [];
+    const check = async (page: Page, label: string, include?: string) => {
+      await page.waitForTimeout(600);
+      await shoot(page, label);
+      found.push(
+        ...describeViolations(await seriousViolations(page, testInfo, label, include)).map(
+          (v) => `${label}: ${v}`,
+        ),
+      );
+    };
+
+    for (const [who, actor] of [
+      ['referee', ruth],
+      ['player', sam],
+    ] as const) {
+      await openTable(actor.page, staged.path);
+      await settle(actor.page, 'lobby');
+      await actor.page.getByRole('button', { name: 'Rules', exact: true }).click();
+      await expect(actor.page.getByRole('switch', { name: '4d6 drop lowest' })).toBeChecked();
+      await check(actor.page, `lobby-rules-${who}`);
+    }
+    await ruth.page.getByRole('button', { name: 'Other table: show why' }).click();
+    await expect(ruth.page.getByRole('dialog', { name: 'Other table' })).toBeVisible();
+    await check(ruth.page, 'roster-mark');
+    await ruth.page.keyboard.press('Escape');
+
+    await sam.seedAbilityRolls([5]);
+    await sam.page
+      .getByRole('region', { name: 'Your characters' })
+      .getByRole('button', { name: 'Create a character' })
+      .click();
+    const dialog = sam.page.getByRole('dialog', { name: 'Create a character' });
+    await dialog.getByRole('button', { name: 'Roll ability scores' }).click();
+    await expect(dialog.getByRole('region', { name: 'Classes this roll qualifies for' })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Roll again' })).toBeVisible();
+    await check(sam.page, 'wizard-4d6', '[role="dialog"]');
+    expect(found).toEqual([]);
   });
 });
 

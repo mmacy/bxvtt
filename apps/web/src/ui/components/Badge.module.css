@@ -115,3 +115,17 @@
   background: var(--color-surface-hover);
   color: var(--color-text-strong);
 }
+
+/* A badge that opens a popover: a bare button around the badge, with the kit's focus ring. */
+.trigger {
+  display: inline-flex;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: none;
+  cursor: pointer;
+}
+
+.trigger:hover .badge {
+  filter: brightness(1.15);
+}

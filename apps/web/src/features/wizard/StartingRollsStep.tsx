@@ -1,4 +1,4 @@
-import type { StartingRolls } from '@bxvtt/shared/protocol';
+import type { CreationRules, StartingRolls } from '@bxvtt/shared/protocol';
 import { classLabel, count, joinList, withArticle } from '@bxvtt/shared/text';
 import { useEffect, useRef } from 'react';
 import { Banner, Button, DiceRoll, Die, Icon, Skeleton, formatModifier, type DieSides } from '@/ui';
@@ -22,8 +22,10 @@ export interface StartingRollsStepProps {
   hitDie: number | null;
   /** The Constitution modifier to hit points from the abilities table, or `undefined` while the table loads. */
   conModifier: number | undefined;
-  /** Whether the first-level reroll of a 1 or 2 is on. */
-  hpReroll: boolean;
+  /** The creation rules recorded on the ability roll, which the hit points are rolled under. */
+  rules: CreationRules | null;
+  /** Whether the wizard offers Start over, because the table lets the player roll new ability scores. */
+  canStartOver: boolean;
   /** The rolls the server recorded, with their dice, or `null` before the player rolls hit points. */
   rolls: StartingRolls | null;
   /** Whether the wizard is still reading the rolls from the server. */
@@ -40,15 +42,16 @@ export interface StartingRollsStepProps {
 }
 
 /**
- * The hit points and gold step: the player rolls hit points with the class's hit die, then rolls starting gold,
- * and sees the dice of each. bxapi rolls both, and every number here comes from its answer or from the rules
- * catalogs. Rolling hit points fixes the class and the reroll option for the ability scores.
+ * The hit points and gold step: the player rolls hit points with the class's hit die, or takes the maximum under
+ * that house rule, then rolls starting gold, and sees the dice of each. bxapi rolls both, and every number here
+ * comes from its answer or from the rules catalogs. Rolling hit points fixes the class for the ability scores.
  */
 export function StartingRollsStep({
   classId,
   hitDie,
   conModifier,
-  hpReroll,
+  rules,
+  canStartOver,
   rolls,
   loading,
   rolling,
@@ -74,8 +77,12 @@ export function StartingRollsStep({
   useEffect(() => {
     if (freshGold) goldResult.current?.focus();
   }, [freshGold]);
-  const setAside = hp ? hp.rolls.slice(0, -1) : [];
+  // With the maximum taken, the die's face doesn't count, so the dice the reroll set aside don't matter either.
+  const maximized = hp?.maximized === true;
+  const setAside = hp && !maximized ? hp.rolls.slice(0, -1) : [];
   const kept = hp ? (hp.rolls.at(-1) ?? null) : null;
+  const maxRule = rules?.max_hp_at_first_level === true;
+  const article = withArticle(className);
 
   if (failure !== null) {
     return (
@@ -121,31 +128,39 @@ export function StartingRollsStep({
               )}
             </dd>
           </div>
-          <div>
-            <dt>Reroll a first 1 or 2</dt>
-            <dd>{hpReroll ? 'On' : 'Off'}</dd>
-          </div>
+          {maxRule ? (
+            <div>
+              <dt>Maximum hit points</dt>
+              <dd>On</dd>
+            </div>
+          ) : (
+            <div>
+              <dt>Hit die reroll</dt>
+              <dd>{rules?.hp_reroll_at_first_level === true ? 'On' : 'Off'}</dd>
+            </div>
+          )}
         </dl>
         {hp === null ? (
           <>
             <p id={HIT_POINT_LOCK_NOTE_ID} className={styles.calmNote}>
               <Icon name="info" size={14} />
               <span>
-                Rolling hit points fixes your class as {withArticle(className)} and keeps the reroll option{' '}
-                {hpReroll ? 'on' : 'off'} for these ability scores. You can still change your ability trade,
-                identity, and equipment. To play another class after you roll, start over with new ability
-                scores.
+                {maxRule
+                  ? `Taking the maximum fixes your class as ${article}, but you can still change your ability trade, identity, and equipment.`
+                  : `Rolling hit points fixes your class as ${article}, but you can still change your ability trade, identity, and equipment.`}
+                {canStartOver && ' To play another class afterward, start over with new ability scores.'}
               </span>
             </p>
             <div>
               <Button
                 variant="primary"
-                icon="dice"
+                // The house rule exists so the die isn't rolled, so the button shows no dice.
+                icon={maxRule ? undefined : 'dice'}
                 loading={rolling === 'hit_points'}
                 aria-describedby={HIT_POINT_LOCK_NOTE_ID}
                 onClick={onRollHitPoints}
               >
-                Roll hit points
+                {maxRule ? 'Take the maximum' : 'Roll hit points'}
               </Button>
             </div>
           </>
@@ -155,7 +170,7 @@ export function StartingRollsStep({
               <div
                 className={styles.setAside}
                 role="group"
-                aria-label={`Set aside by the reroll option: ${joinList(setAside.map(String))}`}
+                aria-label={`Set aside by the hit die reroll: ${joinList(setAside.map(String))}`}
               >
                 <span className={styles.setAsideLabel} aria-hidden="true">
                   Set aside
@@ -171,7 +186,29 @@ export function StartingRollsStep({
                 </span>
               </div>
             )}
-            {sides !== null && kept !== null ? (
+            {maximized ? (
+              sides === null ? (
+                <Skeleton shape="block" width={44} height={44} />
+              ) : (
+                <div className={styles.setAside} role="group" aria-label="Maximum hit die">
+                  <span className={styles.setAsideLabel} aria-hidden="true">
+                    Maximum
+                  </span>
+                  <span className={styles.maxRow}>
+                    {/* The face of the hit die's maximum is the die's size. */}
+                    <Die sides={sides} value={sides} size={44} />
+                    {/* The total, as a rolled die shows it, so the Constitution modifier is next to the die. */}
+                    <span className={styles.maxTotal} aria-hidden="true">
+                      {conModifier !== undefined && conModifier !== 0 && (
+                        <span className={styles.maxEquals}>{formatModifier(conModifier)}</span>
+                      )}
+                      <span className={styles.maxEquals}>=</span>
+                      <span className={styles.maxTotalValue}>{hp.hit_points}</span>
+                    </span>
+                  </span>
+                </div>
+              )
+            ) : sides !== null && kept !== null ? (
               <DiceRoll
                 dice={[{ sides, value: kept }]}
                 modifier={conModifier ?? 0}
@@ -187,7 +224,7 @@ export function StartingRollsStep({
         {hp !== null && (
           <p className={styles.startResult}>
             {setAside.length > 0 &&
-              `The reroll option set aside ${joinList(setAside.map(String))} and rolled again. `}
+              `Your hit die came up ${joinList(setAside.map(String))}, so you rolled again. `}
             You start with {count(hp.hit_points, 'hit point')}.
           </p>
         )}
@@ -202,9 +239,11 @@ export function StartingRollsStep({
             <p id={GOLD_WAIT_NOTE_ID} className={styles.calmNote}>
               <Icon name="info" size={14} />
               <span>
-                {hp === null
-                  ? 'You roll your starting gold after your hit points.'
-                  : 'Roll your starting gold, then spend it on weapons, armour, and gear in the next step.'}
+                {hp !== null
+                  ? 'Roll your starting gold, then spend it on weapons, armour, and gear in the next step.'
+                  : maxRule
+                    ? 'You roll your starting gold after you take your hit points.'
+                    : 'You roll your starting gold after your hit points.'}
               </span>
             </p>
             <div>
@@ -213,7 +252,11 @@ export function StartingRollsStep({
                 variant={hp === null ? 'secondary' : 'primary'}
                 icon="dice"
                 disabled={hp === null}
-                disabledReason="Roll your hit points before your starting gold."
+                disabledReason={
+                  maxRule
+                    ? 'Take your hit points before you roll starting gold.'
+                    : 'Roll your hit points before your starting gold.'
+                }
                 loading={rolling === 'gold'}
                 // While the button waits for the hit points, its reason says what the note says.
                 aria-describedby={hp === null ? undefined : GOLD_WAIT_NOTE_ID}

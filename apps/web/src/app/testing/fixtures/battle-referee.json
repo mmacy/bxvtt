@@ -1,94 +1,146 @@
 {
   "type": "snapshot",
   "user": {
-    "id": "usr_n42KOsHJshcCoV-DsSEH_A",
+    "id": "usr_TiMm-VfZAE76oq3tfbEp1w",
     "name": "Ruth",
     "color": "#e76742",
-    "created_at": "2026-11-26T09:06:55Z"
+    "created_at": "2026-11-26T18:45:53Z"
   },
   "role": "referee",
   "table": {
-    "id": "tbl__oydcMhUrTR91n_a-wuI9Q",
+    "id": "tbl_oJPjo2IqR7AYsj0Yj4byMA",
     "name": "Thursday at the Drowned Bell",
-    "invite_code": "1M0E9-EWVA9-S02ZT-T4Q6Q",
+    "invite_code": "458ZP-173GB-Z2HH4-RR9W9",
     "phase": "playing",
     "settings": {
       "party_control": "caller",
-      "caller_user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw",
+      "caller_user_id": "usr_23A-_Yw9cyPHeD2anBnQdw",
       "auto_resolve": true,
-      "autosave": true
+      "autosave": true,
+      "ruleset": {
+        "hp_reroll_at_first_level": true,
+        "max_hp_at_first_level": false,
+        "ability_score_method": "3d6",
+        "encumbrance": "basic",
+        "variable_weapon_damage": true,
+        "individual_initiative": false,
+        "thac0_arithmetic": false,
+        "weapon_reload": false,
+        "hd5_counts_as_magical": false,
+        "magic_item_death_save": true,
+        "xp_award_timing": "on_return",
+        "deprivation_penalties": false,
+        "aoe_friendly_fire": true,
+        "formation_width_limit": true,
+        "failed_trap_removal_springs": true,
+        "back_stab_needs_both_skills": true
+      },
+      "ability_score_rerolls": 0,
+      "sub_par_restart": false
     },
     "members": [
       {
-        "user_id": "usr_n42KOsHJshcCoV-DsSEH_A",
+        "user_id": "usr_TiMm-VfZAE76oq3tfbEp1w",
         "name": "Ruth",
         "color": "#e76742",
         "role": "referee",
-        "joined_at": "2026-11-26T09:06:55Z"
+        "joined_at": "2026-11-26T18:45:53Z"
       },
       {
-        "user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw",
+        "user_id": "usr_23A-_Yw9cyPHeD2anBnQdw",
         "name": "Sam",
         "color": "#f29e2e",
         "role": "player",
-        "joined_at": "2026-11-26T09:06:55Z"
+        "joined_at": "2026-11-26T18:45:53Z"
       }
     ],
     "roster": [
       {
-        "id": "ros_zQrFbKnB2roZ1RjM_i3ypA",
-        "character_id": "chr_87CZrmG6gnh9y_-_0Hpv4Q",
-        "owner_user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw",
+        "id": "ros_bC7qQdpUPHDCp2rZ_pa7_w",
+        "character_id": "chr_jFswxFmipfsgJAfNdyKN-g",
+        "owner_user_id": "usr_23A-_Yw9cyPHeD2anBnQdw",
         "name": "Brenna",
         "class_id": "fighter",
         "level": 1,
-        "added_at": "2026-11-26T09:06:55Z"
+        "added_at": "2026-11-26T18:45:53Z",
+        "creation_rules": {
+          "ability_score_method": "3d6",
+          "hp_reroll_at_first_level": true,
+          "max_hp_at_first_level": false,
+          "ability_score_rerolls": 0,
+          "sub_par_restart": false
+        },
+        "rolled_at_other_table": false
       },
       {
-        "id": "ros_aAmPJ44di01YRLi8rfj7CQ",
-        "character_id": "chr_Hw6g7yC9Z-K1cGphwzk4yw",
-        "owner_user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw",
+        "id": "ros_xXsPGoySFJlnib6mpiKylA",
+        "character_id": "chr_raqpj2KbE2y7XNlPgagxKQ",
+        "owner_user_id": "usr_23A-_Yw9cyPHeD2anBnQdw",
         "name": "Wren",
         "class_id": "thief",
         "level": 1,
-        "added_at": "2026-11-26T09:06:55Z"
+        "added_at": "2026-11-26T18:45:53Z",
+        "creation_rules": {
+          "ability_score_method": "3d6",
+          "hp_reroll_at_first_level": true,
+          "max_hp_at_first_level": false,
+          "ability_score_rerolls": 0,
+          "sub_par_restart": false
+        },
+        "rolled_at_other_table": false
       },
       {
-        "id": "ros_578ujxA--kIyRLoBAtVpOg",
-        "character_id": "chr_6fyERi-3LCsVThEI_hswxQ",
-        "owner_user_id": "usr_n42KOsHJshcCoV-DsSEH_A",
+        "id": "ros_7Of3RhanzHdvamNb4TW47Q",
+        "character_id": "chr_mMf7ZPTxGbx3cpEmDU4rbg",
+        "owner_user_id": "usr_TiMm-VfZAE76oq3tfbEp1w",
         "name": "Osric",
         "class_id": "cleric",
         "level": 1,
-        "added_at": "2026-11-26T09:06:55Z"
+        "added_at": "2026-11-26T18:45:53Z",
+        "creation_rules": {
+          "ability_score_method": "3d6",
+          "hp_reroll_at_first_level": true,
+          "max_hp_at_first_level": false,
+          "ability_score_rerolls": 0,
+          "sub_par_restart": false
+        },
+        "rolled_at_other_table": false
       },
       {
-        "id": "ros_HchkjIIflwaIIyVueCpldA",
-        "character_id": "chr_C1IdtMsXmGZde2iQ14iwbQ",
-        "owner_user_id": "usr_n42KOsHJshcCoV-DsSEH_A",
+        "id": "ros__cPhA7EH_fzv0dJjkvvyLA",
+        "character_id": "chr_2IVRACjCL6hI-kdyn6hU6A",
+        "owner_user_id": "usr_TiMm-VfZAE76oq3tfbEp1w",
         "name": "Tamsin",
         "class_id": "fighter",
         "level": 1,
-        "added_at": "2026-11-26T09:06:55Z"
+        "added_at": "2026-11-26T18:45:53Z",
+        "creation_rules": {
+          "ability_score_method": "3d6",
+          "hp_reroll_at_first_level": true,
+          "max_hp_at_first_level": false,
+          "ability_score_rerolls": 0,
+          "sub_par_restart": false
+        },
+        "rolled_at_other_table": false
       }
     ],
     "game": {
-      "session_id": "ses_rEucMvINs3jFWwyOmfy3JA",
+      "session_id": "ses_sV_xLhSuRPIM6qpcPn9tLA",
       "adventure_id": "sample:the-drowned-bell",
       "adventure_name": "The Drowned Bell",
       "mode": "battle",
       "ended": false,
-      "started_at": "2026-11-26T09:06:55Z"
+      "started_at": "2026-11-26T18:45:53Z"
     },
-    "created_by": "usr_n42KOsHJshcCoV-DsSEH_A",
-    "created_at": "2026-11-26T09:06:55Z"
+    "created_by": "usr_TiMm-VfZAE76oq3tfbEp1w",
+    "created_at": "2026-11-26T18:45:53Z"
   },
   "presence": {
-    "online": ["usr_n42KOsHJshcCoV-DsSEH_A"]
+    "online": ["usr_TiMm-VfZAE76oq3tfbEp1w"]
   },
   "game": {
-    "table_id": "tbl__oydcMhUrTR91n_a-wuI9Q",
-    "session_id": "ses_rEucMvINs3jFWwyOmfy3JA",
+    "table_id": "tbl_oJPjo2IqR7AYsj0Yj4byMA",
+    "session_id": "ses_sV_xLhSuRPIM6qpcPn9tLA",
     "adventure_id": "sample:the-drowned-bell",
     "adventure_name": "The Drowned Bell",
     "mode": "battle",
@@ -240,6 +292,9 @@
           "spell_slots": [],
           "preparable_spells": [],
           "learnable_spells": [],
+          "reverses_at": null,
+          "can_prepare_now": false,
+          "needs_sleep_to_prepare": false,
           "thief_skills": {}
         },
         {
@@ -342,6 +397,9 @@
           "spell_slots": [],
           "preparable_spells": [],
           "learnable_spells": [],
+          "reverses_at": null,
+          "can_prepare_now": false,
+          "needs_sleep_to_prepare": false,
           "thief_skills": {
             "climb_sheer_surfaces": 87,
             "find_remove_treasure_traps": 10,
@@ -452,6 +510,9 @@
           "spell_slots": [0, 0, 0, 0, 0],
           "preparable_spells": [],
           "learnable_spells": [],
+          "reverses_at": "cast",
+          "can_prepare_now": false,
+          "needs_sleep_to_prepare": true,
           "thief_skills": {}
         },
         {
@@ -593,6 +654,9 @@
           "spell_slots": [],
           "preparable_spells": [],
           "learnable_spells": [],
+          "reverses_at": null,
+          "can_prepare_now": false,
+          "needs_sleep_to_prepare": false,
           "thief_skills": {}
         }
       ],
@@ -664,7 +728,7 @@
           ],
           "features": [
             {
-              "id": "feature:467b05b6d2fd341d25c3ce614c4173e2dd9032eb2909c1caa010049ca8272c50",
+              "id": "feature:c1df354c3baf1168a14b8fb0e61651a7eec8a9bdc4239859add9748b1eac763e",
               "kind": "custom",
               "description": "The statue is Saint Corvane, holding up a lantern. Someone has chipped the glass out of the lantern to see whether there was silver inside it.",
               "cell": null,
@@ -707,6 +771,7 @@
         "mace": "maces",
         "spear": "spears"
       },
+      "valuable_names": {},
       "fatigued": false,
       "exhausted": false,
       "deprivation": {},
@@ -967,28 +1032,30 @@
       {
         "member_id": "character-0001",
         "name": "Brenna",
-        "user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw"
+        "user_id": "usr_23A-_Yw9cyPHeD2anBnQdw"
       },
       {
         "member_id": "character-0002",
         "name": "Wren",
-        "user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw"
+        "user_id": "usr_23A-_Yw9cyPHeD2anBnQdw"
       },
       {
         "member_id": "character-0003",
         "name": "Osric",
-        "user_id": "usr_n42KOsHJshcCoV-DsSEH_A"
+        "user_id": "usr_TiMm-VfZAE76oq3tfbEp1w"
       },
       {
         "member_id": "character-0004",
         "name": "Tamsin",
-        "user_id": "usr_n42KOsHJshcCoV-DsSEH_A"
+        "user_id": "usr_TiMm-VfZAE76oq3tfbEp1w"
       }
     ],
-    "caller_user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw",
+    "caller_user_id": "usr_23A-_Yw9cyPHeD2anBnQdw",
     "referee": {
       "ruleset": {
-        "hp_reroll_at_first_level": false,
+        "hp_reroll_at_first_level": true,
+        "max_hp_at_first_level": false,
+        "ability_score_method": "3d6",
         "encumbrance": "basic",
         "variable_weapon_damage": true,
         "individual_initiative": false,
@@ -2035,32 +2102,32 @@
         "hiding": {}
       },
       "feature_handles": {
-        "priory:1:votive_niche": "feature:940d78ef1c3957c4561aac343326b4a52c2e118393669d95305eaa2e559f32d2",
-        "priory:1:fallen_statue": "feature:467b05b6d2fd341d25c3ce614c4173e2dd9032eb2909c1caa010049ca8272c50",
-        "priory:1:relief_map": "feature:79e31742b835ed32e70f75398450ab93e6d477ecf49b07673beed9370a8d37ca",
-        "priory:1:chapel_altar": "feature:af22b99bbc19559d9dc3535288ba49f67944f3b9549303e9101cde681215cd0f",
-        "priory:1:wine_casks": "feature:342202f06d0a7cc86d62c17f1946af96e4815c39dba17aae91f378333be31a11",
-        "priory:1:goblin_loot": "feature:310fa1b7f41c490b544f8d471d985ee3591d639b9d89746b04333ee78eebd133",
-        "priory:1:iron_chest": "feature:8cb76b859013c84ec71706fc4555c78f7a3613d7af43809289a6eed182fbcda2",
-        "priory:1:gilt_psalter": "feature:02e4a33044dc3c44f0377c756e518aacaea6089e205b9a60492cdc25bfde7106",
-        "priory:1:stirge_nest": "feature:32effd2bb6e5d4867d44849f169ecab0365ca0128ed4fc39408699a1254cec5d",
-        "priory:1:lost_satchel": "feature:80c91fae5e4e92fb10763a9ccf88a518421d57cfeeb0d30846414235b0fceab1",
-        "priory:2:goblin_pouch": "feature:2ec7eff3f7a434ff5b39fbe724014d6142e597ac10c763f5ca619e68f9055306",
-        "priory:2:abbots_coffin": "feature:b68a69bc390e74e771a474a1e172911b6a264b50b48de66870fe5df1d5b3977c",
-        "priory:2:priors_desk": "feature:090105fcc07436edfaeeebe4ff226659dfe500a7d97fa19591bf6dada87a2c37",
-        "priory:2:unsent_letter": "feature:cbff6bec10873bd435db8691aca3b02608f9310a768f991730332f26453fac64",
-        "priory:2:reliquary_casket": "feature:34501b7b25c68d099c0bc8025822a52a7842581b29154a3b6a5327105a7fab2d",
-        "priory:2:offering_chest": "feature:6745a3ab95d1790204709534a96406cdbcf4abcd72199cd4d072dac91058fa21",
-        "priory:2:drowned_purse": "feature:fa3c6cb3bdb0eb1e257916015b8186ff231185aa97d9f2a4691e9c9ea1f178b0",
-        "priory:2:gnawed_bones": "feature:faa8f0e67ff1123165bf71a16c7f7d467f387c75dbe5c729c6e90e2bfe5d19be",
-        "priory:2:bone_wheel": "feature:0b9dfc38e7743012fe4d8a89fd713f401d1238f4710a43b03c4869ce6006f314",
-        "priory:2:sloping_floor": "feature:9f25958097bcad7f282c9fe8a6fccdb472a9c548c9cef93072519100338cd0a1",
-        "priory:3:vestment_chest": "feature:8c571d9e894d1571b3b2bfe972aab65b8c34adbbfc8ab8a74bb9d3c4e108b49e",
-        "priory:3:brothers_strongbox": "feature:1067527f35ee3ebdfdc4ed66f8414d2a20f694ae0ac9a4c712d56ad1591d2b0d",
-        "priory:3:key_stone": "feature:3294dec44937155df5c1697de16aeaede809655bf298e0cbffecaf3950f31e3b",
-        "priory:3:inside_the_bell": "feature:0dfacec1b2f168fdc85491a0a89cdc4b559f99e2706886f63d1e34f6903ea814",
-        "priory:3:priors_hoard": "feature:9b1a1124b9622e39bac0259a68ae146cca8465f7f2b426d2420a9e0b43133924",
-        "priory:3:mercy": "feature:82b76a3a386dc3b4fc082fe7ceb5bdb4a4c680e95fa660cf0116660f75a3b0cd"
+        "priory:1:votive_niche": "feature:91fe4b6a050f7186395ae44cbc6644519a2cbaab3232a8a41c39deafa19d07e5",
+        "priory:1:fallen_statue": "feature:c1df354c3baf1168a14b8fb0e61651a7eec8a9bdc4239859add9748b1eac763e",
+        "priory:1:relief_map": "feature:5d17fd306a1bc3f28dea61b9e22230a8887615e25df603fcd8310710a18ad90f",
+        "priory:1:chapel_altar": "feature:d87cd208b860949a048d7cc43758ada02393b3ad20e6dfed1a9c5b02dd17dfb7",
+        "priory:1:wine_casks": "feature:190962fd5e5a18bef14fba254df6a4b595ca06763007be4b843ff4c882f5e73e",
+        "priory:1:goblin_loot": "feature:816302381f908e2dcd08e6fa0d9591c2e499d0abdebd551b25b194588e6d53d7",
+        "priory:1:iron_chest": "feature:7b86fe3642ccb18b92c20b29a3a5225d9d4104cd0c5ee2c360aaec07b4ea6ba0",
+        "priory:1:gilt_psalter": "feature:15950fbeb25826d2ccb4cde293ce60304ac54d3b6f8cb24468dc96c49a81a743",
+        "priory:1:stirge_nest": "feature:f22d331ed75b355b638f935157d88bcd8099e00d127b386339bee08c8173f03b",
+        "priory:1:lost_satchel": "feature:0ff57b4af7c4337393cbc64f4abac2ab242a8a27ee5acbbfb4d45f285c74c3b9",
+        "priory:2:goblin_pouch": "feature:0c73e8cfa88a6d74ab6fa4a42b05d8f0e9d5116a808a59a138976a60640de846",
+        "priory:2:abbots_coffin": "feature:8d0ef8f0fcb54713c2de252f5c1f79c4b545d77e38fec7e975a9ec47c496034b",
+        "priory:2:priors_desk": "feature:d2eb8f42bc3513e53a9f3aa46dc312a1e120fee98be3edb2ffaa831acee05a6a",
+        "priory:2:unsent_letter": "feature:be8242ae285ac0537322547edef486a2a2766d1df4a3e2a473a7ff978d00636d",
+        "priory:2:reliquary_casket": "feature:913887e028077c2222aacfedd2d456656299b479638fa27a345bf1a3fa0f257f",
+        "priory:2:offering_chest": "feature:36311ef0fc159022f2fa5f55380caa6533ca0b57bb3cc329fef37e289de7267f",
+        "priory:2:drowned_purse": "feature:b9238759047c1dc8c78f6fd18a9aa21142bc192405eb3c475d2c4976c02f1d81",
+        "priory:2:gnawed_bones": "feature:f2054ce8f5e6445f771d920d22a237aeeaffb40ebf3268e4c4b4fe09680daef6",
+        "priory:2:bone_wheel": "feature:c78c60f7c87ee3c7af1ae1123683014cb6a4bdb4bf7fd52602e2970025ecf743",
+        "priory:2:sloping_floor": "feature:1252e4a4a76835d81df3e6d62383a43b3601fe98448ccfc5516c43060a49e105",
+        "priory:3:vestment_chest": "feature:6be1de91a98079a650fc3e887300a6027487873fa6fd74ae2db05968f56ad730",
+        "priory:3:brothers_strongbox": "feature:61794d0675930e09acbfbeb509432d70ab445be97e3b8a88d79c4cdbd59945ac",
+        "priory:3:key_stone": "feature:4dea0f4223de72c6a3da0ff8887ca211e11a672a5146262e04401cea469d66c0",
+        "priory:3:inside_the_bell": "feature:62d25a11f3d5294ab69e46d078637e62e5936c57fa9fa8ee5e0ee125cf672db3",
+        "priory:3:priors_hoard": "feature:1540b126c5ba5bb26c4793e78bb314393794ea13d95273625172c8ec551dddf7",
+        "priory:3:mercy": "feature:e29b92d340d75064ab9813f41307215e186d751a3fa1a4b38c89dd7b772bad93"
       }
     }
   },
@@ -2072,14 +2139,14 @@
     "declared": ["character-0001"],
     "declarations": {
       "character-0001": {
+        "character_id": "character-0001",
         "action": "attack",
         "target_group_id": "group-0001",
-        "move": "close",
-        "character_id": "character-0001"
+        "move": "close"
       }
     },
     "declared_by": {
-      "character-0001": "usr_ztGBLFoxEIwDPWo4LWVDUw"
+      "character-0001": "usr_23A-_Yw9cyPHeD2anBnQdw"
     },
     "refusals": [],
     "projection": {
@@ -2101,39 +2168,39 @@
     "entries": [
       {
         "seq": 1,
-        "created_at": "2026-11-26T09:06:55Z",
-        "user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw",
+        "created_at": "2026-11-26T18:45:53Z",
+        "user_id": "usr_23A-_Yw9cyPHeD2anBnQdw",
         "visibility": "everyone",
         "to": [],
         "kind": "system",
         "code": "member_joined",
         "params": {
-          "user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw"
+          "user_id": "usr_23A-_Yw9cyPHeD2anBnQdw"
         }
       },
       {
         "seq": 2,
-        "created_at": "2026-11-26T09:06:55Z",
-        "user_id": "usr_n42KOsHJshcCoV-DsSEH_A",
+        "created_at": "2026-11-26T18:45:54Z",
+        "user_id": "usr_TiMm-VfZAE76oq3tfbEp1w",
         "visibility": "everyone",
         "to": [],
         "kind": "system",
         "code": "game_started",
         "params": {
-          "session_id": "ses_rEucMvINs3jFWwyOmfy3JA",
+          "session_id": "ses_sV_xLhSuRPIM6qpcPn9tLA",
           "adventure_name": "The Drowned Bell"
         }
       },
       {
         "seq": 3,
-        "created_at": "2026-11-26T09:06:55Z",
-        "user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw",
+        "created_at": "2026-11-26T18:45:54Z",
+        "user_id": "usr_23A-_Yw9cyPHeD2anBnQdw",
         "visibility": "everyone",
         "to": [],
         "kind": "game",
         "command_type": "enter_dungeon",
         "revision": 1,
-        "session_id": "ses_rEucMvINs3jFWwyOmfy3JA",
+        "session_id": "ses_sV_xLhSuRPIM6qpcPn9tLA",
         "events": [
           {
             "code": "exploration.location.entered",
@@ -2205,28 +2272,28 @@
       },
       {
         "seq": 4,
-        "created_at": "2026-11-26T09:06:55Z",
+        "created_at": "2026-11-26T18:45:54Z",
         "user_id": null,
         "visibility": "everyone",
         "to": [],
         "kind": "system",
         "code": "save_created",
         "params": {
-          "save_id": "sav_68vYIh1F2H1IXKC1b98FDQ",
+          "save_id": "sav_bgvJ3_b2fmzJXRA5JlypOQ",
           "label": "Autosave: Entered the priory on Corvane's Holm",
           "autosave": true
         }
       },
       {
         "seq": 5,
-        "created_at": "2026-11-26T09:06:55Z",
-        "user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw",
+        "created_at": "2026-11-26T18:45:54Z",
+        "user_id": "usr_23A-_Yw9cyPHeD2anBnQdw",
         "visibility": "everyone",
         "to": [],
         "kind": "game",
         "command_type": "move_party",
         "revision": 2,
-        "session_id": "ses_rEucMvINs3jFWwyOmfy3JA",
+        "session_id": "ses_sV_xLhSuRPIM6qpcPn9tLA",
         "events": [
           {
             "code": "exploration.party.moved",
@@ -2253,14 +2320,14 @@
       },
       {
         "seq": 6,
-        "created_at": "2026-11-26T09:06:55Z",
-        "user_id": "usr_n42KOsHJshcCoV-DsSEH_A",
+        "created_at": "2026-11-26T18:45:54Z",
+        "user_id": "usr_TiMm-VfZAE76oq3tfbEp1w",
         "visibility": "everyone",
         "to": [],
         "kind": "game",
         "command_type": "spawn_monsters",
         "revision": 3,
-        "session_id": "ses_rEucMvINs3jFWwyOmfy3JA",
+        "session_id": "ses_sV_xLhSuRPIM6qpcPn9tLA",
         "events": [
           {
             "code": "session.monsters.spawned",
@@ -2364,28 +2431,28 @@
       },
       {
         "seq": 7,
-        "created_at": "2026-11-26T09:06:55Z",
+        "created_at": "2026-11-26T18:45:54Z",
         "user_id": null,
         "visibility": "everyone",
         "to": [],
         "kind": "system",
         "code": "save_created",
         "params": {
-          "save_id": "sav_TEPEXsuOt57zZv9aHxpmSw",
+          "save_id": "sav_K4seD_xXqA-rTY0AWpTz8A",
           "label": "Autosave: Met 3 goblins in the priory on Corvane's Holm, level 1",
           "autosave": true
         }
       },
       {
         "seq": 8,
-        "created_at": "2026-11-26T09:06:55Z",
-        "user_id": "usr_ztGBLFoxEIwDPWo4LWVDUw",
+        "created_at": "2026-11-26T18:45:54Z",
+        "user_id": "usr_23A-_Yw9cyPHeD2anBnQdw",
         "visibility": "everyone",
         "to": [],
         "kind": "game",
         "command_type": "engage_battle",
         "revision": 4,
-        "session_id": "ses_rEucMvINs3jFWwyOmfy3JA",
+        "session_id": "ses_sV_xLhSuRPIM6qpcPn9tLA",
         "events": [
           {
             "code": "battle.started",
@@ -2437,6 +2504,6 @@
       "updated_at": null
     }
   },
-  "server_time": "2026-11-26T09:06:55Z",
+  "server_time": "2026-11-26T18:45:54Z",
   "rejoin_requests": []
 }

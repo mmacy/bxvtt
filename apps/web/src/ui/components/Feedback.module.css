@@ -262,3 +262,18 @@
   background: var(--color-surface-hover);
   color: var(--color-text-strong);
 }
+
+/* On a phone, the buttons go under the text, aligned with it, so the sentence keeps the banner's width. */
+@media (max-width: 480px) {
+  .banner {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .bannerActions {
+    grid-row: 2;
+    grid-column: 2 / -1;
+    flex-wrap: wrap;
+    align-self: start;
+  }
+}

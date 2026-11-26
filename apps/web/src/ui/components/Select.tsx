@@ -25,8 +25,19 @@ export interface SelectProps {
   defaultValue?: string;
   onValueChange?: (value: string) => void;
   placeholder?: string;
+  /**
+   * How the placeholder reads. `hint` (the default) dims it, as an empty field. `value` sets it in the normal text
+   * colour, for a placeholder that names a state rather than asking for a choice, such as "Custom".
+   */
+  placeholderTone?: 'hint' | 'value';
   size?: InputSize;
   disabled?: boolean;
+  /**
+   * Shows the value without letting anyone change it, such as a setting only a referee can change. The value stays
+   * at the normal text colour and only the chevron is muted. The trigger stays in the tab order, reports
+   * `aria-readonly`, and never opens its list.
+   */
+  readOnly?: boolean;
   invalid?: boolean;
   id?: string;
   /** Accessible name when the select is not inside a Field. */
@@ -45,8 +56,10 @@ export function Select({
   defaultValue,
   onValueChange,
   placeholder = 'Choose',
+  placeholderTone = 'hint',
   size = 'md',
   disabled,
+  readOnly = false,
   invalid,
   id,
   'aria-label': ariaLabel,
@@ -77,7 +90,9 @@ export function Select({
   return (
     <SelectPrimitive.Root
       value={current}
-      onValueChange={setCurrent}
+      // A read-only trigger ignores the typeahead that changes a closed select's value, and never opens.
+      onValueChange={readOnly ? undefined : setCurrent}
+      {...(readOnly ? { open: false, onOpenChange: () => {} } : {})}
       disabled={disabled ?? field?.disabled}
       required={field?.required}
     >
@@ -85,10 +100,23 @@ export function Select({
         id={id ?? field?.id}
         aria-label={ariaLabel}
         aria-invalid={isInvalid || undefined}
+        aria-readonly={readOnly || undefined}
         aria-describedby={field?.describedBy}
-        className={cx(styles.trigger, styles[size], isInvalid && styles.invalid, className)}
+        className={cx(
+          styles.trigger,
+          styles[size],
+          isInvalid && styles.invalid,
+          readOnly && styles.readOnly,
+          className,
+        )}
       >
-        <SelectPrimitive.Value placeholder={<span className={styles.placeholder}>{placeholder}</span>} />
+        <SelectPrimitive.Value
+          placeholder={
+            <span className={placeholderTone === 'value' ? undefined : styles.placeholder}>
+              {placeholder}
+            </span>
+          }
+        />
         <SelectPrimitive.Icon className={styles.chevron}>
           <Icon name="chevrons-up-down" size={14} />
         </SelectPrimitive.Icon>

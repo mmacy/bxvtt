@@ -36,6 +36,19 @@
   opacity: 0.5;
 }
 
+/* Read-only: the value stays easy to read, and only the chevron says it can't open. */
+.readOnly {
+  cursor: default;
+}
+
+.readOnly:hover:not(:disabled) {
+  border-color: var(--color-border-input);
+}
+
+.readOnly .chevron {
+  opacity: 0.4;
+}
+
 .invalid {
   border-color: var(--color-danger);
 }

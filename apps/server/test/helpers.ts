@@ -3,7 +3,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { BxvttClient, TableConnection } from '@bxvtt/shared/client';
-import type { GameState, ServerMessage, StoredCharacter, TableDetail } from '@bxvtt/shared/protocol';
+import type {
+  CharacterChoices,
+  GameState,
+  ServerMessage,
+  StoredCharacter,
+  TableDetail,
+} from '@bxvtt/shared/protocol';
 import { createServer } from '../src/app';
 import type { Server } from '../src/app';
 import type { Config } from '../src/config';
@@ -167,18 +173,22 @@ export async function connect(server: TestServer, user: TestUser, tableId: strin
 }
 
 /**
- * Creates a fighter-like character with a fixed seed for a user.
+ * Creates a fighter-like character with a fixed seed for a user, the way the wizard does: an ability roll at a
+ * table, the hit points and the gold, then the character with its kit. bxapi derives every roll from the seed, so
+ * the same seed gives the same character as before rolls belonged to tables.
  *
  * @param user - The owner.
  * @param name - The character's name.
  * @param classId - The class.
  * @param seed - The seed for the scores and rolls.
+ * @param tableId - The table to roll at. Defaults to the user's newest table.
  */
 export async function createCharacter(
   user: TestUser,
   name: string,
   classId = 'fighter',
   seed = 1,
+  tableId?: string,
 ): Promise<StoredCharacter> {
   const kits: Record<string, string[]> = {
     fighter: ['leather', 'sword'],
@@ -186,14 +196,45 @@ export async function createCharacter(
     thief: ['leather', 'dagger'],
   };
   const kit = kits[classId] ?? [];
-  return user.client.createCharacter({
-    name,
-    class_id: classId,
-    alignment: 'lawful',
-    purchases: kit.map((item_id) => ({ item_id })),
-    equip_item_ids: kit,
+  return createFromRoll(
+    user,
+    {
+      name,
+      class_id: classId,
+      alignment: 'lawful',
+      purchases: kit.map((item_id) => ({ item_id })),
+      equip_item_ids: kit,
+    },
     seed,
-  });
+    tableId,
+  );
+}
+
+/**
+ * Creates a character from choices with a fixed seed: rolls ability scores at a table, rolls the hit points and
+ * the gold for the class, and creates the character from the roll.
+ *
+ * @param user - The owner.
+ * @param choices - The character's choices, without `ability_roll_id`.
+ * @param seed - The seed for the scores and rolls.
+ * @param tableId - The table to roll at. Defaults to the user's newest table.
+ */
+export async function createFromRoll(
+  user: TestUser,
+  choices: CharacterChoices,
+  seed = 1,
+  tableId?: string,
+): Promise<StoredCharacter> {
+  const table = tableId ?? (await user.client.listTables()).items[0]?.id;
+  if (table === undefined) throw new Error(`${user.name} has no table to roll at. Create or join one first.`);
+  const roll = await user.client.rollAbilities(table, { seed });
+  const starting = {
+    class_id: choices.class_id,
+    ...(choices.starting_spell_ids === undefined ? {} : { starting_spell_ids: choices.starting_spell_ids }),
+  };
+  await user.client.rollHitPoints(roll.id, starting);
+  await user.client.rollStartingGold(roll.id, starting);
+  return user.client.createCharacter({ ...choices, ability_roll_id: roll.id });
 }
 
 /**

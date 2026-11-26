@@ -19,7 +19,6 @@ import {
   useRulesEntry,
   useSendDeclaration,
   useSpellDetail,
-  useTableUi,
   useTextContext,
   type ClassDetail,
 } from '@/app';
@@ -31,6 +30,7 @@ import {
   cx,
   Field,
   Icon,
+  RadioGroup,
   SegmentedControl,
   Select,
   Skeleton,
@@ -54,6 +54,7 @@ import {
   type CarriedItem,
   type MemberGear,
 } from './model';
+import { withoutPointers } from '../sheet/spellText';
 import styles from './combat.module.css';
 import { useEncounterCreatures } from './text';
 import { useCasting } from './casting';
@@ -199,7 +200,6 @@ export function Composer({
   const [tab, setTab] = useState<ComposerTab>(
     usableTabs.includes(initial) ? initial : (usableTabs[0] ?? 'hold'),
   );
-  const openSheet = useTableUi((s) => s.openCharacterSheet);
   const hasMirror = carries(gear, 'mirror');
   const [chosenGaze, setGaze] = useState<GazeChoice>(current?.gaze_defense ?? 'none');
   // A saved mirror guard reads as no guard once the member no longer carries a mirror, since the list has no
@@ -244,15 +244,8 @@ export function Composer({
       {casting.reason && (
         <div className={styles.noSpells}>
           <Icon name="spell" size={14} />
+          {/* The composer runs only in battle, where nobody can prepare spells, so it offers no way to. */}
           <span className={styles.noSpellsText}>{casting.reason}</span>
-          <Button
-            size="sm"
-            variant="ghost"
-            iconEnd="arrow-right"
-            onClick={() => openSheet(member.id, 'spells')}
-          >
-            Open {member.name}'s spells
-          </Button>
         </div>
       )}
 
@@ -638,8 +631,8 @@ function SpellTargets({
   const range = spellRangeFeet(spell.range_spec);
   const targeting = mode.targeting?.mode ?? null;
   const name = capitalize(spellFormName(spellId, reversed, ctx));
-  // A spell in the book had its form chosen when it was memorized. Any other is reversed as it's cast.
-  const choosesForm = spell.reversed_form && !memorizedReversed && !member.spell_book.includes(spellId);
+  // A divine caster chooses the form as they cast. An arcane caster chose it when memorizing the copy.
+  const choosesForm = spell.reversed_form && member.reverses_at === 'cast' && !memorizedReversed;
   const base: DeclarationBody = {
     action: 'cast',
     spell_id: spellId,
@@ -667,13 +660,15 @@ function SpellTargets({
     <div className={styles.choiceStack}>
       <p className={styles.choiceHint}>
         {spellRangeText(spell)}
-        {form?.duration ? ` · ${form.duration}` : ''} · {firstSentence(mode.prose || spell.intro)}
+        {form?.duration ? ` · ${form.duration}` : ''}
+        {/* With several modes, each radio below names its mode, so the hint stops at the range and duration. */}
+        {modes.length > 1 ? '' : ` · ${withoutPointers(firstSentence(mode.prose || spell.intro))}`}
       </p>
       {(modes.length > 1 || choosesForm) && (
         <div className={styles.optionRow}>
           {modes.length > 1 && (
-            <SegmentedControl
-              size="sm"
+            // A vertical list keeps every mode's full label on screen, however long bxapi words it.
+            <RadioGroup
               aria-label={`How to cast ${name}`}
               value={mode.key}
               onValueChange={(value) => {

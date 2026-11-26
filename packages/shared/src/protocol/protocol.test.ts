@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import openapi from '../bxapi/openapi.json' with { type: 'json' };
 import {
+  completeRuleset,
+  osrlibDefaultRuleset,
+  RulesetPatch,
   SpellId,
   ClientMessage,
   CreateUserRequest,
@@ -130,5 +134,45 @@ describe('user colors (R-002)', () => {
         expect(Math.hypot(l1 - l2, a1 - a2, b1 - b2), `${a} and ${b}`).toBeGreaterThan(15);
       }
     }
+  });
+});
+
+describe('the ruleset check', () => {
+  const properties = openapi.components.schemas.Ruleset.properties;
+
+  it("knows every field of bxapi's Ruleset schema, with its default", () => {
+    const defaults = osrlibDefaultRuleset();
+    expect(Object.keys(defaults)).toEqual(Object.keys(properties));
+    for (const [name, property] of Object.entries(properties)) {
+      expect(defaults[name as keyof typeof defaults], name).toEqual(
+        (property as { default: unknown }).default,
+      );
+    }
+  });
+
+  it('accepts known rules with allowed values, and refuses anything else by its field', () => {
+    expect(RulesetPatch.parse({ encumbrance: 'detailed', thac0_arithmetic: true })).toEqual({
+      encumbrance: 'detailed',
+      thac0_arithmetic: true,
+    });
+    for (const [value, field] of [
+      [{ critical_hits: true }, 'critical_hits'],
+      [{ encumbrance: 'heavy' }, 'encumbrance'],
+      [{ ability_score_method: '5d6' }, 'ability_score_method'],
+      [{ weapon_reload: 1 }, 'weapon_reload'],
+    ] as const) {
+      const result = RulesetPatch.safeParse(value);
+      expect(result.success, field).toBe(false);
+      expect(result.error?.issues.map((issue) => issue.path)).toEqual([[field]]);
+    }
+    expect(RulesetPatch.safeParse([]).success).toBe(false);
+  });
+
+  it('fills a stored ruleset with defaults, and drops a rule or value bxapi no longer has', () => {
+    expect(completeRuleset({ encumbrance: 'none', retired_rule: true, weapon_reload: 'sometimes' })).toEqual({
+      ...osrlibDefaultRuleset(),
+      encumbrance: 'none',
+    });
+    expect(completeRuleset(null)).toEqual(osrlibDefaultRuleset());
   });
 });

@@ -61,8 +61,8 @@ export { KitProvider } from './components/KitProvider';
 export type { KitProviderProps } from './components/KitProvider';
 
 // Display
-export { Badge, Tag } from './components/Badge';
-export type { BadgeProps, BadgeTone, TagProps } from './components/Badge';
+export { Badge, BadgePopover, Tag } from './components/Badge';
+export type { BadgePopoverProps, BadgeProps, BadgeTone, TagProps } from './components/Badge';
 export { Avatar, AvatarStack, resolveColor } from './components/Avatar';
 export type { AvatarProps, AvatarStackProps, AvatarSize, Presence } from './components/Avatar';
 export { Card, Panel, Parchment, ScrollArea } from './components/Surfaces';

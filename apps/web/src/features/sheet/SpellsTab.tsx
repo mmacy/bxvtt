@@ -442,8 +442,8 @@ function PrepareDialog({
       spells: member.preparable_spells.filter((id) => levels[id] === index + 1),
     }))
     .filter((group) => group.slots > 0 && group.spells.length > 0);
-  // A spell in the book chose its form when it was memorized, so only a book spell has a row for its reverse.
-  const reversedNameOf = (id: string) => (member.spell_book.includes(id) ? reversedNames[id] : undefined);
+  // Only a caster who chooses the form when memorizing has a row for a spell's reverse.
+  const reversedNameOf = (id: string) => (member.reverses_at === 'memorize' ? reversedNames[id] : undefined);
   // The forms the dialog has a row for. The counts and the command cover these alone, so a spell that leaves the
   // view while the dialog is open is never sent.
   const shown = groups.flatMap(({ spells }) =>
@@ -598,9 +598,8 @@ function CastDialog({
   const modes = form?.modes ?? [];
   const mode = modes.find((m) => m.key === modeKey) ?? modes[0];
   const targeting = mode?.targeting?.mode ?? 'single';
-  // A spell in the book had its form chosen when it was memorized. Any other is reversed as it's cast.
-  const choosesForm =
-    !member.spell_book.includes(copy.spellId) && reversedName !== undefined && !copy.reversed;
+  // A divine caster chooses the form as they cast. An arcane caster chose it when memorizing the copy.
+  const choosesForm = member.reverses_at === 'cast' && reversedName !== undefined && !copy.reversed;
   const cell =
     location?.kind === 'dungeon' && location.position
       ? `cell:${location.dungeon_id}:${location.level_number}:${location.position[0]},${location.position[1]}`

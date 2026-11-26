@@ -2,11 +2,12 @@
  * The wizard's choices, kept in this browser so a dialog closed by accident loses nothing, and the request body
  * that turns them into a character.
  */
-import type {
-  AbilityRoll,
-  CharacterRequest,
-  StartingRollRequest,
-  StartingRollsStatus,
+import {
+  CreationRules,
+  type AbilityRoll,
+  type CharacterRequest,
+  type StartingRollRequest,
+  type StartingRollsStatus,
 } from '@bxvtt/shared/protocol';
 import { ABILITIES, isAbility, readScores, type Ability, type Scores } from './tables';
 import type { CartLine } from './kits';
@@ -31,11 +32,18 @@ export interface Adjustment {
 }
 
 /**
- * The ability roll a draft holds. `rolls`, the three d6 behind each score, is absent for a draft saved before
- * bxapi returned the dice. The wizard then fetches the roll again, and the draft keeps its scores until the dice
- * arrive.
+ * The ability roll a draft holds, as the server answered it. A stored draft can lack some members:
+ *
+ * - `rolls`, the dice behind each score, is absent when the stored dice are damaged. The wizard fetches the roll
+ *   again, and the draft keeps its scores until the dice arrive.
+ * - `table_id`, `rules`, `rerolls_left`, and `ability_score_method` are absent for a roll made before ability rolls
+ *   belonged to a table. The wizard can't continue such a roll, so the player rolls again.
  */
-export type DraftRoll = Omit<AbilityRoll, 'rolls'> & { rolls?: AbilityRoll['rolls'] };
+export type DraftRoll = Omit<
+  AbilityRoll,
+  'rolls' | 'table_id' | 'rules' | 'rerolls_left' | 'ability_score_method'
+> &
+  Partial<Pick<AbilityRoll, 'rolls' | 'table_id' | 'rules' | 'rerolls_left' | 'ability_score_method'>>;
 
 /**
  * Everything the player chose so far. The draft holds no rolled hit points or gold: the server keeps which rolls
@@ -46,10 +54,7 @@ export interface WizardDraft {
   version: 1;
   step: StepId;
   roll: DraftRoll | null;
-  /** How many times the player rolled this session, to say so honestly on the roll step. */
-  rolls: number;
   classId: string | null;
-  hpReroll: boolean;
   adjustment: Adjustment;
   name: string;
   alignment: Alignment | null;
@@ -65,9 +70,7 @@ export function emptyDraft(): WizardDraft {
     version: 1,
     step: 'roll',
     roll: null,
-    rolls: 0,
     classId: null,
-    hpReroll: false,
     adjustment: { lowered: {}, raised: {} },
     name: '',
     alignment: null,
@@ -128,8 +131,8 @@ export function requestFromDraft(draft: WizardDraft, options: RequestOptions = {
     name: name === '' && options.placeholderIdentity ? 'Adventurer' : name,
     class_id: draft.classId ?? '',
     alignment: draft.alignment ?? 'neutral',
+    ability_roll_id: draft.roll?.id ?? '',
   };
-  if (draft.roll) body.ability_roll_id = draft.roll.id;
   if (hasAdjustment(draft.adjustment)) {
     body.adjustment = {
       lowered: cleanMap(draft.adjustment.lowered),
@@ -138,7 +141,6 @@ export function requestFromDraft(draft: WizardDraft, options: RequestOptions = {
   }
   if (draft.spells.length > 0) body.starting_spell_ids = [...draft.spells];
   if (draft.languages.length > 0) body.extra_languages = [...draft.languages];
-  if (draft.hpReroll) body.hp_reroll_at_first_level = true;
   if (!options.withoutOutfit) {
     const purchases = draft.cart.filter((line) => line.quantity > 0);
     if (purchases.length > 0) {
@@ -154,30 +156,28 @@ export function requestFromDraft(draft: WizardDraft, options: RequestOptions = {
 }
 
 /**
- * The body of `POST /api/ability-rolls/{roll_id}/hit-points` and `.../gold` for a draft: the class, the reroll
- * option, and an arcane caster's first spell, which are the choices the hit points and the gold depend on.
+ * The body of `POST /api/ability-rolls/{roll_id}/hit-points` and `.../gold` for a draft: the class and an arcane
+ * caster's first spell, which are the choices the hit points and the gold depend on. The rules recorded on the roll
+ * decide the rest.
  *
  * @param draft - The draft. It must have a class, unless `status` fixes one.
- * @param status - The server's record of the roll. When the hit points are rolled, its class and reroll option
- *   replace the draft's.
+ * @param status - The server's record of the roll. When the hit points are rolled, its class replaces the draft's.
  */
 export function startingRollRequest(
   draft: WizardDraft,
   status: StartingRollsStatus | null = null,
 ): StartingRollRequest {
   const fixed = status?.class_id ?? null;
-  const reroll = fixed === null ? draft.hpReroll : status?.hp_reroll_at_first_level === true;
   const body: StartingRollRequest = { class_id: fixed ?? draft.classId ?? '' };
-  if (reroll) body.hp_reroll_at_first_level = true;
   if (draft.spells.length > 0) body.starting_spell_ids = [...draft.spells];
   return body;
 }
 
 /**
  * Brings a draft in line with the server's record of its roll. The draft lives in the browser and the record on
- * the server, so the record wins: once the hit points are rolled, the draft takes their class and reroll option,
- * and a draft on a step after the hit points and gold returns to that step until both are rolled. A change of
- * class also clears the choices that depend on the class, as choosing another class does.
+ * the server, so the record wins: once the hit points are rolled, the draft takes their class, and a draft on a
+ * step after the hit points and gold returns to that step until both are rolled. A change of class also clears
+ * the choices that depend on the class, as choosing another class does.
  *
  * @param draft - The draft.
  * @param status - The server's record of the draft's roll.
@@ -186,12 +186,14 @@ export function startingRollRequest(
 export function reconcileDraft(draft: WizardDraft, status: StartingRollsStatus): WizardDraft {
   let next = draft;
   const fixed = status.class_id;
-  const reroll = status.hp_reroll_at_first_level === true;
-  if (fixed !== null && (draft.classId !== fixed || draft.hpReroll !== reroll)) {
-    next = { ...next, classId: fixed, hpReroll: reroll };
-    if (draft.classId !== fixed) {
-      next = { ...next, adjustment: { lowered: {}, raised: {} }, spells: [], languages: [] };
-    }
+  if (fixed !== null && draft.classId !== fixed) {
+    next = {
+      ...next,
+      classId: fixed,
+      adjustment: { lowered: {}, raised: {} },
+      spells: [],
+      languages: [],
+    };
   }
   const rolled = fixed !== null && status.gold_rolled;
   if (!rolled && STEP_IDS.indexOf(next.step) > STEP_IDS.indexOf('hp_gold'))
@@ -203,8 +205,16 @@ export function reconcileDraft(draft: WizardDraft, status: StartingRollsStatus):
 
 const STORAGE_PREFIX = 'bxvtt.wizard.';
 
-/** The storage key of a user's draft. */
-export function draftKey(userId: string | null | undefined): string {
+/**
+ * The storage key of a user's draft at a table. Each table has its own draft, because an ability roll belongs to
+ * the table it was rolled at.
+ */
+export function draftKey(userId: string | null | undefined, tableId: string): string {
+  return `${STORAGE_PREFIX}${userId ?? 'anonymous'}.${tableId}`;
+}
+
+/** The storage key of a user's one draft from before drafts belonged to a table. */
+export function legacyDraftKey(userId: string | null | undefined): string {
   return `${STORAGE_PREFIX}${userId ?? 'anonymous'}`;
 }
 
@@ -225,7 +235,10 @@ function abilityMap(value: unknown): Partial<Record<Ability, number>> {
   return result;
 }
 
-/** Reads the three d6 results of each ability from a stored roll, or `null` when one is missing or malformed. */
+/**
+ * Reads the three d6 results that count towards each ability from a stored roll, or `null` when one is missing
+ * or malformed.
+ */
 function readDice(value: unknown): AbilityRoll['rolls']['rolls'] | null {
   if (!isRecord(value)) return null;
   const dice: AbilityRoll['rolls']['rolls'] = {};
@@ -263,9 +276,35 @@ function readRoll(value: unknown): DraftRoll | null {
       isRecord(value.rolls.scores) ? (value.rolls.scores as Record<string, number>) : null,
     );
     const dice = readDice(value.rolls.rolls);
-    if (totals && dice) roll.rolls = { scores: totals, rolls: dice };
+    if (totals && dice) {
+      roll.rolls = {
+        scores: totals,
+        rolls: dice,
+        dropped: readDropped(value.rolls.dropped),
+        sub_par: value.rolls.sub_par === true,
+      };
+    }
   }
+  if (typeof value.table_id === 'string') roll.table_id = value.table_id;
+  const rules = CreationRules.safeParse(value.rules);
+  if (rules.success) roll.rules = rules.data;
+  if (value.rerolls_left === null || (typeof value.rerolls_left === 'number' && value.rerolls_left >= 0)) {
+    roll.rerolls_left = value.rerolls_left;
+  }
+  const method = CreationRules.shape.ability_score_method.safeParse(value.ability_score_method);
+  if (method.success) roll.ability_score_method = method.data;
   return roll;
+}
+
+/** Reads the dropped die of each ability from a stored roll. A die that isn't a d6 face is left out. */
+function readDropped(value: unknown): Record<string, number> {
+  const dropped: Record<string, number> = {};
+  if (!isRecord(value)) return dropped;
+  for (const ability of ABILITIES) {
+    const face = value[ability];
+    if (typeof face === 'number' && Number.isInteger(face) && face >= 1 && face <= 6) dropped[ability] = face;
+  }
+  return dropped;
 }
 
 /**
@@ -279,9 +318,7 @@ export function parseDraft(raw: unknown): WizardDraft | null {
   draft.roll = readRoll(raw.roll);
   if (draft.roll === null) return null;
   draft.step = STEP_IDS.find((id) => id === raw.step) ?? 'roll';
-  draft.rolls = typeof raw.rolls === 'number' ? raw.rolls : 1;
   draft.classId = typeof raw.classId === 'string' ? raw.classId : null;
-  draft.hpReroll = raw.hpReroll === true;
   if (isRecord(raw.adjustment)) {
     draft.adjustment = {
       lowered: abilityMap(raw.adjustment.lowered),
@@ -303,21 +340,55 @@ export function parseDraft(raw: unknown): WizardDraft | null {
   return draft;
 }
 
-/** Reads the user's stored draft, or `null`. */
-export function loadDraft(userId: string | null | undefined): WizardDraft | null {
+function readStored(key: string): WizardDraft | null {
   try {
-    const raw = globalThis.localStorage?.getItem(draftKey(userId));
+    const raw = globalThis.localStorage?.getItem(key);
     return raw ? parseDraft(JSON.parse(raw) as unknown) : null;
   } catch {
     return null;
   }
 }
 
-/** Stores the user's draft, or removes it with `null`. Storage that refuses is ignored. */
-export function saveDraft(userId: string | null | undefined, draft: WizardDraft | null): void {
+/**
+ * Reads the user's stored draft at a table, or `null`. Without one, it takes the user's draft from before drafts
+ * belonged to a table, once, and removes it from storage. That draft's roll has no table, so the wizard can't
+ * continue it.
+ *
+ * @param userId - The user.
+ * @param tableId - The table the wizard is open at.
+ */
+export function loadDraft(userId: string | null | undefined, tableId: string): WizardDraft | null {
+  const draft = readStored(draftKey(userId, tableId));
+  if (draft !== null) return draft;
+  const legacy = readStored(legacyDraftKey(userId));
   try {
-    if (draft === null || draft.roll === null) globalThis.localStorage?.removeItem(draftKey(userId));
-    else globalThis.localStorage?.setItem(draftKey(userId), JSON.stringify(draft));
+    globalThis.localStorage?.removeItem(legacyDraftKey(userId));
+  } catch {
+    // Blocked storage keeps the old draft. It never loads at a table, so it does no harm.
+  }
+  return legacy;
+}
+
+/**
+ * Whether the wizard at a table can continue a draft's roll: the roll was made at that table, so the server keeps
+ * its recorded rules.
+ *
+ * @param roll - The draft's roll.
+ * @param tableId - The table the wizard is open at.
+ */
+export function rollBelongsTo(roll: DraftRoll, tableId: string): boolean {
+  return roll.table_id === tableId;
+}
+
+/** Stores the user's draft at a table, or removes it with `null`. Storage that refuses is ignored. */
+export function saveDraft(
+  userId: string | null | undefined,
+  tableId: string,
+  draft: WizardDraft | null,
+): void {
+  try {
+    if (draft === null || draft.roll === null) globalThis.localStorage?.removeItem(draftKey(userId, tableId));
+    else globalThis.localStorage?.setItem(draftKey(userId, tableId), JSON.stringify(draft));
   } catch {
     // Storage is full or blocked. The draft lives in memory while the page is open.
   }

@@ -247,7 +247,13 @@ function tradeApi(answer?: (request: CharacterCheckRequest) => Promise<void>): F
   api.getStartingRolls.mockResolvedValue({
     used: false,
     class_id: null,
-    hp_reroll_at_first_level: null,
+    rules: {
+      ability_score_method: '3d6',
+      hp_reroll_at_first_level: false,
+      max_hp_at_first_level: false,
+      ability_score_rerolls: 0,
+      sub_par_restart: false,
+    },
     gold_rolled: false,
   });
   return api;
@@ -272,11 +278,21 @@ const FIGHTER_ROLL = {
   eligible_class_ids: ['fighter'],
   used: false,
   created_at: '2026-11-21T00:00:00Z',
+  table_id: fixtureSnapshot('lobby', 'player').table.id,
+  ability_score_method: '3d6',
+  rules: {
+    ability_score_method: '3d6',
+    hp_reroll_at_first_level: false,
+    max_hp_at_first_level: false,
+    ability_score_rerolls: 0,
+    sub_par_restart: false,
+  },
+  rerolls_left: 0,
 };
 
 function openAdjustStep(api: FakeApi) {
   localStorage.setItem(
-    draftKey(null),
+    draftKey(null, fixtureSnapshot('lobby', 'player').table.id),
     JSON.stringify({ ...emptyDraft(), roll: FIGHTER_ROLL, classId: 'fighter', step: 'adjust' }),
   );
   return renderWithTable(<CharacterWizard open onClose={() => {}} onCreated={() => {}} />, {

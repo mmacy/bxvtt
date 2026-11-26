@@ -38,6 +38,11 @@
   cursor: not-allowed;
 }
 
+/* Read-only: the value stays easy to read, and only the controls around it are muted. */
+.readOnly:hover:not(.disabled) {
+  border-color: var(--color-border-input);
+}
+
 .sm {
   --input-height: var(--control-sm);
   font-size: var(--text-sm);
@@ -183,4 +188,8 @@
 .step[data-unavailable] {
   opacity: 0.35;
   cursor: not-allowed;
+}
+
+.readOnly .step:disabled {
+  cursor: default;
 }

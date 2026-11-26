@@ -128,7 +128,7 @@ async function newPage(person, { seedRolls } = {}) {
   const page = await context.newPage();
   page.setDefaultTimeout(15_000);
   if (seedRolls !== undefined) {
-    await page.route('**/api/ability-rolls', async (route) => {
+    await page.route('**/api/tables/*/ability-rolls', async (route) => {
       const request = route.request();
       if (request.method() !== 'POST') return route.continue();
       const body = JSON.parse(request.postData() ?? '{}');
@@ -307,12 +307,17 @@ async function main() {
   for (const player of [sam, priya, theo])
     await player.call('POST', '/join', { invite_code: table.invite_code });
 
+  // Each character comes from an ability roll at the table, with its hit points and gold rolled before the
+  // purchases, as the wizard makes one.
   const create = async (person, spec) => {
+    const roll = await person.call('POST', `/tables/${tableId}/ability-rolls`, { seed: spec.seed });
+    await person.call('POST', `/ability-rolls/${roll.id}/hit-points`, { class_id: spec.classId });
+    await person.call('POST', `/ability-rolls/${roll.id}/gold`, { class_id: spec.classId });
     const character = await person.call('POST', '/characters', {
       name: spec.name,
       class_id: spec.classId,
       alignment: 'lawful',
-      seed: spec.seed,
+      ability_roll_id: roll.id,
       purchases: spec.buy.map((item_id) => ({ item_id })),
       equip_item_ids: spec.equip,
     });

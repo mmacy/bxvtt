@@ -173,9 +173,9 @@ test.describe('first run and lobby', () => {
     const sam = await crew.person('Sam');
     const table = await ruth.client.createTable({ name: 'Marching order' });
     await sam.client.joinTable(table.invite_code);
-    await createCharacter(sam.client, { name: 'Flarg', classId: 'fighter' });
-    await createCharacter(sam.client, { name: 'Tinks', classId: 'thief' });
-    await createCharacter(ruth.client, { name: 'Clarence', classId: 'cleric' });
+    await createCharacter(sam.client, { name: 'Flarg', classId: 'fighter' }, table.id);
+    await createCharacter(sam.client, { name: 'Tinks', classId: 'thief' }, table.id);
+    await createCharacter(ruth.client, { name: 'Clarence', classId: 'cleric' }, table.id);
 
     await ruth.page.goto(`/tables/${table.id}`);
     await sam.page.goto(`/tables/${table.id}`);
@@ -224,7 +224,7 @@ test.describe('first run and lobby', () => {
     const sam = await crew.person('Sam');
     const table = await ruth.client.createTable({ name: 'Farewell' });
     await sam.client.joinTable(table.invite_code);
-    const flarg = await createCharacter(sam.client, { name: 'Flarg', classId: 'fighter' });
+    const flarg = await createCharacter(sam.client, { name: 'Flarg', classId: 'fighter' }, table.id);
     await sam.client.addToRoster(table.id, flarg.id);
     const solo = await sam.client.createTable({ name: 'Sam alone' });
     await openTable(ruth.page, `/tables/${table.id}`);
@@ -281,10 +281,8 @@ test.describe('first run and lobby', () => {
     // Settings save and reach the player's copy of the table.
     await ruth.page.getByRole('radio', { name: 'Anyone with a character' }).click();
     await expect(ruth.page.getByRole('radio', { name: 'Anyone with a character' })).toBeChecked();
-    await ruth.page.getByRole('switch', { name: 'Resolve battle rounds automatically' }).click();
-    await expect(
-      ruth.page.getByRole('switch', { name: 'Resolve battle rounds automatically' }),
-    ).not.toBeChecked();
+    await ruth.page.getByRole('switch', { name: 'Resolve rounds automatically' }).click();
+    await expect(ruth.page.getByRole('switch', { name: 'Resolve rounds automatically' })).not.toBeChecked();
     await expect
       .poll(async () => (await sam.client.getTable(table.id)).settings)
       .toMatchObject({ party_control: 'anyone', auto_resolve: false });
@@ -305,8 +303,8 @@ test.describe('first run and lobby', () => {
     const sam = await crew.person('Sam');
     const table = await ruth.client.createTable({ name: 'Start' });
     await sam.client.joinTable(table.invite_code);
-    const flarg = await createCharacter(sam.client, { name: 'Flarg', classId: 'fighter' });
-    const clarence = await createCharacter(ruth.client, { name: 'Clarence', classId: 'cleric' });
+    const flarg = await createCharacter(sam.client, { name: 'Flarg', classId: 'fighter' }, table.id);
+    const clarence = await createCharacter(ruth.client, { name: 'Clarence', classId: 'cleric' }, table.id);
     await sam.client.addToRoster(table.id, flarg.id);
     await ruth.client.addToRoster(table.id, clarence.id);
     await ruth.seedGameStart(1981);
