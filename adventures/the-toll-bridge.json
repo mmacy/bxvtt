@@ -1283,7 +1283,7 @@
                   {
                     "id": "sea_chest",
                     "kind": "treasure_cache",
-                    "description": "The bandits' pooled winnings from a month of dice, and a good crossbow.",
+                    "description": "The battered sea chest under the window has a lid ringed with cup marks and nicked by knives.",
                     "cell": null,
                     "item_ids": [
                       "crossbow",
@@ -1380,7 +1380,7 @@
                   {
                     "id": "toll_strongbox",
                     "kind": "treasure_cache",
-                    "description": "The week's takings, in a strongbox bolted to the floor under the desk.",
+                    "description": "A strongbox bolted to the floor under the desk, its lid worn bright by daily use.",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [],
@@ -1495,7 +1495,7 @@
                   {
                     "id": "captains_chest",
                     "kind": "treasure_cache",
-                    "description": "Mag Corrie's share of the tolls, a silver brooch, a well-made sword, and a small iron box with a miller's mark on the lid.",
+                    "description": "A brass-cornered chest stands on the stolen carpet at the foot of the curtained bed.",
                     "cell": null,
                     "item_ids": [
                       "millers_strongbox"
@@ -1716,7 +1716,7 @@
                   {
                     "id": "hidden_bundle",
                     "kind": "treasure_cache",
-                    "description": "An oilcloth bundle tied with wire. A small crossbow mechanism is fixed to the shelf behind it, pointing out.",
+                    "description": "An oilcloth bundle sits on the shelf, tied with wire that runs back into a crack in the stone.",
                     "cell": null,
                     "item_ids": [],
                     "magic_item_ids": [

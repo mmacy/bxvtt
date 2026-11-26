@@ -68,7 +68,8 @@ level
       {
         id: 'sea_chest',
         kind: 'treasure_cache',
-        description: "The bandits' pooled winnings from a month of dice, and a good crossbow.",
+        description:
+          'The battered sea chest under the window has a lid ringed with cup marks and nicked by knives.',
         coins: { sp: 180, cp: 300 },
         item_ids: ['crossbow', 'crossbow_bolts'],
       },
@@ -90,7 +91,7 @@ level
       {
         id: 'toll_strongbox',
         kind: 'treasure_cache',
-        description: "The week's takings, in a strongbox bolted to the floor under the desk.",
+        description: 'A strongbox bolted to the floor under the desk, its lid worn bright by daily use.',
         coins: { gp: 90, sp: 240 },
         trap: trap({ kind: 'treasure', trigger: 'open', damage_dice: '1d4', save: save('death') }),
       },
@@ -112,8 +113,7 @@ level
       {
         id: 'captains_chest',
         kind: 'treasure_cache',
-        description:
-          "Mag Corrie's share of the tolls, a silver brooch, a well-made sword, and a small iron box with a miller's mark on the lid.",
+        description: 'A brass-cornered chest stands on the stolen carpet at the foot of the curtained bed.',
         coins: { gp: 220 },
         item_ids: ['millers_strongbox'],
         magic_item_ids: ['sword_plus_1'],
@@ -151,7 +151,7 @@ level
         id: 'hidden_bundle',
         kind: 'treasure_cache',
         description:
-          'An oilcloth bundle tied with wire. A small crossbow mechanism is fixed to the shelf behind it, pointing out.',
+          'An oilcloth bundle sits on the shelf, tied with wire that runs back into a crack in the stone.',
         coins: { gp: 75 },
         valuables: [valuable('gem', 'Amber', 100)],
         magic_item_ids: ['potion_of_healing'],

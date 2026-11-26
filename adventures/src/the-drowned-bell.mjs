@@ -167,7 +167,7 @@ level1
         id: 'chapel_altar',
         kind: 'treasure_cache',
         description:
-          'Two silver candlesticks, two stoppered flasks of holy water, and a clay bottle wrapped in an altar cloth.',
+          'Two silver candlesticks stand on the altar beside two small stoppered flasks and a clay bottle wrapped in an altar cloth.',
         item_ids: ['holy_water', 'holy_water'],
         magic_item_ids: ['potion_of_healing'],
         valuables: [
@@ -234,7 +234,8 @@ level1
       {
         id: 'iron_chest',
         kind: 'treasure_cache',
-        description: 'Coins, a pale moonstone, and an old iron key whose bow is shaped like a bell.',
+        description:
+          'An iron-bound chest with a heavy hasp stands at the foot of the bed, its lid scarred by blades.',
         item_ids: ['priors_iron_key'],
         coins: { gp: 120, ep: 40 },
         valuables: [valuable('gem', 'Moonstone', 50)],
@@ -310,8 +311,7 @@ level1
       {
         id: 'lost_satchel',
         kind: 'treasure_cache',
-        description:
-          'A satchel of oiled leather holding a coil of rope, a few coins, and a rolled scroll in a bone case.',
+        description: 'A satchel of oiled leather lies on the ledge beyond the crack, its flap buckled shut.',
         cell: [1, 7],
         item_ids: ['rope'],
         magic_item_ids: ['spell_scroll_1'],
@@ -435,8 +435,7 @@ level2
       {
         id: 'abbots_coffin',
         kind: 'treasure_cache',
-        description:
-          'Inside the sealed coffin, a skeleton in rotted vestments wears a heavy gold ring and has a purse of old coins under its folded hands.',
+        description: "The third stone coffin on the dais, carved with an abbot's crook.",
         coins: { gp: 60 },
         valuables: [valuable('jewellery', "Abbot's gold ring", 150)],
       },
@@ -451,8 +450,7 @@ level2
       {
         id: 'priors_desk',
         kind: 'treasure_cache',
-        description:
-          "The desk drawers hold the prior's household money and a stoppered bottle of healing draught.",
+        description: "The prior's writing desk has a row of narrow drawers with tarnished brass pulls.",
         coins: { gp: 80 },
         magic_item_ids: ['potion_of_healing'],
       },
@@ -475,14 +473,15 @@ level2
         id: 'reliquary_casket',
         kind: 'treasure_cache',
         description:
-          'The casket holds the Hand of Saint Corvane. A thin pipe runs from its base into the shelf.',
+          'A casket of silver and crystal sits on the marble shelf. A thin pipe runs from its base into the shelf.',
         item_ids: ['hand_of_saint_corvane'],
         trap: trap({ kind: 'treasure', trigger: 'open', damage_dice: '1d6', save: save('breath', 'half') }),
       },
       {
         id: 'offering_chest',
         kind: 'treasure_cache',
-        description: "Pilgrims' offerings in gold, and a scroll sealed with the priory's lantern seal.",
+        description:
+          "A heavy oak chest bound with brass stands below the shelf, its lid stamped with the priory's lantern.",
         coins: { gp: 200 },
         magic_item_ids: ['scroll_of_protection_from_undead'],
       },
@@ -697,7 +696,7 @@ level3
         id: 'vestment_chest',
         kind: 'treasure_cache',
         description:
-          'Inside the chest, under folded altar linen: a silver chalice, a bag of gold, and a flanged mace wrapped in oilcloth.',
+          'A tall chest of carved oak stands against the wall, its doors swollen in their frames and its hinges crusted green.',
         coins: { gp: 100 },
         magic_item_ids: ['mace_plus_1'],
         valuables: [valuable('jewellery', 'Silver chalice', 250, 10)],
@@ -722,8 +721,7 @@ level3
       {
         id: 'brothers_strongbox',
         kind: 'treasure_cache',
-        description:
-          'A small strongbox under the bench, holding the gems the brothers saved from the treasury.',
+        description: 'A small iron strongbox stands under the bench, its lid dull with damp.',
         coins: { pp: 20 },
         valuables: [
           valuable('gem', 'Garnet', 100),
