@@ -16,6 +16,7 @@ import {
   type WizardDraft,
 } from './draft';
 import { applyKit } from './kits';
+import { lotSentence, rowSummary } from './shop';
 import { suggestName } from './names';
 import { checkChoices, explainCreationError, explainInvalid, oneReasonPerAbility } from './server';
 import { casterNextStep, extraLanguageCount, headlineModifier, xpModifierFor, type Scores } from './tables';
@@ -367,5 +368,21 @@ describe('continueBlock', () => {
     expect(continueBlock({ ...facts, step: 'adjust', adjust: 'in_progress' })).toBeNull();
     expect(continueBlock({ ...facts, step: 'outfit' })).toBeNull();
     expect(continueBlock({ ...facts, step: 'identity' })).toBeNull();
+  });
+});
+
+describe('lot phrases in the wizard shop', () => {
+  it('words a lot as the town Outfitter does, with the total for several lots', () => {
+    const torches = {
+      item_type: 'gear',
+      id: 'torch',
+      name: 'Torches (6)',
+      lot_size: 6,
+    } as unknown as EquipmentDetail;
+    const sword = { item_type: 'weapon', id: 'sword', name: 'Sword' } as unknown as EquipmentDetail;
+    expect(lotSentence('torch', 'Torches (6)', torches, 1)).toBe('Comes as 6 torches');
+    expect(lotSentence('torch', 'Torches (6)', torches, 2)).toBe('Comes as 12 torches');
+    expect(lotSentence('sword', 'Sword', sword, 1)).toBeNull();
+    expect(rowSummary('torch', 'Torches (6)', torches)).toBe('Comes as 6 torches');
   });
 });

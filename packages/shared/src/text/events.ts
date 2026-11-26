@@ -1189,7 +1189,7 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
           };
         case 'exploration.trap.safe':
           return {
-            text: 'The known trap does not go off.',
+            text: "The trap doesn't go off.",
             category: 'exploration',
             tone: 'good',
             icon: 'trap',

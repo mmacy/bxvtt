@@ -73,7 +73,7 @@ function trapLines(trap: MapTrap, referee: boolean): string[] {
 function featureTitle(feature: MapFeature, referee: boolean): string {
   switch (feature.kind) {
     case 'cache':
-      return feature.emptied ? 'Emptied' : 'Treasure';
+      return 'Treasure';
     case 'generated_cache':
       return 'Treasure';
     case 'pile':
@@ -125,7 +125,10 @@ export function describeTarget(target: MapTarget, map: LevelMap): TargetDescript
         else if (referee) lines.push(`Holds: ${f.contents.join(', ')}`);
         else lines.push(f.contents.join(', '));
       }
-      if (f.trap) lines.push(...trapLines(f.trap, referee));
+      // An emptied cache says so, and its trap no longer matters, as the scene panel shows it.
+      const emptied = f.kind === 'cache' && f.emptied;
+      if (emptied) lines.push('Emptied.');
+      else if (f.trap) lines.push(...trapLines(f.trap, referee));
       const notes = referee ? refereeNotesLine(f.refereeNotes) : null;
       if (notes !== null) lines.push(notes);
       if (referee && !f.known) lines.push('Unseen by the party.');

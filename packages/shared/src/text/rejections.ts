@@ -134,26 +134,26 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   'combat.attack.out_of_reach': [
     {
       when: ['attacker', 'distance_feet'],
-      text: '{attacker|entity} is {distance_feet|feet} from the target, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
+      text: '{attacker|entity} is {distance_feet|feet} from the target, too far to attack in melee.',
     },
     {
       when: ['character', 'target', 'distance_feet'],
-      text: '{character|member} is {distance_feet|feet} from {target|entity}, too far to reach in melee. Close in first, or use a missile weapon or a spell.',
+      text: '{character|member} is {distance_feet|feet} from {target|entity}, too far to attack in melee.',
     },
     {
       when: ['character', 'distance_feet'],
-      text: '{character|member} is {distance_feet|feet} from the target, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
+      text: '{character|member} is {distance_feet|feet} from the target, too far to attack in melee.',
     },
     {
       when: ['target', 'distance_feet'],
-      text: '{target|entity} is {distance_feet|feet} away, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
+      text: '{target|entity} is {distance_feet|feet} away, too far to attack in melee.',
     },
     {
       when: ['distance_feet'],
-      text: 'The target is {distance_feet|feet} away, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
+      text: 'The target is {distance_feet|feet} away, too far to attack in melee.',
     },
     {
-      text: 'The target is too far away for a melee attack. Close in first, or use a missile weapon or a spell.',
+      text: 'The target is too far away to attack in melee.',
     },
   ],
   'combat.attack.reload': '{attacker|entity} fired last round and must reload this round.',

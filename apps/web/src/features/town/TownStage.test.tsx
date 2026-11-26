@@ -148,7 +148,7 @@ describe('the outfitter', () => {
     await user.click(screen.getByRole('button', { name: 'Add one lot of torches' }));
     await user.click(screen.getByRole('button', { name: 'Add Sword to the cart' }));
     const cart = screen.getByRole('list', { name: 'Cart' });
-    expect(within(cart).getByText('2 lots are 12 torches')).toBeInTheDocument();
+    expect(within(cart).getByText('Comes as 12 torches')).toBeInTheDocument();
     expect(screen.getByText('12 gp')).toBeInTheDocument();
 
     api.sendCommand.mockResolvedValue(

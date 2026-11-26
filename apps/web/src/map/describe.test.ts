@@ -75,6 +75,35 @@ describe('the feature tooltip', () => {
     expect(describeFeature(pile, refereeMap)).toEqual(expected);
   });
 
+  it('titles an emptied cache as treasure, says it is emptied, and drops its trap on both layers', () => {
+    const trap = { state: 'found' as const, trigger: 'open' as const, summary: '1d6 damage' };
+    const chest = feature({
+      description: 'A heavy hasp holds the lid shut.',
+      emptied: true,
+      trap,
+      contents: ['40 gp'],
+      refereeNotes: 'The key is in the well.',
+    });
+    expect(
+      describeFeature(
+        { ...chest, contents: [], refereeNotes: null, trap: { ...trap, trigger: null } },
+        playerMap,
+      ),
+    ).toEqual({
+      title: 'Treasure',
+      lines: ['A heavy hasp holds the lid shut.', 'Emptied.'],
+    });
+    expect(describeFeature(chest, refereeMap)).toEqual({
+      title: 'Treasure',
+      lines: [
+        'A heavy hasp holds the lid shut.',
+        'Holds: 40 gp',
+        'Emptied.',
+        'Referee notes: The key is in the well.',
+      ],
+    });
+  });
+
   it('never shows a player a referee notes line', () => {
     const chest = feature({ description: 'A chest.', refereeNotes: 'Holds the key.' });
     expect(describeFeature(chest, playerMap)?.lines).toEqual(['A chest.']);

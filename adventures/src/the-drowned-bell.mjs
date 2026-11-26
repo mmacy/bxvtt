@@ -237,7 +237,7 @@ level1
         id: 'iron_chest',
         kind: 'treasure_cache',
         referee_notes:
-          "The key's bow is shaped like a bell. It opens the heavy oak door banded with iron, with the bell-shaped keyhole, on level 2.",
+          "The key's bow is shaped like a bell. It opens the iron-banded oak door with the bell-shaped keyhole on level 2.",
         description: 'A heavy hasp holds the lid shut, and blade marks score the iron around it.',
         item_ids: ['priors_iron_key'],
         coins: { gp: 120, ep: 40 },

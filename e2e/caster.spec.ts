@@ -113,7 +113,7 @@ test.describe('a new caster', () => {
       .getByRole('radio', { name: 'Cast' })
       .click();
     // Sleep by Hit Dice takes the goblins as a group, so it needs no single target.
-    await composer.getByRole('radio', { name: /^A total of 2d8 Hit Dice/ }).click();
+    await composer.getByRole('radio', { name: 'By hit dice' }).click();
     const declare = composer.getByRole('button', { name: /^Cast sleep/i }).first();
     await expect(declare).toBeEnabled();
     await expect(declare).toBeVisible();

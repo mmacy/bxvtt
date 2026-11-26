@@ -398,7 +398,7 @@ test.describe('battle', () => {
     // row, and the round can't resolve until Flarg's action changes.
     for (const actor of [sam, ann]) {
       await expect(declarationRow(actor.page, 'Flarg')).toContainText(/Won't work: /);
-      await expect(declarationRow(actor.page, 'Flarg')).toContainText(/too far for a melee attack/);
+      await expect(declarationRow(actor.page, 'Flarg')).toContainText(/too far to attack in melee/);
       await expect(battleBoard(actor.page).getByRole('heading', { name: 'Round 1' })).toBeVisible();
     }
     await expect(battleBoard(sam.page).getByRole('button', { name: 'Resolve round' })).toHaveAttribute(
@@ -476,7 +476,7 @@ test.describe('battle', () => {
     }
     // The server previews the declarations as they arrive, so the board names Flarg's before anyone resolves.
     await openTable(sam.page, table.path);
-    await expect(declarationRow(sam.page, 'Flarg')).toContainText(/too far for a melee attack/);
+    await expect(declarationRow(sam.page, 'Flarg')).toContainText(/too far to attack in melee/);
     // The board's button and the action bar's button both wait for Flarg.
     const resolveButtons = sam.page.getByRole('button', { name: 'Resolve round' });
     await expect(resolveButtons).toHaveCount(2);

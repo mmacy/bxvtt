@@ -86,8 +86,8 @@ export function lotSize(item: ShopItem): number {
 }
 
 /**
- * A plain sentence about a purchase lot, such as "1 lot is 6 torches" or "2 lots are 12 torches", or `null` for
- * an item that sells singly.
+ * A plain phrase about what a purchase of lots holds, such as "Comes as 6 torches" for one lot or "Comes as 12
+ * torches" for two, or `null` for an item that sells singly.
  *
  * @param item - The shop item.
  * @param lots - How many lots.
@@ -98,7 +98,7 @@ export function lotSentence(item: ShopItem, lots: number, ctx: TextContext): str
   if (size <= 1) return null;
   const noun = resolveItemNoun(item.summary.id, ctx, { name: item.summary.name });
   const what = itemPhrase(noun, size * lots);
-  return lots <= 1 ? `1 lot is ${what}` : `${lots} lots are ${what}`;
+  return `Comes as ${what}`;
 }
 
 /** The weight in coins when the entry lists one. Gear lists none. */

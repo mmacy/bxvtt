@@ -392,22 +392,133 @@ describe('repeating last round after the situation changed', () => {
 });
 
 describe('spellModeOptions', () => {
-  it('names a mode by the label before its colon, and otherwise by its first sentence', () => {
+  it('names each mode by its targeting when that label is its own', () => {
     expect(
-      spellModeOptions([
-        { key: 'heal', prose: 'Healing a living subject: Restores 1d6+1 hit points (see Healing).' },
-        { key: 'cure', prose: 'Curing paralysis: Cures paralysis.' },
-        { key: 'plain', prose: 'Light may cancel a darkness spell. It lasts a while.' },
-      ]),
+      spellModeOptions(
+        [
+          {
+            key: 'single_4_plus',
+            prose: 'A single creature with 4+1 Hit Dice (see Hit point modifiers).',
+            targeting: { mode: 'single' },
+          },
+          {
+            key: 'hd_budget',
+            prose: 'A total of 2d8 Hit Dice of creatures of 4 HD or lower each.',
+            targeting: { mode: 'hd_budget' },
+          },
+        ],
+        'Spell',
+      ),
     ).toEqual([
-      { value: 'heal', label: 'Healing a living subject' },
-      { value: 'cure', label: 'Curing paralysis' },
-      { value: 'plain', label: 'Light may cancel a darkness spell.' },
+      { value: 'single_4_plus', label: 'One creature' },
+      { value: 'hd_budget', label: 'By hit dice' },
     ]);
   });
 
-  it('falls back to the key for a mode with no prose', () => {
-    expect(spellModeOptions([{ key: 'dart', prose: '' }])).toEqual([{ value: 'dart', label: 'dart' }]);
+  it('names modes that share a label by the text before the colon', () => {
+    const single = { mode: 'single' };
+    expect(
+      spellModeOptions(
+        [
+          { key: 'illuminate', prose: 'Conjuring light: In a 15’ radius.', targeting: single },
+          {
+            key: 'blind',
+            prose: 'Blinding a creature: By casting the spell upon its eyes.',
+            targeting: single,
+          },
+          {
+            key: 'cancel',
+            prose: 'Cancelling darkness: Light may cancel a darkness spell.',
+            targeting: single,
+          },
+        ],
+        'Spell',
+      ).map((option) => option.label),
+    ).toEqual(['Conjuring light', 'Blinding a creature', 'Cancelling darkness']);
+    expect(
+      spellModeOptions(
+        [
+          {
+            key: 'heal',
+            prose: 'Healing a living subject: Restores 1d6+1 hit points (see Healing).',
+            targeting: single,
+          },
+          {
+            key: 'cure_paralysis',
+            prose: 'Curing paralysis: Paralysing effects are negated.',
+            targeting: single,
+          },
+        ],
+        'Spell',
+      ).map((option) => option.label),
+    ).toEqual(['Healing a living subject', 'Curing paralysis']);
+  });
+
+  it('uses the first sentence without its period for a shared label with no colon, and keeps a lone label', () => {
+    expect(
+      spellModeOptions(
+        [
+          {
+            key: 'a',
+            prose: 'Light may cancel a darkness spell. It lasts a while.',
+            targeting: { mode: 'area' },
+          },
+          { key: 'b', prose: 'Fills a room.', targeting: { mode: 'area' } },
+          { key: 'c', prose: 'Wards the caster.', targeting: { mode: 'self' } },
+        ],
+        'Spell',
+      ).map((option) => option.label),
+    ).toEqual(['Light may cancel a darkness spell', 'Fills a room', 'Self']);
+  });
+
+  it("names Darkness's modes by the form and their keys, because bxapi gives them the same prose", () => {
+    // Darkness, the reverse of Light, as the development bxapi serves it.
+    const prose =
+      'Creates a 15’ radius area of magical blackness, preventing normal sight (but not infravision). Like light, it may alternatively be used to blind creatures or to dispel a light spell.';
+    const single = { mode: 'single' };
+    expect(
+      spellModeOptions(
+        [
+          { key: 'darken', prose, targeting: single },
+          { key: 'blind', prose, targeting: single },
+          { key: 'cancel', prose, targeting: single },
+        ],
+        'Darkness',
+      ),
+    ).toEqual([
+      { value: 'darken', label: 'Darkness: darken' },
+      { value: 'blind', label: 'Darkness: blind' },
+      { value: 'cancel', label: 'Darkness: cancel' },
+    ]);
+  });
+
+  it('keeps the labels that were already distinct when only some modes share their prose', () => {
+    const single = { mode: 'single' };
+    expect(
+      spellModeOptions(
+        [
+          { key: 'dim_light', prose: 'Dims the light.', targeting: single },
+          { key: 'snuff_out', prose: 'Dims the light.', targeting: single },
+          { key: 'ward', prose: 'Wards a door: It holds.', targeting: single },
+        ],
+        'Gloom',
+      ).map((option) => option.label),
+    ).toEqual(['Gloom: dim light', 'Gloom: snuff out', 'Wards a door']);
+  });
+
+  it("names a reversed form's own modes by the same rule", () => {
+    expect(
+      spellModeOptions(
+        [
+          {
+            key: 'harm',
+            prose: 'Inflicts 1d6+1 hit points of damage to a touched creature.',
+            targeting: { mode: 'single' },
+          },
+        ],
+        'Spell',
+      ),
+    ).toEqual([{ value: 'harm', label: 'One creature' }]);
   });
 });
 

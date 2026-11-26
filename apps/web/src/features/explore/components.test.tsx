@@ -519,7 +519,9 @@ describe('ScenePanel', () => {
       });
       expect(screen.queryByText(/A flight of worn steps/)).toBeNull();
       expect(screen.getByRole('heading', { name: 'Gatehouse stair' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: '2 things here' })).toBeInTheDocument();
+      // The button keeps its full name, while a phone shows the number alone.
+      const things = screen.getByRole('button', { name: '2 things here' });
+      expect(things).toHaveTextContent('2 things here');
       // Opening it by hand keeps it open, and this browser remembers.
       fireEvent.click(screen.getByRole('button', { name: 'Show description' }));
       act(() => {

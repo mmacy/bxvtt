@@ -549,6 +549,13 @@
   white-space: nowrap;
 }
 
+/* The words after the count on the folded header's button, which a phone leaves out. */
+@media (max-width: 640px) {
+  .sceneCountWords {
+    display: none;
+  }
+}
+
 .sceneMeta {
   flex: none;
   color: var(--color-text-subtle);

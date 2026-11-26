@@ -50,11 +50,11 @@ describe('the cart', () => {
   });
 
   it('explains a purchase lot in plain words', () => {
-    expect(lotSentence(torch, 1, CTX)).toBe('1 lot is 6 torches');
-    expect(lotSentence(torch, 3, CTX)).toBe('3 lots are 18 torches');
+    expect(lotSentence(torch, 1, CTX)).toBe('Comes as 6 torches');
+    expect(lotSentence(torch, 3, CTX)).toBe('Comes as 18 torches');
     expect(lotSentence(rope, 1, CTX)).toBeNull();
     expect(lotSentence(shopItem('rations_standard', 'Rations (standard, 7 days)', 5, 7), 1, CTX)).toBe(
-      '1 lot is 7 standard rations',
+      'Comes as 7 standard rations',
     );
   });
 });

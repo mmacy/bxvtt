@@ -443,8 +443,20 @@ export function ScenePanel() {
             align="end"
             items={quick}
             trigger={
-              <Button size="sm" variant="secondary" icon="more" tooltip="Choose an action for something here">
-                {thingsHere(count)}
+              <Button
+                size="sm"
+                variant="secondary"
+                icon="more"
+                tooltip="Choose an action for something here"
+                aria-label={thingsHere(count)}
+              >
+                {/* On a phone the button shows the number alone, so the room's name keeps the space. */}
+                <span aria-hidden="true">
+                  {count}
+                  <span className={styles.sceneCountWords}>
+                    {count === 1 ? ' thing here' : ' things here'}
+                  </span>
+                </span>
               </Button>
             }
           />

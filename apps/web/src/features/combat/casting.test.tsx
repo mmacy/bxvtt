@@ -165,4 +165,60 @@ describe('a caster with nothing to cast', () => {
     expect(await within(composer).findByText(/Light makes light\./)).toBeInTheDocument();
     expect(within(composer).queryByRole('checkbox', { name: /reverse/ })).not.toBeInTheDocument();
   });
+
+  it("names Sleep's ways to cast by their targeting on the Cast tab", async () => {
+    const api = createFakeApi();
+    api.rules.mockImplementation(
+      async (path: string) => ({ id: path, abilities: [], progression: [] }) as never,
+    );
+    api.fullCatalog.mockResolvedValue({
+      catalog: 'spells',
+      total: 1,
+      items: [
+        {
+          id: 'sleep',
+          name: 'Sleep',
+          spell_list: 'magic_user',
+          level: 1,
+          range: '240’',
+          range_spec: { kind: 'feet', feet: 240 },
+          duration: '4d4 turns',
+          intro: '',
+          reversed_form: null,
+          modes: [
+            {
+              key: 'single_4_plus',
+              prose: 'A single creature with 4+1 Hit Dice (see Hit point modifiers).',
+              targeting: { mode: 'single' },
+            },
+            {
+              key: 'hd_budget',
+              prose: 'A total of 2d8 Hit Dice of creatures of 4 HD or lower each.',
+              targeting: { mode: 'hd_budget' },
+            },
+          ],
+        },
+      ],
+    } as never);
+    const snapshot = fixtureSnapshot('battle', 'player');
+    const view = snapshot.game?.view;
+    const wren = view?.party.find((m) => m.name === 'Wren');
+    if (!view || !wren) throw new Error('No Wren.');
+    Object.assign(wren, {
+      class_id: 'magic_user',
+      spell_book: ['sleep'],
+      spell_slots: [1, 0, 0, 0, 0, 0],
+      memorized_spells: [{ spell_id: 'sleep' }],
+    });
+    view.spell_names = { ...view.spell_names, sleep: 'Sleep' };
+    view.spell_levels = { ...view.spell_levels, sleep: 1 };
+    const { user } = renderWithTable(<BattleBoard />, { snapshot, api });
+    const row = screen.getAllByRole('listitem').find((li) => within(li).queryByText('Wren', { exact: true }));
+    if (!row) throw new Error('No row for Wren.');
+    await user.click(within(row).getByRole('button', { name: 'Actions' }));
+    await user.click(screen.getByRole('radio', { name: 'Cast' }));
+    const modes = await screen.findByRole('radiogroup', { name: 'How to cast Sleep' });
+    expect(within(modes).getByRole('radio', { name: 'One creature' })).toBeInTheDocument();
+    expect(within(modes).getByRole('radio', { name: 'By hit dice' })).toBeInTheDocument();
+  });
 });

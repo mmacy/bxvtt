@@ -632,7 +632,7 @@ describe('refusals of a battle declaration', () => {
 
   it("names the declaring member in the kernel's checks", () => {
     expect(rej('combat.attack.out_of_reach', { character: 'character-0002', distance_feet: 20 })).toBe(
-      'Wren is 20 feet from the target, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
+      'Wren is 20 feet from the target, too far to attack in melee.',
     );
     expect(
       rej('combat.attack.out_of_reach', {
@@ -640,9 +640,7 @@ describe('refusals of a battle declaration', () => {
         distance_feet: 5,
         target: 'monster-0002',
       }),
-    ).toBe(
-      'Tomas is 5 feet from Goblin 2, too far to reach in melee. Close in first, or use a missile weapon or a spell.',
-    );
+    ).toBe('Tomas is 5 feet from Goblin 2, too far to attack in melee.');
     expect(
       rej('magic.cast.target_count', { character: 'character-0003', expected: 1, supplied: 3, mode: 'x' }),
     ).toBe("Tomas' spell takes 1 target in this mode, but you chose 3.");
@@ -682,7 +680,7 @@ describe('refusals of a battle declaration', () => {
 
   it('reads well without the member', () => {
     expect(describeRejection({ code: 'combat.attack.out_of_reach', params: { distance_feet: 20 } })).toBe(
-      'The target is 20 feet away, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
+      'The target is 20 feet away, too far to attack in melee.',
     );
     expect(describeRejection({ code: 'battle.declaration.target_count', params: {} })).toBe(
       'Choose one target for that action.',

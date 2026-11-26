@@ -646,7 +646,7 @@ function SpellTargets({
     spell_mode: mode.key,
     ...(reversed ? { reversed: true } : {}),
   };
-  const modeOptions = spellModeOptions(modes);
+  const modeOptions = spellModeOptions(modes, name);
   const single = targeting === 'single';
   // A spell that harms or hinders goes at monsters, and any other at the party. The session still checks it.
   const effect = mode.effect?.kind ?? null;

@@ -898,9 +898,17 @@ describe('the spells tab, from the view', () => {
       items: [
         spellTemplate('light_mu', 'Light', {
           modes: [
-            { key: 'conjure', prose: 'Conjuring light: In a 15’ radius.', targeting: { mode: 'area' } },
-            { key: 'blind', prose: 'Blinding a creature: By casting the spell upon its eyes.' },
-            { key: 'cancel', prose: 'Light may cancel a darkness spell. It lasts a while.' },
+            { key: 'conjure', prose: 'Conjuring light: In a 15’ radius.', targeting: { mode: 'single' } },
+            {
+              key: 'blind',
+              prose: 'Blinding a creature: By casting the spell upon its eyes.',
+              targeting: { mode: 'single' },
+            },
+            {
+              key: 'cancel',
+              prose: 'Cancelling darkness: Light may cancel a darkness spell.',
+              targeting: { mode: 'single' },
+            },
           ],
         }),
       ],
@@ -913,7 +921,7 @@ describe('the spells tab, from the view', () => {
     await user.click(await screen.findByRole('button', { name: 'Cast' }));
     const dialog = await screen.findByRole('dialog', { name: 'Cast Light' });
     const group = within(dialog).getByRole('radiogroup', { name: 'How to cast' });
-    for (const label of ['Conjuring light', 'Blinding a creature', 'Light may cancel a darkness spell.'])
+    for (const label of ['Conjuring light', 'Blinding a creature', 'Cancelling darkness'])
       expect(within(group).getByRole('radio', { name: label })).toBeInTheDocument();
     expect(within(group).getAllByRole('radio')).toHaveLength(3);
     // Focus starts on the chosen way to cast.

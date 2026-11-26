@@ -686,7 +686,7 @@ function CastDialog({
               aria-label="How to cast"
               value={mode?.key}
               onValueChange={setModeKey}
-              options={spellModeOptions(modes)}
+              options={spellModeOptions(modes, name)}
             />
           </Field>
         )}

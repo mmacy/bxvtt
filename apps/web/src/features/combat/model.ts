@@ -782,17 +782,46 @@ export function spellModeLabel(targeting: string | null | undefined): string {
 export interface SpellModeLike {
   key: string;
   prose: string;
+  targeting?: { mode?: string | null } | null;
 }
 
 /**
- * The option label for each way to cast a spell. A spell mode has no name field, so the label comes from its
- * prose: the text before the colon when the prose starts with a label and a colon ("Conjuring light: In a 15’
- * radius." gives "Conjuring light"), and otherwise its first sentence.
+ * The option label for each way to cast a spell form. A mode is named by its targeting ("One creature", "By hit
+ * dice") when no other mode of the form has the same label. Modes that share a label are named by the text before
+ * the colon in their prose ("Conjuring light: In a 15’ radius." gives "Conjuring light"), or by their first
+ * sentence without its final period when the prose has no colon. Modes whose prose still gives them the same
+ * label are named by the form and the key ("Darkness: darken"), because a bare key such as "Cancel" would read as
+ * the dialog's own Cancel button.
  *
- * @param modes - The modes of the spell form being cast.
+ * @param modes - The modes of the spell form being cast: the spell's own, or its reversed form's.
+ * @param formName - The name of the form being cast, as the dialog's title names it, such as "Darkness".
  */
-export function spellModeOptions(modes: readonly SpellModeLike[]): Array<{ value: string; label: string }> {
-  return modes.map((mode) => ({ value: mode.key, label: spellModeName(mode.prose) || mode.key }));
+export function spellModeOptions(
+  modes: readonly SpellModeLike[],
+  formName: string,
+): Array<{ value: string; label: string }> {
+  const byTargeting = modes.map((mode) => spellModeLabel(mode.targeting?.mode));
+  const byProse = modes.map((mode, index) => {
+    const label = byTargeting[index] ?? 'Cast';
+    return sharedLabel(byTargeting, label) ? spellModeName(mode.prose) || label : label;
+  });
+  // When bxapi's prose doesn't tell two modes apart, each takes its key, bxapi's own word for the mode.
+  return modes.map((mode, index) => {
+    const label = byProse[index] ?? 'Cast';
+    return {
+      value: mode.key,
+      label: sharedLabel(byProse, label) ? `${formName}: ${keyWords(mode.key)}` : label,
+    };
+  });
+}
+
+function sharedLabel(labels: readonly string[], label: string): boolean {
+  return labels.filter((other) => other === label).length > 1;
+}
+
+/** A mode key in lower case, with underscores read as spaces: `cure_paralysis` gives "cure paralysis". */
+function keyWords(key: string): string {
+  return key.replaceAll('_', ' ').trim().toLowerCase();
 }
 
 function spellModeName(prose: string): string {
@@ -800,7 +829,7 @@ function spellModeName(prose: string): string {
   const line = text.split('\n')[0] ?? '';
   const sentence = (/^(.*?[.!?])(\s|$)/.exec(line)?.[1] ?? line).trim();
   const colon = sentence.indexOf(':');
-  return colon > 0 ? sentence.slice(0, colon).trim() : sentence;
+  return colon > 0 ? sentence.slice(0, colon).trim() : sentence.replace(/\.$/, '');
 }
 
 /**

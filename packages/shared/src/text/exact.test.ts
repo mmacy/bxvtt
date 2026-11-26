@@ -182,7 +182,7 @@ describe('rejections', () => {
     [
       'combat.attack.out_of_reach',
       { distance_feet: 20 },
-      'The target is 20 feet away, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
+      'The target is 20 feet away, too far to attack in melee.',
     ],
     [
       'combat.attack.attacker_incapacitated',
@@ -254,9 +254,7 @@ describe('rejections', () => {
         ],
         ctx,
       ),
-    ).toEqual([
-      'The target is 20 feet away, too far for a melee attack. Close in first, or use a missile weapon or a spell.',
-    ]);
+    ).toEqual(['The target is 20 feet away, too far to attack in melee.']);
   });
 });
 
@@ -974,5 +972,21 @@ describe('commands', () => {
       button: 'Juggle torches',
       phrase: 'juggle torches',
     });
+  });
+});
+
+describe('trap events', () => {
+  it('says a known trap stays quiet without calling it known', () => {
+    const safe = describeEvent(
+      {
+        event_type: 'trap',
+        code: 'exploration.trap.safe',
+        visibility: 'player',
+        character_id: 'character-0001',
+        trap_ref: 'priory:1:iron_chest',
+      } as never,
+      ctx,
+    );
+    expect(safe?.text).toBe("The trap doesn't go off.");
   });
 });
