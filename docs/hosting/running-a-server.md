@@ -122,7 +122,7 @@ If storage reaches 100%, `bxapi` rejects writes and bxvtt returns HTTP 507 `bxap
 
 5. Start `bxapi`, then start `bxvtt`.
 
-This version of bxvtt needs a `bxapi` built on `osrlib` 2.8 (`bxapi` `main` from its pull request 58 onward), so run the `git pull` in step 3 before you start the new bxvtt. bxvtt doesn't check the engine version, so confirm that the startup log reports `"engine":"2.8.0"` or later. With an older `bxapi`, the player view lacks emptied caches, room trap states, the caches in reach, and item names, the battle board can't check declarations, and `bxapi` accepts a player's out-of-battle spell or item aimed at any creature of the session, including one the party hasn't met.
+This version of bxvtt needs a `bxapi` built on `osrlib` 2.8.0 or later (`bxapi` `main` from its pull request 58 onward), so run the `git pull` in step 3 before you start the new bxvtt. bxvtt checks the engine version when it starts, every 10 minutes, and on every health request. With an older engine, it logs an error and serves no game until you update `bxapi`. See ["The game service is out of date"](#the-game-service-is-out-of-date).
 
 On startup, bxvtt migrates older SQLite schemas forward automatically and refuses to open a database created by a newer schema version. Schema version 7 drops the `target_handles` and `battle_refusals` tables, which bxvtt no longer uses, and clears stored battle declarations, so players redeclare in a round that was in progress. Keep your pre-update backup until you verify your next session.
 
@@ -131,6 +131,21 @@ On startup, bxvtt migrates older SQLite schemas forward automatically and refuse
 ### "The rules engine isn't running"
 
 bxvtt is running, but it cannot reach `bxapi` at `BXAPI_URL` (`http://127.0.0.1:8640` by default). Start `bxapi` (or pass the matching `BXAPI_URL` to bxvtt) and select **Check again** in the browser.
+
+### "The game service is out of date"
+
+bxvtt reaches `bxapi`, but `bxapi` runs an `osrlib` older than 2.8.0. The startup log has an error entry such as `"engine":"2.7.0","msg":"bxapi runs osrlib 2.7.0, and bxvtt needs 2.8.0 or later. ..."`, and bxvtt refuses every game request until you update `bxapi`:
+
+- **Signed-in users** see a banner on the home page titled **The game service is out of date**, which states the version `bxapi` runs and the version bxvtt needs.
+- **Visitors without a profile** see the same title with "Games can't run until it's updated. Ask the server host to update the game service."
+- **Players at a table** see **The game service is out of date** when they open or play a game.
+
+To fix it, update `bxapi` and restart it:
+
+1. Stop `bxapi`.
+2. In the `bxapi` directory, run `git pull` to get `main`.
+3. Start `bxapi` again.
+4. Run `curl -s http://127.0.0.1:8660/api/health`. The health check reads the new engine version, and games run again without a bxvtt restart. bxvtt also checks the engine every 10 minutes and whenever someone opens the home page.
 
 ### `EADDRINUSE: address already in use 127.0.0.1:8660`
 

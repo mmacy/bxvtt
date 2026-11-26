@@ -30,7 +30,7 @@ Any button you cannot use right now appears dimmed; point at it to read why.
 
 ### The party panel
 
-Open the **Party** tab (`Alt+1`) to view all party members in marching order with their hit points, armour class, active light remaining (while in a dungeon), unmemorized spell alerts (while in town), and assigned player. If you may act for the party, select **Change order** to reorder members by dragging, pressing arrow keys on a row's handle, or clicking the forward and back buttons, then select **Done**.
+Open the **Party** tab (`Alt+1`) to view all party members in marching order with their hit points, armour class, active light remaining (while in a dungeon), a **No spells memorized** marker on a caster who could prepare spells (while in town), and assigned player. Select the marker to open that caster's **Spells** tab. If you may act for the party, select **Change order** to reorder members by dragging, pressing arrow keys on a row's handle, or clicking the forward and back buttons, then select **Done**.
 
 ## Prepare in town
 
@@ -46,7 +46,7 @@ Between trips into the dungeon, each player buys and equips gear for their chara
 4. Optionally select **Copy to your other characters** to copy the current cart to your other living characters.
 5. Select **Buy for** that character (such as **Buy for Wren**, or **Buy all carts** when multiple characters have items queued). If a character lacks enough gold for their entire cart, `bxapi` rejects that purchase without spending anything. After buying weapons, armour, or a shield, use **Wear** or **Wield** followed by the item's name under **Equip now** on the confirmation card to equip it immediately.
 
-The **Ready for the dungeon?** card checks whether the party has prepared spells, a light source, a tinder box, rations, and rope, with shortcuts such as **Find rope at the outfitter** that filter the shop. These reminders are advisory and never block departure.
+The **Ready for the dungeon?** card checks whether the party has prepared spells (**Spells to prepare**), a light source, a tinder box, rations, and rope, with shortcuts such as **Find rope at the outfitter** that filter the shop. These reminders are advisory and never block departure.
 
 ### Heal and recover at the temple
 
@@ -62,13 +62,15 @@ Select **Treasure buyers** (`M`) to appraise and sell gems and jewellery in the 
 
 ### Rest and prepare spells
 
-Select **Rest and prepare** (or press `Shift+R` for the quick rest menu) and choose:
+When a caster in the party has nothing memorized and could prepare spells, the town square shows a **Spells to prepare** banner. It names who needs a night's rest before preparing spells and who can prepare spells now, with a **Rest for a night** button and an **Open** button for each caster who can prepare (such as **Open Mazpar's spells**). While the banner shows, the **Spells to prepare** line of the readiness checklist shows only its status.
 
-- **Rest one turn** (10 minutes).
-- **Rest a night** (8 hours), required before spellcasters can memorize fresh spells.
-- **Rest a full day** (24 hours), which also restores hit points to living characters.
+Select **Rest and prepare** (or press `Shift+R` for the quick rest menu) and choose a rest:
 
-Use the **Open** button for each caster's spells (such as **Open Mazpar's spells**) on the same screen (or in the **Party** panel) to memorize spells after resting.
+- **Rest for one turn:** A short break.
+- **Rest for a night:** Sleep, so casters can prepare spells.
+- **Rest for a full day:** Sleep, so casters can prepare spells, and recover hit points.
+
+After a rest, the panel reports the game time that passed and the hit points each character recovered. Under **Spells and gear**, each character's row shows their level and class, and for a caster how many spells are in the spell book and how many are memorized, such as "Level 1 magic-user, 1 in spell book, none memorized". Select **Open** followed by the caster's name (or use the **Party** panel) to prepare spells on the character sheet.
 
 ### Leave for the dungeon
 
@@ -82,4 +84,24 @@ Select any character in the **Party** tab to open their character sheet in a sid
 
 - **Sheet:** Displays hit points, armour class, THAC0 (To Hit Armour Class 0), attack bonus, movement speeds, XP toward the next level, active conditions and light, ability scores with modifiers, saving throws, thief or class skills, and spoken languages.
 - **Inventory:** Groups **Worn and wielded** items (each with **Unequip**), **Light** controls (**Light a torch**, **Light the lantern**, **Put out light**, and **Set fire to dropped oil**), **Pack** items, **Gems and jewellery**, and **Purse**. Select the three-dot **Actions for** menu on any pack row to **Equip**, **Use** (for magic items), **Give to…**, or **Drop…** directly from the sheet.
-- **Spells (casters only):** Under **Memorized spells**, select **Prepare spells** after an 8-hour rest to fill spell slots (memorizing takes 6 turns of game time), or select **Cast** on any memorized spell card to cast it outside battle. Arcane casters also have a **Spell book** section with **Learn a spell** to transcribe new spells.
+- **Spells (casters only):** The **Spells** tab appears for a character who has spell slots, a spell book, or memorized spells. See [Prepare, learn, and cast spells](#prepare-learn-and-cast-spells).
+
+### Prepare, learn, and cast spells
+
+The **Spells** tab lists **Memorized spells** first. A **Slots** row shows each spell level's slots and how many are filled, such as **1st level 1 of 2**. Each memorized spell has a card with its level, range, and duration, a **×2** badge when more than one copy is memorized, an **About** button for its full description, and a **Cast** button. A character with slots but nothing memorized shows **No spells memorized**, and a caster without slots yet, such as a 1st-level cleric, shows **No spell slots yet**.
+
+To prepare spells:
+
+![The prepare dialog for Mazpar, a level 1 magic-user, with Sleep chosen under 1st-level spells and 1 of 1 slots chosen, beside the Spells tab showing one empty 1st-level slot](../images/spells-prepare.webp)
+
+1. Select **Prepare spells**. The dialog groups the spells the character can prepare by level, such as **1st-level spells**, and shows how many of that level's slots you have chosen, such as **1 of 2**.
+2. Use the count beside each spell to choose how many copies to memorize. A spell with a reversed form has a second row with a **Reversed** badge, for a caster who chooses the form when memorizing. When a level's slots are full, its counts can't go higher and say "No 1st-level slots left."
+3. Select **Prepare spells**. Your choices replace the spells the character has memorized now.
+
+If the game refuses, for example because the party hasn't rested since the character last prepared, the dialog shows why.
+
+A caster who keeps a spell book also has a **Spell book** section. Select **Learn a spell**, choose a spell in **Spell**, read its details, and select **Learn** followed by its name to write it into the book. When the character can't learn a spell now, the button is unavailable and says so.
+
+To cast a memorized spell outside battle, select **Cast** on its card. When the spell can be cast more than one way, choose how in **How to cast**, then choose the target in **Target**, such as a party member or **Where the party stands**. A caster who chooses a spell's form when casting sees a **Cast** followed by the reversed spell's name and **instead** checkbox, and the dialog's title follows that choice. Select **Cast**.
+
+An adventure can add spells of its own. They appear on the tab, in the dialogs, and in the **About** details like any other spell, but their names don't link to the rules compendium, which lists only the standard spells.

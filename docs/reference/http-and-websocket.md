@@ -66,7 +66,7 @@ All paths below sit under `/api` (for example, `GET /api/health`), and `{t}` den
 
 | Method and path | `BxvttClient` method | Authorization | Response |
 | --- | --- | --- | --- |
-| `GET /health` | `health()` | Public (`bxapi` details require a user token) | `Health` |
+| `GET /health` | `health()` | Public (`bxapi` details require a user token) | `Health`. Anyone gets `status`, `version`, `host_key_required`, `bxapi.reachable`, and `bxapi.outdated` (bxapi answers but runs an `osrlib` older than 2.8.0, so no game runs). A user token adds `bxapi.meta` and the cause in `bxapi.error`. |
 | `POST /users` | `createUser(name)` | Public (rate-limited) | `CreateUserResponse` (includes `token`) |
 | `GET /users/me` | `me()` | User | `User` |
 | `PATCH /users/me` | `updateMe(body)` | User | `User` |

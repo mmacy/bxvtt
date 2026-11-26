@@ -50,6 +50,17 @@ With the **Referee lens** on, select **Referee** (`Alt+4`) in the dock. A persis
 | **Notes** | **Private notes** | Write up to 50,000 characters of referee-only notes that save automatically 1.2 seconds after you stop typing (or immediately on `Ctrl+Enter` / `Cmd+Enter`) and persist with the table across games. |
 | **All** | **Every referee command** | Search and submit schema-driven forms for all 23 `bxapi` referee commands, sorted with currently legal commands first. |
 
+## Read what the players read and what only you read
+
+Each treasure and feature in a room's key, under **Now** and **Key**, shows two texts:
+
+- **Players read:** The feature's description, on the same parchment as the players' scene panel. Every player reads it once the feature comes into the party's sight, so it never names what a treasure holds or a trap the party hasn't found.
+- **Referee notes:** What the adventure's author wrote for you alone, such as what a chest holds, whose money it is, or how its trap is hidden. Players never receive it.
+
+A treasure also shows **Still here** or **Emptied** beside its label and lists its contents after the notes, and a trap shows **Not found**, **Found**, **Sprung**, or **Disarmed**. On the referee map, the tooltip of a treasure shows its description, what it holds (**Holds:**), the first 120 characters of its referee notes (**Referee notes:**), and **Unseen by the party.** until the party has seen it.
+
+The scene panel always shows what the players see, even with the **Referee lens** on, so it never shows referee notes.
+
 ## Handle common table situations
 
 ### End an encounter peacefully or call off pursuit
