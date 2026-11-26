@@ -53,6 +53,8 @@ Rules for processes and ports:
 
 Every interactive element works with the keyboard, has a visible focus state, and has an accessible name.
 
+Give each state one signal. Don't pair a success icon with an error message, and show at most one primary button for the same action on screen. Show status as a `Badge` and choices as buttons, and use a sentence only for something that happened or something that won't work.
+
 ## Writing
 
 These rules apply to UI strings, documentation, code comments, and commit messages.
@@ -60,6 +62,12 @@ These rules apply to UI strings, documentation, code comments, and commit messag
 - Invoke the `clauterize` skill before you write prose, and read `~/.claude/skills/clauterize/references/tells.md`. When the skill asks whether to edit in place or rewrite, the answer is to write for the reader.
 - Use sentence case for every heading, button, tab, label, and menu item.
 - Never use em dashes or en dashes. Use plain declarative sentences, one idea each, in the present tense and active voice. Address the reader as *you*.
-- UI text tells the player what happened and what they can do next. An error states the cause in the game's terms, such as "Wren isn't in the front rank, so she can't attack in melee." Never show a raw code, an ID such as `character-0003`, or a stack trace in the main interface.
+- UI text says what happened or why something won't work, in the game's terms. Add the next step only when the controls on screen don't already show it. An error states the cause, such as "Wren isn't in the front rank, so she can't attack in melee." Never show a raw code, an ID such as `character-0003`, or a stack trace in the main interface.
+- Fit the text to the element. A label or tab is one to three words. A badge is one or two words. A disabled reason or a refusal is one sentence, two at most. A hint under a control is one sentence. Longer help belongs in the compendium, not on the play screen.
+- Never name the machinery: session, server, preview, declaration (as a noun), cache, feature, handle, or code. Say action, declare, treasure, the round.
+- Don't explain a rule the player didn't break. A refusal states the cause once and doesn't restate the general rule. Never write a number or limit that bxapi owns, such as a to-hit bonus or a daily limit, unless a bxapi field supplies it.
+- Say each fact once, in one element. If a badge, a disabled control, or a row status already shows a state, don't repeat it in a sentence beside it.
+- Never use a game verb (Hide, Search, Rest, Turn, Close in) for an interface action. Interface toggles say Collapse, Expand, Close, or Show more.
+- The feed narrates in the third person, by character and party. Controls, hints, and reasons address the player as *you*.
 - Use the game's vocabulary as B/X does: referee (not GM or DM), party, marching order, caller, turn (10 minutes), round (10 seconds), hit points, armour class.
 - Don't hard-wrap Markdown paragraphs.
