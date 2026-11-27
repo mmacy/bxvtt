@@ -5,7 +5,8 @@
 //   BXAPI_URL=http://127.0.0.1:8651 node apps/web/src/map/fixtures/capture-fixtures.mjs
 //
 // It writes `*.json` next to this file. Each fixture holds a player view and a trimmed referee
-// view (the adventure, the dungeon state, and the mode), captured at the same revision.
+// view (the adventure, the dungeon state, and the mode), captured at the same revision. When it finishes, it deletes
+// the characters, adventures, and sessions it created in bxapi.
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -25,7 +26,23 @@ async function api(method, path, body) {
   });
   const text = await response.text();
   if (!response.ok) throw new Error(`${method} ${path} -> ${response.status}: ${text.slice(0, 600)}`);
-  return JSON.parse(text);
+  const result = JSON.parse(text);
+  if (method === 'POST' && CREATES.includes(path) && typeof result.id === 'string') {
+    createdPaths.push(`${path}/${encodeURIComponent(result.id)}`);
+  }
+  return result;
+}
+
+/** The bxapi collections whose new members the script deletes when it finishes. */
+const CREATES = ['/v1/characters', '/v1/adventures', '/v1/sessions'];
+/** The bxapi path of each resource the script created, oldest first. */
+const createdPaths = [];
+
+/** Deletes what the script created in bxapi, newest first, so the development bxapi doesn't keep it. */
+async function removeCreated() {
+  for (const path of createdPaths.reverse()) {
+    await fetch(`${base}${path}`, { method: 'DELETE' }).catch(() => undefined);
+  }
 }
 
 async function command(session, body, { mustAccept = true } = {}) {
@@ -664,4 +681,8 @@ async function main() {
   );
 }
 
-await main();
+try {
+  await main();
+} finally {
+  await removeCreated();
+}

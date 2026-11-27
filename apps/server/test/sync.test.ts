@@ -197,7 +197,8 @@ describe('persistence', () => {
         y: 0,
         text: 'here',
       });
-      await first.close();
+      // The second server plays the same games, so they stay in bxapi until it closes.
+      await first.close({ keepInBxapi: true });
 
       const second = await startServer({ dataDir });
       try {

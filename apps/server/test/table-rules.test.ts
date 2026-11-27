@@ -237,8 +237,12 @@ describe('the table ruleset', () => {
     await alice.client.joinTable(table.invite_code);
     const roll = await alice.client.rollAbilities(table.id, { seed: 5 });
     const choices = { name: 'Lost', class_id: 'fighter', alignment: 'lawful' as const };
-    // bxapi creates the character, as it does when the server times out before the answer comes back.
-    await server.server.ctx.bxapi.post('/v1/characters', { ...choices, ability_roll_id: roll.id });
+    // bxapi creates the character, as it does when the server times out before the answer comes back. The server
+    // never records these characters, so the test deletes them from bxapi itself.
+    const { bxapi } = server.server.ctx;
+    const unrecorded = [
+      await bxapi.post<{ id: string }>('/v1/characters', { ...choices, ability_roll_id: roll.id }),
+    ];
     await expect(alice.client.createCharacter({ ...choices, ability_roll_id: roll.id })).rejects.toSatisfy(
       (error) => isProblem(error, 'ability_roll_used'),
     );
@@ -249,11 +253,16 @@ describe('the table ruleset', () => {
     );
 
     // A preview that finds the roll used closes it too.
-    await server.server.ctx.bxapi.post('/v1/characters', { ...choices, ability_roll_id: next.id });
+    unrecorded.push(
+      await bxapi.post<{ id: string }>('/v1/characters', { ...choices, ability_roll_id: next.id }),
+    );
     await expect(alice.client.rollHitPoints(next.id, { class_id: 'fighter' })).rejects.toSatisfy((error) =>
       isProblem(error, 'ability_roll_used'),
     );
     expect((await alice.client.rollAbilities(table.id, { seed: 7 })).table_id).toBe(table.id);
+    for (const character of unrecorded) {
+      await bxapi.request('DELETE', `/v1/characters/${encodeURIComponent(character.id)}`);
+    }
   });
 
   it('keeps the rules recorded on a roll after the referee changes the table rules', async () => {

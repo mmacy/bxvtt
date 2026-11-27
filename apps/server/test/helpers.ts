@@ -30,7 +30,11 @@ export interface TestServer {
   url: string;
   wsUrl: string;
   config: Config;
-  close: () => Promise<void>;
+  /**
+   * Stops the server. It first deletes what the server stored in bxapi, unless `keepInBxapi` is set for a test
+   * that starts another server on the same data directory. It removes the data directory only when it made it.
+   */
+  close: (options?: { keepInBxapi?: boolean }) => Promise<void>;
 }
 
 /**
@@ -83,9 +87,8 @@ export async function startServer(
     url: `http://127.0.0.1:${port}`,
     wsUrl: `ws://127.0.0.1:${port}/ws`,
     config,
-    close: async () => {
-      // A test that keeps its data directory starts another server on it, which needs the data in bxapi.
-      if (!keep) await removeFromBxapi(server);
+    close: async (options = {}) => {
+      if (options.keepInBxapi !== true) await removeFromBxapi(server);
       await server.app.close();
       if (!keep) await rm(dataDir, { recursive: true, force: true });
     },

@@ -19,7 +19,7 @@ BXAPI_DIR=../bxapi npm run dev:bxapi    # terminal 1 (in bxvtt): anonymous bxapi
 npm run dev                             # terminal 2 (in bxvtt): Fastify on :8660 + Vite on http://localhost:5180
 ```
 
-`scripts/dev-bxapi.sh` disables `bxapi` rate limits and client storage caps so automated test suites can create thousands of sessions without hitting quotas. Open [http://localhost:5180](http://localhost:5180) in your browser; Vite hot-reloads client edits and proxies `/api` and `/ws` to `http://127.0.0.1:8660`.
+`scripts/dev-bxapi.sh` disables `bxapi` rate limits and client storage caps, because a test run creates hundreds of games. The server tests, the end-to-end suite, and the screenshot scripts delete the games, saves, adventures, and characters they create in `bxapi` when they finish. A run that you stop with Ctrl+C leaves its games behind. To delete them, run `node scripts/purge-bxapi.mjs <data directory>` on the run's data directory, or start `bxapi` again on a new database file. Open [http://localhost:5180](http://localhost:5180) in your browser; Vite hot-reloads client edits and proxies `/api` and `/ws` to `http://127.0.0.1:8660`.
 
 ### Reserved ports
 

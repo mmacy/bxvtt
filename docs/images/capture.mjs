@@ -7,7 +7,8 @@
 //
 // The script starts its own bxvtt server on a temporary data directory, sets up a table that plays The Drowned
 // Bell with four named characters, drives a referee and three players in headless Chromium at 1440 by 900, and
-// writes one WebP file for each screen. It stops the server and deletes the data directory when it finishes.
+// writes one WebP file for each screen. When it finishes, it stops the server, deletes what the server stored in
+// bxapi, and deletes the data directory.
 //
 // The browsers send only the commands that a screenshot shows, such as the town purchase. Every other game command,
 // declaration, and fight goes through the HTTP API in a fixed order, so the session's dice come out the same on
@@ -28,6 +29,7 @@ import { dirname, join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
+import { purgeBxapi } from '../../scripts/purge-bxapi.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const outDir = dirname(fileURLToPath(import.meta.url));
@@ -636,6 +638,13 @@ try {
   await main();
 } finally {
   await browser?.close();
-  if (server !== null) server.kill('SIGTERM');
+  if (server !== null && server.exitCode === null) {
+    const exited = new Promise((resolveExit) => server.once('exit', resolveExit));
+    server.kill('SIGTERM');
+    await exited;
+  }
+  // The game and its saves stay in bxapi until the purge deletes them.
+  const { failed } = await purgeBxapi(dataDir, { bxapiUrl });
+  if (failed > 0) console.warn(`${failed} bxapi resources could not be deleted.`);
   rmSync(dataDir, { recursive: true, force: true });
 }
