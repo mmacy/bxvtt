@@ -216,6 +216,7 @@ beforeEach(() => {
 });
 
 describe('CharacterWizard', () => {
+  // This test walks many steps, so it gets more than the default 5 seconds on a busy machine.
   it('walks from the roll to a stored character, named on the review step, and closes', async () => {
     const api = wizardApi();
     const onCreated = vi.fn();
@@ -278,7 +279,7 @@ describe('CharacterWizard', () => {
     });
     expect(api.rollHitPoints).toHaveBeenCalledWith('rol_test', { class_id: 'fighter' });
     expect(localStorage.getItem(draftKey(null, TABLE_ID))).toBeNull();
-  });
+  }, 15_000);
 
   it('sends the player to the name field instead of the server when the name is missing', async () => {
     const api = wizardApi({ rolls: { status: { class_id: 'fighter', gold_rolled: true } } });

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { Stepper } from '../components/Stepper';
 
 describe('Stepper', () => {
-  it('keeps the whole current label for a pointer and a screen reader when a narrow box cuts it short', () => {
+  it('keeps the current label in the step a screen reader reads, with no tooltip copy of it', () => {
     render(
       <Stepper
         aria-label="Character creation"
@@ -16,9 +16,9 @@ describe('Stepper', () => {
         ]}
       />,
     );
+    // A narrow stepper hides the label visually instead of cutting it short, so the text stays in the step.
     const current = screen.getByText('Alignment and languages');
-    expect(current).toHaveAttribute('title', 'Alignment and languages');
     expect(current.closest('[aria-current="step"]')).toHaveTextContent('Alignment and languages');
-    expect(screen.getByText('Review')).not.toHaveAttribute('title');
+    expect(current).not.toHaveAttribute('title');
   });
 });

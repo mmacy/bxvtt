@@ -46,7 +46,7 @@ export function Stepper({ steps, current, onStepClick, 'aria-label': ariaLabel, 
                 {state === 'complete' ? <Icon name="check" size={14} strokeWidth={2.5} /> : index + 1}
               </span>
               <span className={styles.text}>
-                <span className={styles.label} title={state === 'current' ? step.label : undefined}>
+                <span className={styles.label}>
                   {step.label}
                   {state === 'complete' && <span className="visually-hidden"> (complete)</span>}
                 </span>

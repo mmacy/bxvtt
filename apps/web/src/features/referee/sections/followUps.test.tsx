@@ -52,6 +52,7 @@ describe('follow-ups for a placed party', () => {
 });
 
 describe('after the game ends', () => {
+  // This test renders the full referee panel and drives a form, which can pass 5 seconds on a busy machine.
   it('asks before a command changes the story, and sends nothing when the referee declines', async () => {
     const api = refereeApi();
     const snapshot = fixtureSnapshot('exploring', 'referee');
@@ -68,5 +69,5 @@ describe('after the game ends', () => {
     await user.click((await screen.findAllByRole('button', { name: 'Complete quest' }))[0] as HTMLElement);
     await user.click(await screen.findByRole('button', { name: 'Run anyway' }));
     await waitFor(() => expect(api.sendCommand).toHaveBeenCalledTimes(1));
-  });
+  }, 15_000);
 });

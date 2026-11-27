@@ -10,6 +10,7 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode }
 
 import type { EquipmentDetail } from '@/app';
 import {
+  Badge,
   Banner,
   Button,
   Checkbox,
@@ -54,6 +55,18 @@ export interface OutfitStepProps {
   check: CheckState;
   /** Called when adding an item put it on by itself, so a refusal from the server can take it off again. */
   onAutoEquip?: (itemId: string) => void;
+}
+
+/**
+ * The badge that keeps the gold left in view while the cart sits under the equipment. It reads the same `left` as
+ * the purse in the cart panel.
+ *
+ * @param left - The gold left after the cart, below 0 when the cart costs more than the purse holds.
+ */
+export function goldLeftBadge(left: number): { tone: 'gold' | 'danger'; text: string } {
+  return left >= 0
+    ? { tone: 'gold', text: `${left} gp left` }
+    : { tone: 'danger', text: `Over by ${Math.abs(left)} gp` };
 }
 
 const FILTERS = [
@@ -232,6 +245,9 @@ export function OutfitStep({
   const full = useFullCatalog('equipment');
   const spent = cartCost(cart, equipment);
   const left = gold.status === 'known' ? gold.gp - spent : null;
+  // Up to the tablet breakpoint the cart sits under the equipment, out of view, so a badge shows the gold left.
+  const cartBelow = useMediaQuery(`(max-width: ${breakpoints.tablet}px)`);
+  const leftBadge = cartBelow && left !== null ? goldLeftBadge(left) : null;
   const kit = kitLabel(classId);
 
   const rows = useMemo(() => {
@@ -345,18 +361,21 @@ export function OutfitStep({
           <h3 id="wizard-shop" className={styles.subTitle}>
             Equipment
           </h3>
-          {kit && (
-            <Button
-              size="sm"
-              variant="secondary"
-              icon="chest"
-              tooltip="Replace your cart with the items in this kit that your gold covers"
-              onClick={onKit}
-              disabled={equipment === null}
-            >
-              Fill with the {kit.toLowerCase()} kit
-            </Button>
-          )}
+          <div className={styles.shopActions}>
+            {leftBadge && <Badge tone={leftBadge.tone}>{leftBadge.text}</Badge>}
+            {kit && (
+              <Button
+                size="sm"
+                variant="secondary"
+                icon="chest"
+                tooltip="Replace your cart with the items in this kit that your gold covers"
+                onClick={onKit}
+                disabled={equipment === null}
+              >
+                Fill with the {kit.toLowerCase()} kit
+              </Button>
+            )}
+          </div>
         </div>
         {kitNote && <p className={styles.muted}>{kitNote}</p>}
         <div className={styles.shopControls}>
@@ -372,6 +391,7 @@ export function OutfitStep({
             onValueChange={setFilter}
             size="sm"
             aria-label="Type of equipment"
+            className={styles.typeFilter}
           />
         </div>
         {equipment === null || full.items === null ? (
@@ -454,44 +474,52 @@ export function OutfitStep({
               const lot = lotSentence(line.itemId, itemName, detail, line.quantity);
               return (
                 <li key={line.itemId} className={styles.cartRow}>
-                  <span className={styles.cartMain}>
+                  <span className={styles.cartText}>
                     <span className={styles.cartName}>
                       {line.quantity > 1 ? `${line.quantity} × ` : ''}
                       {itemName}
                     </span>
-                    {lot && <span className={styles.cartLot}>{lot}</span>}
-                    {equippable && item && (
-                      <Checkbox
-                        label={
-                          item.item_type === 'armour'
-                            ? `Wear the ${item.name.toLowerCase()}`
-                            : `Wield the ${item.name.toLowerCase()}`
-                        }
-                        checked={equip.includes(line.itemId)}
-                        onCheckedChange={(checked) =>
-                          onEquip(
-                            checked ? [...equip, line.itemId] : equip.filter((id) => id !== line.itemId),
-                          )
-                        }
-                      />
-                    )}
+                    <span className={styles.cartMain}>
+                      {lot && <span className={styles.cartLot}>{lot}</span>}
+                      {equippable && item && (
+                        <Checkbox
+                          label={
+                            item.item_type === 'armour'
+                              ? `Wear the ${item.name.toLowerCase()}`
+                              : `Wield the ${item.name.toLowerCase()}`
+                          }
+                          checked={equip.includes(line.itemId)}
+                          onCheckedChange={(checked) =>
+                            onEquip(
+                              checked ? [...equip, line.itemId] : equip.filter((id) => id !== line.itemId),
+                            )
+                          }
+                        />
+                      )}
+                    </span>
                   </span>
                   {item && (
-                    <LotStepper
-                      item={item}
-                      lots={line.quantity}
-                      bundle={lotSize(detail) > 1}
-                      onLots={(next) => setLots(line.itemId, next)}
-                    />
+                    <span className={styles.cartStepper}>
+                      <LotStepper
+                        item={item}
+                        lots={line.quantity}
+                        bundle={lotSize(detail) > 1}
+                        onLots={(next) => setLots(line.itemId, next)}
+                      />
+                    </span>
                   )}
-                  <span className={styles.price}>{formatGold((item?.cost_gp ?? 0) * line.quantity)}</span>
-                  <IconButton
-                    icon="close"
-                    label={`Remove ${itemName} from the cart`}
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setLots(line.itemId, 0)}
-                  />
+                  <span className={cx(styles.price, styles.cartPrice)}>
+                    {formatGold((item?.cost_gp ?? 0) * line.quantity)}
+                  </span>
+                  <span className={styles.cartRemove}>
+                    <IconButton
+                      icon="close"
+                      label={`Remove ${itemName} from the cart`}
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setLots(line.itemId, 0)}
+                    />
+                  </span>
                 </li>
               );
             })}

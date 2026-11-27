@@ -426,6 +426,11 @@ test.describe('character wizard', () => {
     await list.getByRole('button', { name: 'Add Sword to the cart' }).click();
     await expect(cart(dialog)).toContainText('Sword');
     await expect(list.getByRole('button', { name: 'Add one sword' })).toBeFocused();
+    // The cart sits under the list, so the Equipment heading row shows the gold left, the same amount as the purse.
+    const purse = cart(dialog).getByText(/^\d+ gp spent, \d+ gp left$/);
+    const left = /(\d+) gp left/.exec((await purse.textContent()) ?? '')?.[1] ?? '';
+    const headingRow = dialog.getByRole('heading', { name: 'Equipment', level: 3 }).locator('..');
+    await expect(headingRow.getByText(`${left} gp left`, { exact: true })).toBeVisible();
     await list.getByRole('button', { name: 'Remove one sword' }).click();
     await expect(list.getByRole('button', { name: 'Add Sword to the cart' })).toBeFocused();
     await expect(cart(dialog)).not.toContainText('Sword');

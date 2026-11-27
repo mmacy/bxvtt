@@ -23,10 +23,10 @@ const DETAILS = [
   { ...ITEMS[4], weight_coins: 10 },
 ];
 
-/** Makes the phone breakpoint match, or not. */
-function stubPhone(phone: boolean) {
+/** Makes the `max-width` media queries match as they would on a screen this wide. */
+function stubWidth(width: number) {
   vi.stubGlobal('matchMedia', (query: string) => ({
-    matches: phone && query === '(max-width: 640px)',
+    matches: Number(/max-width: (\d+)px/.exec(query)?.[1] ?? 0) >= width,
     media: query,
     onchange: null,
     addEventListener: () => {},
@@ -38,7 +38,7 @@ function stubPhone(phone: boolean) {
 }
 
 /** The step with a cart of its own, as the wizard holds it. */
-function Harness() {
+function Harness({ gp = 100 }: { gp?: number }) {
   const [cart, setCart] = useState<CartLine[]>([]);
   return (
     <OutfitStep
@@ -47,7 +47,7 @@ function Harness() {
       equip={[]}
       onCart={setCart}
       onEquip={() => {}}
-      gold={{ status: 'known', gp: 100 }}
+      gold={{ status: 'known', gp }}
       classId="fighter"
       onKit={() => {}}
       kitNote={null}
@@ -56,8 +56,8 @@ function Harness() {
   );
 }
 
-function renderStep(phone: boolean) {
-  stubPhone(phone);
+function renderStep(phone: boolean | number, gp?: number) {
+  stubWidth(typeof phone === 'number' ? phone : phone ? 390 : 1440);
   const api = createFakeApi();
   api.fullCatalog.mockImplementation(
     async (name) =>
@@ -67,7 +67,7 @@ function renderStep(phone: boolean) {
         items: name === 'equipment' ? DETAILS : [],
       }) as never,
   );
-  return renderWithTable(<Harness />, { api });
+  return renderWithTable(<Harness gp={gp} />, { api });
 }
 
 afterEach(() => {
@@ -118,5 +118,32 @@ describe('OutfitStep on a wider screen', () => {
     renderStep(false);
     expect(await screen.findByRole('table', { name: 'Equipment for sale' })).toBeInTheDocument();
     expect(screen.queryByRole('list', { name: 'Equipment for sale' })).not.toBeInTheDocument();
+  });
+});
+
+describe('the gold left while the cart sits under the equipment', () => {
+  /** The Equipment heading row, where the badge sits beside the kit button. */
+  function headingRow() {
+    const heading = screen.getByRole('heading', { name: 'Equipment' });
+    return within(heading.parentElement as HTMLElement);
+  }
+
+  it('shows the gold left on the Equipment heading row, and how far over once the cart costs too much', async () => {
+    const { user } = renderStep(820, 28);
+    await screen.findByRole('table', { name: 'Equipment for sale' });
+    expect(headingRow().getByText('28 gp left')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Add Mace to the cart' }));
+    expect(headingRow().getByText('23 gp left')).toBeInTheDocument();
+    // The purse and the badge read the same amount.
+    expect(screen.getByText('5 gp spent, 23 gp left')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Add Holy symbol to the cart' }));
+    expect(headingRow().getByText('Over by 2 gp')).toBeInTheDocument();
+    expect(screen.getByText('30 gp spent, over by 2 gp')).toBeInTheDocument();
+  });
+
+  it('leaves the gold to the purse when the cart sits beside the equipment', async () => {
+    renderStep(1440, 30);
+    await screen.findByRole('table', { name: 'Equipment for sale' });
+    expect(headingRow().queryByText(/gp left|Over by/)).toBeNull();
   });
 });
