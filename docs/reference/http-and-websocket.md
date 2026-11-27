@@ -1,7 +1,7 @@
 ---
 title: HTTP API, WebSocket, and SDK
 sidebar_label: HTTP, WebSocket, and SDK
-description: Reference for BxvttClient, TableConnection, all 72 HTTP endpoints, WebSocket messages, problem codes, what players see, monster targets, battle round previews, and rejoin flows.
+description: Reference for BxvttClient, TableConnection, all 73 HTTP endpoints, WebSocket messages, problem codes, what players see, monster targets, battle round previews, and rejoin flows.
 sidebar_position: 1
 ---
 
@@ -71,7 +71,7 @@ All paths below sit under `/api` (for example, `GET /api/health`), and `{t}` den
 
 | Method and path | `BxvttClient` method | Authorization | Response |
 | --- | --- | --- | --- |
-| `GET /health` | `health()` | Public (`bxapi` details require a user token) | `Health`. Anyone gets `status`, `version`, `host_key_required`, `bxapi.reachable`, and `bxapi.outdated` (bxapi answers but runs an `osrlib` older than 2.9.0, so no game runs). A user token adds `bxapi.meta` and the cause in `bxapi.error`. |
+| `GET /health` | `health()` | Public (`bxapi` details require a user token) | `Health`. Anyone gets `status`, `version`, `host_key_required`, `bxapi.reachable`, and `bxapi.outdated` (bxapi answers but runs an `osrlib` older than 2.10.0, so no game runs). A user token adds `bxapi.meta` and the cause in `bxapi.error`. |
 | `POST /users` | `createUser(name)` | Public (rate-limited) | `CreateUserResponse` (includes `token`) |
 | `GET /users/me` | `me()` | User | `User` |
 | `PATCH /users/me` | `updateMe(body)` | User | `User` |
@@ -117,6 +117,7 @@ All paths below sit under `/api` (for example, `GET /api/health`), and `{t}` den
 | `GET /tables/{t}/ability-rolls/current` | `getCurrentAbilityRoll(tableId)` | Table member | `AbilityRoll`: the user's newest open roll at the table, or `null` when there is none |
 | `GET /ability-rolls/{roll_id}` | `getAbilityRoll(rollId)` | Roll owner, still a member of the roll's table | `AbilityRoll` |
 | `GET /ability-rolls/{roll_id}/starting-rolls` | `getStartingRolls(rollId)` | Roll owner | `StartingRollsStatus` |
+| `GET /ability-rolls/{roll_id}/adjustment-limits?class_id=` | `getAdjustmentLimits(rollId, query)` | Roll owner (rate-limited) | `AdjustmentLimits`: `bxapi`'s limits on the ability score trade for the roll and class |
 | `POST /ability-rolls/{roll_id}/hit-points` | `rollHitPoints(rollId, body)` | Roll owner (rate-limited) | `StartingRolls` |
 | `POST /ability-rolls/{roll_id}/gold` | `rollStartingGold(rollId, body)` | Roll owner (rate-limited) | `StartingRolls` |
 | `POST /characters/preview` | `previewCharacter(body)` | User | `bxapi` generated character, from a `CharacterPreviewRequest` with an optional `ruleset` and `seed` and no roll |
@@ -223,7 +224,7 @@ Every HTTP error returns an RFC 9457 `application/problem+json` object containin
 - **429:** `rate_limited` (with `Retry-After`)
 - **500:** `internal_error`
 - **502:** `bxapi_error`, `save_unreadable` (`bxapi` can't read the save to restore, because its rules engine was updated after the save was made), `invalid_response` (synthesized by SDK when a 2xx body is not JSON)
-- **503:** `bxapi_unavailable` (the server can't reach `bxapi`), `bxapi_outdated` (`bxapi` runs an `osrlib` older than 2.9.0, so the server serves no game and rolls no ability scores until the host updates it; the WebSocket `error` message uses the same code), `server_unavailable` (synthesized by SDK when a proxy/tunnel returns non-JSON 502/503/504)
+- **503:** `bxapi_unavailable` (the server can't reach `bxapi`), `bxapi_outdated` (`bxapi` runs an `osrlib` older than 2.10.0, so the server serves no game and rolls no ability scores until the host updates it; the WebSocket `error` message uses the same code), `server_unavailable` (synthesized by SDK when a proxy/tunnel returns non-JSON 502/503/504)
 - **507:** `bxapi_storage_full` (includes `used_bytes` and `max_bytes`)
 
 ## Key server protocols
@@ -291,6 +292,7 @@ A roll from before rolls belonged to tables, and a roll at a table the user has 
 The character wizard checks choices at every step and shows the player their hit points and starting gold before the character exists, without using up the user's ability roll. Both rely on `bxapi`'s `POST /v1/ability-rolls/{roll_id}/preview`, which returns the character that creation would store from the roll and the choices, stores nothing, and returns the same dice for the same class and ruleset every time.
 
 - **`POST /api/characters/check`** sends the choices to the preview and returns `{ valid, problem }`, where `problem` is `bxapi`'s `character_invalid` problem with its `rejections` or `field`, `index`, and `id`. The response never contains the previewed character, hit points, or gold.
+- **`GET /api/ability-rolls/{roll_id}/adjustment-limits?class_id=`** returns `bxapi`'s `AdjustmentLimits` for the roll's scores as rolled and the class: `lower_step`, `raise_step`, `can_trade`, `max_points` with `max_points_reason`, and for each ability `can_lower`, `can_raise`, `lowest` with `lowest_reason`, and `highest` with `highest_reason`. The limits don't depend on a trade, so a client reads them once for a roll and class, and the wizard's trade step uses them to enable each control. The route applies the ownership, newest-roll, and fixed-class checks that `POST /api/characters/check` applies, and it requires `class_id`. It answers `404 not_found`, `409 ability_roll_used`, `409 ability_roll_superseded`, `409 ability_roll_locked` (with the fixed `class_id`), `422 validation_error` (no `class_id`), `422 character_invalid` (a class that `bxapi` doesn't know or that the scores don't qualify for), `429 rate_limited`, and `503 bxapi_outdated`. Like every route that calls `bxapi`, it can also answer `401 unauthorized`, `502 bxapi_error`, and `503 bxapi_unavailable`.
 - **`POST /api/ability-rolls/{roll_id}/hit-points`** takes `class_id` and an arcane caster's `starting_spell_ids` (because `bxapi` checks the first spell before it rolls hit points). It returns `StartingRolls`: `class_id`, the roll's recorded `rules`, `bxapi`'s `hit_point_roll` (every die in the order thrown, the last one counting, `hit_points`, and `maximized` when the maximum hit points house rule set them), and `gold_roll` (`null` until the gold is rolled). The first request fixes the class for the ability roll. A repeat with the same class returns the same dice, so the wizard sends it again to show the rolls after a reload.
 - **`POST /api/ability-rolls/{roll_id}/gold`** takes the same body after the hit points are rolled and returns `StartingRolls` with `bxapi`'s `gold_roll` (`rolls`, `modifier`, `multiplier`, and `total`).
 - **`GET /api/ability-rolls/{roll_id}/starting-rolls`** returns `StartingRollsStatus`: `used`, the fixed `class_id` (`null` before the hit points are rolled), the recorded `rules`, and `gold_rolled`. It contains no dice.
@@ -301,4 +303,4 @@ The server stores only the fixed class and whether the gold is rolled, on its ro
 - A check or a creation with `purchases` or `equip_item_ids` before the gold is rolled gets `409 gold_not_rolled`, because a refused purchase leaves the roll unused and reveals the gold.
 - Rolling the gold before the hit points gets `409 hit_points_not_rolled`.
 
-Creating a character from an ability roll in one request, with no purchases, needs no starting rolls. Two requests that roll hit points at once fix the class once: the server asks `bxapi` first and records the class only when none is recorded, so the second request either matches the first or gets `ability_roll_locked`. Checks and starting rolls share the per-user limit for character checks.
+Creating a character from an ability roll in one request, with no purchases, needs no starting rolls. Two requests that roll hit points at once fix the class once: the server asks `bxapi` first and records the class only when none is recorded, so the second request either matches the first or gets `ability_roll_locked`. Checks, trade limit reads, and starting rolls share the per-user limit for character checks.
