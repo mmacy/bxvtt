@@ -74,6 +74,7 @@
 
 .rowBetween {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
@@ -95,6 +96,13 @@
 
 .footerStart {
   margin-inline-end: auto;
+}
+
+/* Back and the primary button stay together. When the footer wraps, Start over takes the line above them. */
+.footerActions {
+  display: flex;
+  gap: var(--space-2);
+  margin-inline-start: auto;
 }
 
 .footerNote {
@@ -262,7 +270,7 @@
 
 .classGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
   gap: var(--space-3);
 }
 
@@ -683,6 +691,13 @@
   align-items: start;
 }
 
+/* On a narrow screen the cart sits under the equipment, because it has no room beside it. */
+@media (max-width: 640px) {
+  .outfitGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .shop {
   display: flex;
   flex-direction: column;
@@ -699,6 +714,11 @@
 
 .shopControls > :first-child {
   flex: 1 1 200px;
+}
+
+/* The type filter scrolls inside its own box when a 320 px screen can't hold all of its segments. */
+.shopControls > :last-child {
+  overflow-x: auto;
 }
 
 .shopName {
@@ -726,6 +746,12 @@
   border: var(--border-hair) solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface-2);
+}
+
+@media (max-width: 640px) {
+  .cartPanel {
+    position: static;
+  }
 }
 
 .purse {
@@ -842,6 +868,19 @@
   min-width: 0;
 }
 
+/* A label that phone width reduces to its icon stays in the accessible name. */
+@media (max-width: 480px) {
+  .narrowHidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
 /* The name field stands where the finished sheet shows the name, so it takes the sheet's display face. */
 .reviewNameInput {
   max-width: var(--measure-prose);
@@ -849,6 +888,12 @@
   font-variation-settings: var(--font-display-soft);
   font-size: var(--text-2xl);
   font-weight: var(--weight-semibold);
+}
+
+@media (max-width: 480px) {
+  .reviewNameInput {
+    font-size: var(--text-xl);
+  }
 }
 
 .reviewClass {
@@ -877,10 +922,22 @@
   gap: var(--space-2);
 }
 
+@media (max-width: 900px) {
+  .reviewAbilities {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 .reviewColumns {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-6);
+}
+
+@media (max-width: 860px) {
+  .reviewColumns {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .reviewText,
@@ -904,6 +961,12 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-1) var(--space-4);
   margin: 0;
+}
+
+@media (max-width: 480px) {
+  .reviewFacts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .reviewFacts > div {

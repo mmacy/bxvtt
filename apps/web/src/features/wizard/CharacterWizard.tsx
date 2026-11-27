@@ -1087,44 +1087,48 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
           Start over
         </Button>
       )}
-      {stepIndex(draft.step) > 0 && (
-        <Button variant="secondary" icon="arrow-left" onClick={back} disabled={busy}>
-          Back
-        </Button>
-      )}
-      {draft.step === 'roll' && draft.roll === null && (
-        <Button
-          variant="primary"
-          icon="dice"
-          loading={rolling || !lookedForCurrent}
-          onClick={() => void roll()}
-        >
-          Roll ability scores
-        </Button>
-      )}
-      {draft.step === 'review' ? (
-        <Button variant="primary" icon="check" loading={busy} onClick={() => void next()}>
-          Create character
-        </Button>
-      ) : (
-        draft.roll !== null &&
-        // The step's own roll buttons lead until both rolls are made.
-        !(draft.step === 'hp_gold' && !canContinue) && (
+      <div className={styles.footerActions}>
+        {stepIndex(draft.step) > 0 && (
+          <Button variant="secondary" icon="arrow-left" onClick={back} disabled={busy}>
+            Back
+          </Button>
+        )}
+        {draft.step === 'roll' && draft.roll === null && (
           <Button
             variant="primary"
-            iconEnd="arrow-right"
-            loading={busy}
-            disabled={!canContinue}
-            disabledReason={block?.reason}
-            aria-describedby={
-              draft.step === 'adjust' && adjustCheck.status === 'in_progress' ? ADJUST_GUIDANCE_ID : undefined
-            }
-            onClick={() => void next()}
+            icon="dice"
+            loading={rolling || !lookedForCurrent}
+            onClick={() => void roll()}
           >
-            {draft.step === 'adjust' && !hasAdjustment(draft.adjustment) ? 'Skip this step' : 'Continue'}
+            Roll ability scores
           </Button>
-        )
-      )}
+        )}
+        {draft.step === 'review' ? (
+          <Button variant="primary" icon="check" loading={busy} onClick={() => void next()}>
+            Create character
+          </Button>
+        ) : (
+          draft.roll !== null &&
+          // The step's own roll buttons lead until both rolls are made.
+          !(draft.step === 'hp_gold' && !canContinue) && (
+            <Button
+              variant="primary"
+              iconEnd="arrow-right"
+              loading={busy}
+              disabled={!canContinue}
+              disabledReason={block?.reason}
+              aria-describedby={
+                draft.step === 'adjust' && adjustCheck.status === 'in_progress'
+                  ? ADJUST_GUIDANCE_ID
+                  : undefined
+              }
+              onClick={() => void next()}
+            >
+              {draft.step === 'adjust' && !hasAdjustment(draft.adjustment) ? 'Skip this step' : 'Continue'}
+            </Button>
+          )
+        )}
+      </div>
     </>
   );
 

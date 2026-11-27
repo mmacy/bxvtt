@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Icon } from '../icons/Icon';
 import { cx } from '../lib/cx';
 import styles from './Stepper.module.css';
@@ -22,9 +23,21 @@ export interface StepperProps {
 
 /** Shows progress through a wizard, such as the character creation steps. */
 export function Stepper({ steps, current, onStepClick, 'aria-label': ariaLabel, className }: StepperProps) {
+  const list = useRef<HTMLOListElement>(null);
+
+  // In a narrow container the steps scroll inside their own box, so center the current step in it.
+  useEffect(() => {
+    const box = list.current;
+    const step = box?.querySelector('[aria-current="step"]');
+    if (!box || !step) return;
+    const boxRect = box.getBoundingClientRect();
+    const stepRect = step.getBoundingClientRect();
+    box.scrollLeft += stepRect.left - boxRect.left - (boxRect.width - stepRect.width) / 2;
+  }, [current]);
+
   return (
     <nav aria-label={ariaLabel} className={cx(styles.nav, className)}>
-      <ol className={styles.steps}>
+      <ol ref={list} className={styles.steps}>
         {steps.map((step, index) => {
           const state = index < current ? 'complete' : index === current ? 'current' : 'upcoming';
           const content = (

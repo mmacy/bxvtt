@@ -120,7 +120,8 @@ export function ReviewStep({
                   icon="dice"
                   onClick={() => onName(suggestName(draft.classId, draft.name, Math.random(), taken))}
                 >
-                  Suggest a name
+                  {/* At phone width the button shows its dice alone, so the name field keeps room. The name stays. */}
+                  <span className={styles.narrowHidden}>Suggest a name</span>
                 </Button>
               }
             />
