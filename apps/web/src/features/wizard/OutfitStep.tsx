@@ -217,7 +217,7 @@ export function OutfitStep({
     },
     {
       key: 'weight',
-      header: 'Weight',
+      header: 'Weight (cn)',
       numeric: true,
       sortValue: (item) => weightCoins(full.byId.get(item.id)) ?? Number.MAX_SAFE_INTEGER,
       cell: (item) => {
@@ -321,14 +321,10 @@ export function OutfitStep({
             }
           />
         )}
-        <p className={styles.muted}>
-          Prices are in gold pieces and weights are in coins. You buy weapons and armour one at a time, while
-          gear and ammunition often come in bundles.
-        </p>
       </section>
       <aside className={styles.cartPanel} aria-labelledby="wizard-cart">
         <div className={styles.purse}>
-          <span className={styles.purseLabel}>Rolled starting gold</span>
+          <span className={styles.purseLabel}>Starting gold</span>
           {gold.status === 'loading' && (
             <span className={styles.checking}>
               <Spinner size={14} label="" /> Loading your gold
@@ -365,9 +361,7 @@ export function OutfitStep({
           Cart
         </h3>
         {cart.length === 0 ? (
-          <p className={styles.muted}>
-            Your cart is empty. You can also leave with your gold and shop in town once the game starts.
-          </p>
+          <p className={styles.muted}>Your cart is empty.</p>
         ) : (
           <ul className={styles.cartList}>
             {cart.map((line) => {
@@ -427,9 +421,6 @@ export function OutfitStep({
               <span className={styles.checking}>
                 <Spinner size={14} label="" /> Checking equipment
               </span>
-            )}
-            {check.status === 'ok' && (
-              <span className={styles.okLine}>Your character can afford and use this equipment.</span>
             )}
             {check.status === 'invalid' && (
               <Banner tone="warning" title="Check your cart">

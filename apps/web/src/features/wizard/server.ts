@@ -57,10 +57,10 @@ export interface ExplainOptions {
   /** Names for the IDs in rejections. */
   ctx?: TextContext;
   /**
-   * Whether the wizard offers Start over, because the table lets the player roll new ability scores. Defaults
-   * to `true`.
+   * The character's name, when the error comes from storing the character. A failure that isn't a refusal then
+   * stays on the review step under a title that names the character.
    */
-  canStartOver?: boolean;
+  name?: string;
 }
 
 /** The refusal for an ability roll that already made a character, or that a later character closed. */
@@ -112,19 +112,29 @@ const STEP_TITLES: Record<StepId, string> = {
   roll: 'Roll new ability scores',
   class: 'Choose an eligible class',
   adjust: 'Check your ability score adjustments',
-  identity: 'Check your character details',
+  identity: 'Check your languages and spells',
   hp_gold: 'Roll your hit points and gold',
   outfit: 'Check your starting equipment',
   review: "Couldn't create character",
 };
+
+/** The banner title for a refusal that sends the player to a step. On the review step, it names the character. */
+function stepTitle(step: StepId, name: string | undefined): string {
+  return step === 'review' && name !== undefined ? `Couldn't create ${name}` : STEP_TITLES[step];
+}
 
 /**
  * Explains a `character_invalid` problem: what is wrong in the game's terms, and the step that fixes it.
  *
  * @param problem - The problem document.
  * @param ctx - Names for the IDs in the rejections.
+ * @param name - The character's name, when the problem comes from storing the character.
  */
-export function explainInvalid(problem: Problem, ctx: TextContext = emptyContext()): WizardProblem {
+export function explainInvalid(
+  problem: Problem,
+  ctx: TextContext = emptyContext(),
+  name?: string,
+): WizardProblem {
   const rejections = oneReasonPerAbility(problem.rejections ?? []);
   if (rejections.length > 0) {
     const first = rejections[0];
@@ -133,7 +143,7 @@ export function explainInvalid(problem: Problem, ctx: TextContext = emptyContext
       rejections.map((r) => ({ code: r.code, params: toParamMap(r.params) })),
       ctx,
     );
-    return { step, title: STEP_TITLES[step], sentences };
+    return { step, title: stepTitle(step, name), sentences };
   }
   const id = typeof problem.id === 'string' ? problem.id : '';
   switch (problem.field) {
@@ -160,7 +170,7 @@ export function explainInvalid(problem: Problem, ctx: TextContext = emptyContext
     default:
       return {
         step: 'review',
-        title: STEP_TITLES.review,
+        title: stepTitle('review', name),
         sentences: ['One of your choices is not valid for this character. Review each step and try again.'],
       };
   }
@@ -173,8 +183,8 @@ export function explainInvalid(problem: Problem, ctx: TextContext = emptyContext
  * @param options - Names for the IDs in rejections, and whether the wizard offers Start over.
  */
 export function explainCreationError(error: unknown, options: ExplainOptions = {}): WizardProblem {
-  const { ctx, canStartOver = true } = options;
-  if (isProblem(error, 'character_invalid')) return explainInvalid(error.problem, ctx);
+  const { ctx, name } = options;
+  if (isProblem(error, 'character_invalid')) return explainInvalid(error.problem, ctx, name);
   if (isProblem(error, 'ability_roll_used')) return ROLL_USED_PROBLEM;
   if (isProblem(error, 'not_found')) {
     return {
@@ -192,7 +202,6 @@ export function explainCreationError(error: unknown, options: ExplainOptions = {
         classId === undefined
           ? 'You already rolled hit points for these ability scores, which fixed your class.'
           : `You already rolled hit points as ${withArticle(classInSentence(classLabel(classId)))}, which fixed your class.`,
-        ...(canStartOver ? ['To play another class, choose Start over and roll new ability scores.'] : []),
       ],
     };
   }
@@ -212,21 +221,15 @@ export function explainCreationError(error: unknown, options: ExplainOptions = {
   }
   if (isProblem(error, 'validation_error')) {
     return {
-      step: 'identity',
+      step: 'review',
       title: 'Enter a valid character name',
       sentences: ['Use 1 to 100 characters without tabs, line breaks, or text direction marks.'],
     };
   }
   const message = describeProblem(error);
-  // A failure that never reached the server loses nothing: the draft stays in this browser.
-  const kept = ['server_unavailable', 'network', 'invalid_response', 'rate_limited', 'bxapi_unavailable'];
-  return {
-    step: null,
-    title: message.title,
-    sentences: kept.includes(message.code)
-      ? [message.detail, 'Your draft is still saved in this browser.']
-      : [message.detail],
-  };
+  if (name !== undefined)
+    return { step: 'review', title: stepTitle('review', name), sentences: [message.detail] };
+  return { step: null, title: message.title, sentences: [message.detail] };
 }
 
 /**

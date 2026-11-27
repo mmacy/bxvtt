@@ -345,7 +345,7 @@ describe('the ability trade step in the wizard', () => {
     await user.click(screen.getByRole('button', { name: 'Raise Strength' }));
     await screen.findByText('Valid ability trade', {}, SLOW);
     await user.click(within(FOOTER()).getByRole('button', { name: 'Continue' }));
-    expect(await screen.findByRole('heading', { name: 'Identity' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Alignment and languages' })).toBeInTheDocument();
   });
 
   it('shows a wrong choice as a warning and blocks Continue', async () => {

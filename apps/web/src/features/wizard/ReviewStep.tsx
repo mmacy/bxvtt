@@ -9,11 +9,20 @@ import {
   saveLabel,
 } from '@bxvtt/shared/text';
 import type { StartingRolls } from '@bxvtt/shared/protocol';
-import type { ClassDetail } from '@/app';
-import { Badge, Banner, CoinPurse, Parchment, StatBox, Tooltip, formatModifier } from '@/ui';
+import type { Ref } from 'react';
+import { useMyCharacters, type ClassDetail } from '@/app';
+import { Badge, Button, CoinPurse, Field, Parchment, StatBox, TextInput, formatModifier } from '@/ui';
 import type { WizardDraft } from './draft';
 import { cartLabel, cartPhrase, type CartLine } from './kits';
-import { ABILITIES, casterNextStep, headlineModifier, xpModifierFor, type Scores } from './tables';
+import { suggestName } from './names';
+import {
+  ABILITIES,
+  classMagic,
+  firstSpellLevel,
+  headlineModifier,
+  xpModifierFor,
+  type Scores,
+} from './tables';
 import { RuleLink } from '../sheet/RuleLink';
 import styles from './wizard.module.css';
 
@@ -28,6 +37,11 @@ export interface ReviewStepProps {
   /** The hit points and gold the player rolled, as the server returned them. */
   rolls: StartingRolls | null;
   onEdit: (step: WizardDraft['step']) => void;
+  onName: (name: string) => void;
+  /** Why the name can't be used, shown after the player selects Create character, or `undefined`. */
+  nameError: string | undefined;
+  /** The name input, which the wizard focuses when the name is missing. */
+  nameRef: Ref<HTMLInputElement>;
 }
 
 function cartNames(cart: CartLine[], equip: string[], equipment: EquipmentSummary[] | null) {
@@ -44,7 +58,10 @@ function cartNames(cart: CartLine[], equip: string[], equipment: EquipmentSummar
   });
 }
 
-/** The last step: the finished sheet on parchment, with the rolled hit points and gold, before the server stores it. */
+/**
+ * The last step: the finished sheet on parchment, with the rolled hit points and gold, where the player names the
+ * character before the server stores it.
+ */
 export function ReviewStep({
   draft,
   scores,
@@ -55,7 +72,11 @@ export function ReviewStep({
   goldLeft,
   rolls,
   onEdit,
+  onName,
+  nameError,
+  nameRef,
 }: ReviewStepProps) {
+  const taken = (useMyCharacters().items ?? []).map((c) => c.name);
   const hp = rolls?.hit_point_roll ?? null;
   const gold = rolls?.gold_roll ?? null;
   const first = detail?.progression.find((row) => row.level === 1);
@@ -65,31 +86,45 @@ export function ReviewStep({
   const con = tables ? headlineModifier(tables, 'con', scores.con) : undefined;
   const languages = [...(detail?.languages ?? []), ...draft.languages];
   const gear = cartNames(draft.cart, draft.equip, equipment);
-  const nextStep = casterNextStep(
-    draft.name.trim() || 'Your character',
-    detail,
-    draft.spells.map((id) => spells?.find((s) => s.id === id)?.name ?? id),
-  );
+  // A class whose table gives no spell slots at first level, such as the cleric, casts nothing yet.
+  const spellLevel = classMagic(detail) === null ? null : firstSpellLevel(detail);
   const wearing = gear.filter((item) => item.equipped && item.kind === 'armour').map((item) => item.phrase);
   const wielding = gear.filter((item) => item.equipped && item.kind !== 'armour').map((item) => item.phrase);
   const outfit = [
     ...(wearing.length > 0 ? [`wearing ${joinList(wearing)}`] : []),
     ...(wielding.length > 0 ? [`wielding ${joinList(wielding)}`] : []),
   ];
-  const unworn = gear.filter((item) => !item.equipped && (item.kind === 'armour' || item.kind === 'weapon'));
-  const edit = (step: WizardDraft['step'], label: string, stepName: string) => (
-    <Tooltip content={`Go back to the ${stepName} step`}>
-      <button type="button" className={styles.editLink} onClick={() => onEdit(step)}>
-        Change<span className="visually-hidden"> {label}</span>
-      </button>
-    </Tooltip>
+  const edit = (step: WizardDraft['step'], label: string) => (
+    <button type="button" className={styles.editLink} onClick={() => onEdit(step)}>
+      Change<span className="visually-hidden"> {label}</span>
+    </button>
   );
 
   return (
     <Parchment variant="sheet" className={styles.review}>
       <header className={styles.reviewHeader}>
-        <div>
-          <h3 className={styles.reviewName}>{draft.name.trim() || 'Unnamed adventurer'}</h3>
+        <div className={styles.reviewIdentity}>
+          <Field label="Name" error={nameError} required>
+            <TextInput
+              ref={nameRef}
+              value={draft.name}
+              maxLength={100}
+              autoComplete="off"
+              size="lg"
+              wrapperClassName={styles.reviewNameInput}
+              onChange={(event) => onName(event.target.value)}
+              end={
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  icon="dice"
+                  onClick={() => onName(suggestName(draft.classId, draft.name, Math.random(), taken))}
+                >
+                  Suggest a name
+                </Button>
+              }
+            />
+          </Field>
           <p className={styles.reviewClass}>
             Level 1{' '}
             {detail ? (
@@ -99,13 +134,13 @@ export function ReviewStep({
             {draft.alignment ? alignmentLabel(draft.alignment) : 'No alignment'}
           </p>
         </div>
-        {edit('identity', 'name and alignment', 'identity')}
+        {edit('identity', 'alignment and languages')}
       </header>
 
       <section className={styles.reviewSection} aria-label="Ability scores">
         <div className={styles.rowBetween}>
           <h4 className={styles.reviewHeading}>Ability scores</h4>
-          {edit('adjust', 'ability scores', 'adjust scores')}
+          {edit('adjust', 'ability scores')}
         </div>
         <div className={styles.reviewAbilities}>
           {ABILITIES.map((ability) => (
@@ -127,7 +162,13 @@ export function ReviewStep({
       <div className={styles.reviewColumns}>
         <section className={styles.reviewSection} aria-label="Combat">
           <h4 className={styles.reviewHeading}>Hit points</h4>
-          {hp ? (
+          {hp?.maximized ? (
+            <p className={styles.reviewText}>
+              <span className={styles.reviewNumber}>{count(hp.hit_points, 'hit point')}</span>. Your table
+              gives the maximum on {detail ? `1d${detail.hit_die}` : 'the hit die'}
+              {detail && con !== undefined && con !== 0 ? `, ${formatModifier(con)} for Constitution` : ''}.
+            </p>
+          ) : hp ? (
             <p className={styles.reviewText}>
               <span className={styles.reviewNumber}>{count(hp.hit_points, 'hit point')}</span>. You rolled{' '}
               {hp.rolls.at(-1)} on 1d{detail?.hit_die ?? '?'}
@@ -168,9 +209,8 @@ export function ReviewStep({
               </dl>
               <p className={styles.reviewNote}>
                 {outfit.length > 0
-                  ? `You set out ${outfit.join(' and ')}. `
-                  : 'You set out with nothing worn or wielded. '}
-                You get your final armour class when you create your character.
+                  ? `You set out ${outfit.join(' and ')}.`
+                  : 'You set out with nothing worn or wielded.'}
               </p>
             </>
           )}
@@ -199,17 +239,22 @@ export function ReviewStep({
               </p>
             </>
           )}
-          {nextStep && <p className={styles.reviewNote}>{nextStep}</p>}
+          {spellLevel !== null && spellLevel > 1 && (
+            <>
+              <h4 className={styles.reviewHeading}>Spells</h4>
+              <p className={styles.reviewText}>None until level {spellLevel}.</p>
+            </>
+          )}
         </section>
       </div>
 
       <section className={styles.reviewSection} aria-label="Equipment">
         <div className={styles.rowBetween}>
           <h4 className={styles.reviewHeading}>Equipment</h4>
-          {edit('outfit', 'equipment', 'outfit')}
+          {edit('outfit', 'equipment')}
         </div>
         {gear.length === 0 ? (
-          <p className={styles.reviewText}>None yet. You keep all your gold to spend in town.</p>
+          <p className={styles.reviewText}>None.</p>
         ) : (
           <ul className={styles.reviewGear}>
             {gear.map((item) => (
@@ -223,13 +268,6 @@ export function ReviewStep({
               </li>
             ))}
           </ul>
-        )}
-        {unworn.length > 0 && (
-          <Banner tone="warning" title="Unequipped weapons or armour">
-            {`You packed ${joinList(unworn.map((item) => item.phrase))} without equipping ${
-              unworn.length === 1 ? 'it' : 'them'
-            }. Select Change if you want to wear or wield ${unworn.length === 1 ? 'it' : 'them'}.`}
-          </Banner>
         )}
         {goldLeft !== null && <CoinPurse coins={{ gp: goldLeft }} />}
       </section>

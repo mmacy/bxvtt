@@ -1,7 +1,8 @@
 /**
  * The character wizard: one character of each class, an ability trade, extra languages, an arcane caster's first
- * spell, rolling hit points and gold, shopping with the rolled gold, a refusal for overspending, a draft that
- * survives closing the dialog, rolls that survive a reload, and a class that rolling hit points fixes.
+ * spell, rolling hit points and gold, shopping with the rolled gold, a refusal for overspending, naming the
+ * character on the review step, an unfinished character that survives closing the dialog, rolls that survive a
+ * reload, and a class that rolling hit points fixes.
  */
 import { expect, test } from './support/fixtures';
 import {
@@ -13,12 +14,13 @@ import {
   chooseClass,
   classLabelText,
   createFromReview,
-  fillIdentity,
+  chooseAlignment,
   next,
   openWizard,
   rollFor,
   rollHitPointsAndGold,
   wizard,
+  wizardButton,
   type WizardClass,
 } from './support/wizard';
 
@@ -68,7 +70,7 @@ test.describe('character wizard', () => {
       await chooseClass(dialog, classId);
       await dialog.getByRole('button', { name: 'Skip this step' }).click();
 
-      await fillIdentity(dialog, NAMES[classId]);
+      await chooseAlignment(dialog);
       if (ARCANE.includes(classId)) {
         await dialog
           .getByRole('region', { name: 'First spell' })
@@ -81,7 +83,6 @@ test.describe('character wizard', () => {
       const rolled = await rollHitPointsAndGold(dialog);
       await expect(cart(dialog)).toContainText(`0 gp spent, ${rolled.gold} gp left`);
       await addToCart(dialog, [WEAPONS[classId]]);
-      await expect(cart(dialog)).toContainText('Your character can afford and use this equipment.');
       await next(dialog);
       await createFromReview(sam.page, dialog, NAMES[classId]);
 
@@ -128,7 +129,7 @@ test.describe('character wizard', () => {
     await expect(dialog.getByRole('group', { name: /^Intelligence after the trade 12/ })).toBeVisible();
     await next(dialog);
 
-    await fillIdentity(dialog, 'Flarg');
+    await chooseAlignment(dialog);
     await next(dialog);
     expect((await rollHitPointsAndGold(dialog)).gold).toBe(110);
 
@@ -151,7 +152,7 @@ test.describe('character wizard', () => {
     await expect(shop.getByRole('checkbox', { name: 'Wear the shield', exact: true })).toBeChecked();
     await expect(shop.getByRole('checkbox', { name: 'Wield the sword', exact: true })).toBeChecked();
     await expect(shop.getByText('Wear the plate mail', { exact: true })).toBeVisible();
-    await expect(shop).toContainText('Your character can afford and use this equipment.');
+    await expect(shop.getByRole('alert')).toHaveCount(0);
     await next(dialog);
 
     const review = dialog;
@@ -233,7 +234,7 @@ test.describe('character wizard', () => {
     await expect(dialog.getByRole('group', { name: /^Dexterity after the trade 17/ })).toBeVisible();
     await expect(dialog.getByRole('group', { name: /^Wisdom after the trade 10/ })).toBeVisible();
     await next(dialog);
-    await expect(dialog.getByRole('heading', { name: 'Identity', level: 3 })).toBeVisible();
+    await expect(dialog.getByRole('heading', { name: 'Alignment and languages', level: 3 })).toBeVisible();
   });
 
   test('a wrong ability trade is a warning, and resetting clears it', async ({ crew }) => {
@@ -273,15 +274,15 @@ test.describe('character wizard', () => {
     await expect(dialog).not.toContainText('steps of 2');
     await dialog.getByRole('button', { name: 'Reset to rolled scores' }).click();
     await dialog.getByRole('button', { name: 'Skip this step' }).click();
-    await fillIdentity(dialog, 'Mazpar', 'Neutral');
+    await chooseAlignment(dialog, 'Neutral');
 
     const languages = dialog.getByRole('region', { name: 'Languages' });
-    await expect(languages).toContainText(
-      'With Intelligence 16, you can learn 2 extra languages. Chosen: 0 of 2.',
-    );
-    await languages.getByRole('checkbox', { name: 'Elvish', exact: true }).check();
-    await languages.getByRole('checkbox', { name: 'Goblin', exact: true }).check();
-    await expect(languages).toContainText('Chosen: 2 of 2.');
+    await expect(languages).toContainText('A magic-user speaks Common and the alignment tongue.');
+    await expect(languages).toContainText('0 of 2 chosen');
+    const extra = languages.getByRole('group', { name: 'Extra languages' });
+    await extra.getByRole('checkbox', { name: 'Elvish', exact: true }).check();
+    await extra.getByRole('checkbox', { name: 'Goblin', exact: true }).check();
+    await expect(languages).toContainText('2 of 2 chosen');
     // A third language is more than the Intelligence allows.
     await expect(languages.getByRole('checkbox', { name: 'Dwarvish', exact: true })).toBeDisabled();
 
@@ -337,6 +338,53 @@ test.describe('character wizard', () => {
     expect(JSON.stringify(mazpar.spell_book)).toContain('magic_missile');
   });
 
+  test('names the character on the review step and closes onto the party', async ({ crew }) => {
+    const sam = await crew.person('Sam');
+    const table = await sam.client.createTable({ name: 'Naming' });
+    await sam.seedAbilityRolls([ROLL_SEEDS.fighter]);
+    await sam.page.goto(`/tables/${table.id}`);
+    const dialog = await openWizard(sam.page);
+    await rollFor(dialog, 'fighter');
+    await next(dialog);
+    await chooseClass(dialog, 'fighter');
+    await dialog.getByRole('button', { name: 'Skip this step' }).click();
+    // The name waits for the last step.
+    await expect(dialog.getByRole('textbox', { name: 'Name' })).toHaveCount(0);
+    await chooseAlignment(dialog);
+    await next(dialog);
+    await rollHitPointsAndGold(dialog);
+    await addToCart(dialog, ['Sword']);
+    await next(dialog);
+
+    // The review step opens on the empty name field.
+    await expect(dialog.getByRole('heading', { name: 'Review', level: 3 })).toBeVisible();
+    const name = dialog.getByRole('textbox', { name: 'Name' });
+    await expect(name).toBeFocused();
+
+    // A click outside the dialog doesn't end the wizard. The top-left corner of the page is the overlay.
+    await sam.page.mouse.click(4, 4);
+    await expect(dialog).toBeVisible();
+
+    // Create character without a name goes back to the field and stores nothing.
+    const create = dialog.getByRole('contentinfo').getByRole('button', { name: 'Create character' });
+    await create.click();
+    await expect(name).toBeFocused();
+    await expect(dialog).toBeVisible();
+    expect((await sam.client.listCharacters()).items.some((item) => item.name === 'Flarg')).toBe(false);
+
+    await dialog.getByRole('button', { name: 'Suggest a name' }).click();
+    await expect(name).not.toHaveValue('');
+    await name.fill('Flarg');
+    await create.click();
+    await expect(wizard(sam.page)).toHaveCount(0, { timeout: 20_000 });
+
+    // The wizard closes onto the lobby, with the new character in the party and focus back on the button.
+    const order = sam.page.getByRole('list', { name: 'Party in marching order' });
+    await expect(order.getByRole('listitem').filter({ hasText: 'Flarg' })).toBeVisible({ timeout: 20_000 });
+    await expect(wizardButton(sam.page, 'Create a character')).toBeFocused();
+    await expect(sam.page.getByRole('status').filter({ hasText: 'Flarg joined the party.' })).toHaveCount(1);
+  });
+
   test('a draft survives closing the dialog and reloading the page', async ({ crew }) => {
     const sam = await crew.person('Sam');
     const table = await sam.client.createTable({ name: 'Draft' });
@@ -349,19 +397,25 @@ test.describe('character wizard', () => {
     await next(dialog);
     await chooseClass(dialog, 'thief');
     await dialog.getByRole('button', { name: 'Skip this step' }).click();
-    await fillIdentity(dialog, 'Tinks', 'Chaotic');
+    await chooseAlignment(dialog, 'Chaotic');
 
+    // Closing midway keeps the unfinished character, and the lobby button says so.
     await dialog.getByRole('banner').getByRole('button', { name: 'Close' }).click();
     await expect(wizard(sam.page)).toHaveCount(0);
+    await expect(wizardButton(sam.page, 'Resume character')).toBeFocused();
 
-    dialog = await openWizard(sam.page);
-    await expect(dialog.getByRole('heading', { name: 'Identity', level: 3 })).toBeVisible();
-    await expect(dialog.getByRole('textbox', { name: 'Name' })).toHaveValue('Tinks');
+    dialog = await openWizard(sam.page, 'Resume character');
+    await expect(dialog.getByRole('heading', { name: 'Alignment and languages', level: 3 })).toBeVisible();
     await expect(dialog.getByRole('radio', { name: 'Chaotic' })).toBeChecked();
 
+    // Escape closes the wizard too.
+    await sam.page.keyboard.press('Escape');
+    await expect(wizard(sam.page)).toHaveCount(0);
+    await expect(wizardButton(sam.page, 'Resume character')).toBeFocused();
+
     await sam.page.reload();
-    dialog = await openWizard(sam.page);
-    await expect(dialog.getByRole('textbox', { name: 'Name' })).toHaveValue('Tinks');
+    dialog = await openWizard(sam.page, 'Resume character');
+    await expect(dialog.getByRole('radio', { name: 'Chaotic' })).toBeChecked();
     await expect(dialog.getByRole('button', { name: /^Choose a class \(complete\) Thief/ })).toBeVisible();
 
     // Starting over clears the draft after a confirmation.
@@ -371,6 +425,8 @@ test.describe('character wizard', () => {
       .getByRole('button', { name: /Start over/ })
       .click();
     await expect(dialog.getByRole('button', { name: 'Roll ability scores' })).toBeVisible();
+    await dialog.getByRole('banner').getByRole('button', { name: 'Close' }).click();
+    await expect(wizardButton(sam.page, 'Create a character')).toBeVisible();
   });
 
   test('the rolled hit points and gold survive a reload, and the wizard never offers them again', async ({
@@ -385,7 +441,7 @@ test.describe('character wizard', () => {
     await next(dialog);
     await chooseClass(dialog, 'thief');
     await dialog.getByRole('button', { name: 'Skip this step' }).click();
-    await fillIdentity(dialog, 'Tinks', 'Chaotic');
+    await chooseAlignment(dialog, 'Chaotic');
     await next(dialog);
 
     const rollHitPoints = dialog.getByRole('button', { name: 'Roll hit points' });
@@ -403,7 +459,7 @@ test.describe('character wizard', () => {
     const goldText = (await gold.textContent()) ?? '';
 
     await sam.page.reload();
-    dialog = await openWizard(sam.page);
+    dialog = await openWizard(sam.page, 'Resume character');
     await expect(dialog.getByRole('heading', { name: 'Hit points and gold', level: 3 })).toBeVisible();
     await expect(dialog.getByText(hpText)).toBeVisible();
     await expect(dialog.getByText(goldText)).toBeVisible();
@@ -425,7 +481,7 @@ test.describe('character wizard', () => {
     await next(dialog);
     await chooseClass(dialog, 'fighter');
     await dialog.getByRole('button', { name: 'Skip this step' }).click();
-    await fillIdentity(dialog, 'Flarg');
+    await chooseAlignment(dialog);
     await next(dialog);
 
     // Before the roll, the step says what rolling fixes.
@@ -436,9 +492,7 @@ test.describe('character wizard', () => {
 
     await dialog.getByRole('button', { name: /^Choose a class \(complete\)/ }).click();
     await expect(dialog.getByText('Your class is fixed as a fighter')).toBeVisible();
-    await expect(dialog).toContainText(
-      'You rolled hit points for these ability scores, which fixed your class.',
-    );
+    await expect(dialog).toContainText('You rolled hit points for these ability scores.');
     // A new table allows no rerolls, so nothing offers new ability scores for another class.
     await expect(dialog).not.toContainText('Start over');
     await expect(dialog.getByRole('button', { name: 'Start over' })).toHaveCount(0);
@@ -451,7 +505,7 @@ test.describe('character wizard', () => {
     // The other choices stay free, and the hit points wait where the player left them.
     await next(dialog);
     await dialog.getByRole('button', { name: 'Skip this step' }).click();
-    await fillIdentity(dialog, 'Flarg the Second');
+    await chooseAlignment(dialog);
     await next(dialog);
     await expect(dialog.getByText(hpText)).toBeVisible();
     await expect(dialog.getByRole('button', { name: 'Roll hit points' })).toHaveCount(0);

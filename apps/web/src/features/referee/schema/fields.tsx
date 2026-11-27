@@ -1095,7 +1095,7 @@ function CharacterEditor(props: FieldEditorProps) {
     <div className={styles.fields}>
       <Field
         label="Stored character"
-        hint="Choose one of your stored characters, or create one from the lobby or home page."
+        hint="Choose one of your stored characters, or create one in the lobby."
         id={selectId}
         error={error > 0 && !isRecord(props.value) ? 'Choose a character.' : undefined}
       >

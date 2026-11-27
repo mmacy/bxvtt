@@ -37,12 +37,17 @@ export function wizard(page: Page): Locator {
   return page.getByRole('dialog', { name: 'Create a character' });
 }
 
+/** The lobby's wizard button, which reads "Resume character" while an unfinished character waits. */
+export function wizardButton(page: Page, label: 'Create a character' | 'Resume character'): Locator {
+  return page.getByRole('region', { name: 'Your characters' }).getByRole('button', { name: label });
+}
+
 /** Opens the wizard from the lobby's "Your characters" section. */
-export async function openWizard(page: Page): Promise<Locator> {
-  await page
-    .getByRole('region', { name: 'Your characters' })
-    .getByRole('button', { name: 'Create a character' })
-    .click();
+export async function openWizard(
+  page: Page,
+  label: 'Create a character' | 'Resume character' = 'Create a character',
+): Promise<Locator> {
+  await wizardButton(page, label).click();
   const dialog = wizard(page);
   await expect(dialog).toBeVisible();
   return dialog;
@@ -102,10 +107,9 @@ export async function chooseClass(dialog: Locator, classId: WizardClass): Promis
   await expect(dialog.getByRole('heading', { name: 'Adjust scores', level: 3 })).toBeVisible();
 }
 
-/** Names the character and picks an alignment on the identity step, without continuing. */
-export async function fillIdentity(dialog: Locator, name: string, alignment = 'Lawful'): Promise<void> {
-  await expect(dialog.getByRole('heading', { name: 'Identity', level: 3 })).toBeVisible();
-  await dialog.getByRole('textbox', { name: 'Name' }).fill(name);
+/** Picks an alignment on the alignment and languages step, without continuing. */
+export async function chooseAlignment(dialog: Locator, alignment = 'Lawful'): Promise<void> {
+  await expect(dialog.getByRole('heading', { name: 'Alignment and languages', level: 3 })).toBeVisible();
   await dialog.getByRole('radio', { name: alignment }).click();
 }
 
@@ -141,15 +145,10 @@ export function cart(dialog: Locator): Locator {
   return dialog.getByRole('complementary', { name: 'Cart' });
 }
 
-/**
- * Creates the character from the review step, waits for the "is ready" dialog that shows the new sheet, and
- * closes it with Done.
- */
+/** Names the character on the review step, creates it, and waits for the wizard to close onto the lobby. */
 export async function createFromReview(page: Page, dialog: Locator, name: string): Promise<void> {
   await expect(dialog.getByRole('heading', { name: 'Review', level: 3 })).toBeVisible();
+  await dialog.getByRole('textbox', { name: 'Name' }).fill(name);
   await dialog.getByRole('button', { name: 'Create character' }).click();
-  const ready = page.getByRole('dialog', { name: `${name} is ready` });
-  await expect(ready).toBeVisible({ timeout: 20_000 });
-  await ready.getByRole('button', { name: 'Done' }).click();
-  await expect(ready).toHaveCount(0);
+  await expect(wizard(page)).toHaveCount(0, { timeout: 20_000 });
 }

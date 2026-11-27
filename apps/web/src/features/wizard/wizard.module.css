@@ -87,11 +87,6 @@
   font-size: var(--text-sm);
 }
 
-.okLine {
-  color: var(--color-success);
-  font-size: var(--text-sm);
-}
-
 .fieldError {
   margin: 0;
   color: var(--color-danger);
@@ -842,13 +837,18 @@
   border-bottom: var(--border-thick) double var(--color-border-strong);
 }
 
-.reviewName {
-  margin: 0;
+.reviewIdentity {
+  flex: 1;
+  min-width: 0;
+}
+
+/* The name field stands where the finished sheet shows the name, so it takes the sheet's display face. */
+.reviewNameInput {
+  max-width: var(--measure-prose);
   font-family: var(--font-display);
   font-variation-settings: var(--font-display-soft);
-  font-size: var(--text-4xl);
+  font-size: var(--text-2xl);
   font-weight: var(--weight-semibold);
-  line-height: var(--leading-tight);
 }
 
 .reviewClass {
@@ -952,14 +952,6 @@
   text-decoration: underline;
   text-underline-offset: 0.2em;
   cursor: pointer;
-}
-
-/* Created ----------------------------------------------------------------------------------------------------- */
-
-.created {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
 }
 
 /* The shelves, styled as the town's Outfitter catalog. */

@@ -216,10 +216,11 @@ beforeEach(() => {
 });
 
 describe('CharacterWizard', () => {
-  it('walks from the roll to a stored character', async () => {
+  it('walks from the roll to a stored character, named on the review step, and closes', async () => {
     const api = wizardApi();
     const onCreated = vi.fn();
-    const { user } = renderWithTable(<CharacterWizard open onClose={() => {}} onCreated={onCreated} />, {
+    const onClose = vi.fn();
+    const { user } = renderWithTable(<CharacterWizard open onClose={onClose} onCreated={onCreated} />, {
       api,
       snapshot: fixtureSnapshot('lobby', 'player'),
       preferences: { motion: 'reduce' },
@@ -235,8 +236,8 @@ describe('CharacterWizard', () => {
 
     // The trade is optional, and skipping still asks the server about the choices so far.
     await user.click(await screen.findByRole('button', { name: /Skip this step/ }));
-    await user.type(await screen.findByRole('textbox', { name: /Name/ }), 'Wren');
-    await user.click(screen.getByRole('radio', { name: /Lawful/ }));
+    await user.click(await screen.findByRole('radio', { name: /Lawful/ }));
+    expect(screen.queryByRole('textbox', { name: /Name/ })).toBeNull();
     await user.click(screen.getByRole('button', { name: /Continue/ }));
 
     // The player rolls hit points, then gold, before the shop opens.
@@ -249,14 +250,24 @@ describe('CharacterWizard', () => {
 
     expect(await screen.findByText('110')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Add Sword to the cart' }));
-    await waitFor(() =>
-      expect(screen.getByText('Your character can afford and use this equipment.')).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(continueButton()).toBeEnabled());
     await user.click(screen.getByRole('button', { name: /Continue/ }));
 
+    // Before the review step, the checks send a stand-in name with the alignment the player chose.
+    for (const [request] of api.checkCharacter.mock.calls) expect(request.name).toBe('Adventurer');
+    expect(api.checkCharacter.mock.calls.at(-1)?.[0]).toMatchObject({
+      alignment: 'lawful',
+      purchases: [{ item_id: 'sword' }],
+    });
+
     expect(await screen.findByText('6 hit points')).toBeInTheDocument();
+    // The review step opens on the empty name field.
+    const name = screen.getByRole('textbox', { name: /Name/ });
+    await waitFor(() => expect(name).toHaveFocus());
+    await user.type(name, 'Wren');
     await user.click(await screen.findByRole('button', { name: 'Create character' }));
     await waitFor(() => expect(onCreated).toHaveBeenCalled());
+    expect(onClose).toHaveBeenCalledTimes(1);
     const body = api.createCharacter.mock.calls.at(-1)?.[0];
     expect(body).toMatchObject({
       name: 'Wren',
@@ -266,8 +277,85 @@ describe('CharacterWizard', () => {
       purchases: [{ item_id: 'sword' }],
     });
     expect(api.rollHitPoints).toHaveBeenCalledWith('rol_test', { class_id: 'fighter' });
-    expect(await screen.findByText('Wren is ready')).toBeInTheDocument();
     expect(localStorage.getItem(draftKey(null, TABLE_ID))).toBeNull();
+  });
+
+  it('sends the player to the name field instead of the server when the name is missing', async () => {
+    const api = wizardApi({ rolls: { status: { class_id: 'fighter', gold_rolled: true } } });
+    const onClose = vi.fn();
+    localStorage.setItem(
+      draftKey(null, TABLE_ID),
+      JSON.stringify({
+        ...emptyDraft(),
+        roll: ROLL,
+        classId: 'fighter',
+        alignment: 'lawful',
+        step: 'review',
+      }),
+    );
+    const { user } = renderWithTable(<CharacterWizard open onClose={onClose} onCreated={() => {}} />, {
+      api,
+      snapshot: fixtureSnapshot('lobby', 'player'),
+      preferences: { motion: 'reduce' },
+    });
+    const create = await screen.findByRole('button', { name: 'Create character' });
+    await screen.findByText('6 hit points');
+    const name = screen.getByRole('textbox', { name: /Name/ });
+    create.focus();
+    await user.click(create);
+    expect(name).toHaveFocus();
+    expect(name).toHaveAccessibleDescription(/\S/);
+    expect(api.checkCharacter).not.toHaveBeenCalled();
+    expect(api.createCharacter).not.toHaveBeenCalled();
+    await user.type(name, 'Wren');
+    expect(name).not.toHaveAccessibleDescription();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('keeps the name on a resumed review step and leaves focus where the dialog puts it', async () => {
+    openOn({ step: 'review' }, wizardApi({ rolls: { status: { class_id: 'fighter', gold_rolled: true } } }));
+    const name = await screen.findByRole('textbox', { name: /Name/ });
+    expect(name).toHaveValue('Wren');
+    await screen.findByText('6 hit points');
+    expect(name).not.toHaveFocus();
+  });
+
+  it('stays open on the review step with every choice when storing the character fails', async () => {
+    const api = wizardApi({ rolls: { status: { class_id: 'fighter', gold_rolled: true } } });
+    api.createCharacter.mockRejectedValue(
+      new BxvttProblemError({
+        type: 'about:blank',
+        title: 'Service Unavailable',
+        status: 503,
+        code: 'bxapi_unavailable',
+        detail: 'unreachable',
+      } as Problem),
+    );
+    const onCreated = vi.fn();
+    const onClose = vi.fn();
+    localStorage.setItem(
+      draftKey(null, TABLE_ID),
+      JSON.stringify({
+        ...emptyDraft(),
+        roll: ROLL,
+        classId: 'fighter',
+        name: 'Wren',
+        alignment: 'lawful',
+        step: 'review',
+      }),
+    );
+    const { user } = renderWithTable(<CharacterWizard open onClose={onClose} onCreated={onCreated} />, {
+      api,
+      snapshot: fixtureSnapshot('lobby', 'player'),
+      preferences: { motion: 'reduce' },
+    });
+    await user.click(await screen.findByRole('button', { name: 'Create character' }));
+    expect(await screen.findByText("Couldn't create Wren")).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Review', level: 3 })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /Name/ })).toHaveValue('Wren');
+    expect(onCreated).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(localStorage.getItem(draftKey(null, TABLE_ID))).not.toBeNull();
   });
 
   it('shows the dice bxapi rolled for each ability, not a split of the score', async () => {
@@ -332,8 +420,10 @@ describe('CharacterWizard', () => {
       const api = wizardApi();
       api.getAbilityRoll.mockReturnValue(new Promise(() => {}));
       openWithoutDice(api, { step: 'identity' });
-      expect(await screen.findByText('Resumed your unfinished character')).toBeInTheDocument();
-      expect(screen.getByRole('textbox', { name: /Name/ })).toHaveValue('Wren');
+      expect(
+        await screen.findByRole('heading', { name: 'Alignment and languages', level: 3 }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('radio', { name: /Lawful/ })).toBeChecked();
     });
 
     it('keeps the scores and the draft when the fetch fails for another reason', async () => {
@@ -374,8 +464,9 @@ describe('CharacterWizard', () => {
 
   it('keeps the choices when the dialog closes and reopens', async () => {
     openOn({ step: 'identity' }, wizardApi());
-    expect(await screen.findByText('Resumed your unfinished character')).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: /Name/ })).toHaveValue('Wren');
+    expect(await screen.findByRole('radio', { name: /Lawful/ })).toBeChecked();
+    // The player chose to resume, so no banner repeats it.
+    expect(screen.queryByText(/Resumed/)).toBeNull();
   });
 
   it('starts again from new scores when the server says the roll is used', async () => {
@@ -391,9 +482,7 @@ describe('the hit points and gold step', () => {
   it('before any roll, says what rolling fixes and offers only the hit points', async () => {
     openOn({ step: 'hp_gold' }, wizardApi());
     const roll = await screen.findByRole('button', { name: 'Roll hit points' });
-    expect(roll).toHaveAccessibleDescription(
-      'Rolling hit points fixes your class as a fighter, but you can still change your ability trade, identity, and equipment. To play another class afterward, start over with new ability scores.',
-    );
+    expect(roll).toHaveAccessibleDescription('Rolling hit points fixes your class as a fighter.');
     const gold = screen.getByRole('button', { name: 'Roll starting gold' });
     expect(gold).toHaveAttribute('aria-disabled', 'true');
     expect(gold).toHaveAccessibleDescription('Roll your hit points before your starting gold.');
@@ -473,7 +562,7 @@ describe('the hit points and gold step', () => {
 });
 
 describe('the class step after the hit points are rolled', () => {
-  it('shows the class as fixed and says how to play another', async () => {
+  it('shows the class as fixed', async () => {
     const api = wizardApi({
       rolls: {
         status: {
@@ -485,11 +574,7 @@ describe('the class step after the hit points are rolled', () => {
     });
     openOn({ step: 'class', classId: 'fighter', hpReroll: false }, api);
     expect(await screen.findByText('Your class is fixed as a dwarf')).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        'You rolled hit points for these ability scores, which fixed your class. To play another class, choose Start over and roll new ability scores.',
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByText('You rolled hit points for these ability scores.')).toBeInTheDocument();
     // The server's record wins over the draft in this browser.
     const dwarf = await screen.findByRole('button', { name: 'Dwarf' });
     expect(dwarf).toHaveAttribute('aria-pressed', 'true');
@@ -597,7 +682,7 @@ describe("the table's reroll limit", () => {
     expect(api.getCurrentAbilityRoll).toHaveBeenCalledWith(TABLE_ID);
     // Scores the player didn't see this wizard roll say where they came from.
     expect(screen.getByText('Your latest ability scores')).toBeInTheDocument();
-    expect(screen.getByText('These are the ability scores you rolled last.')).toBeInTheDocument();
+    expect(screen.queryByText('These are the ability scores you rolled last.')).toBeNull();
   });
 
   it('holds Roll ability scores until the server says whether an open roll exists', async () => {
@@ -719,6 +804,36 @@ describe('the creation house rules', () => {
     // The total sits beside the die, as a rolled die's does. Constitution 11 adds nothing.
     expect(maximum).toHaveTextContent('Maximum8=8');
     expect(screen.getByText('You start with 8 hit points.')).toBeInTheDocument();
+  });
+
+  it('says on the review step that the table gave the maximum, without a rolled face', async () => {
+    const api = wizardApi({
+      rolls: {
+        status: { class_id: 'fighter', rules: FOUR_D6, gold_rolled: true },
+        hitPoints: { rolls: [3], hit_points: 8, maximized: true },
+      },
+    });
+    openOn({ step: 'review', roll: { ...ROLL, rules: FOUR_D6 } }, api);
+    const sentence = await screen.findByText(/Your table gives the maximum on 1d8\.$/);
+    expect(sentence).toHaveTextContent('8 hit points. Your table gives the maximum on 1d8.');
+    expect(screen.queryByText(/You rolled 3/)).toBeNull();
+  });
+
+  it('adds the Constitution modifier to the maximum on the review step', async () => {
+    const scores = { ...SCORES, con: 16 };
+    const roll = { ...ROLL, scores, rolls: { ...ROLL.rolls, scores }, rules: FOUR_D6 };
+    const api = wizardApi({
+      rolls: {
+        status: { class_id: 'fighter', rules: FOUR_D6, gold_rolled: true },
+        hitPoints: { rolls: [3], hit_points: 10, maximized: true },
+      },
+    });
+    api.getAbilityRoll.mockResolvedValue(roll);
+    openOn({ step: 'review', roll }, api);
+    const sentence = await screen.findByText(/Your table gives the maximum on 1d8/);
+    expect(sentence).toHaveTextContent(
+      '10 hit points. Your table gives the maximum on 1d8, +2 for Constitution.',
+    );
   });
 
   it('offers Start again for a sub-par roll, outside the rerolls', async () => {

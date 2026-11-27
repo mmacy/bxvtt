@@ -2,6 +2,7 @@ import type { AdventureListing, CreationRules, StartingRuleset, TableDetail } fr
 import { screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { resetMyCharacters } from '@/app';
+import { draftKey, emptyDraft } from '@/features/wizard/draft';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { createFakeApi, renderWithTable } from '@/app/testing/renderWithTable';
 import { LobbyPage } from './LobbyPage';
@@ -332,6 +333,60 @@ describe('LobbyPage', () => {
     await user.click(await screen.findByRole('button', { name: 'Add to party' }));
     expect(api.addToRoster).toHaveBeenCalledWith(store.getState().tableId, 'chr_nnnnnnnnnnnnnnnnnnnnnn');
   });
+  describe('the wizard button', () => {
+    const snapshot = fixtureSnapshot('lobby', 'player');
+    const tableId = snapshot.table.id;
+    /** An unfinished character at the lobby's table, as the wizard stores it. */
+    const unfinished = JSON.stringify({
+      ...emptyDraft(),
+      step: 'class',
+      roll: {
+        id: 'rol_test',
+        scores: { str: 15, int: 9, wis: 10, dex: 12, con: 11, cha: 8 },
+        eligible_class_ids: ['fighter'],
+        used: false,
+        created_at: '2026-11-21T00:00:00Z',
+        table_id: tableId,
+      },
+    });
+
+    function renderLobby() {
+      const fake = createFakeApi();
+      fake.listCharacters.mockResolvedValue({ items: [] });
+      return renderWithTable(<LobbyPage />, { snapshot, api: fake });
+    }
+
+    beforeEach(() => localStorage.clear());
+
+    it('offers to create a character when none is unfinished at this table', async () => {
+      localStorage.setItem(draftKey(null, 'tbl_other'), unfinished);
+      renderLobby();
+      expect(await screen.findByText("You haven't created any characters yet.")).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Create a character' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Resume character' })).toBeNull();
+    });
+
+    it('offers to resume an unfinished character, and returns focus to that button on close', async () => {
+      localStorage.setItem(draftKey(null, tableId), unfinished);
+      const { user } = renderLobby();
+      await user.click(screen.getByRole('button', { name: 'Resume character' }));
+      expect(await screen.findByRole('dialog', { name: 'Create a character' })).toBeInTheDocument();
+      await user.keyboard('{Escape}');
+      expect(screen.queryByRole('dialog')).toBeNull();
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Resume character' })).toHaveFocus());
+    });
+
+    it('reads storage again when the wizard closes', async () => {
+      const { user } = renderLobby();
+      await user.click(screen.getByRole('button', { name: 'Create a character' }));
+      await screen.findByRole('dialog', { name: 'Create a character' });
+      // The wizard saves the character once the player rolls ability scores.
+      localStorage.setItem(draftKey(null, tableId), unfinished);
+      await user.click(screen.getByRole('button', { name: 'Close' }));
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Resume character' })).toHaveFocus());
+    });
+  });
+
   it('keeps a newer rerolls number on screen while an older one saves, and saves a number left waiting', async () => {
     const snapshot = fixtureSnapshot('lobby', 'referee');
     const fake = createFakeApi();

@@ -60,6 +60,49 @@ describe('Dialog', () => {
   });
 });
 
+describe('Dialog outside clicks', () => {
+  function Wizard({ dismissOnOutsideClick }: { dismissOnOutsideClick?: boolean }) {
+    const [open, setOpen] = useState(true);
+    return (
+      <>
+        <p>Lobby</p>
+        <Dialog
+          open={open}
+          onOpenChange={setOpen}
+          title="Create a character"
+          dismissOnOutsideClick={dismissOnOutsideClick}
+        >
+          <TextInput aria-label="Name" />
+        </Dialog>
+      </>
+    );
+  }
+
+  // A modal dialog turns off pointer events on the page behind it, so the click skips that check.
+  const setup = () => userEvent.setup({ pointerEventsCheck: 0 });
+
+  it('closes on a click outside by default', async () => {
+    const user = setup();
+    render(<Wizard />);
+    const dialog = await screen.findByRole('dialog', { name: 'Create a character' });
+    // Radix starts listening for outside presses on the tick after the dialog opens.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await user.click(screen.getByText('Lobby'));
+    await waitFor(() => expect(dialog).not.toBeInTheDocument());
+  });
+
+  it('stays open on a click outside when the caller turns that off, and still closes on Escape', async () => {
+    const user = setup();
+    render(<Wizard dismissOnOutsideClick={false} />);
+    await screen.findByRole('dialog', { name: 'Create a character' });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await user.click(screen.getByText('Lobby'));
+    expect(screen.getByRole('dialog', { name: 'Create a character' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+});
+
 describe('ConfirmDialog', () => {
   it('starts on cancel, and confirming runs the action and closes', async () => {
     const user = userEvent.setup();

@@ -72,6 +72,11 @@ export interface DialogProps {
    * button that the dialog's own action removed. Give a heading `tabIndex={-1}` to make it focusable.
    */
   returnFocus?: RefObject<HTMLElement | null>;
+  /**
+   * Whether a click or focus outside the window closes it. Defaults to true. Pass false for a long form, such as
+   * the character wizard, so a stray click doesn't end it. Escape and the close button still close the dialog.
+   */
+  dismissOnOutsideClick?: boolean;
   className?: string;
 }
 
@@ -92,9 +97,11 @@ export function Dialog({
   paper = false,
   initialFocus,
   returnFocus,
+  dismissOnOutsideClick = true,
   className,
 }: DialogProps) {
   const focus = useOpenFocus(!trigger, initialFocus, returnFocus);
+  const keepOpen = dismissOnOutsideClick ? undefined : (event: Event) => event.preventDefault();
   return (
     <DialogPrimitive.Root open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
       {trigger && <DialogPrimitive.Trigger asChild>{trigger}</DialogPrimitive.Trigger>}
@@ -105,6 +112,8 @@ export function Dialog({
           data-surface={paper ? 'paper' : undefined}
           onOpenAutoFocus={focus.onOpenAutoFocus}
           onCloseAutoFocus={focus.onCloseAutoFocus}
+          onPointerDownOutside={keepOpen}
+          onInteractOutside={keepOpen}
           {...(description ? {} : { 'aria-describedby': undefined })}
         >
           <header className={styles.header}>

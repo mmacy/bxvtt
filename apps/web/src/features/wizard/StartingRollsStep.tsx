@@ -13,7 +13,6 @@ function dieFor(sides: number | null): DieSides | null {
 
 /** The id of the sentence that says what rolling hit points fixes. */
 export const HIT_POINT_LOCK_NOTE_ID = 'wizard-hit-point-lock';
-const GOLD_WAIT_NOTE_ID = 'wizard-gold-wait';
 
 export interface StartingRollsStepProps {
   /** The class the hit points are rolled for. */
@@ -24,8 +23,6 @@ export interface StartingRollsStepProps {
   conModifier: number | undefined;
   /** The creation rules recorded on the ability roll, which the hit points are rolled under. */
   rules: CreationRules | null;
-  /** Whether the wizard offers Start over, because the table lets the player roll new ability scores. */
-  canStartOver: boolean;
   /** The rolls the server recorded, with their dice, or `null` before the player rolls hit points. */
   rolls: StartingRolls | null;
   /** Whether the wizard is still reading the rolls from the server. */
@@ -51,7 +48,6 @@ export function StartingRollsStep({
   hitDie,
   conModifier,
   rules,
-  canStartOver,
   rolls,
   loading,
   rolling,
@@ -146,9 +142,8 @@ export function StartingRollsStep({
               <Icon name="info" size={14} />
               <span>
                 {maxRule
-                  ? `Taking the maximum fixes your class as ${article}, but you can still change your ability trade, identity, and equipment.`
-                  : `Rolling hit points fixes your class as ${article}, but you can still change your ability trade, identity, and equipment.`}
-                {canStartOver && ' To play another class afterward, start over with new ability scores.'}
+                  ? `Taking the maximum fixes your class as ${article}.`
+                  : `Rolling hit points fixes your class as ${article}.`}
               </span>
             </p>
             <div>
@@ -236,16 +231,6 @@ export function StartingRollsStep({
         </h4>
         {gold === null ? (
           <>
-            <p id={GOLD_WAIT_NOTE_ID} className={styles.calmNote}>
-              <Icon name="info" size={14} />
-              <span>
-                {hp !== null
-                  ? 'Roll your starting gold, then spend it on weapons, armour, and gear in the next step.'
-                  : maxRule
-                    ? 'You roll your starting gold after you take your hit points.'
-                    : 'You roll your starting gold after your hit points.'}
-              </span>
-            </p>
             <div>
               <Button
                 ref={goldButton}
@@ -258,8 +243,6 @@ export function StartingRollsStep({
                     : 'Roll your hit points before your starting gold.'
                 }
                 loading={rolling === 'gold'}
-                // While the button waits for the hit points, its reason says what the note says.
-                aria-describedby={hp === null ? undefined : GOLD_WAIT_NOTE_ID}
                 onClick={onRollGold}
               >
                 Roll starting gold
