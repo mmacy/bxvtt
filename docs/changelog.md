@@ -14,7 +14,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- **The wizard names the character last (`@bxvtt/web`):** Step 4 is **Alignment and languages**. You enter the name in the review step's sheet header, where **Suggest a name** moved with it. If the name is empty or can't be used, **Create character** shows the reason under the field and moves focus there. ([#57](https://github.com/mmacy/bxvtt/issues/57))
+- **Create character closes the wizard (`@bxvtt/web`):** The wizard stores the character, closes, and returns you to the lobby with the character in the party. The "is ready" view, **Create another**, and **Done** are gone. ([#61](https://github.com/mmacy/bxvtt/issues/61))
+- **An unfinished character stays visible in the lobby (`@bxvtt/web`):** The lobby button reads **Resume character** while you have an unfinished character at the table. A click outside the wizard no longer closes it, but **Close** and `Escape` still do. To discard an unfinished character, open the wizard and select **Start over**, which shows while the table lets you roll new ability scores. ([#55](https://github.com/mmacy/bxvtt/issues/55))
+- **Maximum hit points on the review step (`@bxvtt/web`):** With maximum hit points on, the review step says your table gives the maximum on the hit die and doesn't describe a roll. ([#56](https://github.com/mmacy/bxvtt/issues/56))
+- **Shorter wizard text (`@bxvtt/web`):** The steps drop sentences that repeat a control or explain a rule you didn't break.
+- **A `dismissOnOutsideClick` prop on the kit's `Dialog` (`@bxvtt/web`):** Pass `false` to keep a dialog open when someone clicks outside it. The default is `true`.
 - **Class names in labels (`@bxvtt/web`, `@bxvtt/shared/text`):** A class name that stands alone as a label, a card line, or a list entry is capitalized as the SRD writes it, such as "Level 1 Fighter" on a character card and "Magic-User spell, level 1" in the compendium. A class name inside a sentence stays lowercase, as in "A fighter has no special abilities." ([#59](https://github.com/mmacy/bxvtt/issues/59))
+
+### Fixed
+
+- **Phone widths (`@bxvtt/web`):** The wizard and the lobby fit screens 390 px and 320 px wide. The stepper scrolls inside its own box, the review sheet stacks its columns and wraps its ability cards, and the footer wraps. The outfit step puts the cart under the equipment at 1100 px and narrower, and at phone width it lists equipment as stacked rows (name and **Add**, description, then price and weight) in place of the table. A long character name no longer widens the lobby's cards.
+- **Wizard text and behavior (`@bxvtt/web`):** An elf's languages read "An elf speaks", the soldier kit's spare dagger no longer raises a warning on the review step, and a name that the server refuses shows under the name field and takes focus. A saved character that reopens on the review step without a name puts focus in the name field.
+- **Closing the wizard while it creates a character (`@bxvtt/web`):** The character still joins the party. When the character is stored, it no longer closes a wizard that you opened in the meantime, and the lobby button returns to **Create a character**.
 
 ## [0.4.0] - 2026-11-26
 
