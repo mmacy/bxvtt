@@ -47,7 +47,7 @@ Playwright starts and tears down dedicated server instances per run without touc
 | `E2E_WORKERS` | `3` | Concurrent Playwright worker count. |
 | `E2E_OUTPUT` | `./test-results` | Artifact output directory (set a unique path when running two E2E suites simultaneously). |
 | `E2E_HOST_KEY_PORT` | `8689` | Port of the secondary host-key server spawned by `e2e/host-key.spec.ts`. |
-| `E2E_KEEP_DATA` | unset | Set `1` to preserve temporary server data directories after teardown. |
+| `E2E_KEEP_DATA` | unset | Set `1` to keep the server's temporary data directory, and the games it stored in `bxapi`, after teardown. |
 | `E2E_SERVER_LOG_LEVEL` | `warn` | Pino log level for the E2E server. |
 | `BXAPI_URL` | `http://127.0.0.1:8651` | Target `bxapi` base URL. |
 

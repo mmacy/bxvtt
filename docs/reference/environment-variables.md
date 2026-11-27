@@ -52,7 +52,7 @@ Relative filesystem paths configured through environment variables resolve again
 | `E2E_WORKERS` | `3` | Number of concurrent Playwright workers. |
 | `E2E_OUTPUT` | `./test-results` | Output directory for Playwright traces, screenshots, and failure artifacts. |
 | `E2E_HOST_KEY_PORT` | `8689` | Port of the secondary server spawned by `e2e/host-key.spec.ts`. |
-| `E2E_KEEP_DATA` | unset | Set `1` to retain temporary server data directories after an E2E run finishes. |
+| `E2E_KEEP_DATA` | unset | Set `1` to keep the server's temporary data directory, and the games it stored in `bxapi`, after an E2E run finishes. |
 | `E2E_SERVER_LOG_LEVEL` | `warn` | Pino log level for the E2E bxvtt server. |
 
 ## Payload, string, and storage limits
