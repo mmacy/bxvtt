@@ -47,10 +47,18 @@ export function useFullCatalog<C extends FullCatalogName>(catalog: C): FullCatal
   return { items: state.items, byId, loading: state.items === null && !state.failed, failed: state.failed };
 }
 
-/** One entry of a whole catalog, with the `{ data, loading }` shape of `useRulesEntry`. */
+/**
+ * One entry of a whole catalog, with the `{ data, loading }` shape of `useRulesEntry`. `failed` is true once the
+ * catalog read has failed, or the catalog has loaded without the entry, so the entry won't arrive.
+ */
 function useFullEntry<C extends FullCatalogName>(catalog: C, id: string | null) {
   const full = useFullCatalog(catalog);
-  return { data: id === null ? null : (full.byId.get(id) ?? null), loading: id !== null && full.loading };
+  const data = id === null ? null : (full.byId.get(id) ?? null);
+  return {
+    data,
+    loading: id !== null && full.loading,
+    failed: id !== null && !full.loading && data === null,
+  };
 }
 
 /** A class's full entry, or `null` for no ID. */

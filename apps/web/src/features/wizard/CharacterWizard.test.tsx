@@ -1,6 +1,7 @@
 import { BxvttProblemError } from '@bxvtt/shared/client';
 import type {
   AbilityRoll,
+  AdjustmentLimits,
   CharacterCheckRequest,
   CharacterRequest,
   CreationRules,
@@ -14,8 +15,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { createFakeApi, renderWithTable, type FakeApi } from '@/app/testing/renderWithTable';
 import catalog from './__fixtures__/catalog.json';
+import limitFixtures from './__fixtures__/adjustment-limits.json';
+import trades from './__fixtures__/adjust-trades.json';
 import stored from './__fixtures__/stored.json';
 import type { ClassDetail } from '@/app';
+import { explainAdjustCheck } from './adjustCheck';
 import { AdjustStep } from './AdjustStep';
 import { CharacterWizard } from './CharacterWizard';
 import { draftKey, emptyDraft, legacyDraftKey, type WizardDraft } from './draft';
@@ -1020,48 +1024,55 @@ describe('the creation house rules', () => {
 });
 
 describe('AdjustStep', () => {
-  it('gates only what the class entry states and shows each refusal next to its score', async () => {
+  it("gates each control by bxapi's limits and shows each refusal next to its score", () => {
     const detail = catalog.details.magic_user as unknown as ClassDetail;
-    const onChange = vi.fn();
+    const fixture = limitFixtures.magic_user_1832;
+    const props = {
+      scores: fixture.scores,
+      onChange: vi.fn(),
+      detail,
+      tables: null,
+      limits: { status: 'ready', limits: fixture.limits as AdjustmentLimits } as const,
+      onRetry: () => {},
+      classId: 'magic_user',
+    };
     const { rerender } = renderWithTable(
-      <AdjustStep
-        scores={{ str: 12, int: 12, wis: 12, dex: 12, con: 12, cha: 12 }}
-        adjustment={{ lowered: {}, raised: {} }}
-        onChange={onChange}
-        detail={detail}
-        tables={null}
-        check={{ status: 'idle' }}
-      />,
+      <AdjustStep {...props} adjustment={{ lowered: {}, raised: {} }} check={{ status: 'idle' }} />,
     );
-    // The class entry lists Intelligence as the prime requisite, which the trade can't lower.
     expect(screen.getByRole('button', { name: 'Lower Intelligence' })).toHaveAttribute(
       'aria-disabled',
       'true',
     );
     expect(screen.getByRole('button', { name: 'Lower Intelligence' })).toHaveAccessibleDescription(
-      "A magic-user can't lower Intelligence.",
+      "Intelligence is a prime requisite, so it can't be lowered.",
     );
-    // Nothing bxapi serves rules out lowering Dexterity, so the player may try and the engine answers.
-    expect(screen.getByRole('button', { name: 'Lower Dexterity' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Lower Strength' })).toBeEnabled();
+    // bxapi's answer to an elf that lowers Wisdom by 4 and raises Strength by 1, captured in adjust-trades.json.
+    const captured = trades.cases.find((c) => c.label === 'elf lowers Wisdom by 4 and raises Strength by 1');
+    if (captured === undefined) throw new Error('No captured elf trade.');
     rerender(
       <AdjustStep
-        scores={{ str: 12, int: 12, wis: 12, dex: 12, con: 12, cha: 12 }}
-        adjustment={{ lowered: { dex: 1 }, raised: {} }}
-        onChange={onChange}
-        detail={detail}
-        tables={null}
-        check={{
-          status: 'invalid',
-          sentences: [],
-          byAbility: {
-            dex: [
-              "Dexterity can't be lowered. Only Strength, Intelligence, and Wisdom can be traded for points.",
-            ],
+        {...props}
+        scores={captured.scores}
+        detail={trades.details.elf as unknown as ClassDetail}
+        classId="elf"
+        limits={{ status: 'loading' }}
+        adjustment={captured.adjustment}
+        check={explainAdjustCheck(
+          {
+            type: 'about:blank',
+            title: 'Unprocessable Entity',
+            status: 422,
+            code: 'character_invalid',
+            detail: 'The ability adjustment breaks the rules.',
+            rejections: captured.rejections,
           },
-        }}
+          'elf',
+        )}
       />,
     );
-    expect(screen.getByRole('status')).toHaveTextContent("Dexterity can't be lowered");
-    expect(screen.queryByText(/even number/)).toBeNull();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Lowering Wisdom by 4 takes it below the lowest score a trade allows.',
+    );
   });
 });

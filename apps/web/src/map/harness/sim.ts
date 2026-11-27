@@ -238,6 +238,7 @@ export function playerViewFrom(
     item_names: {},
     item_names_plural: {},
     valuable_names: {},
+    valuable_phrases: {},
     features_here: [],
     explored: [
       {

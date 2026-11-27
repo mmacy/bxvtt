@@ -1,5 +1,5 @@
 {
-  "osrlib_version": "2.9.0",
+  "osrlib_version": "2.10.0",
   "rejections": {
     "battle.declaration.back_stab_no_ability": {
       "params": ["character"],
@@ -170,67 +170,77 @@
     "creation.adjustment.above_cap": {
       "params": ["ability", "amount", "score"],
       "param_sets": [["ability", "amount", "score"]],
-      "sources": ["core/abilities.py:1092"]
+      "sources": ["core/abilities.py:1399"]
     },
     "creation.adjustment.below_floor": {
       "params": ["ability", "amount", "score"],
       "param_sets": [["ability", "amount", "score"]],
-      "sources": ["core/abilities.py:1080"]
+      "sources": ["core/abilities.py:1377"]
     },
     "creation.adjustment.class_restriction": {
       "params": ["ability"],
       "param_sets": [["ability"]],
-      "sources": ["core/abilities.py:1073"]
+      "sources": ["core/abilities.py:1370"]
+    },
+    "creation.adjustment.no_room_to_lower": {
+      "params": ["max_points"],
+      "param_sets": [["max_points"]],
+      "sources": ["core/abilities.py:1147"]
+    },
+    "creation.adjustment.no_room_to_raise": {
+      "params": ["max_points"],
+      "param_sets": [["max_points"]],
+      "sources": ["core/abilities.py:1145"]
     },
     "creation.adjustment.not_lowerable": {
       "params": ["ability"],
       "param_sets": [["ability"]],
-      "sources": ["core/abilities.py:1067"]
+      "sources": ["core/abilities.py:1366"]
     },
     "creation.adjustment.points_mismatch": {
       "params": ["points_available", "points_spent"],
       "param_sets": [["points_available", "points_spent"]],
-      "sources": ["core/abilities.py:1101"]
+      "sources": ["core/abilities.py:1344"]
     },
     "creation.adjustment.prime_requisite_lowered": {
       "params": ["ability"],
       "param_sets": [["ability"]],
-      "sources": ["core/abilities.py:1070"]
+      "sources": ["core/abilities.py:1368"]
     },
     "creation.adjustment.raise_not_prime_requisite": {
       "params": ["ability"],
       "param_sets": [["ability"]],
-      "sources": ["core/abilities.py:1088"]
+      "sources": ["core/abilities.py:1396"]
     },
     "creation.adjustment.reduction_not_even": {
       "params": ["ability", "amount"],
       "param_sets": [["ability", "amount"]],
-      "sources": ["core/abilities.py:1076"]
+      "sources": ["core/abilities.py:1373"]
     },
     "creation.class.requirements_not_met": {
       "params": ["ability", "class", "minimum", "score"],
       "param_sets": [["ability", "class", "minimum", "score"]],
-      "sources": ["core/character.py:1265"]
+      "sources": ["core/character.py:1269"]
     },
     "creation.languages.duplicate_choice": {
       "params": ["language"],
       "param_sets": [["language"]],
-      "sources": ["core/character.py:1398"]
+      "sources": ["core/character.py:1402"]
     },
     "creation.languages.duplicates_native": {
       "params": ["language"],
       "param_sets": [["language"]],
-      "sources": ["core/character.py:1404"]
+      "sources": ["core/character.py:1408"]
     },
     "creation.languages.not_available": {
       "params": ["language"],
       "param_sets": [["language"]],
-      "sources": ["core/character.py:1402"]
+      "sources": ["core/character.py:1406"]
     },
     "creation.languages.too_many": {
       "params": ["allowed", "chosen"],
       "param_sets": [["allowed", "chosen"]],
-      "sources": ["core/character.py:1385"]
+      "sources": ["core/character.py:1389"]
     },
     "encounter.evade.already_evading": {
       "params": [],
@@ -465,7 +475,7 @@
     "items.curse.stuck": {
       "params": ["item"],
       "param_sets": [["item"]],
-      "sources": ["core/items.py:3420", "crawl/_items.py:48"]
+      "sources": ["core/items.py:3438", "crawl/_items.py:48"]
     },
     "items.device.inert": {
       "params": ["item"],
@@ -475,47 +485,47 @@
     "items.equip.armour_forbidden": {
       "params": ["class"],
       "param_sets": [["class"]],
-      "sources": ["core/items.py:3513"]
+      "sources": ["core/items.py:3531"]
     },
     "items.equip.armour_not_allowed": {
       "params": ["class", "item"],
       "param_sets": [["class", "item"]],
-      "sources": ["core/items.py:3516"]
+      "sources": ["core/items.py:3534"]
     },
     "items.equip.not_equippable": {
       "params": ["item"],
       "param_sets": [["item"]],
-      "sources": ["core/items.py:3346", "core/items.py:3350", "core/items.py:3353", "core/items.py:3526"]
+      "sources": ["core/items.py:3364", "core/items.py:3368", "core/items.py:3371", "core/items.py:3544"]
     },
     "items.equip.not_usable": {
       "params": ["item"],
       "param_sets": [["item"]],
-      "sources": ["core/items.py:3358"]
+      "sources": ["core/items.py:3376"]
     },
     "items.equip.shield_forbidden": {
       "params": ["class"],
       "param_sets": [["class"]],
-      "sources": ["core/items.py:3506"]
+      "sources": ["core/items.py:3524"]
     },
     "items.equip.two_handed_with_shield": {
       "params": ["class", "item"],
       "param_sets": [["class"], ["item"]],
-      "sources": ["core/items.py:3381", "core/items.py:3510"]
+      "sources": ["core/items.py:3399", "core/items.py:3528"]
     },
     "items.equip.weapon_forbidden": {
       "params": ["class", "item"],
       "param_sets": [["class", "item"]],
-      "sources": ["core/items.py:3374"]
+      "sources": ["core/items.py:3392"]
     },
     "items.equip.weapon_not_allowed": {
       "params": ["class", "item"],
       "param_sets": [["class", "item"]],
-      "sources": ["core/items.py:3372"]
+      "sources": ["core/items.py:3390"]
     },
     "items.purchase.insufficient_funds": {
       "params": ["cost_gp", "item"],
       "param_sets": [["cost_gp"], ["cost_gp", "item"]],
-      "sources": ["core/items.py:3198", "crawl/_town.py:51", "crawl/_town.py:156"]
+      "sources": ["core/items.py:3216", "crawl/_town.py:51", "crawl/_town.py:156"]
     },
     "items.purchase.not_stocked": {
       "params": ["item"],
@@ -530,7 +540,7 @@
     "items.ring.hands_full": {
       "params": ["item"],
       "param_sets": [["item"]],
-      "sources": ["core/items.py:3343"]
+      "sources": ["core/items.py:3361"]
     },
     "items.scroll.no_such_spell": {
       "params": ["spell"],
@@ -595,7 +605,7 @@
     "magic.book.already_chosen": {
       "params": ["character"],
       "param_sets": [["character"]],
-      "sources": ["core/character.py:1554"]
+      "sources": ["core/character.py:1558"]
     },
     "magic.book.capacity_exceeded": {
       "params": ["capacity", "spell", "spell_level"],
@@ -605,27 +615,27 @@
     "magic.book.capacity_mismatch": {
       "params": ["capacity", "chosen", "spell_level"],
       "param_sets": [["capacity", "chosen", "spell_level"]],
-      "sources": ["core/character.py:1485"]
+      "sources": ["core/character.py:1489"]
     },
     "magic.book.duplicate": {
       "params": ["spell"],
       "param_sets": [["spell"]],
-      "sources": ["core/character.py:1465", "core/spells.py:1760"]
+      "sources": ["core/character.py:1469", "core/spells.py:1760"]
     },
     "magic.book.not_arcane": {
       "params": ["class"],
       "param_sets": [["class"]],
-      "sources": ["core/character.py:1458", "core/spells.py:1734"]
+      "sources": ["core/character.py:1462", "core/spells.py:1734"]
     },
     "magic.book.unknown_spell": {
       "params": ["spell"],
       "param_sets": [["spell"]],
-      "sources": ["core/character.py:1471", "core/spells.py:1738", "crawl/_spells.py:100"]
+      "sources": ["core/character.py:1475", "core/spells.py:1738", "crawl/_spells.py:100"]
     },
     "magic.book.wrong_list": {
       "params": ["list", "spell"],
       "param_sets": [["list", "spell"]],
-      "sources": ["core/character.py:1475", "core/spells.py:1758"]
+      "sources": ["core/character.py:1479", "core/spells.py:1758"]
     },
     "magic.cast.anti_magic_shell": {
       "params": ["caster"],

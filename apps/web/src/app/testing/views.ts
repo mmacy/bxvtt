@@ -41,6 +41,7 @@ export function playerView(fields: Partial<PlayerView> = {}): PlayerView {
     item_names: {},
     item_names_plural: {},
     valuable_names: {},
+    valuable_phrases: {},
     fatigued: false,
     exhausted: false,
     deprivation: {},

@@ -2,7 +2,7 @@
  "openapi": "3.1.0",
  "info": {
   "title": "bxapi",
-  "description": "\nbxapi runs games of the 1981 B/X (Basic/Expert) fantasy adventure game over HTTP.\n[osrlib](https://github.com/mmacy/osrlib-python), a Python rules engine, applies every rule, while\nbxapi adds API keys, SQLite storage, one-at-a-time access to each game, and RFC 9457 error\nresponses. Your client application draws the screen and reads the player's input. bxapi rolls the\ndice, applies the rules, stores the game, and returns what happened.\n\n## Base URL\n\nEach bxapi server runs at its own address. The `bxapi` command listens on\n`http://127.0.0.1:8640` unless the server's `BXAPI_HOST` and `BXAPI_PORT` settings specify another\naddress, and the examples in this reference use `http://127.0.0.1:8640`. Every path in this\nreference is relative to the server's address. Every operation except `GET /health` is under `/v1`.\n\n## Play a game\n\n1. `GET /v1/meta` checks your API key and returns your client name, role, and storage usage.\n2. `POST /v1/ability-rolls` rolls six ability scores and lists the classes they qualify for.\n3. `POST /v1/characters` creates a character from the roll and the player's choices. Save the\n   character's `id`. To show the player the hit points and starting gold first, send the same\n   choices to `POST /v1/ability-rolls/{roll_id}/preview`, which stores nothing.\n4. `GET /v1/adventures` lists the adventures you can play. Every server includes `builtin-barrow`.\n5. `POST /v1/sessions` starts a game of an adventure with a party of stored characters. Save the\n   session's `id`.\n6. `GET /v1/sessions/{session_id}/commands` lists the commands that are legal now.\n7. `POST /v1/sessions/{session_id}/commands` sends one command and returns what happened.\n8. `GET /v1/sessions/{session_id}/view` returns what the players can see, so your client can draw\n   the screen. Pass `include=view` in step 7 to get the view in the command's response instead.\n\nRepeat steps 6 to 8 until `ended` is `true` in a command's response. For a runnable end-to-end\nwalkthrough with shell variables, see [Play a game](https://mmacy.github.io/bxapi/docs/play-a-game/)\nand [`examples/play_barrow.py`](https://github.com/mmacy/bxapi/blob/main/examples/play_barrow.py).\n\n## Authentication\n\nSend an API key as a bearer token in the `Authorization` header: `Authorization: Bearer <key>`.\nWhoever runs the server configures its keys in the `BXAPI_API_KEYS` setting and assigns each key a\nclient name and a role. Every path under `/v1` requires an API key, whereas `GET /health`, `/docs`,\n`/redoc`, and `/openapi.json` require none. A request with no key, or with an unknown key, gets 401\n`unauthorized`.\n\nA server started with no keys and `BXAPI_ALLOW_ANONYMOUS=true` asks for no key. It treats every\ncaller as a referee for the client `local`, and `GET /v1/meta` returns `auth_enabled` set to\n`false`. Such a server answers a request under `/v1` only when the request's `Host` header is\n`localhost`, `127.0.0.1`, or `[::1]`, with or without a port. A request with another host gets 421\n`misdirected_request`.\n\nEach key grants one of two roles:\n\n- `player`: everything a game client needs. In a session, a player sees only what the players may\n  see.\n- `referee`: everything a player may do, plus the referee view, referee events, referee commands,\n  chosen seeds, character and save imports, and full adventure and save documents.\n\nA player request for a referee feature gets 403 `referee_required`, or 403 `referee_command` when a\nplayer sends a referee command.\n\nA key identifies a client application, not a person. Every key for one client reads and changes\nthat client's characters, adventures, sessions, and saves, whereas another client's resources are\nhidden. A request for another client's resource gets the same 404 `not_found` as an id that\ndoesn't exist.\n\n## Conventions\n\n- **Ids.** A stored resource's id is a prefix followed by 22 random URL-safe characters: `rol_` for\n  an ability roll, `chr_` for a character, `adv_` for an adventure, `ses_` for a session, and\n  `sav_` for a save. Built-in adventure ids start with `builtin-`.\n- **Timestamps.** UTC timestamps in RFC 3339 format with whole seconds, such as\n  `2026-11-20T22:01:05Z`.\n- **Lists.** Every list operation except `GET /v1/sessions/{session_id}/events` accepts `limit` (1\n  to 200, default 50) and `offset` (0 to 2^53 - 1, default 0), and returns `items`, `total`,\n  `limit`, and `offset`. Add `limit` to `offset` for the next page, and stop when `offset` plus\n  `limit` is `total` or greater. The server lists stored resources newest first. The session event\n  log (`GET /v1/sessions/{session_id}/events`) uses `after` and `next_after` (`limit` 1 to 500,\n  default 100) per `visibility` instead.\n- **Documents.** A *document* is osrlib's JSON envelope for an adventure, a character, a party, or\n  a save. It is an object with `kind`, `schema_version`, `engine_version`, and `payload`. The\n  server accepts documents whose `schema_version` is at most the `schema_version` that\n  `GET /v1/meta` returns, and refuses newer ones with 409 `version_unsupported`.\n- **Seeds.** osrlib draws every random number from one integer, the *seed* (0 to 2^53 - 1). The\n  stateless operations under `/v1/dice` and `/v1/generate` accept an optional `seed` from any\n  caller and return the seed they used. Sending the same request with the same seed returns the\n  same result on the same osrlib version. For ability rolls, characters, and sessions, only a\n  referee may choose a seed, and the server never returns it to a player. Each new session also\n  gets a separate secret key for opaque player feature handles. Session and save documents store\n  that key, while both views omit it.\n- **Unknown fields.** A request body with a field the operation doesn't define gets 422\n  `validation_error`, whereas commands and documents are osrlib models and ignore unknown fields.\n- **osrlib's descriptions.** The schema descriptions for commands, events, views, and rules models\n  come from osrlib. Where an osrlib description mentions a validation check, the server returns 422\n  `validation_error` for a malformed command or request body, and 422 `content_invalid` for an\n  uploaded or imported document.\n- **JSON bodies.** Send a request body as UTF-8 JSON with `Content-Type: application/json` (or an\n  `application/*+json` media type). A non-empty body without a JSON `Content-Type` gets 415\n  `unsupported_media_type`. The server refuses undecodable bytes, integers with more than 4,300\n  digits, `NaN`, `Infinity`, numbers too large for a 64-bit float, strings with half of a UTF-16\n  surrogate pair, or arrays and objects nested more than 100 levels deep, with 400 `bad_request`.\n- **Body size.** A body is at most 65,536 bytes. On the five operations that accept an osrlib\n  document, the limit is the server's `BXAPI_MAX_BODY_BYTES` setting instead (8,388,608 bytes by\n  default): `POST /v1/adventures`, `POST /v1/adventures/validate`, `POST /v1/characters/import`,\n  `POST /v1/saves/import`, and `POST /v1/sessions`. A larger body gets 413 `content_too_large`.\n- **Compression.** Send `Accept-Encoding: gzip`, and the server compresses every response of 1,024\n  bytes or more. Most HTTP clients send the header and decompress the response automatically.\n- **Conditional requests and caching.** Every 200 response to a `GET` includes a weak `ETag`\n  header. Send that `ETag` in `If-None-Match` to check whether your copy is still current: the\n  server answers 304 with no body while the content is unchanged, or 200 with the new content when\n  it has changed. Successful `GET` responses under `/v1/rules` include\n  `Cache-Control: private, max-age=3600`, while other `/v1` `GET` responses include\n  `Cache-Control: private, no-cache`.\n- **HEAD.** Every `GET` operation also answers `HEAD` with the same status and headers and no body.\n- **Idempotency keys.** To retry a `POST` under `/v1` without running it twice, send an\n  `Idempotency-Key` header (1 to 255 printable ASCII characters with no spaces, such as a UUID) on\n  the first request and on every retry. The server stores a 2xx response for 24 hours and returns\n  it with `Idempotent-Replayed: true` on a retry. When a request fails with a problem other than\n  500 `internal_error`, nothing changed and the server releases the key so a retry runs the\n  request again. Keys are scoped to your client.\n- **Request ids.** Every response includes an `X-Request-Id` header, such as\n  `req_Zk3uY0mWq1x8Jr5cTt2aLw`, which the server logs with the request. Send `X-Request-Id` with 1\n  to 128 letters, digits, and `.`, `_`, `~`, or `-` to supply your own id. The server replaces any\n  other value with a generated `req_` id.\n- **Storage.** The server counts the bytes of the documents it stores for your client: ability\n  rolls, characters, adventures, sessions, saves, and stored idempotency responses. `GET /v1/meta`\n  returns the current count and the limit (`BXAPI_MAX_CLIENT_BYTES`, 1,073,741,824 bytes by\n  default, or `null` when disabled). At or above the limit, any request that would store a\n  document gets 507 `storage_full` until you delete something.\n- **Rate limits.** Each client has a token-bucket budget of `BXAPI_RATE_LIMIT_PER_MINUTE` requests\n  per server process (600 per minute by default). You can spend the full budget in a burst and\n  regain tokens steadily. A request over the limit gets 429 `rate_limited` with the seconds to wait\n  in `Retry-After`.\n\n## Refused commands\n\nA command that the B/X rules forbid isn't an HTTP error. `POST /v1/sessions/{session_id}/commands`\nreturns 200 with `accepted` set to `false` and osrlib's `rejections`, and the session doesn't\nchange. An HTTP 4xx or 5xx status means the request itself failed.\n\n## Errors\n\nEvery error response is an RFC 9457 problem document with the media type\n`application/problem+json`. Branch on `code`, which stays stable across releases. `detail` is a\nhuman-readable sentence of at most 1,000 characters. Each operation lists the codes it can return\nand how to handle each one.\n\n```json\n{\n  \"type\": \"about:blank\",\n  \"title\": \"Not Found\",\n  \"status\": 404,\n  \"detail\": \"No session has the id 'ses_nope'.\",\n  \"code\": \"not_found\",\n  \"request_id\": \"req_Zk3uY0mWq1x8Jr5cTt2aLw\",\n  \"resource\": \"session\",\n  \"id\": \"ses_nope\"\n}\n```\n\nEvery problem document includes `type`, `title`, `status`, `detail`, `code`, and `request_id`\n(matching the response's `X-Request-Id` header). Specific codes add extra members:\n\n| Code | Added members |\n| --- | --- |\n| `validation_error` | `errors`: the first 20 parts of the request that failed validation, each with `loc`, the path to the value, `msg`, and `type`. `error_count`: how many parts failed, including any that `errors` leaves out. |\n| `not_found` | `resource`: the kind of resource the request asked for, such as `session`. `id`: the id in the request, or its first 128 characters followed by `...`. |\n| `revision_conflict` and `session_busy` | `revision`: the session's current revision. |\n| `referee_command` | `command_type`: the `command_type` of the referee command a player sent. |\n| `character_invalid` | `rejections`: osrlib's reasons for refusing the character, each with `code` and `params`. When osrlib reports no rejections, `field` and `id` appear instead: the request field that failed and the value of the entry, plus `index` (from 0) when `field` is a list. |\n| `storage_full` | `used_bytes`: the bytes of documents the server stores for your client. `max_bytes`: the most bytes the server stores for one client. |\n\nLater releases may add members, so ignore any member your client doesn't recognize.\n\nFive error codes can succeed when you send the same request again: 409\n`idempotency_key_in_progress`, 429 `rate_limited`, and 503 `database_busy` after waiting the\nseconds in their `Retry-After` headers, 408 `request_timeout` right away, and 409 `session_busy`\nright away unless you passed `expected_revision` (if you did, read the session first). For any\nother code, fix the request before retrying. When no response arrives at all, retry a `POST` with\nthe same `Idempotency-Key`. For a 500 error, report `request_id` to the server's operator.\n",
+  "description": "\nbxapi runs games of the 1981 B/X (Basic/Expert) fantasy adventure game over HTTP.\n[osrlib](https://github.com/mmacy/osrlib-python), a Python rules engine, applies every rule, while\nbxapi adds API keys, SQLite storage, one-at-a-time access to each game, and RFC 9457 error\nresponses. Your client application draws the screen and reads the player's input. bxapi rolls the\ndice, applies the rules, stores the game, and returns what happened.\n\n## Base URL\n\nEach bxapi server runs at its own address. The `bxapi` command listens on\n`http://127.0.0.1:8640` unless the server's `BXAPI_HOST` and `BXAPI_PORT` settings specify another\naddress, and the examples in this reference use `http://127.0.0.1:8640`. Every path in this\nreference is relative to the server's address. Every operation except `GET /health` is under `/v1`.\n\n## Play a game\n\n1. `GET /v1/meta` checks your API key and returns your client name, role, and storage usage.\n2. `POST /v1/ability-rolls` rolls six ability scores and lists the classes they qualify for.\n3. `POST /v1/characters` creates a character from the roll and the player's choices. Save the\n   character's `id`. To show the player the hit points and starting gold first, send the same\n   choices to `POST /v1/ability-rolls/{roll_id}/preview`, which stores nothing.\n4. `GET /v1/adventures` lists the adventures you can play. Every server includes `builtin-barrow`.\n5. `POST /v1/sessions` starts a game of an adventure with a party of stored characters. Save the\n   session's `id`.\n6. `GET /v1/sessions/{session_id}/commands` lists the commands that are legal now.\n7. `POST /v1/sessions/{session_id}/commands` sends one command and returns what happened.\n8. `GET /v1/sessions/{session_id}/view` returns what the players can see, so your client can draw\n   the screen. Pass `include=view` in step 7 to get the view in the command's response instead.\n\nRepeat steps 6 to 8 until `ended` is `true` in a command's response. For a runnable end-to-end\nwalkthrough with shell variables, see [Play a game](https://mmacy.github.io/bxapi/docs/play-a-game/)\nand [`examples/play_barrow.py`](https://github.com/mmacy/bxapi/blob/main/examples/play_barrow.py).\n\n## Authentication\n\nSend an API key as a bearer token in the `Authorization` header: `Authorization: Bearer <key>`.\nWhoever runs the server configures its keys in the `BXAPI_API_KEYS` setting and assigns each key a\nclient name and a role. Every path under `/v1` requires an API key, whereas `GET /health`, `/docs`,\n`/redoc`, and `/openapi.json` require none. A request with no key, or with an unknown key, gets 401\n`unauthorized`.\n\nA server started with no keys and `BXAPI_ALLOW_ANONYMOUS=true` asks for no key. It treats every\ncaller as a referee for the client `local`, and `GET /v1/meta` returns `auth_enabled` set to\n`false`. Such a server answers a request under `/v1` only when the request's `Host` header is\n`localhost`, `127.0.0.1`, or `[::1]`, with or without a port. A request with another host gets 421\n`misdirected_request`.\n\nEach key grants one of two roles:\n\n- `player`: everything a game client needs. In a session, a player sees only what the players may\n  see.\n- `referee`: everything a player may do, plus the referee view, referee events, referee commands,\n  chosen seeds, character and save imports, and full adventure and save documents.\n\nA player request for a referee feature gets 403 `referee_required`, or 403 `referee_command` when a\nplayer sends a referee command.\n\nA key identifies a client application, not a person. Every key for one client reads and changes\nthat client's characters, adventures, sessions, and saves, whereas another client's resources are\nhidden. A request for another client's resource gets the same 404 `not_found` as an id that\ndoesn't exist.\n\n## Conventions\n\n- **Ids.** A stored resource's id is a prefix followed by 22 random URL-safe characters: `rol_` for\n  an ability roll, `chr_` for a character, `adv_` for an adventure, `ses_` for a session, and\n  `sav_` for a save. Built-in adventure ids start with `builtin-`.\n- **Timestamps.** UTC timestamps in RFC 3339 format with whole seconds, such as\n  `2026-11-20T22:01:05Z`.\n- **Lists.** Every list operation except `GET /v1/sessions/{session_id}/events` accepts `limit` (1\n  to 200, default 50) and `offset` (0 to 2^53 - 1, default 0), and returns `items`, `total`,\n  `limit`, and `offset`. Add `limit` to `offset` for the next page, and stop when `offset` plus\n  `limit` is `total` or greater. The server lists stored resources newest first. The session event\n  log (`GET /v1/sessions/{session_id}/events`) uses `after` and `next_after` (`limit` 1 to 500,\n  default 100) per `visibility` instead.\n- **Documents.** A *document* is osrlib's JSON envelope for an adventure, a character, a party, or\n  a save. It is an object with `kind`, `schema_version`, `engine_version`, and `payload`. The\n  server accepts documents whose `schema_version` is at most the `schema_version` that\n  `GET /v1/meta` returns, and refuses newer ones with 409 `version_unsupported`.\n- **Seeds.** osrlib draws every random number from one integer, the *seed* (0 to 2^53 - 1). The\n  stateless operations under `/v1/dice` and `/v1/generate` accept an optional `seed` from any\n  caller and return the seed they used. Sending the same request with the same seed returns the\n  same result on the same osrlib version. For ability rolls, characters, and sessions, only a\n  referee may choose a seed, and the server never returns it to a player. Each new session also\n  gets a separate secret key for opaque player feature handles. Session and save documents store\n  that key, while both views omit it.\n- **Unknown fields.** A request body with a field the operation doesn't define gets 422\n  `validation_error`, whereas commands and documents are osrlib models and ignore unknown fields.\n- **osrlib's descriptions.** The schema descriptions for commands, events, views, and rules models\n  come from osrlib. Where an osrlib description mentions a validation check, the server returns 422\n  `validation_error` for a malformed command or request body, and 422 `content_invalid` for an\n  uploaded or imported document. A name in code there, like `MAX_SCORE` or `load_ability_tables`,\n  is a constant or a function in osrlib's Python package, documented in the\n  [osrlib reference](https://mmacy.github.io/osrlib-python/). For the scores that an ability adjustment can reach,\n  call `GET /v1/ability-rolls/{roll_id}/adjustment-limits`.\n- **JSON bodies.** Send a request body as UTF-8 JSON with `Content-Type: application/json` (or an\n  `application/*+json` media type). A non-empty body without a JSON `Content-Type` gets 415\n  `unsupported_media_type`. The server refuses undecodable bytes, integers with more than 4,300\n  digits, `NaN`, `Infinity`, numbers too large for a 64-bit float, strings with half of a UTF-16\n  surrogate pair, or arrays and objects nested more than 100 levels deep, with 400 `bad_request`.\n- **Body size.** A body is at most 65,536 bytes. On the five operations that accept an osrlib\n  document, the limit is the server's `BXAPI_MAX_BODY_BYTES` setting instead (8,388,608 bytes by\n  default): `POST /v1/adventures`, `POST /v1/adventures/validate`, `POST /v1/characters/import`,\n  `POST /v1/saves/import`, and `POST /v1/sessions`. A larger body gets 413 `content_too_large`.\n- **Compression.** Send `Accept-Encoding: gzip`, and the server compresses every response of 1,024\n  bytes or more. Most HTTP clients send the header and decompress the response automatically.\n- **Conditional requests and caching.** Every 200 response to a `GET` includes a weak `ETag`\n  header. Send that `ETag` in `If-None-Match` to check whether your copy is still current: the\n  server answers 304 with no body while the content is unchanged, or 200 with the new content when\n  it has changed. Successful `GET` responses under `/v1/rules` include\n  `Cache-Control: private, max-age=3600`, while other `/v1` `GET` responses include\n  `Cache-Control: private, no-cache`.\n- **HEAD.** Every `GET` operation also answers `HEAD` with the same status and headers and no body.\n- **Idempotency keys.** To retry a `POST` under `/v1` without running it twice, send an\n  `Idempotency-Key` header (1 to 255 printable ASCII characters with no spaces, such as a UUID) on\n  the first request and on every retry. The server stores a 2xx response for 24 hours and returns\n  it with `Idempotent-Replayed: true` on a retry. When a request fails with a problem other than\n  500 `internal_error`, nothing changed and the server releases the key so a retry runs the\n  request again. Keys are scoped to your client.\n- **Request ids.** Every response includes an `X-Request-Id` header, such as\n  `req_Zk3uY0mWq1x8Jr5cTt2aLw`, which the server logs with the request. Send `X-Request-Id` with 1\n  to 128 letters, digits, and `.`, `_`, `~`, or `-` to supply your own id. The server replaces any\n  other value with a generated `req_` id.\n- **Storage.** The server counts the bytes of the documents it stores for your client: ability\n  rolls, characters, adventures, sessions, saves, and stored idempotency responses. `GET /v1/meta`\n  returns the current count and the limit (`BXAPI_MAX_CLIENT_BYTES`, 1,073,741,824 bytes by\n  default, or `null` when disabled). At or above the limit, any request that would store a\n  document gets 507 `storage_full` until you delete something.\n- **Rate limits.** Each client has a token-bucket budget of `BXAPI_RATE_LIMIT_PER_MINUTE` requests\n  per server process (600 per minute by default). You can spend the full budget in a burst and\n  regain tokens steadily. A request over the limit gets 429 `rate_limited` with the seconds to wait\n  in `Retry-After`.\n\n## Refused commands\n\nA command that the B/X rules forbid isn't an HTTP error. `POST /v1/sessions/{session_id}/commands`\nreturns 200 with `accepted` set to `false` and osrlib's `rejections`, and the session doesn't\nchange. An HTTP 4xx or 5xx status means the request itself failed.\n\n## Errors\n\nEvery error response is an RFC 9457 problem document with the media type\n`application/problem+json`. Branch on `code`, which stays stable across releases. `detail` is a\nhuman-readable sentence of at most 1,000 characters. Each operation lists the codes it can return\nand how to handle each one.\n\n```json\n{\n  \"type\": \"about:blank\",\n  \"title\": \"Not Found\",\n  \"status\": 404,\n  \"detail\": \"No session has the id 'ses_nope'.\",\n  \"code\": \"not_found\",\n  \"request_id\": \"req_Zk3uY0mWq1x8Jr5cTt2aLw\",\n  \"resource\": \"session\",\n  \"id\": \"ses_nope\"\n}\n```\n\nEvery problem document includes `type`, `title`, `status`, `detail`, `code`, and `request_id`\n(matching the response's `X-Request-Id` header). Specific codes add extra members:\n\n| Code | Added members |\n| --- | --- |\n| `validation_error` | `errors`: the first 20 parts of the request that failed validation, each with `loc`, the path to the value, `msg`, and `type`. `error_count`: how many parts failed, including any that `errors` leaves out. |\n| `not_found` | `resource`: the kind of resource the request asked for, such as `session`. `id`: the id in the request, or its first 128 characters followed by `...`. |\n| `revision_conflict` and `session_busy` | `revision`: the session's current revision. |\n| `referee_command` | `command_type`: the `command_type` of the referee command a player sent. |\n| `character_invalid` | `rejections`: osrlib's reasons for refusing the character, each with `code` and `params`. When osrlib reports no rejections, `field` and `id` appear instead: the request field that failed and the value of the entry, plus `index` (from 0) when `field` is a list. |\n| `storage_full` | `used_bytes`: the bytes of documents the server stores for your client. `max_bytes`: the most bytes the server stores for one client. |\n\nLater releases may add members, so ignore any member your client doesn't recognize.\n\nFive error codes can succeed when you send the same request again: 409\n`idempotency_key_in_progress`, 429 `rate_limited`, and 503 `database_busy` after waiting the\nseconds in their `Retry-After` headers, 408 `request_timeout` right away, and 409 `session_busy`\nright away unless you passed `expected_revision` (if you did, read the session first). For any\nother code, fix the request before retrying. When no response arrives at all, retry a `POST` with\nthe same `Idempotency-Key`. For a 500 error, report `request_id` to the server's operator.\n",
   "license": {
    "name": "MIT",
    "identifier": "MIT"
@@ -4077,7 +4077,7 @@
      "generate"
     ],
     "summary": "Roll treasure for a treasure type",
-    "description": "Roll coins, gems, jewellery, and magic items for one B/X treasure type without storing anything.\n\nosrlib's `generate_treasure` rolls each entry in `GET /v1/rules/tables/treasure` in table order. `coins` reports\neach denomination (`pp`, `gp`, `ep`, `sp`, `cp`), `valuables` lists rolled gems and jewellery with `value_gp`,\nand each entry in `magic_items` includes `template_id` for lookup via `GET /v1/rules/magic-items/{item_id}`. A\nmonster's treasure letters appear on `GET /v1/rules/monsters/{monster_id}` under `treasure`.\n\nAny caller may pass `seed` to repeat a roll, or omit it to get a new random seed. In an active session, osrlib\nrolls area and lair treasure automatically during play.",
+    "description": "Roll coins, gems, jewellery, and magic items for one B/X treasure type without storing anything.\n\nosrlib's `generate_treasure` rolls each entry in `GET /v1/rules/tables/treasure` in table order. `coins` reports\neach denomination (`pp`, `gp`, `ep`, `sp`, `cp`), `valuables` lists rolled gems and jewellery with `value_gp`,\nand each entry in `magic_items` includes `template_id` for lookup via `GET /v1/rules/magic-items/{item_id}`. A\nrolled gem or piece of jewellery has no name of its own, so its `phrase` is empty. A monster's treasure letters\nappear on `GET /v1/rules/monsters/{monster_id}` under `treasure`.\n\nAny caller may pass `seed` to repeat a roll, or omit it to get a new random seed. In an active session, osrlib\nrolls area and lair treasure automatically during play.",
     "operationId": "generate_treasure",
     "requestBody": {
      "content": {
@@ -5588,13 +5588,227 @@
     }
    }
   },
+  "/v1/ability-rolls/{roll_id}/adjustment-limits": {
+   "get": {
+    "tags": [
+     "characters"
+    ],
+    "summary": "Get the limits on an ability score trade",
+    "description": "Return how far the `adjustment` trade can move each of this roll's ability scores for a class.\n\nThe response is osrlib's `AdjustmentLimits`, unchanged. osrlib computes it from the roll's scores as rolled and\nfrom the class's prime requisites and `may_not_lower`, so it holds for every trade on this roll and class. Read it\nonce, when the player picks a class, and use it to drive the adjustment step's controls. A trade that\n`POST /v1/characters` or `POST /v1/ability-rolls/{roll_id}/preview` refuses doesn't change it.\n\nCount the points the current trade buys: `raise_step` for each step of lowering. Then drive each ability's\ncontrols from its entry in `abilities`:\n\n- A lower control takes `lower_step` off the ability. Enable it while the current score is above `lowest` and the\n  points bought are below `max_points`. When the score is at `lowest`, show `lowest_reason`. Otherwise show\n  `max_points_reason`.\n- A raise control adds `raise_step` to the ability. Enable it while the current score is below `highest` and the\n  trade has a point that it bought and hasn't spent. When the score is at `highest`, show `highest_reason`.\n  Otherwise the player has no point to spend, which your client tracks itself and which has no code.\n- When `can_trade` is `false`, no trade changes a score. Disable the whole step and show `max_points_reason`.\n\nFor a class with two prime requisites, each one's `highest` is its own limit, and `max_points` caps the points\nraised across both. The rules above keep the total within `max_points`, because a raise spends a point the trade\nbought and the lower controls stop buying at `max_points`.\n\nEach reason is a `Rejection`, with the `code` and `params` that the rejections of a 422 `character_invalid` have:\n\n- `lowest_reason`: `creation.adjustment.not_lowerable`, `creation.adjustment.prime_requisite_lowered`,\n  `creation.adjustment.class_restriction`, `creation.adjustment.below_floor`, or the code of `max_points_reason`.\n- `highest_reason`: `creation.adjustment.raise_not_prime_requisite`, `creation.adjustment.above_cap`, or the code\n  of `max_points_reason`.\n- `max_points_reason`: `creation.adjustment.no_room_to_raise` when the prime requisites have room for only\n  `max_points` points, or `creation.adjustment.no_room_to_lower` when the abilities the class can lower pay for\n  only that many. Both have the params `{\"max_points\": integer}`. These two codes appear only here, never in the\n  `rejections` of a 422.\n\n`below_floor` and `above_cap` have the `ability`, and the `score` and `amount` of the first trade osrlib refuses:\nthe rolled score, and the amount that takes it one step past the limit.\n\nThe operation takes no `ruleset` and no other choice, and it works on a used roll, as\n`GET /v1/ability-rolls/{roll_id}` does. The server stores nothing. A `player` key and a `referee` key can both\ncall this operation.",
+    "operationId": "get_adjustment_limits",
+    "security": [
+     {
+      "HTTPBearer": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "roll_id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "description": "Ability roll `id` (`rol_` followed by 22 characters), from `POST /v1/ability-rolls`.",
+       "title": "Roll Id"
+      },
+      "description": "Ability roll `id` (`rol_` followed by 22 characters), from `POST /v1/ability-rolls`."
+     },
+     {
+      "name": "class_id",
+      "in": "query",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "description": "Character class `id` from the roll's `eligible_class_ids`, such as `fighter`.",
+       "title": "Class Id"
+      },
+      "description": "Character class `id` from the roll's `eligible_class_ids`, such as `fighter`."
+     },
+     {
+      "name": "If-None-Match",
+      "in": "header",
+      "required": false,
+      "description": "The `ETag` of a cached response for this request, such as `W/\"5f0c1b6de0a94d7f8f3f0f5b7a1c2d3e\"`, or `*`. While the content is unchanged, the server answers 304 with no body.",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "osrlib's `AdjustmentLimits` for the roll's scores as rolled and the class.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AdjustmentLimits"
+        }
+       }
+      },
+      "headers": {
+       "ETag": {
+        "$ref": "#/components/headers/ETag"
+       },
+       "Cache-Control": {
+        "description": "`private, no-cache`. Revalidate with `If-None-Match` before reusing a cached copy.",
+        "schema": {
+         "type": "string"
+        }
+       },
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "304": {
+      "description": "The response whose `ETag` you sent in `If-None-Match` is still current. The response has no body.",
+      "headers": {
+       "ETag": {
+        "$ref": "#/components/headers/ETag"
+       },
+       "Cache-Control": {
+        "description": "`private, no-cache`. Revalidate with `If-None-Match` before reusing a cached copy.",
+        "schema": {
+         "type": "string"
+        }
+       },
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "401": {
+      "description": "- `unauthorized`: The request has no API key or has an unknown key. Send `Authorization: Bearer <key>` with a key configured on the server. Retrying the same request fails.",
+      "headers": {
+       "WWW-Authenticate": {
+        "description": "`Bearer`, the authentication scheme the server accepts.",
+        "schema": {
+         "type": "string"
+        }
+       },
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      },
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "- `not_found`: Your client has no ability roll with this id, including a roll that another client created. `POST /v1/ability-rolls` creates one.",
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      },
+      "headers": {
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "421": {
+      "description": "- `misdirected_request`: The server runs without API keys, and the request's `Host` header isn't `localhost`, `127.0.0.1`, or `[::1]`. Call the server by one of those names, or configure API keys on the server. A server with API keys never returns this code.",
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      },
+      "headers": {
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "422": {
+      "description": "- `validation_error`: The request doesn't match the operation's schema. A required field is missing, a value has the wrong type or is out of range, or the body isn't valid JSON. `errors` lists the first 20 problems, and the `loc` of each is the path to the value. Fix the request before you send it again. A request without `class_id` returns this code.\n- `character_invalid`: osrlib has no class with this `class_id`, and the problem has `field` (`class_id`) and `id`. Or the roll's scores don't meet the class's minimum scores, and the problem has osrlib's `rejections`. Send a class `id` from the roll's `eligible_class_ids`.",
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      },
+      "headers": {
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "429": {
+      "description": "- `rate_limited`: Your client exceeded the per-minute request budget (`BXAPI_RATE_LIMIT_PER_MINUTE`, 600 by default). Wait the seconds in the `Retry-After` header and retry. Requests without a valid API key share a separate budget and receive 429 instead of 401 `unauthorized` when that budget is exhausted.",
+      "headers": {
+       "Retry-After": {
+        "description": "Whole seconds to wait before retrying, at least `1`.",
+        "schema": {
+         "type": "integer"
+        }
+       },
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      },
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      }
+     },
+     "500": {
+      "description": "- `internal_error`: The server failed because of a bug. The response says nothing about the cause, and the server logs it. Report the request to the server's operator.",
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      },
+      "headers": {
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      }
+     },
+     "503": {
+      "description": "- `database_busy`: Another process held the SQLite write lock for more than 5 seconds. Wait the 1 second in the `Retry-After` header and retry.",
+      "headers": {
+       "Retry-After": {
+        "description": "Whole seconds to wait before retrying: `1`.",
+        "schema": {
+         "type": "integer"
+        }
+       },
+       "X-Request-Id": {
+        "$ref": "#/components/headers/X-Request-Id"
+       }
+      },
+      "content": {
+       "application/problem+json": {
+        "schema": {
+         "$ref": "#/components/schemas/Problem"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
   "/v1/ability-rolls/{roll_id}/preview": {
    "post": {
     "tags": [
      "characters"
     ],
     "summary": "Preview a character from an ability roll",
-    "description": "Return the character that `POST /v1/characters` would create from this ability roll and these choices.\n\nThe response has the `character`, its `derived` stats, and every die osrlib rolled for it in `rolls`: the dice\nbehind the roll's scores in `ability_rolls`, the hit point roll in `hit_point_roll`, and the starting gold roll in\n`gold_roll`. Use it to show a player their hit points and starting gold before they shop, and before the character\nexists. The roll stays unused. Without an `Idempotency-Key`, the server stores nothing and `storage.used_bytes`\ndoesn't change. With one, the server stores the response for the key, as it does for every `POST`.\n\nSend the choices `POST /v1/characters` accepts, without `ability_roll_id`, because the path names the roll, and\nwithout `seed`. The preview and the creation run the same steps on the roll's private seed, so:\n\n- Every preview of one roll with the same choices returns the same response.\n- `POST /v1/characters` with this roll and the same choices stores a character equal to `character`, with the\n  same hit points, gold, and inventory.\n- A choice that `POST /v1/characters` refuses gets the same 422 `character_invalid` here, with the same members,\n  and the roll stays unused.\n\nFor one roll, `gold_roll` changes only when `class_id` or the ruleset's `hp_reroll_at_first_level` changes, and\n`hit_point_roll` changes only with those two and the ruleset's `max_hp_at_first_level`. The `adjustment`,\n`starting_spell_ids`, `extra_languages`, `name`, `alignment`, `purchases`, and `equip_item_ids` change neither\nroll. So once the player has chosen a class under the table's ruleset, you can show the hit points and gold and\nlet the player make every other choice without the dice changing. A different class or reroll option can change\nthe gold as well as the hit points.\n\nSend the `ruleset` you sent to `POST /v1/ability-rolls` for this roll. A ruleset with another\n`ability_score_method` than the roll's gets 409 `ability_roll_ruleset_mismatch`, and so does a request with no\n`ruleset` for a roll made with `4d6_drop_lowest`.\n\nThe response has no `seed`, because the roll's seed stays private, and no `id`, because the server stores no\ncharacter. `character.id` is `null`. A `player` key and a `referee` key can both call this operation.",
+    "description": "Return the character that `POST /v1/characters` would create from this ability roll and these choices.\n\nThe response has the `character`, its `derived` stats, and every die osrlib rolled for it in `rolls`: the dice\nbehind the roll's scores in `ability_rolls`, the hit point roll in `hit_point_roll`, and the starting gold roll in\n`gold_roll`. Use it to show a player their hit points and starting gold before they shop, and before the character\nexists. The roll stays unused. Without an `Idempotency-Key`, the server stores nothing and `storage.used_bytes`\ndoesn't change. With one, the server stores the response for the key, as it does for every `POST`.\n\nSend the choices `POST /v1/characters` accepts, without `ability_roll_id`, because the path names the roll, and\nwithout `seed`. The preview and the creation run the same steps on the roll's private seed, so:\n\n- Every preview of one roll with the same choices returns the same response.\n- `POST /v1/characters` with this roll and the same choices stores a character equal to `character`, with the\n  same hit points, gold, and inventory.\n- A choice that `POST /v1/characters` refuses gets the same 422 `character_invalid` here, with the same members,\n  and the roll stays unused.\n\nFor one roll, `gold_roll` changes only when `class_id` or the ruleset's `hp_reroll_at_first_level` changes, and\n`hit_point_roll` changes only with those two and the ruleset's `max_hp_at_first_level`. The `adjustment`,\n`starting_spell_ids`, `extra_languages`, `name`, `alignment`, `purchases`, and `equip_item_ids` change neither\nroll. So once the player has chosen a class under the table's ruleset, you can show the hit points and gold and\nlet the player make every other choice without the dice changing. A different class or reroll option can change\nthe gold as well as the hit points.\n\nFor the limits on the `adjustment`, call `GET /v1/ability-rolls/{roll_id}/adjustment-limits` with the class. It\ntakes no other choice, so it answers before the player has chosen the starting spells that a preview of a\n`magic_user` or an `elf` requires.\n\nSend the `ruleset` you sent to `POST /v1/ability-rolls` for this roll. A ruleset with another\n`ability_score_method` than the roll's gets 409 `ability_roll_ruleset_mismatch`, and so does a request with no\n`ruleset` for a roll made with `4d6_drop_lowest`.\n\nThe response has no `seed`, because the roll's seed stays private, and no `id`, because the server stores no\ncharacter. `character.id` is `null`. A `player` key and a `referee` key can both call this operation.",
     "operationId": "preview_character",
     "security": [
      {
@@ -10440,7 +10654,7 @@
      "sessions"
     ],
     "summary": "Get the player view",
-    "description": "Return osrlib's `PlayerView`: everything the players may see at the session's current revision.\n\nRender your game screen from this object (or pass `include=view` to `POST /v1/sessions/{session_id}/commands` to\nreceive `PlayerView` alongside `revision` in one response, because standalone `PlayerView` omits `revision`).\nAcquires the session lock so the snapshot always reflects state between commands. The view never includes\nunexplored cells, monster hit points, referee rolls, or the secret feature-handle key.\n\nKey fields for rendering a client UI:\n\n- `mode`: current session mode, which governs legal commands (`GET /v1/sessions/{session_id}/commands`).\n- `location`: `kind` is `\"town\"` in town, or `\"dungeon\"` with `dungeon_id`, `level_number`, `[x, y]` `position`,\n  and `facing`.\n- `party`: party members in marching order, with in-session `id` (such as `\"character-0001\"`, passed as\n  `character_id` to commands), hit points, conditions, inventory, `scores`, `armour_class`, `thac0`, `saves`,\n  `movement_rate_feet`, and `thief_skills`. Combat stats include bonuses and curses from worn unidentified magic\n  items while `inventory` masks unidentified names (such as `\"a shield with a faint aura\"`).\n- `dungeons`: IDs and names of dungeons the party has entered. `can_travel_to_town` states whether\n  `travel_to_town` is currently usable from the party's position.\n- `explored`: the party's known map for each level. Each entry includes mapped `cells` and `edges`, entered\n  `areas` with their names, descriptions, and walked cells, visible `features` with opaque `feature:` IDs,\n  known `transitions` without destinations or gates, and `entrance` when that cell is known. A feature's\n  `emptied` is `true` once the party has emptied that authored cache, and `trap_state` on a feature or an area\n  is the trap's state as the party knows it. Feature cache contents, hidden discoveries, and destinations that\n  the party hasn't learned stay omitted.\n- `features_here`: the feature IDs that `inspect_treasure`, `remove_treasure_trap`, and `take_treasure` accept as\n  `feature_id` from where the party stands. It's empty outside `exploring` mode.\n- `spell_names`, `reversed_spell_names`, and `spell_levels`: the name and level of every spell ID the view\n  shows. Each member's `spell_slots`, `preparable_spells`, and `learnable_spells` give what a `prepare_spells` or\n  `learn_spell` dialog offers that member. A member's `can_prepare_now` says whether the session accepts a\n  `prepare_spells` from them now, `needs_sleep_to_prepare` says whether they have to sleep first, and\n  `reverses_at` says whether they choose a reversible spell's form at `\"memorize\"` or at `\"cast\"`.\n- `item_names` and `item_names_plural`: what to call each item ID the view shows, in a member's `inventory` or\n  in the `contents` of a pile in `piles`. `valuable_names` has the own name of each gem or piece of jewellery\n  that has one, keyed by its instance ID.\n- `encounter`: active encounter state, or `null`. Pass `declarers` to build `resolve_battle_round`, and pass a\n  group's `id` as `target_group_id` for attacks, `close`, thrown splash items, and `area` or `hd_budget` spells\n  (such as `fire_ball` and `sleep`). Each group also has `members` with individual `\"monster-NNNN\"` or\n  `\"npc-NNNN\"` IDs and coarse `status` values. Use an `\"alive\"` member's `id` in `targets` for a `single` or\n  `up_to_n` spell or scroll. To find catalog templates matching a group's `family_id`, search\n  `GET /v1/rules/monsters` with `q` and check `family_id` on `GET /v1/rules/monsters/{monster_id}`.\n- `journal` and `quests`: discovered journal entries and active or completed quests.\n- `town_healing_prices`: gold-piece prices for temple services accepted by `purchase_healing`.",
+    "description": "Return osrlib's `PlayerView`: everything the players may see at the session's current revision.\n\nRender your game screen from this object (or pass `include=view` to `POST /v1/sessions/{session_id}/commands` to\nreceive `PlayerView` alongside `revision` in one response, because standalone `PlayerView` omits `revision`).\nAcquires the session lock so the snapshot always reflects state between commands. The view never includes\nunexplored cells, monster hit points, referee rolls, or the secret feature-handle key.\n\nKey fields for rendering a client UI:\n\n- `mode`: current session mode, which governs legal commands (`GET /v1/sessions/{session_id}/commands`).\n- `location`: `kind` is `\"town\"` in town, or `\"dungeon\"` with `dungeon_id`, `level_number`, `[x, y]` `position`,\n  and `facing`.\n- `party`: party members in marching order, with in-session `id` (such as `\"character-0001\"`, passed as\n  `character_id` to commands), hit points, conditions, inventory, `scores`, `armour_class`, `thac0`, `saves`,\n  `movement_rate_feet`, and `thief_skills`. Combat stats include bonuses and curses from worn unidentified magic\n  items while `inventory` masks unidentified names (such as `\"a shield with a faint aura\"`).\n- `dungeons`: IDs and names of dungeons the party has entered. `can_travel_to_town` states whether\n  `travel_to_town` is currently usable from the party's position.\n- `explored`: the party's known map for each level. Each entry includes mapped `cells` and `edges`, entered\n  `areas` with their names, descriptions, and walked cells, visible `features` with opaque `feature:` IDs,\n  known `transitions` without destinations or gates, and `entrance` when that cell is known. A feature's\n  `emptied` is `true` once the party has emptied that authored cache, and `trap_state` on a feature or an area\n  is the trap's state as the party knows it. Feature cache contents, hidden discoveries, and destinations that\n  the party hasn't learned stay omitted.\n- `features_here`: the feature IDs that `inspect_treasure`, `remove_treasure_trap`, and `take_treasure` accept as\n  `feature_id` from where the party stands. It's empty outside `exploring` mode.\n- `spell_names`, `reversed_spell_names`, and `spell_levels`: the name and level of every spell ID the view\n  shows. Each member's `spell_slots`, `preparable_spells`, and `learnable_spells` give what a `prepare_spells` or\n  `learn_spell` dialog offers that member. A member's `can_prepare_now` says whether the session accepts a\n  `prepare_spells` from them now, `needs_sleep_to_prepare` says whether they have to sleep first, and\n  `reverses_at` says whether they choose a reversible spell's form at `\"memorize\"` or at `\"cast\"`.\n- `item_names` and `item_names_plural`: what to call each item ID the view shows, in a member's `inventory` or\n  in the `contents` of a pile in `piles`. `valuable_names` has the own name of each gem or piece of jewellery\n  that has one, keyed by its instance ID, to show in a list. `valuable_phrases` has what to call each of those\n  pieces in the middle of a sentence, with its article and its case, such as `\"a silver altar candlestick\"` or\n  `\"Ossor's Eye\"`.\n- `encounter`: active encounter state, or `null`. Pass `declarers` to build `resolve_battle_round`, and pass a\n  group's `id` as `target_group_id` for attacks, `close`, thrown splash items, and `area` or `hd_budget` spells\n  (such as `fire_ball` and `sleep`). Each group also has `members` with individual `\"monster-NNNN\"` or\n  `\"npc-NNNN\"` IDs and coarse `status` values. Use an `\"alive\"` member's `id` in `targets` for a `single` or\n  `up_to_n` spell or scroll. To find catalog templates matching a group's `family_id`, search\n  `GET /v1/rules/monsters` with `q` and check `family_id` on `GET /v1/rules/monsters/{monster_id}`.\n- `journal` and `quests`: discovered journal entries and active or completed quests.\n- `town_healing_prices`: gold-piece prices for temple services accepted by `purchase_healing`.",
     "operationId": "get_player_view",
     "security": [
      {
@@ -13437,6 +13651,49 @@
     "title": "AbilityAdjustment",
     "description": "A proposed trade of ability points, made once while a character is being created.\n\nBuild one from what the player chose, check it with\n`validate_adjustment`, and apply it\nwith `apply_adjustment`, or pass it to\n`create_character` as `adjustment`. The\nexchange rate is two points down for one point up. The points bought can go only into\nthe class's prime requisites, the abilities the class is built around. An amount of\nzero or less raises a pydantic `ValidationError`.\n\nAn empty adjustment is legal and changes nothing. Build one for a player who keeps the\nscores as rolled."
    },
+   "AbilityAdjustmentLimit": {
+    "properties": {
+     "can_lower": {
+      "type": "boolean",
+      "title": "Can Lower",
+      "description": "Whether some legal trade lowers this ability. It's true exactly when `lowest` is below the rolled score."
+     },
+     "can_raise": {
+      "type": "boolean",
+      "title": "Can Raise",
+      "description": "Whether some legal trade raises this ability. It's true exactly when `highest` is above the rolled score."
+     },
+     "lowest": {
+      "type": "integer",
+      "title": "Lowest",
+      "description": "The lowest score a legal trade leaves this ability at.\n\nIt's the rolled score when the ability can't be lowered. It's always the rolled score\nless a multiple of `lower_step`. For\nexample, a score of 10 has a `lowest` of 10, because one step would take it to 8, below\n`ADJUSTMENT_FLOOR`."
+     },
+     "lowest_reason": {
+      "$ref": "#/components/schemas/Rejection",
+      "description": "Why no legal trade leaves this ability lower than `lowest`.\n\nWhen a rule about this ability refuses one more step, this is the first rejection that\n`validate_adjustment` reports for lowering\nthe ability by `score - lowest + lower_step`, where `score` is the rolled score. The code is\n`creation.adjustment.not_lowerable`, `creation.adjustment.prime_requisite_lowered`,\n`creation.adjustment.class_restriction`, or `creation.adjustment.below_floor`, whose `score`\nand `amount` params are the rolled score and that refused amount. When the ability has more\nto give but the prime requisites have no room for the points, this is the same rejection as\n`max_points_reason`."
+     },
+     "highest": {
+      "type": "integer",
+      "title": "Highest",
+      "description": "The highest score a legal trade leaves this ability at.\n\nIt's the rolled score when the ability can't be raised. Only a prime requisite of the\nclass can be raised, and no further than\n`MAX_SCORE`."
+     },
+     "highest_reason": {
+      "$ref": "#/components/schemas/Rejection",
+      "description": "Why no legal trade leaves this ability higher than `highest`.\n\nFor an ability that isn't a prime requisite, this is\n`creation.adjustment.raise_not_prime_requisite`. For a prime requisite that the cap\nstops, it's the `creation.adjustment.above_cap` rejection that\n`validate_adjustment` reports for raising\nthe ability by `highest - score + raise_step`, where `score` is the rolled score. Its\n`score` and `amount` params are the rolled score and that refused amount. When the cap\nleaves room but the lowerable abilities can't\npay for more points, this is the same rejection as\n`max_points_reason`."
+     }
+    },
+    "type": "object",
+    "required": [
+     "can_lower",
+     "can_raise",
+     "lowest",
+     "lowest_reason",
+     "highest",
+     "highest_reason"
+    ],
+    "title": "AbilityAdjustmentLimit",
+    "description": "How far one ability score can move in a legal points trade, and why it can't move further.\n\n`adjustment_limits` returns one for each ability\nin `AdjustmentLimits.abilities`. Each\nlimit is the furthest that any legal trade moves this ability, counting the other abilities\nthat pay for its points or take the points it pays for. Use `lowest` and `highest` as the\nbounds of the ability's control, and disable lowering when `can_lower` is false and raising\nwhen `can_raise` is false.\n\nEach limit is reachable on its own, but the player still has to balance the whole trade,\nas `AdjustmentLimits` describes. For example,\nwhen two abilities can each pay for every point the prime requisites have room for, the\nplayer can lower either one to its `lowest`, but not both."
+   },
    "AbilityRoll": {
     "properties": {
      "id": {
@@ -13986,6 +14243,56 @@
     ],
     "title": "AddMember",
     "description": "Referee: add a character to the party during play.\n\nUse it to bring a new character into a running game: a replacement for a character who\ndied, a prisoner the party set free, or an adventurer the party meets in town. Build the\ncharacter with `create_character`, the way you\nbuild a starting party member, and send it here in `town` or `exploring`.\n\nThe session gives the new member an id and puts them at the back of the marching order, so\nthe front rank doesn't change. To move them, send\n`ReorderParty`, which is legal in the same modes. The\nsession logs the command, so a saved game and a replay both have the new member.\n\nThe new id has the form `character-NNNN` and is unique in the party. It's never the id of a\nmember who left with `RemoveMember`. Read it from the\nevent, and pass it as the `character_id` of later commands. The session adds a copy of\n`character`, not the object you pass. Your object stays as it was, with no id. Read the new\nmember with `GameSession.member`.\n\nThe character must be fresh:\n\n- The character can't have a condition or a stat modifier, `dead` included. Each one comes\n  from an effect in the game that applied it, and this session can't end an effect it\n  doesn't track.\n- The character can't carry a magic item or a valuable. Each has an instance id from the\n  game that created it, which could match an id this session hands out. Mundane gear and\n  coins are fine. Give magic items afterwards with\n  `GrantItem`, which creates them with this session's\n  ids.\n\nThe coins the new member brings earn no experience, because the party didn't find them as\ntreasure. Adding a member makes no draws and takes no time.\n\nThe session refuses the command during an encounter or a battle, because the fight is\nalready set up for the party it started with. It also refuses the command once the session\nhas ended, because a new member would restart play. To replace a party whose members are\nall dead or turned to stone, first send `PlaceParty` to move it to town, which\ntakes the session out of `game_over`. Then add the new character.\n\nModes:\n\n`town`, `exploring`\n\n**Rejections:**\n\n- `session.command.wrong_mode` - an encounter or a battle is open, or the session\n  has ended.\n- `party.add.id_assigned` - the character's `id` isn't `null`. The character has an\n  id from another game, or is already a member.\n- `party.add.under_effects` - the character has a condition, like `dead` or\n  `asleep`, or a stat modifier.\n- `party.add.carries_instances` - the character carries a magic item or a valuable,\n  equipped or not.\n\nThe session checks in this order and reports the first that fails.\n\n**Events:**\n\n`MemberAddedEvent` with the new member's id,\nname, class, and level."
+   },
+   "AdjustmentLimits": {
+    "properties": {
+     "lower_step": {
+      "type": "integer",
+      "title": "Lower Step",
+      "description": "The points one step of the trade takes off a lowered ability, which is 2.\n\nMove a lowering control in steps of this size."
+     },
+     "raise_step": {
+      "type": "integer",
+      "title": "Raise Step",
+      "description": "The points one step of lowering buys for a prime requisite, which is 1."
+     },
+     "can_trade": {
+      "type": "boolean",
+      "title": "Can Trade",
+      "description": "Whether some legal trade changes a score. It's true exactly when `max_points` is above 0.\n\nWhen it's false, the only legal trade is the empty one, so you can skip the trade step."
+     },
+     "max_points": {
+      "type": "integer",
+      "title": "Max Points",
+      "description": "The most points a legal trade buys for the prime requisites, and 0 when `can_trade` is false.\n\nIt's the smaller of two totals: the points the lowerable abilities can pay for before\nthey reach `ADJUSTMENT_FLOOR`, and the points\nthe prime requisites have room for below\n`MAX_SCORE`."
+     },
+     "max_points_reason": {
+      "$ref": "#/components/schemas/Rejection",
+      "description": "Why no legal trade buys more than `max_points`.\n\nThe code is one of the following, and its `max_points` param equals `max_points`:\n\n- `creation.adjustment.no_room_to_raise`: the prime requisites have no more room below\n  `MAX_SCORE`. This is the code when the two totals\n  that `max_points` compares are equal, and when every prime requisite is already 18.\n- `creation.adjustment.no_room_to_lower`: the abilities that can be lowered can't pay for\n  more points without going below\n  `ADJUSTMENT_FLOOR`.\n\n`validate_adjustment` never returns these\ntwo codes. They explain where the limits stop, and a proposed trade that goes past a\nlimit breaks one of the rules that `validate_adjustment` does report."
+     },
+     "abilities": {
+      "additionalProperties": {
+       "$ref": "#/components/schemas/AbilityAdjustmentLimit"
+      },
+      "propertyNames": {
+       "$ref": "#/components/schemas/AbilityScore"
+      },
+      "type": "object",
+      "title": "Abilities",
+      "description": "The limits on each of the six abilities, keyed in `AbilityScore` order."
+     }
+    },
+    "type": "object",
+    "required": [
+     "lower_step",
+     "raise_step",
+     "can_trade",
+     "max_points",
+     "max_points_reason",
+     "abilities"
+    ],
+    "title": "AdjustmentLimits",
+    "description": "The limits on the points trade for one set of rolled scores and one class.\n\n`adjustment_limits` returns one. Read\n`can_trade` to decide whether to offer the trade at all, and the entry for each ability\nin `abilities` to set the bounds of its control.\n\nA trade is legal exactly when all of these hold:\n\n- Each lowered amount is a multiple of `lower_step` and no greater than the ability's\n  `score - lowest`.\n- Each raised amount is no greater than the ability's `highest - score`.\n- The points raised add up to the points lowered divided by `lower_step` and multiplied\n  by `raise_step`.\n- The points raised add up to no more than `max_points`.\n\nA client that enforces these conditions proposes only legal trades and doesn't need to\nimplement any trade rule itself."
    },
    "AdvanceTime": {
     "properties": {
@@ -15782,7 +16089,7 @@
         "type": "null"
        }
       ],
-      "description": "Optional point trade between ability scores before rolling hit points, as osrlib's\n`AbilityAdjustment`. Map abilities to lower in `lowered` and abilities to raise in `raised`\nusing keys `str`, `int`, `wis`, `dex`, `con`, and `cha`. If osrlib refuses the trade, creation\nfails with 422 `character_invalid` and `rejections`. Omit or set to `null` to keep the rolled\nscores."
+      "description": "Optional point trade between ability scores before rolling hit points, as osrlib's\n`AbilityAdjustment`. Map abilities to lower in `lowered` and abilities to raise in `raised`\nusing keys `str`, `int`, `wis`, `dex`, `con`, and `cha`. osrlib's descriptions of `lowered` and\n`raised` name `ADJUSTMENT_FLOOR` and `MAX_SCORE`, which are osrlib's Python constants for the\nlowest and the highest score a trade can leave. For the scores a trade can reach from a stored\nability roll with this class, and the reason for each limit, call\n`GET /v1/ability-rolls/{roll_id}/adjustment-limits`. If osrlib refuses the trade, creation fails with 422\n`character_invalid` and `rejections`. Omit or set to `null` to keep the rolled scores."
      },
      "starting_spell_ids": {
       "items": {
@@ -15870,7 +16177,7 @@
         "type": "null"
        }
       ],
-      "description": "Optional point trade between ability scores before rolling hit points, as osrlib's\n`AbilityAdjustment`. Map abilities to lower in `lowered` and abilities to raise in `raised`\nusing keys `str`, `int`, `wis`, `dex`, `con`, and `cha`. If osrlib refuses the trade, creation\nfails with 422 `character_invalid` and `rejections`. Omit or set to `null` to keep the rolled\nscores."
+      "description": "Optional point trade between ability scores before rolling hit points, as osrlib's\n`AbilityAdjustment`. Map abilities to lower in `lowered` and abilities to raise in `raised`\nusing keys `str`, `int`, `wis`, `dex`, `con`, and `cha`. osrlib's descriptions of `lowered` and\n`raised` name `ADJUSTMENT_FLOOR` and `MAX_SCORE`, which are osrlib's Python constants for the\nlowest and the highest score a trade can leave. For the scores a trade can reach from a stored\nability roll with this class, and the reason for each limit, call\n`GET /v1/ability-rolls/{roll_id}/adjustment-limits`. If osrlib refuses the trade, creation fails with 422\n`character_invalid` and `rejections`. Omit or set to `null` to keep the rolled scores."
      },
      "starting_spell_ids": {
       "items": {
@@ -22039,7 +22346,7 @@
         "type": "null"
        }
       ],
-      "description": "Optional point trade between ability scores before rolling hit points, as osrlib's\n`AbilityAdjustment`. Map abilities to lower in `lowered` and abilities to raise in `raised`\nusing keys `str`, `int`, `wis`, `dex`, `con`, and `cha`. If osrlib refuses the trade, creation\nfails with 422 `character_invalid` and `rejections`. Omit or set to `null` to keep the rolled\nscores."
+      "description": "Optional point trade between ability scores before rolling hit points, as osrlib's\n`AbilityAdjustment`. Map abilities to lower in `lowered` and abilities to raise in `raised`\nusing keys `str`, `int`, `wis`, `dex`, `con`, and `cha`. osrlib's descriptions of `lowered` and\n`raised` name `ADJUSTMENT_FLOOR` and `MAX_SCORE`, which are osrlib's Python constants for the\nlowest and the highest score a trade can leave. For the scores a trade can reach from a stored\nability roll with this class, and the reason for each limit, call\n`GET /v1/ability-rolls/{roll_id}/adjustment-limits`. If osrlib refuses the trade, creation fails with 422\n`character_invalid` and `rejections`. Omit or set to `null` to keep the rolled scores."
      },
      "starting_spell_ids": {
       "items": {
@@ -28835,7 +29142,7 @@
      "item_id"
     ],
     "title": "PileItemView",
-    "description": "One thing in a dropped pile, by the id the events name it by, with its count.\n\nYou get these from `PileView.contents`. Look `item_id` up\nin `PlayerView.item_names` and\n`PlayerView.item_names_plural` to name it. A gem or\npiece of jewellery that has a name of its own has it in\n`PlayerView.valuable_names` too. Show that name as\nwritten, with no article."
+    "description": "One thing in a dropped pile, by the id the events name it by, with its count.\n\nYou get these from `PileView.contents`. Look `item_id` up\nin `PlayerView.item_names` and\n`PlayerView.item_names_plural` to name it. A gem or\npiece of jewellery that has a name of its own has it in\n`PlayerView.valuable_names` too, which you show as\nwritten in a list, and a phrase in\n`PlayerView.valuable_phrases`, which you use as\nwritten in a sentence."
    },
    "PileView": {
     "properties": {
@@ -28845,7 +29152,7 @@
       },
       "type": "array",
       "title": "Items",
-      "description": "One display string per thing in the pile, in the order mundane items, magic items,\nthen valuables. A mundane entry has the form `\"{item_id}×{quantity}\"`. A magic item shows its\nname once identified and its masked display name before that. A valuable shows its\nname, or its kind when it has no name."
+      "description": "One display string per thing in the pile, in the order mundane items, magic items,\nthen valuables. A mundane entry has the form `\"{item_id}×{quantity}\"`. A magic item shows its\nname once identified and its masked display name before that. A valuable shows its\nname, without any spaces around it, or its kind when its name is empty or only whitespace."
      },
      "coins_gp_value": {
       "type": "integer",
@@ -29065,7 +29372,7 @@
       },
       "type": "object",
       "title": "Item Names",
-      "description": "What to call one of each item whose id the view shows, keyed by that id, like\n`{\"torch\": \"torch\", \"holy_water\": \"vial of holy water\", \"magic-item-0003\": \"potion\"}`. Show these\nnames, not the ids, and put a number or an article in front of one: \"a torch\". To word a count,\nlike \"6 torches\", use `item_names_plural`.\n\nAn item id appears in the view in four forms, and each is a key here:\n\n- The catalog id of a mundane stack, like `\"holy_water\"`, in a member's\n  `inventory` and in a pile's\n  `contents`. For a stack a member carries, its name is\n  the `display_name` of the template the stack\n  embeds, which the session gives the display names of the template its catalog,\n  `GameSession.effective_equipment`, has\n  under that id, as `ItemInstance.template` says. So a\n  stack from a save or a party document that osrlib 2.7.0 wrote is named as the catalog names it,\n  and the name here matches the stack's template in `inventory`. A bundled id can't shadow a\n  built-in one, because a session refuses an adventure whose bundled id collides with a built-in\n  id. A carried stack whose id the catalog doesn't have, like an item another adventure bundled,\n  keeps the names its template has. For a pile, the name comes from the catalog, and a pile's\n  catalog id that the catalog doesn't have has no entry.\n- The instance id of a magic item, like `\"magic-item-0003\"`, in an inventory and in a pile.\n  Until the party identifies the item, its name is the masked name the inventory shows, without\n  the article: `\"potion\"`, `\"curious device\"`, or `\"shield with a faint aura\"`. So a cursed item\n  and the item it passes for have the same name, and the name tells nothing the inventory\n  doesn't. Once the item is identified, its name is the\n  `display_name` of its template in the magic\n  item catalog, like `\"potion of healing\"`.\n- The template id of an identified magic item, like `\"potion_of_healing\"`, which the inventory\n  shows once the item is identified, with the same name. A pile shows a magic item by its\n  instance id alone, identified or not, so an identified item's template id is a key only while\n  a member carries it. An unidentified item's template id is never a key.\n- The instance id of a gem or a piece of jewellery, like `\"valuable-0007\"`. Its name is its kind,\n  `\"gem\"` or `\"piece of jewellery\"`. The players see everything else about it from the moment\n  they take it, its own name and its value in gold pieces included, in the inventory's\n  `valuables`. A piece that has a name of its own, like `\"Prior's chain of office\"`, has it in\n  `valuable_names` under the same id. Show that name as written, with no article, in place of\n  the kind.\n\nIt names no item whose id the view doesn't show. The player-visible item events, like\n`ItemAcquiredEvent`, name items by the same ids. An\nitem the command left in a member's pack or in a pile the view shows is a key in the view you\nbuild after the command. An item the command used up, sold, or left behind on a trail is a key\nin the view from before it. An item that is identified and used up in the same command, like a\npotion drunk before the party knew it, has its true name on the\n`ItemIdentifiedEvent`.",
+      "description": "What to call one of each item whose id the view shows, keyed by that id, like\n`{\"torch\": \"torch\", \"holy_water\": \"vial of holy water\", \"magic-item-0003\": \"potion\"}`. Show these\nnames, not the ids, and put a number or an article in front of one: \"a torch\". To word a count,\nlike \"6 torches\", use `item_names_plural`.\n\nAn item id appears in the view in four forms, and each is a key here:\n\n- The catalog id of a mundane stack, like `\"holy_water\"`, in a member's\n  `inventory` and in a pile's\n  `contents`. For a stack a member carries, its name is\n  the `display_name` of the template the stack\n  embeds, which the session gives the display names of the template its catalog,\n  `GameSession.effective_equipment`, has\n  under that id, as `ItemInstance.template` says. So a\n  stack from a save or a party document that osrlib 2.7.0 wrote is named as the catalog names it,\n  and the name here matches the stack's template in `inventory`. A bundled id can't shadow a\n  built-in one, because a session refuses an adventure whose bundled id collides with a built-in\n  id. A carried stack whose id the catalog doesn't have, like an item another adventure bundled,\n  keeps the names its template has. For a pile, the name comes from the catalog, and a pile's\n  catalog id that the catalog doesn't have has no entry.\n- The instance id of a magic item, like `\"magic-item-0003\"`, in an inventory and in a pile.\n  Until the party identifies the item, its name is the masked name the inventory shows, without\n  the article: `\"potion\"`, `\"curious device\"`, or `\"shield with a faint aura\"`. So a cursed item\n  and the item it passes for have the same name, and the name tells nothing the inventory\n  doesn't. Once the item is identified, its name is the\n  `display_name` of its template in the magic\n  item catalog, like `\"potion of healing\"`.\n- The template id of an identified magic item, like `\"potion_of_healing\"`, which the inventory\n  shows once the item is identified, with the same name. A pile shows a magic item by its\n  instance id alone, identified or not, so an identified item's template id is a key only while\n  a member carries it. An unidentified item's template id is never a key.\n- The instance id of a gem or a piece of jewellery, like `\"valuable-0007\"`. Its name is its kind,\n  `\"gem\"` or `\"piece of jewellery\"`. The players see everything else about it from the moment\n  they take it, its own name and its value in gold pieces included, in the inventory's\n  `valuables`. A piece that has a name of its own, like `\"Prior's chain of office\"`, has it in\n  `valuable_names` under the same id, and what to call it in a sentence, like\n  `\"the Prior's chain of office\"`, in `valuable_phrases`. Show the name in place of the kind in\n  a list, and the phrase in place of the kind in a sentence.\n\nIt names no item whose id the view doesn't show. The player-visible item events, like\n`ItemAcquiredEvent`, name items by the same ids. An\nitem the command left in a member's pack or in a pile the view shows is a key in the view you\nbuild after the command. An item the command used up, sold, or left behind on a trail is a key\nin the view from before it. An item that is identified and used up in the same command, like a\npotion drunk before the party knew it, has its true name on the\n`ItemIdentifiedEvent`.",
       "default": {}
      },
      "item_names_plural": {
@@ -29083,7 +29390,16 @@
       },
       "type": "object",
       "title": "Valuable Names",
-      "description": "The own name of each gem and piece of jewellery that has one, keyed by its instance id, like\n`{\"valuable-0007\": \"Prior's chain of office\"}`. Show it as written, with no article: \"Sam takes\nPrior's chain of office.\" For an id that isn't a key, use the kind in `item_names`, with an\narticle: \"Sam takes a gem.\"\n\nA piece has a name of its own when its `name` is neither empty nor the plain name that treasure\ngeneration gives its kind, `\"Gem\"` or `\"Jewellery\"`. So a piece an adventure places in a cache\nwith a named `ValuableSpec` is a key, and neither a piece\nthe session rolls on the treasure tables nor a placed piece whose `name` is empty is a key.\n\nThe keys are the instance ids of those pieces in the members'\n`inventory` `valuables` and in the\n`contents` of the known piles. Each value is the name that\nthe inventory's `valuables` give the piece, and the string at the same place in the pile's\n`items`. A piece in a pile the party doesn't know, or in a\ncache the party hasn't emptied, isn't a key, as it isn't one in `item_names`. Every key here is\nalso a key in `item_names`.",
+      "description": "The own name of each gem and piece of jewellery that has one, keyed by its instance id, like\n`{\"valuable-0007\": \"Prior's chain of office\"}`. Show it as written in a list, such as an inventory\nrow. To put the piece in a sentence, use its phrase in\n`valuable_phrases`, which has the article and\nthe case: \"Sam takes the Prior's chain of office.\" For an id that isn't a key, use the kind in\n`item_names`, with an article: \"Sam takes a gem.\"\n\nA piece has a name of its own when its `name` is neither empty, nor only whitespace, nor the\nplain name that treasure generation gives its kind, `\"Gem\"` for a gem or `\"Jewellery\"` for a piece\nof jewellery. Spaces around the name don't count. So a piece an\nadventure places in a cache with a named `ValuableSpec` is a\nkey, and neither a piece the session rolls on the treasure tables nor a placed piece whose `name`\nis empty is a key.\n\nThe keys are the instance ids of those pieces in the members'\n`inventory` `valuables` and in the\n`contents` of the known piles. Each value is the name that\nthe inventory's `valuables` give the piece, without any spaces around it, and the string at the\nsame place in the pile's `items`. A piece in a pile the party\ndoesn't know, or in a cache the party hasn't emptied, isn't a key, as it isn't one in `item_names`.\nEvery key here is also a key in `item_names`.",
+      "default": {}
+     },
+     "valuable_phrases": {
+      "additionalProperties": {
+       "type": "string"
+      },
+      "type": "object",
+      "title": "Valuable Phrases",
+      "description": "What to call each piece in `valuable_names` in the middle of a sentence, with its article and its case, keyed\nby the same instance id, like `{\"valuable-0007\": \"the abbot's seal ring\", \"valuable-0008\": \"a silver altar\ncandlestick\", \"valuable-0009\": \"Ossor's Eye\"}`. Use it as written in a sentence: \"Wren takes a silver altar\ncandlestick.\" Use `valuable_names` in a list, such as an inventory row.\n\nThe keys are exactly the keys of `valuable_names`, for a piece in a member's\n`inventory` and for a piece in a known pile alike. Each value is the\npiece's `phrase` when it has one. Otherwise osrlib makes the phrase\nfrom the name. A name whose first word is \"the\", \"a\", or \"an\", in any case, keeps its words with that first word in\nlowercase, so `\"The abbot's seal ring\"` becomes `\"the abbot's seal ring\"`. Any other name has its first character in\nlowercase and the indefinite article in front, \"an\" before `a`, `e`, `i`, `o`, or `u`, with or without an accent,\nand \"a\" otherwise, so `\"Silver altar candlestick\"` becomes `\"a silver altar candlestick\"` and `\"Eye of Ossor\"`\nbecomes `\"an eye of Ossor\"`. Only that first character changes case. A phrase that's only whitespace counts as no\nphrase, and no value here has spaces around it.\n\nA piece from a save that osrlib 2.9.0 wrote has no phrase, so the view makes its phrase from its name, and every\nkey of `valuable_names` is a key here. A `PlayerView` that osrlib 2.9.0 built, such as a stored feed entry, has no\n`valuable_phrases`, and it validates with this map empty. For such a view, word each name in `valuable_names`\nyourself.",
       "default": {}
      },
      "fatigued": {
@@ -35089,6 +35405,12 @@
       "description": "A display name for the piece. Generation sets a plain one. When you place treasure by hand in an adventure, you\ncan give it any name.",
       "default": ""
      },
+     "phrase": {
+      "type": "string",
+      "title": "Phrase",
+      "description": "What to call the piece in the middle of a sentence, with its article and its case, like\n`\"the abbot's seal ring\"`. The session copies it from the\n`ValuableSpec.phrase` that placed the piece, as it copies `name`. It's\nempty for a piece that treasure generation rolls, for a piece placed with no phrase, and for a piece from a save\nthat osrlib 2.9.0 or earlier wrote.\n\nTo word a sentence, read\n`PlayerView.valuable_phrases`, which has this phrase when it's\nset and, when it's empty or only whitespace, the phrase osrlib makes from `name`. A piece with no name of its own,\nwhose `name` is empty, is only whitespace, or is the one treasure generation gives its kind, has no phrase in the\nview, whatever this field holds.",
+      "default": ""
+     },
      "value_gp": {
       "type": "integer",
       "minimum": 0,
@@ -35127,6 +35449,12 @@
       "type": "string",
       "title": "Name",
       "description": "The name the party sees, like `\"The abbot's seal ring\"`. Leave it empty for an unnamed\nvaluable, like the ones the session rolls on the treasure tables.",
+      "default": ""
+     },
+     "phrase": {
+      "type": "string",
+      "title": "Phrase",
+      "description": "What to call the piece in the middle of a sentence, with its article and its case, like\n`\"a silver altar candlestick\"`, `\"the abbot's seal ring\"`, or `\"Ossor's Eye\"`. A client shows `name` in a list,\nsuch as an inventory row, and words a sentence, such as \"Wren takes the abbot's seal ring.\", with the phrase that\n`PlayerView.valuable_phrases` gives.\n\nLeave it empty, and osrlib makes the phrase from `name`, as for a common noun. A name whose first word is \"the\",\n\"a\", or \"an\" has that word in lowercase, so `\"The abbot's seal ring\"` reads `\"the abbot's seal ring\"`. Any other\nname has its first character in lowercase and \"an\" or \"a\" in front, by its first letter, so\n`\"Silver altar candlestick\"` reads `\"a silver altar candlestick\"`. Set the phrase when the piece has a proper name,\nlike `\"Ossor's Eye\"`, when it takes \"the\", like `\"the Prior's chain of office\"`, or when its first letter doesn't\ngive its article, like `\"a unicorn-horn cup\"`. A phrase that's only whitespace counts as empty, and the view\nleaves out any spaces around a name or a phrase.\n\nOnly a piece with a name of its own has a phrase in the view. A piece whose `name` is empty, is only whitespace,\nor is the name treasure generation gives its kind, `\"Gem\"` for a gem or `\"Jewellery\"` for a piece of jewellery,\nis named by its kind, whatever `phrase` holds.",
       "default": ""
      },
      "value_gp": {
@@ -35738,7 +36066,7 @@
   },
   {
    "name": "characters",
-   "description": "\nCreate, import, inspect, and delete stored player characters for starting game sessions. Each\nsession copies its party members when it starts, so play never modifies a stored character and one\nstored character can start any number of sessions.\n\nIn B/X, players roll six ability scores before choosing a class. An *ability roll* stores those\nsix scores along with a *seed* (the integer that determines osrlib's random rolls), which the\nserver never reveals to players. Creating a character from that roll derives hit points and\nstarting gold from the same seed, so retrying after an invalid choice keeps the same rolls.\n\n1. `POST /v1/ability-rolls` rolls and stores six scores, returning `id`, `scores`, and\n   `eligible_class_ids`. `GET /v1/ability-rolls/{roll_id}` reads a stored roll again.\n2. `POST /v1/ability-rolls/{roll_id}/preview` returns the character, hit points, and starting\n   gold that the player's choices would give, without storing anything or using the roll. Call it\n   as often as the player changes a choice.\n3. `POST /v1/characters` creates and stores a first-level character from `ability_roll_id` (or\n   freshly rolled scores) and the player's choices.\n4. `POST /v1/sessions` starts a game session with the character's `id` in `character_ids`.\n\n`GET /v1/characters` lists your client's stored characters, `GET /v1/characters/{character_id}`\nreturns one character with its derived stats, and `DELETE /v1/characters/{character_id}` deletes\none without affecting active sessions. A referee can import an osrlib *character document* (`kind`,\n`schema_version`, `engine_version`, and `payload`) with `POST /v1/characters/import`. To roll a\ncharacter from new scores without storing it, call `POST /v1/generate/character`.\n"
+   "description": "\nCreate, import, inspect, and delete stored player characters for starting game sessions. Each\nsession copies its party members when it starts, so play never modifies a stored character and one\nstored character can start any number of sessions.\n\nIn B/X, players roll six ability scores before choosing a class. An *ability roll* stores those\nsix scores along with a *seed* (the integer that determines osrlib's random rolls), which the\nserver never reveals to players. Creating a character from that roll derives hit points and\nstarting gold from the same seed, so retrying after an invalid choice keeps the same rolls.\n\n1. `POST /v1/ability-rolls` rolls and stores six scores, returning `id`, `scores`, and\n   `eligible_class_ids`. `GET /v1/ability-rolls/{roll_id}` reads a stored roll again.\n2. `GET /v1/ability-rolls/{roll_id}/adjustment-limits` returns how far the player can trade\n   ability points for the class they pick, so your client can disable each control that can't\n   change a score.\n3. `POST /v1/ability-rolls/{roll_id}/preview` returns the character, hit points, and starting\n   gold that the player's choices would give, without storing anything or using the roll. Call it\n   as often as the player changes a choice.\n4. `POST /v1/characters` creates and stores a first-level character from `ability_roll_id` (or\n   freshly rolled scores) and the player's choices.\n5. `POST /v1/sessions` starts a game session with the character's `id` in `character_ids`.\n\n`GET /v1/characters` lists your client's stored characters, `GET /v1/characters/{character_id}`\nreturns one character with its derived stats, and `DELETE /v1/characters/{character_id}` deletes\none without affecting active sessions. A referee can import an osrlib *character document* (`kind`,\n`schema_version`, `engine_version`, and `payload`) with `POST /v1/characters/import`. To roll a\ncharacter from new scores without storing it, call `POST /v1/generate/character`.\n"
   },
   {
    "name": "adventures",

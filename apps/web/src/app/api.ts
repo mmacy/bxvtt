@@ -41,7 +41,48 @@ export function isNetworkError(error: unknown): boolean {
   return error instanceof TypeError || error instanceof SyntaxError;
 }
 
-const FIXED: Record<string, { title: string; detail: string }> = {
+/** The sentence that tells the reader to try the action again. */
+const RETRY = 'Try again.';
+
+/**
+ * A problem's text. `retry` marks a detail whose first sentence is [`RETRY`][RETRY], kept apart so a caller with its
+ * own Try again control can leave it out (see [`DescribeOptions`][DescribeOptions]).
+ */
+interface ProblemText {
+  title: string;
+  detail: string;
+  retry?: boolean;
+}
+
+/** How [`describeProblem`][describeProblem] words a problem for one place on screen. */
+export interface DescribeOptions {
+  /**
+   * Whether the message sits beside a Try again control. The detail then leaves out its "Try again." sentence,
+   * which the control already says. Defaults to `false`.
+   */
+  retryControl?: boolean;
+}
+
+/** The detail of a problem text, with the retry sentence unless the caller shows its own Try again control. */
+function detailOf(text: ProblemText, options: DescribeOptions): string {
+  return text.retry === true && options.retryControl !== true ? `${RETRY} ${text.detail}` : text.detail;
+}
+
+/** A problem with a code the client doesn't know. */
+const UNKNOWN_PROBLEM: ProblemText = {
+  title: "That didn't work",
+  detail: 'If it keeps happening, reload the page.',
+  retry: true,
+};
+
+/** An error that isn't a problem from the server or a network failure. */
+const UNEXPECTED: ProblemText = {
+  title: 'Something went wrong',
+  detail: 'If it keeps happening, reload the page.',
+  retry: true,
+};
+
+const FIXED: Record<string, ProblemText> = {
   bad_request: {
     title: "The server couldn't process that request",
     detail: 'Reload the page and try again.',
@@ -169,11 +210,13 @@ const FIXED: Record<string, { title: string; detail: string }> = {
   },
   internal_error: {
     title: 'Something went wrong on the server',
-    detail: 'Try again. If it keeps happening, contact the server host.',
+    detail: 'If it keeps happening, contact the server host.',
+    retry: true,
   },
   bxapi_error: {
     title: 'The game server returned an unexpected response',
-    detail: 'Try again. If it keeps happening, contact the server host.',
+    detail: 'If it keeps happening, contact the server host.',
+    retry: true,
   },
   save_unreadable: {
     title: "This save can't be restored",
@@ -232,7 +275,7 @@ const FIXED: Record<string, { title: string; detail: string }> = {
   },
 };
 
-function describeKnownProblem(problem: Problem): ProblemMessage {
+function describeKnownProblem(problem: Problem, options: DescribeOptions): ProblemMessage {
   const code = problem.code;
   if (code === 'rate_limited') {
     const seconds = problem.retry_after;
@@ -266,22 +309,19 @@ function describeKnownProblem(problem: Problem): ProblemMessage {
     return { code, title: "That file isn't valid", detail: problem.detail };
   }
   const fixed = FIXED[code];
-  if (fixed !== undefined) return { code, title: fixed.title, detail: fixed.detail };
-  return {
-    code,
-    title: "That didn't work",
-    detail: 'Try again. If it keeps happening, reload the page.',
-  };
+  if (fixed !== undefined) return { code, title: fixed.title, detail: detailOf(fixed, options) };
+  return { code, title: UNKNOWN_PROBLEM.title, detail: detailOf(UNKNOWN_PROBLEM, options) };
 }
 
 /**
  * Turns any error from an API call into a message for the player.
  *
  * @param error - The value from a `catch`.
+ * @param options - Where the message shows, such as beside a Try again control.
  * @returns A title and a next step. The code is for branching only.
  */
-export function describeProblem(error: unknown): ProblemMessage {
-  if (isProblem(error)) return describeKnownProblem(error.problem);
+export function describeProblem(error: unknown, options: DescribeOptions = {}): ProblemMessage {
+  if (isProblem(error)) return describeKnownProblem(error.problem, options);
   if (isNetworkError(error)) {
     return {
       code: 'network',
@@ -289,11 +329,7 @@ export function describeProblem(error: unknown): ProblemMessage {
       detail: 'Check your connection, or ask the server host whether the server is running.',
     };
   }
-  return {
-    code: 'unknown',
-    title: 'Something went wrong',
-    detail: 'Try again. If it keeps happening, reload the page.',
-  };
+  return { code: 'unknown', title: UNEXPECTED.title, detail: detailOf(UNEXPECTED, options) };
 }
 
 /**

@@ -205,7 +205,7 @@ describe('rejections', () => {
     [
       'creation.adjustment.below_floor',
       { ability: 'wis', score: 11, amount: 8 },
-      "Wisdom is 11, so lowering it by 8 drops it below 9. Ability scores can't be lowered below 9.",
+      'Lowering Wisdom by 8 takes it below the lowest score a trade allows.',
     ],
     [
       'session.command.wrong_mode',

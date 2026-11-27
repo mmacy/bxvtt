@@ -3,6 +3,7 @@ import { z } from 'zod';
 import type { CharacterSummary, StoredCharacter, User } from '@bxvtt/shared/protocol';
 import {
   AbilityRollRequest,
+  AdjustmentLimitsQuery,
   CharacterCheckRequest,
   CharacterPreviewRequest,
   CharacterRequest,
@@ -17,7 +18,7 @@ import { bxapiChoices, StartingRollKeeper } from './starting-rolls';
 import type { Context } from './context';
 import type { Row } from './db';
 import { num, str } from './db';
-import { ApiError, notFound, parseBody } from './errors';
+import { ApiError, notFound, parseBody, parseQuery } from './errors';
 
 /** The path parameters of a character route. */
 const CharacterParams = z.object({ characterId: z.string() });
@@ -156,6 +157,19 @@ export function registerCharacterRoutes(app: FastifyInstance, ctx: Context): voi
     const user = ctx.auth.user(request);
     const { rollId } = RollParams.parse(request.params);
     return startingRolls.status(rollId, user.id);
+  });
+
+  app.get('/api/ability-rolls/:rollId/adjustment-limits', async (request) => {
+    const user = ctx.auth.user(request);
+    const { rollId } = RollParams.parse(request.params);
+    const { class_id: classId } = parseQuery(AdjustmentLimitsQuery, request);
+    // The roll's checks come first, so a request for a roll the user can't use costs nothing.
+    const record = startingRolls.guard(rollId, user.id, { class_id: classId });
+    // An engine older than osrlib 2.10.0 has no limits route.
+    await ctx.game.requireEngine();
+    // bxapi computes the limits on each call, so the call counts against the same limit as a check.
+    takePreview(user.id, 'You are checking character choices too quickly. Wait a moment and try again.');
+    return startingRolls.adjustmentLimits(record, classId);
   });
 
   app.post('/api/ability-rolls/:rollId/hit-points', async (request) => {

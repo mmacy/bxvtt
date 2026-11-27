@@ -1,4 +1,4 @@
-import type { CharacterPreview } from '@bxvtt/shared/bxapi';
+import type { AdjustmentLimits, CharacterPreview } from '@bxvtt/shared/bxapi';
 import type {
   AbilityRoll,
   CharacterChoices,
@@ -104,6 +104,29 @@ export class StartingRollKeeper {
       );
     }
     return record;
+  }
+
+  /**
+   * Reads bxapi's limits on the ability score trade for a roll and a class. The limits depend only on the scores as
+   * rolled and the class, so the trade step reads them once. Pass a roll that [`guard`][guard] accepted for the
+   * class, which refuses another class than the hit points fixed, as it does for a check.
+   *
+   * @param record - The user's newest open roll, from `guard`.
+   * @param classId - The class.
+   * @throws ApiError `ability_roll_used`, `character_invalid` for a class bxapi doesn't know or that the scores
+   *   don't qualify for, or a bxapi failure.
+   */
+  adjustmentLimits(record: RollRecord, classId: string): Promise<AdjustmentLimits> {
+    return callBxapi(
+      () =>
+        this.rolls.closingIfUsed(record, () =>
+          this.ctx.bxapi.get<AdjustmentLimits>(
+            `/v1/ability-rolls/${encodeURIComponent(record.id)}/adjustment-limits`,
+            { class_id: classId },
+          ),
+        ),
+      { passNotFound: true },
+    );
   }
 
   /**

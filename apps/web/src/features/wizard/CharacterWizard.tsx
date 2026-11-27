@@ -2,6 +2,7 @@ import type { AbilityTables } from '@bxvtt/shared/bxapi';
 import { isProblem } from '@bxvtt/shared/client';
 import type {
   AbilityRoll,
+  AdjustmentLimits,
   CharacterRequest,
   StartingRollRequest,
   StartingRolls,
@@ -24,7 +25,7 @@ import {
 } from '@/app';
 import { Banner, Button, ConfirmDialog, Dialog, Stepper, type StepperStep } from '@/ui';
 import { RuleLinksContext } from '../sheet/RuleLink';
-import { ADJUST_GUIDANCE_ID, AdjustStep, type AdjustCheckState, type CheckState } from './AdjustStep';
+import { AdjustStep, type CheckState, type TradeCheckState } from './AdjustStep';
 import { explainAdjustCheck } from './adjustCheck';
 import { ClassStep } from './ClassStep';
 import {
@@ -32,7 +33,6 @@ import {
   adjustedScores,
   draftKey,
   emptyDraft,
-  hasAdjustment,
   loadDraft,
   reconcileDraft,
   requestFromDraft,
@@ -57,6 +57,15 @@ import {
 } from './server';
 import { StartingRollsStep } from './StartingRollsStep';
 import { classMagic, extraLanguageCount, headlineModifier, readScores, spellSlotsAt } from './tables';
+import {
+  fitTrade,
+  tradeContinueBlock,
+  tradeContinueLabel,
+  tradeNeedsCheck,
+  tradeStatus,
+  type TradeStatus,
+} from './tradeControls';
+import { useAdjustmentLimits } from './useAdjustmentLimits';
 import styles from './wizard.module.css';
 import { useClassDetail } from '../sheet/catalogs';
 
@@ -89,7 +98,7 @@ const STEP_LABELS: Record<StepId, string> = {
 const STEP_DESCRIPTIONS: Record<StepId, string> = {
   roll: 'Roll 3d6 in order for each ability score.',
   class: 'Choose from the classes your ability scores qualify for.',
-  adjust: 'Trade points into your prime requisite, or keep your rolled scores.',
+  adjust: 'Trade points into a prime requisite, or keep your rolled scores.',
   identity: 'Choose an alignment and languages.',
   hp_gold: 'Roll your hit points, then your starting gold.',
   outfit: 'Spend your starting gold on weapons, armour, and gear.',
@@ -200,7 +209,7 @@ export interface ContinueFacts {
   /** How the roll step lets the player get new ability scores now, from [`rerollOffer`][rerollOffer]. */
   newScores: 'roll_again' | 'start_again' | 'none';
   classId: string | null;
-  adjust: AdjustCheckState['status'];
+  adjust: TradeStatus;
   /** Whether the starting gold is rolled. */
   goldRolled: boolean;
   gold: GoldState;
@@ -232,10 +241,7 @@ export function continueBlock(facts: ContinueFacts): { reason: string | null } |
         return { reason: 'Choose a class first.' };
       return null;
     case 'adjust':
-      if (facts.adjust === 'checking') return wait;
-      if (facts.adjust === 'invalid')
-        return { reason: "This ability trade isn't allowed. Change it, or reset to your rolled scores." };
-      return null;
+      return tradeContinueBlock(facts.adjust);
     case 'hp_gold':
       return facts.goldRolled ? null : wait;
     case 'outfit':
@@ -280,7 +286,6 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
   const nameInput = useRef<HTMLInputElement>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [kitNote, setKitNote] = useState<string | null>(null);
-  const [tradeAttempts, setTradeAttempts] = useState(0);
   // What the server recorded about the draft's roll: its starting rolls, and the class the hit points fixed.
   const [recorded, setRecorded] = useState<Recorded | null>(null);
   // The roll and reroll limit the wizard last read the roll's `rerolls_left` under.
@@ -627,33 +632,55 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
   const go = useCallback(
     (step: StepId) => {
       setShowErrors(false);
-      setTradeAttempts(0);
       setPlayed(null);
       update({ step });
     },
     [update],
   );
 
-  // Step 3: check the trade live. Each answer is stored with the request it answers, so a stale answer shows
-  // as "checking" until the current request's answer arrives.
-  const adjustJson =
-    draft.step === 'adjust' && draft.roll && draft.classId && hasAdjustment(draft.adjustment)
+  // A draft saved by an earlier version of the step can hold a trade the limits can't produce. It starts over.
+  const fitToLimits = useCallback((loaded: AdjustmentLimits, forRoll: string, forClass: string) => {
+    setDraft((d) => {
+      const rolled = readScores(d.roll?.scores);
+      if (rolled === null || d.roll?.id !== forRoll || d.classId !== forClass) return d;
+      const fitted = fitTrade(loaded, rolled, d.adjustment);
+      return fitted === d.adjustment ? d : { ...d, adjustment: fitted, languages: [] };
+    });
+  }, []);
+  // bxapi's limits on the trade depend only on the roll and the class, so the step reads them once for each pair.
+  const limits = useAdjustmentLimits(
+    rollId,
+    draft.classId,
+    draft.step === 'adjust',
+    handleRollRefusal,
+    fitToLimits,
+  );
+
+  // Step 3: check the trade live, once it's balanced or the limits can't say. Each answer is stored with the
+  // request it answers, so a stale answer shows as "checking" until the current request's answer arrives. The key
+  // also has the limits' status and the Try again count, so a check that got no answer runs again after either.
+  const [checkRound, setCheckRound] = useState(0);
+  const adjustRequest =
+    draft.step === 'adjust' && draft.roll && draft.classId && tradeNeedsCheck(limits.state, draft.adjustment)
       ? JSON.stringify(requestFromDraft(draft, { withoutOutfit: true, placeholderIdentity: true }))
       : null;
-  const [adjustResult, setAdjustResult] = useState<{ key: string; state: AdjustCheckState } | null>(null);
+  const adjustJson = adjustRequest === null ? null : `${limits.state.status}#${checkRound}#${adjustRequest}`;
+  const [adjustResult, setAdjustResult] = useState<{ key: string; state: TradeCheckState } | null>(null);
   useEffect(() => {
-    if (adjustJson === null) return;
+    if (adjustJson === null || adjustRequest === null) return;
     let cancelled = false;
     const timer = setTimeout(() => {
-      const settle = (state: AdjustCheckState) => {
+      const settle = (state: TradeCheckState) => {
         if (!cancelled) setAdjustResult({ key: adjustJson, state });
       };
-      checkChoices(getApi(), JSON.parse(adjustJson) as CharacterRequest).then(
+      checkChoices(getApi(), JSON.parse(adjustRequest) as CharacterRequest).then(
         (result) => {
           if (!result.valid && result.problem) {
             const explained = explainInvalid(result.problem);
             if (explained.step !== null && stepIndex(explained.step) <= stepIndex('adjust')) {
-              settle(explainAdjustCheck(result.problem));
+              settle(
+                explainAdjustCheck(result.problem, (JSON.parse(adjustRequest) as CharacterRequest).class_id),
+              );
               return;
             }
           }
@@ -661,7 +688,8 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
         },
         (error: unknown) => {
           if (handleRollRefusal(error)) return;
-          settle({ status: 'invalid', sentences: explainCreationError(error).sentences });
+          // No answer is no refusal: the step shows no verdict, and Continue checks again.
+          settle({ status: 'failed' });
         },
       );
     }, CHECK_DELAY_MS);
@@ -669,13 +697,14 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [adjustJson, handleRollRefusal]);
-  const adjustCheck: AdjustCheckState =
+  }, [adjustJson, adjustRequest, handleRollRefusal]);
+  const adjustCheck: TradeCheckState =
     adjustJson === null
       ? { status: 'idle' }
       : adjustResult?.key === adjustJson
         ? adjustResult.state
         : { status: 'checking' };
+  const adjustStatus = tradeStatus(limits.state, draft.adjustment, adjustCheck.status);
 
   // The outfit step spends the rolled gold.
   const gold: GoldState = rolls?.gold_roll
@@ -898,11 +927,6 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
         go('adjust');
         return;
       case 'adjust':
-        // A trade in progress stays on the step. The step says to finish it or reset it.
-        if (adjustCheck.status === 'in_progress') {
-          setTradeAttempts((n) => n + 1);
-          return;
-        }
         if (
           await check(requestFromDraft(draft, { withoutOutfit: true, placeholderIdentity: true }), 'adjust')
         )
@@ -971,7 +995,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
           ? 'roll_again'
           : 'none',
     classId: draft.classId,
-    adjust: adjustCheck.status,
+    adjust: adjustStatus,
     goldRolled: rolls?.gold_roll != null,
     gold,
     cart: cartCheck.status,
@@ -1080,14 +1104,19 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
           <AdjustStep
             scores={scores}
             adjustment={draft.adjustment}
-            onChange={(adjustment) => {
-              setTradeAttempts(0);
-              update({ adjustment, languages: [] });
-            }}
+            onChange={(adjustment) => update({ adjustment, languages: [] })}
             detail={detail}
             tables={tables}
             check={adjustCheck}
-            continueAttempts={tradeAttempts}
+            detailFailed={classEntry.failed}
+            limits={limits.state}
+            onRetry={() => {
+              setCheckRound((n) => n + 1);
+              limits.retry();
+            }}
+            retrying={limits.retrying}
+            failures={limits.failures}
+            classId={draft.classId}
           />
         )}
         {step === 'identity' && adjusted && (
@@ -1218,14 +1247,9 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
               loading={busy}
               disabled={!canContinue}
               disabledReason={block?.reason}
-              aria-describedby={
-                draft.step === 'adjust' && adjustCheck.status === 'in_progress'
-                  ? ADJUST_GUIDANCE_ID
-                  : undefined
-              }
               onClick={() => void next()}
             >
-              {draft.step === 'adjust' && !hasAdjustment(draft.adjustment) ? 'Skip this step' : 'Continue'}
+              {draft.step === 'adjust' ? tradeContinueLabel(limits.state, adjustStatus) : 'Continue'}
             </Button>
           )
         )}
