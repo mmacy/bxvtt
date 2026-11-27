@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- **Class names in labels (`@bxvtt/web`, `@bxvtt/shared/text`):** A class name that stands alone as a label, a card line, or a list entry is capitalized as the SRD writes it, such as "Level 1 Fighter" on a character card and "Magic-User spell, level 1" in the compendium. A class name inside a sentence stays lowercase, as in "A fighter has no special abilities." ([#59](https://github.com/mmacy/bxvtt/issues/59))
+
 ## [0.4.0] - 2026-11-26
 
 This release needs a `bxapi` built on `osrlib` 2.9.0, which is `bxapi` `main` from its pull request 60 onward. Update and restart `bxapi` before you start this version. With an older engine, the server serves no game and rolls no ability scores: it refuses every game request, every ability roll, and every WebSocket snapshot with `503 bxapi_outdated`, and `GET /api/health` reports `degraded` with the versions for a signed-in user. Without the check, an older `bxapi` couldn't roll with a table's `ruleset`, couldn't report a sub-par roll, and would leave the player view without the spell and valuable fields that the client reads now.

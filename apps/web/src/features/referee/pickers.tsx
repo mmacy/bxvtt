@@ -5,7 +5,6 @@
  */
 import type { MemberView } from '@bxvtt/shared/bxapi';
 import {
-  classInSentence,
   classLabel,
   itemTypeLabel,
   magicItemTemplateName,
@@ -39,7 +38,7 @@ function capital(text: string): string {
 
 /** What a party member picker shows under the name: the level and the class the view states, and whether the member is down. */
 export function memberDescription(member: MemberView): string {
-  const parts = [`Level ${member.level} ${classInSentence(memberClassName(member))}`];
+  const parts = [`Level ${member.level} ${memberClassName(member)}`];
   if (member.current_hp <= 0) parts.push('down');
   return parts.join(', ');
 }

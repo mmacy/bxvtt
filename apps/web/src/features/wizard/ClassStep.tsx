@@ -1,6 +1,7 @@
 import type { ClassSummary, EquipmentSummary } from '@bxvtt/shared/bxapi';
 import {
   abilityLabel,
+  classInSentence,
   classLabel,
   emptyContext,
   joinList,
@@ -203,7 +204,7 @@ export function ClassStep({
       {locked && classId && (
         <Banner
           tone="info"
-          title={`Your class is fixed as ${withArticle(classLabel(classId).toLowerCase())}`}
+          title={`Your class is fixed as ${withArticle(classInSentence(classLabel(classId)))}`}
         >
           <span id={LOCK_NOTE_ID}>
             {maxHitPoints
@@ -232,13 +233,13 @@ export function ClassStep({
           <h3 id="class-detail-title" className={styles.subTitle}>
             What a{' '}
             <RuleLink entry={{ kind: 'classes', id: selected.data.id }}>
-              {classLabel(selected.data.id).toLowerCase()}
+              {classInSentence(classLabel(selected.data.id))}
             </RuleLink>{' '}
             can do
           </h3>
           {selected.data.abilities.length === 0 ? (
             <p className={styles.muted}>
-              A {classLabel(selected.data.id).toLowerCase()} has no special abilities and relies on armour,
+              A {classInSentence(classLabel(selected.data.id))} has no special abilities and relies on armour,
               weapons, and hit points.
             </p>
           ) : (

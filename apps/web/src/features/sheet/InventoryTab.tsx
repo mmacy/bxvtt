@@ -1,5 +1,5 @@
 import type { MemberView } from '@bxvtt/shared/bxapi';
-import { capitalizeFirst, count, creatureNames, groupName } from '@bxvtt/shared/text';
+import { capitalizeFirst, classLabel, count, creatureNames, groupName } from '@bxvtt/shared/text';
 import { useMemo, useState, type ReactNode } from 'react';
 import {
   useCanControlMember,
@@ -656,7 +656,7 @@ function UseItemDialog({
                 options={(spells.data ?? []).map((spell) => ({
                   value: spell.id,
                   label: spell.name,
-                  description: `${spell.spell_list === 'magic_user' ? 'Magic-user' : capitalizeFirst(spell.spell_list.replaceAll('_', ' '))}, level ${spell.level}`,
+                  description: `${classLabel(spell.spell_list)}, level ${spell.level}`,
                 }))}
               />
             </Field>

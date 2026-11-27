@@ -1,5 +1,5 @@
 import type { CreationRules, StartingRolls } from '@bxvtt/shared/protocol';
-import { classLabel, count, joinList, withArticle } from '@bxvtt/shared/text';
+import { classInSentence, classLabel, count, joinList, withArticle } from '@bxvtt/shared/text';
 import { useEffect, useRef } from 'react';
 import { Banner, Button, DiceRoll, Die, Icon, Skeleton, formatModifier, type DieSides } from '@/ui';
 import styles from './wizard.module.css';
@@ -61,7 +61,7 @@ export function StartingRollsStep({
   failure,
   onRetry,
 }: StartingRollsStepProps) {
-  const className = classLabel(classId).toLowerCase();
+  const className = classInSentence(classLabel(classId));
   const sides = dieFor(hitDie);
   const hp = rolls?.hit_point_roll ?? null;
   const gold = rolls?.gold_roll ?? null;

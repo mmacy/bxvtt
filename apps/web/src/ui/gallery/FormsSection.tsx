@@ -21,20 +21,20 @@ const spellOptions: ComboboxOption[] = [
   {
     value: 'protection-from-evil',
     label: 'Protection from evil',
-    description: 'Cleric or magic-user, level 1',
+    description: 'Cleric or Magic-User, level 1',
     icon: 'shield',
   },
-  { value: 'sleep', label: 'Sleep', description: 'Magic-user, level 1', icon: 'spell', keywords: ['mu'] },
+  { value: 'sleep', label: 'Sleep', description: 'Magic-User, level 1', icon: 'spell', keywords: ['mu'] },
   {
     value: 'magic-missile',
     label: 'Magic missile',
-    description: 'Magic-user, level 1',
+    description: 'Magic-User, level 1',
     icon: 'spell',
     keywords: ['mu'],
   },
-  { value: 'light', label: 'Light', description: 'Cleric or magic-user, level 1', icon: 'torch' },
-  { value: 'read-languages', label: 'Read languages', description: 'Magic-user, level 1', icon: 'scroll' },
-  { value: 'shield', label: 'Shield', description: 'Magic-user, level 1', icon: 'shield', disabled: true },
+  { value: 'light', label: 'Light', description: 'Cleric or Magic-User, level 1', icon: 'torch' },
+  { value: 'read-languages', label: 'Read languages', description: 'Magic-User, level 1', icon: 'scroll' },
+  { value: 'shield', label: 'Shield', description: 'Magic-User, level 1', icon: 'shield', disabled: true },
 ];
 
 export function FormsSection() {

@@ -1,5 +1,5 @@
 import type { AbilityTables } from '@bxvtt/shared/bxapi';
-import { abilityLabel, classLabel, joinList } from '@bxvtt/shared/text';
+import { abilityLabel, classInSentence, classLabel, joinList } from '@bxvtt/shared/text';
 import { useEffect, useRef } from 'react';
 import type { ClassDetail } from '@/app';
 import { Banner, Button, IconButton, Spinner, StatBox, cx, formatModifier } from '@/ui';
@@ -84,7 +84,7 @@ export function AdjustStep({
   const before = detail ? xpModifierFor(detail, scores) : null;
   const after = detail ? xpModifierFor(detail, adjusted) : null;
   const traded = hasAdjustment(adjustment);
-  const name = detail ? classLabel(detail.id).toLowerCase() : 'this class';
+  const name = detail ? classInSentence(classLabel(detail.id)) : 'this class';
   const unfinished = traded && check.status === 'in_progress';
   const guidance = check.status === 'in_progress' ? check.guidance : [];
   const blockedNote = useRef<HTMLParagraphElement>(null);

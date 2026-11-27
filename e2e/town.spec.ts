@@ -210,7 +210,7 @@ test.describe('town', () => {
     await openTownTab(page, 'Rest and prepare');
     const rest = page.getByRole('tabpanel', { name: 'Rest and prepare' });
     await expect(rest.getByRole('button', { name: "Open Flarg's sheet" })).toBeVisible();
-    await expect(rest.getByText('Level 1 magic-user, 1 in spell book, none memorized')).toBeVisible();
+    await expect(rest.getByText('Level 1 Magic-User, 1 in spell book, none memorized')).toBeVisible();
     await rest.getByRole('button', { name: "Open Clarence's spells" }).click();
     const clarence = page.getByRole('dialog', { name: 'Clarence' });
     await expect(clarence.getByRole('tab', { name: 'Spells' })).toHaveAttribute('aria-selected', 'true');

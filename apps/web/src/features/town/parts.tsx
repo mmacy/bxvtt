@@ -1,6 +1,5 @@
 /** Small pieces that several parts of the town share: seat owners, member choosers, and the purse line. */
 import type { MemberView } from '@bxvtt/shared/bxapi';
-import { classInSentence } from '@bxvtt/shared/text';
 import type { ReactNode } from 'react';
 import { memberClassName, tokenClass, useMembers, useSeats } from '@/app';
 import { Avatar, CoinPurse, Icon, TokenPortrait, cx, type IconName, type TokenSize } from '@/ui';
@@ -58,9 +57,9 @@ export function classLine(member: MemberView): string {
   return `${memberClassName(member)} ${member.level}`;
 }
 
-/** The level and class as the sheet and the marching order write them: "Level 1 magic-user". */
+/** The level and class as the sheet and the marching order write them: "Level 1 Magic-User". */
 export function levelClassLine(member: MemberView): string {
-  return `Level ${member.level} ${classInSentence(memberClassName(member))}`;
+  return `Level ${member.level} ${memberClassName(member)}`;
 }
 
 /** A member's purse as coins. */

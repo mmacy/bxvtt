@@ -15,13 +15,14 @@ import type { FullCatalogEntries } from '@bxvtt/shared/protocol';
 import {
   abilityLabel,
   alignmentLabel,
+  classLabel,
   commandInfo,
   formatDice,
   itemTypeLabel,
   ordinal,
   weaponQualityLabel,
 } from '@bxvtt/shared/text';
-import { SECTIONS, TABLE_ANCHORS, tableSetInfo, titleFromId, type Route, type SectionId } from './model';
+import { SECTIONS, TABLE_ANCHORS, tableSetInfo, type Route, type SectionId } from './model';
 import {
   formatArmourClass,
   formatCost,
@@ -37,7 +38,7 @@ export interface SearchItem {
   kind: ResultKind;
   id: string;
   name: string;
-  /** The line under the name: "Magic-user spell, level 1". */
+  /** The line under the name: "Magic-User spell, level 1". */
   subtitle: string;
   route: Route;
   nameNorm: string;
@@ -68,11 +69,9 @@ export interface Catalogs {
   fullEquipment?: readonly FullCatalogEntries['equipment'][] | null;
 }
 
-const SPELL_LISTS: Record<string, string> = { cleric: 'Cleric', magic_user: 'Magic-user' };
-
-/** The name of a spell list for display: `Magic-user`. */
+/** The name of a spell list for display, which is the name of its class: `Magic-User`. */
 export function spellListLabel(list: string): string {
-  return SPELL_LISTS[list] ?? titleFromId(list);
+  return classLabel(list);
 }
 
 function words(text: string): string[] {

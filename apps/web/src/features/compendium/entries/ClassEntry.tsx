@@ -1,6 +1,13 @@
 import { useEquipmentCatalog } from '@/app';
 import type { ClassDefinition } from '@bxvtt/shared/bxapi';
-import { abilityLabel, formatInteger, languageLabel, ordinal, saveLabel } from '@bxvtt/shared/text';
+import {
+  abilityLabel,
+  classInSentence,
+  formatInteger,
+  languageLabel,
+  ordinal,
+  saveLabel,
+} from '@bxvtt/shared/text';
 import { Button, Icon, classIconNames } from '@/ui';
 import { useEntry } from '../catalogs';
 import { EntryFrame } from '../Frame';
@@ -315,7 +322,7 @@ export function ClassEntry({ id }: { id: string }) {
                               size="sm"
                               variant="secondary"
                               icon="spell"
-                              tooltip={`Show every ${spellListLabel(list)} spell in the spells index`}
+                              tooltip={`Show every ${classInSentence(spellListLabel(list))} spell in the spells index`}
                               onClick={() => {
                                 setIndex({ spells: { list, level: 'all', query: '' } });
                                 go({ page: 'section', section: 'spells' });

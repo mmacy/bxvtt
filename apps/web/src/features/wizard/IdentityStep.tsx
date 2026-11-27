@@ -1,5 +1,11 @@
 import type { Language, SpellSummary } from '@bxvtt/shared/bxapi';
-import { alignmentDescription, alignmentLabel, classLabel, languageLabel } from '@bxvtt/shared/text';
+import {
+  alignmentDescription,
+  alignmentLabel,
+  classInSentence,
+  classLabel,
+  languageLabel,
+} from '@bxvtt/shared/text';
 import { useState } from 'react';
 import { useMyCharacters, displayStringProblem, type ClassDetail } from '@/app';
 import {
@@ -130,7 +136,7 @@ export function IdentityStep(props: IdentityStepProps) {
     magic?.kind === 'arcane'
       ? (spellCatalog ?? []).filter((s) => s.spell_list === magic.spellList && s.level === 1)
       : [];
-  const className = detail ? classLabel(detail.id).toLowerCase() : 'character';
+  const className = detail ? classInSentence(classLabel(detail.id)) : 'character';
 
   return (
     <div className={styles.identityGrid}>

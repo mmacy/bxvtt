@@ -1,6 +1,6 @@
 import { useMonsterCatalog, type SpellDetail } from '@/app';
 import type { SpellMode } from '@bxvtt/shared/bxapi';
-import { ordinal } from '@bxvtt/shared/text';
+import { classInSentence, ordinal } from '@bxvtt/shared/text';
 import { Button } from '@/ui';
 import { useEntry, useFullCatalog } from '../catalogs';
 import { EntryFrame } from '../Frame';
@@ -66,7 +66,7 @@ export function SpellEntry({ id }: { id: string }) {
                     variant="secondary"
                     size="sm"
                     icon="spell"
-                    tooltip={`Show the ${ordinal(spell.level)} level ${listName} spells`}
+                    tooltip={`Show the ${ordinal(spell.level)} level ${classInSentence(listName)} spells`}
                     className={styles.listButton}
                     onClick={() => {
                       setIndex({ spells: { list: spell.spell_list, level: String(spell.level), query: '' } });

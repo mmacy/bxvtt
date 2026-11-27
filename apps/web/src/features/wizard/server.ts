@@ -6,6 +6,7 @@
 import { isProblem, type BxvttClient } from '@bxvtt/shared/client';
 import type { AbilityRoll, CharacterCheck, CharacterRequest, Problem } from '@bxvtt/shared/protocol';
 import {
+  classInSentence,
   classLabel,
   describeRejections,
   emptyContext,
@@ -190,7 +191,7 @@ export function explainCreationError(error: unknown, options: ExplainOptions = {
       sentences: [
         classId === undefined
           ? 'You already rolled hit points for these ability scores, which fixed your class.'
-          : `You already rolled hit points as ${withArticle(classLabel(classId).toLowerCase())}, which fixed your class.`,
+          : `You already rolled hit points as ${withArticle(classInSentence(classLabel(classId)))}, which fixed your class.`,
         ...(canStartOver ? ['To play another class, choose Start over and roll new ability scores.'] : []),
       ],
     };

@@ -514,7 +514,7 @@ describe('the rest panel caster line', () => {
     const { user } = setup(snapshot);
     await user.click(screen.getByRole('tab', { name: 'Rest and prepare' }));
     expect(
-      await screen.findByText('Level 1 magic-user, 1 in spell book, none memorized'),
+      await screen.findByText('Level 1 Magic-User, 1 in spell book, none memorized'),
     ).toBeInTheDocument();
   });
 });

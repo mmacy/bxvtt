@@ -6,4 +6,9 @@ describe('memberClassName', () => {
     expect(memberClassName({ class_id: 'hollow_knight', class_name: 'Hollow knight' })).toBe('Hollow knight');
     expect(memberClassName({ class_id: 'magic_user', class_name: '' })).toBe('Magic-User');
   });
+
+  it('capitalizes the first letter of a custom class and keeps the rest as the referee wrote it', () => {
+    expect(memberClassName({ class_id: 'hollow_knight', class_name: 'hollow knight' })).toBe('Hollow knight');
+    expect(memberClassName({ class_id: 'warlock', class_name: 'warlock of Sarn' })).toBe('Warlock of Sarn');
+  });
 });

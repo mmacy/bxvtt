@@ -93,9 +93,7 @@ export function ReviewStep({
           <p className={styles.reviewClass}>
             Level 1{' '}
             {detail ? (
-              <RuleLink entry={{ kind: 'classes', id: detail.id }}>
-                {classLabel(detail.id).toLowerCase()}
-              </RuleLink>
+              <RuleLink entry={{ kind: 'classes', id: detail.id }}>{classLabel(detail.id)}</RuleLink>
             ) : null}
             {title ? ` · ${title}` : ''} ·{' '}
             {draft.alignment ? alignmentLabel(draft.alignment) : 'No alignment'}
