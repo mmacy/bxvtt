@@ -74,6 +74,7 @@
 
 .rowBetween {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
@@ -87,11 +88,6 @@
   font-size: var(--text-sm);
 }
 
-.okLine {
-  color: var(--color-success);
-  font-size: var(--text-sm);
-}
-
 .fieldError {
   margin: 0;
   color: var(--color-danger);
@@ -100,6 +96,13 @@
 
 .footerStart {
   margin-inline-end: auto;
+}
+
+/* Back and the primary button stay together. When the footer wraps, Start over takes the line above them. */
+.footerActions {
+  display: flex;
+  gap: var(--space-2);
+  margin-inline-start: auto;
 }
 
 .footerNote {
@@ -267,7 +270,7 @@
 
 .classGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
   gap: var(--space-3);
 }
 
@@ -522,6 +525,14 @@
 
 .fieldset > legend {
   margin-bottom: var(--space-2);
+  padding: 0;
+}
+
+/* A legend that heads a column reads as the heading beside it, which the page styles as a display heading. */
+.fieldset > legend.subTitle {
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-plain);
+  line-height: var(--leading-snug);
 }
 
 .languageGrid {
@@ -688,6 +699,14 @@
   align-items: start;
 }
 
+/* Up to the tablet breakpoint (1100 px) the cart sits under the equipment. The equipment table needs 500 px, and
+   beside the cart it has that much room only from about 960 px, so the table takes the full width instead. */
+@media (max-width: 1100px) {
+  .outfitGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .shop {
   display: flex;
   flex-direction: column;
@@ -706,6 +725,27 @@
   flex: 1 1 200px;
 }
 
+/* The type filter scrolls inside its own box when its segments don't fit. On a phone narrower than 390 px, where
+   the segments need about 291 px and don't fit, they wrap onto a second line instead, so no segment hides past
+   the edge. */
+.shopControls > :last-child {
+  overflow-x: auto;
+}
+
+@media (max-width: 389px) {
+  .typeFilter {
+    flex-wrap: wrap;
+  }
+}
+
+/* The gold left badge and the kit button share the right end of the Equipment heading row. */
+.shopActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .shopName {
   color: var(--color-text-strong);
   font-weight: var(--weight-semibold);
@@ -722,6 +762,7 @@
 }
 
 .cartPanel {
+  container: cart / inline-size;
   position: sticky;
   top: 88px;
   display: flex;
@@ -731,6 +772,14 @@
   border: var(--border-hair) solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface-2);
+}
+
+/* Under the table the cart keeps a reading width, so its rows stay close to their steppers and prices. */
+@media (max-width: 1100px) {
+  .cartPanel {
+    position: static;
+    max-width: var(--measure-prose);
+  }
 }
 
 .purse {
@@ -768,15 +817,19 @@
   list-style: none;
 }
 
+/* The stepper, price, and remove button line up with the name's first line, so they stay put when a long name
+   wraps or a row adds a lot line or a checkbox. */
 .cartRow {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto auto;
-  align-items: center;
+  align-items: start;
   gap: var(--space-2);
   padding-bottom: var(--space-2);
   border-bottom: var(--border-hair) solid var(--color-border);
 }
 
+/* The name and the details below it form one block beside the stepper, price, and remove button. */
+.cartText,
 .cartMain {
   display: flex;
   flex-direction: column;
@@ -784,12 +837,65 @@
   min-width: 0;
 }
 
+.cartMain:empty {
+  display: none;
+}
+
+/* The name wraps in full. Its first line sits centered on the 28 px controls beside it. */
 .cartName {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  padding-block-start: calc((var(--control-sm) - 1lh) / 2);
+  overflow-wrap: anywhere;
   color: var(--color-text-strong);
+}
+
+.cartPrice {
+  line-height: var(--control-sm);
+}
+
+/* A stacked cart narrower than 400 px gives each row three lines: the name in full with the remove button, then
+   the lot line and the wear or wield checkbox, then the stepper and the price. Beside the equipment, the cart
+   keeps its one-line rows. */
+@media (max-width: 1100px) {
+  @container cart (max-width: 399px) {
+    .cartRow {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas:
+        'name remove'
+        'main main'
+        'stepper price';
+      row-gap: var(--space-1);
+    }
+
+    .cartText {
+      display: contents;
+    }
+
+    .cartName {
+      grid-area: name;
+    }
+
+    .cartMain {
+      grid-area: main;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      column-gap: var(--space-3);
+    }
+
+    .cartStepper {
+      grid-area: stepper;
+    }
+
+    .cartPrice {
+      grid-area: price;
+      justify-self: end;
+    }
+
+    .cartRemove {
+      grid-area: remove;
+    }
+  }
 }
 
 .goldBig {
@@ -835,24 +941,51 @@
 
 .reviewHeader {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-3);
+  flex-direction: column;
+  gap: var(--space-1);
   padding-bottom: var(--space-3);
   border-bottom: var(--border-thick) double var(--color-border-strong);
 }
 
-.reviewName {
-  margin: 0;
+/* A label that phone width reduces to its icon stays in the accessible name. */
+@media (max-width: 480px) {
+  .narrowHidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+}
+
+/* The name field stands where the finished sheet shows the name, so it takes the sheet's display face. */
+.reviewNameInput {
   font-family: var(--font-display);
   font-variation-settings: var(--font-display-soft);
-  font-size: var(--text-4xl);
+  font-size: var(--text-2xl);
   font-weight: var(--weight-semibold);
-  line-height: var(--leading-tight);
+}
+
+@media (max-width: 480px) {
+  .reviewNameInput {
+    font-size: var(--text-xl);
+  }
+}
+
+/* The class line wraps beside its Change link, which stays at the right edge as the section links do. */
+.reviewClassRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
 }
 
 .reviewClass {
-  margin: var(--space-1) 0 0;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
   font-size: var(--text-lg);
 }
 
@@ -877,10 +1010,22 @@
   gap: var(--space-2);
 }
 
+@media (max-width: 900px) {
+  .reviewAbilities {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 .reviewColumns {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-6);
+}
+
+@media (max-width: 860px) {
+  .reviewColumns {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .reviewText,
@@ -904,6 +1049,12 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-1) var(--space-4);
   margin: 0;
+}
+
+@media (max-width: 480px) {
+  .reviewFacts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .reviewFacts > div {
@@ -954,14 +1105,6 @@
   cursor: pointer;
 }
 
-/* Created ----------------------------------------------------------------------------------------------------- */
-
-.created {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
 /* The shelves, styled as the town's Outfitter catalog. */
 
 .shopNameButton {
@@ -1010,6 +1153,64 @@
 
 .none {
   color: var(--color-text-disabled);
+}
+
+/* The stacked equipment list on a phone: name and cart control on top, price and weight under the name. */
+.stackedList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: var(--border-hair) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-1);
+}
+
+.stackedItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: var(--border-hair) solid var(--color-border);
+}
+
+.stackedItem:last-child {
+  border-bottom: 0;
+}
+
+.stackedName {
+  min-width: 0;
+}
+
+.stackedItem .shopNameButton {
+  align-items: flex-start;
+  padding: 0;
+}
+
+.stackedItem .shopName {
+  overflow-wrap: anywhere;
+}
+
+.stackedItem .shopSub {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.stackedControl {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* The price and weight line starts where the name does, not under the icon. */
+.stackedMeta {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding-inline-start: calc(var(--control-sm) + var(--space-2));
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
 }
 
 .lotStepper {

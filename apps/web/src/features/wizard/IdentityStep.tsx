@@ -2,41 +2,29 @@ import type { Language, SpellSummary } from '@bxvtt/shared/bxapi';
 import {
   alignmentDescription,
   alignmentLabel,
+  capitalizeFirst,
   classInSentence,
   classLabel,
+  joinList,
   languageLabel,
+  withArticle,
 } from '@bxvtt/shared/text';
 import { useState } from 'react';
-import { useMyCharacters, displayStringProblem, type ClassDetail } from '@/app';
-import {
-  Badge,
-  Button,
-  Checkbox,
-  Field,
-  IconButton,
-  Popover,
-  RadioGroup,
-  Skeleton,
-  TextInput,
-  cx,
-} from '@/ui';
+import type { ClassDetail } from '@/app';
+import { Badge, Checkbox, IconButton, Popover, RadioGroup, Skeleton, cx } from '@/ui';
 import { spellDuration, spellRange, withoutPointers } from '../sheet/spellText';
 import { ALIGNMENTS, type Alignment } from './draft';
-import { suggestName } from './names';
 import type { ClassMagic } from './tables';
 import { RuleLink } from '../sheet/RuleLink';
 import styles from './wizard.module.css';
 import { useSpellDetail } from '../sheet/catalogs';
 
 export interface IdentityStepProps {
-  name: string;
-  onName: (name: string) => void;
   alignment: Alignment | null;
   onAlignment: (alignment: Alignment) => void;
   detail: ClassDetail | null;
   /** How many extra languages the intelligence table lists for the character's INT. */
   extraLanguages: number;
-  intelligence: number;
   languages: string[];
   onLanguages: (ids: string[]) => void;
   languageCatalog: Language[] | null;
@@ -46,7 +34,7 @@ export interface IdentityStepProps {
   spells: string[];
   onSpells: (ids: string[]) => void;
   spellCatalog: SpellSummary[] | null;
-  /** Shows the name's problem after the player tried to continue. */
+  /** Shows what is missing after the player tried to continue. */
   showErrors: boolean;
 }
 
@@ -108,16 +96,13 @@ function SpellCard({
   );
 }
 
-/** Step 4: the name, the alignment, extra languages, and an arcane caster's first spell. */
+/** Step 4: the alignment, extra languages, and an arcane caster's first spell. */
 export function IdentityStep(props: IdentityStepProps) {
   const {
-    name,
-    onName,
     alignment,
     onAlignment,
     detail,
     extraLanguages,
-    intelligence,
     languages,
     onLanguages,
     languageCatalog,
@@ -128,8 +113,6 @@ export function IdentityStep(props: IdentityStepProps) {
     spellCatalog,
     showErrors,
   } = props;
-  const nameProblem = displayStringProblem(name, 100);
-  const taken = (useMyCharacters().items ?? []).map((c) => c.name);
   const native = detail?.languages ?? [];
   const choosable = (languageCatalog ?? []).filter((l) => l.choosable && !native.includes(l.id));
   const firstSpells =
@@ -141,30 +124,6 @@ export function IdentityStep(props: IdentityStepProps) {
   return (
     <div className={styles.identityGrid}>
       <div className={styles.identityColumn}>
-        <Field
-          label="Name"
-          hint="Choose a name up to 100 characters."
-          error={showErrors && nameProblem ? nameProblem : undefined}
-          required
-        >
-          <TextInput
-            value={name}
-            maxLength={100}
-            autoComplete="off"
-            onChange={(event) => onName(event.target.value)}
-            end={
-              <Button
-                size="sm"
-                variant="ghost"
-                icon="dice"
-                onClick={() => onName(suggestName(detail?.id ?? detail?.race, name, Math.random(), taken))}
-              >
-                Suggest a name
-              </Button>
-            }
-          />
-        </Field>
-
         <fieldset className={styles.fieldset}>
           <legend className={styles.subTitle}>Alignment</legend>
           <RadioGroup
@@ -181,30 +140,35 @@ export function IdentityStep(props: IdentityStepProps) {
             }))}
           />
           {showErrors && alignment === null && <p className={styles.fieldError}>Choose an alignment.</p>}
-          <p className={styles.muted}>
-            Characters of the same alignment also share a secret alignment tongue.
-          </p>
         </fieldset>
       </div>
 
       <div className={styles.identityColumn}>
         <section className={styles.fieldset} aria-labelledby="wizard-languages">
-          <h3 id="wizard-languages" className={styles.subTitle}>
-            Languages
-          </h3>
+          <div className={styles.rowBetween}>
+            <h3 id="wizard-languages" className={styles.subTitle}>
+              Languages
+            </h3>
+            {extraLanguages > 0 && (
+              <Badge tone={languages.length === extraLanguages ? 'success' : 'neutral'}>
+                {languages.length} of {extraLanguages} chosen
+              </Badge>
+            )}
+          </div>
           <p className={styles.prose}>
-            A {className} speaks{' '}
-            {native.length > 0 ? native.map((id) => languageLabel(id)).join(', ') : 'Common'} and their
-            alignment tongue.
+            {capitalizeFirst(withArticle(className))} speaks{' '}
+            {joinList([
+              ...(native.length > 0 ? native.map((id) => languageLabel(id)) : ['Common']),
+              'the alignment tongue',
+            ])}
+            .
           </p>
-          {extraLanguages > 0 ? (
+          {extraLanguages > 0 && (
             <>
-              <p className={styles.muted}>
-                With Intelligence {intelligence}, you can learn {extraLanguages} extra{' '}
-                {extraLanguages === 1 ? 'language' : 'languages'}. Chosen: {languages.length} of{' '}
-                {extraLanguages}.
+              <p id="wizard-extra-languages" className={styles.muted}>
+                Extra languages
               </p>
-              <div className={styles.languageGrid}>
+              <div className={styles.languageGrid} role="group" aria-labelledby="wizard-extra-languages">
                 {choosable.map((language) => {
                   const checked = languages.includes(language.id);
                   return (
@@ -223,8 +187,6 @@ export function IdentityStep(props: IdentityStepProps) {
                 })}
               </div>
             </>
-          ) : (
-            <p className={styles.muted}>With Intelligence {intelligence}, you gain no extra languages.</p>
           )}
         </section>
 
@@ -234,14 +196,10 @@ export function IdentityStep(props: IdentityStepProps) {
               <h3 id="wizard-spells" className={styles.subTitle}>
                 First {bookSize === 1 ? 'spell' : 'spells'}
               </h3>
-              <Badge tone={spells.length === bookSize ? 'success' : 'magic'}>
+              <Badge tone={spells.length === bookSize ? 'success' : 'neutral'}>
                 {spells.length} of {bookSize} chosen
               </Badge>
             </div>
-            <p className={styles.muted}>
-              Choose {bookSize === 1 ? '1 first-level spell' : `${bookSize} first-level spells`} for your
-              starting spell book. Check with your referee if they assign starting spells at your table.
-            </p>
             {showErrors && spells.length !== bookSize && (
               <p className={styles.fieldError}>
                 Choose {bookSize === 1 ? 'a spell' : `${bookSize} spells`} for your spell book.
@@ -273,17 +231,6 @@ export function IdentityStep(props: IdentityStepProps) {
                 })}
               </div>
             )}
-          </section>
-        )}
-        {magic?.kind === 'divine' && (
-          <section className={styles.fieldset} aria-labelledby="wizard-divine">
-            <h3 id="wizard-divine" className={styles.subTitle}>
-              Spells
-            </h3>
-            <p className={styles.muted}>
-              A {className} doesn&apos;t keep a spell book. Instead, they pray for spells each day once they
-              reach a level with spell slots.
-            </p>
           </section>
         )}
       </div>

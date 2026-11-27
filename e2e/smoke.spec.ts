@@ -42,7 +42,6 @@ async function createWithWizard(actor: Actor, choices: WizardChoices): Promise<v
   await wizard.getByRole('button', { name: choices.className }).click();
   await wizard.getByRole('button', { name: 'Continue' }).click();
   await wizard.getByRole('button', { name: 'Skip this step' }).click();
-  await wizard.getByRole('textbox', { name: 'Name' }).fill(choices.name);
   await wizard.getByRole('radiogroup', { name: 'Alignment' }).getByRole('radio', { name: 'Lawful' }).click();
   if (choices.spell) await wizard.getByRole('button', { name: choices.spell }).click();
   await wizard.getByRole('button', { name: 'Continue' }).click();
@@ -50,14 +49,12 @@ async function createWithWizard(actor: Actor, choices: WizardChoices): Promise<v
   await wizard.getByRole('button', { name: 'Roll starting gold' }).click();
   await wizard.getByRole('button', { name: 'Continue' }).click();
   await wizard.getByRole('button', { name: /^Fill with the .* kit$/ }).click();
-  await expect(wizard.getByText('Your character can afford and use this equipment.')).toBeVisible({
-    timeout: 20_000,
-  });
-  await wizard.getByRole('button', { name: 'Continue' }).click();
+  const proceed = wizard.getByRole('button', { name: 'Continue' });
+  await expect(proceed).toBeEnabled({ timeout: 20_000 });
+  await proceed.click();
+  await wizard.getByRole('textbox', { name: 'Name' }).fill(choices.name);
   await wizard.getByRole('button', { name: 'Create character' }).click();
-  const ready = page.getByRole('dialog', { name: `${choices.name} is ready` });
-  await ready.getByRole('button', { name: 'Done' }).click();
-  await expect(ready).toHaveCount(0);
+  await expect(wizard).toHaveCount(0, { timeout: 20_000 });
   await expect(
     page
       .getByRole('list', { name: 'Party in marching order' })

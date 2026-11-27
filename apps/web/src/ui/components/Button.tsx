@@ -1,6 +1,6 @@
 import { Slot } from 'radix-ui';
 import { useComposedRefs } from 'radix-ui/internal';
-import { forwardRef, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, isValidElement, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { Icon, type IconName } from '../icons/Icon';
 import { cx } from '../lib/cx';
 import { hasContent, joinIds, labelIsCut, useControlHelp, type ControlHelpProps } from './ControlHelp';
@@ -37,10 +37,20 @@ const iconSize: Record<ButtonSize, number> = { sm: 14, md: 16, lg: 18 };
 
 const preventDefault = (event: { preventDefault: () => void }) => event.preventDefault();
 
+/** The text of a label, including the text inside its elements, such as a span that hides it at phone width. */
+function labelText(node: ReactNode): string {
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(labelText).join('');
+  if (isValidElement<{ children?: ReactNode }>(node)) return labelText(node.props.children);
+  return '';
+}
+
 /**
  * The kit's only button. Use `variant` for emphasis and `asChild` to style a link as a button. Pass `tooltip` for
  * help the label doesn't give, and `disabledReason` with `disabled` to say why the button is unavailable. When an
- * action bar hides the label, or the label is cut off, the button shows its label as a tooltip.
+ * action bar hides the label, or the label is cut off, the button shows its label as a tooltip. A label that your
+ * own styles hide at some widths isn't detected, so pass the label as `tooltip` too, which screen readers then
+ * don't hear twice.
  */
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   {
@@ -73,7 +83,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   const fallback = !explicit && !asChild && rest.title === undefined;
   const help = useControlHelp({
     tooltip: explicit ? tooltip : fallback ? children : null,
-    tooltipIsName: !explicit,
+    // A tooltip that repeats the label, for a label hidden at some widths, adds no description.
+    tooltipIsName:
+      !explicit || (typeof tooltip === 'string' && tooltip.trim() === labelText(children).trim()),
     reason: disabled && hasContent(disabledReason) ? disabledReason : null,
     shortcut,
     side: tooltipSide,

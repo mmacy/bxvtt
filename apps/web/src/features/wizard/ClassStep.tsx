@@ -1,6 +1,7 @@
 import type { ClassSummary, EquipmentSummary } from '@bxvtt/shared/bxapi';
 import {
   abilityLabel,
+  capitalizeFirst,
   classInSentence,
   classLabel,
   emptyContext,
@@ -178,8 +179,6 @@ export interface ClassStepProps {
   locked?: boolean;
   /** Whether the roll's rules took the maximum hit points instead of rolling them. */
   maxHitPoints?: boolean;
-  /** Whether the wizard offers Start over, because the table lets the player roll new ability scores. */
-  canStartOver?: boolean;
 }
 
 /** Step 2: choose a class, with the facts a new player needs and the reason a class is out of reach. */
@@ -192,7 +191,6 @@ export function ClassStep({
   equipment,
   locked = false,
   maxHitPoints = false,
-  canStartOver = true,
 }: ClassStepProps) {
   const selected = useClassDetail(classId ? classId : null);
   if (classes === null) return <Skeleton shape="block" height={360} />;
@@ -208,9 +206,8 @@ export function ClassStep({
         >
           <span id={LOCK_NOTE_ID}>
             {maxHitPoints
-              ? 'You took the maximum hit points for these ability scores, which fixed your class.'
-              : 'You rolled hit points for these ability scores, which fixed your class.'}
-            {canStartOver && ' To play another class, choose Start over and roll new ability scores.'}
+              ? 'You took the maximum hit points for these ability scores.'
+              : 'You rolled hit points for these ability scores.'}
           </span>
         </Banner>
       )}
@@ -239,8 +236,8 @@ export function ClassStep({
           </h3>
           {selected.data.abilities.length === 0 ? (
             <p className={styles.muted}>
-              A {classInSentence(classLabel(selected.data.id))} has no special abilities and relies on armour,
-              weapons, and hit points.
+              {capitalizeFirst(withArticle(classInSentence(classLabel(selected.data.id))))} has no special
+              abilities.
             </p>
           ) : (
             <Accordion

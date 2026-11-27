@@ -3,6 +3,7 @@
  * so each roll repeats. The seed also fixes the hit points and gold, which bxapi rolls from the same roll.
  */
 import { expect, type Locator, type Page } from '@playwright/test';
+import type { Actor } from './fixtures';
 
 /** The class card's accessible name is the class name. Its details are the card's description. */
 export const CLASS_CARDS = {
@@ -37,12 +38,17 @@ export function wizard(page: Page): Locator {
   return page.getByRole('dialog', { name: 'Create a character' });
 }
 
+/** The lobby's wizard button, which reads "Resume character" while an unfinished character waits. */
+export function wizardButton(page: Page, label: 'Create a character' | 'Resume character'): Locator {
+  return page.getByRole('region', { name: 'Your characters' }).getByRole('button', { name: label });
+}
+
 /** Opens the wizard from the lobby's "Your characters" section. */
-export async function openWizard(page: Page): Promise<Locator> {
-  await page
-    .getByRole('region', { name: 'Your characters' })
-    .getByRole('button', { name: 'Create a character' })
-    .click();
+export async function openWizard(
+  page: Page,
+  label: 'Create a character' | 'Resume character' = 'Create a character',
+): Promise<Locator> {
+  await wizardButton(page, label).click();
   const dialog = wizard(page);
   await expect(dialog).toBeVisible();
   return dialog;
@@ -102,10 +108,9 @@ export async function chooseClass(dialog: Locator, classId: WizardClass): Promis
   await expect(dialog.getByRole('heading', { name: 'Adjust scores', level: 3 })).toBeVisible();
 }
 
-/** Names the character and picks an alignment on the identity step, without continuing. */
-export async function fillIdentity(dialog: Locator, name: string, alignment = 'Lawful'): Promise<void> {
-  await expect(dialog.getByRole('heading', { name: 'Identity', level: 3 })).toBeVisible();
-  await dialog.getByRole('textbox', { name: 'Name' }).fill(name);
+/** Picks an alignment on the alignment and languages step, without continuing. */
+export async function chooseAlignment(dialog: Locator, alignment = 'Lawful'): Promise<void> {
+  await expect(dialog.getByRole('heading', { name: 'Alignment and languages', level: 3 })).toBeVisible();
   await dialog.getByRole('radio', { name: alignment }).click();
 }
 
@@ -136,20 +141,35 @@ export async function addToCart(dialog: Locator, items: string[]): Promise<void>
   for (const item of items) await dialog.getByRole('button', { name: `Add ${item} to the cart` }).click();
 }
 
+/**
+ * Opens the wizard at a table as a fighter and goes through to the outfit step. The actor needs `seedAbilityRolls`
+ * not to have been called yet.
+ *
+ * @returns The wizard dialog.
+ */
+export async function reachOutfit(actor: Actor, tableId: string): Promise<Locator> {
+  await actor.seedAbilityRolls([ROLL_SEEDS.fighter]);
+  await actor.page.goto(`/tables/${tableId}`);
+  const dialog = await openWizard(actor.page);
+  await rollFor(dialog, 'fighter');
+  await next(dialog);
+  await chooseClass(dialog, 'fighter');
+  await dialog.getByRole('button', { name: 'Skip this step' }).click();
+  await chooseAlignment(dialog);
+  await next(dialog);
+  await rollHitPointsAndGold(dialog);
+  return dialog;
+}
+
 /** The cart panel on the outfit step. */
 export function cart(dialog: Locator): Locator {
   return dialog.getByRole('complementary', { name: 'Cart' });
 }
 
-/**
- * Creates the character from the review step, waits for the "is ready" dialog that shows the new sheet, and
- * closes it with Done.
- */
+/** Names the character on the review step, creates it, and waits for the wizard to close onto the lobby. */
 export async function createFromReview(page: Page, dialog: Locator, name: string): Promise<void> {
   await expect(dialog.getByRole('heading', { name: 'Review', level: 3 })).toBeVisible();
+  await dialog.getByRole('textbox', { name: 'Name' }).fill(name);
   await dialog.getByRole('button', { name: 'Create character' }).click();
-  const ready = page.getByRole('dialog', { name: `${name} is ready` });
-  await expect(ready).toBeVisible({ timeout: 20_000 });
-  await ready.getByRole('button', { name: 'Done' }).click();
-  await expect(ready).toHaveCount(0);
+  await expect(wizard(page)).toHaveCount(0, { timeout: 20_000 });
 }

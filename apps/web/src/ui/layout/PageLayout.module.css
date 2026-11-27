@@ -79,3 +79,10 @@
     padding-block: var(--space-6) var(--space-10);
   }
 }
+
+/* At 320 px the brand, nav, and header actions need tighter gaps to fit beside the page's side padding. */
+@media (max-width: 480px) {
+  .headerInner {
+    gap: var(--space-3);
+  }
+}

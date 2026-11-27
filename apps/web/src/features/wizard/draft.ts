@@ -9,6 +9,7 @@ import {
   type StartingRollRequest,
   type StartingRollsStatus,
 } from '@bxvtt/shared/protocol';
+import { displayStringProblem } from '@/app';
 import { ABILITIES, isAbility, readScores, type Ability, type Scores } from './tables';
 import type { CartLine } from './kits';
 
@@ -117,6 +118,11 @@ export interface RequestOptions {
   withoutOutfit?: boolean;
   /** Fills a missing name and alignment, to check an early step before the player reaches the identity step. */
   placeholderIdentity?: boolean;
+  /**
+   * Fills a missing or unusable name and keeps the chosen alignment, to check a step before the review step, where
+   * the player names the character.
+   */
+  placeholderName?: boolean;
 }
 
 /**
@@ -127,8 +133,11 @@ export interface RequestOptions {
  */
 export function requestFromDraft(draft: WizardDraft, options: RequestOptions = {}): CharacterRequest {
   const name = draft.name.trim();
+  const standIn =
+    (options.placeholderIdentity && name === '') ||
+    (options.placeholderName && displayStringProblem(draft.name, 100) !== null);
   const body: CharacterRequest = {
-    name: name === '' && options.placeholderIdentity ? 'Adventurer' : name,
+    name: standIn ? 'Adventurer' : name,
     class_id: draft.classId ?? '',
     alignment: draft.alignment ?? 'neutral',
     ability_roll_id: draft.roll?.id ?? '',
@@ -367,6 +376,17 @@ export function loadDraft(userId: string | null | undefined, tableId: string): W
     // Blocked storage keeps the old draft. It never loads at a table, so it does no harm.
   }
   return legacy;
+}
+
+/**
+ * Whether the user has an unfinished character at a table: a stored draft that holds an ability roll. Unlike
+ * {@link loadDraft}, it changes nothing in storage, so the lobby can call it whenever it renders the wizard button.
+ *
+ * @param userId - The user.
+ * @param tableId - The table.
+ */
+export function hasDraft(userId: string | null | undefined, tableId: string): boolean {
+  return readStored(draftKey(userId, tableId)) !== null;
 }
 
 /**

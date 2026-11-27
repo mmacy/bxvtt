@@ -118,15 +118,27 @@ button.inner:hover .label {
   overflow-wrap: anywhere;
 }
 
-/* In a narrow container, only the current step keeps its label. */
+/* In a narrow container, only the current step shows its label. The other labels stay in the accessible names, so
+   the steps still read and work by keyboard. The steps scroll inside their own box when they don't fit, and the
+   component scrolls the current step into view. */
 @container (max-width: 560px) {
   .complete .text,
   .upcoming .text {
-    display: none;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 
   .steps {
     align-items: center;
+    overflow-x: auto;
+    /* Room for the marker's ring and glow, which the scroll box would otherwise clip. */
+    padding: var(--space-1);
   }
 
   .step {
@@ -141,5 +153,21 @@ button.inner:hover .label {
 
   .step:not(:last-child)::after {
     display: none;
+  }
+}
+
+/* Up to a 420 px stepper, the markers leave too little room to show the current label in full, and the step
+   heading under the stepper already shows it, so the label is hidden rather than cut short. The label stays in the
+   step's accessible name. From 421 px the longest step label fits. */
+@container (max-width: 420px) {
+  .current .text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 }

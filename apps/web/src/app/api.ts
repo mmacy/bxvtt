@@ -312,6 +312,25 @@ export function reportError(error: unknown, options: { title?: string } = {}): P
   return message;
 }
 
+/** Why the server would refuse a display string: nothing after trimming, too many characters, or invisible ones. */
+export type DisplayStringIssue = 'empty' | 'too_long' | 'invisible';
+
+/**
+ * Checks a display string (a user name, table name, save label, or character name) the way the server will, and
+ * says which rule it breaks. A form that words the problem its own way branches on the result.
+ *
+ * @param value - The text the user typed.
+ * @param max - The most characters it may have, such as `LIMITS.userName`.
+ * @returns The rule the text breaks, or `null` when the text is fine.
+ */
+export function displayStringIssue(value: string, max: number): DisplayStringIssue | null {
+  const text = value.trim();
+  if (text === '') return 'empty';
+  if ([...text].length > max) return 'too_long';
+  if (!displayString(max).safeParse(text).success) return 'invisible';
+  return null;
+}
+
 /**
  * Checks a display string (a user name, table name, or save label) the way the server will, so a form can stop
  * the user before the server refuses it.
@@ -321,11 +340,14 @@ export function reportError(error: unknown, options: { title?: string } = {}): P
  * @returns A sentence that explains the problem, or `null` when the text is fine.
  */
 export function displayStringProblem(value: string, max: number): string | null {
-  const text = value.trim();
-  if (text === '') return 'Enter at least one character.';
-  if ([...text].length > max) return `Use at most ${max} characters.`;
-  if (!displayString(max).safeParse(text).success) {
-    return "Remove the invisible characters. Names can't contain control characters or text direction marks.";
+  switch (displayStringIssue(value, max)) {
+    case 'empty':
+      return 'Enter at least one character.';
+    case 'too_long':
+      return `Use at most ${max} characters.`;
+    case 'invisible':
+      return "Remove the invisible characters. Names can't contain control characters or text direction marks.";
+    case null:
+      return null;
   }
-  return null;
 }

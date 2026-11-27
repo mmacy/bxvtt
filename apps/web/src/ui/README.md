@@ -206,7 +206,7 @@ Put help in visible text instead of a tooltip when any of these is true:
 | Export | Description | Source |
 | --- | --- | --- |
 | `Tabs`, `TabsList`, `TabsTrigger`, `TabsContent` | Line or enclosed tabs with icons, unread badges, and `keepMounted` state preservation. | `components/Tabs.tsx` |
-| `Dialog`, `DialogClose`, `ConfirmDialog`, `Drawer` | Modal dialogs, async confirmation dialog, and side/bottom sheet (`dimmed={false}` optional) with focus restoration. | `components/Dialog.tsx` |
+| `Dialog`, `DialogClose`, `ConfirmDialog`, `Drawer` | Modal dialogs (pass `dismissOnOutsideClick={false}` so an outside click doesn't close one), async confirmation dialog, and side/bottom sheet (`dimmed={false}` optional) with focus restoration. | `components/Dialog.tsx` |
 | `Popover`, `Tooltip`, `TooltipProvider` | Anchored non-modal popover (requires `title` or `label`) and hover/focus tooltip for a trigger that isn't a kit control. | `components/Popover.tsx` |
 | `DropdownMenu`, `ContextMenu` | Button menu and right-click / long-press / `Shift+F10` menu. | `components/Menu.tsx` |
 | `toast`, `ToastProvider`, `Toaster` | Polite and assertive live-region toast notifications. | `components/toastStore.ts`, `components/Toast.tsx` |

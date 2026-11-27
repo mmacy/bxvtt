@@ -70,7 +70,7 @@ The SRD has two optional rules for creating a character, and both are switches u
 
 - **4d6 drop lowest (off by default):** Each ability score is the total of the highest three of four d6, instead of 3d6. The wizard shows all four dice and marks the one that doesn't count.
 - **Ability score rerolls (0 by default):** How many times each player can roll new ability scores for one character. A player's first roll is free, and each later roll uses one reroll. Enter a whole number from 0 to 99, or check **Unlimited**. At 0, the wizard offers no **Roll again** button, and the player keeps the first roll. Creating a character starts the count again for the next character, and a player can't make a character from an older roll once they roll again. A change to the number takes effect when you leave the field or press Enter.
-- **Maximum hit points (off by default):** A first-level character starts with the highest number on the hit die instead of rolling it. The wizard's hit points step shows **Maximum hit points** and a **Take the maximum** button.
+- **Maximum hit points (off by default):** A first-level character starts with the highest number on the hit die instead of rolling it. The wizard's hit points step shows **Maximum hit points** and a **Take the maximum** button, and the review step says the table gives the maximum.
 
 ### When a change takes effect
 

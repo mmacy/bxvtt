@@ -3,6 +3,7 @@ import { useMemo, useState, type DragEvent } from 'react';
 import {
   getApi,
   useApiAction,
+  useCurrentUser,
   useIsReferee,
   useMembers,
   useMyCharacters,
@@ -12,7 +13,7 @@ import {
 } from '@/app';
 import { Button, EmptyState, IconButton, Skeleton, cx } from '@/ui';
 import { StoredCharacterCard } from '@/features/sheet';
-import { CharacterWizard } from '@/features/wizard';
+import { CharacterWizard, hasDraft } from '@/features/wizard';
 import { CreationRulesMark } from './CreationRulesMark';
 import styles from './lobby.module.css';
 
@@ -46,6 +47,9 @@ export function RosterPanel() {
   const [pendingOrder, setPendingOrder] = useState<string[] | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
+  // A list change isn't announced, so a screen reader hears that the wizard's new character joined the party.
+  // Each add puts a new element in the live region, so a second character with the same name is announced too.
+  const [joined, setJoined] = useState<{ text: string; count: number } | null>(null);
 
   const roster = useMemo(() => {
     const entries = table?.roster ?? [];
@@ -209,36 +213,57 @@ export function RosterPanel() {
           Drag cards or use the arrows to set the marching order. Rank 1 leads the party.
         </p>
       )}
-      <MyCharacters />
+      <p role="status" className="visually-hidden">
+        {joined && <span key={joined.count}>{joined.text}</span>}
+      </p>
+      <MyCharacters
+        onJoined={(name) =>
+          setJoined((last) => ({ text: `${name} joined the party.`, count: (last?.count ?? 0) + 1 }))
+        }
+      />
     </div>
   );
 }
 
-/** The user's stored characters that aren't on the roster, with the character wizard. */
-function MyCharacters() {
+/**
+ * The user's stored characters that aren't on the roster, with the character wizard.
+ *
+ * @param onJoined - Called with the character's name when the wizard's new character joins the party.
+ */
+function MyCharacters({ onJoined }: { onJoined: (name: string) => void }) {
   const table = useTableDetail();
+  const userId = useCurrentUser()?.id ?? null;
+  const tableId = table?.id ?? '';
   const store = useTableStoreApi();
   const { items, loading, error, refresh } = useMyCharacters();
   const { run } = useApiAction();
   const [wizardOpen, setWizardOpen] = useState(false);
   const [adding, setAdding] = useState<string | null>(null);
+  // The lobby reads storage when the section mounts and each time the wizard closes, so an unfinished character
+  // saved in another tab changes the button only after one of those.
+  const [unfinished, setUnfinished] = useState(() => hasDraft(userId, tableId));
   if (table === null) return null;
   const onRoster = new Set(table.roster.map((entry) => entry.character_id));
   const available = (items ?? []).filter((character) => !onRoster.has(character.id));
 
-  const add = async (characterId: string, name: string) => {
+  const add = async (characterId: string, name: string): Promise<boolean> => {
     setAdding(characterId);
     const result = await run(() => getApi().addToRoster(table.id, characterId), {
       errorTitle: `Couldn't add ${name} to the party`,
     });
     if (result.ok) store.getState().receiveTable(result.value);
     setAdding(null);
+    return result.ok;
   };
 
-  // The wizard's success view already says the character is ready, so no toast covers it.
+  // The wizard closes onto the party, where the new character appears, so no toast covers the success.
+  // The player can close the wizard before the server stores the character, so the button reads storage here too.
   const onCreated = (character: StoredCharacter) => {
+    setUnfinished(hasDraft(userId, tableId));
     void refresh();
-    void add(character.id, character.name);
+    void add(character.id, character.name).then((ok) => {
+      if (ok) onJoined(character.name.trim());
+    });
   };
 
   return (
@@ -247,9 +272,15 @@ function MyCharacters() {
         <h3 id="my-characters" className={styles.subTitle}>
           Your characters
         </h3>
-        <Button size="sm" variant="secondary" icon="plus" onClick={() => setWizardOpen(true)}>
-          Create a character
-        </Button>
+        {unfinished ? (
+          <Button size="sm" variant="secondary" iconEnd="arrow-right" onClick={() => setWizardOpen(true)}>
+            Resume character
+          </Button>
+        ) : (
+          <Button size="sm" variant="secondary" icon="plus" onClick={() => setWizardOpen(true)}>
+            Create a character
+          </Button>
+        )}
       </div>
       {loading && items === null && <Skeleton shape="block" height={56} />}
       {error !== null && (
@@ -260,7 +291,7 @@ function MyCharacters() {
       {items !== null && available.length === 0 && (
         <p className={styles.note}>
           {items.length === 0
-            ? "You haven't created any characters yet. Create one to add them to the party."
+            ? "You haven't created any characters yet."
             : 'All of your characters are already in the party.'}
         </p>
       )}
@@ -287,7 +318,14 @@ function MyCharacters() {
           ))}
         </ul>
       )}
-      <CharacterWizard open={wizardOpen} onClose={() => setWizardOpen(false)} onCreated={onCreated} />
+      <CharacterWizard
+        open={wizardOpen}
+        onClose={() => {
+          setWizardOpen(false);
+          setUnfinished(hasDraft(userId, tableId));
+        }}
+        onCreated={onCreated}
+      />
     </section>
   );
 }

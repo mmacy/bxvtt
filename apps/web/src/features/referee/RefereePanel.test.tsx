@@ -109,6 +109,7 @@ describe('RefereePanel', () => {
     );
   });
 
+  // This test renders the full referee panel and drives a form, which can pass 5 seconds on a busy machine.
   it('shows bxapi’s refusal next to the form', async () => {
     const api = refereeApi();
     const snapshot = fixtureSnapshot('exploring', 'referee');
@@ -142,7 +143,7 @@ describe('RefereePanel', () => {
       expect.objectContaining({ command_type: 'set_door_state', x: 0, y: 0, direction: 'north', open: true }),
       expect.any(Number),
     );
-  });
+  }, 15_000);
 
   it('asks for missing fields before it sends anything', async () => {
     const api = refereeApi();

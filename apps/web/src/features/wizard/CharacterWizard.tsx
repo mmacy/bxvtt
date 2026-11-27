@@ -8,9 +8,10 @@ import type {
   StartingRollsStatus,
   StoredCharacter,
 } from '@bxvtt/shared/protocol';
-import { classLabel, count, emptyContext, resolveItemNoun } from '@bxvtt/shared/text';
+import { alignmentLabel, classLabel, emptyContext, resolveItemNoun } from '@bxvtt/shared/text';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  displayStringIssue,
   displayStringProblem,
   getApi,
   useClassCatalog,
@@ -23,13 +24,13 @@ import {
 } from '@/app';
 import { Banner, Button, ConfirmDialog, Dialog, Stepper, type StepperStep } from '@/ui';
 import { RuleLinksContext } from '../sheet/RuleLink';
-import { StoredSheet } from '../sheet/StoredSheet';
 import { ADJUST_GUIDANCE_ID, AdjustStep, type AdjustCheckState, type CheckState } from './AdjustStep';
 import { explainAdjustCheck } from './adjustCheck';
 import { ClassStep } from './ClassStep';
 import {
   STEP_IDS,
   adjustedScores,
+  draftKey,
   emptyDraft,
   hasAdjustment,
   loadDraft,
@@ -42,7 +43,7 @@ import {
   type WizardDraft,
 } from './draft';
 import { IdentityStep } from './IdentityStep';
-import { applyKit, cartPhrase } from './kits';
+import { applyKit, cartPhrase, kitLabel } from './kits';
 import { OutfitStep, cartCost, type GoldState } from './OutfitStep';
 import { ReviewStep } from './ReviewStep';
 import { RollStep, offersNewScores, rerollOffer, type AbilityScoreMethod } from './RollStep';
@@ -55,14 +56,7 @@ import {
   type WizardProblem,
 } from './server';
 import { StartingRollsStep } from './StartingRollsStep';
-import {
-  casterNextStep,
-  classMagic,
-  extraLanguageCount,
-  headlineModifier,
-  readScores,
-  spellSlotsAt,
-} from './tables';
+import { classMagic, extraLanguageCount, headlineModifier, readScores, spellSlotsAt } from './tables';
 import styles from './wizard.module.css';
 import { useClassDetail } from '../sheet/catalogs';
 
@@ -72,9 +66,8 @@ export interface CharacterWizardProps {
   /** Closes the wizard without creating a character. */
   onClose: () => void;
   /**
-   * Called once bxapi has stored the new character (`POST /api/characters`). The lobby adds it to the roster,
-   * and the home page refreshes the character list. Call `onClose` yourself after it, or keep the wizard open
-   * to make another.
+   * Called once bxapi has stored the new character (`POST /api/characters`), just before the wizard calls
+   * `onClose`. The lobby adds the character to the party.
    */
   onCreated: (character: StoredCharacter) => void;
 }
@@ -83,25 +76,32 @@ const STEP_LABELS: Record<StepId, string> = {
   roll: 'Roll abilities',
   class: 'Choose a class',
   adjust: 'Adjust scores',
-  identity: 'Identity',
+  identity: 'Alignment and languages',
   hp_gold: 'Hit points and gold',
   outfit: 'Outfit',
   review: 'Review',
 };
 
-/** What each step asks of the player. The roll and hit point steps say it by the table's rules instead. */
+/**
+ * What each step asks of the player. The roll, alignment and languages, and hit point steps say it by the table's
+ * rules or the class instead.
+ */
 const STEP_DESCRIPTIONS: Record<StepId, string> = {
   roll: 'Roll 3d6 in order for each ability score.',
   class: 'Choose from the classes your ability scores qualify for.',
   adjust: 'Trade points into your prime requisite, or keep your rolled scores.',
-  identity: 'Choose a name, alignment, and languages.',
+  identity: 'Choose an alignment and languages.',
   hp_gold: 'Roll your hit points, then your starting gold.',
   outfit: 'Spend your starting gold on weapons, armour, and gear.',
-  review: 'Review your character sheet, then create your character.',
+  review: 'Name your character, then create it.',
 };
 
 /** The step description of the roll step under 4d6 drop lowest. */
 const ROLL_4D6_DESCRIPTION = 'Roll 4d6 in order for each ability score, and keep the highest three.';
+
+/** The step description of the alignment and languages step for an arcane caster, by the size of the spell book. */
+const IDENTITY_SPELL_DESCRIPTION = 'Choose an alignment, languages, and your first spell.';
+const IDENTITY_SPELLS_DESCRIPTION = 'Choose an alignment, languages, and your first spells.';
 
 /** The step description of the hit points and gold step under maximum hit points. */
 const HP_MAX_DESCRIPTION = 'Take the maximum hit points, then roll your starting gold.';
@@ -147,6 +147,35 @@ function openingDraft(
   }
   return { draft: stored, problem: null };
 }
+
+/** What the name field says when the server refuses a name the wizard let through. */
+const NAME_REFUSED = "This name won't work. Try another.";
+
+/**
+ * Why the character's name can't be used, worded for the name field, or `null` when it can. The shared check's
+ * own sentences say "character" for a letter, which reads as the adventurer here.
+ *
+ * @param name - The name as the player typed it.
+ */
+export function characterNameProblem(name: string): string | null {
+  switch (displayStringIssue(name, 100)) {
+    case 'empty':
+      return 'Enter a name.';
+    case 'invisible':
+      return 'Remove tabs and other invisible marks from the name.';
+    case 'too_long':
+      return displayStringProblem(name, 100);
+    case null:
+      return null;
+  }
+}
+
+/**
+ * The creates in flight, by the storage key of the unfinished character they store. The player can close the wizard
+ * while the server stores the character and open it again before the answer. The new wizard then holds the same
+ * character, so it waits for that answer instead of offering Create character a second time.
+ */
+const pendingCreates = new Map<string, { rollId: string; stored: Promise<boolean> }>();
 
 /** Debounce for the live checks, in milliseconds. The server allows 60 checks a minute per user. */
 const CHECK_DELAY_MS = 600;
@@ -213,8 +242,7 @@ export function continueBlock(facts: ContinueFacts): { reason: string | null } |
       if (facts.gold.status === 'loading') return wait;
       if (facts.gold.status === 'unknown') return { reason: facts.gold.message };
       if (facts.cart === 'checking') return wait;
-      if (facts.cart === 'invalid')
-        return { reason: 'Your cart breaks a rule. Change it as the note under the cart says.' };
+      if (facts.cart === 'invalid') return { reason: 'Change your cart as the note under it says.' };
       return null;
     default:
       return null;
@@ -234,17 +262,29 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
   const tableId = table?.id ?? '';
   const [opening] = useState(() => openingDraft(userId, tableId));
   const [draft, setDraft] = useState<WizardDraft>(() => opening.draft ?? emptyDraft());
-  const [restored, setRestored] = useState(opening.draft?.roll != null);
   const [freshRollId, setFreshRollId] = useState<string | null>(null);
   const [revealedRollId, setRevealedRollId] = useState<string | null>(null);
   const [rolling, setRolling] = useState(false);
-  const [busy, setBusy] = useState(false);
+  // A create the player started in an earlier wizard for this character, which this wizard waits for.
+  const [earlierCreate] = useState(() => {
+    const pending = pendingCreates.get(draftKey(userId, tableId));
+    return pending !== undefined && pending.rollId === opening.draft?.roll?.id ? pending : null;
+  });
+  const [busy, setBusy] = useState(earlierCreate !== null);
   const [problem, setProblem] = useState<WizardProblem | null>(opening.problem);
   const [showErrors, setShowErrors] = useState(false);
-  const [created, setCreated] = useState<StoredCharacter | null>(null);
+  // The name's problem shows after the player selects Create character, until the name is valid.
+  const [showNameError, setShowNameError] = useState(false);
+  // Whether the server refused the name on create. The field says so until the player changes the name.
+  const [refusedName, setRefusedName] = useState(false);
+  const nameInput = useRef<HTMLInputElement>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [kitNote, setKitNote] = useState<string | null>(null);
   const [tradeAttempts, setTradeAttempts] = useState(0);
+  // What the server recorded about the draft's roll: its starting rolls, and the class the hit points fixed.
+  const [recorded, setRecorded] = useState<Recorded | null>(null);
+  // The roll and reroll limit the wizard last read the roll's `rerolls_left` under.
+  const [readRoll, setReadRoll] = useState<string | null>(null);
 
   const classes = useClassCatalog();
   const abilityTable = useRuleTable('abilities');
@@ -261,11 +301,61 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
   const bookSize = magic?.kind === 'arcane' ? (spellSlotsAt(detail, 1)[0] ?? 0) : 0;
   const extraLanguages = tables && adjusted ? extraLanguageCount(tables, adjusted.int) : 0;
   // Keep the draft in this browser, so closing the dialog by accident loses nothing.
+  // After the character is stored, the draft stays cleared while the dialog closes.
+  const finished = useRef(false);
   useEffect(() => {
-    if (created === null) saveDraft(userId, tableId, draft);
-  }, [draft, userId, tableId, created]);
+    if (!finished.current) saveDraft(userId, tableId, draft);
+  }, [draft, userId, tableId]);
+  // The player can close the wizard while the server stores the character. The answer then must not close a
+  // wizard the player opened since.
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  // When the earlier create stores the character, the earlier wizard has already reported it, so this one only
+  // closes. When it fails, the player carries on here.
+  useEffect(() => {
+    if (earlierCreate === null) return;
+    void earlierCreate.stored.then((created) => {
+      if (!mounted.current) return;
+      setBusy(false);
+      if (created) {
+        finished.current = true;
+        saveDraft(userId, tableId, null);
+        onClose();
+      }
+    });
+  }, [earlierCreate, userId, tableId, onClose]);
 
   const update = useCallback((change: Partial<WizardDraft>) => setDraft((d) => ({ ...d, ...change })), []);
+
+  // A wizard that opens on the review step without a name starts on the name field. The dialog focuses it, because
+  // the field isn't in the page yet when the wizard's first effects run.
+  const [opensOnName] = useState(() => draft.step === 'review' && draft.name.trim() === '');
+  const nameNow = useRef(draft.name);
+  useEffect(() => {
+    nameNow.current = draft.name;
+  });
+  // Every step change, whether the player's or the wizard's own after a refusal, shows the new step from its top,
+  // so a banner above the step is in view. Focus moves to the step heading, or to the empty name field on the
+  // review step.
+  const stepHeading = useRef<HTMLHeadingElement>(null);
+  const wizardTop = useRef<HTMLDivElement>(null);
+  const shownStep = useRef(draft.step);
+  useEffect(() => {
+    if (shownStep.current === draft.step) return;
+    shownStep.current = draft.step;
+    wizardTop.current?.scrollIntoView?.({ block: 'start' });
+    if (draft.step === 'review' && nameNow.current.trim() === '' && nameInput.current) {
+      nameInput.current.focus({ preventScroll: true });
+    } else {
+      stepHeading.current?.focus({ preventScroll: true });
+    }
+  }, [draft.step]);
 
   const rollId = draft.roll?.id ?? null;
   const currentRollId = useRef(rollId);
@@ -273,17 +363,13 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
   // from their answers: rerolls left, no limit, or a sub-par roll the table lets the player discard.
   const offer = draft.roll === null ? null : rerollOffer(draft.roll);
   const canStartOver = offer !== null && offersNewScores(offer);
-  // A refusal read in an effect words its advice by this, without reading the dice again when it changes.
-  const canStartOverNow = useRef(canStartOver);
   const rerollLimit = table?.settings.ability_score_rerolls;
   const rerollLimitNow = useRef(rerollLimit);
   useEffect(() => {
     currentRollId.current = rollId;
-    canStartOverNow.current = canStartOver;
     rerollLimitNow.current = rerollLimit;
   });
   // The step heading takes focus after a new roll, because the button that rolled may leave the screen.
-  const stepHeading = useRef<HTMLHeadingElement>(null);
   const focusHeading = useRef(false);
   useEffect(() => {
     if (!focusHeading.current) return;
@@ -291,15 +377,9 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
     stepHeading.current?.focus();
   });
 
-  // What the server recorded about the draft's roll: its starting rolls, and the class the hit points fixed.
-  const [recorded, setRecorded] = useState<Recorded | null>(null);
-  // The roll and reroll limit the wizard last read the roll's `rerolls_left` under.
-  const [readRoll, setReadRoll] = useState<string | null>(null);
-
   /** Takes a roll the server answered as the draft's roll, keeping only the identity. */
   const takeRoll = useCallback((roll: AbilityRoll, fresh: boolean) => {
     setFreshRollId(fresh ? roll.id : null);
-    setRestored(false);
     if (fresh) {
       // A new roll has no starting rolls yet, so the wizard needn't ask.
       setRecorded({
@@ -353,6 +433,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
             }
           : {
               step: 'roll',
+              tone: 'info',
               title: 'You rolled newer ability scores',
               sentences: [
                 roll !== null
@@ -409,7 +490,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
             step: 'roll',
             tone: 'info',
             title: 'Your latest ability scores',
-            sentences: ['These are the ability scores you rolled last.'],
+            sentences: [],
           });
         },
         () => {
@@ -523,7 +604,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
         (error: unknown) => {
           if (cancelled) return;
           if (handleRollRefusal(error)) return;
-          const explained = explainCreationError(error, { canStartOver: canStartOverNow.current });
+          const explained = explainCreationError(error);
           setDiceFailure({ key: diceJson, message: `${explained.title}. ${explained.sentences.join(' ')}` });
           // A choice that stops the roll, such as a missing first spell, is fixed on its own step.
           if (explained.step !== null && explained.step !== 'review') {
@@ -612,7 +693,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
   // The outfit step checks the cart live, once the gold is rolled.
   const cartJson =
     draft.step === 'outfit' && draft.cart.length > 0 && gold.status === 'known'
-      ? JSON.stringify(requestFromDraft(draft))
+      ? JSON.stringify(requestFromDraft(draft, { placeholderName: true }))
       : null;
   const [cartResult, setCartResult] = useState<{ key: string; state: CheckState } | null>(null);
   // Items the wizard put on by itself. When the server says the class can't use one, it comes off again.
@@ -710,7 +791,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
       }));
     } catch (error) {
       if (handleRollRefusal(error)) return;
-      const explained = explainCreationError(error, { canStartOver });
+      const explained = explainCreationError(error);
       if (isProblem(error, 'ability_roll_locked')) {
         // Another tab rolled these hit points first. Read the record again, and say so on this step.
         setProblem({ ...explained, step: null });
@@ -742,7 +823,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
       return false;
     } catch (error) {
       if (handleRollRefusal(error)) return false;
-      const explained = explainCreationError(error, { canStartOver });
+      const explained = explainCreationError(error);
       setProblem(explained);
       if (explained.step !== null && explained.step !== draft.step) go(explained.step);
       return false;
@@ -752,31 +833,57 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
   };
 
   const finish = (character: StoredCharacter) => {
+    finished.current = true;
     saveDraft(userId, tableId, null);
-    setCreated(character);
     onCreated(character);
+    if (mounted.current) onClose();
   };
 
   const create = async () => {
+    // The name is the last choice, so the wizard checks it here and sends the player to the field.
+    if (displayStringIssue(draft.name, 100) !== null) {
+      setShowNameError(true);
+      nameInput.current?.focus();
+      return;
+    }
+    const name = draft.name.trim();
     setBusy(true);
     setProblem(null);
+    const key = draftKey(userId, tableId);
+    let settle: (created: boolean) => void = () => {};
+    const pending = {
+      rollId: draft.roll?.id ?? '',
+      stored: new Promise<boolean>((resolve) => (settle = resolve)),
+    };
+    pendingCreates.set(key, pending);
+    let created = false;
     try {
       const body = requestFromDraft(draft);
       // Checking first keeps a refused choice out of the create route, so the browser logs no error for it.
       const result = await checkChoices(getApi(), body);
       if (!result.valid && result.problem) {
-        const explained = explainInvalid(result.problem);
+        const explained = explainInvalid(result.problem, emptyContext(), name);
         setProblem(explained);
         if (explained.step !== null && explained.step !== 'review') go(explained.step);
         return;
       }
-      finish(await getApi().createCharacter(body));
+      const character = await getApi().createCharacter(body);
+      created = true;
+      finish(character);
     } catch (error) {
       if (handleRollRefusal(error)) return;
-      const explained = explainCreationError(error, { canStartOver });
+      // The server refuses only the name this way. The field says so, and nothing else repeats it.
+      if (isProblem(error, 'validation_error')) {
+        setRefusedName(true);
+        nameInput.current?.focus();
+        return;
+      }
+      const explained = explainCreationError(error, { name });
       setProblem(explained);
       if (explained.step !== null && explained.step !== 'review') go(explained.step);
     } finally {
+      if (pendingCreates.get(key) === pending) pendingCreates.delete(key);
+      settle(created);
       setBusy(false);
     }
   };
@@ -803,16 +910,17 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
         return;
       case 'identity': {
         setShowErrors(true);
-        if (displayStringProblem(draft.name, 100) !== null || draft.alignment === null) return;
+        if (draft.alignment === null) return;
         if (magic?.kind === 'arcane' && draft.spells.length !== bookSize) return;
-        if (await check(requestFromDraft(draft, { withoutOutfit: true }), 'identity')) go('hp_gold');
+        if (await check(requestFromDraft(draft, { withoutOutfit: true, placeholderName: true }), 'identity'))
+          go('hp_gold');
         return;
       }
       case 'hp_gold':
         go('outfit');
         return;
       case 'outfit':
-        if (await check(requestFromDraft(draft), 'outfit')) go('review');
+        if (await check(requestFromDraft(draft, { placeholderName: true }), 'outfit')) go('review');
         return;
       case 'review':
         await create();
@@ -830,14 +938,15 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
   const startOver = () => {
     saveDraft(userId, tableId, null);
     setDraft(emptyDraft());
-    setCreated(null);
     setProblem(null);
-    setRestored(false);
+    setShowNameError(false);
+    setRefusedName(false);
     setFreshRollId(null);
   };
 
   const applyClassKit = () => {
-    if (!draft.classId || !equipment.data) return;
+    const kit = kitLabel(draft.classId);
+    if (!draft.classId || !equipment.data || kit === null) return;
     const result = applyKit(draft.classId, equipment.data, gold.status === 'known' ? gold.gp : null);
     update({ cart: result.cart, equip: result.equip });
     setKitNote(
@@ -845,7 +954,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
         ? `Added what your gold covers, skipping ${result.skipped
             .map((id) => cartPhrase(id, 1, equipment.data?.find((e) => e.id === id)?.name).toLowerCase())
             .join(', ')}.`
-        : 'Added the starter kit. Swap or remove anything you like.',
+        : `Added the ${kit.toLowerCase()} kit.`,
     );
   };
 
@@ -876,8 +985,8 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
     description:
       id === 'class' && draft.classId && past('class')
         ? classLabel(draft.classId)
-        : id === 'identity' && draft.name.trim() && past('identity')
-          ? draft.name.trim()
+        : id === 'identity' && draft.alignment && past('identity')
+          ? alignmentLabel(draft.alignment)
           : id === 'hp_gold' && rolls?.gold_roll && past('hp_gold')
             ? `${rolls.hit_point_roll.hit_points} hp, ${rolls.gold_roll.total} gp`
             : id === 'outfit' && goldLeft !== null && past('outfit')
@@ -885,7 +994,6 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
               : undefined,
   }));
 
-  const title = created ? `${created.name} is ready` : 'Create a character';
   // The roll's recorded rules decide how it was rolled. Before the first roll, the table's rules say how it will be.
   const method: AbilityScoreMethod =
     draft.roll?.rules?.ability_score_method ??
@@ -898,42 +1006,14 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
       ? ROLL_4D6_DESCRIPTION
       : step === 'hp_gold' && maxHitPoints
         ? HP_MAX_DESCRIPTION
-        : STEP_DESCRIPTIONS[step];
-
-  const createdNext = created
-    ? casterNextStep(
-        created.name,
-        detail,
-        created.character.spell_book.map((id) => spellCatalog.data?.find((s) => s.id === id)?.name ?? id),
-      )
-    : null;
+        : step === 'identity' && magic?.kind === 'arcane'
+          ? bookSize > 1
+            ? IDENTITY_SPELLS_DESCRIPTION
+            : IDENTITY_SPELL_DESCRIPTION
+          : STEP_DESCRIPTIONS[step];
 
   let body;
-  if (created) {
-    body = (
-      <div className={styles.created}>
-        <Banner
-          tone="success"
-          title={`${created.name} is ready for adventure`}
-          actions={
-            <>
-              <Button variant="ghost" size="sm" icon="plus" onClick={startOver}>
-                Create another
-              </Button>
-              <Button variant="primary" size="sm" onClick={onClose}>
-                Done
-              </Button>
-            </>
-          }
-        >
-          {created.name} starts with {count(created.character.max_hp, 'hit point')} and is ready to join any
-          table.
-          {createdNext && ` ${createdNext}`}
-        </Banner>
-        <StoredSheet character={created} color={user?.color} />
-      </div>
-    );
-  } else if (!scores && draft.step !== 'roll') {
+  if (!scores && draft.step !== 'roll') {
     body = null;
   } else {
     const step = draft.step;
@@ -958,14 +1038,6 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
           </h3>
           <p className={styles.stepDescription}>{stepDescription(step)}</p>
         </div>
-        {restored && step !== 'roll' && (
-          <Banner
-            tone="info"
-            title="Resumed your unfinished character"
-            onDismiss={() => setRestored(false)}
-            dismissLabel="Dismiss"
-          />
-        )}
         {problem && (problem.step === null || problem.step === step) && (
           <Banner
             tone={problem.tone ?? 'warning'}
@@ -1002,7 +1074,6 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
             equipment={equipment.data}
             locked={hitPointsRolled}
             maxHitPoints={maxHitPoints}
-            canStartOver={canStartOver}
           />
         )}
         {step === 'adjust' && scores && (
@@ -1021,13 +1092,10 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
         )}
         {step === 'identity' && adjusted && (
           <IdentityStep
-            name={draft.name}
-            onName={(name) => update({ name })}
             alignment={draft.alignment}
             onAlignment={(alignment) => update({ alignment })}
             detail={detail}
             extraLanguages={extraLanguages}
-            intelligence={adjusted.int}
             languages={draft.languages}
             onLanguages={(languages) => update({ languages })}
             languageCatalog={languageCatalog.data}
@@ -1045,7 +1113,6 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
             hitDie={detail?.hit_die ?? null}
             conModifier={tables && adjusted ? headlineModifier(tables, 'con', adjusted.con) : undefined}
             rules={status?.rules ?? null}
-            canStartOver={canStartOver}
             rolls={rolls}
             loading={status === null || (hitPointsRolled && rolls === null)}
             rolling={startingRoll}
@@ -1089,13 +1156,26 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
               setProblem(null);
               go(target);
             }}
+            onName={(name) => {
+              update({ name });
+              setRefusedName(false);
+              if (displayStringIssue(name, 100) === null) setShowNameError(false);
+            }}
+            nameError={
+              refusedName
+                ? NAME_REFUSED
+                : showNameError
+                  ? (characterNameProblem(draft.name) ?? undefined)
+                  : undefined
+            }
+            nameRef={nameInput}
           />
         )}
       </>
     );
   }
 
-  const footer = created ? undefined : (
+  const footer = (
     <>
       {/* On the roll step, Roll again does the same job. Without rerolls left, new scores can't replace these. */}
       {draft.roll !== null && draft.step !== 'roll' && canStartOver && (
@@ -1108,44 +1188,48 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
           Start over
         </Button>
       )}
-      {stepIndex(draft.step) > 0 && (
-        <Button variant="secondary" icon="arrow-left" onClick={back} disabled={busy}>
-          Back
-        </Button>
-      )}
-      {draft.step === 'roll' && draft.roll === null && (
-        <Button
-          variant="primary"
-          icon="dice"
-          loading={rolling || !lookedForCurrent}
-          onClick={() => void roll()}
-        >
-          Roll ability scores
-        </Button>
-      )}
-      {draft.step === 'review' ? (
-        <Button variant="primary" icon="check" loading={busy} onClick={() => void next()}>
-          Create character
-        </Button>
-      ) : (
-        draft.roll !== null &&
-        // The step's own roll buttons lead until both rolls are made.
-        !(draft.step === 'hp_gold' && !canContinue) && (
+      <div className={styles.footerActions}>
+        {stepIndex(draft.step) > 0 && (
+          <Button variant="secondary" icon="arrow-left" onClick={back} disabled={busy}>
+            Back
+          </Button>
+        )}
+        {draft.step === 'roll' && draft.roll === null && (
           <Button
             variant="primary"
-            iconEnd="arrow-right"
-            loading={busy}
-            disabled={!canContinue}
-            disabledReason={block?.reason}
-            aria-describedby={
-              draft.step === 'adjust' && adjustCheck.status === 'in_progress' ? ADJUST_GUIDANCE_ID : undefined
-            }
-            onClick={() => void next()}
+            icon="dice"
+            loading={rolling || !lookedForCurrent}
+            onClick={() => void roll()}
           >
-            {draft.step === 'adjust' && !hasAdjustment(draft.adjustment) ? 'Skip this step' : 'Continue'}
+            Roll ability scores
           </Button>
-        )
-      )}
+        )}
+        {draft.step === 'review' ? (
+          <Button variant="primary" icon="check" loading={busy} onClick={() => void next()}>
+            Create character
+          </Button>
+        ) : (
+          draft.roll !== null &&
+          // The step's own roll buttons lead until both rolls are made.
+          !(draft.step === 'hp_gold' && !canContinue) && (
+            <Button
+              variant="primary"
+              iconEnd="arrow-right"
+              loading={busy}
+              disabled={!canContinue}
+              disabledReason={block?.reason}
+              aria-describedby={
+                draft.step === 'adjust' && adjustCheck.status === 'in_progress'
+                  ? ADJUST_GUIDANCE_ID
+                  : undefined
+              }
+              onClick={() => void next()}
+            >
+              {draft.step === 'adjust' && !hasAdjustment(draft.adjustment) ? 'Skip this step' : 'Continue'}
+            </Button>
+          )
+        )}
+      </div>
     </>
   );
 
@@ -1155,14 +1239,18 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
       onOpenChange={(next) => {
         if (!next) onClose();
       }}
-      title={title}
+      title="Create a character"
       size="xl"
       footer={footer}
+      dismissOnOutsideClick={false}
+      initialFocus={opensOnName ? nameInput : undefined}
       className={styles.dialog}
     >
-      {/* The lobby and the home page render the rules reference, so names in the wizard open it. */}
+      {/* The lobby renders the rules reference, so names in the wizard open it. */}
       <RuleLinksContext.Provider value={true}>
-        <div className={styles.wizard}>{body}</div>
+        <div ref={wizardTop} className={styles.wizard}>
+          {body}
+        </div>
       </RuleLinksContext.Provider>
       <ConfirmDialog
         open={confirmReset}

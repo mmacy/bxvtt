@@ -2,14 +2,15 @@ import type { AbilityTables, EquipmentSummary } from '@bxvtt/shared/bxapi';
 import { BxvttProblemError } from '@bxvtt/shared/client';
 import type { CharacterRequest, CreationRules, Problem } from '@bxvtt/shared/protocol';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { ClassDetail, EquipmentDetail } from '@/app';
+import { describeProblem, type ClassDetail, type EquipmentDetail } from '@/app';
 import { createFakeApi } from '@/app/testing/renderWithTable';
 import catalog from './__fixtures__/catalog.json';
-import { continueBlock, type ContinueFacts } from './CharacterWizard';
+import { characterNameProblem, continueBlock, type ContinueFacts } from './CharacterWizard';
 import { autoEquip } from './OutfitStep';
 import {
   draftKey,
   emptyDraft,
+  hasDraft,
   legacyDraftKey,
   loadDraft,
   parseDraft,
@@ -26,7 +27,7 @@ import { applyKit } from './kits';
 import { lotSentence, rowSummary } from './shop';
 import { suggestName } from './names';
 import { checkChoices, explainCreationError, explainInvalid, oneReasonPerAbility } from './server';
-import { casterNextStep, extraLanguageCount, headlineModifier, xpModifierFor, type Scores } from './tables';
+import { extraLanguageCount, headlineModifier, xpModifierFor, type Scores } from './tables';
 
 const tables = catalog.abilities as unknown as AbilityTables;
 const fighter = catalog.details.fighter as unknown as ClassDetail;
@@ -118,6 +119,19 @@ describe('requestFromDraft', () => {
     expect(body.name).toBe('Adventurer');
     expect(body.purchases).toBeUndefined();
   });
+
+  it('fills only a missing name before the review step, with the chosen alignment', () => {
+    const unnamed = draftWith({ name: '  ', alignment: 'chaotic' });
+    expect(requestFromDraft(unnamed, { placeholderName: true })).toMatchObject({
+      name: 'Adventurer',
+      alignment: 'chaotic',
+    });
+    expect(requestFromDraft(draftWith({ name: 'Wren' }), { placeholderName: true }).name).toBe('Wren');
+    // A saved name the server would refuse, such as one with a tab, waits for the review step too.
+    expect(requestFromDraft(draftWith({ name: 'Bo\tb' }), { placeholderName: true }).name).toBe('Adventurer');
+    // Creating the character sends the name as the player typed it.
+    expect(requestFromDraft(unnamed).name).toBe('');
+  });
 });
 
 describe('parseDraft', () => {
@@ -181,6 +195,20 @@ describe('drafts at a table', () => {
     expect(loaded?.roll && rollBelongsTo(loaded.roll, 'tbl_test')).toBe(false);
     expect(localStorage.getItem(legacyDraftKey('usr_a'))).toBeNull();
     expect(loadDraft('usr_a', 'tbl_test')).toBeNull();
+  });
+
+  it('says whether a table has an unfinished character without touching the draft from before tables', () => {
+    expect(hasDraft('usr_a', 'tbl_test')).toBe(false);
+    saveDraft('usr_a', 'tbl_test', draftWith({}));
+    expect(hasDraft('usr_a', 'tbl_test')).toBe(true);
+    expect(hasDraft('usr_a', 'tbl_other')).toBe(false);
+    expect(hasDraft('usr_b', 'tbl_test')).toBe(false);
+    // A damaged entry, or one without a roll, is no unfinished character.
+    localStorage.setItem(draftKey('usr_a', 'tbl_other'), JSON.stringify({ ...emptyDraft(), roll: null }));
+    expect(hasDraft('usr_a', 'tbl_other')).toBe(false);
+    localStorage.setItem(legacyDraftKey('usr_a'), JSON.stringify(draftWith({})));
+    hasDraft('usr_a', 'tbl_other');
+    expect(localStorage.getItem(legacyDraftKey('usr_a'))).not.toBeNull();
   });
 });
 
@@ -346,6 +374,47 @@ describe('explaining refusals', () => {
     expect(explainCreationError(new TypeError('offline')).step).toBeNull();
   });
 
+  it('keeps a failure to store the character on the review step, under a title that names it', () => {
+    const offline = explainCreationError(new TypeError('offline'), { name: 'Wren' });
+    expect(offline).toMatchObject({ step: 'review', title: "Couldn't create Wren" });
+    expect(offline.sentences.join(' ')).not.toMatch(/saved in this browser/);
+  });
+
+  it('keeps a validation refusal from an earlier check on its step', () => {
+    const refused = new BxvttProblemError({
+      type: 'about:blank',
+      title: 'Unprocessable Entity',
+      status: 422,
+      code: 'validation_error',
+      detail: 'name',
+    } as Problem);
+    expect(explainCreationError(refused).step).toBeNull();
+  });
+
+  it('starts the body of a failure to store with what failed, so no sentence starts with a stray pronoun', () => {
+    const down = new BxvttProblemError({
+      type: 'about:blank',
+      title: 'Service Unavailable',
+      status: 503,
+      code: 'server_unavailable',
+      detail: 'starting',
+    } as Problem);
+    const failures = [down, new TypeError('Failed to fetch'), new Error('timed out')];
+    for (const failure of failures) {
+      const explained = explainCreationError(failure, { name: 'Wren' });
+      const message = describeProblem(failure);
+      expect(explained.title).toBe("Couldn't create Wren");
+      expect(explained.sentences).toEqual([`${message.title}. ${message.detail}`]);
+      expect(explained.sentences[0]).not.toMatch(/^(It|They|This)\b/);
+    }
+  });
+
+  it('names the character only for a failure after the player selects Create character', () => {
+    const unknown = { ...problem({}).problem, field: 'somewhere' };
+    expect(explainInvalid(unknown)).toMatchObject({ step: 'review', title: "Couldn't create character" });
+    expect(explainInvalid(unknown, undefined, 'Wren').title).toBe("Couldn't create Wren");
+  });
+
   it('never shows a raw code', () => {
     const text = explainInvalid({
       ...problem({}).problem,
@@ -376,32 +445,6 @@ describe('autoEquip', () => {
   });
 });
 
-describe('casterNextStep', () => {
-  const mu = catalog.details.magic_user as unknown as ClassDetail;
-  it('tells an arcane caster when the first spell gets memorized', () => {
-    expect(casterNextStep('Tamsin', mu, ['Sleep'])).toBe(
-      "Tamsin starts with Sleep in the spell book, and memorizes it after the party's first night of rest.",
-    );
-  });
-  it('says nothing for a class without spells', () => {
-    expect(casterNextStep('Brenna', fighter, [])).toBeNull();
-  });
-  it("doesn't promise spells the class table doesn't give at first level", () => {
-    const cleric = {
-      ...mu,
-      id: 'cleric',
-      abilities: [{ tag: 'divine_magic', name: 'Divine Magic', prose: '', manual: false, params: {} }],
-      progression: mu.progression.map((row) => ({
-        ...row,
-        spell_slots: row.level === 1 ? [0, 0, 0, 0, 0] : [1, 0, 0, 0, 0],
-      })),
-    } as unknown as ClassDetail;
-    expect(casterNextStep('Osric', cleric, [])).toBe(
-      'Osric casts no spells at first level and gains spell slots at level 2.',
-    );
-  });
-});
-
 describe('oneReasonPerAbility', () => {
   it('drops the step-of-two advice for a score that cannot be lowered at all', () => {
     const kept = oneReasonPerAbility([
@@ -413,6 +456,14 @@ describe('oneReasonPerAbility', () => {
       'creation.adjustment.not_lowerable',
       'creation.adjustment.points_mismatch',
     ]);
+  });
+});
+
+describe('characterNameProblem', () => {
+  it('words the name problems for a character, where "character" would read as the adventurer', () => {
+    expect(characterNameProblem('  ')).toBe('Enter a name.');
+    expect(characterNameProblem('Wren\tVale')).toBe('Remove tabs and other invisible marks from the name.');
+    expect(characterNameProblem('Wren Vale')).toBeNull();
   });
 });
 
@@ -451,7 +502,7 @@ describe('continueBlock', () => {
     const unknown = { status: 'unknown', message: 'Roll your starting gold first.' } as const;
     expect(continueBlock({ ...facts, step: 'outfit', gold: unknown })).toEqual({ reason: unknown.message });
     expect(continueBlock({ ...facts, step: 'outfit', cart: 'invalid' })).toEqual({
-      reason: 'Your cart breaks a rule. Change it as the note under the cart says.',
+      reason: 'Change your cart as the note under it says.',
     });
     expect(continueBlock({ ...facts, step: 'outfit', cart: 'checking' })).toEqual({ reason: null });
   });

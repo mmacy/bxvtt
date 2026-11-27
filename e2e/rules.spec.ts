@@ -7,7 +7,14 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from './support/fixtures';
 import { createCharacter, openTable, setupTable } from './support/table';
-import { ROLL_SEEDS, chooseClass, createFromReview, fillIdentity, next, openWizard } from './support/wizard';
+import {
+  ROLL_SEEDS,
+  chooseAlignment,
+  chooseClass,
+  createFromReview,
+  next,
+  openWizard,
+} from './support/wizard';
 
 /** A seed whose 3d6 roll bxapi calls sub-par (STR 4, INT 5), but that still qualifies for a fighter. */
 const SUB_PAR_SEED = 6;
@@ -227,7 +234,7 @@ test.describe('table rules', () => {
     await next(dialog);
     await chooseClass(dialog, 'fighter');
     await dialog.getByRole('button', { name: 'Skip this step' }).click();
-    await fillIdentity(dialog, 'Flarg');
+    await chooseAlignment(dialog);
     await next(dialog);
 
     // Under the house rule, the hit die isn't rolled.
@@ -243,6 +250,10 @@ test.describe('table rules', () => {
     await next(dialog);
     await dialog.getByRole('button', { name: 'Add Sword to the cart' }).click();
     await next(dialog);
+    // The review step says the table gave the maximum, and names no rolled face.
+    const combat = dialog.getByRole('region', { name: 'Combat' });
+    await expect(combat).toContainText('Your table gives the maximum on 1d8');
+    await expect(combat).not.toContainText(/You rolled \d+ on 1d/);
     await createFromReview(sam.page, dialog, 'Flarg');
 
     const stored = (await sam.client.listCharacters()).items.find((item) => item.name === 'Flarg');
