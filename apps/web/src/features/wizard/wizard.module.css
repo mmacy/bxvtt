@@ -817,10 +817,12 @@
   list-style: none;
 }
 
+/* The stepper, price, and remove button line up with the name's first line, so they stay put when a long name
+   wraps or a row adds a lot line or a checkbox. */
 .cartRow {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto auto;
-  align-items: center;
+  align-items: start;
   gap: var(--space-2);
   padding-bottom: var(--space-2);
   border-bottom: var(--border-hair) solid var(--color-border);
@@ -839,12 +841,16 @@
   display: none;
 }
 
+/* The name wraps in full. Its first line sits centered on the 28 px controls beside it. */
 .cartName {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  padding-block-start: calc((var(--control-sm) - 1lh) / 2);
+  overflow-wrap: anywhere;
   color: var(--color-text-strong);
+}
+
+.cartPrice {
+  line-height: var(--control-sm);
 }
 
 /* A stacked cart narrower than 400 px gives each row three lines: the name in full with the remove button, then
@@ -867,9 +873,6 @@
 
     .cartName {
       grid-area: name;
-      overflow: visible;
-      white-space: normal;
-      overflow-wrap: anywhere;
     }
 
     .cartMain {
