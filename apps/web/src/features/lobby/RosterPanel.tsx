@@ -48,7 +48,8 @@ export function RosterPanel() {
   const [dragging, setDragging] = useState<string | null>(null);
   const [dropIndex, setDropIndex] = useState<number | null>(null);
   // A list change isn't announced, so a screen reader hears that the wizard's new character joined the party.
-  const [joined, setJoined] = useState('');
+  // Each add puts a new element in the live region, so a second character with the same name is announced too.
+  const [joined, setJoined] = useState<{ text: string; count: number } | null>(null);
 
   const roster = useMemo(() => {
     const entries = table?.roster ?? [];
@@ -213,9 +214,13 @@ export function RosterPanel() {
         </p>
       )}
       <p role="status" className="visually-hidden">
-        {joined}
+        {joined && <span key={joined.count}>{joined.text}</span>}
       </p>
-      <MyCharacters onJoined={(name) => setJoined(`${name} joined the party.`)} />
+      <MyCharacters
+        onJoined={(name) =>
+          setJoined((last) => ({ text: `${name} joined the party.`, count: (last?.count ?? 0) + 1 }))
+        }
+      />
     </div>
   );
 }
@@ -252,7 +257,9 @@ function MyCharacters({ onJoined }: { onJoined: (name: string) => void }) {
   };
 
   // The wizard closes onto the party, where the new character appears, so no toast covers the success.
+  // The player can close the wizard before the server stores the character, so the button reads storage here too.
   const onCreated = (character: StoredCharacter) => {
+    setUnfinished(hasDraft(userId, tableId));
     void refresh();
     void add(character.id, character.name).then((ok) => {
       if (ok) onJoined(character.name.trim());

@@ -371,7 +371,6 @@ async function main() {
   await wizard.getByRole('button', { name: 'Magic-User', exact: true }).click();
   await next();
   await next();
-  await wizard.getByRole('textbox', { name: 'Name' }).fill('Mazpar');
   await wizard.getByRole('radio', { name: 'Lawful' }).click();
   await wizard.getByRole('checkbox', { name: 'Elvish' }).click();
   await wizard.getByRole('checkbox', { name: 'Hobgoblin' }).click();
@@ -389,10 +388,10 @@ async function main() {
   await wizard.getByRole('button', { name: /^Add Backpack/ }).click();
   await snap(theoPage, 'wizard-outfit');
   await next();
+  // The player names the character on the review step, and the wizard closes once the server stores it.
+  await wizard.getByRole('textbox', { name: 'Name' }).fill('Mazpar');
   await wizard.getByRole('button', { name: 'Create character' }).click();
-  const ready = theoPage.getByRole('dialog', { name: 'Mazpar is ready' });
-  await ready.waitFor({ timeout: 30_000 });
-  await ready.getByRole('button', { name: 'Done' }).click();
+  await wizard.waitFor({ state: 'detached', timeout: 30_000 });
 
   // The lobby, seen by the referee, with every player online.
   const samPage = await newPage(sam);

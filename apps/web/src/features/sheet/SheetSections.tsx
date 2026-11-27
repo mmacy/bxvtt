@@ -1,7 +1,6 @@
 /**
- * The parts of a character sheet that every sheet shares: the party member's sheet at the table, a stored
- * character's sheet in the lobby, and the finished character in the wizard. Each part draws bxapi's numbers and
- * computes nothing.
+ * The parts of a character sheet that every sheet shares: the party member's sheet at the table and a stored
+ * character's sheet in the lobby. Each part draws bxapi's numbers and computes nothing.
  */
 import {
   abilityLabel,

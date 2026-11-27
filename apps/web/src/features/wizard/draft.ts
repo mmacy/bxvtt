@@ -9,6 +9,7 @@ import {
   type StartingRollRequest,
   type StartingRollsStatus,
 } from '@bxvtt/shared/protocol';
+import { displayStringProblem } from '@/app';
 import { ABILITIES, isAbility, readScores, type Ability, type Scores } from './tables';
 import type { CartLine } from './kits';
 
@@ -118,8 +119,8 @@ export interface RequestOptions {
   /** Fills a missing name and alignment, to check an early step before the player reaches the identity step. */
   placeholderIdentity?: boolean;
   /**
-   * Fills a missing name and keeps the chosen alignment, to check a step before the review step, where the player
-   * names the character.
+   * Fills a missing or unusable name and keeps the chosen alignment, to check a step before the review step, where
+   * the player names the character.
    */
   placeholderName?: boolean;
 }
@@ -132,8 +133,11 @@ export interface RequestOptions {
  */
 export function requestFromDraft(draft: WizardDraft, options: RequestOptions = {}): CharacterRequest {
   const name = draft.name.trim();
+  const standIn =
+    (options.placeholderIdentity && name === '') ||
+    (options.placeholderName && displayStringProblem(draft.name, 100) !== null);
   const body: CharacterRequest = {
-    name: name === '' && (options.placeholderIdentity || options.placeholderName) ? 'Adventurer' : name,
+    name: standIn ? 'Adventurer' : name,
     class_id: draft.classId ?? '',
     alignment: draft.alignment ?? 'neutral',
     ability_roll_id: draft.roll?.id ?? '',

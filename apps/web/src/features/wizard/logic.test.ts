@@ -127,6 +127,8 @@ describe('requestFromDraft', () => {
       alignment: 'chaotic',
     });
     expect(requestFromDraft(draftWith({ name: 'Wren' }), { placeholderName: true }).name).toBe('Wren');
+    // A saved name the server would refuse, such as one with a tab, waits for the review step too.
+    expect(requestFromDraft(draftWith({ name: 'Bo\tb' }), { placeholderName: true }).name).toBe('Adventurer');
     // Creating the character sends the name as the player typed it.
     expect(requestFromDraft(unnamed).name).toBe('');
   });
@@ -378,7 +380,7 @@ describe('explaining refusals', () => {
     expect(offline.sentences.join(' ')).not.toMatch(/saved in this browser/);
   });
 
-  it('sends a refused name to the review step, where the player names the character', () => {
+  it('sends a name refused on create to the review step, and keeps an earlier check on its step', () => {
     const refused = new BxvttProblemError({
       type: 'about:blank',
       title: 'Unprocessable Entity',
@@ -386,10 +388,17 @@ describe('explaining refusals', () => {
       code: 'validation_error',
       detail: 'name',
     } as Problem);
-    expect(explainCreationError(refused)).toMatchObject({
+    expect(explainCreationError(refused, { name: 'Wren' })).toMatchObject({
       step: 'review',
       title: 'Enter a valid character name',
     });
+    expect(explainCreationError(refused).step).toBeNull();
+  });
+
+  it('names the character only for a failure after the player selects Create character', () => {
+    const unknown = { ...problem({}).problem, field: 'somewhere' };
+    expect(explainInvalid(unknown)).toMatchObject({ step: 'review', title: "Couldn't create character" });
+    expect(explainInvalid(unknown, undefined, 'Wren').title).toBe("Couldn't create Wren");
   });
 
   it('never shows a raw code', () => {

@@ -301,7 +301,9 @@ describe('CharacterWizard', () => {
     const create = await screen.findByRole('button', { name: 'Create character' });
     await screen.findByText('6 hit points');
     const name = screen.getByRole('textbox', { name: /Name/ });
-    create.focus();
+    // A saved character that reopens on the review step without a name starts on the name field.
+    await waitFor(() => expect(name).toHaveFocus());
+    // Selecting Create character moves focus to the button, and the missing name sends it back to the field.
     await user.click(create);
     expect(name).toHaveFocus();
     expect(name).toHaveAccessibleDescription(/\S/);
@@ -318,6 +320,66 @@ describe('CharacterWizard', () => {
     expect(name).toHaveValue('Wren');
     await screen.findByText('6 hit points');
     expect(name).not.toHaveFocus();
+  });
+
+  it('stores a character created while the player closed the wizard, without closing a later one', async () => {
+    const api = wizardApi({ rolls: { status: { class_id: 'fighter', gold_rolled: true } } });
+    let store: (character: StoredCharacter) => void = () => {};
+    api.createCharacter.mockReturnValue(new Promise<StoredCharacter>((resolve) => (store = resolve)));
+    const onCreated = vi.fn();
+    const onClose = vi.fn();
+    localStorage.setItem(
+      draftKey(null, TABLE_ID),
+      JSON.stringify({
+        ...emptyDraft(),
+        roll: ROLL,
+        classId: 'fighter',
+        name: 'Wren',
+        alignment: 'lawful',
+        step: 'review',
+      }),
+    );
+    const view = renderWithTable(<CharacterWizard open onClose={onClose} onCreated={onCreated} />, {
+      api,
+      snapshot: fixtureSnapshot('lobby', 'player'),
+      preferences: { motion: 'reduce' },
+    });
+    await view.user.click(await screen.findByRole('button', { name: 'Create character' }));
+    await waitFor(() => expect(api.createCharacter).toHaveBeenCalled());
+    // The player closes the wizard while the server stores the character, as Escape does.
+    view.rerender(<CharacterWizard open={false} onClose={onClose} onCreated={onCreated} />);
+    act(() => store({ ...(stored as unknown as StoredCharacter), name: 'Wren' }));
+    await waitFor(() => expect(onCreated).toHaveBeenCalledTimes(1));
+    expect(onClose).not.toHaveBeenCalled();
+    // The character exists, so nothing is left unfinished.
+    expect(localStorage.getItem(draftKey(null, TABLE_ID))).toBeNull();
+  });
+
+  it('puts a name the server refuses on the field, with focus there', async () => {
+    const api = wizardApi({ rolls: { status: { class_id: 'fighter', gold_rolled: true } } });
+    api.createCharacter.mockRejectedValue(
+      new BxvttProblemError({
+        type: 'about:blank',
+        title: 'Unprocessable Entity',
+        status: 422,
+        code: 'validation_error',
+        detail: 'name',
+      } as Problem),
+    );
+    const { user } = openOn({ step: 'review' }, api);
+    const create = await screen.findByRole('button', { name: 'Create character' });
+    await screen.findByText('6 hit points');
+    const name = screen.getByRole('textbox', { name: /Name/ });
+    await user.click(create);
+    const sentence = 'Use 1 to 100 characters without tabs, line breaks, or text direction marks.';
+    await waitFor(() => expect(name).toHaveAccessibleDescription(sentence));
+    expect(name).toHaveAttribute('aria-invalid', 'true');
+    expect(name).toHaveFocus();
+    expect(screen.getByText('Enter a valid character name')).toBeInTheDocument();
+    // The field says why, so the banner doesn't repeat it.
+    expect(screen.getAllByText(sentence)).toHaveLength(1);
+    await user.type(name, 'a');
+    expect(name).not.toHaveAccessibleDescription();
   });
 
   it('stays open on the review step with every choice when storing the character fails', async () => {

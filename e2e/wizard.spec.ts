@@ -152,6 +152,10 @@ test.describe('character wizard', () => {
     await expect(shop.getByRole('checkbox', { name: 'Wear the shield', exact: true })).toBeChecked();
     await expect(shop.getByRole('checkbox', { name: 'Wield the sword', exact: true })).toBeChecked();
     await expect(shop.getByText('Wear the plate mail', { exact: true })).toBeVisible();
+    // Continue waits for the cart check, so once it's enabled the check has answered without a refusal.
+    await expect(dialog.getByRole('contentinfo').getByRole('button', { name: 'Continue' })).toBeEnabled({
+      timeout: 15_000,
+    });
     await expect(shop.getByRole('alert')).toHaveCount(0);
     await next(dialog);
 
@@ -348,9 +352,9 @@ test.describe('character wizard', () => {
     await next(dialog);
     await chooseClass(dialog, 'fighter');
     await dialog.getByRole('button', { name: 'Skip this step' }).click();
+    await chooseAlignment(dialog);
     // The name waits for the last step.
     await expect(dialog.getByRole('textbox', { name: 'Name' })).toHaveCount(0);
-    await chooseAlignment(dialog);
     await next(dialog);
     await rollHitPointsAndGold(dialog);
     await addToCart(dialog, ['Sword']);
@@ -364,6 +368,12 @@ test.describe('character wizard', () => {
     // A click outside the dialog doesn't end the wizard. The top-left corner of the page is the overlay.
     await sam.page.mouse.click(4, 4);
     await expect(dialog).toBeVisible();
+
+    // Reopened on the review step without a name, the wizard starts on the name field again.
+    await sam.page.keyboard.press('Escape');
+    await expect(wizard(sam.page)).toHaveCount(0);
+    await openWizard(sam.page, 'Resume character');
+    await expect(name).toBeFocused();
 
     // Create character without a name goes back to the field and stores nothing.
     const create = dialog.getByRole('contentinfo').getByRole('button', { name: 'Create character' });

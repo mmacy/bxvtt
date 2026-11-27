@@ -239,6 +239,8 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
   const [showErrors, setShowErrors] = useState(false);
   // The name's problem shows after the player selects Create character, until the name is valid.
   const [showNameError, setShowNameError] = useState(false);
+  // Why the server refused the name on create, shown on the field until the player changes the name.
+  const [refusedName, setRefusedName] = useState<string | null>(null);
   const nameInput = useRef<HTMLInputElement>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [kitNote, setKitNote] = useState<string | null>(null);
@@ -268,10 +270,21 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
   useEffect(() => {
     if (!finished.current) saveDraft(userId, tableId, draft);
   }, [draft, userId, tableId]);
+  // The player can close the wizard while the server stores the character. The answer then must not close a
+  // wizard the player opened since.
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const update = useCallback((change: Partial<WizardDraft>) => setDraft((d) => ({ ...d, ...change })), []);
 
-  // The review step opens on the name field while the character has no name.
+  // The review step opens on the name field while the character has no name. A wizard that opens on the review
+  // step focuses the field through the dialog, because the field isn't in the page yet when this effect first runs.
+  const [opensOnName] = useState(() => draft.step === 'review' && draft.name.trim() === '');
   const reviewOpen = draft.step === 'review' && adjusted !== null;
   const nameNow = useRef(draft.name);
   useEffect(() => {
@@ -761,7 +774,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
     finished.current = true;
     saveDraft(userId, tableId, null);
     onCreated(character);
-    onClose();
+    if (mounted.current) onClose();
   };
 
   const create = async () => {
@@ -788,6 +801,13 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
     } catch (error) {
       if (handleRollRefusal(error)) return;
       const explained = explainCreationError(error, { name });
+      if (isProblem(error, 'validation_error')) {
+        // The field states the reason, so the banner keeps only its title.
+        setRefusedName(explained.sentences.join(' '));
+        setProblem({ ...explained, sentences: [] });
+        nameInput.current?.focus();
+        return;
+      }
       setProblem(explained);
       if (explained.step !== null && explained.step !== 'review') go(explained.step);
     } finally {
@@ -847,6 +867,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
     setDraft(emptyDraft());
     setProblem(null);
     setShowNameError(false);
+    setRefusedName(null);
     setFreshRollId(null);
   };
 
@@ -1064,9 +1085,13 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
             }}
             onName={(name) => {
               update({ name });
+              setRefusedName(null);
               if (displayStringProblem(name, 100) === null) setShowNameError(false);
             }}
-            nameError={showNameError ? (displayStringProblem(draft.name, 100) ?? undefined) : undefined}
+            nameError={
+              refusedName ??
+              (showNameError ? (displayStringProblem(draft.name, 100) ?? undefined) : undefined)
+            }
             nameRef={nameInput}
           />
         )}
@@ -1142,6 +1167,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
       size="xl"
       footer={footer}
       dismissOnOutsideClick={false}
+      initialFocus={opensOnName ? nameInput : undefined}
       className={styles.dialog}
     >
       {/* The lobby renders the rules reference, so names in the wizard open it. */}

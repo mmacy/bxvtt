@@ -219,7 +219,9 @@ export function explainCreationError(error: unknown, options: ExplainOptions = {
       sentences: ['Roll your starting gold so you know how much you can spend, then choose your equipment.'],
     };
   }
-  if (isProblem(error, 'validation_error')) {
+  // The server refuses only the name this way. Earlier checks send a stand-in name, so the refusal belongs to
+  // the review step only when the player selected Create character.
+  if (isProblem(error, 'validation_error') && name !== undefined) {
     return {
       step: 'review',
       title: 'Enter a valid character name',
