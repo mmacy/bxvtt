@@ -12,11 +12,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-27
+
 This release needs a `bxapi` built on `osrlib` 2.10.0, which is `bxapi` `main` from its pull request 63 onward. Update and restart `bxapi` before you start this version. With an older engine, the server refuses every game request, ability roll, and WebSocket snapshot with `503 bxapi_outdated`.
 
 ### Added
 
 - **`GET /api/ability-rolls/{roll_id}/adjustment-limits` (`@bxvtt/server`, `@bxvtt/shared/protocol`, `@bxvtt/shared/client`):** Returns `bxapi`'s `AdjustmentLimits` for a roll and a `class_id` (`BxvttClient.getAdjustmentLimits`), which state how far an ability score trade can move each score and why it stops there. The route applies the ownership, newest-roll, and fixed-class checks of `POST /api/characters/check` and shares its rate limit. ([#60](https://github.com/mmacy/bxvtt/issues/60))
+- **A `dismissOnOutsideClick` prop on the kit's `Dialog` (`@bxvtt/web`):** Pass `false` to keep a dialog open when someone clicks outside it. The default is `true`.
 
 ### Changed
 
@@ -28,7 +31,6 @@ This release needs a `bxapi` built on `osrlib` 2.10.0, which is `bxapi` `main` f
 - **An unfinished character stays visible in the lobby (`@bxvtt/web`):** The lobby button reads **Resume character** while you have an unfinished character at the table. A click outside the wizard no longer closes it, but **Close** and `Escape` still do. To discard an unfinished character, open the wizard and select **Start over**, which shows while the table lets you roll new ability scores. ([#55](https://github.com/mmacy/bxvtt/issues/55))
 - **Maximum hit points on the review step (`@bxvtt/web`):** With maximum hit points on, the review step says your table gives the maximum on the hit die and doesn't describe a roll. ([#56](https://github.com/mmacy/bxvtt/issues/56))
 - **Shorter wizard text (`@bxvtt/web`):** The steps drop sentences that repeat a control or explain a rule you didn't break.
-- **A `dismissOnOutsideClick` prop on the kit's `Dialog` (`@bxvtt/web`):** Pass `false` to keep a dialog open when someone clicks outside it. The default is `true`.
 - **Class names in labels (`@bxvtt/web`, `@bxvtt/shared/text`):** A class name that stands alone as a label, a card line, or a list entry is capitalized as the SRD writes it, such as "Level 1 Fighter" on a character card and "Magic-User spell, level 1" in the compendium. A class name inside a sentence stays lowercase, as in "A fighter has no special abilities." ([#59](https://github.com/mmacy/bxvtt/issues/59))
 
 ### Fixed
@@ -203,7 +205,8 @@ This release needs a `bxapi` built on `osrlib` 2.8, which is `bxapi` `main` from
 - **Bundled adventures, authoring builder, and automated verifier (`adventures/`):** Every server offers two original `osrlib` modules compiled from `adventures/src/*.mjs` (*The Drowned Bell*, a 3-level, 36-area campaign dungeon, and *The Toll at Crookback Bridge*, a 1-level, 13-area single-session module) alongside `bxapi`'s built-in *The Barrow of the Forgotten King*, plus per-table custom `.json` upload validation (up to 8 MiB) and live `adventures/` directory scanning. Zero-dependency scripts in `adventures/tools/` provide an ASCII grid compiler (`LevelBuilder` in `build.mjs`) and an automated static and live `bxapi` verifier (`check.mjs`) that checks schema validity, entrance reachability, level transitions, keyed encounters, triggers, and quests. See [Included and custom adventures](adventures/included-adventures.md) and [Author and validate adventures](adventures/authoring-and-checking.md).
 - **Design system, verification suites, and documentation site:** `@bxvtt/web` builds on a token-driven UI kit (`apps/web/src/ui`, with component galleries at `/kit` and `/kit/table`) using Radix UI primitives, self-hosted Fraunces, Atkinson Hyperlegible Next, and Rokkitt variable fonts, custom B/X class, equipment, and die SVGs, full keyboard navigation, code-split client bundles, and in-memory Brotli and gzip asset serving. Automated checks cover TypeScript, ESLint, Prettier, Vitest unit and live-`bxapi` server integration suites (including scans ensuring player responses never include referee data), multi-browser Playwright end-to-end game and `axe-core` accessibility suites (`e2e/`), GitHub Actions CI against production bundles, and a Docusaurus 3.10 documentation site (`website/` and `docs/`) with light and dark torch-ember themes.
 
-[Unreleased]: https://github.com/mmacy/bxvtt/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/mmacy/bxvtt/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/mmacy/bxvtt/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/mmacy/bxvtt/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/mmacy/bxvtt/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/mmacy/bxvtt/compare/v0.1.0...v0.2.0
