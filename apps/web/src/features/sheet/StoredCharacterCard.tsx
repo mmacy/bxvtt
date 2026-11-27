@@ -49,7 +49,7 @@ export function StoredCharacterCard({
         </Tooltip>
         <p className={styles.meta}>
           <span>
-            Level {summary.level} {classLabel(summary.class_id).toLowerCase()}
+            Level {summary.level} {classLabel(summary.class_id)}
             {owner ? <span className="visually-hidden-inline">,</span> : null}
           </span>
           {owner ? (

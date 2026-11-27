@@ -232,7 +232,7 @@ describe('Compendium pages', () => {
     const { user } = setup();
     await user.click(screen.getByRole('tab', { name: 'Spells' }));
     await screen.findByRole('heading', { name: /Cleric spells, 1st level/ });
-    await user.click(screen.getByRole('radio', { name: 'Magic-user' }));
+    await user.click(screen.getByRole('radio', { name: 'Magic-User' }));
     expect(screen.queryByRole('heading', { name: /Cleric spells/ })).not.toBeInTheDocument();
     await user.type(screen.getByRole('searchbox', { name: 'Filter spells by name' }), 'sleep');
     expect(screen.getByRole('button', { name: 'Sleep' })).toBeInTheDocument();

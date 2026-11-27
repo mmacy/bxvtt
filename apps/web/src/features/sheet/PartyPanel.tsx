@@ -418,7 +418,7 @@ function MemberRow({ member, rank, color, controller, light, effects, onOpen }: 
             )}
           </span>
           <span className={styles.meta} aria-hidden="true">
-            Level {member.level} {classInSentence(memberClassName(member))}
+            Level {member.level} {memberClassName(member)}
           </span>
           {light && (
             <span className={styles.lightLine} aria-hidden="true">

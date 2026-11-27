@@ -317,7 +317,11 @@ const CLASS_NAMES: Record<string, string> = Object.fromEntries(
   catalog.classes.map((entry) => [entry.id, entry.name]),
 );
 
-/** Name of a character class: `Magic-User`. Unknown IDs read as words. */
+/**
+ * Name of a character class as a label, a heading, a badge, a card line, or a list or table entry: `Magic-User`.
+ * Unknown IDs read as words. Inside a sentence, pass the name to `classInSentence`, which reads
+ * `magic-user`.
+ */
 export function classLabel(classId: string): string {
   return Object.hasOwn(CLASS_NAMES, classId)
     ? (CLASS_NAMES[classId] ?? fallbackLabel(classId))

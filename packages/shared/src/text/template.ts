@@ -22,6 +22,7 @@ import {
 } from './context';
 import {
   capitalizeFirst,
+  classInSentence,
   coinName,
   count,
   formatFeet,
@@ -34,6 +35,7 @@ import {
 import {
   abilityLabel,
   battleActionLabel,
+  classLabel,
   conditionLabel,
   restKindLabel,
   saveVersus,
@@ -107,7 +109,7 @@ function asText(value: ParamValue | null | undefined): string | undefined {
 }
 
 function formatClass(value: string): string {
-  return (classCatalogName(value) ?? prettifyId(value)).toLowerCase();
+  return classInSentence(classCatalogName(value) ?? prettifyId(value));
 }
 
 const MODE_PHRASES: Record<string, string> = {
@@ -127,11 +129,6 @@ const QUEST_STATUSES: Record<string, string> = {
   inactive: 'not active yet',
   active: 'already active',
   completed: 'already finished',
-};
-
-const SPELL_LISTS: Record<string, string> = {
-  cleric: 'cleric',
-  magic_user: 'magic-user',
 };
 
 function formatValue(value: ParamValue | null | undefined, format: string, ctx: TextContext): string {
@@ -198,7 +195,7 @@ function formatValue(value: ParamValue | null | undefined, format: string, ctx: 
     case 'inreverse':
       return Number(first(value)) === 1 || first(value) === 'true' ? ' in its reversed form' : '';
     case 'spelllist':
-      return text ? (SPELL_LISTS[text] ?? prettifyId(text)) : 'that';
+      return text ? classInSentence(classLabel(text)) : 'that';
     case 'moveReason':
       return text ? (MOVE_REASONS[text] ?? prettifyId(text)) : 'of a problem';
     case 'questStatus':

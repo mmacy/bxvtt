@@ -288,7 +288,7 @@ describe('rules links', () => {
     const { user } = renderWithTable(<CharacterSheet memberId={brenna?.id ?? null} onClose={() => {}} />, {
       snapshot,
     });
-    await user.click(await screen.findByRole('button', { name: 'fighter' }));
+    await user.click(await screen.findByRole('button', { name: 'Fighter' }));
     expect(useTableUi.getState().compendiumEntry).toEqual({ kind: 'classes', id: 'fighter' });
   });
 
@@ -1098,7 +1098,7 @@ describe('names the player view states', () => {
   it('shows a custom class on the sheet and in the party panel', async () => {
     const { snapshot, brenna } = customClassSnapshot();
     renderWithTable(<CharacterSheet memberId={brenna.id} onClose={() => {}} />, { snapshot });
-    expect(await screen.findByRole('button', { name: 'hollow knight' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Hollow knight' })).toBeInTheDocument();
   });
 
   it('describes a party row with the view’s class name', () => {

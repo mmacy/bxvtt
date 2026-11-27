@@ -7,10 +7,10 @@ describe('memberDescription', () => {
     const brenna = structuredClone(fixtureSnapshot('exploring', 'referee').game?.view.party[0]);
     if (!brenna) throw new Error('No Brenna.');
     expect(memberDescription({ ...brenna, level: 2, class_name: 'Hollow knight', current_hp: 4 })).toBe(
-      'Level 2 hollow knight',
+      'Level 2 Hollow knight',
     );
     expect(
       memberDescription({ ...brenna, level: 2, class_id: 'fighter', class_name: '', current_hp: 0 }),
-    ).toBe('Level 2 fighter, down');
+    ).toBe('Level 2 Fighter, down');
   });
 });

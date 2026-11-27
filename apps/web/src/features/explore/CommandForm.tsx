@@ -6,6 +6,7 @@
  */
 import type { MemberView, SpellSummary } from '@bxvtt/shared/bxapi';
 import {
+  classLabel,
   commandFieldOptionLabel,
   commandFieldText,
   commandInfo,
@@ -615,13 +616,11 @@ function SpellListInput({ label, help, value, onChange, caster }: SpellListInput
   );
 }
 
-const SPELL_LISTS: Record<string, string> = { cleric: 'Cleric', magic_user: 'Magic-user' };
-
 /** The catalog's spells, grouped by spell list and level. */
 function groupSpells(spells: readonly SpellSummary[]): SelectGroup[] {
   const groups = new Map<string, SelectOption[]>();
   for (const spell of spells) {
-    const list = SPELL_LISTS[spell.spell_list] ?? spell.spell_list;
+    const list = classLabel(spell.spell_list);
     const key = `${list} spells, level ${spell.level}`;
     groups.set(key, [...(groups.get(key) ?? []), { value: spell.id, label: spell.name }]);
   }

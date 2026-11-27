@@ -6,7 +6,6 @@
 import {
   abilityLabel,
   alignmentLabel,
-  classInSentence,
   conditionDescription,
   conditionLabel,
   formatFeet,
@@ -84,9 +83,7 @@ export function SheetHeader({ model, color, controller, actions }: SheetHeaderPr
         <p className={styles.name}>{model.name}</p>
         <p className={styles.classLine}>
           Level {model.level}{' '}
-          <RuleLink entry={{ kind: 'classes', id: model.classId }}>
-            {classInSentence(model.className)}
-          </RuleLink>
+          <RuleLink entry={{ kind: 'classes', id: model.classId }}>{model.className}</RuleLink>
           {[model.title, alignmentLabel(model.alignment)]
             .filter((part): part is string => Boolean(part))
             .map((part) => `, ${part}`)

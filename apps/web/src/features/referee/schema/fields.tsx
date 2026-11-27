@@ -1089,7 +1089,7 @@ function CharacterEditor(props: FieldEditorProps) {
   const options = (mine.items ?? []).map((c) => ({
     value: c.id,
     label: c.name,
-    description: `Level ${c.level} ${classLabel(c.class_id).toLowerCase()}`,
+    description: `Level ${c.level} ${classLabel(c.class_id)}`,
   }));
   return (
     <div className={styles.fields}>

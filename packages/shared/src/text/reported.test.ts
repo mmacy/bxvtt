@@ -8,8 +8,10 @@ import outcomes from './fixtures/outcomes.json' with { type: 'json' };
 import bell from '../../../../adventures/the-drowned-bell.json' with { type: 'json' };
 import bridge from '../../../../adventures/the-toll-bridge.json' with { type: 'json' };
 import {
+  classLabel,
   contextFromPlayerView,
   describeEvent,
+  describeRejection,
   describeEvents,
   equipmentNoun,
   describeGameEntry,
@@ -667,6 +669,22 @@ describe('class names in the middle of a sentence', () => {
     expect(classInSentence('Warlock of Sarn')).toBe('warlock of Sarn');
     expect(classInSentence('Knight of the Silver Hand')).toBe('knight of the Silver Hand');
     expect(classInSentence('Hollow Knight')).toBe('Hollow Knight');
+  });
+
+  it('reads the same class as a label on its own and in lower case inside a sentence', () => {
+    expect(classLabel('magic_user')).toBe('Magic-User');
+    expect(classInSentence(classLabel('magic_user'))).toBe('magic-user');
+    expect(classInSentence(classLabel('fighter'))).toBe('fighter');
+  });
+
+  it('capitalizes the class only as the first word of a sentence', () => {
+    const refusal = (classId: string) =>
+      describeRejection({ code: 'items.equip.armour_forbidden', params: { class: classId } }, emptyContext());
+    const advice = (list: string) =>
+      describeRejection({ code: 'magic.book.wrong_list', params: { spell: 'sleep', list } }, emptyContext());
+    expect(refusal('magic_user')).toBe("Magic-users can't wear armour.");
+    expect(refusal('hollow_knight')).toBe("Hollow knights can't wear armour.");
+    expect(advice('magic_user')).toBe("Sleep is a magic-user spell, which this class can't learn.");
   });
 });
 

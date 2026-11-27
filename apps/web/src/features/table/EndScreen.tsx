@@ -1,6 +1,5 @@
 import type { SaveEntry } from '@bxvtt/shared/protocol';
 import {
-  classInSentence,
   conditionLabel,
   count,
   formatGameClock,
@@ -279,7 +278,7 @@ export function EndScreen() {
                   <p className={styles.saveTitle}>{member.name}</p>
                   <p className={styles.endMeta}>
                     <span>
-                      Level {member.level} {classInSentence(memberClassName(member))}
+                      Level {member.level} {memberClassName(member)}
                       <span className="visually-hidden-inline">,</span>
                     </span>
                     <span>{formatInteger(member.xp)} XP</span>
