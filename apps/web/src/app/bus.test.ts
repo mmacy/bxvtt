@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { displayStringProblem } from './api';
+import { displayStringIssue, displayStringProblem } from './api';
 import { useMapBus } from './mapBus';
 import { formatShortcut, matchesShortcut } from './shortcuts';
 
@@ -63,6 +63,15 @@ describe('shortcuts', () => {
     expect(formatShortcut('mod+k', false)).toEqual(['Ctrl', 'K']);
     expect(formatShortcut('mod+k', true)).toEqual(['⌘', 'K']);
     expect(formatShortcut('shift+arrowup', false)).toEqual(['Shift', '↑']);
+  });
+});
+
+describe('displayStringIssue', () => {
+  it('names the rule a display string breaks, so a form can word it', () => {
+    expect(displayStringIssue('Rhea', 40)).toBeNull();
+    expect(displayStringIssue('   ', 40)).toBe('empty');
+    expect(displayStringIssue('x'.repeat(41), 40)).toBe('too_long');
+    expect(displayStringIssue('Rh\tea', 40)).toBe('invisible');
   });
 });
 

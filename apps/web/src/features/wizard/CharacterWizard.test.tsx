@@ -306,12 +306,33 @@ describe('CharacterWizard', () => {
     // Selecting Create character moves focus to the button, and the missing name sends it back to the field.
     await user.click(create);
     expect(name).toHaveFocus();
-    expect(name).toHaveAccessibleDescription(/\S/);
+    expect(name).toHaveAccessibleDescription('Enter a name.');
     expect(api.checkCharacter).not.toHaveBeenCalled();
     expect(api.createCharacter).not.toHaveBeenCalled();
     await user.type(name, 'Wren');
     expect(name).not.toHaveAccessibleDescription();
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('heads the review sheet with the name, then the class line and its Change link, in that order', async () => {
+    const { user } = openOn(
+      { step: 'review' },
+      wizardApi({ rolls: { status: { class_id: 'fighter', gold_rolled: true } } }),
+    );
+    const name = await screen.findByRole('textbox', { name: /Name/ });
+    await screen.findByText('6 hit points');
+    name.focus();
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Suggest a name' })).toHaveFocus();
+    await user.tab();
+    expect(document.activeElement).toHaveTextContent('Fighter');
+    await user.tab();
+    // jsdom drops the space before the visually hidden part of the name, which browsers keep.
+    const change = screen.getByRole('button', { name: /^Change\s?alignment and languages$/ });
+    expect(change).toHaveFocus();
+    // The link shares the class line's row, and each dot stays on the line with the word before it.
+    const line = within(change.parentElement as HTMLElement).getByText(/^Level 1/);
+    expect(line.textContent).toBe('Level 1 Fighter\u00a0· Veteran\u00a0· Lawful');
   });
 
   it('keeps the name on a resumed review step and leaves focus where the dialog puts it', async () => {
@@ -355,6 +376,67 @@ describe('CharacterWizard', () => {
     expect(localStorage.getItem(draftKey(null, TABLE_ID))).toBeNull();
   });
 
+  describe('a wizard reopened while an earlier create is in flight', () => {
+    function openReviewDraft() {
+      localStorage.setItem(
+        draftKey(null, TABLE_ID),
+        JSON.stringify({
+          ...emptyDraft(),
+          roll: ROLL,
+          classId: 'fighter',
+          name: 'Wren',
+          alignment: 'lawful',
+          step: 'review',
+        }),
+      );
+    }
+
+    async function startThenReopen(api: FakeApi, onCreated: () => void, onClose: () => void) {
+      openReviewDraft();
+      const view = renderWithTable(<CharacterWizard open onClose={onClose} onCreated={onCreated} />, {
+        api,
+        snapshot: fixtureSnapshot('lobby', 'player'),
+        preferences: { motion: 'reduce' },
+      });
+      await view.user.click(await screen.findByRole('button', { name: 'Create character' }));
+      await waitFor(() => expect(api.createCharacter).toHaveBeenCalled());
+      // The player closes the wizard and opens it again before the server answers.
+      view.rerender(<CharacterWizard open={false} onClose={onClose} onCreated={onCreated} />);
+      view.rerender(<CharacterWizard open onClose={onClose} onCreated={onCreated} />);
+      const create = await screen.findByRole('button', { name: 'Create character' });
+      return create;
+    }
+
+    it('waits for the answer and closes once the character is stored', async () => {
+      const api = wizardApi({ rolls: { status: { class_id: 'fighter', gold_rolled: true } } });
+      let store: (character: StoredCharacter) => void = () => {};
+      api.createCharacter.mockReturnValue(new Promise<StoredCharacter>((resolve) => (store = resolve)));
+      const onCreated = vi.fn();
+      const onClose = vi.fn();
+      const create = await startThenReopen(api, onCreated, onClose);
+      expect(create).toHaveAttribute('aria-busy', 'true');
+      act(() => store({ ...(stored as unknown as StoredCharacter), name: 'Wren' }));
+      await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+      expect(onCreated).toHaveBeenCalledTimes(1);
+      expect(api.createCharacter).toHaveBeenCalledTimes(1);
+      expect(localStorage.getItem(draftKey(null, TABLE_ID))).toBeNull();
+    });
+
+    it('lets the player carry on when the earlier create fails', async () => {
+      const api = wizardApi({ rolls: { status: { class_id: 'fighter', gold_rolled: true } } });
+      let fail: (error: unknown) => void = () => {};
+      api.createCharacter.mockReturnValue(
+        new Promise<StoredCharacter>((_resolve, reject) => (fail = reject)),
+      );
+      const onClose = vi.fn();
+      const create = await startThenReopen(api, () => {}, onClose);
+      act(() => fail(new TypeError('Failed to fetch')));
+      await waitFor(() => expect(create).not.toHaveAttribute('aria-busy'));
+      expect(onClose).not.toHaveBeenCalled();
+      expect(localStorage.getItem(draftKey(null, TABLE_ID))).not.toBeNull();
+    });
+  });
+
   it('puts a name the server refuses on the field, with focus there', async () => {
     const api = wizardApi({ rolls: { status: { class_id: 'fighter', gold_rolled: true } } });
     api.createCharacter.mockRejectedValue(
@@ -371,13 +453,12 @@ describe('CharacterWizard', () => {
     await screen.findByText('6 hit points');
     const name = screen.getByRole('textbox', { name: /Name/ });
     await user.click(create);
-    const sentence = 'Use 1 to 100 characters without tabs, line breaks, or text direction marks.';
-    await waitFor(() => expect(name).toHaveAccessibleDescription(sentence));
+    await waitFor(() => expect(name).toHaveAccessibleDescription("This name won't work. Try another."));
     expect(name).toHaveAttribute('aria-invalid', 'true');
     expect(name).toHaveFocus();
-    expect(screen.getByText('Enter a valid character name')).toBeInTheDocument();
-    // The field says why, so the banner doesn't repeat it.
-    expect(screen.getAllByText(sentence)).toHaveLength(1);
+    // The field is the one signal: no banner repeats the refusal.
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText(/valid character name/)).toBeNull();
     await user.type(name, 'a');
     expect(name).not.toHaveAccessibleDescription();
   });
@@ -722,13 +803,18 @@ describe("the table's reroll limit", () => {
     const api = wizardApi({ rolls: { status: { class_id: 'fighter', gold_rolled: true } } });
     api.checkCharacter.mockRejectedValue(refusal('ability_roll_superseded', { roll_id: 'rol_newest' }));
     api.getAbilityRoll.mockImplementation(async (id: string) => ({ ...ROLL, id }));
+    const scrolled = vi.fn();
+    Element.prototype.scrollIntoView = scrolled;
     const { user } = openOn({ step: 'review' }, api);
     await user.click(await screen.findByRole('button', { name: 'Create character' }));
     expect(await screen.findByText('You rolled newer ability scores')).toBeInTheDocument();
     expect(
       screen.getByText('Only your newest ability scores count, so they replace the ones you had here.'),
     ).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Roll abilities', level: 3 })).toBeInTheDocument();
+    // The wizard changed the step by itself, so it shows the new step from the top, with focus on its heading.
+    const heading = screen.getByRole('heading', { name: 'Roll abilities', level: 3 });
+    await waitFor(() => expect(heading).toHaveFocus());
+    expect(scrolled).toHaveBeenCalledWith({ block: 'start' });
     expect(api.createCharacter).not.toHaveBeenCalled();
   });
 

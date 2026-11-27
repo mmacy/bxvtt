@@ -11,6 +11,7 @@ import type {
 import { alignmentLabel, classLabel, emptyContext, resolveItemNoun } from '@bxvtt/shared/text';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  displayStringIssue,
   displayStringProblem,
   getApi,
   useClassCatalog,
@@ -29,6 +30,7 @@ import { ClassStep } from './ClassStep';
 import {
   STEP_IDS,
   adjustedScores,
+  draftKey,
   emptyDraft,
   hasAdjustment,
   loadDraft,
@@ -146,6 +148,35 @@ function openingDraft(
   return { draft: stored, problem: null };
 }
 
+/** What the name field says when the server refuses a name the wizard let through. */
+const NAME_REFUSED = "This name won't work. Try another.";
+
+/**
+ * Why the character's name can't be used, worded for the name field, or `null` when it can. The shared check's
+ * own sentences say "character" for a letter, which reads as the adventurer here.
+ *
+ * @param name - The name as the player typed it.
+ */
+export function characterNameProblem(name: string): string | null {
+  switch (displayStringIssue(name, 100)) {
+    case 'empty':
+      return 'Enter a name.';
+    case 'invisible':
+      return 'Remove tabs and other invisible marks from the name.';
+    case 'too_long':
+      return displayStringProblem(name, 100);
+    case null:
+      return null;
+  }
+}
+
+/**
+ * The creates in flight, by the storage key of the unfinished character they store. The player can close the wizard
+ * while the server stores the character and open it again before the answer. The new wizard then holds the same
+ * character, so it waits for that answer instead of offering Create character a second time.
+ */
+const pendingCreates = new Map<string, { rollId: string; stored: Promise<boolean> }>();
+
 /** Debounce for the live checks, in milliseconds. The server allows 60 checks a minute per user. */
 const CHECK_DELAY_MS = 600;
 
@@ -234,13 +265,18 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
   const [freshRollId, setFreshRollId] = useState<string | null>(null);
   const [revealedRollId, setRevealedRollId] = useState<string | null>(null);
   const [rolling, setRolling] = useState(false);
-  const [busy, setBusy] = useState(false);
+  // A create the player started in an earlier wizard for this character, which this wizard waits for.
+  const [earlierCreate] = useState(() => {
+    const pending = pendingCreates.get(draftKey(userId, tableId));
+    return pending !== undefined && pending.rollId === opening.draft?.roll?.id ? pending : null;
+  });
+  const [busy, setBusy] = useState(earlierCreate !== null);
   const [problem, setProblem] = useState<WizardProblem | null>(opening.problem);
   const [showErrors, setShowErrors] = useState(false);
   // The name's problem shows after the player selects Create character, until the name is valid.
   const [showNameError, setShowNameError] = useState(false);
-  // Why the server refused the name on create, shown on the field until the player changes the name.
-  const [refusedName, setRefusedName] = useState<string | null>(null);
+  // Whether the server refused the name on create. The field says so until the player changes the name.
+  const [refusedName, setRefusedName] = useState(false);
   const nameInput = useRef<HTMLInputElement>(null);
   const [confirmReset, setConfirmReset] = useState(false);
   const [kitNote, setKitNote] = useState<string | null>(null);
@@ -280,19 +316,46 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
     };
   }, []);
 
+  // When the earlier create stores the character, the earlier wizard has already reported it, so this one only
+  // closes. When it fails, the player carries on here.
+  useEffect(() => {
+    if (earlierCreate === null) return;
+    void earlierCreate.stored.then((created) => {
+      if (!mounted.current) return;
+      setBusy(false);
+      if (created) {
+        finished.current = true;
+        saveDraft(userId, tableId, null);
+        onClose();
+      }
+    });
+  }, [earlierCreate, userId, tableId, onClose]);
+
   const update = useCallback((change: Partial<WizardDraft>) => setDraft((d) => ({ ...d, ...change })), []);
 
-  // The review step opens on the name field while the character has no name. A wizard that opens on the review
-  // step focuses the field through the dialog, because the field isn't in the page yet when this effect first runs.
+  // A wizard that opens on the review step without a name starts on the name field. The dialog focuses it, because
+  // the field isn't in the page yet when the wizard's first effects run.
   const [opensOnName] = useState(() => draft.step === 'review' && draft.name.trim() === '');
-  const reviewOpen = draft.step === 'review' && adjusted !== null;
   const nameNow = useRef(draft.name);
   useEffect(() => {
     nameNow.current = draft.name;
   });
+  // Every step change, whether the player's or the wizard's own after a refusal, shows the new step from its top,
+  // so a banner above the step is in view. Focus moves to the step heading, or to the empty name field on the
+  // review step.
+  const stepHeading = useRef<HTMLHeadingElement>(null);
+  const wizardTop = useRef<HTMLDivElement>(null);
+  const shownStep = useRef(draft.step);
   useEffect(() => {
-    if (reviewOpen && nameNow.current.trim() === '') nameInput.current?.focus();
-  }, [reviewOpen]);
+    if (shownStep.current === draft.step) return;
+    shownStep.current = draft.step;
+    wizardTop.current?.scrollIntoView?.({ block: 'start' });
+    if (draft.step === 'review' && nameNow.current.trim() === '' && nameInput.current) {
+      nameInput.current.focus({ preventScroll: true });
+    } else {
+      stepHeading.current?.focus({ preventScroll: true });
+    }
+  }, [draft.step]);
 
   const rollId = draft.roll?.id ?? null;
   const currentRollId = useRef(rollId);
@@ -307,7 +370,6 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
     rerollLimitNow.current = rerollLimit;
   });
   // The step heading takes focus after a new roll, because the button that rolled may leave the screen.
-  const stepHeading = useRef<HTMLHeadingElement>(null);
   const focusHeading = useRef(false);
   useEffect(() => {
     if (!focusHeading.current) return;
@@ -779,7 +841,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
 
   const create = async () => {
     // The name is the last choice, so the wizard checks it here and sends the player to the field.
-    if (displayStringProblem(draft.name, 100) !== null) {
+    if (displayStringIssue(draft.name, 100) !== null) {
       setShowNameError(true);
       nameInput.current?.focus();
       return;
@@ -787,6 +849,14 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
     const name = draft.name.trim();
     setBusy(true);
     setProblem(null);
+    const key = draftKey(userId, tableId);
+    let settle: (created: boolean) => void = () => {};
+    const pending = {
+      rollId: draft.roll?.id ?? '',
+      stored: new Promise<boolean>((resolve) => (settle = resolve)),
+    };
+    pendingCreates.set(key, pending);
+    let created = false;
     try {
       const body = requestFromDraft(draft);
       // Checking first keeps a refused choice out of the create route, so the browser logs no error for it.
@@ -797,20 +867,23 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
         if (explained.step !== null && explained.step !== 'review') go(explained.step);
         return;
       }
-      finish(await getApi().createCharacter(body));
+      const character = await getApi().createCharacter(body);
+      created = true;
+      finish(character);
     } catch (error) {
       if (handleRollRefusal(error)) return;
-      const explained = explainCreationError(error, { name });
+      // The server refuses only the name this way. The field says so, and nothing else repeats it.
       if (isProblem(error, 'validation_error')) {
-        // The field states the reason, so the banner keeps only its title.
-        setRefusedName(explained.sentences.join(' '));
-        setProblem({ ...explained, sentences: [] });
+        setRefusedName(true);
         nameInput.current?.focus();
         return;
       }
+      const explained = explainCreationError(error, { name });
       setProblem(explained);
       if (explained.step !== null && explained.step !== 'review') go(explained.step);
     } finally {
+      if (pendingCreates.get(key) === pending) pendingCreates.delete(key);
+      settle(created);
       setBusy(false);
     }
   };
@@ -867,7 +940,7 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
     setDraft(emptyDraft());
     setProblem(null);
     setShowNameError(false);
-    setRefusedName(null);
+    setRefusedName(false);
     setFreshRollId(null);
   };
 
@@ -1085,12 +1158,15 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
             }}
             onName={(name) => {
               update({ name });
-              setRefusedName(null);
-              if (displayStringProblem(name, 100) === null) setShowNameError(false);
+              setRefusedName(false);
+              if (displayStringIssue(name, 100) === null) setShowNameError(false);
             }}
             nameError={
-              refusedName ??
-              (showNameError ? (displayStringProblem(draft.name, 100) ?? undefined) : undefined)
+              refusedName
+                ? NAME_REFUSED
+                : showNameError
+                  ? (characterNameProblem(draft.name) ?? undefined)
+                  : undefined
             }
             nameRef={nameInput}
           />
@@ -1172,7 +1248,9 @@ function WizardDialog({ onClose, onCreated }: Omit<CharacterWizardProps, 'open'>
     >
       {/* The lobby renders the rules reference, so names in the wizard open it. */}
       <RuleLinksContext.Provider value={true}>
-        <div className={styles.wizard}>{body}</div>
+        <div ref={wizardTop} className={styles.wizard}>
+          {body}
+        </div>
       </RuleLinksContext.Provider>
       <ConfirmDialog
         open={confirmReset}

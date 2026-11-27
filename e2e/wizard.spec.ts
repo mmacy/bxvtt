@@ -379,7 +379,12 @@ test.describe('character wizard', () => {
     const create = dialog.getByRole('contentinfo').getByRole('button', { name: 'Create character' });
     await create.click();
     await expect(name).toBeFocused();
+    await expect(name).toHaveAccessibleDescription('Enter a name.');
     await expect(dialog).toBeVisible();
+    // A tab in the name is caught before the server sees it, in the wizard's own words.
+    await name.fill('Wren\tVale');
+    await create.click();
+    await expect(name).toHaveAccessibleDescription('Remove tabs and other invisible marks from the name.');
     expect((await sam.client.listCharacters()).items.some((item) => item.name === 'Flarg')).toBe(false);
 
     await dialog.getByRole('button', { name: 'Suggest a name' }).click();

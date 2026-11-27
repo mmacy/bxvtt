@@ -3,8 +3,16 @@
  * interaction bus, preferences, shell overlays, and keyboard shortcuts. Features import everything from `@/app`.
  * `apps/web/src/features/README.md` documents each export with an example.
  */
-export { describeProblem, displayStringProblem, getApi, isNetworkError, reportError, setApi } from './api';
-export type { ProblemMessage } from './api';
+export {
+  describeProblem,
+  displayStringIssue,
+  displayStringProblem,
+  getApi,
+  isNetworkError,
+  reportError,
+  setApi,
+} from './api';
+export type { DisplayStringIssue, ProblemMessage } from './api';
 export { isRetiredToken, useCurrentUser, useIdentity } from './identity';
 export type { IdentityState, IdentityStatus } from './identity';
 export { DEFAULT_PREFERENCES, PLAYBACK_SPEEDS, usePreferences, useReduceMotion } from './preferences';

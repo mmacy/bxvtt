@@ -525,6 +525,14 @@
 
 .fieldset > legend {
   margin-bottom: var(--space-2);
+  padding: 0;
+}
+
+/* A legend that heads a column reads as the heading beside it, which the page styles as a display heading. */
+.fieldset > legend.subTitle {
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-plain);
+  line-height: var(--leading-snug);
 }
 
 .languageGrid {
@@ -856,16 +864,10 @@
 
 .reviewHeader {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-3);
+  flex-direction: column;
+  gap: var(--space-1);
   padding-bottom: var(--space-3);
   border-bottom: var(--border-thick) double var(--color-border-strong);
-}
-
-.reviewIdentity {
-  flex: 1;
-  min-width: 0;
 }
 
 /* A label that phone width reduces to its icon stays in the accessible name. */
@@ -883,7 +885,6 @@
 
 /* The name field stands where the finished sheet shows the name, so it takes the sheet's display face. */
 .reviewNameInput {
-  max-width: var(--measure-prose);
   font-family: var(--font-display);
   font-variation-settings: var(--font-display-soft);
   font-size: var(--text-2xl);
@@ -896,8 +897,18 @@
   }
 }
 
+/* The class line wraps beside its Change link, which stays at the right edge as the section links do. */
+.reviewClassRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
 .reviewClass {
-  margin: var(--space-1) 0 0;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
   font-size: var(--text-lg);
 }
 

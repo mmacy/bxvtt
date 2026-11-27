@@ -2,10 +2,10 @@ import type { AbilityTables, EquipmentSummary } from '@bxvtt/shared/bxapi';
 import { BxvttProblemError } from '@bxvtt/shared/client';
 import type { CharacterRequest, CreationRules, Problem } from '@bxvtt/shared/protocol';
 import { beforeEach, describe, expect, it } from 'vitest';
-import type { ClassDetail, EquipmentDetail } from '@/app';
+import { describeProblem, type ClassDetail, type EquipmentDetail } from '@/app';
 import { createFakeApi } from '@/app/testing/renderWithTable';
 import catalog from './__fixtures__/catalog.json';
-import { continueBlock, type ContinueFacts } from './CharacterWizard';
+import { characterNameProblem, continueBlock, type ContinueFacts } from './CharacterWizard';
 import { autoEquip } from './OutfitStep';
 import {
   draftKey,
@@ -380,7 +380,7 @@ describe('explaining refusals', () => {
     expect(offline.sentences.join(' ')).not.toMatch(/saved in this browser/);
   });
 
-  it('sends a name refused on create to the review step, and keeps an earlier check on its step', () => {
+  it('keeps a validation refusal from an earlier check on its step', () => {
     const refused = new BxvttProblemError({
       type: 'about:blank',
       title: 'Unprocessable Entity',
@@ -388,11 +388,25 @@ describe('explaining refusals', () => {
       code: 'validation_error',
       detail: 'name',
     } as Problem);
-    expect(explainCreationError(refused, { name: 'Wren' })).toMatchObject({
-      step: 'review',
-      title: 'Enter a valid character name',
-    });
     expect(explainCreationError(refused).step).toBeNull();
+  });
+
+  it('starts the body of a failure to store with what failed, so no sentence starts with a stray pronoun', () => {
+    const down = new BxvttProblemError({
+      type: 'about:blank',
+      title: 'Service Unavailable',
+      status: 503,
+      code: 'server_unavailable',
+      detail: 'starting',
+    } as Problem);
+    const failures = [down, new TypeError('Failed to fetch'), new Error('timed out')];
+    for (const failure of failures) {
+      const explained = explainCreationError(failure, { name: 'Wren' });
+      const message = describeProblem(failure);
+      expect(explained.title).toBe("Couldn't create Wren");
+      expect(explained.sentences).toEqual([`${message.title}. ${message.detail}`]);
+      expect(explained.sentences[0]).not.toMatch(/^(It|They|This)\b/);
+    }
   });
 
   it('names the character only for a failure after the player selects Create character', () => {
@@ -442,6 +456,14 @@ describe('oneReasonPerAbility', () => {
       'creation.adjustment.not_lowerable',
       'creation.adjustment.points_mismatch',
     ]);
+  });
+});
+
+describe('characterNameProblem', () => {
+  it('words the name problems for a character, where "character" would read as the adventurer', () => {
+    expect(characterNameProblem('  ')).toBe('Enter a name.');
+    expect(characterNameProblem('Wren\tVale')).toBe('Remove tabs and other invisible marks from the name.');
+    expect(characterNameProblem('Wren Vale')).toBeNull();
   });
 });
 

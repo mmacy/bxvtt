@@ -196,7 +196,7 @@ export function IdentityStep(props: IdentityStepProps) {
               <h3 id="wizard-spells" className={styles.subTitle}>
                 First {bookSize === 1 ? 'spell' : 'spells'}
               </h3>
-              <Badge tone={spells.length === bookSize ? 'success' : 'magic'}>
+              <Badge tone={spells.length === bookSize ? 'success' : 'neutral'}>
                 {spells.length} of {bookSize} chosen
               </Badge>
             </div>

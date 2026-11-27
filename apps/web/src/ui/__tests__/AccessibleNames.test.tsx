@@ -9,6 +9,29 @@ import { Popover } from '../components/Popover';
 import { CoinPurse } from '../game/StatBlock';
 import { ActionBar, ActionBarItem, ActionBarMenu } from '../layout/ActionBar';
 
+describe('a button whose tooltip repeats its label', () => {
+  it('shows the label as a tooltip without describing the button with it again', async () => {
+    const user = userEvent.setup();
+    render(
+      <Button icon="dice" tooltip="Suggest a name">
+        <span className="visually-hidden">Suggest a name</span>
+      </Button>,
+    );
+    const button = screen.getByRole('button', { name: 'Suggest a name' });
+    expect(button).not.toHaveAccessibleDescription();
+    await user.hover(button);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Suggest a name');
+    expect(button).not.toHaveAccessibleDescription();
+  });
+
+  it('still describes the button with a tooltip that adds help', () => {
+    render(<Button tooltip="Replace your cart with the kit">Fill with the kit</Button>);
+    expect(screen.getByRole('button', { name: 'Fill with the kit' })).toHaveAccessibleDescription(
+      'Replace your cart with the kit',
+    );
+  });
+});
+
 describe('key hints inside controls', () => {
   it('keeps a Kbd child out of the button name and text, and names the shortcut', () => {
     render(

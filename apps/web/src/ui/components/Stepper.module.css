@@ -151,7 +151,40 @@ button.inner:hover .label {
     gap: var(--space-2);
   }
 
+  /* The current step takes the room the markers leave, and a label longer than that ends in an ellipsis. The
+     label's title and the step's accessible name keep the whole label. */
+  .current {
+    flex: 0 1 auto;
+    /* The marker keeps its size while the label gives up its room. */
+    min-width: 28px;
+  }
+
+  .current .marker {
+    flex: none;
+  }
+
+  .current .label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .step:not(:last-child)::after {
     display: none;
+  }
+}
+
+/* Below about 360 px of screen, the markers leave no room for a label, and the step heading under the stepper
+   already shows it. The label stays in the step's accessible name. */
+@container (max-width: 300px) {
+  .current .text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 }

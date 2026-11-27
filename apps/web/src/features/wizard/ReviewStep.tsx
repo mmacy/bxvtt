@@ -103,39 +103,42 @@ export function ReviewStep({
   return (
     <Parchment variant="sheet" className={styles.review}>
       <header className={styles.reviewHeader}>
-        <div className={styles.reviewIdentity}>
-          <Field label="Name" error={nameError} required>
-            <TextInput
-              ref={nameRef}
-              value={draft.name}
-              maxLength={100}
-              autoComplete="off"
-              size="lg"
-              wrapperClassName={styles.reviewNameInput}
-              onChange={(event) => onName(event.target.value)}
-              end={
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  icon="dice"
-                  onClick={() => onName(suggestName(draft.classId, draft.name, Math.random(), taken))}
-                >
-                  {/* At phone width the button shows its dice alone, so the name field keeps room. The name stays. */}
-                  <span className={styles.narrowHidden}>Suggest a name</span>
-                </Button>
-              }
-            />
-          </Field>
+        <Field label="Name" error={nameError} required>
+          <TextInput
+            ref={nameRef}
+            value={draft.name}
+            maxLength={100}
+            autoComplete="off"
+            size="lg"
+            wrapperClassName={styles.reviewNameInput}
+            onChange={(event) => onName(event.target.value)}
+            end={
+              <Button
+                size="sm"
+                variant="ghost"
+                icon="dice"
+                tooltip="Suggest a name"
+                onClick={() => onName(suggestName(draft.classId, draft.name, Math.random(), taken))}
+              >
+                {/* At phone width the button shows its dice alone, so the name field keeps room. The name stays. */}
+                <span className={styles.narrowHidden}>Suggest a name</span>
+              </Button>
+            }
+          />
+        </Field>
+        {/* The Change link sits on the class line, because it changes the alignment and languages, not the name. */}
+        <div className={styles.reviewClassRow}>
           <p className={styles.reviewClass}>
             Level 1{' '}
             {detail ? (
               <RuleLink entry={{ kind: 'classes', id: detail.id }}>{classLabel(detail.id)}</RuleLink>
             ) : null}
-            {title ? ` · ${title}` : ''} ·{' '}
-            {draft.alignment ? alignmentLabel(draft.alignment) : 'No alignment'}
+            {/* A no-break space keeps each dot on the line before it, so no line starts with a dot. */}
+            {title ? `\u00a0· ${title}` : ''}
+            {`\u00a0· ${draft.alignment ? alignmentLabel(draft.alignment) : 'No alignment'}`}
           </p>
+          {edit('identity', 'alignment and languages')}
         </div>
-        {edit('identity', 'alignment and languages')}
       </header>
 
       <section className={styles.reviewSection} aria-label="Ability scores">

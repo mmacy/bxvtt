@@ -219,18 +219,15 @@ export function explainCreationError(error: unknown, options: ExplainOptions = {
       sentences: ['Roll your starting gold so you know how much you can spend, then choose your equipment.'],
     };
   }
-  // The server refuses only the name this way. Earlier checks send a stand-in name, so the refusal belongs to
-  // the review step only when the player selected Create character.
-  if (isProblem(error, 'validation_error') && name !== undefined) {
+  const message = describeProblem(error);
+  // The title names the character instead, so the body starts with the problem's own title. A detail such as "It
+  // might be starting" then has its subject.
+  if (name !== undefined)
     return {
       step: 'review',
-      title: 'Enter a valid character name',
-      sentences: ['Use 1 to 100 characters without tabs, line breaks, or text direction marks.'],
+      title: stepTitle('review', name),
+      sentences: [`${message.title}. ${message.detail}`],
     };
-  }
-  const message = describeProblem(error);
-  if (name !== undefined)
-    return { step: 'review', title: stepTitle('review', name), sentences: [message.detail] };
   return { step: null, title: message.title, sentences: [message.detail] };
 }
 
