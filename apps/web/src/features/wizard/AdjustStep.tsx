@@ -1,13 +1,26 @@
 import type { AbilityTables } from '@bxvtt/shared/bxapi';
-import { abilityLabel, classInSentence, classLabel, joinList } from '@bxvtt/shared/text';
+import { abilityLabel } from '@bxvtt/shared/text';
 import { useEffect, useRef } from 'react';
 import type { ClassDetail } from '@/app';
-import { Banner, Button, IconButton, Spinner, StatBox, cx, formatModifier } from '@/ui';
-import { adjustedScores, hasAdjustment, type Adjustment } from './draft';
-import { ABILITIES, headlineModifier, xpModifierFor, type Ability, type Scores } from './tables';
+import {
+  Badge,
+  Banner,
+  Button,
+  IconButton,
+  Skeleton,
+  Spinner,
+  StatBox,
+  cx,
+  formatModifier,
+  type BadgeTone,
+} from '@/ui';
+import { adjustedScores, type Adjustment } from './draft';
+import { ABILITIES, headlineModifier, xpModifierFor, type Scores } from './tables';
+import { tradeControls, tradeLead, tradeStatus, tradeStatusLabel, type TradeStatus } from './tradeControls';
+import type { LimitsState } from './useAdjustmentLimits';
 import styles from './wizard.module.css';
 
-/** What the server said about the trade. */
+/** What the server said about the choices. */
 export type CheckState =
   | { status: 'idle' }
   | { status: 'checking' }
@@ -20,96 +33,132 @@ export type CheckState =
     };
 
 /**
- * What the step shows about the trade: what the server said, plus a trade the player is still making. A trade in
- * progress isn't a wrong choice, so it carries guidance about the next step and not a refusal.
+ * What the server said about the trade. `failed` is a check that got no answer, such as when the server is
+ * unreachable, which says nothing about the trade.
  */
-export type AdjustCheckState = CheckState | { status: 'in_progress'; guidance: string[] };
-
-/** The element that says what to do next about a trade in progress. The Continue button points to it. */
-export const ADJUST_GUIDANCE_ID = 'adjust-trade-guidance';
+export type TradeCheckState = CheckState | { status: 'failed' };
 
 export interface AdjustStepProps {
   scores: Scores;
   adjustment: Adjustment;
   onChange: (adjustment: Adjustment) => void;
   detail: ClassDetail | null;
+  /** Whether the class entry won't load, so the step shows its reasons without the prime requisite's name. */
+  detailFailed?: boolean;
   tables: AbilityTables | null;
-  check: AdjustCheckState;
-  /**
-   * How many times the player has tried to continue with the trade in progress. Each try moves focus to the
-   * note that says to finish the trade or reset it, so a screen reader reads it again.
-   */
-  continueAttempts?: number;
+  /** The latest check of the trade. */
+  check: TradeCheckState;
+  /** bxapi's limits on the trade for the roll and the class. */
+  limits: LimitsState;
+  /** Reads the limits again after they failed to load. */
+  onRetry: () => void;
+  /** Whether the read after Try again is running. */
+  retrying?: boolean;
+  /** How many reads of the limits have failed, so the banner announces each failure. */
+  failures?: number;
+  /** The class the player chose. */
+  classId: string | null;
 }
 
-/** The signed change the player made to one ability: negative when lowered. */
-function changeOf(adjustment: Adjustment, ability: Ability): number {
-  return (adjustment.raised[ability] ?? 0) - (adjustment.lowered[ability] ?? 0);
-}
-
-/** An adjustment with one ability's change set. */
-export function withChange(adjustment: Adjustment, ability: Ability, change: number): Adjustment {
-  const lowered = { ...adjustment.lowered };
-  const raised = { ...adjustment.raised };
-  delete lowered[ability];
-  delete raised[ability];
-  if (change < 0) lowered[ability] = -change;
-  if (change > 0) raised[ability] = change;
-  return { lowered, raised };
-}
+const STATUS_TONES: Record<TradeStatus['kind'], BadgeTone> = {
+  untraded: 'neutral',
+  unspent: 'info',
+  short: 'warning',
+  checking: 'neutral',
+  invalid: 'danger',
+  complete: 'success',
+  unchecked: 'neutral',
+  unavailable: 'neutral',
+};
 
 /**
- * Step 3, optional: trade ability points. The rules engine checks each trade as the player makes it, and a
- * refusal that names a score shows next to that score.
+ * Step 3, optional: trade ability points. The step enables each control from bxapi's limits and shows the
+ * reason when one is disabled. The rules engine checks each trade as the player makes it, and the step shows a
+ * refusal that names a score next to that score.
  */
 export function AdjustStep({
   scores,
   adjustment,
   onChange,
   detail,
+  detailFailed = false,
   tables,
   check,
-  continueAttempts = 0,
+  limits,
+  onRetry,
+  retrying = false,
+  failures = 0,
+  classId,
 }: AdjustStepProps) {
   const primes = detail?.prime_requisites ?? [];
-  // The class entry states which scores the trade can't lower: `may_not_lower`, which bxapi documents as the
-  // abilities the adjustment can't lower "besides the prime requisites". Every other limit (which scores can go
-  // down or up, the rate, the floor and the cap) is the rules engine's to check, so those controls stay open
-  // and the engine's refusal explains a trade it won't take.
-  const fixed = detail?.may_not_lower ?? [];
-  const cannotLower = (ability: Ability) => primes.includes(ability) || fixed.includes(ability);
+  // The reasons name the prime requisite from the class entry, so the step waits for both before it shows any. If
+  // the entry won't load, the reasons read without the name.
+  const loaded = limits.status === 'ready' && (detail !== null || detailFailed) ? limits.limits : null;
+  const input = { limits: loaded, scores, adjustment, classId, primes };
+  const controls = tradeControls(input);
+  const status = tradeStatus(limits, adjustment, check.status);
+  const label = tradeStatusLabel(status);
   const byAbility = check.status === 'invalid' ? (check.byAbility ?? {}) : {};
-  const general = check.status === 'invalid' ? check.sentences : [];
+  const general = status.kind === 'invalid' && check.status === 'invalid' ? check.sentences : [];
   const adjusted = adjustedScores(scores, adjustment);
   const before = detail ? xpModifierFor(detail, scores) : null;
   const after = detail ? xpModifierFor(detail, adjusted) : null;
-  const traded = hasAdjustment(adjustment);
-  const name = detail ? classInSentence(classLabel(detail.id)) : 'this class';
-  const unfinished = traded && check.status === 'in_progress';
-  const guidance = check.status === 'in_progress' ? check.guidance : [];
-  const blockedNote = useRef<HTMLParagraphElement>(null);
+  const traded = status.kind !== 'untraded';
+  const unfinished = status.kind === 'unspent' || status.kind === 'short';
+  // After Try again, focus moves from the banner to the lead sentence that replaces it.
+  const lead = useRef<HTMLParagraphElement>(null);
+  const focusLead = useRef(false);
   useEffect(() => {
-    if (continueAttempts > 0) blockedNote.current?.focus();
-  }, [continueAttempts]);
+    if (focusLead.current && loaded !== null) {
+      focusLead.current = false;
+      lead.current?.focus();
+    }
+  }, [loaded]);
+  // A retry that fails again keeps focus on Try again, so a later load for another reason leaves focus alone.
+  useEffect(() => {
+    focusLead.current = false;
+  }, [failures]);
 
   return (
     <div className={styles.stepBody}>
-      <p className={styles.lead}>
-        In B/X, most classes can lower Strength, Intelligence, or Wisdom by 2 points to raise a prime
-        requisite by 1, down to a minimum score of 9. For a {name}, your prime{' '}
-        {primes.length === 1 ? 'requisite is' : 'requisites are'}{' '}
-        {joinList(primes.map((a) => abilityLabel(a)))}. Skip this step if you want to keep your rolled scores.
-      </p>
+      {limits.status === 'failed' ? (
+        <Banner
+          tone="warning"
+          title="Couldn't check which scores you can trade"
+          actions={
+            <Button
+              size="sm"
+              variant="secondary"
+              icon="refresh"
+              loading={retrying}
+              onClick={() => {
+                focusLead.current = true;
+                onRetry();
+              }}
+            >
+              Try again
+            </Button>
+          }
+        >
+          {/* A new node for each failure, so the alert announces a retry that fails again with the same text. */}
+          <span key={failures}>{limits.detail}</span>
+        </Banner>
+      ) : (
+        <p ref={lead} tabIndex={-1} className={styles.lead}>
+          {loaded === null ? <Skeleton width="24em" /> : tradeLead({ ...input, limits: loaded })}
+        </p>
+      )}
       <div className={styles.adjustGrid} role="group" aria-label="Ability trades">
         {ABILITIES.map((ability) => {
-          const change = changeOf(adjustment, ability);
+          const change = (adjustment.raised[ability] ?? 0) - (adjustment.lowered[ability] ?? 0);
           const prime = primes.includes(ability);
           const value = adjusted[ability];
+          const row = controls[ability];
           return (
             <div key={ability} className={cx(styles.adjustRow, change !== 0 && styles.adjustChanged)}>
               <span className={styles.adjustName}>
                 {abilityLabel(ability)}
-                {prime && <span className={styles.primeMark}>Prime requisite</span>}
+                {prime && <Badge tone="accent">Prime requisite</Badge>}
               </span>
               <span className={styles.adjustRolled} aria-label={`Rolled ${scores[ability]}`}>
                 {scores[ability]}
@@ -120,9 +169,9 @@ export function AdjustStep({
                   label={`Lower ${abilityLabel(ability)}`}
                   size="sm"
                   variant="secondary"
-                  disabled={change <= 0 && cannotLower(ability)}
-                  disabledReason={`A ${name} can't lower ${abilityLabel(ability)}.`}
-                  onClick={() => onChange(withChange(adjustment, ability, change - 1))}
+                  disabled={!row.lower.enabled}
+                  disabledReason={row.lower.reason ?? undefined}
+                  onClick={() => row.lower.next && onChange(row.lower.next)}
                 />
                 <span className={styles.adjustChange} aria-live="polite">
                   {change === 0 ? '0' : formatModifier(change)}
@@ -132,7 +181,9 @@ export function AdjustStep({
                   label={`Raise ${abilityLabel(ability)}`}
                   size="sm"
                   variant="secondary"
-                  onClick={() => onChange(withChange(adjustment, ability, change + 1))}
+                  disabled={!row.raise.enabled}
+                  disabledReason={row.raise.reason ?? undefined}
+                  onClick={() => row.raise.next && onChange(row.raise.next)}
                 />
               </span>
               <span className={styles.adjustStat}>
@@ -156,45 +207,18 @@ export function AdjustStep({
       </div>
 
       <div className={styles.adjustFooter}>
-        <div className={styles.adjustVerdict}>
-          {/*
-            The polite region announces each state as the player clicks. Guidance is an info banner, a status, so
-            it never sounds like an error.
-          */}
-          <div aria-live="polite">
-            {!traded && (
-              <span className={styles.muted}>No points traded. Your rolled scores are unchanged.</span>
-            )}
-            {traded && check.status === 'checking' && (
-              <span className={styles.checking}>
-                <Spinner size={14} label="" /> Checking ability trade
-              </span>
-            )}
-            {traded && check.status === 'ok' && (
-              <Banner tone="success" title="Valid ability trade">
-                {before !== null && after !== null && before !== after
-                  ? `Your experience modifier changes from ${formatModifier(before)}% to ${formatModifier(after)}%.`
-                  : 'Your experience modifier stays the same.'}
-              </Banner>
-            )}
-            {unfinished && (
-              <Banner tone="info" title="Your ability trade isn't finished">
-                <span id={ADJUST_GUIDANCE_ID}>{guidance.join(' ')}</span>
-              </Banner>
-            )}
-            {traded && check.status === 'invalid' && (
-              <Banner tone="warning" title="This ability trade isn't allowed">
-                {general.length > 0
-                  ? general.join(' ')
-                  : 'Check the message beside each adjusted score above.'}
-              </Banner>
-            )}
-          </div>
-          {/* Outside the live region: focus moves here, so a screen reader reads it once. */}
-          {unfinished && continueAttempts > 0 && (
-            <p ref={blockedNote} tabIndex={-1} className={styles.adjustBlocked}>
-              Finish the trade, or reset to your rolled scores, before you continue.
-            </p>
+        <div className={styles.adjustVerdict} aria-live="polite">
+          {status.kind === 'checking' && (
+            <span className={styles.checking}>
+              <Spinner size={14} label="" /> Checking the trade
+            </span>
+          )}
+          {label !== null && <Badge tone={STATUS_TONES[status.kind]}>{label}</Badge>}
+          {general.length > 0 && <span>{general.join(' ')}</span>}
+          {status.kind === 'complete' && before !== null && after !== null && before !== after && (
+            <span className={styles.muted}>
+              Your experience modifier changes from {formatModifier(before)}% to {formatModifier(after)}%.
+            </span>
           )}
         </div>
         {traded && (
@@ -203,7 +227,7 @@ export function AdjustStep({
             icon="undo"
             onClick={() => onChange({ lowered: {}, raised: {} })}
           >
-            Reset to rolled scores
+            Reset scores
           </Button>
         )}
       </div>

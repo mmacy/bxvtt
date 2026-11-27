@@ -12,8 +12,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+This release needs a `bxapi` built on `osrlib` 2.10.0, which is `bxapi` `main` from its pull request 63 onward. Update and restart `bxapi` before you start this version. With an older engine, the server refuses every game request, ability roll, and WebSocket snapshot with `503 bxapi_outdated`.
+
+### Added
+
+- **`GET /api/ability-rolls/{roll_id}/adjustment-limits` (`@bxvtt/server`, `@bxvtt/shared/protocol`, `@bxvtt/shared/client`):** Returns `bxapi`'s `AdjustmentLimits` for a roll and a `class_id` (`BxvttClient.getAdjustmentLimits`), which state how far an ability score trade can move each score and why it stops there. The route applies the ownership, newest-roll, and fixed-class checks of `POST /api/characters/check` and shares its rate limit. ([#60](https://github.com/mmacy/bxvtt/issues/60))
+
 ### Changed
 
+- **`osrlib` 2.10.0 or later (`@bxvtt/server`):** The server's minimum engine version is 2.10.0, because the trade limits come from `bxapi` since that version. An older engine gets `503 bxapi_outdated`, and `GET /api/health` reports it as outdated.
+- **The ability trade step disables controls that can't work (`@bxvtt/web`, `@bxvtt/shared/text`):** Each **Lower** and **Raise** button that can't change its score is unavailable and gives the reason on hover and focus, and lowering moves by the step that `bxapi` states. A badge beside **Reset scores** shows **points to spend**, **points short**, or **Trade complete**, and **Continue** waits until the trade is finished. When no trade is possible, the step says why and offers **Continue**. ([#54](https://github.com/mmacy/bxvtt/issues/54), [#60](https://github.com/mmacy/bxvtt/issues/60))
+- **A saved trade that the limits can't produce is dropped (`@bxvtt/web`):** A character that you started in an earlier version and left on a trade that the step can't make now opens with no trade, and you trade again.
 - **The wizard names the character last (`@bxvtt/web`):** Step 4 is **Alignment and languages**. You enter the name in the review step's sheet header, where **Suggest a name** moved with it. If the name is empty or can't be used, **Create character** shows the reason under the field and moves focus there. ([#57](https://github.com/mmacy/bxvtt/issues/57))
 - **Create character closes the wizard (`@bxvtt/web`):** The wizard stores the character, closes, and returns you to the lobby with the character in the party. The "is ready" view, **Create another**, and **Done** are gone. ([#61](https://github.com/mmacy/bxvtt/issues/61))
 - **An unfinished character stays visible in the lobby (`@bxvtt/web`):** The lobby button reads **Resume character** while you have an unfinished character at the table. A click outside the wizard no longer closes it, but **Close** and `Escape` still do. To discard an unfinished character, open the wizard and select **Start over**, which shows while the table lets you roll new ability scores. ([#55](https://github.com/mmacy/bxvtt/issues/55))

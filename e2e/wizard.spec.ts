@@ -48,6 +48,9 @@ const NAMES: Record<WizardClass, string> = {
 
 const ARCANE: WizardClass[] = ['magic_user', 'elf'];
 
+/** The seeded rolls with no score a trade can lower, so the trade step offers Continue instead of a skip. */
+const NO_TRADE: WizardClass[] = ['dwarf', 'magic_user'];
+
 test.describe('character wizard', () => {
   for (const classId of Object.keys(ROLL_SEEDS) as WizardClass[]) {
     test(`creates ${/^[AEIOU]/.test(classLabelText(classId)) ? 'an' : 'a'} ${classLabelText(classId).toLowerCase()} and adds it to the party`, async ({
@@ -69,7 +72,10 @@ test.describe('character wizard', () => {
       expect(rolls).toBe(classId === 'halfling' ? 2 : 1);
       await next(dialog);
       await chooseClass(dialog, classId);
-      await dialog.getByRole('button', { name: 'Skip this step' }).click();
+      await dialog
+        .getByRole('contentinfo')
+        .getByRole('button', { name: NO_TRADE.includes(classId) ? 'Continue' : 'Skip this step' })
+        .click();
 
       await chooseAlignment(dialog);
       if (ARCANE.includes(classId)) {
@@ -123,7 +129,6 @@ test.describe('character wizard', () => {
     await chooseClass(dialog, 'fighter');
 
     // Two points of Intelligence buy one point of Strength, the fighter's prime requisite.
-    await dialog.getByRole('button', { name: 'Lower Intelligence' }).click();
     await dialog.getByRole('button', { name: 'Lower Intelligence' }).click();
     await dialog.getByRole('button', { name: 'Raise Strength' }).click();
     await expect(dialog.getByRole('group', { name: /^Strength after the trade 16/ })).toBeVisible();
@@ -182,7 +187,7 @@ test.describe('character wizard', () => {
     expect(sheet.inventory?.wielded.length).toBe(1);
   });
 
-  test('a halfling finishes a trade across two prime requisites, guided step by step', async ({ crew }) => {
+  test('a halfling finishes a trade across two prime requisites, one point at a time', async ({ crew }) => {
     const sam = await crew.person('Sam');
     const table = await sam.client.createTable({ name: 'Two primes' });
     await sam.seedAbilityRolls([ROLL_SEEDS.halfling]);
@@ -193,48 +198,23 @@ test.describe('character wizard', () => {
     await chooseClass(dialog, 'halfling');
 
     const lower = dialog.getByRole('button', { name: 'Lower Wisdom' });
-    const guidance = dialog.getByText("Your ability trade isn't finished");
-    const warning = dialog.getByRole('alert');
     const footer = dialog.getByRole('contentinfo');
 
-    // One click on minus lowers Wisdom by 1, which isn't an even amount yet. That's guidance, not a refusal.
+    // Each click lowers Wisdom by 2 and buys a point. The keyboard works the control once the limits load.
+    await expect(lower).toBeEnabled();
     await lower.focus();
     await sam.page.keyboard.press('Enter');
-    await expect(guidance).toBeVisible();
-    await expect(dialog).toContainText(
-      "You've lowered Wisdom by 1. Lower a score by an even amount to gain points.",
-    );
-    await expect(warning).toHaveCount(0);
-    await expect(dialog).not.toContainText("This ability trade isn't allowed");
-
-    // The second click gives points to spend.
+    await expect(dialog.getByText('1 point to spend')).toBeVisible();
     await sam.page.keyboard.press('Enter');
-    await expect(dialog).toContainText(
-      "You've gained 1 point from lowering scores. Raise a prime requisite to finish the trade.",
-    );
-    await expect(warning).toHaveCount(0);
-
-    // Continue stays on the step, says why, and puts focus on the note a screen reader reads.
+    await expect(dialog.getByText('2 points to spend')).toBeVisible();
+    await expect(dialog.getByRole('alert')).toHaveCount(0);
     const cont = footer.getByRole('button', { name: 'Continue' });
-    await expect(cont).toBeEnabled();
-    await cont.click();
-    await expect(dialog.getByRole('heading', { name: 'Adjust scores', level: 3 })).toBeVisible();
-    const note = dialog.getByText('Finish the trade, or reset to your rolled scores, before you continue.');
-    await expect(note).toBeVisible();
-    await expect(note).toBeFocused();
+    await expect(cont).toHaveAttribute('aria-disabled', 'true');
 
-    // Two more clicks make 4 points of Wisdom, which buys 2 points of prime requisites. Spend one, then the other.
-    await lower.click();
-    await lower.click();
     await dialog.getByRole('button', { name: 'Raise Strength' }).click();
-    await expect(dialog).toContainText(
-      "You've gained 2 points from lowering scores and spent 1. Raise a prime requisite to spend the rest.",
-    );
-    await expect(warning).toHaveCount(0);
+    await expect(dialog.getByText('1 point to spend')).toBeVisible();
     await dialog.getByRole('button', { name: 'Raise Dexterity' }).click();
-    await expect(dialog.getByText('Valid ability trade')).toBeVisible();
-    // The note about finishing the trade goes away with the trade in progress.
-    await expect(note).toHaveCount(0);
+    await expect(dialog.getByText('Trade complete')).toBeVisible();
     await expect(dialog.getByRole('group', { name: /^Strength after the trade 17/ })).toBeVisible();
     await expect(dialog.getByRole('group', { name: /^Dexterity after the trade 17/ })).toBeVisible();
     await expect(dialog.getByRole('group', { name: /^Wisdom after the trade 10/ })).toBeVisible();
@@ -242,7 +222,7 @@ test.describe('character wizard', () => {
     await expect(dialog.getByRole('heading', { name: 'Alignment and languages', level: 3 })).toBeVisible();
   });
 
-  test('a wrong ability trade is a warning, and resetting clears it', async ({ crew }) => {
+  test("a score the class can't lower has a disabled control that says why", async ({ crew }) => {
     const sam = await crew.person('Sam');
     const table = await sam.client.createTable({ name: 'Wrong trade' });
     await sam.seedAbilityRolls([ROLL_SEEDS.halfling]);
@@ -252,13 +232,9 @@ test.describe('character wizard', () => {
     await next(dialog);
     await chooseClass(dialog, 'halfling');
 
-    await dialog.getByRole('button', { name: 'Lower Constitution' }).click();
-    await expect(dialog.getByRole('alert')).toContainText("This ability trade isn't allowed");
-    await expect(dialog).toContainText("Constitution can't be lowered.");
-    await expect(dialog.getByText("Your ability trade isn't finished")).toHaveCount(0);
-    await expect(dialog.getByRole('contentinfo').getByRole('button', { name: 'Continue' })).toBeDisabled();
-    await dialog.getByRole('button', { name: 'Reset to rolled scores' }).click();
-    await expect(dialog.getByRole('alert')).toHaveCount(0);
+    const lower = dialog.getByRole('button', { name: 'Lower Constitution' });
+    await expect(lower).toHaveAttribute('aria-disabled', 'true');
+    await expect(lower).toHaveAccessibleDescription("Constitution can't be lowered.");
     await expect(dialog.getByRole('button', { name: 'Skip this step' })).toBeEnabled();
   });
 
@@ -271,14 +247,12 @@ test.describe('character wizard', () => {
     await rollFor(dialog, 'magic_user');
     await next(dialog);
     await chooseClass(dialog, 'magic_user');
-    // Dexterity can't be traded at all, so the refusal gives that one reason (R-105).
-    await dialog.getByRole('button', { name: 'Lower Dexterity' }).click();
-    await expect(dialog).toContainText(
-      "Dexterity can't be lowered. Only Strength, Intelligence, and Wisdom can be traded for points.",
+    // Dexterity can't be traded at all, so its control gives that one reason (R-105).
+    await expect(dialog.getByRole('button', { name: 'Lower Dexterity' })).toHaveAccessibleDescription(
+      "Dexterity can't be lowered.",
     );
-    await expect(dialog).not.toContainText('steps of 2');
-    await dialog.getByRole('button', { name: 'Reset to rolled scores' }).click();
-    await dialog.getByRole('button', { name: 'Skip this step' }).click();
+    // Strength and Wisdom are 10, too low to lower, so no trade is possible and the step offers Continue.
+    await next(dialog);
     await chooseAlignment(dialog, 'Neutral');
 
     const languages = dialog.getByRole('region', { name: 'Languages' });

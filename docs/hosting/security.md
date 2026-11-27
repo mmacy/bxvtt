@@ -60,7 +60,7 @@ The server groups IPv6 addresses by `/64` prefix and trusts forwarding headers (
 | Rejoin status/cancel calls per IP address | 120 per minute |
 | Authenticated state-changing requests per user | 100 per 20 seconds |
 | Feed posts and new annotations per user | 30 per 30 seconds |
-| Character wizard checks and hit point and gold rolls per user | 60 per minute |
+| Character wizard checks, trade limit reads, and hit point and gold rolls per user | 60 per minute |
 | Tables per user (tables they created and still referee) | 50 |
 | Stored characters per user | 200 |
 | Lobby roster entries per table | 20 |

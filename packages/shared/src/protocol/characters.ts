@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type {
   AbilityRoll as BxapiAbilityRoll,
+  AdjustmentLimits as BxapiAdjustmentLimits,
   CharacterSummary,
   GeneratedCharacterResponse,
   HitPointRoll,
@@ -125,6 +126,22 @@ export const CharacterCheck = z.object({
 });
 /** Response of `POST /api/characters/check`. */
 export type CharacterCheck = z.infer<typeof CharacterCheck>;
+
+/** Query of `GET /api/ability-rolls/{roll_id}/adjustment-limits`: the class to trade ability points for. */
+export const AdjustmentLimitsQuery = z.strictObject({
+  class_id: z.string().min(1).max(100),
+});
+/** Query of `GET /api/ability-rolls/{roll_id}/adjustment-limits`. */
+export type AdjustmentLimitsQuery = z.infer<typeof AdjustmentLimitsQuery>;
+
+/**
+ * Response of `GET /api/ability-rolls/{roll_id}/adjustment-limits`: bxapi's `AdjustmentLimits` for the roll's
+ * scores as rolled and the class. It states how far a trade can move each score, and the reason it stops there.
+ * The limits don't depend on a trade, so one answer serves every trade on the roll and class.
+ */
+export const AdjustmentLimits = z.custom<BxapiAdjustmentLimits>();
+/** Response of `GET /api/ability-rolls/{roll_id}/adjustment-limits`. */
+export type AdjustmentLimits = BxapiAdjustmentLimits;
 
 /**
  * Body of `POST /api/ability-rolls/{roll_id}/hit-points` and `POST /api/ability-rolls/{roll_id}/gold`: the

@@ -51,4 +51,28 @@ describe('describeProblem', () => {
       "Games can't run until it's updated. Ask the server host to update the game service.",
     );
   });
+
+  it('keeps the retry sentence by default, and leaves it out beside a Try again control', () => {
+    const serverError = new BxvttProblemError({
+      type: 'about:blank',
+      title: 'Internal Server Error',
+      status: 500,
+      code: 'internal_error',
+      detail: 'The server failed.',
+    });
+    expect(describeProblem(serverError).detail).toBe(
+      'Try again. If it keeps happening, contact the server host.',
+    );
+    expect(describeProblem(serverError, { retryControl: true }).detail).toBe(
+      'If it keeps happening, contact the server host.',
+    );
+    const thrown = new Error('boom');
+    expect(describeProblem(thrown).detail).toBe('Try again. If it keeps happening, reload the page.');
+    expect(describeProblem(thrown, { retryControl: true }).detail).toBe(
+      'If it keeps happening, reload the page.',
+    );
+    // A detail with no retry sentence reads the same either way.
+    const network = new TypeError('Failed to fetch');
+    expect(describeProblem(network, { retryControl: true }).detail).toBe(describeProblem(network).detail);
+  });
 });

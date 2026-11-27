@@ -13,7 +13,14 @@ import {
 import { emptyContext } from './context';
 import { BATTLE_ACTION_VALUES } from './labels';
 import { describeEvent, fallbackEventText, isKnownEventType } from './events';
-import { DECLARATION_CODES, REJECTION_TEMPLATES, declarationParams, describeRejection } from './rejections';
+import {
+  ADJUSTMENT_MERGED_PARAMS,
+  DECLARATION_CODES,
+  REJECTION_KEY_SUFFIXES,
+  REJECTION_TEMPLATES,
+  declarationParams,
+  describeRejection,
+} from './rejections';
 import { TEMPLATE_FORMATS, templatePlaceholders, templateVariants } from './template';
 import { EVENT_SAMPLES } from './fixtures/event-samples';
 
@@ -21,6 +28,18 @@ type Schema = { properties?: Record<string, unknown>; oneOf?: Array<{ $ref: stri
 const schemas = openapi.components.schemas as unknown as Record<string, Schema>;
 const rejectionCodes = Object.keys(codes.rejections);
 const eventTypes = Object.keys(codes.events);
+
+/** The template keys of a code: the code itself, or the code with each of its suffixes. */
+function templateKeys(code: string): string[] {
+  const suffixes = REJECTION_KEY_SUFFIXES[code];
+  return suffixes ? suffixes.map((suffix) => `${code}.${suffix}`) : [code];
+}
+
+/** The code a template key belongs to. */
+function codeOfKey(key: string): string {
+  const base = key.slice(0, key.lastIndexOf('.'));
+  return base in REJECTION_KEY_SUFFIXES ? base : key;
+}
 
 const DASH = new RegExp('[\\u2013\\u2014]');
 const FORMATS = new Set<string>(TEMPLATE_FORMATS);
@@ -47,18 +66,21 @@ const NUMERIC_PARAMS = new Set([
   'allowed',
   'points_available',
   'points_spent',
+  'max_points',
+  'lowest',
+  'highest',
   'uses_per_day',
   'reversed',
 ]);
 
 describe('rejection coverage', () => {
   it('has a template for every rejection code that osrlib can return', () => {
-    const missing = rejectionCodes.filter((code) => !(code in REJECTION_TEMPLATES));
+    const missing = rejectionCodes.flatMap(templateKeys).filter((key) => !(key in REJECTION_TEMPLATES));
     expect(missing).toEqual([]);
   });
 
   it('has no template for a code that osrlib no longer returns', () => {
-    const extra = Object.keys(REJECTION_TEMPLATES).filter((code) => !(code in codes.rejections));
+    const extra = Object.keys(REJECTION_TEMPLATES).filter((key) => !(codeOfKey(key) in codes.rejections));
     expect(extra).toEqual([]);
   });
 
@@ -66,24 +88,27 @@ describe('rejection coverage', () => {
     const known = new Set<string>([
       ...((codes.rejections as Record<string, { params: string[] }>)[code]?.params ?? []),
       ...declarationParams(code),
+      ...(ADJUSTMENT_MERGED_PARAMS[code] ?? []),
     ]);
-    const template = REJECTION_TEMPLATES[code];
-    expect(template).toBeDefined();
-    if (template === undefined) return;
-    const variants = templateVariants(template);
-    for (const variant of variants) {
-      for (const key of variant.when ?? []) expect(known, `${code}: when ${key}`).toContain(key);
-      for (const placeholder of templatePlaceholders(variant.text)) {
-        expect(known, `${code}: {${placeholder.name}}`).toContain(placeholder.name);
-        const format = placeholder.format.split(':')[0] ?? '';
-        expect(
-          FORMATS.has(format) || IDENTITY_FORMATS.has(format),
-          `${code}: format ${placeholder.format}`,
-        ).toBe(true);
+    for (const templateKey of templateKeys(code)) {
+      const template = REJECTION_TEMPLATES[templateKey];
+      expect(template, templateKey).toBeDefined();
+      if (template === undefined) continue;
+      const variants = templateVariants(template);
+      for (const variant of variants) {
+        for (const key of variant.when ?? []) expect(known, `${templateKey}: when ${key}`).toContain(key);
+        for (const placeholder of templatePlaceholders(variant.text)) {
+          expect(known, `${templateKey}: {${placeholder.name}}`).toContain(placeholder.name);
+          const format = placeholder.format.split(':')[0] ?? '';
+          expect(
+            FORMATS.has(format) || IDENTITY_FORMATS.has(format),
+            `${templateKey}: format ${placeholder.format}`,
+          ).toBe(true);
+        }
       }
+      const last = variants[variants.length - 1];
+      expect(last?.when ?? [], `${templateKey}: the last variant is the fallback`).toEqual([]);
     }
-    const last = variants[variants.length - 1];
-    expect(last?.when ?? [], `${code}: the last variant is the fallback`).toEqual([]);
   });
 
   it('writes every template without a dash, an exclamation mark, or a raw ID', () => {

@@ -523,7 +523,8 @@ export interface paths {
          *     osrlib's `generate_treasure` rolls each entry in `GET /v1/rules/tables/treasure` in table order. `coins` reports
          *     each denomination (`pp`, `gp`, `ep`, `sp`, `cp`), `valuables` lists rolled gems and jewellery with `value_gp`,
          *     and each entry in `magic_items` includes `template_id` for lookup via `GET /v1/rules/magic-items/{item_id}`. A
-         *     monster's treasure letters appear on `GET /v1/rules/monsters/{monster_id}` under `treasure`.
+         *     rolled gem or piece of jewellery has no name of its own, so its `phrase` is empty. A monster's treasure letters
+         *     appear on `GET /v1/rules/monsters/{monster_id}` under `treasure`.
          *
          *     Any caller may pass `seed` to repeat a roll, or omit it to get a new random seed. In an active session, osrlib
          *     rolls area and lair treasure automatically during play.
@@ -690,6 +691,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/ability-rolls/{roll_id}/adjustment-limits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the limits on an ability score trade
+         * @description Return how far the `adjustment` trade can move each of this roll's ability scores for a class.
+         *
+         *     The response is osrlib's `AdjustmentLimits`, unchanged. osrlib computes it from the roll's scores as rolled and
+         *     from the class's prime requisites and `may_not_lower`, so it holds for every trade on this roll and class. Read it
+         *     once, when the player picks a class, and use it to drive the adjustment step's controls. A trade that
+         *     `POST /v1/characters` or `POST /v1/ability-rolls/{roll_id}/preview` refuses doesn't change it.
+         *
+         *     Count the points the current trade buys: `raise_step` for each step of lowering. Then drive each ability's
+         *     controls from its entry in `abilities`:
+         *
+         *     - A lower control takes `lower_step` off the ability. Enable it while the current score is above `lowest` and the
+         *       points bought are below `max_points`. When the score is at `lowest`, show `lowest_reason`. Otherwise show
+         *       `max_points_reason`.
+         *     - A raise control adds `raise_step` to the ability. Enable it while the current score is below `highest` and the
+         *       trade has a point that it bought and hasn't spent. When the score is at `highest`, show `highest_reason`.
+         *       Otherwise the player has no point to spend, which your client tracks itself and which has no code.
+         *     - When `can_trade` is `false`, no trade changes a score. Disable the whole step and show `max_points_reason`.
+         *
+         *     For a class with two prime requisites, each one's `highest` is its own limit, and `max_points` caps the points
+         *     raised across both. The rules above keep the total within `max_points`, because a raise spends a point the trade
+         *     bought and the lower controls stop buying at `max_points`.
+         *
+         *     Each reason is a `Rejection`, with the `code` and `params` that the rejections of a 422 `character_invalid` have:
+         *
+         *     - `lowest_reason`: `creation.adjustment.not_lowerable`, `creation.adjustment.prime_requisite_lowered`,
+         *       `creation.adjustment.class_restriction`, `creation.adjustment.below_floor`, or the code of `max_points_reason`.
+         *     - `highest_reason`: `creation.adjustment.raise_not_prime_requisite`, `creation.adjustment.above_cap`, or the code
+         *       of `max_points_reason`.
+         *     - `max_points_reason`: `creation.adjustment.no_room_to_raise` when the prime requisites have room for only
+         *       `max_points` points, or `creation.adjustment.no_room_to_lower` when the abilities the class can lower pay for
+         *       only that many. Both have the params `{"max_points": integer}`. These two codes appear only here, never in the
+         *       `rejections` of a 422.
+         *
+         *     `below_floor` and `above_cap` have the `ability`, and the `score` and `amount` of the first trade osrlib refuses:
+         *     the rolled score, and the amount that takes it one step past the limit.
+         *
+         *     The operation takes no `ruleset` and no other choice, and it works on a used roll, as
+         *     `GET /v1/ability-rolls/{roll_id}` does. The server stores nothing. A `player` key and a `referee` key can both
+         *     call this operation.
+         */
+        get: operations["get_adjustment_limits"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/ability-rolls/{roll_id}/preview": {
         parameters: {
             query?: never;
@@ -724,6 +783,10 @@ export interface paths {
          *     roll. So once the player has chosen a class under the table's ruleset, you can show the hit points and gold and
          *     let the player make every other choice without the dice changing. A different class or reroll option can change
          *     the gold as well as the hit points.
+         *
+         *     For the limits on the `adjustment`, call `GET /v1/ability-rolls/{roll_id}/adjustment-limits` with the class. It
+         *     takes no other choice, so it answers before the player has chosen the starting spells that a preview of a
+         *     `magic_user` or an `elf` requires.
          *
          *     Send the `ruleset` you sent to `POST /v1/ability-rolls` for this roll. A ruleset with another
          *     `ability_score_method` than the roll's gets 409 `ability_roll_ruleset_mismatch`, and so does a request with no
@@ -1196,7 +1259,9 @@ export interface paths {
          *       `reverses_at` says whether they choose a reversible spell's form at `"memorize"` or at `"cast"`.
          *     - `item_names` and `item_names_plural`: what to call each item ID the view shows, in a member's `inventory` or
          *       in the `contents` of a pile in `piles`. `valuable_names` has the own name of each gem or piece of jewellery
-         *       that has one, keyed by its instance ID.
+         *       that has one, keyed by its instance ID, to show in a list. `valuable_phrases` has what to call each of those
+         *       pieces in the middle of a sentence, with its article and its case, such as `"a silver altar candlestick"` or
+         *       `"Ossor's Eye"`.
          *     - `encounter`: active encounter state, or `null`. Pass `declarers` to build `resolve_battle_round`, and pass a
          *       group's `id` as `target_group_id` for attacks, `close`, thrown splash items, and `area` or `hd_budget` spells
          *       (such as `fire_ball` and `sleep`). Each group also has `members` with individual `"monster-NNNN"` or
@@ -1540,6 +1605,80 @@ export interface components {
             raised: {
                 [key: string]: number;
             };
+        };
+        /**
+         * AbilityAdjustmentLimit
+         * @description How far one ability score can move in a legal points trade, and why it can't move further.
+         *
+         *     `adjustment_limits` returns one for each ability
+         *     in `AdjustmentLimits.abilities`. Each
+         *     limit is the furthest that any legal trade moves this ability, counting the other abilities
+         *     that pay for its points or take the points it pays for. Use `lowest` and `highest` as the
+         *     bounds of the ability's control, and disable lowering when `can_lower` is false and raising
+         *     when `can_raise` is false.
+         *
+         *     Each limit is reachable on its own, but the player still has to balance the whole trade,
+         *     as `AdjustmentLimits` describes. For example,
+         *     when two abilities can each pay for every point the prime requisites have room for, the
+         *     player can lower either one to its `lowest`, but not both.
+         */
+        AbilityAdjustmentLimit: {
+            /**
+             * Can Lower
+             * @description Whether some legal trade lowers this ability. It's true exactly when `lowest` is below the rolled score.
+             */
+            can_lower: boolean;
+            /**
+             * Can Raise
+             * @description Whether some legal trade raises this ability. It's true exactly when `highest` is above the rolled score.
+             */
+            can_raise: boolean;
+            /**
+             * Lowest
+             * @description The lowest score a legal trade leaves this ability at.
+             *
+             *     It's the rolled score when the ability can't be lowered. It's always the rolled score
+             *     less a multiple of `lower_step`. For
+             *     example, a score of 10 has a `lowest` of 10, because one step would take it to 8, below
+             *     `ADJUSTMENT_FLOOR`.
+             */
+            lowest: number;
+            /**
+             * @description Why no legal trade leaves this ability lower than `lowest`.
+             *
+             *     When a rule about this ability refuses one more step, this is the first rejection that
+             *     `validate_adjustment` reports for lowering
+             *     the ability by `score - lowest + lower_step`, where `score` is the rolled score. The code is
+             *     `creation.adjustment.not_lowerable`, `creation.adjustment.prime_requisite_lowered`,
+             *     `creation.adjustment.class_restriction`, or `creation.adjustment.below_floor`, whose `score`
+             *     and `amount` params are the rolled score and that refused amount. When the ability has more
+             *     to give but the prime requisites have no room for the points, this is the same rejection as
+             *     `max_points_reason`.
+             */
+            lowest_reason: components["schemas"]["Rejection"];
+            /**
+             * Highest
+             * @description The highest score a legal trade leaves this ability at.
+             *
+             *     It's the rolled score when the ability can't be raised. Only a prime requisite of the
+             *     class can be raised, and no further than
+             *     `MAX_SCORE`.
+             */
+            highest: number;
+            /**
+             * @description Why no legal trade leaves this ability higher than `highest`.
+             *
+             *     For an ability that isn't a prime requisite, this is
+             *     `creation.adjustment.raise_not_prime_requisite`. For a prime requisite that the cap
+             *     stops, it's the `creation.adjustment.above_cap` rejection that
+             *     `validate_adjustment` reports for raising
+             *     the ability by `highest - score + raise_step`, where `score` is the rolled score. Its
+             *     `score` and `amount` params are the rolled score and that refused amount. When the cap
+             *     leaves room but the lowerable abilities can't
+             *     pay for more points, this is the same rejection as
+             *     `max_points_reason`.
+             */
+            highest_reason: components["schemas"]["Rejection"];
         };
         /**
          * AbilityRoll
@@ -2137,6 +2276,81 @@ export interface components {
              *     command keeps the templates it arrived with.
              */
             character: components["schemas"]["Character"];
+        };
+        /**
+         * AdjustmentLimits
+         * @description The limits on the points trade for one set of rolled scores and one class.
+         *
+         *     `adjustment_limits` returns one. Read
+         *     `can_trade` to decide whether to offer the trade at all, and the entry for each ability
+         *     in `abilities` to set the bounds of its control.
+         *
+         *     A trade is legal exactly when all of these hold:
+         *
+         *     - Each lowered amount is a multiple of `lower_step` and no greater than the ability's
+         *       `score - lowest`.
+         *     - Each raised amount is no greater than the ability's `highest - score`.
+         *     - The points raised add up to the points lowered divided by `lower_step` and multiplied
+         *       by `raise_step`.
+         *     - The points raised add up to no more than `max_points`.
+         *
+         *     A client that enforces these conditions proposes only legal trades and doesn't need to
+         *     implement any trade rule itself.
+         */
+        AdjustmentLimits: {
+            /**
+             * Lower Step
+             * @description The points one step of the trade takes off a lowered ability, which is 2.
+             *
+             *     Move a lowering control in steps of this size.
+             */
+            lower_step: number;
+            /**
+             * Raise Step
+             * @description The points one step of lowering buys for a prime requisite, which is 1.
+             */
+            raise_step: number;
+            /**
+             * Can Trade
+             * @description Whether some legal trade changes a score. It's true exactly when `max_points` is above 0.
+             *
+             *     When it's false, the only legal trade is the empty one, so you can skip the trade step.
+             */
+            can_trade: boolean;
+            /**
+             * Max Points
+             * @description The most points a legal trade buys for the prime requisites, and 0 when `can_trade` is false.
+             *
+             *     It's the smaller of two totals: the points the lowerable abilities can pay for before
+             *     they reach `ADJUSTMENT_FLOOR`, and the points
+             *     the prime requisites have room for below
+             *     `MAX_SCORE`.
+             */
+            max_points: number;
+            /**
+             * @description Why no legal trade buys more than `max_points`.
+             *
+             *     The code is one of the following, and its `max_points` param equals `max_points`:
+             *
+             *     - `creation.adjustment.no_room_to_raise`: the prime requisites have no more room below
+             *       `MAX_SCORE`. This is the code when the two totals
+             *       that `max_points` compares are equal, and when every prime requisite is already 18.
+             *     - `creation.adjustment.no_room_to_lower`: the abilities that can be lowered can't pay for
+             *       more points without going below
+             *       `ADJUSTMENT_FLOOR`.
+             *
+             *     `validate_adjustment` never returns these
+             *     two codes. They explain where the limits stop, and a proposed trade that goes past a
+             *     limit breaks one of the rules that `validate_adjustment` does report.
+             */
+            max_points_reason: components["schemas"]["Rejection"];
+            /**
+             * Abilities
+             * @description The limits on each of the six abilities, keyed in `AbilityScore` order.
+             */
+            abilities: {
+                [key: string]: components["schemas"]["AbilityAdjustmentLimit"];
+            };
         };
         /**
          * AdvanceTime
@@ -4535,9 +4749,12 @@ export interface components {
             /**
              * @description Optional point trade between ability scores before rolling hit points, as osrlib's
              *     `AbilityAdjustment`. Map abilities to lower in `lowered` and abilities to raise in `raised`
-             *     using keys `str`, `int`, `wis`, `dex`, `con`, and `cha`. If osrlib refuses the trade, creation
-             *     fails with 422 `character_invalid` and `rejections`. Omit or set to `null` to keep the rolled
-             *     scores.
+             *     using keys `str`, `int`, `wis`, `dex`, `con`, and `cha`. osrlib's descriptions of `lowered` and
+             *     `raised` name `ADJUSTMENT_FLOOR` and `MAX_SCORE`, which are osrlib's Python constants for the
+             *     lowest and the highest score a trade can leave. For the scores a trade can reach from a stored
+             *     ability roll with this class, and the reason for each limit, call
+             *     `GET /v1/ability-rolls/{roll_id}/adjustment-limits`. If osrlib refuses the trade, creation fails with 422
+             *     `character_invalid` and `rejections`. Omit or set to `null` to keep the rolled scores.
              */
             adjustment?: components["schemas"]["AbilityAdjustment"] | null;
             /**
@@ -4607,9 +4824,12 @@ export interface components {
             /**
              * @description Optional point trade between ability scores before rolling hit points, as osrlib's
              *     `AbilityAdjustment`. Map abilities to lower in `lowered` and abilities to raise in `raised`
-             *     using keys `str`, `int`, `wis`, `dex`, `con`, and `cha`. If osrlib refuses the trade, creation
-             *     fails with 422 `character_invalid` and `rejections`. Omit or set to `null` to keep the rolled
-             *     scores.
+             *     using keys `str`, `int`, `wis`, `dex`, `con`, and `cha`. osrlib's descriptions of `lowered` and
+             *     `raised` name `ADJUSTMENT_FLOOR` and `MAX_SCORE`, which are osrlib's Python constants for the
+             *     lowest and the highest score a trade can leave. For the scores a trade can reach from a stored
+             *     ability roll with this class, and the reason for each limit, call
+             *     `GET /v1/ability-rolls/{roll_id}/adjustment-limits`. If osrlib refuses the trade, creation fails with 422
+             *     `character_invalid` and `rejections`. Omit or set to `null` to keep the rolled scores.
              */
             adjustment?: components["schemas"]["AbilityAdjustment"] | null;
             /**
@@ -10159,9 +10379,12 @@ export interface components {
             /**
              * @description Optional point trade between ability scores before rolling hit points, as osrlib's
              *     `AbilityAdjustment`. Map abilities to lower in `lowered` and abilities to raise in `raised`
-             *     using keys `str`, `int`, `wis`, `dex`, `con`, and `cha`. If osrlib refuses the trade, creation
-             *     fails with 422 `character_invalid` and `rejections`. Omit or set to `null` to keep the rolled
-             *     scores.
+             *     using keys `str`, `int`, `wis`, `dex`, `con`, and `cha`. osrlib's descriptions of `lowered` and
+             *     `raised` name `ADJUSTMENT_FLOOR` and `MAX_SCORE`, which are osrlib's Python constants for the
+             *     lowest and the highest score a trade can leave. For the scores a trade can reach from a stored
+             *     ability roll with this class, and the reason for each limit, call
+             *     `GET /v1/ability-rolls/{roll_id}/adjustment-limits`. If osrlib refuses the trade, creation fails with 422
+             *     `character_invalid` and `rejections`. Omit or set to `null` to keep the rolled scores.
              */
             adjustment?: components["schemas"]["AbilityAdjustment"] | null;
             /**
@@ -17157,8 +17380,10 @@ export interface components {
          *     in `PlayerView.item_names` and
          *     `PlayerView.item_names_plural` to name it. A gem or
          *     piece of jewellery that has a name of its own has it in
-         *     `PlayerView.valuable_names` too. Show that name as
-         *     written, with no article.
+         *     `PlayerView.valuable_names` too, which you show as
+         *     written in a list, and a phrase in
+         *     `PlayerView.valuable_phrases`, which you use as
+         *     written in a sentence.
          */
         PileItemView: {
             /**
@@ -17192,7 +17417,7 @@ export interface components {
              * @description One display string per thing in the pile, in the order mundane items, magic items,
              *     then valuables. A mundane entry has the form `"{item_id}×{quantity}"`. A magic item shows its
              *     name once identified and its masked display name before that. A valuable shows its
-             *     name, or its kind when it has no name.
+             *     name, without any spaces around it, or its kind when its name is empty or only whitespace.
              */
             items: string[];
             /**
@@ -17522,8 +17747,9 @@ export interface components {
              *       `"gem"` or `"piece of jewellery"`. The players see everything else about it from the moment
              *       they take it, its own name and its value in gold pieces included, in the inventory's
              *       `valuables`. A piece that has a name of its own, like `"Prior's chain of office"`, has it in
-             *       `valuable_names` under the same id. Show that name as written, with no article, in place of
-             *       the kind.
+             *       `valuable_names` under the same id, and what to call it in a sentence, like
+             *       `"the Prior's chain of office"`, in `valuable_phrases`. Show the name in place of the kind in
+             *       a list, and the phrase in place of the kind in a sentence.
              *
              *     It names no item whose id the view doesn't show. The player-visible item events, like
              *     `ItemAcquiredEvent`, name items by the same ids. An
@@ -17555,25 +17781,55 @@ export interface components {
             /**
              * Valuable Names
              * @description The own name of each gem and piece of jewellery that has one, keyed by its instance id, like
-             *     `{"valuable-0007": "Prior's chain of office"}`. Show it as written, with no article: "Sam takes
-             *     Prior's chain of office." For an id that isn't a key, use the kind in `item_names`, with an
-             *     article: "Sam takes a gem."
+             *     `{"valuable-0007": "Prior's chain of office"}`. Show it as written in a list, such as an inventory
+             *     row. To put the piece in a sentence, use its phrase in
+             *     `valuable_phrases`, which has the article and
+             *     the case: "Sam takes the Prior's chain of office." For an id that isn't a key, use the kind in
+             *     `item_names`, with an article: "Sam takes a gem."
              *
-             *     A piece has a name of its own when its `name` is neither empty nor the plain name that treasure
-             *     generation gives its kind, `"Gem"` or `"Jewellery"`. So a piece an adventure places in a cache
-             *     with a named `ValuableSpec` is a key, and neither a piece
-             *     the session rolls on the treasure tables nor a placed piece whose `name` is empty is a key.
+             *     A piece has a name of its own when its `name` is neither empty, nor only whitespace, nor the
+             *     plain name that treasure generation gives its kind, `"Gem"` for a gem or `"Jewellery"` for a piece
+             *     of jewellery. Spaces around the name don't count. So a piece an
+             *     adventure places in a cache with a named `ValuableSpec` is a
+             *     key, and neither a piece the session rolls on the treasure tables nor a placed piece whose `name`
+             *     is empty is a key.
              *
              *     The keys are the instance ids of those pieces in the members'
              *     `inventory` `valuables` and in the
              *     `contents` of the known piles. Each value is the name that
-             *     the inventory's `valuables` give the piece, and the string at the same place in the pile's
-             *     `items`. A piece in a pile the party doesn't know, or in a
-             *     cache the party hasn't emptied, isn't a key, as it isn't one in `item_names`. Every key here is
-             *     also a key in `item_names`.
+             *     the inventory's `valuables` give the piece, without any spaces around it, and the string at the
+             *     same place in the pile's `items`. A piece in a pile the party
+             *     doesn't know, or in a cache the party hasn't emptied, isn't a key, as it isn't one in `item_names`.
+             *     Every key here is also a key in `item_names`.
              * @default {}
              */
             valuable_names: {
+                [key: string]: string;
+            };
+            /**
+             * Valuable Phrases
+             * @description What to call each piece in `valuable_names` in the middle of a sentence, with its article and its case, keyed
+             *     by the same instance id, like `{"valuable-0007": "the abbot's seal ring", "valuable-0008": "a silver altar
+             *     candlestick", "valuable-0009": "Ossor's Eye"}`. Use it as written in a sentence: "Wren takes a silver altar
+             *     candlestick." Use `valuable_names` in a list, such as an inventory row.
+             *
+             *     The keys are exactly the keys of `valuable_names`, for a piece in a member's
+             *     `inventory` and for a piece in a known pile alike. Each value is the
+             *     piece's `phrase` when it has one. Otherwise osrlib makes the phrase
+             *     from the name. A name whose first word is "the", "a", or "an", in any case, keeps its words with that first word in
+             *     lowercase, so `"The abbot's seal ring"` becomes `"the abbot's seal ring"`. Any other name has its first character in
+             *     lowercase and the indefinite article in front, "an" before `a`, `e`, `i`, `o`, or `u`, with or without an accent,
+             *     and "a" otherwise, so `"Silver altar candlestick"` becomes `"a silver altar candlestick"` and `"Eye of Ossor"`
+             *     becomes `"an eye of Ossor"`. Only that first character changes case. A phrase that's only whitespace counts as no
+             *     phrase, and no value here has spaces around it.
+             *
+             *     A piece from a save that osrlib 2.9.0 wrote has no phrase, so the view makes its phrase from its name, and every
+             *     key of `valuable_names` is a key here. A `PlayerView` that osrlib 2.9.0 built, such as a stored feed entry, has no
+             *     `valuable_phrases`, and it validates with this map empty. For such a view, word each name in `valuable_names`
+             *     yourself.
+             * @default {}
+             */
+            valuable_phrases: {
                 [key: string]: string;
             };
             /**
@@ -24117,6 +24373,22 @@ export interface components {
              */
             name: string;
             /**
+             * Phrase
+             * @description What to call the piece in the middle of a sentence, with its article and its case, like
+             *     `"the abbot's seal ring"`. The session copies it from the
+             *     `ValuableSpec.phrase` that placed the piece, as it copies `name`. It's
+             *     empty for a piece that treasure generation rolls, for a piece placed with no phrase, and for a piece from a save
+             *     that osrlib 2.9.0 or earlier wrote.
+             *
+             *     To word a sentence, read
+             *     `PlayerView.valuable_phrases`, which has this phrase when it's
+             *     set and, when it's empty or only whitespace, the phrase osrlib makes from `name`. A piece with no name of its own,
+             *     whose `name` is empty, is only whitespace, or is the one treasure generation gives its kind, has no phrase in the
+             *     view, whatever this field holds.
+             * @default
+             */
+            phrase: string;
+            /**
              * Value Gp
              * @description What it's worth in gold pieces, and what it pays when sold.
              */
@@ -24153,6 +24425,27 @@ export interface components {
              * @default
              */
             name: string;
+            /**
+             * Phrase
+             * @description What to call the piece in the middle of a sentence, with its article and its case, like
+             *     `"a silver altar candlestick"`, `"the abbot's seal ring"`, or `"Ossor's Eye"`. A client shows `name` in a list,
+             *     such as an inventory row, and words a sentence, such as "Wren takes the abbot's seal ring.", with the phrase that
+             *     `PlayerView.valuable_phrases` gives.
+             *
+             *     Leave it empty, and osrlib makes the phrase from `name`, as for a common noun. A name whose first word is "the",
+             *     "a", or "an" has that word in lowercase, so `"The abbot's seal ring"` reads `"the abbot's seal ring"`. Any other
+             *     name has its first character in lowercase and "an" or "a" in front, by its first letter, so
+             *     `"Silver altar candlestick"` reads `"a silver altar candlestick"`. Set the phrase when the piece has a proper name,
+             *     like `"Ossor's Eye"`, when it takes "the", like `"the Prior's chain of office"`, or when its first letter doesn't
+             *     give its article, like `"a unicorn-horn cup"`. A phrase that's only whitespace counts as empty, and the view
+             *     leaves out any spaces around a name or a phrase.
+             *
+             *     Only a piece with a name of its own has a phrase in the view. A piece whose `name` is empty, is only whitespace,
+             *     or is the name treasure generation gives its kind, `"Gem"` for a gem or `"Jewellery"` for a piece of jewellery,
+             *     is named by its kind, whatever `phrase` holds.
+             * @default
+             */
+            phrase: string;
             /**
              * Value Gp
              * @description What the valuable is worth in gold pieces. It sells for this much in town, and it is worth
@@ -24765,6 +25058,7 @@ export interface components {
     pathItems: never;
 }
 export type AbilityAdjustment = components['schemas']['AbilityAdjustment'];
+export type AbilityAdjustmentLimit = components['schemas']['AbilityAdjustmentLimit'];
 export type AbilityRoll = components['schemas']['AbilityRoll'];
 export type AbilityRollRequest = components['schemas']['AbilityRollRequest'];
 export type AbilityScore = components['schemas']['AbilityScore'];
@@ -24777,6 +25071,7 @@ export type ActiveEffect = components['schemas']['ActiveEffect'];
 export type ActiveModifier = components['schemas']['ActiveModifier'];
 export type AddJournalEntry = components['schemas']['AddJournalEntry'];
 export type AddMember = components['schemas']['AddMember'];
+export type AdjustmentLimits = components['schemas']['AdjustmentLimits'];
 export type AdvanceTime = components['schemas']['AdvanceTime'];
 export type Adventure = components['schemas']['Adventure'];
 export type AdventureCompletedEvent = components['schemas']['AdventureCompletedEvent'];
@@ -28297,6 +28592,129 @@ export interface operations {
             };
             /** @description - `misdirected_request`: The server runs without API keys, and the request's `Host` header isn't `localhost`, `127.0.0.1`, or `[::1]`. Call the server by one of those names, or configure API keys on the server. A server with API keys never returns this code. */
             421: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `rate_limited`: Your client exceeded the per-minute request budget (`BXAPI_RATE_LIMIT_PER_MINUTE`, 600 by default). Wait the seconds in the `Retry-After` header and retry. Requests without a valid API key share a separate budget and receive 429 instead of 401 `unauthorized` when that budget is exhausted. */
+            429: {
+                headers: {
+                    /** @description Whole seconds to wait before retrying, at least `1`. */
+                    "Retry-After"?: number;
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `internal_error`: The server failed because of a bug. The response says nothing about the cause, and the server logs it. Report the request to the server's operator. */
+            500: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `database_busy`: Another process held the SQLite write lock for more than 5 seconds. Wait the 1 second in the `Retry-After` header and retry. */
+            503: {
+                headers: {
+                    /** @description Whole seconds to wait before retrying: `1`. */
+                    "Retry-After"?: number;
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_adjustment_limits: {
+        parameters: {
+            query: {
+                /** @description Character class `id` from the roll's `eligible_class_ids`, such as `fighter`. */
+                class_id: string;
+            };
+            header?: {
+                /** @description The `ETag` of a cached response for this request, such as `W/"5f0c1b6de0a94d7f8f3f0f5b7a1c2d3e"`, or `*`. While the content is unchanged, the server answers 304 with no body. */
+                "If-None-Match"?: string;
+            };
+            path: {
+                /** @description Ability roll `id` (`rol_` followed by 22 characters), from `POST /v1/ability-rolls`. */
+                roll_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description osrlib's `AdjustmentLimits` for the roll's scores as rolled and the class. */
+            200: {
+                headers: {
+                    ETag: components["headers"]["ETag"];
+                    /** @description `private, no-cache`. Revalidate with `If-None-Match` before reusing a cached copy. */
+                    "Cache-Control"?: string;
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdjustmentLimits"];
+                };
+            };
+            /** @description The response whose `ETag` you sent in `If-None-Match` is still current. The response has no body. */
+            304: {
+                headers: {
+                    ETag: components["headers"]["ETag"];
+                    /** @description `private, no-cache`. Revalidate with `If-None-Match` before reusing a cached copy. */
+                    "Cache-Control"?: string;
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description - `unauthorized`: The request has no API key or has an unknown key. Send `Authorization: Bearer <key>` with a key configured on the server. Retrying the same request fails. */
+            401: {
+                headers: {
+                    /** @description `Bearer`, the authentication scheme the server accepts. */
+                    "WWW-Authenticate"?: string;
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `not_found`: Your client has no ability roll with this id, including a roll that another client created. `POST /v1/ability-rolls` creates one. */
+            404: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description - `misdirected_request`: The server runs without API keys, and the request's `Host` header isn't `localhost`, `127.0.0.1`, or `[::1]`. Call the server by one of those names, or configure API keys on the server. A server with API keys never returns this code. */
+            421: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /**
+             * @description - `validation_error`: The request doesn't match the operation's schema. A required field is missing, a value has the wrong type or is out of range, or the body isn't valid JSON. `errors` lists the first 20 problems, and the `loc` of each is the path to the value. Fix the request before you send it again. A request without `class_id` returns this code.
+             *     - `character_invalid`: osrlib has no class with this `class_id`, and the problem has `field` (`class_id`) and `id`. Or the roll's scores don't meet the class's minimum scores, and the problem has osrlib's `rejections`. Send a class `id` from the roll's `eligible_class_ids`.
+             */
+            422: {
                 headers: {
                     "X-Request-Id": components["headers"]["X-Request-Id"];
                     [name: string]: unknown;

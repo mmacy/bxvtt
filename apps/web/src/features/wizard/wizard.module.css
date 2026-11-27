@@ -399,6 +399,13 @@
   }
 }
 
+/* On a phone each row card takes the full width, so its score box fits beside the controls. */
+@media (max-width: 640px) {
+  .adjustGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .adjustRow {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -408,6 +415,8 @@
     'controls stat'
     'refusal refusal';
   align-items: center;
+  /* Cards in one grid row share a height. The rows stay at the top, so a taller card doesn't move the others. */
+  align-content: start;
   gap: var(--space-1) var(--space-3);
   padding: var(--space-3);
   border: var(--border-hair) solid var(--color-border);
@@ -427,12 +436,6 @@
   gap: var(--space-2);
   font-weight: var(--weight-semibold);
   color: var(--color-text-strong);
-}
-
-.primeMark {
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  color: var(--color-text-muted);
 }
 
 .adjustRolled {
@@ -473,23 +476,19 @@
 }
 
 .adjustVerdict {
+  display: flex;
   flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
   min-width: 300px;
 }
 
-/* The note that says to finish or reset the trade. Focus lands here when the player tries to continue. */
-.adjustBlocked {
-  margin: var(--space-2) 0 0;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  color: var(--color-text-strong);
-  font-size: var(--text-sm);
-  line-height: var(--leading-normal);
-}
-
-.adjustBlocked:focus {
-  outline: 2px solid var(--color-focus);
-  outline-offset: -2px;
+/* A 320 px screen is narrower than the status row's usual minimum, so Reset scores wraps under it instead. */
+@media (max-width: 480px) {
+  .adjustVerdict {
+    min-width: 0;
+  }
 }
 
 /* Identity ---------------------------------------------------------------------------------------------------- */

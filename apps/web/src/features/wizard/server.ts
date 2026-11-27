@@ -111,7 +111,7 @@ function stepForCode(code: string): StepId {
 const STEP_TITLES: Record<StepId, string> = {
   roll: 'Roll new ability scores',
   class: 'Choose an eligible class',
-  adjust: 'Check your ability score adjustments',
+  adjust: 'Check your ability trade',
   identity: 'Check your languages and spells',
   hp_gold: 'Roll your hit points and gold',
   outfit: 'Check your starting equipment',
@@ -237,18 +237,23 @@ export function explainCreationError(error: unknown, options: ExplainOptions = {
  *
  * @param problem - The `character_invalid` problem.
  * @param ctx - Names for the IDs in the rejections.
+ * @param classId - The class the trade was checked for. A class restriction names it, as the step's disabled
+ *   reason does, because bxapi's refusal names only the ability.
  */
 export function explainByAbility(
   problem: Problem,
   ctx: TextContext = emptyContext(),
+  classId: string | null = null,
 ): { byAbility: Partial<Record<string, string[]>>; general: string[] } {
   const byAbility: Partial<Record<string, string[]>> = {};
   const general: string[] = [];
   for (const rejection of oneReasonPerAbility(problem.rejections ?? [])) {
-    const [sentence] = describeRejections(
-      [{ code: rejection.code, params: toParamMap(rejection.params) }],
-      ctx,
-    );
+    const params = toParamMap(rejection.params);
+    const named =
+      rejection.code === 'creation.adjustment.class_restriction' && classId !== null
+        ? { ...params, class: classId }
+        : params;
+    const [sentence] = describeRejections([{ code: rejection.code, params: named }], ctx);
     if (!sentence) continue;
     const ability = rejection.params.ability;
     if (typeof ability === 'string') (byAbility[ability] ??= []).push(sentence);

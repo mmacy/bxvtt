@@ -12,7 +12,7 @@ export {
   reportError,
   setApi,
 } from './api';
-export type { DisplayStringIssue, ProblemMessage } from './api';
+export type { DescribeOptions, DisplayStringIssue, ProblemMessage } from './api';
 export { isRetiredToken, useCurrentUser, useIdentity } from './identity';
 export type { IdentityState, IdentityStatus } from './identity';
 export { DEFAULT_PREFERENCES, PLAYBACK_SPEEDS, usePreferences, useReduceMotion } from './preferences';

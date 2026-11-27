@@ -161,21 +161,63 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   'combat.breath.no_breath_weapon': '{monster|entity} has no breath weapon.',
 
   // Character creation -----------------------------------------------------------------------------------------
-  'creation.adjustment.above_cap':
-    '{ability|ability} is {score}, so raising it by {amount} exceeds the maximum of 18. Choose a smaller increase.',
-  'creation.adjustment.below_floor':
-    "{ability|ability} is {score}, so lowering it by {amount} drops it below 9. Ability scores can't be lowered below 9.",
-  'creation.adjustment.class_restriction': "This class can't lower {ability|ability}.",
-  'creation.adjustment.not_lowerable':
-    "{ability|ability} can't be lowered. Only Strength, Intelligence, and Wisdom can be traded for points.",
+  // Each adjustment template reads as a refusal, with the params of a 422, and as the disabled reason of a trade
+  // control, with the params of `adjustment_limits` and the values in `ADJUSTMENT_MERGED_PARAMS`.
+  'creation.adjustment.above_cap': [
+    { when: ['highest'], text: "{ability|ability} can't go above {highest|number} in a trade." },
+    {
+      when: ['amount'],
+      text: 'Raising {ability|ability} by {amount|number} takes it above the highest score a trade allows.',
+    },
+    { text: 'Raising {ability|ability} takes it above the highest score a trade allows.' },
+  ],
+  'creation.adjustment.below_floor': [
+    { when: ['lowest'], text: "{ability|ability} can't go below {lowest|number} in a trade." },
+    {
+      when: ['amount'],
+      text: 'Lowering {ability|ability} by {amount|number} takes it below the lowest score a trade allows.',
+    },
+    { text: 'Lowering {ability|ability} takes it below the lowest score a trade allows.' },
+  ],
+  'creation.adjustment.class_restriction': [
+    { when: ['class'], text: "{class|classcap} can't lower {ability|ability}." },
+    { text: "Your class can't lower {ability|ability}." },
+  ],
+  'creation.adjustment.no_room_to_lower.none': 'None of your scores can go lower in a trade.',
+  'creation.adjustment.no_room_to_lower.some': [
+    { when: ['max_points'], text: 'Lowering your other scores buys only {max_points|count:point}.' },
+    { text: "Lowering your other scores can't buy any more points." },
+  ],
+  'creation.adjustment.no_room_to_raise.none': [
+    { when: ['prime'], text: '{prime|ability} is already as high as a trade can take it.' },
+    { text: 'Your prime requisites are already as high as a trade can take them.' },
+  ],
+  'creation.adjustment.no_room_to_raise.some': [
+    {
+      when: ['prime', 'max_points'],
+      text: '{prime|ability} can rise only {max_points|count:point} in a trade.',
+    },
+    {
+      when: ['max_points'],
+      text: 'Your prime requisites can rise only {max_points|count:point} between them in a trade.',
+    },
+    { when: ['prime'], text: "{prime|ability} can't rise any further in a trade." },
+    { text: "Your prime requisites can't rise any further in a trade." },
+  ],
+  'creation.adjustment.not_lowerable': "{ability|ability} can't be lowered.",
   'creation.adjustment.points_mismatch':
-    'You gained {points_available|count:point} from lowering scores, but you spent {points_spent|number}. Raise a prime requisite by 1 for every 2 points you lower.',
+    'You gained {points_available|count:point} from lowering scores, but spent {points_spent|number}.',
   'creation.adjustment.prime_requisite_lowered':
-    "You can't lower {ability|ability} because it is a prime requisite for this class.",
+    "{ability|ability} is a prime requisite, so it can't be lowered.",
   'creation.adjustment.raise_not_prime_requisite':
-    "{ability|ability} isn't a prime requisite for this class, so you can't raise it.",
-  'creation.adjustment.reduction_not_even':
-    "You can't lower {ability|ability} by {amount}. Lower ability scores by an even number, in steps of 2.",
+    "{ability|ability} isn't a prime requisite, so it can't be raised.",
+  'creation.adjustment.reduction_not_even': [
+    {
+      when: ['amount'],
+      text: "You can't lower {ability|ability} by {amount|number}. Lower it by an even amount.",
+    },
+    { text: "You can't lower {ability|ability} by that amount. Lower it by an even amount." },
+  ],
   'creation.class.requirements_not_met':
     '{class|classcap} require {ability|ability} {minimum|number} or higher, but this character has {score|number}.',
   'creation.languages.duplicate_choice':
@@ -504,6 +546,41 @@ export function declarationParams(code: string): readonly string[] {
   return DECLARATION_CODES.has(code) ? ['character'] : [];
 }
 
+/**
+ * The codes whose template key has a suffix, with the suffixes. `adjustment_limits` reports these two codes to
+ * explain where a trade stops, and their wording depends on whether the trade can buy any points: the key ends in
+ * `.none` when `max_points` is 0 and in `.some` otherwise.
+ */
+export const REJECTION_KEY_SUFFIXES: Readonly<Record<string, readonly string[]>> = {
+  'creation.adjustment.no_room_to_lower': ['none', 'some'],
+  'creation.adjustment.no_room_to_raise': ['none', 'some'],
+};
+
+/**
+ * The key in [`REJECTION_TEMPLATES`][REJECTION_TEMPLATES] for a rejection: its code, plus a suffix for a code in
+ * [`REJECTION_KEY_SUFFIXES`][REJECTION_KEY_SUFFIXES].
+ *
+ * @param rejection A rejection, with `code` and `params`.
+ */
+export function rejectionTemplateKey(rejection: { code: string; params?: ParamMap | undefined }): string {
+  if (!Object.hasOwn(REJECTION_KEY_SUFFIXES, rejection.code)) return rejection.code;
+  const points = Number(rejection.params?.max_points);
+  return `${rejection.code}.${points === 0 ? 'none' : 'some'}`;
+}
+
+/**
+ * The params that the wizard adds to a reason from `adjustment_limits`, beyond those osrlib passes with the code.
+ * `lowest` and `highest` come from the same ability's entry, `class` is the class the player chose, and `prime` is
+ * the class's prime requisite when it has only one. A refusal from a 422 has none of them, so each template's
+ * fallback reads without them.
+ */
+export const ADJUSTMENT_MERGED_PARAMS: Readonly<Record<string, readonly string[]>> = {
+  'creation.adjustment.above_cap': ['highest'],
+  'creation.adjustment.below_floor': ['lowest'],
+  'creation.adjustment.class_restriction': ['class'],
+  'creation.adjustment.no_room_to_raise': ['prime'],
+};
+
 /** Build a sentence from the words of a code that has no template: `items.equip.too_heavy` gives `Equip too heavy`. */
 export function fallbackRejectionText(code: string): string {
   const words = code.split('.').slice(1).map(prettifyId);
@@ -522,9 +599,8 @@ export function describeRejection(
   rejection: { code: string; params?: ParamMap | undefined },
   ctx: TextContext = emptyContext(),
 ): string {
-  const template = Object.hasOwn(REJECTION_TEMPLATES, rejection.code)
-    ? REJECTION_TEMPLATES[rejection.code]
-    : undefined;
+  const key = rejectionTemplateKey(rejection);
+  const template = Object.hasOwn(REJECTION_TEMPLATES, key) ? REJECTION_TEMPLATES[key] : undefined;
   if (template === undefined) return fallbackRejectionText(rejection.code);
   return removeDashes(renderTemplate(template, rejection.params ?? {}, ctx));
 }
@@ -552,77 +628,4 @@ export function describeRejectionsText(
   ctx: TextContext = emptyContext(),
 ): string {
   return describeRejections(rejections, ctx).map(capitalizeFirst).join(' ');
-}
-
-// Ability trades in progress -----------------------------------------------------------------------------------
-
-/**
- * The refusals that describe a trade of ability points the player has not finished, not a choice that breaks a
- * rule. The first click on a minus button lowers a score by 1, which is odd, and the second lowers it by 2, which
- * buys a point the player hasn't spent yet. Both are the next step toward a valid trade, so the wizard shows them as
- * guidance. Every other refusal about a trade (a score that can't be lowered or raised, the floor, the cap) means
- * the player chose something bxapi won't take, and stays a warning. A code that is not listed here, including one
- * that bxapi adds later, is a warning until someone decides otherwise.
- */
-const TRADE_IN_PROGRESS_CODES: ReadonlySet<string> = new Set([
-  'creation.adjustment.reduction_not_even',
-  'creation.adjustment.points_mismatch',
-]);
-
-/**
- * Whether a refusal describes an ability trade the player is still making.
- *
- * @param code - The rejection code.
- */
-export function isTradeInProgress(code: string): boolean {
-  return TRADE_IN_PROGRESS_CODES.has(code);
-}
-
-/**
- * What to do next, for each trade in progress. Each sentence uses only what bxapi's refusal carries. The
- * `points_mismatch` params already state the points in the unit that a prime requisite spends, so no sentence
- * converts between lowering and raising.
- */
-const TRADE_GUIDANCE_TEMPLATES: Record<string, Template> = {
-  'creation.adjustment.reduction_not_even':
-    "You've lowered {ability|ability} by {amount}. Lower a score by an even amount to gain points.",
-  'creation.adjustment.points_mismatch.unspent':
-    "You've gained {points_available|count:point} from lowering scores. Raise a prime requisite to finish the trade.",
-  'creation.adjustment.points_mismatch.partly_spent':
-    "You've gained {points_available|count:point} from lowering scores and spent {points_spent|number}. Raise a prime requisite to spend the rest.",
-  'creation.adjustment.points_mismatch.unfunded':
-    "You've spent {points_spent|count:point} without lowering a score to pay for the trade. Lower a score to gain points, or reset to your rolled scores.",
-  'creation.adjustment.points_mismatch.overspent':
-    "You've gained {points_available|count:point} from lowering scores, but you spent {points_spent|number}. Raise a prime requisite by less, or lower a score to gain more points.",
-};
-
-function tradeGuidanceKey(rejection: { code: string; params?: ParamMap | undefined }): string | undefined {
-  if (rejection.code !== 'creation.adjustment.points_mismatch') return rejection.code;
-  const available = Number(rejection.params?.points_available);
-  const spent = Number(rejection.params?.points_spent);
-  if (!Number.isFinite(available) || !Number.isFinite(spent)) return undefined;
-  if (spent === 0) return `${rejection.code}.unspent`;
-  if (available === 0) return `${rejection.code}.unfunded`;
-  return `${rejection.code}.${spent < available ? 'partly_spent' : 'overspent'}`;
-}
-
-/**
- * Describes a trade in progress as guidance about the next step, in the player's terms. A rejection that
- * {@link isTradeInProgress} doesn't list, or one that lacks the params the guidance needs, gets the sentence
- * from {@link describeRejection}.
- *
- * @param rejection - A rejection from a character check, with `code` and `params`.
- * @param ctx - Names for the IDs in the params. Defaults to an empty context.
- */
-export function describeTradeGuidance(
-  rejection: { code: string; params?: ParamMap | undefined },
-  ctx: TextContext = emptyContext(),
-): string {
-  const key = isTradeInProgress(rejection.code) ? tradeGuidanceKey(rejection) : undefined;
-  const template =
-    key !== undefined && Object.hasOwn(TRADE_GUIDANCE_TEMPLATES, key)
-      ? TRADE_GUIDANCE_TEMPLATES[key]
-      : undefined;
-  if (template === undefined) return describeRejection(rejection, ctx);
-  return removeDashes(renderTemplate(template, rejection.params ?? {}, ctx));
 }

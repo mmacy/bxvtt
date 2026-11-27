@@ -475,7 +475,7 @@ describe('continueBlock', () => {
     revealing: false,
     newScores: 'roll_again',
     classId: 'fighter',
-    adjust: 'idle',
+    adjust: { kind: 'untraded' },
     goldRolled: true,
     gold: { status: 'known', gp: 110 },
     cart: 'ok',
@@ -495,10 +495,18 @@ describe('continueBlock', () => {
     expect(continueBlock({ ...facts, step: 'class', classId: null })).toEqual({
       reason: 'Choose a class first.',
     });
-    expect(continueBlock({ ...facts, step: 'adjust', adjust: 'invalid' })).toEqual({
-      reason: "This ability trade isn't allowed. Change it, or reset to your rolled scores.",
+    expect(continueBlock({ ...facts, step: 'adjust', adjust: { kind: 'invalid' } })).toEqual({
+      reason: 'Change the trade, or reset your scores.',
     });
-    expect(continueBlock({ ...facts, step: 'adjust', adjust: 'checking' })).toEqual({ reason: null });
+    expect(continueBlock({ ...facts, step: 'adjust', adjust: { kind: 'unspent', points: 1 } })).toEqual({
+      reason: 'Spend your points on a prime requisite, or reset your scores.',
+    });
+    expect(continueBlock({ ...facts, step: 'adjust', adjust: { kind: 'short', points: 1 } })).toEqual({
+      reason: 'Lower a score to pay for what you raised, or reset your scores.',
+    });
+    expect(continueBlock({ ...facts, step: 'adjust', adjust: { kind: 'checking' } })).toEqual({
+      reason: null,
+    });
     const unknown = { status: 'unknown', message: 'Roll your starting gold first.' } as const;
     expect(continueBlock({ ...facts, step: 'outfit', gold: unknown })).toEqual({ reason: unknown.message });
     expect(continueBlock({ ...facts, step: 'outfit', cart: 'invalid' })).toEqual({
@@ -507,9 +515,9 @@ describe('continueBlock', () => {
     expect(continueBlock({ ...facts, step: 'outfit', cart: 'checking' })).toEqual({ reason: null });
   });
 
-  it('lets the player continue from a finished step, and from a trade in progress so the step can say why not', () => {
+  it('lets the player continue from a finished step', () => {
     expect(continueBlock(facts)).toBeNull();
-    expect(continueBlock({ ...facts, step: 'adjust', adjust: 'in_progress' })).toBeNull();
+    expect(continueBlock({ ...facts, step: 'adjust', adjust: { kind: 'complete' } })).toBeNull();
     expect(continueBlock({ ...facts, step: 'outfit' })).toBeNull();
     expect(continueBlock({ ...facts, step: 'identity' })).toBeNull();
   });

@@ -22,9 +22,10 @@ export const SERVER_VERSION = (
  * reads view fields that osrlib 2.8 added, such as `item_names`, `features_here`, and `MapFeatureView.emptied`.
  * Since osrlib 2.9, bxapi takes a table's `ruleset` for ability rolls and character creation, with the
  * `ability_score_method` and `max_hp_at_first_level` house rules, and reports a sub-par roll, which the table
- * rules need.
+ * rules need. Since osrlib 2.10, bxapi states the limits on the ability score trade
+ * (`GET /v1/ability-rolls/{roll_id}/adjustment-limits`), which drive the wizard's trade step.
  */
-export const MIN_ENGINE_VERSION = '2.9.0';
+export const MIN_ENGINE_VERSION = '2.10.0';
 
 /**
  * Whether a dotted numeric version, such as `2.10.0`, is at least another. Missing parts count as zero, so `2.8`

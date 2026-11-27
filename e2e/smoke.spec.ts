@@ -29,6 +29,8 @@ interface WizardChoices {
   name: keyof typeof ROLLS;
   className: RegExp;
   spell?: RegExp;
+  /** Whether the roll leaves a score a trade can lower, so the trade step offers a skip instead of Continue. */
+  canTrade?: boolean;
 }
 
 /** Creates a character through the wizard with the class's quick kit, and closes the wizard. */
@@ -41,7 +43,7 @@ async function createWithWizard(actor: Actor, choices: WizardChoices): Promise<v
   await wizard.getByRole('button', { name: 'Continue' }).click();
   await wizard.getByRole('button', { name: choices.className }).click();
   await wizard.getByRole('button', { name: 'Continue' }).click();
-  await wizard.getByRole('button', { name: 'Skip this step' }).click();
+  await wizard.getByRole('button', { name: choices.canTrade ? 'Skip this step' : 'Continue' }).click();
   await wizard.getByRole('radiogroup', { name: 'Alignment' }).getByRole('radio', { name: 'Lawful' }).click();
   if (choices.spell) await wizard.getByRole('button', { name: choices.spell }).click();
   await wizard.getByRole('button', { name: 'Continue' }).click();
@@ -189,7 +191,7 @@ test('a referee and two players play The Toll at Crookback Bridge from table cre
 
   await test.step('each player creates two characters with the wizard', async () => {
     await createWithWizard(sam, { name: 'Flarg', className: /^Fighter/ });
-    await createWithWizard(sam, { name: 'Clarence', className: /^Cleric/ });
+    await createWithWizard(sam, { name: 'Clarence', className: /^Cleric/, canTrade: true });
     await createWithWizard(ann, { name: 'Mazpar', className: /^Magic-User/, spell: /^Sleep Range/ });
     await createWithWizard(ann, { name: 'Elfy', className: /^Elf/, spell: /^Sleep Range/ });
     const order = ruth.page.getByRole('list', { name: 'Party in marching order' }).getByRole('listitem');

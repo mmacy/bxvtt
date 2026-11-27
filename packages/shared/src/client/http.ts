@@ -2,6 +2,8 @@ import type { BattleDeclaration } from '../bxapi';
 import type {
   AbilityRoll,
   AbilityRollRequest,
+  AdjustmentLimits,
+  AdjustmentLimitsQuery,
   AdventureDocument,
   AdventureList,
   AdventureListing,
@@ -503,6 +505,21 @@ export class BxvttClient {
    */
   previewCharacter(body: CharacterPreviewRequest): Promise<CharacterPreview> {
     return this.request('POST', '/api/characters/preview', { body });
+  }
+
+  /**
+   * Reads the limits on the ability score trade for one of the user's ability rolls and a class: how far a trade
+   * can move each score, and why it stops there. The limits don't depend on the trade, so read them once when the
+   * player chooses a class.
+   *
+   * @param rollId - The ability roll ID, which must be the user's newest open roll at its table.
+   * @param query - The class.
+   * @throws BxvttProblemError `not_found` for a roll the user doesn't have, `ability_roll_used`,
+   *   `ability_roll_superseded`, `ability_roll_locked` for another class than the hit points fixed,
+   *   `character_invalid` for a class the scores don't qualify for, and `bxapi_outdated`.
+   */
+  getAdjustmentLimits(rollId: string, query: AdjustmentLimitsQuery): Promise<AdjustmentLimits> {
+    return this.request('GET', `/api/ability-rolls/${enc(rollId)}/adjustment-limits`, { query });
   }
 
   /**
