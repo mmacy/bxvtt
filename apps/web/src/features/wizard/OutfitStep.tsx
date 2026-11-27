@@ -6,7 +6,7 @@ import {
   itemTypeLabel,
   resolveItemNoun,
 } from '@bxvtt/shared/text';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 
 import type { EquipmentDetail } from '@/app';
 import {
@@ -24,7 +24,9 @@ import {
   Skeleton,
   Spinner,
   Tooltip,
+  breakpoints,
   cx,
+  useMediaQuery,
   type DataColumn,
 } from '@/ui';
 import { ItemDetailBody } from '../sheet/ItemDetail';
@@ -152,6 +154,63 @@ function LotStepper({
   );
 }
 
+/** The price and weight line under an item in the stacked list: "7 gp · 50 cn", or only the price when no weight is listed. */
+function priceLine(item: EquipmentSummary, detail: EquipmentDetail | undefined): string {
+  const price = item.cost_gp === 0 ? 'Free' : formatGold(item.cost_gp);
+  const weight = weightCoins(detail);
+  return weight === null || weight === 0 ? price : `${price} · ${weight} cn`;
+}
+
+/**
+ * One item of the stacked list: the details button and the cart control on the first lines, then the price and
+ * weight. When the control swaps between Add and the stepper, focus follows it, so a keyboard user keeps their place.
+ */
+function StackedItem({
+  item,
+  detail,
+  lots,
+  control,
+}: {
+  item: EquipmentSummary;
+  detail: EquipmentDetail | undefined;
+  lots: number;
+  control: ReactNode;
+}) {
+  const box = useRef<HTMLDivElement>(null);
+  const refocus = useRef<'first' | 'last' | null>(null);
+  const inCart = lots > 0;
+
+  // The clicked button unmounts when the control swaps, so the effect puts focus on its replacement.
+  useEffect(() => {
+    const which = refocus.current;
+    refocus.current = null;
+    if (which === null) return;
+    const buttons = box.current?.querySelectorAll('button');
+    (which === 'last' ? buttons?.[buttons.length - 1] : buttons?.[0])?.focus();
+  }, [inCart]);
+
+  const onClick = (event: MouseEvent<HTMLDivElement>) => {
+    const clicked = (event.target as HTMLElement).closest('button');
+    const first = box.current?.querySelector('button');
+    // Add becomes the stepper, so focus goes to the stepper's plus. The last lot's minus gives Add back its focus.
+    if (!inCart) refocus.current = 'last';
+    else refocus.current = lots === 1 && clicked === first ? 'first' : null;
+  };
+
+  return (
+    <li className={styles.stackedItem}>
+      <div className={styles.stackedName}>
+        <DetailsButton item={item} detail={detail} />
+      </div>
+      {/* The wrapper only hears clicks that bubble up from its buttons, which Enter and Space also send. */}
+      <div ref={box} className={styles.stackedControl} onClick={onClick}>
+        {control}
+      </div>
+      <p className={styles.stackedMeta}>{priceLine(item, detail)}</p>
+    </li>
+  );
+}
+
 /** Step 5: buy starting gear with the rolled gold, and choose what to wear and wield. */
 export function OutfitStep({
   equipment,
@@ -168,6 +227,8 @@ export function OutfitStep({
 }: OutfitStepProps) {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
+  // On a phone the four-column table is too wide, so a list takes its place. The CSS sets the cart's own switch.
+  const stacked = useMediaQuery(`(max-width: ${breakpoints.phone}px)`);
   const full = useFullCatalog('equipment');
   const spent = cartCost(cart, equipment);
   const left = gold.status === 'known' ? gold.gp - spent : null;
@@ -199,6 +260,41 @@ export function OutfitStep({
       }
     }
   };
+
+  /** The Add button, or the stepper once the item is in the cart. The table and the stacked list share it. */
+  const cartControl = (item: EquipmentSummary) => {
+    const lots = cart.find((l) => l.itemId === item.id)?.quantity ?? 0;
+    if (lots === 0) {
+      return (
+        <Button
+          size="sm"
+          variant="secondary"
+          icon="plus"
+          aria-label={`Add ${item.name} to the cart`}
+          onClick={() => setLots(item.id, 1)}
+        >
+          Add
+        </Button>
+      );
+    }
+    return (
+      <LotStepper
+        item={item}
+        lots={lots}
+        bundle={lotSize(full.byId.get(item.id)) > 1}
+        onLots={(next) => setLots(item.id, next)}
+      />
+    );
+  };
+
+  const noMatch = (
+    <EmptyState
+      size="compact"
+      icon="search"
+      title="No matching equipment"
+      description="Try a shorter search or choose All."
+    />
+  );
 
   const columns: DataColumn<EquipmentSummary>[] = [
     {
@@ -238,30 +334,7 @@ export function OutfitStep({
       header: 'Cart',
       align: 'end',
       width: '132px',
-      cell: (item) => {
-        const lots = cart.find((l) => l.itemId === item.id)?.quantity ?? 0;
-        if (lots === 0) {
-          return (
-            <Button
-              size="sm"
-              variant="secondary"
-              icon="plus"
-              aria-label={`Add ${item.name} to the cart`}
-              onClick={() => setLots(item.id, 1)}
-            >
-              Add
-            </Button>
-          );
-        }
-        return (
-          <LotStepper
-            item={item}
-            lots={lots}
-            bundle={lotSize(full.byId.get(item.id)) > 1}
-            onLots={(next) => setLots(item.id, next)}
-          />
-        );
-      },
+      cell: (item) => cartControl(item),
     },
   ];
 
@@ -303,6 +376,22 @@ export function OutfitStep({
         </div>
         {equipment === null || full.items === null ? (
           <Skeleton lines={8} />
+        ) : stacked ? (
+          rows.length === 0 ? (
+            noMatch
+          ) : (
+            <ul className={styles.stackedList} aria-label="Equipment for sale">
+              {rows.map((item) => (
+                <StackedItem
+                  key={item.id}
+                  item={item}
+                  detail={full.byId.get(item.id)}
+                  lots={cart.find((l) => l.itemId === item.id)?.quantity ?? 0}
+                  control={cartControl(item)}
+                />
+              ))}
+            </ul>
+          )
         ) : (
           <DataTable
             caption="Equipment for sale"
@@ -311,14 +400,7 @@ export function OutfitStep({
             rows={rows}
             columns={columns}
             rowKey={(item) => item.id}
-            empty={
-              <EmptyState
-                size="compact"
-                icon="search"
-                title="No matching equipment"
-                description="Try a shorter search or choose All."
-              />
-            }
+            empty={noMatch}
           />
         )}
       </section>

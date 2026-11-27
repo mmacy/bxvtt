@@ -699,8 +699,9 @@
   align-items: start;
 }
 
-/* On a narrow screen the cart sits under the equipment, because it has no room beside it. */
-@media (max-width: 640px) {
+/* Up to the tablet breakpoint (1100 px) the cart sits under the equipment. The equipment table needs 500 px, and
+   beside the cart it has that much room only from about 960 px, so the table takes the full width instead. */
+@media (max-width: 1100px) {
   .outfitGrid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -756,9 +757,11 @@
   background: var(--color-surface-2);
 }
 
-@media (max-width: 640px) {
+/* Under the table the cart keeps a reading width, so its rows stay close to their steppers and prices. */
+@media (max-width: 1100px) {
   .cartPanel {
     position: static;
+    max-width: var(--measure-prose);
   }
 }
 
@@ -1076,6 +1079,64 @@
 
 .none {
   color: var(--color-text-disabled);
+}
+
+/* The stacked equipment list on a phone: name and cart control on top, price and weight under the name. */
+.stackedList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: var(--border-hair) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-1);
+}
+
+.stackedItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: var(--border-hair) solid var(--color-border);
+}
+
+.stackedItem:last-child {
+  border-bottom: 0;
+}
+
+.stackedName {
+  min-width: 0;
+}
+
+.stackedItem .shopNameButton {
+  align-items: flex-start;
+  padding: 0;
+}
+
+.stackedItem .shopName {
+  overflow-wrap: anywhere;
+}
+
+.stackedItem .shopSub {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.stackedControl {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* The price and weight line starts where the name does, not under the icon. */
+.stackedMeta {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding-inline-start: calc(var(--control-sm) + var(--space-2));
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
 }
 
 .lotStepper {

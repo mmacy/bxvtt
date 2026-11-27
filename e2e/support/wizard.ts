@@ -3,6 +3,7 @@
  * so each roll repeats. The seed also fixes the hit points and gold, which bxapi rolls from the same roll.
  */
 import { expect, type Locator, type Page } from '@playwright/test';
+import type { Actor } from './fixtures';
 
 /** The class card's accessible name is the class name. Its details are the card's description. */
 export const CLASS_CARDS = {
@@ -138,6 +139,26 @@ export async function rollHitPointsAndGold(dialog: Locator): Promise<{ hitPoints
 /** Adds items to the cart on the outfit step. */
 export async function addToCart(dialog: Locator, items: string[]): Promise<void> {
   for (const item of items) await dialog.getByRole('button', { name: `Add ${item} to the cart` }).click();
+}
+
+/**
+ * Opens the wizard at a table as a fighter and goes through to the outfit step. The actor needs `seedAbilityRolls`
+ * not to have been called yet.
+ *
+ * @returns The wizard dialog.
+ */
+export async function reachOutfit(actor: Actor, tableId: string): Promise<Locator> {
+  await actor.seedAbilityRolls([ROLL_SEEDS.fighter]);
+  await actor.page.goto(`/tables/${tableId}`);
+  const dialog = await openWizard(actor.page);
+  await rollFor(dialog, 'fighter');
+  await next(dialog);
+  await chooseClass(dialog, 'fighter');
+  await dialog.getByRole('button', { name: 'Skip this step' }).click();
+  await chooseAlignment(dialog);
+  await next(dialog);
+  await rollHitPointsAndGold(dialog);
+  return dialog;
 }
 
 /** The cart panel on the outfit step. */

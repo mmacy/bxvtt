@@ -14,6 +14,7 @@ import { SCREENS_DIR } from './support/env';
 import { expect, test } from './support/fixtures';
 import { stagedTable, type Stage } from './support/states';
 import { createCharacter, openTable } from './support/table';
+import { reachOutfit } from './support/wizard';
 
 async function shoot(page: Page, label: string): Promise<void> {
   await page.screenshot({ path: `${SCREENS_DIR}/a11y-${label}.png` });
@@ -93,6 +94,20 @@ test.describe('axe finds no serious or critical violations', () => {
     await shoot(ruth.page, 'wizard');
     expect(
       describeViolations(await seriousViolations(ruth.page, testInfo, 'wizard', '[role="dialog"]')),
+    ).toEqual([]);
+  });
+
+  test('the outfit step on a phone', async ({ crew }, testInfo) => {
+    const ruth = await crew.person('Ruth', { viewport: { width: 390, height: 844 } });
+    const table = await ruth.client.createTable({ name: 'Phone shop' });
+    const dialog = await reachOutfit(ruth, table.id);
+    await expect(dialog.getByRole('list', { name: 'Equipment for sale' })).toBeVisible();
+    await ruth.page.waitForTimeout(800);
+    await shoot(ruth.page, 'wizard-outfit-phone');
+    expect(
+      describeViolations(
+        await seriousViolations(ruth.page, testInfo, 'wizard-outfit-phone', '[role="dialog"]'),
+      ),
     ).toEqual([]);
   });
 

@@ -17,6 +17,7 @@ import {
   chooseAlignment,
   next,
   openWizard,
+  reachOutfit,
   rollFor,
   rollHitPointsAndGold,
   wizard,
@@ -398,6 +399,36 @@ test.describe('character wizard', () => {
     await expect(order.getByRole('listitem').filter({ hasText: 'Flarg' })).toBeVisible({ timeout: 20_000 });
     await expect(wizardButton(sam.page, 'Create a character')).toBeFocused();
     await expect(sam.page.getByRole('status').filter({ hasText: 'Flarg joined the party.' })).toHaveCount(1);
+  });
+
+  test('on a phone the equipment is a list with an Add button on each row', async ({ crew }) => {
+    const sam = await crew.person('Sam', { viewport: { width: 390, height: 844 } });
+    const table = await sam.client.createTable({ name: 'Phone shop' });
+    const dialog = await reachOutfit(sam, table.id);
+
+    // The list takes the table's place, and nothing scrolls sideways.
+    const list = dialog.getByRole('list', { name: 'Equipment for sale' });
+    await expect(list).toBeVisible();
+    await expect(dialog.getByRole('table')).toHaveCount(0);
+    const add = list.getByRole('button', { name: 'Add Sword to the cart' });
+    await add.scrollIntoViewIfNeeded();
+    await expect(add).toBeInViewport();
+    expect(
+      await sam.page.evaluate(
+        () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      ),
+    ).toBe(true);
+    await expect(list.getByRole('listitem').filter({ hasText: 'Sword' }).first()).toContainText(
+      /\d+ gp · \d+ cn/,
+    );
+
+    // Add puts the item in the cart, and focus moves to the stepper that replaces the button.
+    await list.getByRole('button', { name: 'Add Sword to the cart' }).click();
+    await expect(cart(dialog)).toContainText('Sword');
+    await expect(list.getByRole('button', { name: 'Add one sword' })).toBeFocused();
+    await list.getByRole('button', { name: 'Remove one sword' }).click();
+    await expect(list.getByRole('button', { name: 'Add Sword to the cart' })).toBeFocused();
+    await expect(cart(dialog)).not.toContainText('Sword');
   });
 
   test('a draft survives closing the dialog and reloading the page', async ({ crew }) => {
