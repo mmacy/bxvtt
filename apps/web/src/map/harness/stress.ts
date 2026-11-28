@@ -137,7 +137,7 @@ export function stressLevel(
             ? {
                 kind: 'treasure',
                 trigger: 'open',
-                effect: { damage_dice: '1d6', kills: false },
+                effect: { damage_dice: '1d6', kills: false, poison: false },
                 affects: 'triggerer',
               }
             : null,
@@ -174,7 +174,12 @@ export function stressLevel(
       features,
       trap:
         random() < 0.15
-          ? { kind: 'room', trigger: 'enter', effect: { fall_feet: 10, kills: false }, affects: 'triggerer' }
+          ? {
+              kind: 'room',
+              trigger: 'enter',
+              effect: { fall_feet: 10, kills: false, poison: false },
+              affects: 'triggerer',
+            }
           : null,
       treasure: random() < 0.1 ? { letters: [], unguarded: true } : null,
     };

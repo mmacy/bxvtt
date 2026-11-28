@@ -97,6 +97,8 @@ describe('rejection coverage', () => {
       const variants = templateVariants(template);
       for (const variant of variants) {
         for (const key of variant.when ?? []) expect(known, `${templateKey}: when ${key}`).toContain(key);
+        for (const key of Object.keys(variant.is ?? {}))
+          expect(known, `${templateKey}: is ${key}`).toContain(key);
         for (const placeholder of templatePlaceholders(variant.text)) {
           expect(known, `${templateKey}: {${placeholder.name}}`).toContain(placeholder.name);
           const format = placeholder.format.split(':')[0] ?? '';
@@ -108,6 +110,7 @@ describe('rejection coverage', () => {
       }
       const last = variants[variants.length - 1];
       expect(last?.when ?? [], `${templateKey}: the last variant is the fallback`).toEqual([]);
+      expect(last?.is ?? {}, `${templateKey}: the last variant is the fallback`).toEqual({});
     }
   });
 

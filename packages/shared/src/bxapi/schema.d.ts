@@ -1146,16 +1146,24 @@ export interface paths {
          *     - **Town purchases (`purchase_equipment`):** Pass a party member's `party[i].id` (such as `"character-0001"`) as
          *       `character_id` and repeat equipment `id` values in `item_ids` once per purchase lot (unlike `purchases` on
          *       `POST /v1/characters`, which takes `{item_id, quantity}` objects).
-         *     - **Out-of-battle spells (`cast_spell`):** Pass `character_id`, `spell_id`, and `mode` set to a `SpellMode.key`
-         *       from `GET /v1/rules/spells/{spell_id}` (such as `"heal"` on `cure_light_wounds`, not the session's
-         *       `SessionMode`), plus target IDs in `targets` (such as `["character-0001"]` or `"cell:barrow:1:0,0"`).
+         *     - **Temple services (`purchase_healing`):** Pass `character_id` and a `service` from `town_healing_prices`.
+         *       Leave `caster_level` out for the lowest level that can perform the service, which
+         *       `town_healing_caster_levels` gives. Leave `spell_mode` out for the service's first usage, or set it to a usage
+         *       key from `town_healing_mode_names`, such as `"cure_paralysis"` on `cure_light_wounds`.
+         *     - **Out-of-battle spells (`cast_spell`):** Pass `character_id`, `spell_id`, and `mode` set to the `key` of an
+         *       entry in the player view's `spell_modes[spell_id]` (such as `"heal"` on `cure_light_wounds`, not the session's
+         *       `SessionMode`), plus target IDs in `targets` (such as `["character-0001"]`). A usage whose `accepts_cells` is
+         *       `true` also takes a cell of the level the party stands on, in the form `"cell:barrow:1:0,0"`. A usage whose
+         *       `one_target_per_missile` is `true` takes exactly the caster's `missile_counts[spell_id]` targets.
+         *     - **Scrolls (`use_item`):** An identified spell scroll's entry in a member's `inventory` lists the spells left on
+         *       it in `spells`. Pass one of them as `spell_id`, or leave `spell_id` out to read the first.
          *     - **Battle rounds (`resolve_battle_round`):** Include exactly one `BattleDeclaration` in `declarations` for each
          *       member ID in `encounter.declarers`. Pass `target_group_id` from `encounter.groups[i].id` (such as
-         *       `"group-0001"`) for `attack`, `close`, thrown splash items, and `area` or `hd_budget` spells (such as
-         *       `fire_ball` or `sleep` with `spell_mode: "hd_budget"`). In battle, spell casts set `spell_mode` rather than
-         *       `mode`. Spells and scrolls with `single` or `up_to_n` targeting (such as `magic_missile` with
-         *       `spell_mode: "missiles"`) take individual `"monster-NNNN"` or `"npc-NNNN"` IDs from
-         *       `encounter.groups[i].members` in `targets`. Use an entry whose `status` is `"alive"`.
+         *       `"group-0001"`) for `attack`, `close`, thrown splash items, and spells whose usage has a `target_group` of
+         *       `"required"` or `"optional"` in `spell_modes` (such as `fire_ball`, or `sleep` with `spell_mode: "hd_budget"`).
+         *       In battle, spell casts set `spell_mode` rather than `mode`. Spells and scrolls with `single` or `up_to_n`
+         *       targeting (such as `magic_missile` with `spell_mode: "missiles"`) take individual `"monster-NNNN"` or
+         *       `"npc-NNNN"` IDs from `encounter.groups[i].members` in `targets`. Use an entry whose `status` is `"alive"`.
          *     - **Treasure caches (`inspect_treasure`, `remove_treasure_trap`, `take_treasure`):** Pass a handle from the
          *       player view's `features_here` as `feature_id`. The list has the `explored[i].features[j].id` of each treasure
          *       cache the party can reach from where it stands. The handle starts with `feature:`. Don't parse it. A referee
@@ -1207,6 +1215,44 @@ export interface paths {
          *     `can_back_stab` lists the declarers who could declare an `attack` with `back_stab`. Use them to offer those two
          *     choices only to a member the session would accept them from.
          *
+         *     To learn which targets each action on a member's menu reaches before the player picks one, send the actions in
+         *     `candidates`. A candidate is an osrlib `BattleCandidate`: a `declaration` that leaves out its target, the
+         *     `target_field` that each target ID goes in (`"target_group_id"` or `"targets"`), and the `target_ids` to judge
+         *     it at. Build one candidate for each choice on the menu:
+         *
+         *     - A melee attack is an `attack` with `weapon_id`, at group IDs in `target_group_id`.
+         *     - A close and attack is the same `attack` with `move` set to `"close"`.
+         *     - Each missile weapon the member wields is an `attack` of its own with that `weapon_id`.
+         *     - A spell is a `cast` with `spell_id`, `spell_mode`, and `reversed`. Use `target_group_id` for a spell aimed at a
+         *       group, and `targets` for one aimed at a member, a monster, or an NPC.
+         *     - A potion given to another member, or a touch with an item such as a staff of healing, is a `use_item` with
+         *       `item_id`, at member IDs in `targets`.
+         *     - Handing over an item is a `give_item` with `item_id`, at member IDs in `targets`.
+         *
+         *     Name `weapon_id` in every `attack` candidate. When you leave it out, the session picks the weapon at the member's
+         *     projected distance to each group, and the answer doesn't say which weapon it judged. A `move` with
+         *     `fighting_withdrawal` or `retreat` can't be a candidate, because it takes no target and can turn the plan into a
+         *     formation move. Send it in `declarations` instead.
+         *
+         *     The response's `candidates` has one `BattleCandidateJudgement` for each candidate, in the order you sent them.
+         *     Its `rejections` maps each target ID to every reason the session would refuse the action there, with the same
+         *     `code` and `params` as the plan's `rejections`, and an empty list means the session would accept it. A rejection
+         *     that doesn't depend on the target, such as `battle.declaration.weapon_not_wielded`, appears under every target,
+         *     and an ID that names nothing gets the rejection the same declaration would get in the plan, such as
+         *     `battle.declaration.unknown_group`. Its `attack_kinds` maps each target ID of an `attack` candidate to `"melee"`
+         *     or `"missile"`, the kind of attack the member would make there. A target refused before the session decides the
+         *     kind of attack, for example because its group is unknown, has no entry.
+         *
+         *     Each candidate is judged in place of the member's own planned declaration, after every other member's planned
+         *     move, as `can_hide` is judged. The member's own planned move isn't made first, so a candidate that closes is judged
+         *     from where the member stands now. A candidate's entry reports only its own rejections: a close that would push
+         *     another member's planned close and attack out of the front rank is still accepted, and the other member's
+         *     rejection shows in the next preview. To send the action the player picks, set the target in the candidate's
+         *     declaration and put it in `declarations`, replacing the member's earlier declaration.
+         *
+         *     A request takes at most 64 candidates and 256 target IDs counted over every candidate's `target_ids`. Split a
+         *     larger menu over several previews.
+         *
          *     The preview takes the session lock, rolls no dice, passes no game time, and changes nothing: `revision` stays the
          *     same, so the request takes no `expected_revision` and needs no `Idempotency-Key`.
          */
@@ -1241,35 +1287,72 @@ export interface paths {
          *     - `party`: party members in marching order, with in-session `id` (such as `"character-0001"`, passed as
          *       `character_id` to commands), hit points, conditions, inventory, `scores`, `armour_class`, `thac0`, `saves`,
          *       `movement_rate_feet`, and `thief_skills`. Combat stats include bonuses and curses from worn unidentified magic
-         *       items while `inventory` masks unidentified names (such as `"a shield with a faint aura"`).
+         *       items while `inventory` masks unidentified names (such as `"a shield with a faint aura"`). An identified spell
+         *       scroll's `inventory` entry has `spells`, the spells left on it in the order `use_item` reads them, to offer as
+         *       `use_item`'s `spell_id`.
          *     - `dungeons`: IDs and names of dungeons the party has entered. `can_travel_to_town` states whether
          *       `travel_to_town` is currently usable from the party's position.
          *     - `explored`: the party's known map for each level. Each entry includes mapped `cells` and `edges`, entered
          *       `areas` with their names, descriptions, and walked cells, visible `features` with opaque `feature:` IDs,
          *       known `transitions` without destinations or gates, and `entrance` when that cell is known. A feature's
          *       `emptied` is `true` once the party has emptied that authored cache, and `trap_state` on a feature or an area
-         *       is the trap's state as the party knows it. Feature cache contents, hidden discoveries, and destinations that
-         *       the party hasn't learned stay omitted.
+         *       is the trap's state as the party knows it. An edge's `trap_state` marks a door where the party has found or
+         *       sprung a room trap that opening the door springs. Feature cache contents, hidden discoveries, and destinations
+         *       that the party hasn't learned stay omitted.
          *     - `features_here`: the feature IDs that `inspect_treasure`, `remove_treasure_trap`, and `take_treasure` accept as
          *       `feature_id` from where the party stands. It's empty outside `exploring` mode.
          *     - `spell_names`, `reversed_spell_names`, and `spell_levels`: the name and level of every spell ID the view
          *       shows. Each member's `spell_slots`, `preparable_spells`, and `learnable_spells` give what a `prepare_spells` or
          *       `learn_spell` dialog offers that member. A member's `can_prepare_now` says whether the session accepts a
          *       `prepare_spells` from them now, `needs_sleep_to_prepare` says whether they have to sleep first, and
-         *       `reverses_at` says whether they choose a reversible spell's form at `"memorize"` or at `"cast"`.
+         *       `reverses_at` says whether they choose a reversible spell's form at `"memorize"` or at `"cast"`. The names
+         *       include the spells on an identified scroll.
+         *     - `spell_modes` and `reversed_spell_modes`: what a cast dialog offers for each spell in `spell_names`, in its
+         *       normal form and its reverse. Each entry is osrlib's `SpellModeView` of one usage: its `key`, which you send as
+         *       `cast_spell`'s `mode`, a battle `cast` declaration's `spell_mode`, or a scroll's `mode`, its `display_name`,
+         *       whether it's `manual`, and the checks the session makes of its targets (`targeting`, `min_targets`,
+         *       `max_targets`, `accepts_cells`, `target_group`, `one_target_per_missile`, and `scroll_missile_count`).
+         *       `spell_ranges` and `reversed_spell_ranges` give each form's range as osrlib's `RangeSpec`, and
+         *       `spell_range_texts` and `reversed_spell_range_texts` give it as the spell's page prints it, to show the player.
+         *       Each member's `missile_counts` and `reversed_missile_counts` give how many targets that member's cast of a
+         *       missile usage, such as `magic_missile`'s, takes.
          *     - `item_names` and `item_names_plural`: what to call each item ID the view shows, in a member's `inventory` or
          *       in the `contents` of a pile in `piles`. `valuable_names` has the own name of each gem or piece of jewellery
          *       that has one, keyed by its instance ID, to show in a list. `valuable_phrases` has what to call each of those
          *       pieces in the middle of a sentence, with its article and its case, such as `"a silver altar candlestick"` or
          *       `"Ossor's Eye"`.
          *     - `encounter`: active encounter state, or `null`. Pass `declarers` to build `resolve_battle_round`, and pass a
-         *       group's `id` as `target_group_id` for attacks, `close`, thrown splash items, and `area` or `hd_budget` spells
-         *       (such as `fire_ball` and `sleep`). Each group also has `members` with individual `"monster-NNNN"` or
+         *       group's `id` as `target_group_id` for attacks, `close`, thrown splash items, and spells whose usage names a
+         *       group (such as `fire_ball` and `sleep`). Each group also has `members` with individual `"monster-NNNN"` or
          *       `"npc-NNNN"` IDs and coarse `status` values. Use an `"alive"` member's `id` in `targets` for a `single` or
          *       `up_to_n` spell or scroll. To find catalog templates matching a group's `family_id`, search
-         *       `GET /v1/rules/monsters` with `q` and check `family_id` on `GET /v1/rules/monsters/{monster_id}`.
+         *       `GET /v1/rules/monsters` with `q` and check `family_id` on `GET /v1/rules/monsters/{monster_id}`. In
+         *       `encounter` mode, `evade_rejections` maps each `evade` `drop` value (`"none"`, `"treasure"`, and `"food"`) to
+         *       the rejections the session would give that `evade` now, and an empty list means it would accept it. Read it to
+         *       enable or disable each choice of a flee menu, and show the reason, such as
+         *       `encounter.evade.nobody_able_to_act` when no living member can act or `encounter.evade.cannot_move` when a
+         *       member is entangled or overloaded. The map is empty in `battle` mode, where the session refuses every `evade`.
+         *       While monsters pursue the party, `pursuit_gap_feet` is the distance to the nearest pursuer, and each group's
+         *       `distance_feet` follows the chase.
          *     - `journal` and `quests`: discovered journal entries and active or completed quests.
+         *     - `supplies`: how long the party's light and food last, in rounds and days, so a client can show "light left"
+         *       and "food left" without counting items. `light_reserve_usable` says whether the party has what a
+         *       `light_source` for a carried torch or lantern needs, and `food_days` is the fewest rations any living member
+         *       carries, with `food_short_first_ids` naming those members.
          *     - `town_healing_prices`: gold-piece prices for temple services accepted by `purchase_healing`.
+         *       `town_healing_funds_gp` is the whole gold pieces the party can pay toward a fee, so a service is affordable
+         *       when its price is at most that number.
+         *     - `town_healing_rejections` and `town_healing_caster_levels`: in `town` mode, for each member ID and then each
+         *       temple service, the rejections `purchase_healing` without `caster_level` or `spell_mode` would get, leaving the
+         *       fee out, and the lowest cleric level that can perform each service the member can receive. An empty list means
+         *       the temple can perform the service for that member, and the temple refuses a service that would do nothing,
+         *       with `town.healing.no_effect` and a `reason` param. Read both to build the temple screen, and send the level as
+         *       `caster_level`. Both maps are empty outside `town` mode.
+         *     - `town_healing_mode_rejections` and `town_healing_mode_names`: for each service that the temple sells in more
+         *       than one usage, such as `cure_light_wounds` in `heal` and `cure_paralysis`, the same answer as
+         *       `town_healing_rejections` for each usage, keyed by member ID, service, and usage key, and each usage's display
+         *       name. Offer each usage with an empty list, and send its key as `purchase_healing`'s `spell_mode`.
+         *       `town_healing_rejections` answers for each service's first usage only.
          */
         get: operations["get_player_view"];
         put?: never;
@@ -1293,16 +1376,19 @@ export interface paths {
          *
          *     A session's adventure can add spells to the built-in catalog, and `GET /v1/rules/spells/{spell_id}` serves only
          *     the built-in ones. This operation reads the session's own catalog, osrlib's `GameSession.effective_spells`, so
-         *     it also answers for a spell the adventure adds. Use `level` and `spell_list` to place a spell from a member's
-         *     `spell_book` in a `prepare_spells` dialog, and the `key` of each entry in `modes` as the `mode` of a `cast_spell`
-         *     command. Show a mode's `display_name` as its label.
+         *     it also answers for a spell the adventure adds.
+         *
+         *     The player view already has what a cast dialog needs: each usage's key, label, and target checks in
+         *     `spell_modes`, each form's range in `spell_ranges` and `spell_range_texts`, and each member's missile counts in
+         *     `missile_counts`. Call this operation for the rest of the spell, such as its `spell_list`, its `duration`, and
+         *     the text in `intro` and in each mode's `prose`, to show a spell's full description.
          *
          *     The operation serves the spells in `spell_names` and no others: the ones in a member's `spell_book`,
-         *     `memorized_spells`, `preparable_spells`, or `learnable_spells`, and the ones behind an effect on a member. So it
-         *     answers for a spell the adventure adds as soon as a member could prepare or learn it. A spell the view doesn't
-         *     name gets 404 `not_found`, whether or not the session's catalog has it, so the response doesn't reveal a spell
-         *     on an unidentified scroll or a spell the adventure keeps for its monsters. A player and a referee get the same
-         *     answer.
+         *     `memorized_spells`, `preparable_spells`, or `learnable_spells`, the ones on an identified scroll, and the ones
+         *     behind an effect on a member. So it answers for a spell the adventure adds as soon as a member could prepare or
+         *     learn it. A spell the view doesn't name gets 404 `not_found`, whether or not the session's catalog has it, so the
+         *     response doesn't reveal a spell on an unidentified scroll or a spell the adventure keeps for its monsters. A
+         *     player and a referee get the same answer.
          */
         get: operations["get_session_spell"];
         put?: never;
@@ -1769,6 +1855,9 @@ export interface components {
          *     `create_character` includes one in its result. Pass
          *     `scores` to `validate_class_choice`, and read
          *     `sub_par` to find out whether a referee may let the player start again. Frozen.
+         *
+         *     Parsing a document raises `pydantic.ValidationError` when `scores`, `rolls`, or `dropped` breaks
+         *     what its field says, so a roll you parse is one that the dice could have thrown.
          */
         AbilityScoreRolls: {
             /**
@@ -1783,8 +1872,9 @@ export interface components {
              * Rolls
              * @description The three d6 results that count towards each score, keyed the same way, in the order they were thrown.
              *
-             *     Each score is the sum of its three dice. With the `"4d6_drop_lowest"` method, the die dropped
-             *     from an ability's four is in `dropped` instead, and the other three keep their order here.
+             *     All six abilities are present, each die is from 1 to 6, and each score is the sum of its three
+             *     dice. With the `"4d6_drop_lowest"` method, the die dropped from an ability's four is in `dropped`
+             *     instead, and the other three keep their order here.
              */
             rolls: {
                 [key: string]: [
@@ -1801,6 +1891,8 @@ export interface components {
              *     first of them thrown when two or more tie for lowest. A `"3d6"` roll drops nothing, so this is
              *     empty, and so is a roll that osrlib 2.8.0 or earlier recorded. Read an ability with no entry as one
              *     with no die dropped. To show all four dice of an ability, show its three `rolls` and this die.
+             *     When it isn't empty, all six abilities are present, and each die is from 1 to the lowest of the
+             *     ability's three `rolls`.
              * @default {}
              */
             dropped: {
@@ -3216,7 +3308,9 @@ export interface components {
             /**
              * Attack Name
              * @description The name of what the attacker used: a weapon, a gear item, a magic item, or a monster's attack. It's
-             *     `"unarmed"` for an unarmed attack, and `"improvised"` for an attack with a gear item's combat stats alone.
+             *     `"unarmed"` for an unarmed attack, and `"improvised"` for an attack with a gear item's combat stats alone. In a
+             *     session, an NPC adventurer's unidentified magic weapon is named by the mundane weapon underneath, such as
+             *     `"Sword"`, because the players never identify an NPC's items.
              */
             attack_name: string;
             /**
@@ -3353,6 +3447,139 @@ export interface components {
             amount: number;
         };
         /**
+         * BattleCandidate
+         * @description One action a member could declare, to be judged at each of several targets before the player picks one.
+         *
+         *     Pass these to `preview_battle_round` in `candidates` to
+         *     learn which targets each action on a battle screen's menu reaches, in one call. The preview judges
+         *     the candidate once for each id in `target_ids`, with that id set in `target_field`, and returns a
+         *     `BattleCandidateJudgement` for it. You list the
+         *     candidates from the player view, and the session decides whether each one works, so the answers
+         *     reveal nothing the view masks.
+         *
+         *     Build one candidate for each choice on the menu:
+         *
+         *     - A melee attack is an `attack` with `weapon_id`, at group ids in `target_group_id`.
+         *     - A close and attack is the same `attack` with `move="close"`.
+         *     - Each missile weapon the member wields is an `attack` of its own with that `weapon_id`.
+         *     - A spell is a `cast` with `spell_id`, `spell_mode`, and `reversed`. Use `target_group_id` for a
+         *       spell aimed at a group, and `targets` for one aimed at a member, a monster, or an NPC.
+         *     - A potion given to another member, or a touch with an item such as a staff of healing, is a
+         *       `use_item` with `item_id`, at member ids in `targets`.
+         *     - Handing over an item is a `give_item` with `item_id`, at member ids in `targets`.
+         *
+         *     Name `weapon_id` in every `attack` candidate. When you leave it out, the session picks the
+         *     weapon at the member's projected distance to each group, so an accepted answer doesn't say
+         *     which weapon it judged. The judgement's `attack_kinds` still says whether that attack is a
+         *     melee or a missile attack.
+         *
+         *     A `fighting_withdrawal` or a `retreat` can't be a candidate, because it takes no target and can
+         *     turn the plan into a formation move. Judge one as a planned declaration in `declarations`
+         *     instead.
+         *
+         *     The model is frozen.
+         */
+        BattleCandidate: {
+            /**
+             * @description The declaration to judge, complete except for its target.
+             *
+             *     Leave the field that `target_field` names at its default: `target_group_id` at `null`, or
+             *     `targets` empty. Its `character_id` names the member, who has to be in
+             *     `EncounterView.declarers`. The member doesn't need
+             *     a declaration in the plan. When they have one, the candidate takes its place.
+             *
+             *     The field that `target_field` doesn't name keeps the value you give it, and the session judges
+             *     the declaration with both. So a `cast` candidate with `target_field="targets"` whose
+             *     declaration also sets `target_group_id` is judged with both set, as the same declaration in the
+             *     plan would be.
+             */
+            declaration: components["schemas"]["BattleDeclaration"];
+            /**
+             * Target Field
+             * @description Which field of the declaration each target id goes in. With `"target_group_id"`, the id is
+             *     the declaration's `target_group_id`. With `"targets"`, the declaration's `targets` contains
+             *     only that id.
+             * @enum {string}
+             */
+            target_field: "target_group_id" | "targets";
+            /**
+             * Target Ids
+             * @description The ids to judge the declaration at, with no id repeated: group ids from
+             *     `EncounterView.groups`, or the ids of members,
+             *     monsters, or NPCs from the player view.
+             *
+             *     An id that names nothing gets the rejection the session would give the same declaration in the
+             *     plan, such as `battle.declaration.unknown_group`. An empty tuple is allowed, and its judgement
+             *     has no entries.
+             */
+            target_ids: string[];
+        };
+        /**
+         * BattleCandidateJudgement
+         * @description The session's answer for one `BattleCandidate` at each of its targets.
+         *
+         *     `BattleRoundPreview.candidates` holds one for
+         *     each candidate you passed to `preview_battle_round`.
+         *     Read `rejections` to enable or disable each target of the action, and show the rejection codes
+         *     as the reason a target is disabled. Read `attack_kinds` to label an attack by how the member
+         *     would make it. The model is frozen.
+         */
+        BattleCandidateJudgement: {
+            /** @description The candidate, as you passed it. */
+            candidate: components["schemas"]["BattleCandidate"];
+            /**
+             * Rejections
+             * @description Every reason the session would refuse the candidate at each target, keyed by target id.
+             *
+             *     There's one entry for each id in the candidate's `target_ids`, in that order. An empty tuple
+             *     means the session would accept that declaration. Each tuple is exactly what
+             *     `BattleRoundPreview.rejections` would hold
+             *     for the member if you previewed the plan with their declaration replaced by
+             *     `candidate.declaration_for(target_id)`. It has the same codes and params, and every rejection has
+             *     the member's id as its `character` param. A rejection that doesn't depend on the target, such as
+             *     `battle.declaration.weapon_not_wielded`, appears under every target.
+             */
+            rejections: {
+                [key: string]: components["schemas"]["Rejection"][];
+            };
+            /**
+             * Attack Kinds
+             * @description Whether an `attack` candidate would be a melee or a missile attack at each target, keyed by
+             *     target id, in the order of `target_ids`.
+             *
+             *     It's the decision the session makes when it accepts the round, at the same projected distance
+             *     the rejections are judged at. A weapon with only the `missile` quality, such as a bow, always
+             *     makes a missile attack, and one with only the `melee` quality, such as a sword, always makes a
+             *     melee attack. A weapon with both, such as a dagger, makes a melee attack within 5' of the group
+             *     and a missile attack beyond. So a close and attack with a dagger that stops short of the group
+             *     is a missile attack: the member closes part way, then throws. With no `weapon_id`, it's the kind
+             *     of attack the session makes with the weapon it picks.
+             *
+             *     A target has an entry when the session's checks get as far as that decision. Every target the
+             *     session would accept has one. A target refused by a check that comes after the decision has
+             *     one too. Examples are a refusal for reach, for the front rank, for range, or for ammunition,
+             *     `battle.declaration.back_stab_not_melee` with a `"missile"` entry, and
+             *     `battle.declaration.no_mirror`. A target has no entry when the session refuses the attack before it
+             *     decides, because the group is unknown or has fled, the group has no monster to strike, the
+             *     weapon isn't wielded or can't attack, the member can't move for a close, or a check of
+             *     `back_stab` or `move` that comes before the group check refuses it. A candidate that isn't an
+             *     `attack` has no entries.
+             *
+             *     The decision can change when the monsters act first. A group that moves before the attack
+             *     comes up changes the distance. So a dagger judged as a throw can resolve as a melee attack, and
+             *     a dagger judged as a melee attack can resolve as a throw. A melee attack that closes from
+             *     beyond 5' into reach stays a melee attack wherever the member ends up. An attack with a weapon
+             *     that has only the `missile` quality, such as a bow, stays a missile attack after a close, even
+             *     one that takes the member within 5'.
+             *
+             *     A judgement without `attack_kinds` parses with it empty.
+             * @default {}
+             */
+            attack_kinds: {
+                [key: string]: "melee" | "missile";
+            };
+        };
+        /**
          * BattleDeclaration
          * @description One party member's declared action for a battle round.
          *
@@ -3383,7 +3610,10 @@ export interface components {
          *       light wounds*.
          *
          *     To check one member's choice against the choices already made for the round, call
-         *     `preview_battle_round` with them.
+         *     `preview_battle_round` with them. To check
+         *     every target of each choice on a member's menu in the same call, pass the choices in its
+         *     `candidates` argument, each a `BattleCandidate`
+         *     with the target ids to try.
          *
          *     `action` decides which other fields apply. Leave the others at their defaults.
          *
@@ -3601,7 +3831,9 @@ export interface components {
              *     group gets `magic.cast.unknown_target`, whose `target` param is the id you supplied.
              *     Refresh the player view and choose an `"alive"` member. A running group remains targetable
              *     until it leaves. A refused round changes no state, draws no randomness, and spends no time.
-             *     Party member and cell targets retain the spell mode's existing checks.
+             *     A cell reference has to name a cell of the level the party stands on, or the session refuses
+             *     it with `magic.cast.unknown_target`, as it does a reference that doesn't parse. Party member
+             *     and cell targets otherwise retain the spell mode's existing checks.
              *
              *     For a mode that affects a total number of Hit Dice (`hd_budget`), you can leave this empty
              *     and set `target_group_id` instead. The session then collects the targets from the group, as
@@ -3636,7 +3868,8 @@ export interface components {
              *     - For a `use_item` of a staff of healing, it's the id of the creature the staff touches.
              *       Leave it empty, and the member using it is healed. The session refuses an id that matches no
              *       creature with `items.use.unknown_target`, a creature that's dead or turned to stone with
-             *       `items.use.target_cannot_be_healed`, a creature the staff already healed today with
+             *       `items.use.target_cannot_be_healed`, another creature that's invisible with
+             *       `items.use.invisible_target`, a creature the staff already healed today with
              *       `items.use.target_healed_today`, and another member out of reach with
              *       `battle.declaration.member_out_of_reach`. A monster's group has to stand within 5' of the
              *       member, or the use gets `combat.attack.out_of_reach`. A touch on a monster then follows the
@@ -4056,8 +4289,10 @@ export interface components {
          *     to grey out a choice the session would refuse, and read `advance_feet` and `front_rank` to show
          *     where the members would stand once their declared moves are made. Read `can_hide` and
          *     `can_back_stab` to offer a member a `hide` or a back-stab the session would accept beside the
-         *     choices already made. The model is frozen. A preview without `can_hide` or `can_back_stab`,
-         *     like one built by osrlib 2.7.0, parses with each of them empty.
+         *     choices already made, and read `candidates` for the answers to the candidates you passed. The
+         *     model is frozen. A preview without `can_hide` or `can_back_stab`, like one built by osrlib
+         *     2.7.0, parses with each of them empty, and a preview without `candidates`, like one built by
+         *     osrlib 2.10.0, parses with it empty.
          */
         BattleRoundPreview: {
             /**
@@ -4133,10 +4368,26 @@ export interface components {
              * @default []
              */
             can_back_stab: string[];
+            /**
+             * Candidates
+             * @description The session's answer for each candidate you passed to
+             *     `preview_battle_round`, in the order you passed them.
+             *     It's empty when you passed none.
+             *
+             *     A member declares one action in a round, so each candidate is judged as `can_hide` judges a
+             *     `hide`: as if it took the place of the member's own planned declaration, where the other
+             *     members' planned moves would leave the party. The member's own planned move is never made
+             *     first, so a candidate that closes is judged from where the member stands now. For each
+             *     candidate and each of its targets, the entry matches what this function returns for the same
+             *     plan with that member's declaration replaced by `candidate.declaration_for(target_id)`: the
+             *     judgement's `rejections` entry is that preview's `rejections` for the member.
+             * @default []
+             */
+            candidates: components["schemas"]["BattleCandidateJudgement"][];
         };
         /**
          * BattleRoundPreviewRequest
-         * @description The declarations planned so far for a battle round, for `POST /v1/sessions/{session_id}/battle-round/preview`.
+         * @description The planned declarations and the candidate actions for `POST /v1/sessions/{session_id}/battle-round/preview`.
          */
         BattleRoundPreviewRequest: {
             /**
@@ -4145,6 +4396,21 @@ export interface components {
              *     in any order. Pass any subset of the declarers, including none (`[]`). At most 20 entries.
              */
             declarations: components["schemas"]["BattleDeclaration"][];
+            /**
+             * Candidates
+             * @description osrlib `BattleCandidate` objects: the actions a member could declare, each to be judged at every id in its
+             *     `target_ids`. The response's `candidates` has one judgement for each, in the order you send them. Omit the field,
+             *     or send `[]`, for a preview without candidates. At most 64 entries, with at most 256 target IDs counted over every
+             *     candidate's `target_ids`.
+             *
+             *     Build each candidate from a declaration that leaves its target out: set `declaration` to a `BattleDeclaration`
+             *     for a member in `encounter.declarers`, with the field that `target_field` names left at its default
+             *     (`target_group_id` `null`, or `targets` empty). Set `target_field` to `"target_group_id"` to judge group IDs from
+             *     `encounter.groups`, or to `"targets"` to judge member, monster, or NPC IDs, and list the IDs in `target_ids`
+             *     with none repeated.
+             * @default []
+             */
+            candidates: components["schemas"]["BattleCandidate"][];
         };
         /**
          * BattleStartedEvent
@@ -4373,7 +4639,8 @@ export interface components {
          *     - `magic.cast.unknown_target` - a target id isn't a party member's. No encounter is open
          *       in this command's modes, so the party can act on no other creature. A monster or an NPC
          *       adventurer of an encounter that has ended gets this code, with the same params as an id
-         *       that matches nothing.
+         *       that matches nothing. A cell reference gets it too when it doesn't name a cell of the
+         *       level the party stands on, and every cell reference gets it in town.
          *     - `magic.cast.not_memorized` - the caster has no memorized copy. A member who
          *       can't cast spells at all gets this code too.
          *     - `magic.cast.caster_incapacitated`, `magic.cast.caster_restrained`,
@@ -4444,8 +4711,12 @@ export interface components {
              *     `cell:{dungeon}:{level}:{x},{y}` form that `cell_ref`
              *     builds. A dead or petrified member can be named, so *raise dead* and *stone to flesh* work on
              *     them. The session refuses any other id with `magic.cast.unknown_target`, a monster's or an NPC
-             *     adventurer's included, even one an earlier event named. The mode's targeting sets how many
-             *     targets it takes, and the session refuses the wrong number with `magic.cast.target_count`.
+             *     adventurer's included, even one an earlier event named. A cell reference has to name a cell of
+             *     the level the party stands on. The session refuses one that doesn't parse, names no cell of the
+             *     adventure, or names a cell of another level or another dungeon with `magic.cast.unknown_target`,
+             *     and in town it refuses every cell reference that way. A member who is invisible is still a
+             *     target. The mode's targeting sets how many targets it takes, and the session refuses the
+             *     wrong number with `magic.cast.target_count`.
              *     The session refuses a cell reference for a mode that works only on creatures with
              *     `magic.cast.target_must_be_creature`.
              * @default []
@@ -5030,6 +5301,8 @@ export interface components {
          *     `model_validate`, which checks it with the same rules as the built-in classes. One of those rules
          *     is that a `divine_magic` or `arcane_magic` ability has a `spell_list` param, so
          *     `caster_profile` always finds the list a casting class uses.
+         *     Another is that a class has at most one of those two abilities, because a character casts from one
+         *     spell list.
          */
         ClassDefinition: {
             /**
@@ -5980,6 +6253,31 @@ export interface components {
              * @description What the item is, as its magic item catalog id.
              */
             template_id: string;
+            /**
+             * Item Names
+             * @description What to call the item in `instance_id`, keyed by that id, such as `{"magic-item-0003": "ring of weakness"}`.
+             *     Each name is the name that `PlayerView.item_names` has for that id,
+             *     so an unidentified magic item has its masked name, such as `"potion"` or `"shield with a faint aura"`, and never
+             *     its true name. The curse is revealed only on an identified item, so the name is the item's true display name,
+             *     which names the item that `template_id` already identifies. A client that replays an event log, or that didn't
+             *     keep a view, can name the items from the event. It's empty on an event from a log written before the field
+             *     existed.
+             * @default {}
+             */
+            item_names: {
+                [key: string]: string;
+            };
+            /**
+             * Item Names Plural
+             * @description What to call two or more of each item in `item_names`, with the same keys, such as
+             *     `{"magic-item-0003": "rings of weakness"}`, from
+             *     `PlayerView.item_names_plural`. Use it with a count of your
+             *     own.
+             * @default {}
+             */
+            item_names_plural: {
+                [key: string]: string;
+            };
         };
         /**
          * DamageAbsorbedEvent
@@ -6177,6 +6475,18 @@ export interface components {
              * @description The entity id of the creature that died.
              */
             target_id: string;
+            /**
+             * Poison
+             * @description Whether poison killed the creature, such as a viper's bite, a poison needle, or a potion of poison.
+             *
+             *     The save versus death covers death ray and poison alike, so a failed save of that category doesn't say which
+             *     killed. Read this field instead. The session records a member's death as a poison death when it's True, and
+             *     *neutralize poison* revives only a character who died of poison. The event has player visibility, so the players
+             *     learn that poison killed the creature, as a referee at the table would tell them that the needle was poisoned.
+             *     It's False on an event loaded from a save written before the field existed.
+             * @default false
+             */
+            poison: boolean;
         };
         /**
          * DeathRecord
@@ -6199,11 +6509,19 @@ export interface components {
             round: number;
             /**
              * Cause
-             * @description What killed the character: `"poison"`, `"damage"`, or `"unknown"`. The session reads the
-             *     events of the command that killed the character, up to the death, and records the last cause
-             *     among them. A failed save versus death ray or poison, or a poison effect that ran its course,
-             *     gives `"poison"`. Damage dealt gives `"damage"`. With neither, the cause is `"unknown"`. Only
-             *     *neutralize poison* treats `"poison"` differently from the other causes.
+             * @description What killed the character: `"poison"`, `"damage"`, or `"unknown"`.
+             *
+             *     It's `"poison"` when the character's `DeathEvent` has `poison`
+             *     set. Every death by poison sets it: a monster's poison, at once or when its onset runs out, a
+             *     sea dragon's spittle, a potion of poison, and a trap whose
+             *     `TrapEffect.poison` is set. An effect whose `expiry` is
+             *     `"death"` kills by poison only when its `kind`
+             *     contains `poison`. A failed save versus death
+             *     alone never makes it `"poison"`, because that save covers death ray as well. For any other
+             *     death, the session reads the events of the command that killed the character, up to the death.
+             *     It's `"damage"` when the character took damage after their last failed saving throw among them, and
+             *     `"unknown"` otherwise, as for *finger of death*. Only *neutralize poison* treats `"poison"`
+             *     differently from the other causes.
              */
             cause: string;
         };
@@ -6330,6 +6648,32 @@ export interface components {
              *     The rejection code reference explains each code.
              */
             reason: string;
+            /**
+             * Item Names
+             * @description What to call the item in `item_id`, keyed by that id, such as `{"magic-item-0003": "wand"}`. Each name is the
+             *     name that `PlayerView.item_names` has for that id, so an
+             *     unidentified magic item has its masked name, such as `"potion"` or `"shield with a faint aura"`, and never its
+             *     true name. A fizzled declaration identifies nothing, so an unidentified item keeps its masked name. It's empty
+             *     on a `magic.turning.fizzled` or a `battle.melee.fizzled` event, which has no item, and on a
+             *     `battle.give.fizzled` event whose item has left the party. A client that replays an event log, or that didn't
+             *     keep a view, can name the items from the event. It's also empty on an event from a log written before the field
+             *     existed.
+             * @default {}
+             */
+            item_names: {
+                [key: string]: string;
+            };
+            /**
+             * Item Names Plural
+             * @description What to call two or more of each item in `item_names`, with the same keys, such as
+             *     `{"magic-item-0003": "wands"}`, from
+             *     `PlayerView.item_names_plural`. Use it with a count of your
+             *     own.
+             * @default {}
+             */
+            item_names_plural: {
+                [key: string]: string;
+            };
         };
         /**
          * DefeatedMonsterRecord
@@ -7274,6 +7618,20 @@ export interface components {
              */
             found_traps: string[];
             /**
+             * Trap Doors
+             * @description The doors at which the party learned of an open-trigger room trap, as lists of
+             *     `edge_ref` values keyed by the trap's area reference. A
+             *     `Search` that finds the trap through a door adds that door, and
+             *     opening a door that springs the trap adds that door. The player view reads it for
+             *     `EdgeView.trap_state`. A save from osrlib 2.11.0 has
+             *     none, so a trap that such a save found or sprung at a door shows on that door only once the party
+             *     walks the trapped area's cell beside it.
+             * @default {}
+             */
+            trap_doors: {
+                [key: string]: string[];
+            };
+            /**
              * Found Tricks
              * @description The construction tricks the party has found with a
              *     `Search` for construction, as feature references.
@@ -7518,6 +7876,34 @@ export interface components {
              *     a door.
              */
             door_wedged?: boolean | null;
+            /**
+             * Trap State
+             * @description The state of a room trap the party knows is on this door, with the values and meaning of
+             *     `MapFeatureView.trap_state`: `"found"` once a
+             *     `Search` has found it, and `"sprung"` once it has gone off. No
+             *     command removes a room trap, so a door never shows `"removed"`.
+             *
+             *     Only a room trap that springs when someone opens a door of its area
+             *     (`TrapSpec.trigger` `"open"`) shows on a door, and only
+             *     on a door of the trapped area where the party has learned of the trap:
+             *
+             *     - the door a `Search` found the trap through, which is the door in the
+             *       `TrapEvent.direction` of the find. The edge is the
+             *       same from both sides of the door.
+             *     - the door whose opening sprang the trap.
+             *     - any door on a cell of the trapped area that the party has walked, which
+             *       `EnteredAreaView.cells` lists. Once the party enters
+             *       the area, the doors on its walked cells show the area's `trap_state`, however the party got in
+             *       and wherever it found the trap. The exception is a door whose other side is a second trapped
+             *       area whose trap the party also knows of, where the rule below for two known traps decides.
+             *
+             *     A trapped area's other doors stay `null` until the party walks the area's cell beside them,
+             *     because the party can't yet know that they lead into the same area. When a door has known traps
+             *     of the areas on both of its sides, `"sprung"` wins over `"found"`. The field never names or
+             *     describes the area. It's `null` on every edge that isn't a door, including an undiscovered
+             *     secret door, which the view shows as a wall.
+             */
+            trap_state?: ("found" | "sprung" | "removed") | null;
         };
         /**
          * EffectActiveCondition
@@ -7630,7 +8016,8 @@ export interface components {
              * @description The effect's name, like `"sleep"` or `"regeneration"`. The model accepts any non-empty string. The ledger
              *     compares kinds on the same target for `stacking`, and
              *     `EffectsLedger.active_on` filters on the kind, so give each kind of
-             *     effect one name and use it everywhere.
+             *     effect one name and use it everywhere. A kind that contains `poison`, such as `"poison"` or `"spider_poison"`,
+             *     makes a `"death"` expiry a death by poison.
              */
             kind: string;
             /**
@@ -7692,7 +8079,10 @@ export interface components {
              *     `EffectExpiredEvent`, and takes off the condition and modifiers.
              *     Then it runs the outcome on the bearer:
              *
-             *     - `"death"` kills the bearer, which is how a delayed poison works.
+             *     - `"death"` kills the bearer, which is how a delayed poison works. The death is a death by poison, with
+             *       `DeathEvent.poison` set, only when the effect's `kind` contains
+             *       `poison`. Name a delayed poison's kind that way, because a session revives a character with
+             *       *neutralize poison* only after a death by poison. A kind such as `"venom"` kills, but not by poison.
              *     - `"splash_damage"` deals the second round of damage from burning oil or holy water. It rolls the `dice`
              *       param, which the definition needs.
              *     - `"weakness_strength_set"` attaches the Ring of Weakness curse when its onset ends. Pass an `allocator` to
@@ -7733,6 +8123,10 @@ export interface components {
              *     - For the `"weakness_strength_set"` outcome: `strength_set`, the strength score the curse sets.
              *     - For `natural_healing`: `healing_rest_days`, the number of rest days
              *       for each natural heal.
+             *
+             *     Constructing a definition raises `pydantic.ValidationError` when one of these integer params is present and
+             *     isn't a whole number: `per_round` and `delay_rounds` on a regeneration tick, which can't be negative either,
+             *     `strength_set` on a `weakness_strength_set` expiry, and `healing_rest_days`, which has to be at least 1.
              *
              *     osrlib ignores any key it doesn't read, so you can store your own values here.
              * @default {}
@@ -8027,6 +8421,12 @@ export interface components {
              *     routed group moves away. When every member the monsters can see has fallen back behind the line,
              *     the line moves back to the foremost of them, and every group's distance grows by the same amount,
              *     as `BattleState.advance_feet` describes.
+             *
+             *     During a pursuit, the party runs as one body, and this is the group's distance from the party. A
+             *     pursuing group's distance changes each round as
+             *     `PursuitState.gap_feet` describes. A group that
+             *     doesn't pursue stands where it is, so its distance grows by the party's running rate each round.
+             *     A device used during the chase measures its reach from this distance.
              */
             distance_feet: number;
             /**
@@ -8069,8 +8469,8 @@ export interface components {
             /**
              * @description The treasure the group shares, rolled at spawn from the treasure types for groups (U and V), or
              *     None when the group has none. It drops on the party's cell only when every member is slain. If
-             *     any member routed, the group's treasure goes with the runners. When a turning turns only some
-             *     members of a group, the group's treasure stays with the members who fight on.
+             *     any member routed, the group's treasure goes with the runners. When a turning or a fear effect
+             *     catches only some members of a group, the group's treasure stays with the members who fight on.
              */
             group_treasure?: components["schemas"]["TreasureBundle"] | null;
         };
@@ -8754,8 +9154,9 @@ export interface components {
             battle_round?: number | null;
             /**
              * Pursuit Gap Feet
-             * @description How far ahead of its pursuers the fleeing party is, in feet. `null` when the party
-             *     isn't being pursued.
+             * @description How far ahead of its nearest pursuer the fleeing party is, in feet. `null` when the party
+             *     isn't being pursued. A pursuing group's `distance_feet` in `groups` shows the same chase, so the
+             *     nearest pursuer's distance is this value.
              */
             pursuit_gap_feet?: number | null;
             /**
@@ -8919,6 +9320,48 @@ export interface components {
              * @default false
              */
             party_free_round: boolean;
+            /**
+             * Evade Rejections
+             * @description Why the session would refuse an `Evade` now, for each value of
+             *     `Evade.drop`, keyed by that value: `"none"`, `"treasure"`, and `"food"`.
+             *
+             *     Read it to disable a choice on your flee menu that the session would refuse, and to show the reason. Each value is a
+             *     tuple of `Rejection` models with the `code` and `params` that an `Evade` with
+             *     that `drop` gets. An empty tuple means that the session accepts it. An accepted `Evade` can still end in a pursuit
+             *     or a battle, because the outcome depends on the monsters, and the view makes no prediction of it.
+             *
+             *     The codes you'll meet are these:
+             *
+             *     - `encounter.evade.already_evading`, for every value, while a pursuit is running, as `pursuit_gap_feet` shows.
+             *       Each round of a pursuit comes from a `Wait` or a
+             *       `DropItems` instead.
+             *     - `encounter.evade.nobody_able_to_act`, for every value, when no living member can act, because each one is
+             *       paralysed, petrified, or asleep.
+             *     - `encounter.evade.cannot_move`, for every value, with the `character` param, when that living member is caught in
+             *       a *web*.
+             *     - `encounter.evade.cannot_move`, with the `reason` param `"overloaded"`, when a living member would still carry
+             *       more than the maximum load after the drop. The `"treasure"` drop scatters every coin before the party runs, so
+             *       an overloaded party can get the rejection for `"none"` and `"food"` and none for `"treasure"`.
+             *     - `encounter.evade.nothing_to_drop`, with the `drop` param `"treasure"`, when no living member has a coin in
+             *       their purse.
+             *     - `encounter.evade.nothing_to_drop`, with the `drop` param `"food"`, when no living member carries a
+             *       `rations_standard` or a `rations_iron`.
+             *
+             *     A dead member's coins and rations don't count. A member who is alive but can't act, such as one who is asleep or
+             *     paralysed, counts, as long as another member can act.
+             *
+             *     While the session is in the `encounter` mode and no pursuit is running, the `"none"` entry is empty unless the party
+             *     can't run: nobody can act, a member is caught in a *web*, or a member carries too much to move. Only the overload
+             *     can clear with a drop, so read the `"treasure"` entry before you tell the player that the party can't evade.
+             *
+             *     The map has an entry for every value while the session is in the `encounter` mode. In a battle, the map is empty,
+             *     because the session refuses every `Evade` there with `session.command.wrong_mode`. An `EncounterView` that osrlib
+             *     2.10.0 built, such as one in a stored feed entry, has no `evade_rejections`, and it validates with the map empty.
+             * @default {}
+             */
+            evade_rejections: {
+                [key: string]: components["schemas"]["Rejection"][];
+            };
         };
         /**
          * EncumbranceMode
@@ -8942,9 +9385,11 @@ export interface components {
          *     away, and then switches to `exploring`:
          *
          *     - Monsters that were slain earlier in the encounter, or that fled, are still fleeing, or
-         *       were turned, count as defeated and are worth experience.
-         *     - Slain monsters drop their treasure in a pile on the party's cell. Monsters that fled or
-         *       were turned take theirs with them.
+         *       were turned, count as defeated and are worth experience. So does each afraid member of a
+         *       group whose living members are all turned or afraid, because that group retreats as a whole.
+         *       The session applies the same rule however the encounter ends.
+         *     - Slain monsters drop their treasure in a pile on the party's cell. Monsters that fled, were
+         *       turned, or retreat with such a group take theirs with them.
          *     - Monsters still standing aren't defeated and are worth no experience.
          *     - Effects on the encounter's monsters end.
          *     - The clock advances, so the encounter costs at least one turn.
@@ -8972,11 +9417,14 @@ export interface components {
          *
          *     **Rejections:**
          *
-         *     - `session.command.wrong_mode` - no encounter is open.
+         *     - `session.command.wrong_mode` or `encounter.none_active` - no encounter is open.
          *
          *     **Events:**
          *
-         *     A `MonsterDefeatedEvent` for each monster
+         *     A `MonsterFledEvent` for each group of turned or
+         *     afraid members that breaks away from a group that still has a member who is neither, such
+         *     as one restored from an older save. Then a
+         *     `MonsterDefeatedEvent` for each monster
          *     that counts as defeated, a `LootDroppedEvent`
          *     when the slain leave anything on the floor, the events of effects ending on the
          *     encounter's monsters, and the experience award when the ruleset awards it immediately.
@@ -9054,7 +9502,9 @@ export interface components {
          *     `TurnUndead` is the one aggressive act the
          *     party can take in an encounter without starting a battle first. When the monsters were
          *     surprised at the start of the encounter, the party gets a free first round. During a
-         *     pursuit, the party turns and fights at the current distance. Once the battle has
+         *     pursuit, the party turns and fights, and each group stands where the chase has left it, as
+         *     its `EncounterGroup.distance_feet` shows,
+         *     and no nearer than 5'. Once the battle has
          *     started, send one `ResolveBattleRound` for
          *     each round.
          *
@@ -9197,7 +9647,8 @@ export interface components {
              *     It's `null` while the party hasn't met the room's trap, and for a room with no trap, so a room
              *     the players know nothing about looks the same whether or not it's trapped. The view lists an area
              *     only once the party has entered it, so a trap found or sprung through a door of a room the party
-             *     hasn't entered shows here once the party walks in.
+             *     hasn't entered shows here once the party walks in. Before then, the door shows it in
+             *     `EdgeView.trap_state`.
              */
             trap_state?: ("found" | "sprung" | "removed") | null;
         };
@@ -9322,6 +9773,32 @@ export interface components {
              * @default []
              */
             saved_items: string[];
+            /**
+             * Saved Item Names
+             * @description What to call one of each item in `saved_items`, keyed by the same id, such as
+             *     `{"magic-item-0003": "sword with a faint aura"}`. Each name is the name that
+             *     `PlayerView.item_names` has for that id, so an unidentified magic
+             *     item has its masked name, such as `"potion"` or `"shield with a faint aura"`, and never its true name. The save
+             *     identifies nothing. The destroyed items are in `item_names`, in a different form: an unidentified item has an
+             *     article there, and a mundane item has its printed name. A client that replays an event log, or that didn't keep
+             *     a view, can name the items from the event. It's empty on an event from a log written before the field
+             *     existed.
+             * @default {}
+             */
+            saved_item_names: {
+                [key: string]: string;
+            };
+            /**
+             * Saved Item Names Plural
+             * @description What to call two or more of each item in `saved_item_names`, with the same keys, such as
+             *     `{"magic-item-0003": "swords with a faint aura"}`, from
+             *     `PlayerView.item_names_plural`. Use it with a count of your
+             *     own.
+             * @default {}
+             */
+            saved_item_names_plural: {
+                [key: string]: string;
+            };
         };
         /**
          * EquipmentItem
@@ -9364,13 +9841,20 @@ export interface components {
          * @description Run from the encounter before a battle starts.
          *
          *     An encounter must be open. Monsters whose stance is `attacks` or `hostile` pursue the
-         *     party, if any of them can move. The party gets away at once when no monster pursues it,
+         *     party, if any of them can move. A group that is running itself, after a failed morale
+         *     check or because its living members are all turned or afraid, doesn't pursue. A group
+         *     that stops pursuing during the chase drops out of it, and when no group is left, the
+         *     party gets away at once. The party gets away at once when no monster pursues it,
          *     or when it runs faster than the slowest monster that pursues it. Otherwise a pursuit
          *     starts, and each `Wait` or
          *     `DropItems` runs one round of it. `drop` scatters
          *     bait as the party runs: coins tempt intelligent monsters, and food tempts unintelligent
          *     ones. Once battle has started, the party can't evade. The OSE SRD allows evasion only
-         *     before combat.
+         *     before combat. The members who can act carry a member who is asleep, paralysed, or turned
+         *     to stone at the party's usual rate. They can't carry a member out of a *web*, and a member
+         *     who carries more than the maximum load can't run. If nobody in the party can act during a
+         *     pursuit, or a member is caught in a *web*, the party stops running, and the pursuers close
+         *     the gap at their own rate.
          *
          *     Modes:
          *
@@ -9382,8 +9866,18 @@ export interface components {
          *     - `encounter.none_active` - a second check behind the mode gate, which normal
          *       play never reaches.
          *     - `encounter.evade.already_evading` - a pursuit is already running.
+         *     - `encounter.evade.nobody_able_to_act` - no living member can act, because each one
+         *       is paralysed, petrified, or asleep. A party with nobody able to act can't run.
+         *     - `encounter.evade.cannot_move` - the party can't run. The `character` param names a
+         *       living member caught in a *web*. The `reason` param `overloaded` means that a living
+         *       member would still carry more than the maximum load once the drop is made. In
+         *       practice only `treasure` can clear an overload, because it scatters every coin first.
          *     - `encounter.evade.nothing_to_drop` - no living member has coins (for
          *       `treasure`) or rations (for `food`) to scatter.
+         *
+         *     `EncounterView.evade_rejections` in the
+         *     player view gives the rejections an `Evade` with each `drop` would get now, from the same
+         *     check the session makes. Read it to disable a drop the session would refuse.
          *
          *     **Events:**
          *
@@ -11699,6 +12193,30 @@ export interface components {
              *     written before the field existed.
              */
             origin?: string | null;
+            /**
+             * Item Names
+             * @description What to call one of each item in `item_ids`, keyed by the same id, such as
+             *     `{"torch": "torch", "magic-item-0003": "potion", "valuable-0007": "gem"}`. Each name is the name that
+             *     `PlayerView.item_names` has for that id, so an unidentified magic
+             *     item has its masked name, such as `"potion"` or `"shield with a faint aura"`, and never its true name. The names
+             *     are the ones the party knew when the event happened. A client that replays an event log, or that didn't keep a
+             *     view, can name the items from the event. It's empty on an event from a log written before the field existed.
+             * @default {}
+             */
+            item_names: {
+                [key: string]: string;
+            };
+            /**
+             * Item Names Plural
+             * @description What to call two or more of each item in `item_names`, with the same keys, such as
+             *     `{"torch": "torches", "magic-item-0003": "potions"}`, from
+             *     `PlayerView.item_names_plural`. Use it with a count of your
+             *     own.
+             * @default {}
+             */
+            item_names_plural: {
+                [key: string]: string;
+            };
         };
         /**
          * ItemAcquiredPattern
@@ -11775,6 +12293,31 @@ export interface components {
              *     player-visible event.
              */
             item_id: string;
+            /**
+             * Item Names
+             * @description What to call the item in `item_id`, keyed by that id, such as `{"iron_spikes": "iron spike"}`. Each name is
+             *     the name that `PlayerView.item_names` has for that id, so an
+             *     unidentified magic item has its masked name, such as `"potion"` or `"shield with a faint aura"`, and never its
+             *     true name. The names are the ones the party knew when the event happened. The item may be the last unit the
+             *     member had, so the view built after the command may not name it. A client that replays an event log, or that
+             *     didn't keep a view, can name the items from the event. It's empty on an event from a log written before the
+             *     field existed.
+             * @default {}
+             */
+            item_names: {
+                [key: string]: string;
+            };
+            /**
+             * Item Names Plural
+             * @description What to call two or more of each item in `item_names`, with the same keys, such as
+             *     `{"iron_spikes": "iron spikes"}`, from
+             *     `PlayerView.item_names_plural`. Use it with a count of your
+             *     own.
+             * @default {}
+             */
+            item_names_plural: {
+                [key: string]: string;
+            };
         };
         /**
          * ItemIdentifiedEvent
@@ -11786,8 +12329,9 @@ export interface components {
          *     `ResolveBattleRound`, and when the
          *     referee identifies it with `IdentifyItem`.
          *
-         *     Before this, player-visible events contain only the item's `instance_id`. After it,
-         *     you can show the party the name of the item whose catalog id is `template_id`.
+         *     Before this, player-visible events contain the item's `instance_id` and its masked name, such as
+         *     `"potion"`, in their `item_names`. After it, you can show the party the name of the item whose
+         *     catalog id is `template_id`, and the item events that follow name it by `display_name`.
          */
         ItemIdentifiedEvent: {
             /**
@@ -11950,6 +12494,33 @@ export interface components {
              *     declaration's `targets`.
              */
             target_id?: string | null;
+            /**
+             * Item Names
+             * @description What to call the item in `instance_id`, keyed by that id, such as `{"magic-item-0003": "potion of healing"}`.
+             *     Each name is the name that `PlayerView.item_names` has for that id,
+             *     so an unidentified magic item has its masked name, such as `"potion"` or `"shield with a faint aura"`, and never
+             *     its true name. The first use of an item identifies it, and that use's
+             *     `ItemIdentifiedEvent` comes earlier in the same result, so the name
+             *     is always the item's true display name, the same as that event's `display_name`. A potion drunk or a scroll read
+             *     is used up, so no view built after the command names it. A client that replays an event log, or that didn't keep
+             *     a view, can name the items from the event. It's empty on an event from a log written before the field
+             *     existed.
+             * @default {}
+             */
+            item_names: {
+                [key: string]: string;
+            };
+            /**
+             * Item Names Plural
+             * @description What to call two or more of each item in `item_names`, with the same keys, such as
+             *     `{"magic-item-0003": "potions of healing"}`, from
+             *     `PlayerView.item_names_plural`. Use it with a count of your
+             *     own.
+             * @default {}
+             */
+            item_names_plural: {
+                [key: string]: string;
+            };
         };
         /**
          * ItemsDroppedEvent
@@ -12011,6 +12582,30 @@ export interface components {
              *     }
              */
             coins: components["schemas"]["Coins"];
+            /**
+             * Item Names
+             * @description What to call one of each item in `item_ids`, keyed by the same id, such as
+             *     `{"torch": "torch", "magic-item-0003": "potion"}`. Each name is the name that
+             *     `PlayerView.item_names` has for that id, so an unidentified magic
+             *     item has its masked name, such as `"potion"` or `"shield with a faint aura"`, and never its true name. The names
+             *     are the ones the party knew when the event happened. A drop made while fleeing leaves the goods on the trail, so
+             *     no view built after the command names them. A client that replays an event log, or that didn't keep a view, can
+             *     name the items from the event. It's empty on an event from a log written before the field existed.
+             * @default {}
+             */
+            item_names: {
+                [key: string]: string;
+            };
+            /**
+             * Item Names Plural
+             * @description What to call two or more of each item in `item_names`, with the same keys, such as `{"torch": "torches"}`,
+             *     from `PlayerView.item_names_plural`. Use it with a count of
+             *     your own.
+             * @default {}
+             */
+            item_names_plural: {
+                [key: string]: string;
+            };
         };
         /**
          * ItemsGivenEvent
@@ -12074,6 +12669,29 @@ export interface components {
              *     }
              */
             coins: components["schemas"]["Coins"];
+            /**
+             * Item Names
+             * @description What to call one of each item in `item_ids`, keyed by the same id, such as
+             *     `{"torch": "torch", "magic-item-0003": "potion"}`. Each name is the name that
+             *     `PlayerView.item_names` has for that id, so an unidentified magic
+             *     item has its masked name, such as `"potion"` or `"shield with a faint aura"`, and never its true name. The names
+             *     are the ones the party knew when the event happened. A client that replays an event log, or that didn't keep a
+             *     view, can name the items from the event. It's empty on an event from a log written before the field existed.
+             * @default {}
+             */
+            item_names: {
+                [key: string]: string;
+            };
+            /**
+             * Item Names Plural
+             * @description What to call two or more of each item in `item_names`, with the same keys, such as `{"torch": "torches"}`,
+             *     from `PlayerView.item_names_plural`. Use it with a count of
+             *     your own.
+             * @default {}
+             */
+            item_names_plural: {
+                [key: string]: string;
+            };
         };
         /**
          * ItemsLeftBehindEvent
@@ -12128,6 +12746,29 @@ export interface components {
              *     }
              */
             coins: components["schemas"]["Coins"];
+            /**
+             * Item Names
+             * @description What to call one of each item in `item_ids`, keyed by the same id, such as
+             *     `{"torch": "torch", "valuable-0007": "gem"}`. Each name is the name that
+             *     `PlayerView.item_names` has for that id, so an unidentified magic
+             *     item has its masked name, such as `"potion"` or `"shield with a faint aura"`, and never its true name. The names
+             *     are the ones the party knew when the event happened. A client that replays an event log, or that didn't keep a
+             *     view, can name the items from the event. It's empty on an event from a log written before the field existed.
+             * @default {}
+             */
+            item_names: {
+                [key: string]: string;
+            };
+            /**
+             * Item Names Plural
+             * @description What to call two or more of each item in `item_names`, with the same keys, such as `{"torch": "torches"}`,
+             *     from `PlayerView.item_names_plural`. Use it with a count of
+             *     your own.
+             * @default {}
+             */
+            item_names_plural: {
+                [key: string]: string;
+            };
         };
         /**
          * ItemsRemovedEvent
@@ -12188,6 +12829,30 @@ export interface components {
              *     }
              */
             coins: components["schemas"]["Coins"];
+            /**
+             * Item Names
+             * @description What to call one of each item in `item_ids`, keyed by the same id, such as
+             *     `{"torch": "torch", "magic-item-0003": "potion"}`. Each name is the name that
+             *     `PlayerView.item_names` has for that id, so an unidentified magic
+             *     item has its masked name, such as `"potion"` or `"shield with a faint aura"`, and never its true name. The names
+             *     are the ones the party knew when the event happened. The items have left the party, so no view built after the
+             *     command names them. A client that replays an event log, or that didn't keep a view, can name the items from the
+             *     event. It's empty on an event from a log written before the field existed.
+             * @default {}
+             */
+            item_names: {
+                [key: string]: string;
+            };
+            /**
+             * Item Names Plural
+             * @description What to call two or more of each item in `item_names`, with the same keys, such as `{"torch": "torches"}`,
+             *     from `PlayerView.item_names_plural`. Use it with a count of
+             *     your own.
+             * @default {}
+             */
+            item_names_plural: {
+                [key: string]: string;
+            };
         };
         /**
          * JournalEntry
@@ -12588,8 +13253,9 @@ export interface components {
              *     each key with `edge_key`, like `"1,0:west"`, and only for an
              *     edge between two cells on the grid. `validate_adventure`
              *     reports a key that isn't the `edge_key` of a side of a cell on the grid, like `"0,0:east"` in place
-             *     of `"1,0:west"`. An edge with no entry is a wall, and so is the level's boundary, so an empty
-             *     map is a level of solid rock. Read an edge with
+             *     of `"1,0:west"`. It accepts a key on the level's boundary, like `"0,0:west"`, but the session
+             *     treats that edge as a wall and doesn't read its entry. An edge with no entry is a wall, and so is
+             *     the level's boundary, so an empty map is a level of solid rock. Read an edge with
              *     `edge` instead of indexing the map, because it works out
              *     the key and returns a wall for an edge with no entry.
              *
@@ -12963,6 +13629,19 @@ export interface components {
              */
             location_id: string;
             /**
+             * Display Name
+             * @description The authored name of the town or the dungeon, to show the player: the town's
+             *     `TownSpec.name` on a town entry, like `"Threshold"`, and
+             *     the dungeon's `DungeonSpec.name` on a level or dungeon
+             *     entry, like `"The Old Crypt"`, without the spaces at either end. The player view shows the same names, in
+             *     `PlayerView.town_name` and
+             *     `PlayerView.dungeons`. It's empty on an area entry, for
+             *     a dungeon whose author gave it no name, and on an event loaded from a save written before the field
+             *     existed.
+             * @default
+             */
+            display_name: string;
+            /**
              * Level Number
              * @description The level the party is on, for area, level, and dungeon entries, and `null` for town.
              */
@@ -13070,6 +13749,29 @@ export interface components {
              *     }
              */
             coins: components["schemas"]["Coins"];
+            /**
+             * Item Names
+             * @description What to call one of each item in `item_ids`, keyed by the same id, such as
+             *     `{"sword": "sword", "magic-item-0003": "potion", "valuable-0007": "gem"}`. Each name is the name that
+             *     `PlayerView.item_names` has for that id, so an unidentified magic
+             *     item has its masked name, such as `"potion"` or `"shield with a faint aura"`, and never its true name. The names
+             *     are the ones the party knew when the event happened. A client that replays an event log, or that didn't keep a
+             *     view, can name the items from the event. It's empty on an event from a log written before the field existed.
+             * @default {}
+             */
+            item_names: {
+                [key: string]: string;
+            };
+            /**
+             * Item Names Plural
+             * @description What to call two or more of each item in `item_names`, with the same keys, such as `{"sword": "swords"}`,
+             *     from `PlayerView.item_names_plural`. Use it with a count of
+             *     your own.
+             * @default {}
+             */
+            item_names_plural: {
+                [key: string]: string;
+            };
         };
         /**
          * MagicAllotment
@@ -13278,7 +13980,9 @@ export interface components {
             duration_dice?: string | null;
             /**
              * Params
-             * @description Per-item scalars the behavior reads, keyed by name.
+             * @description Per-item scalars the behavior reads, keyed by name. A `save_or_die` item kills by poison when `poison` is
+             *     the boolean `true`, as on the potion of poison, so *neutralize poison* can revive the character it kills. A
+             *     string such as `"true"` doesn't count.
              * @default {}
              */
             params: {
@@ -14128,6 +14832,15 @@ export interface components {
              *     weapon. An identified item shows its `name`, its `template_id`, and whether a curse has been revealed. Charges
              *     never appear.
              *
+             *     An identified spell scroll also has a `spells` key, the ids of the spells left on it, in the order that
+             *     `UseItem` reads them, so the first is the one that a `UseItem` with `spell_id`
+             *     unset reads. A spell appears once for each time it's on the scroll. Send one of them as `UseItem.spell_id` to
+             *     read it, and look its name and usages up in `PlayerView.spell_names`
+             *     and `PlayerView.spell_modes`. Reading the scroll identifies it, and
+             *     so does a referee's `IdentifyItem`. An unidentified scroll has no `spells`
+             *     key, and neither has a scroll with no spells on it, such as a cursed scroll, a scroll of protection, or a
+             *     treasure map.
+             *
              *     To name an item in a sentence, look up the id it has here in
              *     `PlayerView.item_names`: a mundane item's
              *     `template.id`, and a magic item's or a valuable's `instance_id`.
@@ -14446,6 +15159,36 @@ export interface components {
              * @default []
              */
             learnable_spells: string[];
+            /**
+             * Missile Counts
+             * @description How many missiles the member's cast of a spell shoots, keyed by spell id, for each spell in `spell_book`,
+             *     `memorized_spells`, `preparable_spells`, or `learnable_spells` whose normal form has a usage that takes one
+             *     target per missile, such as `{"magic_missile": 3}` for a 6th-level magic-user. A cast of that usage takes
+             *     exactly this many targets, and the session refuses any other number with `magic.cast.target_count`. Name a
+             *     creature more than once to send it more missiles.
+             *
+             *     The number grows with the member's level, as the OSE SRD's *magic missile* gives "2 more missiles for every 5
+             *     experience levels", so read the view again after the member levels up or is drained. A usage takes one target per
+             *     missile when its `SpellModeView.one_target_per_missile`
+             *     is true. A reading from a scroll takes the scroll's number instead, in
+             *     `SpellModeView.scroll_missile_count`. A `MemberView`
+             *     that osrlib 2.11.0 or earlier built validates with this map empty.
+             * @default {}
+             */
+            missile_counts: {
+                [key: string]: number;
+            };
+            /**
+             * Reversed Missile Counts
+             * @description How many missiles the member's cast of a spell's reverse shoots, keyed by spell id, for the spells in the same
+             *     lists as `missile_counts` whose reverse has a usage that takes one target per missile. No built-in spell's
+             *     reverse has one, but a spell that an adventure bundles can. A `MemberView` that osrlib 2.11.0 or earlier built
+             *     validates with this map empty.
+             * @default {}
+             */
+            reversed_missile_counts: {
+                [key: string]: number;
+            };
             /**
              * Reverses At
              * @description When the member chooses the form of a spell that reverses: `"memorize"`, `"cast"`, or `null` for a
@@ -14804,6 +15547,11 @@ export interface components {
              *
              *     A troll's regeneration has `delay_rounds` 3 and `per_round` 3, and a wight's energy drain has
              *     `levels` 1. The keys differ by tag. Empty when the SRD gives no numbers.
+             *
+             *     A `regeneration` ability's params become an effect when an encounter starts, through
+             *     `regeneration_definition`. Constructing the ability raises
+             *     `pydantic.ValidationError` when the params can't build that effect, such as a `per_round` of `"three"` or a
+             *     `revive` of `"lots"`, which isn't a dice expression.
              * @default {}
              */
             params: {
@@ -15071,8 +15819,11 @@ export interface components {
          *     the battle at once, and a `MonsterEscapedEvent` for
          *     it comes right after this event.
          *
-         *     When a cleric turns only some of a group, the turned members leave the group and flee as
-         *     a new group, and `group_id` is the new group's id.
+         *     When a cleric turns only some of a group, or a fear effect such as a wand of fear or *cause
+         *     fear* frightens only some of it, the turned and afraid members leave the group and flee as a
+         *     new group, and `group_id` is the new group's id. A fear effect used outside a battle, during an
+         *     encounter or a pursuit, splits the group the same way, and the event comes in the result of the
+         *     `UseItem` that frightened them.
          *
          *     A group that fails its morale check is still in the battle when this event comes, and
          *     `EncounterGroupView.fleeing` is true from
@@ -15260,6 +16011,9 @@ export interface components {
              * Drained Hd
              * @description How many Hit Dice have been drained from it, which `drain_monster_hd`
              *     adds to. Its THAC0, attack bonus, and saving throws follow the Hit Dice it has left.
+             *
+             *     When it's above 0, it's less than the template's Hit Dice count, because a drain that would take the last Hit
+             *     Die kills the creature instead. Setting a value at or above that count raises `pydantic.ValidationError`.
              * @default 0
              */
             drained_hd: number;
@@ -15428,7 +16182,8 @@ export interface components {
              *     `"Hellhound (5)"`, a hellhound with 5 Hit Dice, is `"hellhound"`. The session gives a group of these
              *     creatures this name as its `label`.
              *
-             *     A template you write that leaves it out gets its `name`.
+             *     A template you write that leaves it out gets its `name`. When `name` is empty or only spaces too, it gets the
+             *     words of its `id`, so `cave_goblin` is called `"cave goblin"`.
              * @default
              */
             display_name: string;
@@ -15604,6 +16359,21 @@ export interface components {
              * @default []
              */
             categories: string[];
+            /**
+             * Intelligent
+             * @description Whether the creature is intelligent, as its SRD page states, or `null` when the page doesn't say.
+             *
+             *     The session reads it when monsters pursue a fleeing party. Intelligent pursuers may stop for dropped
+             *     treasure, and unintelligent ones for dropped food. For a template that leaves it `null`, the session
+             *     judges the monster by its treasure type instead: a monster whose `treasure` lists letters counts as
+             *     intelligent, and any other monster counts as unintelligent.
+             *
+             *     The built-in templates set it only where the SRD page says so in its prose, such as the invisible stalker's
+             *     "Highly intelligent" (`true`) or the basilisk's "Unintelligent" (`false`). A page that calls its creature
+             *     semi-intelligent or of low intelligence leaves it `null`. Set it on a template you write to say which
+             *     bait tempts the creature.
+             */
+            intelligent?: boolean | null;
             /**
              * Overrides Applied
              * @description The field paths, like `"categories"`, that a correction changed when this template was compiled from the SRD.
@@ -17556,6 +18326,158 @@ export interface components {
                 [key: string]: number;
             };
             /**
+             * Town Healing Rejections
+             * @description Why the temple would refuse each of its services for each party member now, keyed by
+             *     `MemberView.id` and then by the
+             *     `HealingService` name, like `"raise_dead"`.
+             *
+             *     Read it to disable a temple service that a member can't use, and to show the reason. Each value is a tuple of
+             *     `Rejection` models with the `code` and `params` that a
+             *     `PurchaseHealing` for that member and service gets with `spell_mode`
+             *     unset, which is the spell's first usage. For a service the temple sells in more than one usage, such as *cure light
+             *     wounds*, which also cures paralysis, read
+             *     `town_healing_mode_rejections` for each usage.
+             *     An empty tuple means that some temple cleric can perform the service for the member, and
+             *     `town_healing_caster_levels` gives the level to send.
+             *     A tuple that isn't empty means that no temple cleric, of any level, can, and it contains the rejections that a
+             *     purchase with `caster_level` unset gets.
+             *
+             *     Turn a rejection into text by its code, as you do for a refused command. The code you'll meet is
+             *     `town.healing.no_effect`, for a service that would do nothing for the member, and its `reason` param says why:
+             *
+             *     - `dead`: *cure light wounds* or *cure serious wounds* for a dead member.
+             *     - `weakened` or `diseased`: a cure for a member whose condition stops them from healing by magic.
+             *     - `full_hit_points`: a cure for a member at their maximum hit points.
+             *     - `not_diseased`: *cure disease* for a member who isn't diseased.
+             *     - `not_poisoned`: *neutralize poison* for a member who isn't poisoned and didn't die of poison in the last 10
+             *       rounds.
+             *     - `not_cursed`: *remove curse* for a member with no curse that the spell lifts.
+             *     - `not_dead`: *raise dead* for a living member.
+             *     - `dead_too_long`: *raise dead* for a member who has been dead longer than the highest-level temple cleric
+             *       reaches.
+             *     - `no_death_record`: *raise dead* for a dead member whose death the session didn't record, so it can't tell how
+             *       long ago the member died.
+             *
+             *     A purchase whose `caster_level` is too low to raise a member whom a higher cleric could raise gets one more
+             *     *raise dead* reason, `caster_level_too_low`. This map never shows it, because a higher level works for that
+             *     member, and the map shows an empty tuple and the level instead.
+             *
+             *     The fee isn't part of the answer, so a service the party can't afford is listed as one the temple can perform.
+             *     Compare the price in `town_healing_prices` with
+             *     `town_healing_funds_gp`, because the session refuses a
+             *     purchase the party can't pay for with `items.purchase.insufficient_funds` before it makes these checks.
+             *
+             *     The map has an entry for every party member, the dead included, and every service, while the session is in the
+             *     `"town"` mode. The town's `town_services` don't change it, because the temple serves the party in any town. In
+             *     any other mode the map is empty, because the session refuses every `PurchaseHealing` there with
+             *     `session.command.wrong_mode`. A `PlayerView` that osrlib 2.10.0 built, such as a stored feed entry, has no
+             *     `town_healing_rejections`, and it validates with this map empty.
+             * @default {}
+             */
+            town_healing_rejections: {
+                [key: string]: {
+                    [key: string]: components["schemas"]["Rejection"][];
+                };
+            };
+            /**
+             * Town Healing Caster Levels
+             * @description The lowest temple cleric level that can perform each service for each party member, keyed like
+             *     `town_healing_rejections`.
+             *
+             *     Send the number as `PurchaseHealing.caster_level`, and a
+             *     party that can pay gets the service. A service that no temple cleric can perform for the member has no entry, and
+             *     its rejections are in `town_healing_rejections`. For every service except *raise dead*, the level is the lowest
+             *     that can cast the service, so leaving `caster_level` unset gives the same result. For *raise dead* it's the lowest
+             *     level whose reach covers how long the member has been dead: 7 for a member who died less than a day ago, and 8
+             *     for one dead 3 days.
+             *
+             *     The price is the same at every level, and a higher level changes nothing but how far back *raise dead* reaches
+             *     and the caster level recorded on the weakness that *raise dead* leaves, which *dispel magic* rolls against. So
+             *     the level here gives the same result as any higher level, except that a *dispel magic* that a party cleric casts
+             *     on that weakness succeeds at least as often. If your game limits its temple to clerics of some level, compare
+             *     that limit with this number, as you compare a price with the party's funds.
+             *
+             *     The map is empty outside the `"town"` mode, and a `PlayerView` that osrlib 2.10.0 built validates with it
+             *     empty.
+             * @default {}
+             */
+            town_healing_caster_levels: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            };
+            /**
+             * Town Healing Mode Rejections
+             * @description Why the temple would refuse each usage of a service for each party member now, for the services it sells in
+             *     more than one usage. The map is keyed by `MemberView.id`, then by the
+             *     `HealingService` name, and then by the usage's
+             *     `SpellMode.key`, which is what you send as
+             *     `PurchaseHealing.spell_mode`.
+             *
+             *     Read it to offer a usage beside the service's first one, such as "cure paralysis" beside *cure light wounds*'s
+             *     healing. Each value means what a value of
+             *     `town_healing_rejections` means, for a purchase that
+             *     names that usage: an empty tuple means that some temple cleric can perform it for the member, and a tuple that
+             *     isn't empty contains the rejections that a purchase with `caster_level` unset gets. The usages come in the order
+             *     the spell lists them, so the first is the one that `town_healing_rejections` answers for, with the same tuple.
+             *     The session makes the same check for the view and the command, so they can't disagree. Look a usage's display
+             *     name up in `town_healing_mode_names`.
+             *
+             *     The temple sells *cure light wounds* in its `heal` and `cure_paralysis` usages, and every other service in its
+             *     first usage alone, so *cure light wounds* is the only service in this map. A refusal of `cure_paralysis` is
+             *     `town.healing.no_effect` with the `reason` param `dead` for a dead member or `not_paralysed` for a member who
+             *     isn't paralysed. The cleric level doesn't change the answer for either usage of cure light wounds, so leave
+             *     `caster_level` unset, which uses the service's lowest level.
+             *
+             *     The map has an entry for every party member, the dead included, while the session is in the `"town"` mode, and
+             *     it's empty in any other mode. A `PlayerView` that osrlib 2.11.0 or earlier built validates with it empty.
+             * @default {}
+             */
+            town_healing_mode_rejections: {
+                [key: string]: {
+                    [key: string]: {
+                        [key: string]: components["schemas"]["Rejection"][];
+                    };
+                };
+            };
+            /**
+             * Town Healing Mode Names
+             * @description The display name of each usage of a service, for the services the temple sells in more than one usage, keyed
+             *     by the `HealingService` name and then by the usage's
+             *     `SpellMode.key`, such as `{"cure_light_wounds": {"heal": "Heal a living subject",
+             *     "cure_paralysis": "Cure paralysis"}}`.
+             *
+             *     Each name is the usage's `SpellMode.display_name` in the session's spell catalog,
+             *     so a remote client can label each usage in
+             *     `town_healing_mode_rejections` without the
+             *     catalog. The services and usages are the same as there, in the same order. The session fills it in every mode,
+             *     like `town_healing_prices`, and a `PlayerView` that osrlib 2.11.0 or earlier built validates with it empty.
+             * @default {}
+             */
+            town_healing_mode_names: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
+            /**
+             * Town Healing Funds Gp
+             * @description The whole gold pieces that the party's purses can pay toward a temple fee now.
+             *
+             *     The temple sells a service the party can pay for when the service's price in
+             *     `town_healing_prices` is at most this number, and it refuses
+             *     one that costs more with `items.purchase.insufficient_funds`. The session computes this number with the function
+             *     its funds check uses, so the two can't disagree. Each purse pays in whole gold pieces of its total value, across
+             *     every coin type, and any value below a gold piece stays in the purse, so this is the sum over the party, dead
+             *     members included, of each purse's value rounded down to a gold piece. For example, two members who each have 12
+             *     gp and 5 sp give 24, not 25. Whoever is treated, the total is the same, because the patient's purse only pays
+             *     first.
+             *
+             *     The session fills it in every mode, like `town_healing_prices`. A `PlayerView` that osrlib 2.10.0 built has no
+             *     `town_healing_funds_gp`, and it validates with `null`, which means the view doesn't state the funds, not that
+             *     the party has none.
+             */
+            town_healing_funds_gp?: number | null;
+            /**
              * Party
              * @description The party's character sheets, in marching order, the dead included.
              */
@@ -17649,11 +18571,12 @@ export interface components {
              * @description The name of each spell whose id the view shows, keyed by spell id, like
              *     `{"magic_missile": "Magic Missile"}`. Show these names, not the ids.
              *
-             *     A spell id appears in five places in the view: in a member's
+             *     A spell id appears in six places in the view: in a member's
              *     `spell_book`,
              *     `preparable_spells`, and
              *     `learnable_spells`, as the `spell_id` of a copy in
-             *     a member's `memorized_spells`, and as the
+             *     a member's `memorized_spells`, in the `spells` of an
+             *     identified spell scroll in a member's `inventory`, and as the
              *     `kind` of an effect in `effects`, because a spell's
              *     effect has the spell's id as its kind unless the spell's data gives it a kind of its own. Every one
              *     of those ids that the session's catalog,
@@ -17664,7 +18587,8 @@ export interface components {
              *
              *     It names no spell whose id the view doesn't show. So a spell the adventure bundles for a list that
              *     no member casts from stays hidden, and so does a spell at a level where no member could prepare or
-             *     learn it. A spell on a scroll is named only when a member could prepare or learn it anyway. A spell
+             *     learn it, unless a member carries an identified scroll with the spell on it. A spell on an
+             *     unidentified scroll is named only when the view shows its id in another place. A spell
              *     id on a member that the session's catalog doesn't have, like one from a party made for another
              *     adventure, has no entry either, and the session refuses to prepare or cast that spell. The name here
              *     is always the spell's normal form. For a copy prepared reversed, show its name from
@@ -17711,6 +18635,101 @@ export interface components {
                 [key: string]: number;
             };
             /**
+             * Spell Ranges
+             * @description How far each spell in `spell_names` reaches in its normal form, keyed by spell id, as the
+             *     `RangeSpec` that
+             *     `SpellTemplate.range_spec_for` returns, such as `kind` `"feet"`
+             *     and `feet` 150 for `"magic_missile"`. Use it to offer only the targets a cast can reach.
+             *
+             *     The session checks the range in a battle, where it measures the distance from the caster to the target's group,
+             *     the caster's entry in that group's
+             *     `member_distance_feet`, or to a targeted party
+             *     member where that member will stand once the round's moves are made. It refuses a target beyond the range with
+             *     `magic.cast.out_of_range`. Outside a battle it checks no distance. The reach of each kind:
+             *
+             *     - `feet` and `yards`: `feet`, with yards already converted.
+             *     - `per_level`: `feet`, or 0 when it's `null`, plus `per_level_feet` times the caster's level, which is
+             *       `MemberView.level`. A spell read from a scroll uses the lowest level
+             *       that could cast it instead, whatever the reader's level.
+             *     - `touch`: 5', the reach of a melee attack. In a battle, the session also refuses a touch spell on a monster with
+             *       `battle.declaration.not_in_front_rank` when the caster isn't in the party's front rank toward the monster's
+             *       group, and with `combat.attack.out_of_reach` when the monster isn't in its group's front rank.
+             *     - `caster` and `special`: no distance that the session checks.
+             *
+             *     It's read from the same catalog as `spell_names`, and every spell there has an entry. A `PlayerView` that
+             *     osrlib 2.11.0 or earlier built validates with this map empty.
+             * @default {}
+             */
+            spell_ranges: {
+                [key: string]: components["schemas"]["RangeSpec"];
+            };
+            /**
+             * Reversed Spell Ranges
+             * @description How far each spell's reverse reaches, keyed by spell id, for every spell in `reversed_spell_names`, read the
+             *     way `spell_ranges` is. A reverse can reach a different distance from the normal form: `spell_ranges["remove_fear"]`
+             *     is touch, and `reversed_spell_ranges["remove_fear"]`, for *cause fear*, is 120 feet. A `PlayerView` that osrlib
+             *     2.11.0 or earlier built validates with this map empty.
+             * @default {}
+             */
+            reversed_spell_ranges: {
+                [key: string]: components["schemas"]["RangeSpec"];
+            };
+            /**
+             * Spell Range Texts
+             * @description The range of each spell in `spell_names` as its page prints it, keyed by spell id, such as
+             *     `{"remove_fear": "The caster or a creature touched"}`. Show it to the player beside the spell's name. It's the
+             *     `range` that `spell_ranges` is parsed from, and for a range that osrlib
+             *     can't parse, whose `kind` in `spell_ranges` is `"special"`, such as *create food*'s `"Appears in the caster’s
+             *     presence"`, it's the only statement of the range. It's read from the same catalog as `spell_names`, and every spell
+             *     there has an entry. A `PlayerView` that osrlib 2.11.0 or earlier built validates with this map empty.
+             * @default {}
+             */
+            spell_range_texts: {
+                [key: string]: string;
+            };
+            /**
+             * Reversed Spell Range Texts
+             * @description The range of each spell's reverse as its page prints it, keyed by spell id, for every spell in
+             *     `reversed_spell_names`. It's the reverse's own `range` when the reverse
+             *     has one, such as `"120’"` for *cause fear*, and the spell's `range` otherwise. A `PlayerView` that osrlib 2.11.0 or
+             *     earlier built validates with this map empty.
+             * @default {}
+             */
+            reversed_spell_range_texts: {
+                [key: string]: string;
+            };
+            /**
+             * Spell Modes
+             * @description The usages of each spell in `spell_names`, in its normal form, keyed by spell id, as
+             *     `SpellModeView` models in the order the form lists them. Build a cast dialog
+             *     from them: each one has the key to send as the cast's mode, a label to show, and what the session checks of the
+             *     cast's targets. For example, `spell_modes["light_mu"]` has the usages `illuminate`, `blind`, and `cancel`, labelled
+             *     `"Conjure light"`, `"Blind a creature"`, and `"Cancel darkness"`.
+             *
+             *     Each usage is read from the same catalog as `spell_names`,
+             *     `GameSession.effective_spells`, so a spell the adventure
+             *     bundles has the usages its author wrote. Every spell in `spell_names` has an entry, and no other spell does. A
+             *     `PlayerView` that osrlib 2.11.0 or earlier built validates with this map empty.
+             * @default {}
+             */
+            spell_modes: {
+                [key: string]: components["schemas"]["SpellModeView"][];
+            };
+            /**
+             * Reversed Spell Modes
+             * @description The usages of each spell's reverse, keyed by spell id, for every spell in `reversed_spell_names`, as
+             *     `SpellModeView` models in the order the reverse lists them. The reverse's keys
+             *     can differ from the normal form's: `spell_modes["cure_light_wounds"]` has `heal` and `cure_paralysis`, and
+             *     `reversed_spell_modes["cure_light_wounds"]` has `harm`. Send a key from here with `reversed` set.
+             *
+             *     It's read from the same catalog as `spell_modes`. A spell that doesn't reverse has no entry, and a `PlayerView`
+             *     that osrlib 2.11.0 or earlier built validates with this map empty.
+             * @default {}
+             */
+            reversed_spell_modes: {
+                [key: string]: components["schemas"]["SpellModeView"][];
+            };
+            /**
              * Item Names
              * @description What to call one of each item whose id the view shows, keyed by that id, like
              *     `{"torch": "torch", "holy_water": "vial of holy water", "magic-item-0003": "potion"}`. Show these
@@ -17752,12 +18771,11 @@ export interface components {
              *       a list, and the phrase in place of the kind in a sentence.
              *
              *     It names no item whose id the view doesn't show. The player-visible item events, like
-             *     `ItemAcquiredEvent`, name items by the same ids. An
-             *     item the command left in a member's pack or in a pile the view shows is a key in the view you
-             *     build after the command. An item the command used up, sold, or left behind on a trail is a key
-             *     in the view from before it. An item that is identified and used up in the same command, like a
-             *     potion drunk before the party knew it, has its true name on the
-             *     `ItemIdentifiedEvent`.
+             *     `ItemAcquiredEvent`, list items by the same ids, and
+             *     each has its own `item_names` and `item_names_plural` for the ids it lists. An event's names come
+             *     from the same function as these, so an event names an id as a view built when the event happened
+             *     would. Read the event's names for an item the command used up, sold, or left behind on a trail,
+             *     because the view you build after the command doesn't name it.
              * @default {}
              */
             item_names: {
@@ -17771,8 +18789,8 @@ export interface components {
              *     Each value is the plural of the name in `item_names`: the template's
              *     `display_name_plural`, the plural of a
              *     masked name, like `"shields with a faint aura"`, or `"gems"` or `"pieces of jewellery"`. Use it
-             *     with a count from a pile's `contents`, an inventory
-             *     entry's `quantity`, or the ids an event repeats, one per unit: "2 vials of holy water".
+             *     with a count from a pile's `contents` or an inventory
+             *     entry's `quantity`: "2 vials of holy water".
              * @default {}
              */
             item_names_plural: {
@@ -17872,6 +18890,14 @@ export interface components {
              *     one.
              */
             encounter?: components["schemas"]["EncounterView"] | null;
+            /**
+             * @description How long the party's light and food will last, as a
+             *     `SuppliesView`. The session always fills it in.
+             *
+             *     A `PlayerView` that osrlib 2.10.0 built, such as a stored feed entry, has no `supplies`, and it validates with
+             *     `supplies` set to `null`, so such a view has no supplies summary to show.
+             */
+            supplies?: components["schemas"]["SuppliesView"] | null;
         };
         /**
          * PrepareSpells
@@ -18298,6 +19324,8 @@ export interface components {
          *     The party must be in town. Name the patient in `character_id` and the service in `service`.
          *     Each service works as the matching spell, cast on the member by a temple cleric. The cleric is
          *     of the lowest level that can cast the service unless you choose a level in `caster_level`.
+         *     The cleric casts the spell's first usage unless you choose another in `spell_mode`, such as
+         *     *cure light wounds*'s `cure_paralysis`.
          *
          *     The town's `TownSpec.healing_prices` sets
          *     what each service costs, and a service the town doesn't list costs the standard price from
@@ -18320,6 +19348,18 @@ export interface components {
          *     Because the party pays, a dead member can be raised even when that member's purse is
          *     empty, and the party doesn't have to move coins between purses first.
          *
+         *     To learn before you send the command which services the temple can perform for each
+         *     member, read
+         *     `PlayerView.town_healing_rejections`,
+         *     which contains the rejections that follow the funds check, and
+         *     `PlayerView.town_healing_caster_levels`,
+         *     which gives the `caster_level` to send. Both answer for each service's first usage. For a
+         *     service the temple sells in more than one usage, read
+         *     `PlayerView.town_healing_mode_rejections`
+         *     for the answer for each usage. To learn whether the party can pay, compare the
+         *     price with
+         *     `PlayerView.town_healing_funds_gp`.
+         *
          *     Modes:
          *
          *     `town`
@@ -18328,18 +19368,30 @@ export interface components {
          *
          *     - `session.command.wrong_mode` - the party is not in town.
          *     - `session.command.unknown_member` - `character_id` matches no party member.
+         *     - `magic.cast.unknown_mode` - `spell_mode` matches no usage of the service's spell.
+         *     - `town.healing.mode_not_offered` - `spell_mode` names a usage the temple doesn't sell:
+         *       a manual usage, which the session can't resolve, or one that works only on undead.
          *     - `town.healing.caster_level_out_of_range` - `caster_level` is below the lowest level
          *       that can cast the service, or above the highest level a cleric can reach. The
          *       rejection's `minimum` and `maximum` params give the lowest and highest levels the
          *       temple accepts for the service.
          *     - `items.purchase.insufficient_funds` - the whole gold pieces in the party's
          *       purses add up to less than the town's price for the service.
-         *     - `town.healing.no_effect` - the service would do nothing for the member. That's
-         *       `raise_dead` for a living member or for one dead longer than the spell reaches at
-         *       the cleric's level, `cure_disease` for a member who isn't diseased, and
-         *       `neutralize_poison` for a member who isn't poisoned and didn't die of poison in the
-         *       last 10 rounds. The session checks the party's funds first, so a party that can't
-         *       pay gets `items.purchase.insufficient_funds` instead.
+         *     - `town.healing.no_effect` - the usage would do nothing for the member. The
+         *       rejection's `reason` param says why. For the healing usage of `cure_light_wounds` and
+         *       `cure_serious_wounds` it's `dead`, `weakened`, `diseased`, or `full_hit_points`,
+         *       checked in that order, because neither condition lets a member heal by magic. For
+         *       `cure_light_wounds`'s `cure_paralysis` usage it's `dead` or `not_paralysed`, checked
+         *       in that order. For
+         *       `cure_disease` it's `not_diseased`. For `neutralize_poison` it's `not_poisoned`, for
+         *       a member who isn't poisoned and didn't die of poison in the last 10 rounds. For
+         *       `remove_curse` it's `not_cursed`, for a member who carries no item whose curse has
+         *       been revealed and has no item curse's effect. For `raise_dead` it's `not_dead` for a
+         *       living member, `no_death_record` for a dead member whose death the session didn't
+         *       record, `caster_level_too_low` for a member a higher-level cleric could raise, and
+         *       `dead_too_long` for a member no temple cleric can raise, checked in that order. The
+         *       session checks the party's funds first, so a party that can't pay gets
+         *       `items.purchase.insufficient_funds` instead.
          *
          *     **Events:**
          *
@@ -18383,9 +19435,30 @@ export interface components {
              *     above 7th. A level 7 cleric raises only a member who died less than a day ago, and a level 9
              *     cleric raises a member dead up to 8 days. The session refuses a level below the lowest that can
              *     cast the service, or above 14, the highest level a cleric can reach. The price is the same at
-             *     every level.
+             *     every level. For each member and service,
+             *     `PlayerView.town_healing_caster_levels`
+             *     gives the lowest level that works.
              */
             caster_level?: number | null;
+            /**
+             * Spell Mode
+             * @description Which usage of the service's spell the temple cleric casts, by that usage's
+             *     `SpellMode.key`, or `null` for the spell's first usage.
+             *
+             *     The temple sells *cure light wounds* in two usages: `heal`, the first, which restores 1d6+1
+             *     hit points, and `cure_paralysis`, which ends the member's paralysis. Every other service has
+             *     one usage the temple sells, which is the spell's first. The temple doesn't sell a manual usage,
+             *     such as *cure disease*'s `kill_green_slime` or *neutralize poison*'s `items`, because the session
+             *     resolves nothing for one, or *raise dead*'s `destroy_undead`, which works only on undead. It
+             *     refuses those with `town.healing.mode_not_offered`, and a key the spell doesn't have with
+             *     `magic.cast.unknown_mode`. The price is the same for every usage of a service. For each member
+             *     and each service the temple sells in more than one usage,
+             *     `PlayerView.town_healing_mode_rejections`
+             *     gives the answer for each usage, and
+             *     `PlayerView.town_healing_mode_names`
+             *     gives each usage's display name.
+             */
+            spell_mode?: string | null;
         };
         /**
          * PursuitEvent
@@ -18428,8 +19501,8 @@ export interface components {
             round: number;
             /**
              * Gap Feet
-             * @description How far ahead the party is, in feet, at the end of this round. It never goes below zero, and
-             *     at five feet or less the pursuers have caught up.
+             * @description How far ahead of its nearest pursuer the party is, in feet, at the end of this round. It never
+             *     goes below zero, and at five feet or less the pursuers have caught up.
              */
             gap_feet: number;
         };
@@ -18444,7 +19517,7 @@ export interface components {
          *     rejects `Parley` and
          *     `TurnUndead`, and `Wait` runs
          *     one round of the chase. `EngageBattle` turns the party to
-         *     fight at the current gap.
+         *     fight, and each group stands where the chase has left it.
          */
         PursuitState: {
             /**
@@ -18456,14 +19529,34 @@ export interface components {
             round: number;
             /**
              * Gap Feet
-             * @description The distance between the party and its pursuers, in feet. It starts at the distance of the
+             * @description The distance between the party and its nearest pursuer, in feet. It starts at the distance of the
              *     nearest pursuing group. When the pursuit follows a retreat from a battle, it starts at the smallest
              *     distance from any living member to any group that can follow, after the retreat's move, because
-             *     members can stand at different places on the battle's range track. Each round, it grows by the
-             *     party's running rate and shrinks by the running rate of the slowest pursuing group. At 5 feet or
-             *     less, the pursuers catch the party, and a battle starts.
+             *     members can stand at different places on the battle's range track. That retreat also sets each
+             *     group's `distance_feet` to its distance from
+             *     the nearest standing member, because the party runs as one body from then on.
+             *
+             *     Each round, every pursuing group's `distance_feet` grows by the party's running rate and shrinks by
+             *     the running rate of the slowest pursuing group, and this field becomes the smallest of them. A group
+             *     that stops pursuing stays where it is, and the gap is measured to the pursuers that remain. At 5 feet
+             *     or less, the pursuers catch the party, and a battle starts. The groups that reached the party stand
+             *     at 5 feet, and every other group stays as far behind as the chase left it. When the nearest pursuer
+             *     stops pursuing and the next one is farther back, the gap grows to that group's distance.
              */
             gap_feet: number;
+            /**
+             * Pursuer Ids
+             * @description The ids of the groups that pursued the party in the last round, or at the start of the chase
+             *     before its first round. A group that has stopped pursuing joins the chase again only while it
+             *     stands within `FLEE_EXIT_FEET` of the party, so the session
+             *     reads this to tell a pursuer from a group that has dropped out.
+             *
+             *     It's None in a chase saved by an engine that didn't record it. That engine kept the gap here and
+             *     left each group at the encounter's starting distance, so
+             *     `load_game` moves every group that hasn't fled to `gap_feet`, and
+             *     the next round counts every group able and willing to pursue as a pursuer.
+             */
+            pursuer_ids?: string[] | null;
         };
         /**
          * QuestActivatedEvent
@@ -19157,9 +20250,9 @@ export interface components {
              *     `DungeonState.found_traps`, and every feature the
              *     adventure authors has one, on a level or in an area, found or not. A generated cache's key is its
              *     id in `DungeonState.generated_caches`, like
-             *     `"cache-0001"`, and every cache there has one, including a lair cache the players can't see yet,
-             *     except a cache whose cell reference names no cell of the adventure, which the session never
-             *     shows or resolves.
+             *     `"cache-0001"`. Every cache that the session rolled or that `load_game`
+             *     restored has one, including a lair cache the players can't see yet. A cache you write into
+             *     `DungeonState.generated_caches` yourself on a cell that doesn't exist has none.
              *
              *     Each value is the `MapFeatureView.id` that the player view
              *     shows for the feature once the party knows it. Use it to show a referee the feature the players
@@ -19733,7 +20826,7 @@ export interface components {
          *     - Item declarations: `battle.declaration.item_unusable`,
          *       `battle.declaration.unknown_group`, `battle.declaration.no_target`,
          *       `items.use.not_usable`, `items.device.inert`, `items.scroll.spent`,
-         *       `items.scroll.no_such_spell`, `items.scroll.wrong_caster`,
+         *       `items.scroll.wrong_caster`, `items.scroll.no_such_spell`,
          *       `exploration.action.requires_light`, and `combat.attack.out_of_reach`. A staff's
          *       strike for a charge is a melee attack, so it also gets
          *       `battle.declaration.not_in_front_rank` when the member won't stand in the group's
@@ -19751,6 +20844,7 @@ export interface components {
          *       `battle.declaration.member_out_of_reach`. A staff of healing's touch gets
          *       `battle.declaration.target_count`, `items.use.unknown_target`,
          *       `items.use.target_cannot_be_healed` on a creature that's dead or turned to stone,
+         *       `items.use.invisible_target` on another creature that's invisible,
          *       `items.use.target_healed_today` on a creature the staff already healed today, and
          *       `battle.declaration.member_out_of_reach` on another member. On a monster, it gets the
          *       checks of a touch spell on a monster.
@@ -20092,6 +21186,9 @@ export interface components {
          *     `MemorizedSpell`'s `reversed` field. A divine caster
          *     memorizes the normal form and chooses when casting, by speaking the words backwards, so any of
          *     their memorized copies can be cast either way.
+         *
+         *     Constructing one raises `pydantic.ValidationError` when only one of `range` and `range_spec` is
+         *     set, so the range a client shows is always the range casting checks.
          */
         ReversedForm: {
             /**
@@ -20106,7 +21203,10 @@ export interface components {
              * @description The SRD text for the reverse, all of it.
              *
              *     Each of the reverse's `modes` has the part of this text that covers that mode as its own
-             *     `prose`.
+             *     `prose`. In the built-in catalog, the format is the same as a mode's
+             *     prose: line-oriented text with no inline markup, one paragraph, list item, heading, table row, or stat line
+             *     per line, where a run of lines that start with `|` is a table whose first line is the header row and whose
+             *     second is the delimiter row. It's not Markdown, so lay it out line by line.
              * @default
              */
             prose: string;
@@ -20131,6 +21231,26 @@ export interface components {
              *     the second one to the reverse.
              */
             duration_spec?: components["schemas"]["DurationSpec"] | null;
+            /**
+             * Range
+             * @description The reverse's range, when the reverse's text states one of its own, such as `"120’"`. Show this to a player.
+             *
+             *     `null` means the normal form's printed `range` applies to the reverse too, which is the usual case. The
+             *     page's range line belongs to the normal form, so a reverse states a different range in its text. In the
+             *     built-in catalog, only *cause fear*, the reverse of *remove fear*, does: it "Causes a target within
+             *     120’ to flee", while *remove fear* reaches "The caster or a creature touched".
+             */
+            range?: string | null;
+            /**
+             * @description The structured form of `range`, as a `RangeSpec`.
+             *
+             *     `null` means the reverse reaches as far as the normal form. Casting reads it for a reversed cast, and
+             *     `SpellTemplate.range_spec_for` returns the range
+             *     that applies to either form.
+             *
+             *     Set both `range` and `range_spec`, or neither of them.
+             */
+            range_spec?: components["schemas"]["RangeSpec"] | null;
         };
         /**
          * Role
@@ -20869,6 +21989,16 @@ export interface components {
              * @default []
              */
             found: string[];
+            /**
+             * Feature Ids
+             * @description The `feature:` handles of the construction tricks the search found, in the order of their
+             *     `"construction:<feature id>"` entries in `found`, and empty when it found none. Each is the
+             *     `MapFeatureView.id` under which the player view lists the
+             *     trick from the view built after this command, so you can tell which listed feature the search
+             *     revealed without reading the authored id in `found`.
+             * @default []
+             */
+            feature_ids: string[];
         };
         /**
          * SellTreasure
@@ -21456,6 +22586,16 @@ export interface components {
              */
             mode: string;
             /**
+             * Mode Display Name
+             * @description The cast mode's `SpellMode.display_name`, such as
+             *     `"Blind a creature"` for the `blind` mode of *light*, for a line that states which usage the caster chose. It's read
+             *     from the form that was cast, so a reversed cast has the reverse's label. An event loaded from a save written
+             *     before the field existed has an empty string, and `format_message` names the
+             *     mode by `mode`.
+             * @default
+             */
+            mode_display_name: string;
+            /**
              * Reversed
              * @description True when the spell was cast in its reversed form.
              * @default false
@@ -21617,10 +22757,10 @@ export interface components {
              * @description The conditions a `cure` effect lifts. *Cure light wounds*' `cure_paralysis` mode lifts `paralysed`.
              *
              *     Casting releases each effect in the target's `EffectsLedger` that puts one
-             *     of these conditions on it. Paralysis comes off however it was put on. Casting also removes a `paralysed`
-             *     condition that has no ledger effect behind it, like one granted with
-             *     `grant_condition`. The other conditions come off only with the ledger
-             *     effect that granted them.
+             *     of these conditions on it. Paralysis, disease, and poison come off however they were put on. Casting also removes
+             *     a `paralysed`, `diseased`, or `poisoned` condition in this tuple that has no ledger effect behind it, like one
+             *     granted with `grant_condition`. The other conditions come off only with the
+             *     ledger effect that granted them.
              * @default []
              */
             cures_conditions: components["schemas"]["Condition"][];
@@ -21753,6 +22893,9 @@ export interface components {
              *     loads this way, with a label on every mode. A spell with a single mode has nothing to choose
              *     between, so the built-in catalog gives that mode the label from its key too, like *fire ball*'s
              *     `"Damage"`. For a form with one mode, show the spell's name and not the mode's label.
+             *
+             *     The cast event includes the label of the mode that was cast, in
+             *     `SpellCastEvent.mode_display_name`.
              * @default
              */
             display_name: string;
@@ -21784,13 +22927,154 @@ export interface components {
              * @description The SRD text for this usage.
              *
              *     Show it to the player. For a manual mode, it's all the information osrlib has about the result.
-             *     In the built-in catalog, no two modes of one form have the same prose. Where the page describes
-             *     several usages in one passage, like the reverse of *light*, each mode's prose is the part of
-             *     the passage that covers that usage, and the whole passage is the form's own prose, such as
+             *
+             *     In the built-in catalog, the value is line-oriented text, and lines are separated by a single newline. Each
+             *     line is one paragraph, list item, heading, table row, or stat line of the page, and no line is empty. The
+             *     lines have no inline markup: the page's bold and italic markers and its link targets are removed, and an
+             *     asterisk that remains, such as the one in a stat line's `HD 12*`, is part of the data. A run of consecutive
+             *     lines that start with `|` is a table. Its first line is the header row, its second is the delimiter row,
+             *     such as `| --- | --- |`, and every row of the run has the same number of cells. The text as a whole is not
+             *     Markdown, so lay it out line by line rather than passing it to a Markdown renderer. A heading is a line like
+             *     any paragraph, such as `"Tornado"` on the *control weather* page, and nothing in the value marks it as a
+             *     heading.
+             *
+             *     A mode that covers one numbered usage has that usage's line, followed by the text the page prints after its
+             *     usages that applies to the mode. Both modes of *hold person* and of *hold monster* end with the
+             *     **Restrictions** line. The `hd_budget` mode of *sleep* has the rules for creatures of 4 HD or less, and both
+             *     of its modes have the **Killing** and **Awakening** rules. The `restore_life` mode of *raise dead* has the
+             *     stipulations for restoring life. Every other built-in mode has the whole text of its form, except where the
+             *     page describes several usages in one passage, as the next paragraph says. Each line of a spell page's text
+             *     is in the prose of at least one mode, in the reverse's prose, or in the template's `intro`.
+             *
+             *     In the built-in catalog, no two modes of one form have the same prose. Where the page describes several
+             *     usages in one passage, like the reverse of *light*, each mode's prose is the part of the passage that covers
+             *     that usage, and the whole passage is the form's own prose, such as
              *     `ReversedForm.prose`.
              * @default
              */
             prose: string;
+        };
+        /**
+         * SpellModeView
+         * @description One usage of a spell's form, with what a cast dialog needs to label it and to collect its targets.
+         *
+         *     You get these from `PlayerView.spell_modes` and
+         *     `PlayerView.reversed_spell_modes`, one per
+         *     `SpellMode` of the form, in the order the form lists them. Send `key` as
+         *     `CastSpell.mode`, as a battle `cast` declaration's
+         *     `spell_mode`, or as
+         *     `UseItem.mode` for a scroll.
+         *
+         *     The target fields describe the checks that the session makes of a cast's targets for this usage, the same checks
+         *     whichever command casts it: how many targets it takes, whether a cell reference may be one, and whether a battle
+         *     declaration names a group. A cast that passes them can still be refused for something the targets are, such as
+         *     `magic.cast.unknown_target` for an id that names nobody the party can act on, or for the range, such as
+         *     `magic.cast.out_of_range`. The range belongs to the whole form, in
+         *     `PlayerView.spell_ranges` and
+         *     `PlayerView.reversed_spell_ranges`.
+         *
+         *     Every field comes from the session's spell catalog alone, so a usage reads the same in every view of a session.
+         */
+        SpellModeView: {
+            /**
+             * Key
+             * @description The usage's `SpellMode.key`, such as `"blind"`, which is what you send.
+             */
+            key: string;
+            /**
+             * Display Name
+             * @description The usage's `SpellMode.display_name`, such as `"Blind a creature"`. Show it where
+             *     a player chooses one of a form's usages. For a form with one usage, show the spell's name instead.
+             */
+            display_name: string;
+            /**
+             * Manual
+             * @description True when osrlib doesn't resolve the usage's outcome, as for
+             *     `SpellMode.manual`. Casting spends the copy and leaves the result to the referee,
+             *     so tell the player that before they cast it.
+             * @default false
+             */
+            manual: boolean;
+            /**
+             * @description How the usage picks who it affects, the `TargetingMode` of its
+             *     `SpellMode.targeting`, such as `"single"` or `"area"`. `null` for a usage with no
+             *     targeting, which is a manual usage in the built-in catalog, and the session then checks no number of targets.
+             */
+            targeting?: components["schemas"]["TargetingMode"] | null;
+            /**
+             * Min Targets
+             * @description The fewest ids that `targets` may hold: 1 for a `single` or `hd_budget` usage and for an `up_to_n` usage that
+             *     osrlib resolves, and 0 for every other usage, such as a `self` or `area` usage. The session refuses fewer with
+             *     `magic.cast.target_count`.
+             *
+             *     A battle declaration of an `area` usage names a group in
+             *     `target_group_id` instead, and so can one of an
+             *     `hd_budget` usage, as `target_group` states. A usage whose `one_target_per_missile` is true takes an exact
+             *     number of targets instead, which depends on the caster.
+             * @default 0
+             */
+            min_targets: number;
+            /**
+             * Max Targets
+             * @description The most ids that `targets` may hold: 0 for a `self` usage, 1 for a `single` usage, and `null` for every other
+             *     usage, which the session doesn't limit. The session refuses more with `magic.cast.target_count`.
+             *
+             *     For an `up_to_n` or `hd_budget` usage, send every creature that the player wants the spell to reach, in the order
+             *     the player prefers. The spell affects at most the number of creatures that its targeting allows, and the session
+             *     picks them from the ones you send. An `up_to_n` usage affects the first ones in your order, up to the fixed
+             *     `count` or a roll of
+             *     `count_dice` made when the spell is cast, such as *hold person*'s
+             *     1d4. An `hd_budget` usage affects the weakest first, until a roll of
+             *     `hd_budget_dice`, such as *sleep*'s 2d8 Hit Dice, runs out.
+             *     The others are unaffected, and the cast is still accepted. A usage whose `one_target_per_missile` is true takes
+             *     an exact number of targets instead.
+             */
+            max_targets?: number | null;
+            /**
+             * One Target Per Missile
+             * @description True for a usage that shoots missiles and takes one target for each, such as *magic missile*'s. Name a
+             *     creature more than once to send it more missiles. The number of targets has to equal the number of missiles,
+             *     which grows with the caster's level, and the session refuses any other number with `magic.cast.target_count`.
+             *     Read the caster's number in `MemberView.missile_counts`, or
+             *     `scroll_missile_count` for a reading from a scroll.
+             * @default false
+             */
+            one_target_per_missile: boolean;
+            /**
+             * Scroll Missile Count
+             * @description How many targets a reading of the spell from a scroll takes, for a usage whose `one_target_per_missile` is
+             *     true. A scroll's spell resolves at the lowest level that could cast it, whatever the reader's level, so every
+             *     reader sends this many. `null` for every other usage, and for a spell on a list that no built-in class casts
+             *     from.
+             */
+            scroll_missile_count?: number | null;
+            /**
+             * Accepts Cells
+             * @description Whether a target may be a cell reference in the `cell:{dungeon}:{level}:{x},{y}` form that
+             *     `cell_ref` builds, for a usage that affects a place, such as *light*'s
+             *     `illuminate` or *web*. A usage that works only on creatures, such as one that allows a saving throw or deals
+             *     damage, has `false`, and the session refuses a cell reference for it with `magic.cast.target_must_be_creature`.
+             * @default false
+             */
+            accepts_cells: boolean;
+            /**
+             * Target Group
+             * @description Whether a battle `cast` declaration of the usage names a group in
+             *     `target_group_id`.
+             *
+             *     - `required`: an `area` usage, such as *fire ball*'s. The session takes the group's living members that the
+             *       area covers, ignores `targets`, and refuses a declaration with no group or a group that has fled with
+             *       `battle.declaration.unknown_group`.
+             *     - `optional`: an `hd_budget` usage, such as *sleep*'s. A declaration with a group and no `targets` takes the
+             *       group's living members, and one with `targets` takes those.
+             *     - `none`: every other usage, whose declaration names its targets in `targets`.
+             *
+             *     Outside a battle, `CastSpell` names targets alone, because the party can act
+             *     on no monster there.
+             * @default none
+             * @enum {string}
+             */
+            target_group: "none" | "optional" | "required";
         };
         /**
          * SpellSummary
@@ -21899,7 +23183,13 @@ export interface components {
              * @description The range line as printed. Show this to a player.
              */
             range: string;
-            /** @description The structured form of `range`, as a `RangeSpec`. */
+            /**
+             * @description The structured form of `range`, as a `RangeSpec`.
+             *
+             *     It's the normal form's range. A reverse can state a range of its own, in
+             *     `ReversedForm.range_spec`, so read the range of a
+             *     cast from `range_spec_for`.
+             */
             range_spec: components["schemas"]["RangeSpec"];
             /**
              * @description The spell's reverse, as a `ReversedForm`.
@@ -21920,7 +23210,9 @@ export interface components {
              *
              *     On a page with several usages, it's the lead-in, like `"This spell has two usages:"`. On a
              *     page with one usage, it's the opening of the spell's description, and that mode's `prose` is
-             *     the full text.
+             *     the full text. In the built-in catalog, it's the first line of the page's text, in the format of
+             *     `SpellMode.prose`: one line with no inline markup, never a
+             *     table row. It's not Markdown.
              * @default
              */
             intro: string;
@@ -22252,6 +23544,137 @@ export interface components {
              *     the die against it.
              */
             open_doors: number;
+        };
+        /**
+         * SuppliesView
+         * @description How long the party's light and food will last, counted from what the living members carry.
+         *
+         *     You get this from `PlayerView.supplies`. osrlib computes each number
+         *     by the rules the session applies, so you can show "light left" and "food left" without knowing the burn time of
+         *     a torch or how the party eats. Every time is in rounds, as
+         *     `MemberEffectView.remaining_rounds` is, and a turn is
+         *     `ROUNDS_PER_TURN` rounds.
+         *
+         *     Only the items that living members carry count, because a dead member's torch or ration is of use only after a
+         *     living member takes it.
+         *     Items in a dropped pile don't count either. In town the summary reports the same numbers as in a dungeon, and
+         *     you decide from `PlayerView.location` whether to show them. When
+         *     every member is dead, every count is 0, every flag is false, and `food_short_first_ids` is empty.
+         */
+        SuppliesView: {
+            /**
+             * Light Burning Rounds
+             * @description The rounds left on the timed light that will burn longest, among the lights burning now, and 0 when no
+             *     timed light burns.
+             *
+             *     Lights burn at the same time, so this is the longest time left, not a sum: two torches burning at once, with 40
+             *     and 300 rounds left, give 300. It counts every light effect on a living member, which is a lit torch or lantern,
+             *     the *light* spell, and any effect whose kind is in
+             *     `LIGHT_EFFECT_KINDS`. Each light's own time left is its entry's
+             *     `remaining_rounds` in `PlayerView.effects`. A light from a potion has
+             *     no `remaining_rounds` there, because the referee keeps a potion's duration secret, so it doesn't count here or
+             *     in `light_permanent`.
+             *
+             *     A *darkness* effect puts the party's light out while it lasts without ending the lights, so it doesn't change
+             *     this number. To learn whether the party has light right now, look for a `darkness` or `continual_darkness`
+             *     effect in `effects`.
+             */
+            light_burning_rounds: number;
+            /**
+             * Light Permanent
+             * @description Whether a light with no duration is burning on a living member, such as *continual light* or a sword that
+             *     sheds light. Such a light adds nothing to `light_burning_rounds`, and while it burns the party doesn't run out
+             *     of light.
+             */
+            light_permanent: boolean;
+            /**
+             * Light Reserve Rounds
+             * @description How many rounds of light the party carries and hasn't lit yet.
+             *
+             *     It's the living members' unlit torches times the rounds one torch burns, plus their oil flasks times the
+             *     rounds one flask burns in a lantern. A lit torch is used up when it's lit, so `torches` counts only unlit ones
+             *     and nothing is counted twice. Oil counts only when a living member carries a lantern, and then every living
+             *     member's flasks count, because members can pass items to each other. So the reserve can include oil that stays
+             *     unusable until a flask or the lantern changes hands. Read `light_reserve_usable` to learn whether the
+             *     party holds what it needs to light something.
+             */
+            light_reserve_rounds: number;
+            /**
+             * Light Reserve Usable
+             * @description Whether the party has what `LightSource` needs to light a carried torch
+             *     or lantern now.
+             *
+             *     It's true when a living member who can act carries a torch, or carries a lantern and an oil flask, and either
+             *     carries a tinder box or stands in a party where a living member already has a flame burning. `LightSource`
+             *     uses the same carrying check. So while the session is in a mode that accepts
+             *     `LightSource`, `"town"` or `"exploring"`, some `LightSource` that names a torch or a lantern is accepted when
+             *     this is true, and every one is refused when it's false. The flag doesn't depend on the mode. In an encounter or
+             *     a battle, the session refuses `LightSource` with `session.command.wrong_mode` whatever this flag says, so read
+             *     `PlayerView.mode` to learn whether the party can light anything this
+             *     moment. When the reserve isn't zero and this is false, the likely cause is that no member who carries a torch
+             *     or a lantern has a tinder box, that the oil and the lantern are in different packs, or that the carriers can't
+             *     act.
+             *
+             *     An accepted command strikes the tinder box when the party has no flame, and the strike can fail, so an
+             *     accepted command doesn't always light the source. Setting fire to a flask dropped on the
+             *     floor doesn't count, because a pool of burning oil on the floor isn't a light that the party carries.
+             */
+            light_reserve_usable: boolean;
+            /**
+             * Torches
+             * @description The unlit torches the living members carry.
+             */
+            torches: number;
+            /**
+             * Oil Flasks
+             * @description The oil flasks the living members carry.
+             */
+            oil_flasks: number;
+            /**
+             * Lanterns
+             * @description The lanterns the living members carry, lit or not.
+             */
+            lanterns: number;
+            /**
+             * Rations
+             * @description The rations the living members carry, standard and iron together.
+             */
+            rations: number;
+            /**
+             * Rations Standard
+             * @description The standard rations the living members carry.
+             */
+            rations_standard: number;
+            /**
+             * Rations Iron
+             * @description The iron rations the living members carry.
+             */
+            rations_iron: number;
+            /**
+             * Food Days
+             * @description How many days the party eats before the first living member goes short, as the packs are now.
+             *
+             *     Each member eats from their own pack, one ration a day, so it's the fewest rations any living member carries.
+             *     The session feeds every living member at the start of each new day. The party eats for `food_days` days, and
+             *     at the feeding after those, the members in `food_short_first_ids` go short. In town nobody goes short,
+             *     because a member with no rations is fed anyway, but this is still the number of days a member's own pack
+             *     lasts. It's 0 when every member is dead.
+             */
+            food_days: number;
+            /**
+             * Food Days Shared
+             * @description How many days the party could eat if its rations were shared out evenly: the living members' rations
+             *     divided by the number of living members, rounded down. When it's larger than `food_days`, passing rations
+             *     between members with `GiveItems` feeds the party longer. It's 0 when every
+             *     member is dead.
+             */
+            food_days_shared: number;
+            /**
+             * Food Short First Ids
+             * @description The ids of the living members who carry the fewest rations, the count that sets `food_days`, in marching
+             *     order. They go short first. It's empty when every member is dead.
+             */
+            food_short_first_ids: string[];
         };
         /**
          * SurpriseRolledEvent
@@ -22591,6 +24014,19 @@ export interface components {
             dimensions: {
                 [key: string]: number;
             };
+            /**
+             * Creatures Only
+             * @description True when every target has to be a creature, not a location string.
+             *
+             *     `validate_cast` refuses a location string as a target of a mode that sets
+             *     it, with `magic.cast.target_must_be_creature`. Set it on a mode whose effect does something only on a creature,
+             *     when neither the mode's save nor its effect already requires a creature. An effect with no condition and no
+             *     modifiers, like *light*'s, would otherwise take a location. In the built-in catalog, *fly*, *infravision*, *water
+             *     breathing*, and *haste* set it, because their pages name a creature as the subject. `false`, the default, leaves
+             *     the decision to the mode's save and effect.
+             * @default false
+             */
+            creatures_only: boolean;
         };
         /**
          * TargetsSelectedEvent
@@ -22888,7 +24324,9 @@ export interface components {
             /**
              * Position
              * @description The cell on this level where the transition stands. The party has to stand here to use it
-             *     with `UseStairs` or to cross it as a passage.
+             *     with `UseStairs` or to cross it as a passage. In a trap's
+             *     `TrapEffect.transition`, the session doesn't read
+             *     it, because the trap moves the party from the cell where it springs.
              */
             position: [
                 number,
@@ -22972,7 +24410,8 @@ export interface components {
          *
          *     Put one in the `effect` of a `TrapSpec`, which sets when the
          *     trap springs and whom it hits. The fields combine: a dart trap deals damage, a pit deals falling
-         *     damage and can add a condition, and a gas trap calls for a saving throw and kills on a failure.
+         *     damage and can add a condition, and a poison gas trap calls for a saving throw and kills by poison on a
+         *     failure.
          *     For a trap that your own code resolves, leave the other fields unset and describe the trap in
          *     `manual`.
          *
@@ -23011,9 +24450,21 @@ export interface components {
              * Kills
              * @description Whether the trap kills a victim who fails the save, like a poison gas trap. A victim who
              *     passes the save survives, whatever `on_save` is. With no `save`, the trap kills every victim.
+             *     Set `poison` as well when the trap kills by poison.
              * @default false
              */
             kills: boolean;
+            /**
+             * Poison
+             * @description Whether the trap's kill is a death by poison, such as the OSE SRD's poison gas and poisoned
+             *     needle, or `false` for any other kill, such as a death ray. The save versus death covers both, so
+             *     the save's category doesn't say which. *Neutralize poison* revives a character who died of
+             *     poison within ten rounds and no one else, so set this for every trap that kills with poison.
+             *     The victim's `DeathEvent` reports it in its `poison` field,
+             *     which the players see. Set it only with `kills`: damage from a trap is a death by damage.
+             * @default false
+             */
+            poison: boolean;
             /**
              * @description A condition the trap gives a victim who fails the save, like blindness, or `null`. A victim who
              *     passes the save doesn't get it. With no `save`, every victim gets it.
@@ -23054,7 +24505,9 @@ export interface components {
              *     the whole party or no one. With a `save`, it moves the party when at least one victim fails
              *     the save, and leaves the party on the trapped cell when every victim passes. With no `save`,
              *     it always moves the party. The transition can't have a `requires` gate, because the party
-             *     doesn't choose to take it. `validate_adventure`
+             *     doesn't choose to take it. The session moves the party to `to_position` from the cell where the
+             *     trap springs, so it doesn't read the transition's `position`. Set `position` to a cell the trap
+             *     covers. `validate_adventure`
              *     checks it as it checks a level's transitions: it has to stand on the grid of the trap's level and
              *     lead to a cell on the grid of a level that exists. It also reports a transition whose `kind` is
              *     `"passage"`.
@@ -23153,6 +24606,16 @@ export interface components {
              *     `exploration.trap.found`.
              */
             direction?: string | null;
+            /**
+             * Feature Id
+             * @description The `feature:` handle of the treasure cache whose trap this is, the
+             *     `MapFeatureView.id` under which the player view lists the
+             *     cache, so you can tell which listed cache the event is about without reading the authored id in
+             *     `trap_ref`. It's set on every code for a treasure trap, and `null` for a room trap. The cache's
+             *     commands act only on a cache where the party stands, which the player view lists, so the handle
+             *     here is always one the view already shows.
+             */
+            feature_id?: string | null;
         };
         /**
          * TrapSpec
@@ -23493,6 +24956,30 @@ export interface components {
              * @description What they fetched, in gold pieces.
              */
             gp_value: number;
+            /**
+             * Item Names
+             * @description What to call one of each item in `instance_ids`, keyed by the same id, such as
+             *     `{"valuable-0007": "gem", "valuable-0008": "piece of jewellery"}`. Each name is the name that
+             *     `PlayerView.item_names` has for that id. The names are the ones the
+             *     party knew when the event happened. The items have left the party, so no view built after the command names
+             *     them. A client that replays an event log, or that didn't keep a view, can name the items from the event. It's
+             *     empty on an event from a log written before the field existed.
+             * @default {}
+             */
+            item_names: {
+                [key: string]: string;
+            };
+            /**
+             * Item Names Plural
+             * @description What to call two or more of each item in `item_names`, with the same keys, such as
+             *     `{"valuable-0007": "gems"}`, from
+             *     `PlayerView.item_names_plural`. Use it with a count of your
+             *     own.
+             * @default {}
+             */
+            item_names_plural: {
+                [key: string]: string;
+            };
         };
         /**
          * TreasureTables
@@ -23759,7 +25246,8 @@ export interface components {
          *
          *     Presenting the symbol is an aggressive act. If any monster is left neither turned nor
          *     destroyed, the monsters that weren't turned attack at once, and battle starts. In a group
-         *     that was only partly turned, the turned monsters split off as a new group and flee.
+         *     that was only partly turned, the turned monsters, and any afraid ones, split off as a new
+         *     group and flee.
          *
          *     Modes:
          *
@@ -23788,7 +25276,7 @@ export interface components {
          *     comes before the round, and battle starts after it
          *     (`BattleStartedEvent`). A
          *     `MonsterFledEvent` follows for each new group
-         *     of turned members.
+         *     of turned and afraid members.
          */
         TurnUndead: {
             /**
@@ -24148,11 +25636,14 @@ export interface components {
          *       id, and `items.use.target_cannot_drink` when it's the id of a member who is dead or
          *       turned to stone. A member who is asleep or paralysed can be given a potion to drink.
          *     - Scrolls: `exploration.action.requires_light` (reading needs light, and
-         *       infravision isn't enough), `items.scroll.spent`, `items.scroll.no_such_spell`,
-         *       and `items.scroll.wrong_caster`. A read also gets the checks of a cast, at the
+         *       infravision isn't enough), `items.scroll.spent`, `items.scroll.wrong_caster`, and
+         *       `items.scroll.no_such_spell`, in that order, so a member who can't read the scroll
+         *       gets `items.scroll.wrong_caster` whatever `spell_id` names. A read also gets the checks of a cast, at the
          *       scroll's level: `magic.cast.unknown_target` (a target that isn't a party member and
-         *       isn't a living creature in a group of the open encounter that hasn't fled),
-         *       `magic.cast.unknown_mode`,
+         *       isn't a living creature in a group of the open encounter that hasn't fled, or a cell
+         *       reference that doesn't name a cell of the level the party stands on),
+         *       `magic.cast.invisible_target` (an invisible monster or NPC adventurer of the open
+         *       encounter, while an invisible member is still a target), `magic.cast.unknown_mode`,
          *       `magic.cast.target_count`, `magic.cast.target_must_be_creature`,
          *       `magic.cast.out_of_range`, `magic.cast.caster_incapacitated`,
          *       `magic.cast.caster_restrained`, and `magic.cast.anti_magic_shell`.
@@ -24162,6 +25653,8 @@ export interface components {
          *       has fled, or a staff of healing's target that isn't a party member and isn't in a group
          *       of the open encounter that hasn't fled), `items.use.target_cannot_be_healed` (a
          *       staff of healing used on a creature that's dead or turned to stone),
+         *       `items.use.invisible_target` (a staff of healing used on an invisible monster or NPC
+         *       adventurer of the open encounter that stands),
          *       `items.use.target_healed_today` (a staff of healing used on a creature it already
          *       healed today, because the OSE SRD's staff "Is effective on any individual at most once
          *       per day"), and `items.use.battle_only` (a staff whose only power is its strike, like the staff of
@@ -24179,7 +25672,10 @@ export interface components {
          *     `SpellCastEvent`, each a separate event. While
          *     exploring, one round passes. During an encounter, the encounter round's events
          *     follow instead. During a pursuit, a `PursuitEvent`
-         *     round follows, because the party keeps running.
+         *     round follows, because the party keeps running. When a wand of fear or a scroll of
+         *     *cause fear* frightens only some of a group, a
+         *     `MonsterFledEvent` for the new group of afraid
+         *     members comes before the round's events.
          */
         UseItem: {
             /**
@@ -24223,7 +25719,9 @@ export interface components {
              *     or a creature in a group of the open encounter that hasn't fled, and the session refuses any
              *     other id with `items.use.unknown_target`, a creature of an encounter that has ended included.
              *     The session refuses a healing device on a creature that's dead or turned to stone with
-             *     `items.use.target_cannot_be_healed`, and one on a creature it already healed today with
+             *     `items.use.target_cannot_be_healed`. Then it refuses an invisible monster or NPC adventurer of
+             *     the open encounter with `items.use.invisible_target`, while an invisible member is still a
+             *     target. It refuses a healing device on a creature it already healed today with
              *     `items.use.target_healed_today`.
              */
             target_id?: string | null;
@@ -24231,8 +25729,9 @@ export interface components {
              * Spell Id
              * @description Which spell to read off a scroll that has more than one, by its id (see the
              *     [spell id index](https://mmacy.github.io/osrlib-python/reference/content-ids/spells/)).
-             *     `null` reads the first spell left on the scroll. Leave it `null` for anything that isn't a
-             *     scroll.
+             *     `null` reads the first spell left on the scroll. Once the party has identified the scroll, its entry in
+             *     `MemberView.inventory` lists the spells left, in the order a read
+             *     takes them. Leave it `null` for anything that isn't a scroll.
              */
             spell_id?: string | null;
             /**
@@ -25092,6 +26591,8 @@ export type AttackMatrixRow = components['schemas']['AttackMatrixRow'];
 export type AttackRolledEvent = components['schemas']['AttackRolledEvent'];
 export type AttackRoutine = components['schemas']['AttackRoutine'];
 export type AwardXp = components['schemas']['AwardXP'];
+export type BattleCandidate = components['schemas']['BattleCandidate'];
+export type BattleCandidateJudgement = components['schemas']['BattleCandidateJudgement'];
 export type BattleDeclaration = components['schemas']['BattleDeclaration'];
 export type BattleEndedEvent = components['schemas']['BattleEndedEvent'];
 export type BattleRoundEvent = components['schemas']['BattleRoundEvent'];
@@ -25423,6 +26924,7 @@ export type SpellDisruptedEvent = components['schemas']['SpellDisruptedEvent'];
 export type SpellEffect = components['schemas']['SpellEffect'];
 export type SpellForgottenEvent = components['schemas']['SpellForgottenEvent'];
 export type SpellMode = components['schemas']['SpellMode'];
+export type SpellModeView = components['schemas']['SpellModeView'];
 export type SpellSummary = components['schemas']['SpellSummary'];
 export type SpellTemplate = components['schemas']['SpellTemplate'];
 export type SpellsMemorizedEvent = components['schemas']['SpellsMemorizedEvent'];
@@ -25434,6 +26936,7 @@ export type StockingTable = components['schemas']['StockingTable'];
 export type Storage = components['schemas']['Storage'];
 export type StoredCharacter = components['schemas']['StoredCharacter'];
 export type StrengthRow = components['schemas']['StrengthRow'];
+export type SuppliesView = components['schemas']['SuppliesView'];
 export type SurpriseRolledEvent = components['schemas']['SurpriseRolledEvent'];
 export type SwordSentience = components['schemas']['SwordSentience'];
 export type TableSet = components['schemas']['TableSet'];
@@ -29481,6 +30984,16 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            /** @description - `content_invalid`: The server's osrlib refuses the stored character, which an older osrlib version accepted, such as a character whose custom class casts from two spell lists. `detail` has osrlib's reason. Delete the character, and import a fixed document via `POST /v1/characters/import`. */
+            422: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             /** @description - `rate_limited`: Your client exceeded the per-minute request budget (`BXAPI_RATE_LIMIT_PER_MINUTE`, 600 by default). Wait the seconds in the `Retry-After` header and retry. Requests without a valid API key share a separate budget and receive 429 instead of 401 `unauthorized` when that budget is exhausted. */
             429: {
                 headers: {
@@ -30608,7 +32121,7 @@ export interface operations {
             /**
              * @description - `validation_error`: The request doesn't match the operation's schema. A required field is missing, a value has the wrong type or is out of range, or the body isn't valid JSON. `errors` lists the first 20 problems, and the `loc` of each is the path to the value. Fix the request before you send it again. Sending both `character_ids` and `party_document`, sending neither, or passing more than 20 `character_ids` returns this code too.
              *     - `party_invalid`: osrlib refuses the party (such as an empty `character_ids` list), `party_document` has more than 20 characters, or two party members share the same id.
-             *     - `content_invalid`: `party_document` isn't a valid party document, or the server's osrlib refuses a stored adventure uploaded under an older osrlib version. Fix the party document, or upload a fixed adventure via `POST /v1/adventures` and start the session with the new `adventure_id`.
+             *     - `content_invalid`: `party_document` isn't a valid party document, or the server's osrlib refuses a stored adventure or a stored character that an older osrlib version accepted, such as a character whose custom class casts from two spell lists. Fix the party document, upload a fixed adventure via `POST /v1/adventures` and start the session with the new `adventure_id`, or import a fixed character via `POST /v1/characters/import` and send its new id.
              *     - `idempotency_key_reused`: Your client already sent this `Idempotency-Key` with a different method, path, query, body, or role. Generate a new key for each distinct request.
              */
             422: {
@@ -31332,7 +32845,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description osrlib's `BattleRoundPreview`: each declaration's rejections, keyed by member ID, and where the members would stand. */
+            /** @description osrlib's `BattleRoundPreview`: each declaration's rejections, keyed by member ID, where the members would stand, and a judgement for each candidate you sent. */
             200: {
                 headers: {
                     "Idempotent-Replayed": components["headers"]["Idempotent-Replayed"];
@@ -31433,8 +32946,8 @@ export interface operations {
                 };
             };
             /**
-             * @description - `validation_error`: The request doesn't match the operation's schema. A required field is missing, a value has the wrong type or is out of range, or the body isn't valid JSON. `errors` lists the first 20 problems, and the `loc` of each is the path to the value. Fix the request before you send it again. More than 20 `declarations` returns this code too.
-             *     - `declaration_invalid`: A declaration names a member who isn't in `encounter.declarers`, or two declarations name the same member. Send at most one declaration for each member in `encounter.declarers`.
+             * @description - `validation_error`: The request doesn't match the operation's schema. A required field is missing, a value has the wrong type or is out of range, or the body isn't valid JSON. `errors` lists the first 20 problems, and the `loc` of each is the path to the value. Fix the request before you send it again. More than 20 `declarations`, more than 64 `candidates`, or more than 256 target IDs counted over every candidate's `target_ids` returns this code too. Split the candidates over several previews.
+             *     - `declaration_invalid`: osrlib can't judge a declaration or a candidate, and `detail` ends with osrlib's reason. A declaration names a member who isn't in `encounter.declarers`, or two declarations name the same member. Or a candidate names a member who isn't in `encounter.declarers`, its declaration already sets the field that `target_field` names, its `target_ids` repeats an ID, or its declaration is a `move` with `fighting_withdrawal` or `retreat`. osrlib's reason for a candidate starts with `candidate`, the candidate's zero-based position in `candidates`, and the member's ID, such as `candidate 0 for 'character-0001' already sets target_group_id`. Fix that declaration or candidate before you send the request again.
              *     - `idempotency_key_reused`: Your client already sent this `Idempotency-Key` with a different method, path, query, body, or role. Generate a new key for each distinct request.
              */
             422: {

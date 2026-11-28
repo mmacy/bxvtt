@@ -46,9 +46,13 @@ export type ParamValue = number | string | readonly (number | string)[];
 /** A message's params. bxapi can send a param as `null`, and the text reads `null` as a missing param. */
 export type ParamMap = Readonly<Record<string, ParamValue | null | undefined>>;
 
-/** One wording of a message, used when every param in `when` is present. */
+/**
+ * One wording of a message, used when every param in `when` is present and each param in `is` has the value it
+ * names, such as `{ is: { reason: 'dead' } }`.
+ */
 export interface TemplateVariant {
   when?: readonly string[];
+  is?: Readonly<Record<string, string>>;
   text: string;
 }
 
@@ -247,8 +251,11 @@ function present(params: ParamMap, key: string): boolean {
 export function renderTemplate(template: Template, params: ParamMap, ctx: TextContext): string {
   const variants = templateVariants(template);
   const chosen =
-    variants.find((variant) => (variant.when ?? []).every((key) => present(params, key))) ??
-    variants[variants.length - 1];
+    variants.find(
+      (variant) =>
+        (variant.when ?? []).every((key) => present(params, key)) &&
+        Object.entries(variant.is ?? {}).every(([key, value]) => asText(params[key]) === value),
+    ) ?? variants[variants.length - 1];
   if (!chosen) return '';
   const filled = chosen.text.replace(PLACEHOLDER, (_match, name: string, format?: string) =>
     formatValue(params[name], format ?? 'raw', ctx),

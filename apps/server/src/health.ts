@@ -23,9 +23,12 @@ export const SERVER_VERSION = (
  * Since osrlib 2.9, bxapi takes a table's `ruleset` for ability rolls and character creation, with the
  * `ability_score_method` and `max_hp_at_first_level` house rules, and reports a sub-par roll, which the table
  * rules need. Since osrlib 2.10, bxapi states the limits on the ability score trade
- * (`GET /v1/ability-rolls/{roll_id}/adjustment-limits`), which drive the wizard's trade step.
+ * (`GET /v1/ability-rolls/{roll_id}/adjustment-limits`), which drive the wizard's trade step. Since osrlib 2.12,
+ * the player view states which usages of a spell take a cell or a creature (`spell_modes`), a scroll's spells, the
+ * temple's answer for each member and usage, and why the party can't evade (`evade_rejections`), which the client
+ * reads in place of its own guesses.
  */
-export const MIN_ENGINE_VERSION = '2.10.0';
+export const MIN_ENGINE_VERSION = '2.12.0';
 
 /**
  * Whether a dotted numeric version, such as `2.10.0`, is at least another. Missing parts count as zero, so `2.8`

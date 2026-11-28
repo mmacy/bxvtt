@@ -63,7 +63,7 @@ By default, bxvtt listens on `http://127.0.0.1:8660` and connects to `bxapi` at 
 
 ```text
 {"level":30,...,"msg":"Server listening at http://127.0.0.1:8660"}
-{"level":30,...,"bxapi":"http://127.0.0.1:8640","engine":"2.10.0","msg":"bxapi is reachable"}
+{"level":30,...,"bxapi":"http://127.0.0.1:8640","engine":"2.12.0","msg":"bxapi is reachable"}
 ```
 
 If the log reports `bxapi is unreachable` instead, verify that `bxapi` is running on port 8640 (or set `BXAPI_URL` before running `npm start`, such as `BXAPI_URL=http://127.0.0.1:8651 npm start`). You can also verify server health from another shell:

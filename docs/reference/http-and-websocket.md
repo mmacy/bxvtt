@@ -71,7 +71,7 @@ All paths below sit under `/api` (for example, `GET /api/health`), and `{t}` den
 
 | Method and path | `BxvttClient` method | Authorization | Response |
 | --- | --- | --- | --- |
-| `GET /health` | `health()` | Public (`bxapi` details require a user token) | `Health`. Anyone gets `status`, `version`, `host_key_required`, `bxapi.reachable`, and `bxapi.outdated` (bxapi answers but runs an `osrlib` older than 2.10.0, so no game runs). A user token adds `bxapi.meta` and the cause in `bxapi.error`. |
+| `GET /health` | `health()` | Public (`bxapi` details require a user token) | `Health`. Anyone gets `status`, `version`, `host_key_required`, `bxapi.reachable`, and `bxapi.outdated` (bxapi answers but runs an `osrlib` older than 2.12.0, so no game runs). A user token adds `bxapi.meta` and the cause in `bxapi.error`. |
 | `POST /users` | `createUser(name)` | Public (rate-limited) | `CreateUserResponse` (includes `token`) |
 | `GET /users/me` | `me()` | User | `User` |
 | `PATCH /users/me` | `updateMe(body)` | User | `User` |
@@ -253,7 +253,7 @@ Every HTTP error returns an RFC 9457 `application/problem+json` object containin
 - **429:** `rate_limited` (with `Retry-After`)
 - **500:** `internal_error`
 - **502:** `bxapi_error`, `save_unreadable` (`bxapi` can't read the save to restore, because its rules engine was updated after the save was made), `invalid_response` (synthesized by SDK when a 2xx body is not JSON)
-- **503:** `bxapi_unavailable` (the server can't reach `bxapi`), `bxapi_outdated` (`bxapi` runs an `osrlib` older than 2.10.0, so the server serves no game and rolls no ability scores until the host updates it; the WebSocket `error` message uses the same code), `server_unavailable` (synthesized by SDK when a proxy/tunnel returns non-JSON 502/503/504)
+- **503:** `bxapi_unavailable` (the server can't reach `bxapi`), `bxapi_outdated` (`bxapi` runs an `osrlib` older than 2.12.0, so the server serves no game and rolls no ability scores until the host updates it; the WebSocket `error` message uses the same code), `server_unavailable` (synthesized by SDK when a proxy/tunnel returns non-JSON 502/503/504)
 - **507:** `bxapi_storage_full` (includes `used_bytes` and `max_bytes`)
 
 ## Key server protocols

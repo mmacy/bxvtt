@@ -243,6 +243,29 @@ describe('rejections', () => {
       ),
     ).toEqual(['The target is 20 feet away, too far to attack in melee.']);
   });
+
+  it("words the temple's refusal by its reason, and falls back without a reason it knows", () => {
+    const noEffect = (reason?: string) =>
+      rej('town.healing.no_effect', {
+        character: 'character-0003',
+        item: 'cure_light_wounds',
+        ...(reason === undefined ? {} : { reason }),
+      });
+    expect(noEffect('dead')).toBe("Wren is dead, so cure light wounds won't help.");
+    expect(noEffect('not_paralysed')).toBe("Wren isn't paralysed.");
+    expect(noEffect('full_hit_points')).toBe('Wren already has all their hit points.');
+    expect(noEffect('a_new_reason')).toBe("Wren doesn't need cure light wounds right now.");
+    expect(noEffect()).toBe("Wren doesn't need cure light wounds right now.");
+  });
+
+  it('names who holds the party in a web when it refuses to flee', () => {
+    expect(rej('encounter.evade.cannot_move', { character: 'character-0003' })).toBe(
+      "Wren is caught in a web, so the party can't flee.",
+    );
+    expect(rej('encounter.evade.cannot_move', { reason: 'overloaded' })).toBe(
+      "The party can't flee because a party member is overloaded.",
+    );
+  });
 });
 
 describe('events', () => {
