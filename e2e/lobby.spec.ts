@@ -397,7 +397,7 @@ test.describe('first run and lobby', () => {
     await ruth.page.getByRole('menuitem', { name: 'Return to lobby' }).click();
     const returning = ruth.page.getByRole('alertdialog', { name: 'Return to lobby?' });
     // The dialog says what returning does to the characters (R-530).
-    await expect(returning).toContainText('Starting a new game resets characters to their initial sheets');
+    await expect(returning).toContainText('A new game starts the characters from their first sheets');
     await returning.getByRole('button', { name: /lobby/i }).click();
     for (const page of [ruth.page, sam.page]) {
       await expect(page.getByRole('heading', { name: 'Party', level: 2 })).toBeVisible({ timeout: 20_000 });
