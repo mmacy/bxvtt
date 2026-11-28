@@ -124,11 +124,11 @@ Both causes reach every member with the same code and `detail`, and neither name
 | Method and path | `BxvttClient` method | Authorization | Response |
 | --- | --- | --- | --- |
 | `GET /tables` | `listTables()` | User | `TableList` (includes `online_count`) |
-| `POST /tables` | `createTable(body)` | User (`host_key` required when configured) | `TableDetail` |
-| `GET /tables/{t}` | `getTable(tableId)` | Table member | `TableDetail` |
+| `POST /tables` | `createTable(body)` | User (`host_key` required when configured) | `RefereeTableDetail` (a `TableDetail` with `invite_code`) |
+| `GET /tables/{t}` | `getTable(tableId)` | Table member | `TableDetail`, with `invite_code` for a referee only |
 | `PATCH /tables/{t}` | `updateTable(tableId, body)` | Referee | `TableDetail`. See [Table rules](#table-rules) for the ruleset settings. |
 | `DELETE /tables/{t}` | `deleteTable(tableId)` | Referee | `204` |
-| `POST /tables/{t}/invite-code` | `regenerateInviteCode(tableId)` | Referee | `TableDetail` |
+| `POST /tables/{t}/invite-code` | `regenerateInviteCode(tableId)` | Referee | `RefereeTableDetail` |
 | `POST /join` | `joinTable(code)` | User (rate-limited) | `TableDetail` |
 | `POST /tables/{t}/leave` | `leaveTable(tableId)` | Table member (except sole referee while others remain) | `204` |
 | `PATCH /tables/{t}/members/{user_id}` | `setMemberRole(tableId, userId, role)` | Referee | `TableDetail` |
@@ -150,6 +150,8 @@ Both causes reach every member with the same code and `detail`, and neither name
 | `GET /characters` | `listCharacters()` | User | Stored character list |
 | `GET /characters/{id}` | `getCharacter(id)` | Owner, or referee of a table rostering the character | `bxapi` `StoredCharacter` |
 | `DELETE /characters/{id}` | `deleteCharacter(id)` | Owner | `204` |
+
+Every route that answers with a `TableDetail` builds it for the caller's role after the change, and the `table` message that follows is built for each recipient's role. Only a referee's copy has `invite_code`, so a player's `POST /join` response leaves out the code they just used. A referee who makes themselves a player gets a response without the code. A member whom a referee promotes receives the code in their new snapshot without reloading, and `RefereeTableDetail.parse` from `@bxvtt/shared/protocol` checks that a response has it.
 
 ### Rules, adventures, sessions, saves, feed, and annotations
 
@@ -208,7 +210,7 @@ Clients send `auth` as their first frame within 10 seconds of connecting. `Table
 | Client to server | `resync` | Optional `feed_after`; requests a fresh `snapshot`. |
 | Server to client | `snapshot` | `user`, `role`, `table`, `presence`, `game`, `declarations`, `feed`, `annotations`, `notes`, `server_time`, and `rejoin_requests` (referees only). |
 | Server to client | `presence` | `presence.online` list of connected user IDs. |
-| Server to client | `table` | Complete updated `TableDetail`. |
+| Server to client | `table` | Complete updated `TableDetail`, built for the recipient's current role (`invite_code` for referees only). |
 | Server to client | `game` | Complete role-projected `GameState`, or `null` in the lobby. |
 | Server to client | `feed` | Single new `FeedEntry` visible to the recipient. |
 | Server to client | `declarations` | Complete `DeclarationsState`, or `null` outside battle. |

@@ -27,6 +27,7 @@ The bxvtt server treats every incoming request as untrusted:
 
 - Every API route except `GET /api/health`, `POST /api/users`, and the unauthenticated rejoin endpoints requires a bearer token, and non-members receive HTTP 404 on table routes.
 - Invite codes contain 100 bits of entropy, and IP-based token buckets rate-limit user creation, invite attempts, rejoin requests, and host-key checks.
+- Only referees receive a table's invite code. The server builds each table description for the recipient's current role, so a player's responses and WebSocket messages leave out `invite_code`. A player still knows the code they joined with, so this keeps from players only a code that a referee replaced after they joined.
 - Setting `BXVTT_HOST_KEY` restricts `POST /api/tables` to callers who supply that key (`npm run share` sets one automatically), while players join existing tables with an invite code alone.
 - WebSocket handshakes validate `Origin`, enforce a 10-second authentication window, cap frame sizes, and pair with a strict Content Security Policy on client pages.
 
