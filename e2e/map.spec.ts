@@ -121,7 +121,9 @@ test.describe('the map with the keyboard', () => {
     await sam.page.mouse.move(centre.x, centre.y);
     await sam.page.mouse.down();
     await sam.page.mouse.move(centre.x, centre.y - 80, { steps: 6 });
-    await expect(sam.page.getByText('2 squares, 20 feet', { exact: true })).toBeVisible();
+    // The map also announces a pointer measurement, a quarter of a second after the drag settles, in the same
+    // words. Look at the status line, not the live region.
+    await expect(sam.page.locator('span', { hasText: /^2 squares, 20 feet$/ })).toBeVisible();
     await sam.page.mouse.up();
     await sam.page.screenshot({ path: `${SCREENS_DIR}/map-ruler.png` });
 
