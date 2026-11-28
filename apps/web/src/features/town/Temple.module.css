@@ -60,21 +60,11 @@
 }
 
 .serviceDetail,
-.short,
-.explain,
 .pays {
   margin: var(--space-0-5) 0 0;
   color: var(--color-text-muted);
   font-size: var(--text-sm);
   line-height: var(--leading-snug);
-}
-
-.short {
-  color: var(--color-warning);
-}
-
-.explain {
-  margin-bottom: var(--space-3);
 }
 
 .price {

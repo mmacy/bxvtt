@@ -107,11 +107,20 @@ test.describe('town', () => {
       'true',
     );
 
-    // Raise dead for a living member costs more than the party carries, so the temple refuses.
-    await sam.page.getByRole('button', { name: 'Buy raise dead for Flarg' }).click();
-    const refusal = sam.page.getByRole('tabpanel', { name: 'Temple' }).getByText("Couldn't treat Flarg");
-    await expect(refusal).toBeVisible();
-    await expect(refusal.locator('xpath=..')).toContainText("you don't have enough gold");
+    // Raise dead costs more than the party carries, so its button is unavailable and a keyboard user hears why.
+    const raise = sam.page.getByRole('button', { name: 'Buy raise dead for Flarg' });
+    await expect(raise).toHaveAttribute('aria-disabled', 'true');
+    await expect(raise).toHaveAccessibleDescription(/The party has \d+ gp, and this costs 1,000 gp\./);
+    // Tab reaches it from the service above, and the reason shows on focus.
+    await sam.page.getByRole('button', { name: 'Buy remove curse for Flarg' }).focus();
+    await sam.page.keyboard.press('Tab');
+    await expect(raise).toBeFocused();
+    await expect(sam.page.getByRole('tooltip')).toContainText('and this costs 1,000 gp.');
+    await raise.press('Enter');
+    await expect(
+      sam.page.getByRole('tabpanel', { name: 'Temple' }).getByText("Couldn't treat Flarg"),
+    ).toHaveCount(0);
+    expect(purseOf(await sam.client.getGame(table.table.id), 'Flarg')).toBe(AFTER_DELVE.purses.Flarg);
 
     // Cure light wounds costs 20 gp: Flarg's 19 gp and 1 gp from Tinks.
     await sam.page.getByRole('button', { name: 'Buy cure light wounds for Flarg' }).click();
