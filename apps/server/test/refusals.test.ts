@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { DeclarationsState, GameState } from '@bxvtt/shared/protocol';
+import { isProblem } from '@bxvtt/shared/client';
 import { contextFromPlayerView, describeRejection, type ParamMap } from '@bxvtt/shared/text';
 import { findRepoRoot } from '../src/config';
 import type { TestConnection, TestServer, TestUser } from './helpers';
@@ -33,6 +34,8 @@ describe('previewing the declarations of a battle round', () => {
   let previewFails = false;
   /** Makes bxapi's preview answer as an osrlib older than 2.8 does, without `can_hide` and `can_back_stab`. */
   let previewWithoutLists = false;
+  /** Adds a rejection of Tess's saved declaration to a preview that judges a candidate for Mira. */
+  let candidateBreaksTess = false;
 
   beforeAll(async () => {
     const bell = await readFile(`${findRepoRoot()}/adventures/the-drowned-bell.json`, 'utf8');
@@ -44,6 +47,22 @@ describe('previewing the declarations of a battle round', () => {
       if (method === 'POST' && path.endsWith('/battle-round/preview')) {
         previewCalls += 1;
         if (previewFails) throw new Error('bxapi is down');
+        if (candidateBreaksTess) {
+          const body = (
+            options as { body?: { declarations?: Array<{ character_id: string; action: string }> } }
+          )?.body;
+          const mira = body?.declarations?.find((d) => d.character_id === 'character-0003');
+          if (mira?.action === 'hold') {
+            const result = (await original(method, path, options)) as {
+              rejections: Record<string, unknown[]>;
+            };
+            const rejection = {
+              code: 'battle.declaration.hide_in_front_rank',
+              params: { character: 'character-0001' },
+            };
+            return { ...result, rejections: { ...result.rejections, 'character-0001': [rejection] } };
+          }
+        }
         if (previewWithoutLists) {
           const result = (await original(method, path, options)) as Record<string, unknown>;
           const { can_hide: _hide, can_back_stab: _backStab, ...older } = result;
@@ -151,6 +170,42 @@ describe('previewing the declarations of a battle round', () => {
     await alice.client.getDeclarations(tableId);
     await alice.client.getDeclarations(tableId);
     expect(previewCalls).toBe(before);
+  });
+
+  it('previews candidates for members who have not declared, beside the stored declarations, and stores nothing', async () => {
+    const commands = commandCalls;
+    // Mira stands 30 feet from the goblins, so a melee attack without closing in won't work, and a hold will.
+    const strike = await alice.client.previewCandidates(tableId, {
+      'character-0003': { action: 'attack', target_group_id: group() },
+    });
+    expect(strike).toEqual({ revision: game.revision, accepted: [] });
+    const hold = await alice.client.previewCandidates(tableId, { 'character-0003': { action: 'hold' } });
+    expect(hold.accepted).toEqual(['character-0003']);
+    const state = await alice.client.getDeclarations(tableId);
+    expect(state?.declared).toEqual(['character-0001', 'character-0002']);
+    expect(commandCalls).toBe(commands);
+  });
+
+  it('accepts no candidate that would make a saved declaration fail', async () => {
+    candidateBreaksTess = true;
+    try {
+      const result = await alice.client.previewCandidates(tableId, { 'character-0003': { action: 'hold' } });
+      expect(result.accepted).toEqual([]);
+    } finally {
+      candidateBreaksTess = false;
+    }
+  });
+
+  it('never accepts a candidate for a member who has already declared, without failing the request', async () => {
+    const result = await alice.client.previewCandidates(tableId, { 'character-0001': { action: 'hold' } });
+    expect(result.accepted).toEqual([]);
+  });
+
+  it('answers nobody outside the table', async () => {
+    const outsider = await createUser(server, 'Olive');
+    await expect(
+      outsider.client.previewCandidates(tableId, { 'character-0003': { action: 'hold' } }),
+    ).rejects.toSatisfy((error) => isProblem(error, 'not_found'));
   });
 
   it("shows a player the same preview rejection as the referee for a creature the player view doesn't list", async () => {

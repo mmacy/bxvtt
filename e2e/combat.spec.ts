@@ -604,6 +604,79 @@ test.describe('battle', () => {
   });
 });
 
+test.describe('the battle board keeps its size (#64)', () => {
+  test('the board stays one size through two rounds, closes a stale composer, and only Collapse makes it smaller', async ({
+    crew,
+  }) => {
+    // This test watches the board during playback, so everyone plays back at the normal pace.
+    const table = await combatTable(crew, { playbackSpeed: 'normal' });
+    const { sam, ann, ruth, tableId, memberId } = table;
+    await walkIntoGuardroom(sam.client, tableId);
+    await send(sam.client, tableId, { command_type: 'engage_battle' });
+    for (const actor of [sam, ann]) await openTable(actor.page, table.path);
+    const track = (page: Page) => battleBoard(page).getByRole('figure', { name: /^Battlefield/ });
+    const height = async (page: Page) => Math.round((await track(page).boundingBox())?.height ?? 0);
+    await expect(battleBoard(sam.page).getByRole('heading', { name: 'Round 1' })).toBeVisible();
+    const full = await height(sam.page);
+    expect(full).toBeGreaterThan(0);
+
+    // Round 1, declaring: opening a composer, and the board moving it on to the next character, leave the track
+    // as it was.
+    await declarationRow(sam.page, 'Flarg').getByRole('button', { name: 'Actions' }).click();
+    await expect(sam.page.getByRole('region', { name: 'Declare for Flarg' })).toBeVisible();
+    expect(await height(sam.page)).toBe(full);
+    await declareHold(sam.page, 'Flarg');
+    await expect(sam.page.getByRole('region', { name: 'Declare for Tinks' })).toBeVisible();
+    expect(await height(sam.page)).toBe(full);
+    await declareHold(sam.page, 'Tinks');
+    await expect(sam.page.getByRole('region', { name: /^Declare for/ })).toHaveCount(0);
+
+    // Ann leaves Mazpar's composer open, and the referee's declarations resolve the round for her.
+    await declarationRow(ann.page, 'Mazpar').getByRole('button', { name: 'Actions' }).click();
+    await expect(ann.page.getByRole('region', { name: 'Declare for Mazpar' })).toBeVisible();
+    const annFull = await height(ann.page);
+    await ruth.client.declare(tableId, memberId('Clarence'), { action: 'hold' });
+    await ruth.client.declare(tableId, memberId('Mazpar'), { action: 'hold' });
+
+    // Playing back: the stale composer has closed, and the track keeps its height.
+    const annBoard = battleBoard(ann.page);
+    await expect(annBoard.getByRole('button', { name: 'Pause playback' })).toBeVisible({ timeout: 30_000 });
+    await expect(ann.page.getByRole('region', { name: 'Declare for Mazpar' })).toHaveCount(0);
+    expect(await height(ann.page)).toBe(annFull);
+    await shot(ann.page, 'board-size-playback');
+
+    // Result shown, then the next round: the Result card and Replay are on the full board.
+    await expect(annBoard.getByRole('heading', { name: 'Round 2' })).toBeVisible({ timeout: 30_000 });
+    await expect(annBoard.getByText('Round 1 result')).toBeVisible({ timeout: 30_000 });
+    await expect(annBoard.getByRole('button', { name: 'Replay' })).toBeVisible();
+    expect(await height(ann.page)).toBe(annFull);
+    await expect(annBoard.getByRole('list', { name: 'Actions this round' })).toBeVisible();
+
+    // Round 2: Sam collapses the board. It stays collapsed through the round's playback, which it still shows.
+    const samBoard = battleBoard(sam.page);
+    await expect(samBoard.getByRole('heading', { name: 'Round 2' })).toBeVisible({ timeout: 30_000 });
+    await samBoard.getByRole('button', { name: 'Collapse the battle board' }).click();
+    const expand = samBoard.getByRole('button', { name: 'Expand the battle board' });
+    await expect(expand).toHaveText('Expand');
+    await expect(expand).toHaveAttribute('aria-expanded', 'false');
+    await expect(samBoard.getByRole('list', { name: 'Actions this round' })).toHaveCount(0);
+    const compact = await height(sam.page);
+    expect(compact).toBeLessThan(full);
+    for (const name of ['Flarg', 'Tinks'])
+      await sam.client.declare(tableId, memberId(name), { action: 'hold' });
+    for (const name of ['Clarence', 'Mazpar'])
+      await ann.client.declare(tableId, memberId(name), { action: 'hold' });
+    await expect(samBoard.getByRole('button', { name: 'Pause playback' })).toBeVisible({ timeout: 30_000 });
+    expect(await height(sam.page)).toBe(compact);
+    await expect(samBoard.getByRole('heading', { name: 'Round 3' })).toBeVisible({ timeout: 30_000 });
+    await expect(expand).toBeVisible();
+    await shot(sam.page, 'board-size-collapsed');
+    await expand.click();
+    await expect(samBoard.getByRole('list', { name: 'Actions this round' })).toBeVisible();
+    expect(await height(sam.page)).toBe(full);
+  });
+});
+
 test.describe('hide in shadows and back-stab', () => {
   test('a thief in the back rank is offered Hide, the one in front isn’t, and the hidden thief can back-stab next round', async ({
     crew,

@@ -7,23 +7,20 @@ import {
   useEncounter,
   useGameMode,
   useParty,
-  useRevision,
   useSendDeclaration,
   useShortcut,
   useTableSettings,
   useTextContext,
 } from '@/app';
 import { ActionBarDivider, ActionBarItem, Button } from '@/ui';
-import { QUICK_ICONS, quickAction, quickTooltip, repeatTooltip, useRepeatLastRound } from './BattleBoard';
-import { memberCasts } from './casting';
 import {
-  blockedNote,
-  blockedReason,
-  blockingMembers,
-  currentProjection,
-  memberGear,
-  stealthLists,
-} from './model';
+  QUICK_ICONS,
+  quickTooltip,
+  repeatTooltip,
+  useBattleQuickActions,
+  useRepeatLastRound,
+} from './BattleBoard';
+import { blockedNote, blockedReason, blockingMembers, ROUND_REFUSED_REASON } from './model';
 import { useCombatPeople } from './people';
 import { useCombatUi } from './state';
 import { useEncounterCommands } from './useEncounterCommands';
@@ -96,10 +93,13 @@ export function resolveRoundReason(facts: {
   auto: boolean;
   waiting: readonly string[];
   refused?: readonly string[];
+  /** Whether bxapi refused the round as a whole and no action has changed since. */
+  roundRefused?: boolean;
 }): string | null {
-  const { canResolve, canResolveEarly, auto, waiting, refused = [] } = facts;
+  const { canResolve, canResolveEarly, auto, waiting, refused = [], roundRefused = false } = facts;
   if (!canResolve.allowed) return canResolve.reason;
   if (refused.length > 0) return blockedReason(refused);
+  if (roundRefused) return ROUND_REFUSED_REASON;
   if (auto) return 'The round resolves by itself once everyone has declared.';
   if (waiting.length === 0) return null;
   if (!canResolveEarly.allowed) return canResolveEarly.reason;
@@ -234,7 +234,6 @@ function BattleActions() {
   const encounter = useEncounter();
   const party = useParty();
   const declarations = useDeclarations();
-  const projection = currentProjection(declarations, useRevision());
   const ctx = useTextContext();
   const people = useCombatPeople();
   const settings = useTableSettings();
@@ -254,33 +253,29 @@ function BattleActions() {
   const mine = declarers.filter((id) => people.isMine(id));
   const next = mine.find((id) => !declared.includes(id)) ?? null;
   const nextMember = party.find((m) => m.id === next) ?? null;
-  const casts = memberCasts(nextMember);
-  const canBackStab =
-    nextMember !== null &&
-    encounter !== null &&
-    stealthLists(encounter, projection).canBackStab.includes(nextMember.id);
-  // While a round plays back, the bar offers nothing to declare yet.
-  const quick =
-    nextMember && !playing
-      ? quickAction(nextMember, encounter, memberGear(nextMember, ctx), ctx, { casts, canBackStab })
-      : null;
+  // While a round plays back, the bar offers nothing to declare yet. It shares the board's answer for the round.
+  const quicks = useBattleQuickActions(true);
+  const quick = nextMember && !playing ? (quicks.actions?.[nextMember.id] ?? null) : null;
   const repeatable = repeat.candidates(mine.filter((id) => !declared.includes(id)));
   const everyone = declarers.length > 0 && declarers.every((id) => declared.includes(id));
   const waiting = declarers.filter((id) => !declared.includes(id));
   const auto = settings?.auto_resolve ?? true;
   const showResolve = canResolve.allowed && !auto;
   const refused = blockingMembers(declarations?.refusals ?? [], declarers).map((id) => memberName(id, ctx));
+  const roundRefused = (declarations?.refusals ?? []).some((refusal) => refusal.member_id === null);
   const resolveReason = resolveRoundReason({
     canResolve,
     canResolveEarly,
     auto,
     waiting,
     refused,
+    roundRefused,
   });
 
   // The bar offers the same highlighted choice as the member's row: it declares it, or opens the Cast tab.
   const attack = () => {
-    if (!next || !quick) return;
+    // While bxapi's answer for the current state is out, the button shows the previous choice and waits.
+    if (!next || !quick || quicks.pending) return;
     if (quick.body) void declare(next, quick.body);
     else openComposer(next);
   };
@@ -289,7 +284,7 @@ function BattleActions() {
   };
   // The round can't resolve while a declared action won't work, so the bar's button and the command palette's
   // action are unavailable then, with the reason, like the board's button.
-  const resolvable = showResolve && everyone && refused.length === 0;
+  const resolvable = showResolve && everyone && refused.length === 0 && !roundRefused;
   const resolveRound = () => {
     if (resolvable) void resolve();
   };
@@ -353,7 +348,7 @@ function BattleActions() {
           keys="a"
           icon={QUICK_ICONS[quick.kind]}
           onClick={attack}
-          disabled={pending}
+          loading={pending || quicks.pending}
           tooltip={quickTooltip(quick, nextMember.name)}
         />
       )}
@@ -363,7 +358,7 @@ function BattleActions() {
           keys="shift+a"
           icon="rotate"
           onClick={again}
-          disabled={pending}
+          loading={pending}
           tooltip={repeatTooltip(repeatable, ctx)}
         />
       )}

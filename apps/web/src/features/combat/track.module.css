@@ -64,6 +64,10 @@
   color: var(--color-text-subtle);
 }
 
+.tickQuiet {
+  color: transparent;
+}
+
 .tick::before {
   content: '';
   position: absolute;
@@ -143,6 +147,19 @@
   color: var(--color-text-strong);
 }
 
+/* A group's name, distance, and conditions, under its token, or above it when the next group stands too close. */
+.groupLabel {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-0-5);
+}
+
+.groupAbove .groupLabel {
+  position: absolute;
+  bottom: calc(100% + var(--space-1));
+  left: 0;
+}
+
 .groupName {
   display: inline-flex;
   align-items: center;
@@ -157,6 +174,10 @@
 }
 
 .groupDistance {
+  max-width: var(--space-24);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: var(--font-numeric);
   font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
@@ -165,6 +186,9 @@
 }
 
 .groupConditions {
+  max-width: var(--space-24);
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: var(--text-2xs);
   color: var(--color-magic);
   white-space: nowrap;

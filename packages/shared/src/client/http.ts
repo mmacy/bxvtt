@@ -21,6 +21,7 @@ import type {
   CreateUserResponse,
   DeclarationBody,
   DeclarationsState,
+  PreviewCandidatesResult,
   DiceRollRequest,
   DiceRollResponse,
   EventPage,
@@ -888,6 +889,21 @@ export class BxvttClient {
    */
   clearDeclaration(tableId: string, memberId: string): Promise<DeclarationsState> {
     return this.request('DELETE', `/api/tables/${enc(tableId)}/game/declarations/${enc(memberId)}`);
+  }
+
+  /**
+   * Asks which candidate declarations the session would accept beside the stored ones, without storing them.
+   *
+   * @param tableId - The table ID.
+   * @param candidates - A candidate declaration for each of some members who haven't declared, by member ID.
+   */
+  previewCandidates(
+    tableId: string,
+    candidates: Record<string, DeclarationBody>,
+  ): Promise<PreviewCandidatesResult> {
+    return this.request('POST', `/api/tables/${enc(tableId)}/game/declarations/preview`, {
+      body: { candidates },
+    });
   }
 
   /**

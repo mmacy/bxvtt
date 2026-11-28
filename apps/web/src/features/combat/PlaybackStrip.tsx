@@ -9,7 +9,19 @@ import {
 } from '@bxvtt/shared/text';
 import { useCallback, useLayoutEffect, useRef } from 'react';
 import { formatShortcut, PLAYBACK_SPEEDS, useShortcut } from '@/app';
-import { ariaKeyShortcuts, Badge, Button, cx, Die, DropdownMenu, Icon, IconButton, SectionLabel } from '@/ui';
+import {
+  ariaKeyShortcuts,
+  Badge,
+  breakpoints,
+  Button,
+  cx,
+  Die,
+  DropdownMenu,
+  Icon,
+  IconButton,
+  SectionLabel,
+  useMediaQuery,
+} from '@/ui';
 import { lineIcon, type RoundDigest } from './playback';
 import { SPEEDS } from './transport';
 import type { PlaybackItem, PlaybackView } from './usePlayback';
@@ -259,13 +271,15 @@ function ReplayControl({ replay, focus }: { replay: () => void; focus: FocusHand
   const container = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const { leave, claim } = focus;
+  // Below the phone breakpoint, Replay takes a line of its own under the result, so it never leaves the card.
+  const phone = useMediaQuery(`(max-width: ${breakpoints.phone - 1}px)`);
   useLayoutEffect(() => {
     if (claim('replay')) button.current?.focus();
     const node = container.current;
     return () => leave(node, 'pause');
   }, [leave, claim]);
   return (
-    <div className={styles.stripControls} ref={container}>
+    <div className={cx(styles.stripControls, phone && styles.stripControlsOwnLine)} ref={container}>
       <Button
         ref={button}
         size="sm"

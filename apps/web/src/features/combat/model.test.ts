@@ -9,13 +9,10 @@ import {
   blockedReason,
   blockingMembers,
   describeDeclaration,
+  attackPlans,
   memberGear,
-  membersInReach,
   nearestGroup,
-  planAttack,
-  quickAttack,
   refusalTexts,
-  suggestAction,
   repeatProblem,
   usableItems,
 } from './model';
@@ -51,30 +48,15 @@ const sling = {
   quantity: 1,
 };
 
-describe('planAttack', () => {
-  it('closes and attacks when the group is within the encounter rate plus 5 feet', () => {
-    const { encounter, party } = battle();
-    const brenna = member(party, 'Brenna');
-    const group = withGroup(encounter, { member_distance_feet: { [brenna.id]: 35 } }).groups[0];
-    if (!group) throw new Error('No group.');
-    const plan = planAttack(
-      { ...brenna, encounter_rate_feet: 30 },
-      encounter,
-      group,
-      memberGear(brenna, emptyContext()),
-    );
-    expect(plan.kind).toBe('close');
-    expect(plan.note).toBe('Closes 30 feet, then attacks.');
-  });
-
-  it('explains a group out of reach with the distance and the member’s rate', () => {
+describe('attackPlans', () => {
+  it('offers to close in and attack a group the member doesn’t stand against, however far it is', () => {
     const { encounter, party } = battle();
     const brenna = { ...member(party, 'Brenna'), encounter_rate_feet: 20 };
-    const group = encounter.groups[0];
+    const group = withGroup(encounter, { member_distance_feet: { [brenna.id]: 200 } }).groups[0];
     if (!group) throw new Error('No group.');
-    const plan = planAttack(brenna, encounter, group, memberGear(brenna, emptyContext()));
-    expect(plan.kind).toBe('out_of_reach');
-    expect(plan.reason).toBe('Out of reach: 30 feet away, while Brenna moves 20 feet per round.');
+    const plans = attackPlans(brenna, encounter, group, memberGear(brenna, emptyContext()));
+    expect(plans.map((p) => [p.kind, p.reason])).toEqual([['close', null]]);
+    expect(plans[0]?.distance).toBe(200);
   });
 
   it('attacks where the member stands when they are in the group’s front rank', () => {
@@ -83,40 +65,53 @@ describe('planAttack', () => {
     const group = withGroup(encounter, { front_rank: [brenna.id], member_distance_feet: { [brenna.id]: 5 } })
       .groups[0];
     if (!group) throw new Error('No group.');
-    expect(planAttack(brenna, encounter, group, memberGear(brenna, emptyContext())).kind).toBe('melee');
+    expect(
+      attackPlans(brenna, encounter, group, memberGear(brenna, emptyContext())).map((p) => p.kind),
+    ).toEqual(['melee']);
   });
 
-  it('shoots with a missile weapon whose long range reaches the group', () => {
+  it('offers a shot with a wielded missile weapon at any distance, and a close beside it', () => {
     const { encounter, party } = battle();
     const wren = member(party, 'Wren');
     const armed = { ...wren, inventory: { ...wren.inventory, wielded: [sling] } };
-    const group = encounter.groups[0];
+    const group = withGroup(encounter, { member_distance_feet: { [wren.id]: 500 } }).groups[0];
     if (!group) throw new Error('No group.');
-    const plan = planAttack(armed, encounter, group, memberGear(armed, emptyContext()));
-    expect(plan.kind).toBe('missile');
-    expect(plan.weapon?.id).toBe('sling');
+    const plans = attackPlans(armed, encounter, group, memberGear(armed, emptyContext()));
+    expect(plans.map((p) => p.kind)).toEqual(['missile', 'close']);
+    expect(plans[0]?.weapon?.id).toBe('sling');
   });
 
-  it('says the member can’t move when they are immobile', () => {
+  it('keeps a reloading weapon’s shot, unavailable with the reason, for a member bxapi lists as reloading', () => {
+    const { encounter, party } = battle();
+    const wren = member(party, 'Wren');
+    const crossbow = {
+      ...sling,
+      template: { ...sling.template, id: 'crossbow', name: 'Crossbow', qualities: ['missile', 'reload'] },
+    };
+    const armed = { ...wren, inventory: { ...wren.inventory, wielded: [crossbow] } };
+    const group = encounter.groups[0];
+    if (!group) throw new Error('No group.');
+    const reloading = { ...encounter, reloading: [wren.id] };
+    const plans = attackPlans(armed, reloading, group, memberGear(armed, emptyContext()));
+    expect(plans.map((p) => [p.kind, p.reason])).toEqual([
+      ['missile', 'Wren is reloading a crossbow this round.'],
+      ['close', null],
+    ]);
+  });
+
+  it('says the member can’t move when bxapi lists them as immobile', () => {
     const { encounter, party } = battle();
     const brenna = member(party, 'Brenna');
     const stuck = { ...encounter, immobile: [brenna.id] };
     const group = stuck.groups[0];
     if (!group) throw new Error('No group.');
-    expect(planAttack(brenna, stuck, group, memberGear(brenna, emptyContext())).reason).toMatch(
-      /^Brenna can't move this round/,
+    expect(attackPlans(brenna, stuck, group, memberGear(brenna, emptyContext()))[0]?.reason).toBe(
+      "Brenna can't move this round.",
     );
   });
 });
 
-describe('quickAttack', () => {
-  it('declares an attack on the nearest group, closing in', () => {
-    const { encounter, party } = battle();
-    const brenna = { ...member(party, 'Brenna'), encounter_rate_feet: 40 };
-    const quick = quickAttack(brenna, encounter, memberGear(brenna, emptyContext()));
-    expect(quick?.declaration).toEqual({ action: 'attack', target_group_id: 'group-0001', move: 'close' });
-  });
-
+describe('nearestGroup', () => {
   it('picks the nearer of two groups', () => {
     const { encounter, party } = battle();
     const brenna = member(party, 'Brenna');
@@ -201,17 +196,6 @@ describe('repeatProblem', () => {
       ),
     ).toBe('The goblins have escaped.');
     expect(repeatProblem({ action: 'hold' }, brenna, fled, memberGear(brenna, ctx), ctx)).toBeNull();
-  });
-});
-
-describe('membersInReach', () => {
-  it('lists members within 5 feet on the range track', () => {
-    const { encounter } = battle();
-    const spread = {
-      ...encounter,
-      advance_feet: { 'character-0001': 20, 'character-0002': 15, 'character-0003': 0 },
-    };
-    expect(membersInReach(spread, 'character-0001')).toEqual(['character-0002']);
   });
 });
 
@@ -315,67 +299,8 @@ describe('monster targets by ID', () => {
   });
 });
 
-describe('suggestAction', () => {
-  const facts = { casts: false };
-  const unarmoured = (m: MemberView): MemberView => ({
-    ...m,
-    inventory: { ...m.inventory, worn_armour: null, shield: null },
-  });
-
-  it('strikes the group a member already stands against', () => {
-    const { encounter, party } = battle();
-    const brenna = member(party, 'Brenna');
-    const engaged = withGroup(encounter, {
-      front_rank: [brenna.id],
-      member_distance_feet: { [brenna.id]: 5 },
-    });
-    expect(suggestAction(brenna, engaged, memberGear(brenna, emptyContext()), facts)?.kind).toBe('melee');
-  });
-
-  it('shoots with a missile weapon in range before anything else', () => {
-    const { encounter, party } = battle();
-    const wren = member(party, 'Wren');
-    const armed = { ...wren, inventory: { ...wren.inventory, wielded: [sling] } };
-    const suggestion = suggestAction(armed, encounter, memberGear(armed, emptyContext()), facts);
-    expect(suggestion?.kind).toBe('missile');
-    expect(suggestion?.body).toEqual({ action: 'attack', target_group_id: 'group-0001' });
-  });
-
-  it('offers the Cast tab to a caster with a spell ready, and never casts for them', () => {
-    const { encounter, party } = battle();
-    const osric = {
-      ...member(party, 'Osric'),
-      memorized_spells: [{ spell_id: 'cure_light_wounds', reversed: false }],
-    };
-    const suggestion = suggestAction(osric, encounter, memberGear(osric, emptyContext()), { casts: true });
-    expect(suggestion).toMatchObject({ kind: 'cast', body: null });
-  });
-
-  it('closes in only for an armoured front-line fighter who casts no spells', () => {
-    const { encounter, party } = battle();
-    const brenna = { ...member(party, 'Brenna'), encounter_rate_feet: 40 };
-    const gear = memberGear(brenna, emptyContext());
-    expect(suggestAction(brenna, encounter, gear, facts)?.kind).toBe('close');
-    // The same member without armour, or of a class that casts, holds instead.
-    expect(
-      suggestAction(unarmoured(brenna), encounter, memberGear(unarmoured(brenna), emptyContext()), facts)
-        ?.kind,
-    ).toBe('hold');
-    expect(suggestAction(brenna, encounter, gear, { casts: true })?.kind).toBe('hold');
-  });
-
-  it('holds a back-rank member with no missile weapon, without a rule about why', () => {
-    const { encounter, party } = battle();
-    const brenna = member(party, 'Brenna');
-    const back = { ...encounter, front_rank: ['character-0002'] };
-    const suggestion = suggestAction(brenna, back, memberGear(brenna, emptyContext()), facts);
-    expect(suggestion).toMatchObject({ kind: 'hold', body: { action: 'hold' } });
-    expect(suggestion?.reason).toBe('No attack from here.');
-  });
-});
-
 describe('repeating last round after the situation changed', () => {
-  it('refuses to repeat a melee attack once the member has fallen back', () => {
+  it('repeats an attack wherever the member stands, and leaves the reach to the preview', () => {
     const { view, encounter, party } = battle();
     const ctx = contextFromPlayerView(view);
     const brenna = { ...member(party, 'Brenna'), encounter_rate_feet: 40 };
@@ -387,7 +312,7 @@ describe('repeating last round after the situation changed', () => {
         memberGear(brenna, ctx),
         ctx,
       ),
-    ).toBe('Brenna is no longer in reach of the goblins.');
+    ).toBeNull();
   });
 });
 

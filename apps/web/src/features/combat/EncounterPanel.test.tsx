@@ -7,12 +7,18 @@ import { ActionBar } from '@/ui';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { createFakeApi, renderWithTable, type FakeApi } from '@/app/testing/renderWithTable';
 import { CombatActions, resolveRoundReason } from './CombatActions';
-import { EncounterPanel } from './EncounterPanel';
+import { EncounterPanel, fleeBaitReasons } from './EncounterPanel';
 import { spawnMissing } from './RefereeTools';
 import { resetCombatMemory } from './memory';
+import { resetQuickActions } from './quick';
 import { resetCombatUi } from './state';
 
 function stubRules(api: FakeApi) {
+  // bxapi's preview accepts every quick action unless a test says otherwise.
+  api.previewCandidates.mockImplementation(async (_tableId, candidates) => ({
+    revision: 0,
+    accepted: Object.keys(candidates),
+  }));
   api.rules.mockImplementation(async (path: string) => {
     if (path === 'classes/cleric') return { id: 'cleric', abilities: [{ tag: 'turn_undead' }] } as never;
     return { id: path, abilities: [] } as never;
@@ -35,6 +41,7 @@ function accepted(game: GameState): CommandResult {
 beforeEach(() => {
   resetCombatMemory();
   resetCombatUi();
+  resetQuickActions();
 });
 
 describe('EncounterPanel', () => {
@@ -219,7 +226,7 @@ describe('CombatActions', () => {
       </ActionBar>,
       { snapshot, api },
     );
-    await user.click(screen.getByRole('button', { name: /^Declare for Wren:/ }));
+    await user.click(await screen.findByRole('button', { name: /^Declare for Wren:/ }));
     expect(api.declare).toHaveBeenCalledWith(
       expect.any(String),
       'character-0002',
@@ -403,5 +410,164 @@ describe('spawnMissing', () => {
     expect(spawnMissing('goblin', null, null)).toBe('Enter how many monsters to add.');
     expect(spawnMissing('goblin', 2, null)).toBe('Enter how far away the monsters appear.');
     expect(spawnMissing('goblin', 2, 40)).toBeNull();
+  });
+});
+
+describe('Give items', () => {
+  const ruth = 'usr_TiMm-VfZAE76oq3tfbEp1w';
+
+  async function options(user: { click: (el: Element) => Promise<void> }, name: string): Promise<string[]> {
+    await user.click(screen.getByRole('combobox', { name }));
+    const list = (await screen.findAllByRole('option')).map((o) => o.textContent ?? '');
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
+    return list;
+  }
+
+  it('starts From on the one character the player controls and leaves that character out of To', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('encounter', 'player');
+    const game = snapshot.game as GameState;
+    game.seats = game.seats.map((s) => (s.member_id === 'character-0001' ? { ...s, user_id: ruth } : s));
+    const { user } = renderWithTable(<EncounterPanel />, { snapshot, api });
+    await user.click(screen.getByRole('button', { name: 'Give items' }));
+    expect(screen.getByRole('combobox', { name: 'From' })).toHaveTextContent('Wren');
+    expect(await options(user, 'To')).toEqual(['Brenna', 'Osric', 'Tamsin']);
+  });
+
+  it('follows the characters the player controls when the seats change after the panel opens', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('encounter', 'player');
+    const game = snapshot.game as GameState;
+    const { user, store } = renderWithTable(<EncounterPanel />, { snapshot, api });
+    act(() => {
+      store.getState().receive({
+        type: 'game',
+        game: {
+          ...game,
+          seats: game.seats.map((s) => (s.member_id === 'character-0001' ? { ...s, user_id: ruth } : s)),
+        },
+      });
+    });
+    await user.click(screen.getByRole('button', { name: 'Give items' }));
+    expect(screen.getByRole('combobox', { name: 'From' })).toHaveTextContent('Wren');
+    expect(await options(user, 'To')).toEqual(['Brenna', 'Osric', 'Tamsin']);
+  });
+});
+
+describe('fleeing with bait', () => {
+  it('disables scattering coins or dropping food only when nobody in the party carries any', () => {
+    const party = fixtureSnapshot('encounter', 'player').game?.view.party ?? [];
+    // A ration is any item whose template says so, whatever its ID.
+    const rations = {
+      instance_type: 'item',
+      quantity: 3,
+      template: { id: 'some_food', name: 'Some food', params: { ration: true } },
+    };
+    const poor = party.map((m) => ({
+      ...m,
+      inventory: { ...m.inventory, purse: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 }, items: [] },
+    }));
+    expect(fleeBaitReasons(poor)).toEqual({
+      treasure: 'No one in the party has any coins.',
+      food: 'No one in the party carries food.',
+    });
+    const [first, ...rest] = poor;
+    if (!first) throw new Error('No party.');
+    // Bait on a dead member still counts, because bxapi decides who can drop it.
+    const dead = {
+      ...first,
+      conditions: ['dead'],
+      inventory: { ...first.inventory, items: [rations], purse: { pp: 0, gp: 1, ep: 0, sp: 0, cp: 0 } },
+    };
+    expect(fleeBaitReasons([dead, ...rest])).toEqual({ treasure: null, food: null });
+  });
+});
+
+describe('Use an item', () => {
+  it('never sends a target chosen for another item', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('encounter', 'player');
+    const game = snapshot.game as GameState;
+    const wren = game.view.party.find((m) => m.id === 'character-0002');
+    if (!wren) throw new Error('No Wren.');
+    wren.inventory = {
+      ...wren.inventory,
+      items: [
+        {
+          instance_type: 'magic_item',
+          instance_id: 'magic-item-0001',
+          display: 'a wand',
+          template_id: 'wand_of_fire_balls',
+          quantity: 1,
+        },
+        {
+          instance_type: 'magic_item',
+          instance_id: 'magic-item-0002',
+          display: 'a potion',
+          template_id: 'potion_of_healing',
+          quantity: 1,
+        },
+      ],
+    };
+    game.seats = game.seats.map((s) =>
+      s.member_id === 'character-0001' ? { ...s, user_id: 'someone-else' } : s,
+    );
+    api.sendCommand.mockResolvedValue(accepted(game));
+    const { user } = renderWithTable(<EncounterPanel />, { snapshot, api });
+    await user.click(screen.getByRole('button', { name: 'Use an item' }));
+    // Aim the wand at the goblins, then switch to the potion.
+    await user.click(screen.getByRole('combobox', { name: 'Target' }));
+    await user.click(await screen.findByRole('option', { name: /^At the goblins/ }));
+    await user.click(screen.getByRole('combobox', { name: 'Item' }));
+    await user.click(await screen.findByRole('option', { name: /potion/i }));
+    await user.click(screen.getByRole('button', { name: /^Use a potion/ }));
+    expect(api.sendCommand).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        command_type: 'use_item',
+        item_id: 'magic-item-0002',
+        target_id: 'character-0002',
+      }),
+      expect.any(Number),
+    );
+  });
+});
+
+describe('Drop items', () => {
+  it('never sends an item that has left the pack while the popover is open', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('encounter', 'player');
+    const game = snapshot.game as GameState;
+    const torch = { instance_type: 'item', quantity: 1, template: { id: 'torch', name: 'Torch' } };
+    const rope = { instance_type: 'item', quantity: 1, template: { id: 'rope_50ft', name: 'Rope' } };
+    const withItems = (items: unknown[]) =>
+      game.view.party.map((m) =>
+        m.id === 'character-0002' ? { ...m, inventory: { ...m.inventory, items } } : m,
+      );
+    game.view.party = withItems([torch, rope]);
+    game.seats = game.seats.map((s) =>
+      s.member_id === 'character-0001' ? { ...s, user_id: 'someone-else' } : s,
+    );
+    api.sendCommand.mockResolvedValue(accepted(game));
+    const { user, store } = renderWithTable(<EncounterPanel />, { snapshot, api });
+    await user.click(screen.getByRole('button', { name: 'Drop items' }));
+    await user.click(screen.getByRole('checkbox', { name: /torch/i }));
+    await user.click(screen.getByRole('checkbox', { name: /rope/i }));
+    // The torch is given away while the popover is open.
+    act(() => {
+      store
+        .getState()
+        .receive({ type: 'game', game: { ...game, view: { ...game.view, party: withItems([rope]) } } });
+    });
+    await user.click(screen.getByRole('button', { name: 'Drop' }));
+    expect(api.sendCommand).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ command_type: 'drop_items', item_ids: ['rope_50ft'] }),
+      expect.any(Number),
+    );
   });
 });

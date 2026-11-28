@@ -18,7 +18,7 @@ import {
   useTextContext,
   type TableStore,
 } from '@/app';
-import { Badge, Button, cx, Icon } from '@/ui';
+import { Badge, breakpoints, Button, cx, Icon, useMediaQuery } from '@/ui';
 import { fightEvents, summarizeFight, xpSentence } from './fight';
 import { PlaybackStrip } from './PlaybackStrip';
 import { RangeTrack } from './RangeTrack';
@@ -44,6 +44,8 @@ export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
   const ctx = useTextContext();
   const people = useCombatPeople();
   const reduce = useReduceMotion();
+  // Below the phone breakpoint the compact lane has no room for stacked tokens, so the track keeps its full height.
+  const phone = useMediaQuery(`(max-width: ${breakpoints.phone - 1}px)`);
   const mode = useGameMode();
   const revision = useRevision();
   const accept = useCallback((entry: GameEntry) => entry.revision === endRevision, [endRevision]);
@@ -98,7 +100,7 @@ export function Aftermath({ endRevision, afterSeq, onClose }: AftermathProps) {
           pops={playback.beat?.pops}
           popKey={playback.current ? `${playback.current.seq}-${playback.beatIndex}` : undefined}
           animate={!reduce}
-          compact
+          compact={!phone}
         />
       )}
       {playback.playing ? (
