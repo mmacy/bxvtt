@@ -86,21 +86,13 @@ const rej = (
 describe('rejections', () => {
   it('names the member and says what to do', () => {
     expect(rej('battle.declaration.not_in_front_rank', { character: 'character-0003' })).toBe(
-      "Wren isn't in the front rank, so they can't reach the monsters in melee or with a touch. Close with the monsters first, or use a missile weapon or a spell with range.",
+      "Wren isn't in the front rank, so they can't reach the monsters.",
     );
   });
 
   it.each([
-    [
-      'exploration.move.blocked',
-      { direction: 'north' },
-      'A wall or a closed door blocks the way north. Open a door first, or choose another direction.',
-    ],
-    [
-      'exploration.door.no_door',
-      { direction: 'east' },
-      "There's no door to the east. Choose a side with a door the party has found.",
-    ],
+    ['exploration.move.blocked', { direction: 'north' }, 'A wall or a closed door blocks the way north.'],
+    ['exploration.door.no_door', { direction: 'east' }, "There's no door to the east."],
     ['exploration.door.stuck', {}, 'The door is stuck. Choose a party member to force it open.'],
     [
       'exploration.action.requires_light',
@@ -154,23 +146,15 @@ describe('rejections', () => {
     [
       'magic.cast.unknown_target',
       { character: 'character-0002', target: 'monster-0099' },
-      "Tomas' target has fallen or isn't here. Choose another target.",
+      "Tomas' target has fallen or isn't here.",
     ],
-    [
-      'magic.cast.unknown_target',
-      { target: 'monster-0099' },
-      "That target has fallen or isn't here. Choose another target.",
-    ],
+    ['magic.cast.unknown_target', { target: 'monster-0099' }, "That target has fallen or isn't here."],
     [
       'items.use.unknown_target',
       { character: 'character-0002', target: 'monster-0099' },
-      "Tomas' target isn't here. Choose another target.",
+      "Tomas' target isn't here.",
     ],
-    [
-      'items.use.unknown_target',
-      { target: 'monster-0099' },
-      "That target isn't here. Choose another target.",
-    ],
+    ['items.use.unknown_target', { target: 'monster-0099' }, "That target isn't here."],
     [
       'exploration.feature.emptied',
       { feature: 'feature:cache_7' },
@@ -244,7 +228,7 @@ describe('rejections', () => {
 
   it('names an unknown member as a party member, never as an ID', () => {
     expect(rej('battle.declaration.not_in_front_rank', { character: 'character-0099' }, emptyContext())).toBe(
-      "A party member isn't in the front rank, so they can't reach the monsters in melee or with a touch. Close with the monsters first, or use a missile weapon or a spell with range.",
+      "A party member isn't in the front rank, so they can't reach the monsters.",
     );
   });
 

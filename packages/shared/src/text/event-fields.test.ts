@@ -117,24 +117,24 @@ describe('hiding thieves', () => {
         { code: 'battle.declaration.hide_not_a_thief', params: { character: 'character-0001' } },
         ctx,
       ),
-    ).toBe("Brenna can't hide in shadows. Only a character with thief skills can.");
+    ).toBe("Brenna doesn't have thief skills, so they can't hide in shadows.");
     expect(
       describeRejection(
         { code: 'battle.declaration.hide_in_front_rank', params: { character: 'character-0002' } },
         ctx,
       ),
-    ).toBe("Wren will be in the front rank this round and can't hide there. Choose another action.");
+    ).toBe("Wren will be in the front rank this round and can't hide there.");
   });
 
   it('points a refused back-stab at the Back-stab control, not at hiding', () => {
     // Hiding isn't always possible in a round, so the refusal names the control that fixes the declaration.
     const params = { character: 'character-0002' };
     expect(describeRejection({ code: 'battle.declaration.back_stab_target_aware', params }, ctx)).toBe(
-      "The monsters have noticed Wren, so a back-stab won't work. Turn off Back-stab to attack normally.",
+      "The monsters have noticed Wren, so a back-stab won't work.",
     );
     // A custom class can have the ability, so the refusal doesn't say that only thieves can back-stab.
     expect(describeRejection({ code: 'battle.declaration.back_stab_no_ability', params }, ctx)).toBe(
-      "Wren can't back-stab. Turn off Back-stab to attack normally.",
+      "Wren can't back-stab.",
     );
   });
 });
@@ -645,13 +645,25 @@ describe('refusals of a battle declaration', () => {
       rej('magic.cast.target_count', { character: 'character-0003', expected: 1, supplied: 3, mode: 'x' }),
     ).toBe("Tomas' spell takes 1 target in this mode, but you chose 3.");
     expect(rej('magic.cast.unknown_target', { character: 'character-0003', target: 'monster-0002' })).toBe(
-      "Tomas' target has fallen or isn't here. Choose another target.",
+      "Tomas' target has fallen or isn't here.",
     );
     expect(rej('battle.declaration.no_target', { character: 'character-0002', group: 'group-0001' })).toBe(
-      'No targets remain in the goblins for Wren to strike. Choose another group.',
+      'No targets remain in the goblins for Wren to strike.',
     );
     expect(rej('exploration.item.not_carried', { character: 'character-0002', item: 'torch' })).toBe(
       "Wren doesn't have a torch.",
+    );
+  });
+
+  it('says a member is too far to reach a target, without restating the range rule', () => {
+    expect(
+      rej('battle.declaration.member_out_of_reach', {
+        character: 'character-0002',
+        target: 'character-0001',
+      }),
+    ).toBe('Wren is too far from Brenna to reach them.');
+    expect(rej('battle.declaration.move_not_combinable', { character: 'character-0002' })).toBe(
+      "Wren can't combine movement with that action.",
     );
   });
 
@@ -675,7 +687,7 @@ describe('refusals of a battle declaration', () => {
         item: 'staff_of_healing',
         target: 'character-0001',
       }),
-    ).toBe('A staff of healing has already healed Brenna today. Choose someone else.');
+    ).toBe('A staff of healing has already healed Brenna today.');
   });
 
   it('reads well without the member', () => {
