@@ -94,6 +94,12 @@ export const EntryNames = z.object({
    */
   items_plural: z.record(z.string(), z.string()).optional(),
   /**
+   * What to call each named valuable in `items` in the middle of a sentence, by item ID, from the player view's
+   * `valuable_phrases` at the same moment as `items`. An entry written before osrlib 2.10.0 has none, and the
+   * text words the name itself. Optional in the type so that older fixtures and stored entries still parse.
+   */
+  valuable_phrases: z.record(z.string(), z.string()).optional(),
+  /**
    * Dungeon names by dungeon ID, for the dungeons the events name that the party has entered, as in the player
    * view's `dungeons`. Optional in the type so that older fixtures still compile.
    */

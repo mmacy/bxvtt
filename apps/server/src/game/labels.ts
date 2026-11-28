@@ -52,12 +52,14 @@ export function learnLabels(book: LabelBook, view: PlayerView): void {
 export interface ItemNames {
   one: Map<string, string>;
   many: Map<string, string>;
+  /** What to call each named valuable in a sentence, by item ID, from the views' `valuable_phrases`. */
+  phrases: Map<string, string>;
 }
 
 /**
  * Collects the item names for a command's feed entry from what a player can see: the player view from before the
  * command and the one from after it, whose `item_names` and `item_names_plural` name every item ID each view shows
- * (a pile's `contents` among them), the own name of each valuable those views show (`valuable_names`), and
+ * (a pile's `contents` among them), the own name of each valuable those views show (`valuable_names`) with its phrase (`valuable_phrases`), and
  * the `display_name` of each `item_identified` event. The view from after
  * wins, so an item identified and kept reads by its true name. An event's name fills in only an ID that neither
  * view names. An item identified and used up in the same command, such as a potion drunk before the party knew
@@ -68,7 +70,7 @@ export interface ItemNames {
  * @param events - The events of the command.
  */
 export function itemNames(views: readonly PlayerView[], events: readonly GameEvent[] = []): ItemNames {
-  const names: ItemNames = { one: new Map(), many: new Map() };
+  const names: ItemNames = { one: new Map(), many: new Map(), phrases: new Map() };
   for (const view of views) {
     for (const [id, name] of Object.entries(view.item_names ?? {})) names.one.set(id, name);
     for (const [id, name] of Object.entries(view.item_names_plural ?? {})) names.many.set(id, name);
@@ -77,6 +79,9 @@ export function itemNames(views: readonly PlayerView[], events: readonly GameEve
     for (const [id, name] of Object.entries(view.valuable_names ?? {})) {
       names.one.set(id, name);
       names.many.delete(id);
+      const phrase = view.valuable_phrases?.[id];
+      if (phrase === undefined) names.phrases.delete(id);
+      else names.phrases.set(id, phrase);
     }
   }
   for (const event of events) {
@@ -131,6 +136,7 @@ export function entryNames(
     monsters: {},
     items: {},
     items_plural: {},
+    valuable_phrases: {},
     dungeons: {},
   };
   // The member who acted, whom the events may leave out, such as the speaker of a talk.
@@ -157,6 +163,8 @@ export function entryNames(
     if (item !== undefined) names.items[id] = item;
     const plural = items.many.get(id);
     if (plural !== undefined && names.items_plural !== undefined) names.items_plural[id] = plural;
+    const phrase = items.phrases.get(id);
+    if (phrase !== undefined && names.valuable_phrases !== undefined) names.valuable_phrases[id] = phrase;
     const dungeon = context.dungeons?.[id];
     if (dungeon !== undefined && names.dungeons !== undefined) names.dungeons[id] = dungeon;
   }

@@ -6766,7 +6766,8 @@
                         "kind": "jewellery",
                         "name": "Abbot's gold ring",
                         "value_gp": 150,
-                        "weight_coins": 0
+                        "weight_coins": 0,
+                        "phrase": "the abbot's gold ring"
                       }
                     ],
                     "trap": null
@@ -10491,7 +10492,8 @@
                         "kind": "jewellery",
                         "name": "Prior's chain of office",
                         "value_gp": 400,
-                        "weight_coins": 20
+                        "weight_coins": 20,
+                        "phrase": "the prior's chain of office"
                       }
                     ],
                     "trap": null

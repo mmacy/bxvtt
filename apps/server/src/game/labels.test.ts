@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { GameEvent, PlayerView } from '@bxvtt/shared/protocol';
-import { itemNames } from './labels';
+import { entryNames, itemNames, newLabelBook } from './labels';
 
 /** A player view that names some items. */
 function view(names: Record<string, string>, plurals: Record<string, string> = {}): PlayerView {
@@ -18,6 +18,38 @@ function identified(fields: Record<string, unknown> = {}): GameEvent {
     ...fields,
   } as unknown as GameEvent;
 }
+
+describe('valuable phrases for a feed entry', () => {
+  /** A player view that names valuables, with the phrases osrlib 2.10 states. */
+  function named(names: Record<string, string>, phrases: Record<string, string> | undefined): PlayerView {
+    return {
+      item_names: { 'valuable-0001': 'piece of jewellery' },
+      item_names_plural: {},
+      valuable_names: names,
+      ...(phrases === undefined ? {} : { valuable_phrases: phrases }),
+    } as unknown as PlayerView;
+  }
+
+  it("records each named valuable's phrase from the view", () => {
+    const names = itemNames([named({ 'valuable-0001': "Ossor's Eye" }, { 'valuable-0001': "Ossor's Eye" })]);
+    expect(names.one.get('valuable-0001')).toBe("Ossor's Eye");
+    expect(names.phrases.get('valuable-0001')).toBe("Ossor's Eye");
+  });
+
+  it('records no phrase for a view that osrlib 2.9.0 built', () => {
+    const names = itemNames([named({ 'valuable-0001': 'Moonstone' }, undefined)]);
+    expect(names.one.get('valuable-0001')).toBe('Moonstone');
+    expect(names.phrases.has('valuable-0001')).toBe(false);
+  });
+
+  it("writes the phrase into the entry's names only for an ID the events name", () => {
+    const items = itemNames([named({ 'valuable-0001': 'Moonstone' }, { 'valuable-0001': 'a moonstone' })]);
+    const book = newLabelBook();
+    const events = [{ event_type: 'item_acquired', item_ids: ['valuable-0001'] }] as unknown as GameEvent[];
+    expect(entryNames(events, book, items).valuable_phrases).toEqual({ 'valuable-0001': 'a moonstone' });
+    expect(entryNames([], book, items).valuable_phrases).toEqual({});
+  });
+});
 
 describe('item names for a feed entry', () => {
   it('takes the view from after the command over the one from before', () => {

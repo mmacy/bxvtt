@@ -7,6 +7,7 @@ import {
   emptyContext,
   itemList,
   valuableNames,
+  valuablePhrases,
 } from '@bxvtt/shared/text';
 import { findRepoRoot } from '../src/config';
 import type { TestConnection, TestServer, TestUser } from './helpers';
@@ -175,8 +176,11 @@ describe('what the party knows of the dungeon', () => {
     // A valuable reads by its own name, which the inventory shows, and has no plural. Every other item reads
     // by the view's item names.
     const own = valuableNames(game.view);
+    const phrases = valuablePhrases(game.view);
     for (const [id, name] of Object.entries(items)) {
       expect(name).toBe(own[id] ?? game.view.item_names[id]);
+      // A named valuable also has the phrase that osrlib states for it, for the sentences of the feed.
+      expect(entry.names?.valuable_phrases?.[id]).toBe(phrases[id]);
       expect(entry.names?.items_plural?.[id]).toBe(
         own[id] === undefined ? game.view.item_names_plural[id] : undefined,
       );
@@ -187,6 +191,7 @@ describe('what the party knows of the dungeon', () => {
     const text = describeGameEntry(entry, emptyContext(), { only: 'player' })
       .map((line) => line.text)
       .join(' ');
+    expect(Object.values(entry.names?.valuable_phrases ?? {})).toContain('a silver altar candlestick');
     expect(text).toMatch(/takes .*2 silver altar candlesticks|takes .*a silver altar candlestick/);
     expect(text).not.toMatch(/jewellery/);
   });

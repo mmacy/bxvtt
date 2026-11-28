@@ -34,6 +34,12 @@ export interface ItemNoun {
    * words of an item's ID.
    */
   unnamed?: boolean;
+  /**
+   * What bxapi says to call one gem or piece of jewellery in the middle of a sentence, such as `the abbot's seal
+   * ring` or `Ossor's Eye`, from the player view's `valuable_phrases`. `itemPhrase` returns it as written for a
+   * count of one. `one` and `many` are then the phrase without its article.
+   */
+  phrase?: string;
 }
 
 /** The noun of an item that nothing names. See `ItemNoun.unnamed`. */
@@ -238,9 +244,10 @@ export function itemNounFromName(name: string, options: ItemNameOptions = {}): I
   if (/^(?:\p{Lu}[\p{L}-]*\s+)+\p{Lu}[\p{L}-]*['’]s?\s/u.test(text)) {
     return { one: text, many: pluralize(text), noArticle: true };
   }
-  // Any other name, such as a valuable's `Moonstone`, reads as a common noun with its first letter in lower case:
-  // "a moonstone". A possessive in it, as in `Prior's iron key` or `Abbot's gold ring`, names one particular
-  // thing, so it takes `the`: "the prior's iron key".
+  // Any other name, such as an adventure item's `Moonstone lamp`, reads as a common noun with its first letter in
+  // lower case: "a moonstone lamp". A possessive in it, as in `Prior's iron key`, names one particular thing, so
+  // it takes `the`: "the prior's iron key". A gem or a piece of jewellery doesn't read through here: bxapi's
+  // `valuable_phrases` words it. Only an entry stored before osrlib 2.10.0 reaches this for a valuable.
   const one = lowerFirstWord(text);
   if (/\p{L}['’]s\b/u.test(text)) return { one, many: pluralize(one), definite: true };
   return { one, many: pluralize(one) };
@@ -257,6 +264,7 @@ export function itemNounFromName(name: string, options: ItemNameOptions = {}): I
 export function itemPhrase(noun: ItemNoun, quantity = 1): string {
   if (noun.unnamed) return noun.one;
   if (quantity !== 1) return `${quantity} ${noun.many}`;
+  if (noun.phrase !== undefined) return noun.phrase;
   if (noun.noArticle) return noun.one;
   if (noun.proper || noun.definite) return `the ${noun.one}`;
   return `${indefiniteArticle(noun.one)} ${noun.one}`;

@@ -443,7 +443,7 @@ level2
           'Inside the sealed coffin, a skeleton in rotted vestments wears the gold ring. A purse of old coins lies under its folded hands.',
         description: "The sealed coffin's lid is carved with an abbot's crook, and lead fills its seams.",
         coins: { gp: 60 },
-        valuables: [valuable('jewellery', "Abbot's gold ring", 150)],
+        valuables: [valuable('jewellery', "Abbot's gold ring", 150, 0, "the abbot's gold ring")],
       },
     ],
   })
@@ -797,7 +797,7 @@ level3
           "Rotten bags lie in the black water at the drowned prior's feet, and a round shield shows under the surface.",
         coins: { gp: 600, sp: 1000 },
         magic_item_ids: ['shield_plus_1'],
-        valuables: [valuable('jewellery', "Prior's chain of office", 400, 20)],
+        valuables: [valuable('jewellery', "Prior's chain of office", 400, 20, "the prior's chain of office")],
       },
       {
         id: 'mercy',

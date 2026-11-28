@@ -23,6 +23,7 @@ import {
   squarePoint,
   type DungeonTable,
 } from './support/map';
+import type { GameState } from '@bxvtt/shared/protocol';
 import { placeParty, send } from './support/table';
 
 const PRIORY = 'priory';
@@ -233,6 +234,73 @@ test.describe('exploration', () => {
     expect(lines.join('\n')).toMatch(/takes a potion\b/);
     expect(lines.join('\n')).not.toMatch(/potion of healing/i);
     expectNoRawText(lines, "Sam's feed after the treasure");
+  });
+
+  test('a named valuable reads by its phrase when it is taken, given, and dropped', async ({ crew }) => {
+    const setup = await dungeonTable(crew, { seed: 4 });
+    const { sam, table } = setup;
+    const scene = scenePanel(sam.page);
+    await openScene(sam.page);
+
+    // The chapel altar holds two silver altar candlesticks, whose phrase is the default that osrlib makes.
+    await placer(setup)(17, 12, 'east');
+    await scene.getByRole('button', { name: 'Take', exact: true }).click();
+    await expect(scene.getByRole('button', { name: 'Take', exact: true })).toHaveCount(0);
+    const game = await sam.client.getGame(table.id);
+    const ids = Object.keys(game.view.valuable_names);
+    expect(ids).toHaveLength(2);
+    const carrying = (state: GameState, id: string) => {
+      const member = state.view.party.find((candidate) =>
+        JSON.stringify(candidate.inventory).includes(`"${id}"`),
+      );
+      if (member === undefined) throw new Error(`no one carries ${id}`);
+      return member;
+    };
+    const [first, second] = ids;
+    if (first === undefined || second === undefined) throw new Error('no valuable ids');
+    const holder = carrying(game, first);
+    const other = game.view.party.find((member) => member.id !== holder.id);
+    if (other === undefined) throw new Error('the party has one member');
+    const given = await send(sam.client, table.id, {
+      command_type: 'give_items',
+      character_id: holder.id,
+      recipient_id: other.id,
+      item_ids: [first],
+    });
+    const dropper = carrying(given, second);
+    await send(sam.client, table.id, {
+      command_type: 'drop_items',
+      character_id: dropper.id,
+      item_ids: [second],
+    });
+
+    const lines = (await feedLines(sam.page)).join('\n');
+    expect(lines).toMatch(new RegExp(`${holder.name} takes .*silver altar candlesticks?`));
+    expect(lines).toContain(`${holder.name} gives a silver altar candlestick to ${other.name}.`);
+    expect(lines).toContain(`${dropper.name} drops a silver altar candlestick.`);
+    expect(lines).not.toMatch(/piece of jewellery/);
+    // The dropped candlestick lies in a pile that the scene lists by the same phrase.
+    await openScene(sam.page);
+    await expect(scene.getByText('A silver altar candlestick.', { exact: true })).toBeVisible();
+    expectNoRawText(await feedLines(sam.page), "Sam's feed after the candlesticks");
+  });
+
+  test("a possessive valuable reads by the phrase the adventure's author set", async ({ crew }) => {
+    const setup = await dungeonTable(crew, { seed: 4 });
+    const { sam, table } = setup;
+    const scene = scenePanel(sam.page);
+    await openScene(sam.page);
+
+    // The sealed coffin in the founders' tomb, on level 2, holds the abbot's gold ring, whose default phrase would be "an abbot's".
+    await placer(setup)(22, 3, 'east', 2);
+    await scene.getByRole('button', { name: 'Take', exact: true }).click();
+    await expect(scene.getByRole('button', { name: 'Take', exact: true })).toHaveCount(0);
+    const game = await sam.client.getGame(table.id);
+    expect(Object.values(game.view.valuable_names)).toEqual(["Abbot's gold ring"]);
+    expect(Object.values(game.view.valuable_phrases)).toEqual(["the abbot's gold ring"]);
+    const lines = (await feedLines(sam.page)).join('\n');
+    expect(lines).toMatch(/ takes the abbot's gold ring and /);
+    expect(lines).not.toMatch(/an abbot's|piece of jewellery/);
   });
 
   test('a treasure out of reach says to step closer, and stepping onto it offers Take', async ({ crew }) => {

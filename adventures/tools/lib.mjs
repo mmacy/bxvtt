@@ -113,7 +113,16 @@ export function feature(spec) {
   };
 }
 
-export const valuable = (kind, name, value_gp, weight_coins = 0) => ({ kind, name, value_gp, weight_coins });
+// `phrase` is what the player view calls the piece in the middle of a sentence. Leave it out when the default reads
+// right: osrlib lowers the first letter of `name` and puts `a` or `an` in front. Set it for a proper name
+// ("Ossor's Eye"), for a name that takes `the` (a possessive, such as "the abbot's gold ring"), and for a plural.
+export const valuable = (kind, name, value_gp, weight_coins = 0, phrase = undefined) => ({
+  kind,
+  name,
+  value_gp,
+  weight_coins,
+  ...(phrase === undefined ? {} : { phrase }),
+});
 
 export function transition(spec) {
   return { side: null, requires: null, ...spec };
