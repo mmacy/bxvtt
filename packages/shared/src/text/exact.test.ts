@@ -1105,6 +1105,9 @@ describe('the event fields of osrlib 2.12, and the events stored before them', (
     const learned = extendContextWithEvents(ctx, [consumed]);
     expect(itemName('magic-item-0009', learned)).toBe('a potion');
     expect(itemName('magic-item-0009', ctx)).toBe('a magic item');
+    // An event stored before osrlib 2.12 has no names, and the context names the item as it did.
+    const { item_names: _names, item_names_plural: _plurals, ...stored } = consumed;
+    expect(extendContextWithEvents(ctx, [stored])).toBe(ctx);
     // A name the context already has wins, such as a named valuable's own name.
     const sold = { ...consumed, item_names: { 'valuable-0001': 'gem' } };
     expect(itemName('valuable-0001', extendContextWithEvents(ctx, [sold]))).toBe(

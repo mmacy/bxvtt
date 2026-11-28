@@ -151,6 +151,16 @@ test.describe('play screen shell', () => {
     const bar = page.getByRole('banner');
     await expect(bar.getByText(/^Light left: /)).toBeVisible();
     await expect(bar.getByText('Food left: No food')).toBeVisible();
+    // Each badge is a tab stop whose tooltip opens on keyboard focus.
+    const stop = (name: RegExp) => bar.locator('[tabindex="0"]', { has: page.getByText(name) });
+    await stop(/^Light left: /).focus();
+    await page.keyboard.press('Tab');
+    await expect(stop(/^Food left: /)).toBeFocused();
+    await expect(page.getByRole('tooltip')).toContainText('No one in the party carries rations');
+    await page.keyboard.press('Shift+Tab');
+    await expect(stop(/^Light left: /)).toBeFocused();
+    await expect(page.getByRole('tooltip')).toContainText('Burning now: ');
+    await page.keyboard.press('Escape');
     await bar.getByText('Food left: No food').hover();
     await expect(page.getByRole('tooltip')).toContainText('No one in the party carries rations');
 

@@ -5,9 +5,11 @@
 // It writes openapi.json, schema.d.ts (the types), and ruleset.json (the `Ruleset` fields, their values, and their
 // defaults, which the protocol's ruleset check reads). Then it regenerates packages/shared/src/text/data/codes.json
 // and catalog.json from osrlib's source with packages/shared/src/text/tools/extract-codes.py, which needs a Python
-// that has the same osrlib installed as the bxapi: the bxapi checkout's (`uv run`), or $OSRLIB_PYTHON. With
-// BXAPI_URL and no OSRLIB_PYTHON, it can't reach that osrlib, so it compares the code list's osrlib version with the
-// server's engine and prints the command to run when they differ.
+// that has the same osrlib installed as the bxapi: the bxapi checkout's (`uv run`), or $OSRLIB_PYTHON. It stops
+// before it writes the code list when $OSRLIB_PYTHON has another osrlib. With BXAPI_URL and no OSRLIB_PYTHON, it
+// can't reach that osrlib. In every case it then compares the code list's osrlib version with the bxapi's engine,
+// and when they differ it prints the command to run and exits with status 1. Set BXAPI_KEY for a server that
+// requires a key, because the engine version comes from GET /v1/meta.
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
@@ -15,6 +17,9 @@ import { join } from 'node:path';
 
 const outDir = new URL('../packages/shared/src/bxapi/', import.meta.url).pathname;
 const bxapiDir = process.env.BXAPI_DIR ?? join(homedir(), 'repos', 'bxapi');
+// Run the checkout's Python as it is installed: `--frozen` never rewrites uv.lock, and `--no-sync` never installs
+// or removes a package in its .venv, so the generator changes nothing in the bxapi checkout.
+const uvRun = ['run', '--frozen', '--no-sync'];
 
 let text;
 if (process.env.BXAPI_URL) {
@@ -22,7 +27,7 @@ if (process.env.BXAPI_URL) {
   if (!response.ok) throw new Error(`GET /openapi.json returned ${response.status}`);
   text = await response.text();
 } else {
-  text = execFileSync('uv', ['run', 'python', '-m', 'bxapi.openapi'], {
+  text = execFileSync('uv', [...uvRun, 'python', '-m', 'bxapi.openapi'], {
     cwd: bxapiDir,
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
@@ -92,23 +97,50 @@ const extract = (command, args) => {
   execFileSync(command, args, { cwd: repoRoot, stdio: 'inherit' });
   execFileSync('npx', ['prettier', '--write', textData], { cwd: repoRoot, stdio: 'inherit' });
 };
-if (process.env.OSRLIB_PYTHON) {
-  extract(process.env.OSRLIB_PYTHON, ['-I', extractScript]);
-} else if (!process.env.BXAPI_URL) {
-  extract('uv', ['run', '--project', bxapiDir, 'python', extractScript]);
-} else {
-  const meta = await fetch(new URL('/v1/meta', process.env.BXAPI_URL)).then((response) => response.json());
-  const listed = JSON.parse(readFileSync(codesPath, 'utf8')).osrlib_version;
-  if (meta.engine_version !== listed) {
-    console.warn(
-      `codes.json lists the codes of osrlib ${listed}, but the bxapi at ${process.env.BXAPI_URL} runs osrlib ` +
-        `${meta.engine_version}. Regenerate it with the Python of that bxapi:\n` +
-        `  OSRLIB_PYTHON=<bxapi checkout>/.venv/bin/python BXAPI_URL=${process.env.BXAPI_URL} npm run gen:bxapi\n` +
-        'or, from the repository root:\n' +
-        `  <bxapi checkout>/.venv/bin/python -I packages/shared/src/text/tools/extract-codes.py && npx prettier --write packages/shared/src/text/data`,
-    );
-    process.exitCode = 1;
-  } else {
-    console.log(`codes.json already lists the codes of osrlib ${listed}.`);
+const osrlibVersionCode = 'import importlib.metadata as m; print(m.version("osrlib"))';
+// The osrlib version that the bxapi above runs: the server's `engine_version`, or the one installed in the checkout.
+const engineVersion = async () => {
+  if (!process.env.BXAPI_URL) {
+    return execFileSync('uv', [...uvRun, 'python', '-I', '-c', osrlibVersionCode], {
+      cwd: bxapiDir,
+      encoding: 'utf8',
+    }).trim();
   }
+  const headers = process.env.BXAPI_KEY ? { authorization: `Bearer ${process.env.BXAPI_KEY}` } : {};
+  const response = await fetch(new URL('/v1/meta', process.env.BXAPI_URL), { headers });
+  if (!response.ok) {
+    throw new Error(
+      `GET /v1/meta returned ${response.status}, so the generator can't tell which osrlib the bxapi runs. ` +
+        'Set BXAPI_KEY for a server that requires a key.',
+    );
+  }
+  const { engine_version: version } = await response.json();
+  if (typeof version !== 'string' || version === '')
+    throw new Error('GET /v1/meta returned no engine_version.');
+  return version;
+};
+const engine = await engineVersion();
+if (process.env.OSRLIB_PYTHON) {
+  const python = process.env.OSRLIB_PYTHON;
+  const installed = execFileSync(python, ['-I', '-c', osrlibVersionCode], { encoding: 'utf8' }).trim();
+  if (installed !== engine) {
+    throw new Error(
+      `${python} has osrlib ${installed}, but the bxapi runs osrlib ${engine}. Set OSRLIB_PYTHON to the Python ` +
+        'of that bxapi. The code list is unchanged.',
+    );
+  }
+  extract(python, ['-I', extractScript]);
+} else if (!process.env.BXAPI_URL) {
+  extract('uv', [...uvRun, '--project', bxapiDir, 'python', '-I', extractScript]);
+}
+const listed = JSON.parse(readFileSync(codesPath, 'utf8')).osrlib_version;
+if (listed !== engine) {
+  console.error(
+    `codes.json lists the codes of osrlib ${listed}, but the bxapi runs osrlib ${engine}. Regenerate it with ` +
+      'the Python of that bxapi:\n' +
+      `  OSRLIB_PYTHON=<bxapi checkout>/.venv/bin/python BXAPI_URL=${process.env.BXAPI_URL ?? '<url>'} npm run gen:bxapi`,
+  );
+  process.exitCode = 1;
+} else {
+  console.log(`codes.json lists the codes of osrlib ${listed}.`);
 }

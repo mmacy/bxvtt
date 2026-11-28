@@ -84,7 +84,7 @@ Every test using the `crew` fixture (`e2e/support/fixtures.ts`) automatically fa
 | Task | Command |
 | --- | --- |
 | Regenerate `bxapi` OpenAPI types in `packages/shared/src/bxapi` and the text layer's code list in `packages/shared/src/text/data` | `npm run gen:bxapi` (with `BXAPI_URL`, also set `OSRLIB_PYTHON` to the Python of that `bxapi`; see `packages/shared/src/text/README.md`) |
-| Extract `osrlib` event/rejection codes for `@bxvtt/shared/text` | `uv run --project ~/repos/bxapi python packages/shared/src/text/tools/extract-codes.py && npx prettier --write packages/shared/src/text/data` |
+| Extract `osrlib` event/rejection codes for `@bxvtt/shared/text` | `uv run --frozen --no-sync --project ~/repos/bxapi python -I packages/shared/src/text/tools/extract-codes.py && npx prettier --write packages/shared/src/text/data` |
 | Rebuild sample adventures in `adventures/*.json` | `node adventures/tools/build.mjs` |
 | Verify sample adventures against `bxapi` | `node adventures/tools/check.mjs --no-maps` |
 | Regenerate WebP screenshots in `docs/images/` | `npm run build && BXAPI_URL=http://127.0.0.1:8651 node docs/images/capture.mjs` |

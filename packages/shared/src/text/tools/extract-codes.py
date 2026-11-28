@@ -13,7 +13,7 @@ script reads the installed osrlib package and writes two files that the tests us
 `npm run gen:bxapi` runs it after it regenerates the bxapi types (see the text README). To run it alone, run it
 from the repository root with a Python that has bxapi's osrlib installed, then format the output:
 
-    uv run --project ~/repos/bxapi python packages/shared/src/text/tools/extract-codes.py
+    uv run --frozen --no-sync --project ~/repos/bxapi python -I packages/shared/src/text/tools/extract-codes.py
     npx prettier --write packages/shared/src/text/data
 
 The script reads osrlib's source with the `ast` module, because osrlib keeps no registry of rejection codes. It
