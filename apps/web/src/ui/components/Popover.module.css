@@ -45,6 +45,14 @@
   margin-inline-end: calc(var(--space-1) * -1);
 }
 
+/*
+ * A closing tooltip has no animation, so it unmounts at once. Otherwise a tooltip that closes while it is still
+ * opening, as when someone holds Tab, waits for an animation end that never comes and stays on screen.
+ */
+.tooltip[data-state='closed'] {
+  animation: none;
+}
+
 @keyframes pop {
   from {
     opacity: 0;
