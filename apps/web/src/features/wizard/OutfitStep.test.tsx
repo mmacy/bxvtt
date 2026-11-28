@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createFakeApi, renderWithTable } from '@/app/testing/renderWithTable';
 import type { CartLine } from './kits';
-import { OutfitStep } from './OutfitStep';
+import { OutfitStep, addBlock } from './OutfitStep';
 
 const ITEMS: EquipmentSummary[] = [
   { id: 'mace', name: 'Mace', item_type: 'weapon', cost_gp: 5 },
@@ -38,8 +38,8 @@ function stubWidth(width: number) {
 }
 
 /** The step with a cart of its own, as the wizard holds it. */
-function Harness({ gp = 100 }: { gp?: number }) {
-  const [cart, setCart] = useState<CartLine[]>([]);
+function Harness({ gp = 100, start = [] }: { gp?: number; start?: CartLine[] }) {
+  const [cart, setCart] = useState<CartLine[]>(start);
   return (
     <OutfitStep
       equipment={ITEMS}
@@ -56,7 +56,7 @@ function Harness({ gp = 100 }: { gp?: number }) {
   );
 }
 
-function renderStep(phone: boolean | number, gp?: number) {
+function renderStep(phone: boolean | number, gp?: number, start?: CartLine[]) {
   stubWidth(typeof phone === 'number' ? phone : phone ? 390 : 1440);
   const api = createFakeApi();
   api.fullCatalog.mockImplementation(
@@ -67,7 +67,7 @@ function renderStep(phone: boolean | number, gp?: number) {
         items: name === 'equipment' ? DETAILS : [],
       }) as never,
   );
-  return renderWithTable(<Harness gp={gp} />, { api });
+  return renderWithTable(<Harness gp={gp} start={start} />, { api });
 }
 
 afterEach(() => {
@@ -136,7 +136,19 @@ describe('the gold left while the cart sits under the equipment', () => {
     expect(headingRow().getByText('23 gp left')).toBeInTheDocument();
     // The purse and the badge read the same amount.
     expect(screen.getByText('5 gp spent, 23 gp left')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Add Holy symbol to the cart' }));
+    // The holy symbol costs more than the 23 gp left, so it can't be added.
+    expect(screen.getByRole('button', { name: 'Add Holy symbol to the cart' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+  });
+
+  it('says how far over a cart that already costs too much is', async () => {
+    renderStep(820, 28, [
+      { itemId: 'mace', quantity: 1 },
+      { itemId: 'holy_symbol', quantity: 1 },
+    ]);
+    await screen.findByRole('table', { name: 'Equipment for sale' });
     expect(headingRow().getByText('Over by 2 gp')).toBeInTheDocument();
     expect(screen.getByText('30 gp spent, over by 2 gp')).toBeInTheDocument();
   });
@@ -145,5 +157,40 @@ describe('the gold left while the cart sits under the equipment', () => {
     renderStep(1440, 30);
     await screen.findByRole('table', { name: 'Equipment for sale' });
     expect(headingRow().queryByText(/gp left|Over by/)).toBeNull();
+  });
+});
+
+describe('an item that costs more than the gold left', () => {
+  it('says why one more lot is unavailable, and leaves the rest', () => {
+    expect(addBlock(5, 3)).toBe('This costs 5 gp, and you have 3 gp left.');
+    expect(addBlock(5, -2)).toBe('This costs 5 gp, and you have 0 gp left.');
+    expect(addBlock(5, 5)).toBeNull();
+    expect(addBlock(0, 0)).toBeNull();
+    expect(addBlock(5, null)).toBeNull();
+  });
+
+  it('disables Add with the reason and keeps a free item enabled', async () => {
+    const { user } = renderStep(false, 3);
+    const mace = await screen.findByRole('button', { name: 'Add Mace to the cart' });
+    expect(mace).toHaveAttribute('aria-disabled', 'true');
+    expect(mace).toHaveAccessibleDescription('This costs 5 gp, and you have 3 gp left.');
+    await user.click(mace);
+    expect(screen.queryByRole('button', { name: 'Add one mace' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add Rope to the cart' })).not.toHaveAttribute('aria-disabled');
+    expect(screen.getByRole('button', { name: 'Add Torches (6) to the cart' })).not.toHaveAttribute(
+      'aria-disabled',
+    );
+  });
+
+  it('disables the plus button once the gold left cannot cover another lot', async () => {
+    const { user } = renderStep(false, 6);
+    await user.click(await screen.findByRole('button', { name: 'Add Mace to the cart' }));
+    for (const plus of screen.getAllByRole('button', { name: 'Add one mace' })) {
+      expect(plus).toHaveAttribute('aria-disabled', 'true');
+      expect(plus).toHaveAccessibleDescription('This costs 5 gp, and you have 1 gp left.');
+    }
+    for (const minus of screen.getAllByRole('button', { name: 'Remove one mace' })) {
+      expect(minus).not.toHaveAttribute('aria-disabled');
+    }
   });
 });

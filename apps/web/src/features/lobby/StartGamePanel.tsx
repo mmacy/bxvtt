@@ -1,6 +1,6 @@
 import type { AdventureListing, TableDetail } from '@bxvtt/shared/protocol';
 import { joinList } from '@bxvtt/shared/text';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { describeProblem, getApi, useTableStoreApi, type ProblemMessage } from '@/app';
 import { Banner, Button, Icon } from '@/ui';
 import { STARTING_RULESET_NAMES, matchStartingRuleset } from './rules';
@@ -73,6 +73,7 @@ export interface StartGamePanelProps {
  */
 export function StartGamePanel({ table, adventure }: StartGamePanelProps) {
   const store = useTableStoreApi();
+  const blockersId = useId();
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<ProblemMessage | null>(null);
   const { blockers, warnings } = startChecks(table, adventure);
@@ -108,7 +109,7 @@ export function StartGamePanel({ table, adventure }: StartGamePanelProps) {
         </p>
       </div>
       {blockers.length > 0 && (
-        <ul className={styles.checks} aria-label="Before you start">
+        <ul id={blockersId} className={styles.checks} aria-label="Before you start">
           {blockers.map((text) => (
             <li key={text} className={styles.check}>
               <Icon name="info" size={16} className={styles.checkIcon} />
@@ -139,7 +140,9 @@ export function StartGamePanel({ table, adventure }: StartGamePanelProps) {
         block
         loading={busy}
         disabled={blockers.length > 0}
-        disabledReason={blockers.join(' ')}
+        // The list above says what is missing, so the button gives no second reason. A screen reader still
+        // reads the list as the button's description.
+        aria-describedby={blockers.length > 0 ? blockersId : undefined}
         onClick={() => void start()}
       >
         Start game

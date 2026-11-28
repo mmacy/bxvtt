@@ -128,6 +128,7 @@ function AwardXpAction() {
   const [error, setError] = useState<string | null>(null);
   const targets =
     who === EVERYONE ? party.filter((m) => m.current_hp > 0).map((m) => m.id) : who ? [who] : [];
+  const nobodyStanding = who === EVERYONE && !party.some((m) => m.current_hp > 0);
   const submit = () => {
     if (amount === null || amount < 0) return setError('Enter an amount of 0 or more.');
     if (targets.length === 0) return setError('Choose who receives it.');
@@ -150,7 +151,14 @@ function AwardXpAction() {
         <NumberInput value={amount} min={0} step={25} onChange={setAmount} />
       </Field>
       <div className={styles.rowActions}>
-        <Button size="sm" variant="primary" loading={busy} onClick={submit}>
+        <Button
+          size="sm"
+          variant="primary"
+          loading={busy}
+          disabled={nobodyStanding}
+          disabledReason={nobodyStanding ? 'No one in the party is alive.' : null}
+          onClick={submit}
+        >
           Award XP
         </Button>
       </div>
@@ -314,9 +322,9 @@ export function SpawnMonstersForm({
         >
           Spawn
         </Button>
-        <span className={styles.secondary}>
-          {available ? 'Joins the active encounter, or starts a new one.' : reason}
-        </span>
+        {available && (
+          <span className={styles.secondary}>Joins the active encounter, or starts a new one.</span>
+        )}
       </div>
       <CommandOutcome outcome={outcome} onDismiss={clear} />
     </div>
@@ -331,6 +339,13 @@ function SpawnNpcPartyForm() {
   const [distance, setDistance] = useState<number | null>(60);
   const { run, busy, outcome, clear } = useRefereeCommand();
   const { available, reason } = useCommandReason('spawn_npc_party');
+  // The count only has to be entered when the referee chose "Exactly". A dice count is checked when it rolls.
+  const missing =
+    mode === 'fixed' && fixed === null
+      ? 'Enter how many adventurers to add.'
+      : distance === null
+        ? 'Enter how far away the adventurers appear.'
+        : null;
   const submit = () => {
     if (distance === null) return;
     const command: GameCommand = {
@@ -369,13 +384,12 @@ function SpawnNpcPartyForm() {
           size="sm"
           variant="primary"
           loading={busy}
-          disabled={!available}
-          disabledReason={reason}
+          disabled={!available || missing !== null}
+          disabledReason={reason ?? missing}
           onClick={submit}
         >
           Spawn party
         </Button>
-        {reason !== null && <span className={styles.secondary}>{reason}</span>}
       </div>
       <CommandOutcome outcome={outcome} onDismiss={clear} />
     </div>
@@ -405,6 +419,7 @@ function PlacePartyForm({ data }: { data: RefereeData }) {
   const [error, setError] = useState<string | null>(null);
   const areas = useAreaOptions(data.adventure);
   const { run, busy, outcome, clear } = useRefereeCommand();
+  const { available, reason } = useCommandReason('place_party');
   const [placed, setPlaced] = useState<{ dungeonId: string; levelNumber: number; area: AreaSpec } | null>(
     null,
   );
@@ -487,7 +502,14 @@ function PlacePartyForm({ data }: { data: RefereeData }) {
         </Field>
       )}
       <div className={styles.rowActions}>
-        <Button size="sm" variant="primary" loading={busy} onClick={() => void submit()}>
+        <Button
+          size="sm"
+          variant="primary"
+          loading={busy}
+          disabled={!available}
+          disabledReason={reason}
+          onClick={() => void submit()}
+        >
           Place party
         </Button>
       </div>
@@ -729,7 +751,6 @@ export function QuickActions({ data }: { data: RefereeData }) {
           label: 'Place the party',
           icon: 'map',
           commands: ['place_party'],
-          bare: true,
           render: () => <PlacePartyForm data={data} />,
         },
         {

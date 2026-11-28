@@ -9,7 +9,7 @@ Each directory under `src/features` implements one part of the browser client. F
 | Directory | Public exports | Rendered location |
 | --- | --- | --- |
 | `home` | `HomePage`, `JoinPage`, `NotFoundPage`, `RulesReference`, `ProfileMenu` | `/`, `/join/:code`, `*`, and shared page headers. |
-| `lobby` | `LobbyPage`, `TableSettingsForm` | Table page while `phase === 'lobby'`, and inside `TableSettingsDialog`. |
+| `lobby` | `LobbyPage`, `TableSettingsForm`, `TableRulesForm`, `RulesSummary` | Table page while `phase === 'lobby'`, and inside `TableSettingsDialog`, which shows a player the `RulesSummary` as **Table rules**. |
 | `table` | `TablePage`, `PlayShell` | `/tables/:tableId` route and active game frame (wrapped in `ErrorBoundary` per slot). |
 | `wizard` | `CharacterWizard({ open, onClose, onCreated })`, `hasDraft(userId, tableId)` | Modal dialog opened from the lobby's **Create a character** button, which reads **Resume character** while the user has an unfinished character at the table. The wizard closes once it stores the character, and the lobby adds the character to the party. |
 | `sheet` | `PartyPanel()`, `CharacterSheet({ memberId, onClose, tab? })`, `StoredCharacterCard(...)` | Dock **Party** tab, character sheet drawer (`sheet` / `inventory` / `spells`), and lobby character rows. |

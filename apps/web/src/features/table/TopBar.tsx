@@ -67,11 +67,19 @@ export function ShellTopBar() {
     { label: 'Save game', icon: 'save', shortcut: formatShortcut('mod+s'), onSelect: save },
     { label: 'Saves', icon: 'download', onSelect: () => ui.setSavesOpen(true) },
     { type: 'separator' },
-    { label: 'Table settings', icon: 'settings', onSelect: () => ui.setSettingsOpen(true) },
+    referee
+      ? { label: 'Table settings', icon: 'settings', onSelect: () => ui.setSettingsOpen(true) }
+      : { label: 'Table rules', icon: 'scroll', onSelect: () => ui.setSettingsOpen(true) },
     ...(referee
-      ? [{ label: 'Seats and caller', icon: 'users' as const, onSelect: () => ui.setSeatsOpen(true) }]
+      ? [
+          { label: 'Seats and caller', icon: 'users' as const, onSelect: () => ui.setSeatsOpen(true) },
+          {
+            label: 'Copy invite link',
+            icon: 'link' as const,
+            onSelect: () => void copyInviteLink(table.invite_code),
+          },
+        ]
       : []),
-    { label: 'Copy invite link', icon: 'link', onSelect: () => void copyInviteLink(table.invite_code) },
     { type: 'separator' },
     {
       label: 'Rules reference',

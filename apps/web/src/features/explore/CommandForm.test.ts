@@ -73,6 +73,41 @@ describe('firstMissingField', () => {
   });
 });
 
+describe('firstMissingField for lists and groups', () => {
+  it('counts a required list with no entries as missing', () => {
+    const fields = fieldsFromSchema(
+      {
+        properties: { item_ids: { items: { type: 'string' }, type: 'array' } },
+        required: ['item_ids'],
+      },
+      null,
+    );
+    expect(firstMissingField(fields, { item_ids: [] })?.name).toBe('item_ids');
+    expect(firstMissingField(fields, {})?.name).toBe('item_ids');
+    expect(firstMissingField(fields, { item_ids: ['torch'] })).toBeUndefined();
+  });
+
+  it('checks the required fields inside a group that is required or has a value', () => {
+    const schema = {
+      properties: {
+        target: {
+          properties: { x: { type: 'integer' }, y: { type: 'integer' } },
+          required: ['x', 'y'],
+          type: 'object',
+        },
+      },
+      required: ['target'],
+    };
+    const fields = fieldsFromSchema(schema, null);
+    expect(firstMissingField(fields, {})?.name).toBe('x');
+    expect(firstMissingField(fields, { target: { x: 1 } })?.name).toBe('y');
+    expect(firstMissingField(fields, { target: { x: 1, y: 2 } })).toBeUndefined();
+    const optional = fieldsFromSchema({ ...schema, required: [] }, null);
+    expect(firstMissingField(optional, {})).toBeUndefined();
+    expect(firstMissingField(optional, { target: { x: 1 } })?.name).toBe('y');
+  });
+});
+
 describe('commandFromValues', () => {
   it('builds the command and leaves out what the user left empty', () => {
     const fields = fieldsFromSchema(giveItems, 'character_id');

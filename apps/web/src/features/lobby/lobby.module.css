@@ -571,3 +571,54 @@
 .ruleNumber > :last-child {
   width: auto;
 }
+
+/* The read-only summary of the table's rules */
+.summary {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.summaryGroup {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.summaryList {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.summaryRow {
+  display: grid;
+  grid-template-columns: minmax(0, calc(var(--space-24) + var(--space-12))) minmax(0, 1fr);
+  gap: var(--space-4);
+}
+
+.summaryLabel {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.summaryValue {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-md);
+}
+
+.summaryRule {
+  white-space: nowrap;
+}
+
+.summaryRuleText {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+@media (max-width: 640px) {
+  .summaryRow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+}

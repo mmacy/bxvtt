@@ -1,5 +1,5 @@
 import type { AdventureListing } from '@bxvtt/shared/protocol';
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import {
   describeProblem,
@@ -10,18 +10,17 @@ import {
   useMembers,
   useTableDetail,
 } from '@/app';
-import { Badge, Banner, DropdownMenu, IconButton, Panel, PageLayout, Wordmark } from '@/ui';
+import { Badge, Banner, Button, DropdownMenu, IconButton, Panel, PageLayout, Wordmark } from '@/ui';
 import { ProfileMenu, RulesReference } from '@/features/home';
 import { AdventurePicker } from './AdventurePicker';
 import { InvitePanel } from './InvitePanel';
 import { MembersPanel } from './MembersPanel';
 import { RosterPanel } from './RosterPanel';
 import { LobbySaves } from './LobbySaves';
+import { RulesSummary, StartingRulesBadge } from './RulesSummary';
 import { StartGamePanel } from './StartGamePanel';
 import { TableRulesForm } from './TableRulesForm';
 import { TableSettingsForm } from './TableSettingsForm';
-import { STARTING_RULESET_NAMES, matchStartingRuleset } from './rules';
-import { useStartingRulesets } from './startingRulesets';
 import { useTableExit } from './TableExit';
 import styles from './lobby.module.css';
 
@@ -31,9 +30,58 @@ function suggested(adventures: AdventureListing[]): string | null {
 }
 
 /**
+ * The table's rules for everyone: a read-only summary, with a button that gives a referee the form that changes
+ * them. Focus moves to the form's first control when it opens, and back to the button when it closes.
+ */
+function TableRulesPanel() {
+  const referee = useIsReferee();
+  const [editing, setEditing] = useState(false);
+  const body = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  const opened = useRef(false);
+  useEffect(() => {
+    if (editing) {
+      // The starting rules select takes the place of a skeleton once the rulesets load, so keep trying until then.
+      const select = body.current?.querySelector<HTMLElement>('[role="combobox"]');
+      if (select && !opened.current) {
+        select.focus();
+        opened.current = true;
+      }
+    } else if (opened.current) {
+      opened.current = false;
+      button.current?.focus();
+    }
+  });
+  return (
+    <Panel
+      title="Table rules"
+      meta={<StartingRulesBadge />}
+      actions={
+        referee ? (
+          <Button
+            ref={button}
+            size="sm"
+            variant="secondary"
+            icon={editing ? undefined : 'settings'}
+            onClick={() => {
+              if (editing) opened.current = true;
+              setEditing(!editing);
+            }}
+          >
+            {editing ? 'Done' : 'Change rules'}
+          </Button>
+        ) : undefined
+      }
+    >
+      <div ref={body}>{referee && editing ? <TableRulesForm /> : <RulesSummary />}</div>
+    </Panel>
+  );
+}
+
+/**
  * The lobby before the game starts: the people at the table, the invite link, the party in marching order, the
- * table's rules and settings, and for the referee, the adventure and the start button. A player sees the same
- * lobby read-only where they lack permission.
+ * table's rules, and for the referee, the invite link, the table's settings, the adventure, and the start button.
+ * A player reads the rules and has none of the referee's controls.
  */
 export function LobbyPage({ banner }: { banner?: ReactNode }) {
   const table = useTableDetail();
@@ -43,8 +91,6 @@ export function LobbyPage({ banner }: { banner?: ReactNode }) {
   const [adventures, setAdventures] = useState<AdventureListing[] | null>(null);
   const [adventureError, setAdventureError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
-  const [rulesOpen, setRulesOpen] = useState(false);
-  const starting = useStartingRulesets();
   const tableId = table?.id ?? null;
   const exit = useTableExit();
 
@@ -80,15 +126,6 @@ export function LobbyPage({ banner }: { banner?: ReactNode }) {
   const refereeNames = members.filter((m) => m.role === 'referee').map((m) => m.name);
   const adventure = adventures?.find((a) => a.id === selected) ?? null;
   const online = members.filter((m) => m.online).length;
-  const matched =
-    starting.items === null ? undefined : matchStartingRuleset(table.settings.ruleset, starting.items);
-  // The open panel's Select names the starting rules, so only the collapsed panel shows them.
-  const rulesMeta =
-    rulesOpen || matched === undefined
-      ? undefined
-      : matched === null
-        ? 'Custom'
-        : STARTING_RULESET_NAMES[matched];
 
   return (
     <PageLayout
@@ -146,9 +183,7 @@ export function LobbyPage({ banner }: { banner?: ReactNode }) {
               <RosterPanel />
             </Panel>
             {/* Every member reads the rules early, and a referee sets them before the players create characters. */}
-            <Panel title="Rules" meta={rulesMeta} collapsible open={rulesOpen} onOpenChange={setRulesOpen}>
-              <TableRulesForm showNote />
-            </Panel>
+            <TableRulesPanel />
             {referee && (
               <Panel title="Adventure" meta="Only referees see this until the game starts">
                 <AdventurePicker
@@ -180,12 +215,16 @@ export function LobbyPage({ banner }: { banner?: ReactNode }) {
             <Panel title="People at the table" meta={`${members.length}`} bodyPadding="sm">
               <MembersPanel />
             </Panel>
-            <Panel title="Invite players">
-              <InvitePanel />
-            </Panel>
-            <Panel title="Table settings" collapsible defaultOpen={referee}>
-              <TableSettingsForm />
-            </Panel>
+            {referee && (
+              <>
+                <Panel title="Invite players">
+                  <InvitePanel />
+                </Panel>
+                <Panel title="Table settings" collapsible defaultOpen>
+                  <TableSettingsForm />
+                </Panel>
+              </>
+            )}
           </aside>
         </div>
       </div>

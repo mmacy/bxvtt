@@ -30,10 +30,10 @@
   gap: var(--space-2);
   max-width: 260px;
   padding: var(--space-1) var(--space-2);
-  border: var(--border-hair) solid var(--palette-ink-600);
+  border: var(--border-hair) solid var(--color-border-strong);
   border-radius: var(--radius-sm);
-  background: var(--palette-ink-950);
-  color: var(--palette-bone-50);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-strong);
   font-size: var(--text-sm);
   line-height: var(--leading-snug);
   box-shadow: var(--shadow-2);

@@ -204,4 +204,48 @@ describe('RefereePanel', () => {
     expect(spawn).not.toHaveAttribute('aria-disabled', 'true');
     expect(spawn).not.toHaveAccessibleDescription(/only while exploring/);
   });
+
+  it('disables Place party with the catalog reason while an encounter is open', async () => {
+    const api = refereeApi();
+    const { user } = renderWithTable(<RefereePanel />, {
+      snapshot: fixtureSnapshot('encounter', 'referee'),
+      api,
+    });
+    await user.click(screen.getByRole('tab', { name: 'Quick actions' }));
+    await user.click(screen.getByRole('button', { name: /Place the party/ }));
+    const place = await screen.findByRole('button', { name: 'Place party' });
+    await waitFor(() => expect(place).toHaveAttribute('aria-disabled', 'true'));
+    await waitFor(() => expect(place).toHaveAccessibleDescription(/^You can place the party only in town/));
+    // The reason is on the button alone, not repeated in a line above the form.
+    expect(screen.queryByText(/^You can place the party only in town/, { selector: 'p' })).toBeNull();
+    await user.click(place);
+    expect(api.sendCommand).not.toHaveBeenCalled();
+  });
+
+  it('disables Award XP for every living member when no one is alive', async () => {
+    const snapshot = fixtureSnapshot('exploring', 'referee');
+    for (const member of snapshot.game?.view.party ?? []) member.current_hp = 0;
+    const { user } = renderWithTable(<RefereePanel />, { snapshot, api: refereeApi() });
+    await user.click(screen.getByRole('tab', { name: 'Quick actions' }));
+    await user.click(screen.getByRole('button', { name: /Award experience/ }));
+    const award = await screen.findByRole('button', { name: 'Award XP' });
+    expect(award).toHaveAttribute('aria-disabled', 'true');
+    expect(award).toHaveAccessibleDescription('No one in the party is alive.');
+  });
+
+  it('keeps Spawn party off until the count and distance are filled in', async () => {
+    const api = refereeApi();
+    const { user } = renderWithTable(<RefereePanel />, {
+      snapshot: fixtureSnapshot('exploring', 'referee'),
+      api,
+    });
+    await user.click(screen.getByRole('tab', { name: 'Quick actions' }));
+    await user.click(screen.getByRole('button', { name: /Spawn an NPC party/ }));
+    const spawn = await screen.findByRole('button', { name: 'Spawn party' });
+    expect(spawn).not.toHaveAttribute('aria-disabled', 'true');
+    await user.clear(screen.getByRole('spinbutton'));
+    await user.tab();
+    await waitFor(() => expect(spawn).toHaveAttribute('aria-disabled', 'true'));
+    expect(spawn).toHaveAccessibleDescription('Enter how far away the adventurers appear.');
+  });
 });

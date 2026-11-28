@@ -46,12 +46,35 @@ export function CommandForm({ commandType }: { commandType: string }) {
   const spells = useSpellCatalog();
   const ctx = useTextContext();
   const { send, pending } = useSendCommand();
-  const [values, setValues] = useState<Record<string, FieldValue>>({});
+  const [chosen, setValues] = useState<Record<string, FieldValue>>({});
   const [outcome, setOutcome] = useState<{ tone: 'success' | 'warning'; text: string[] } | null>(null);
 
   const fields = useMemo(() => (schema.data ? readFields(schema.data.json_schema) : []), [schema.data]);
   const info = commandInfo(commandType);
   const set = (name: string, value: FieldValue) => setValues((previous) => ({ ...previous, [name]: value }));
+  // What the form shows: the player's choices, and for a field with one possible value, that value. A character
+  // field starts on the only character the player can act for, and the marching order starts as the order on screen.
+  const only = shoppers.length === 1 ? shoppers[0] : undefined;
+  const values: Record<string, FieldValue> = {
+    ...(only !== undefined && fields.some((field) => field.name === 'character_id')
+      ? { character_id: only.id }
+      : {}),
+    ...(fields.some((field) => field.name === 'order') ? { order: party.map((member) => member.id) } : {}),
+    ...chosen,
+  };
+  // A choice that its select no longer lists, such as a recipient who became the giver, shows as empty, so the
+  // form doesn't send it either.
+  if (
+    typeof values.character_id === 'string' &&
+    !shoppers.some((member) => member.id === values.character_id)
+  )
+    delete values.character_id;
+  if (
+    typeof values.recipient_id === 'string' &&
+    (values.recipient_id === values.character_id ||
+      !party.some((member) => member.id === values.recipient_id))
+  )
+    delete values.recipient_id;
 
   const actorId = typeof values.character_id === 'string' ? values.character_id : null;
   const actor = party.find((member) => member.id === actorId) ?? null;
@@ -82,10 +105,14 @@ export function CommandForm({ commandType }: { commandType: string }) {
     const text = commandFieldText(commandType, field.name);
     const value = values[field.name];
     if (field.name === 'character_id' || field.name === 'recipient_id') {
-      const choices = field.name === 'character_id' ? shoppers : party;
+      // A character can't hand something to themselves, so the recipient list leaves out the giver.
+      const choices =
+        field.name === 'character_id' ? shoppers : party.filter((member) => member.id !== actorId);
       return (
         <Select
-          value={typeof value === 'string' ? value : undefined}
+          value={
+            typeof value === 'string' && choices.some((member) => member.id === value) ? value : undefined
+          }
           onValueChange={(next) => set(field.name, next)}
           placeholder="Choose a character"
           options={choices.map((member) => ({ value: member.id, label: member.name }))}
@@ -147,7 +174,7 @@ export function CommandForm({ commandType }: { commandType: string }) {
       );
     }
     if (field.name === 'order') {
-      const order = Array.isArray(value) ? value : party.map((member) => member.id);
+      const order = Array.isArray(value) ? value : [];
       const move = (index: number, by: -1 | 1) => {
         const next = [...order];
         const target = index + by;

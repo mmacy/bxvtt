@@ -150,7 +150,10 @@ export function IdentityStep(props: IdentityStepProps) {
               Languages
             </h3>
             {extraLanguages > 0 && (
-              <Badge tone={languages.length === extraLanguages ? 'success' : 'neutral'}>
+              <Badge
+                id="wizard-languages-count"
+                tone={languages.length === extraLanguages ? 'success' : 'neutral'}
+              >
                 {languages.length} of {extraLanguages} chosen
               </Badge>
             )}
@@ -168,7 +171,12 @@ export function IdentityStep(props: IdentityStepProps) {
               <p id="wizard-extra-languages" className={styles.muted}>
                 Extra languages
               </p>
-              <div className={styles.languageGrid} role="group" aria-labelledby="wizard-extra-languages">
+              <div
+                className={styles.languageGrid}
+                role="group"
+                aria-labelledby="wizard-extra-languages"
+                aria-describedby="wizard-languages-count"
+              >
                 {choosable.map((language) => {
                   const checked = languages.includes(language.id);
                   return (
@@ -196,7 +204,7 @@ export function IdentityStep(props: IdentityStepProps) {
               <h3 id="wizard-spells" className={styles.subTitle}>
                 First {bookSize === 1 ? 'spell' : 'spells'}
               </h3>
-              <Badge tone={spells.length === bookSize ? 'success' : 'neutral'}>
+              <Badge id="wizard-spells-count" tone={spells.length === bookSize ? 'success' : 'neutral'}>
                 {spells.length} of {bookSize} chosen
               </Badge>
             </div>
@@ -208,7 +216,12 @@ export function IdentityStep(props: IdentityStepProps) {
             {spellCatalog === null ? (
               <Skeleton lines={4} />
             ) : (
-              <div className={styles.spellChoices}>
+              <div
+                className={styles.spellChoices}
+                role="group"
+                aria-labelledby="wizard-spells"
+                aria-describedby="wizard-spells-count"
+              >
                 {firstSpells.map((spell) => {
                   const selected = spells.includes(spell.id);
                   return (

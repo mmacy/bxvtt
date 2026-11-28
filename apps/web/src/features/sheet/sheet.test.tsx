@@ -8,6 +8,7 @@ import stored from '../wizard/__fixtures__/stored.json';
 import { StoredCharacterCard } from './StoredCharacterCard';
 import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { createFakeApi, renderWithTable } from '@/app/testing/renderWithTable';
+import { pileView } from '@/app/testing/views';
 import { CharacterSheet } from './CharacterSheet';
 import { entryRule } from './InventoryTab';
 import { effectLabel } from './actions';
@@ -157,6 +158,18 @@ describe('PartyPanel', () => {
 });
 
 describe('marching order reasons', () => {
+  it('disables Change order with a reason when one member is in the marching order', async () => {
+    const snapshot = fixtureSnapshot('exploring', 'referee');
+    const view = snapshot.game?.view;
+    const first = view?.party[0];
+    if (!view || !first) throw new Error('No party.');
+    view.party = [first];
+    renderWithTable(<PartyPanel />, { snapshot });
+    const change = screen.getByRole('button', { name: 'Change order' });
+    expect(change).toHaveAttribute('aria-disabled', 'true');
+    expect(change).toHaveAccessibleDescription(`${first.name} is the only one in the marching order.`);
+  });
+
   it('says why the first member cannot move forward and the last cannot move back', async () => {
     const snapshot = fixtureSnapshot('exploring', 'player');
     const party = snapshot.game?.view.party ?? [];
@@ -238,6 +251,120 @@ describe('CharacterSheet', () => {
     expect(submit).toHaveAccessibleDescription('Choose at least one item or some coins to drop.');
     await user.click(within(dialog).getByRole('button', { name: 'More torches' }));
     expect(within(dialog).getByRole('button', { name: 'Drop' })).not.toHaveAttribute('aria-disabled');
+  });
+
+  it('disables Give with a reason when no one else is in the party, and Give and Drop when nothing is carried', async () => {
+    const snapshot = fixtureSnapshot('exploring', 'player');
+    const view = snapshot.game?.view;
+    if (!view) throw new Error('No view.');
+    const brenna = view.party[0];
+    if (!brenna) throw new Error('No Brenna.');
+    view.party = [brenna];
+    const { user, unmount } = renderWithTable(<CharacterSheet memberId={brenna.id} onClose={() => {}} />, {
+      snapshot,
+    });
+    await user.click(await screen.findByRole('tab', { name: 'Inventory' }));
+    const give = screen.getByRole('button', { name: 'Give' });
+    expect(give).toHaveAttribute('aria-disabled', 'true');
+    expect(give).toHaveAccessibleDescription('Nobody else in the party can take it.');
+    expect(screen.getByRole('button', { name: 'Drop' })).not.toHaveAttribute('aria-disabled');
+    unmount();
+
+    const empty = fixtureSnapshot('exploring', 'player');
+    const bare = empty.game?.view.party[0];
+    if (!bare) throw new Error('No member.');
+    (bare as { inventory: unknown }).inventory = {
+      items: [],
+      wielded: [],
+      valuables: [],
+      purse: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 },
+    };
+    const second = renderWithTable(<CharacterSheet memberId={bare.id} onClose={() => {}} />, {
+      snapshot: empty,
+    });
+    await second.user.click(await screen.findByRole('tab', { name: 'Inventory' }));
+    for (const name of ['Give', 'Drop']) {
+      const button = screen.getByRole('button', { name });
+      expect(button).toHaveAttribute('aria-disabled', 'true');
+      expect(button).toHaveAccessibleDescription(`${bare.name} isn't carrying anything.`);
+    }
+    second.unmount();
+
+    // An equipped magic item can be handed over, so a member who carries only that can still give and drop.
+    const ringed = fixtureSnapshot('exploring', 'player');
+    const wearer = ringed.game?.view.party[0];
+    if (!wearer) throw new Error('No member.');
+    (wearer as { inventory: unknown }).inventory = {
+      items: [],
+      wielded: [],
+      valuables: [],
+      rings: [
+        {
+          instance_type: 'magic_item',
+          instance_id: 'magic-item-0009',
+          template_id: 'ring_of_protection_1',
+          name: 'Ring of protection +1',
+        },
+      ],
+      purse: { pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 },
+    };
+    const third = renderWithTable(<CharacterSheet memberId={wearer.id} onClose={() => {}} />, {
+      snapshot: ringed,
+    });
+    await third.user.click(await screen.findByRole('tab', { name: 'Inventory' }));
+    for (const name of ['Give', 'Drop'])
+      expect(screen.getByRole('button', { name })).not.toHaveAttribute('aria-disabled');
+  });
+
+  it('offers Light dropped oil only when the pile on the party’s cell holds a flask of oil', async () => {
+    const light = async (contents: Array<{ item_id: string; quantity: number }>) => {
+      const snapshot = fixtureSnapshot('exploring', 'player');
+      const view = snapshot.game?.view;
+      const brenna = view?.party[0];
+      if (!view || !brenna) throw new Error('No view.');
+      view.piles = { 'cell:priory:1:14,22': pileView({ contents }) };
+      const { user, unmount } = renderWithTable(<CharacterSheet memberId={brenna.id} onClose={() => {}} />, {
+        snapshot,
+      });
+      await user.click(await screen.findByRole('tab', { name: 'Inventory' }));
+      const offered = screen.queryByRole('button', { name: 'Light dropped oil' }) !== null;
+      unmount();
+      return offered;
+    };
+    expect(await light([{ item_id: 'rope', quantity: 1 }])).toBe(false);
+    expect(await light([{ item_id: 'oil_flask', quantity: 2 }])).toBe(true);
+  });
+
+  it('moves the recipient on when the chosen member leaves the party while the dialog is open', async () => {
+    const api = createFakeApi();
+    const snapshot = fixtureSnapshot('exploring', 'player');
+    api.sendCommand.mockResolvedValue(accepted(snapshot));
+    const [brenna, wren, osric] = snapshot.game?.view.party ?? [];
+    if (!brenna || !wren || !osric || !snapshot.game) throw new Error('The fixture party changed.');
+    const { user, store } = renderWithTable(<CharacterSheet memberId={brenna.id} onClose={() => {}} />, {
+      api,
+      snapshot,
+    });
+    await user.click(await screen.findByRole('tab', { name: 'Inventory' }));
+    await user.click(screen.getByRole('button', { name: 'Give' }));
+    const dialog = await screen.findByRole('dialog', { name: /Give from/ });
+    await user.click(within(dialog).getByRole('combobox'));
+    await user.click(await screen.findByRole('option', { name: osric.name }));
+    const game = snapshot.game;
+    act(() =>
+      store.getState().receiveGame({
+        ...game,
+        revision: game.revision + 1,
+        view: { ...game.view, party: game.view.party.filter((member) => member.id !== osric.id) },
+      }),
+    );
+    await user.click(within(dialog).getByRole('button', { name: 'More torches' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Give' }));
+    await waitFor(() => expect(api.sendCommand).toHaveBeenCalled());
+    expect(api.sendCommand.mock.calls[0]?.[1]).toMatchObject({
+      command_type: 'give_items',
+      recipient_id: wren.id,
+    });
   });
 
   it('gives items one unit per entry with the coins', async () => {
@@ -635,8 +762,9 @@ describe('the spells tab, from the view', () => {
     await user.click(screen.getByRole('button', { name: 'Learn a spell' }));
     const dialog = await screen.findByRole('dialog', { name: 'Learn a spell' });
     expect(dialog).toHaveAccessibleDescription("Choose a spell to write into Wren's spell book.");
-    const learn = within(dialog).getByRole('button', { name: 'Learn spell' });
-    expect(learn).toHaveAccessibleDescription('Choose a spell first.');
+    // With one spell to learn, it is already chosen.
+    const learn = within(dialog).getByRole('button', { name: 'Learn Ember Dart' });
+    expect(learn).not.toHaveAttribute('aria-disabled');
     await user.click(within(dialog).getByRole('combobox', { name: 'Spell' }));
     const option = await screen.findByRole('option', { name: /Ember Dart/ });
     // Every spell on the list is 1st level, so no option repeats it.
@@ -1035,9 +1163,15 @@ describe('the spells tab, from the view', () => {
     await openSpells(user);
     await user.click(screen.getByRole('button', { name: 'Learn a spell' }));
     const dialog = await screen.findByRole('dialog', { name: 'Learn a spell' });
+    // With two spells to learn and none chosen, the button says what is missing.
+    const learn = within(dialog).getByRole('button', { name: 'Learn' });
+    expect(learn).toHaveAttribute('aria-disabled', 'true');
+    expect(learn).toHaveAccessibleDescription('Choose a spell to learn.');
     await user.click(within(dialog).getByRole('combobox', { name: 'Spell' }));
     expect(await screen.findByRole('option', { name: /Ember Dart/ })).toHaveTextContent('1st level');
     expect(screen.getByRole('option', { name: /Web/ })).toHaveTextContent('2nd level');
+    await user.click(screen.getByRole('option', { name: /Web/ }));
+    expect(within(dialog).getByRole('button', { name: 'Learn Web' })).not.toHaveAttribute('aria-disabled');
   });
 
   it('prints a bundled spell’s range as the catalog does, and leaves out a summary the text repeats', async () => {

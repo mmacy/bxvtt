@@ -29,7 +29,7 @@ import {
   NumberInput,
   Panel,
 } from '@/ui';
-import { readPurse } from './inventory';
+import { partyGoldPieces, readPurse } from './inventory';
 import { memberStatus, neediestFirst } from './members';
 import { MemberChooser, PlaceHeader } from './parts';
 import { placeName } from './services';
@@ -77,7 +77,8 @@ export function Temple() {
     ordered.find((member) => canAct(member).allowed) ??
     ordered[0] ??
     null;
-  const partyGold = party.reduce((sum, member) => sum + readPurse(member).gp, 0);
+  // With a coin other than gold in any purse, only bxapi can say whether the party can pay, so no Buy button waits on it.
+  const partyGold = partyGoldPieces(party.map(readPurse));
 
   if (patient === null) return <EmptyState icon="heart" title="No party members to treat" />;
   const permission = canAct(patient);
@@ -152,26 +153,24 @@ export function Temple() {
           <ul className={styles.services}>
             {orderServices(prices, status.dead).map((service) => {
               const price = prices[service] ?? 0;
-              const short = partyGold < price;
+              const short = partyGold !== null && partyGold < price;
               return (
                 <li key={service} className={styles.service}>
                   <div className={styles.serviceText}>
                     <h3 className={styles.serviceName}>{healingServiceLabel(service)}</h3>
                     <p className={styles.serviceDetail}>{healingServiceDescription(service)}</p>
-                    {short && (
-                      <p className={styles.short}>
-                        The party has {formatGold(partyGold)} in gold, but this service costs{' '}
-                        {formatGold(price)}.
-                      </p>
-                    )}
                   </div>
                   <span className={styles.price}>{price === 0 ? 'Free' : formatGold(price)}</span>
                   <Button
                     variant="secondary"
                     icon="heart"
                     loading={pending}
-                    disabled={!permission.allowed}
-                    disabledReason={permission.reason}
+                    disabled={!permission.allowed || short}
+                    disabledReason={
+                      permission.allowed
+                        ? `The party has ${formatGold(partyGold ?? 0)}, and this costs ${formatGold(price)}.`
+                        : permission.reason
+                    }
                     aria-label={`Buy ${healingServiceLabel(service).toLowerCase()} for ${patient.name}`}
                     onClick={() => void buy(service)}
                   >
@@ -181,10 +180,6 @@ export function Temple() {
               );
             })}
           </ul>
-          {!permission.allowed && <p className={styles.explain}>{permission.reason}</p>}
-          {status.dead && (
-            <p className={styles.explain}>{`${patient.name} is dead, so Raise dead appears first.`}</p>
-          )}
           {referee && (
             <Field
               label="Cleric level (optional)"
@@ -238,11 +233,7 @@ export function Temple() {
             </div>
           </Panel>
           <Panel title="Who pays">
-            <p className={styles.pays}>
-              The whole party shares temple fees. Gold comes from {patient.name}&apos;s purse first, then from
-              other party members in marching order (in whole gold pieces). You can raise a dead character
-              even if their purse is empty.
-            </p>
+            <p className={styles.pays}>The whole party shares temple fees.</p>
             <ul className={styles.purses}>
               {party.map((member) => (
                 <li key={member.id} className={styles.purseLine}>

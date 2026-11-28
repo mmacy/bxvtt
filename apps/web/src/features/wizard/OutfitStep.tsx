@@ -85,6 +85,18 @@ export function cartCost(cart: readonly CartLine[], equipment: readonly Equipmen
   }, 0);
 }
 
+/**
+ * Why one more lot of an item can't go in the cart, or `null` when it can. The item's price and the gold left
+ * come from the catalog and the rolled gold, so the step decides no rule.
+ *
+ * @param cost - The price of one lot, in gold pieces.
+ * @param left - The gold left after the cart, or `null` while the rolled gold isn't known.
+ */
+export function addBlock(cost: number, left: number | null): string | null {
+  if (left === null || cost <= left) return null;
+  return `This costs ${cost} gp, and you have ${Math.max(left, 0)} gp left.`;
+}
+
 /** The rules of thumb a kit follows for what to wear: the first body armour, shield, and weapon go on. */
 export function autoEquip(
   itemId: string,
@@ -139,11 +151,14 @@ function LotStepper({
   lots,
   bundle,
   onLots,
+  addReason,
 }: {
   item: EquipmentSummary;
   lots: number;
   bundle: boolean;
   onLots: (lots: number) => void;
+  /** Why one more lot can't be added, or `null`. */
+  addReason: string | null;
 }) {
   const noun = resolveItemNoun(item.id, emptyContext(), { name: item.name });
   return (
@@ -161,6 +176,8 @@ function LotStepper({
         icon="plus"
         size="sm"
         label={bundle ? `Add one lot of ${noun.many}` : `Add one ${noun.one}`}
+        disabled={addReason !== null}
+        disabledReason={addReason}
         onClick={() => onLots(lots + 1)}
       />
     </span>
@@ -280,6 +297,7 @@ export function OutfitStep({
   /** The Add button, or the stepper once the item is in the cart. The table and the stacked list share it. */
   const cartControl = (item: EquipmentSummary) => {
     const lots = cart.find((l) => l.itemId === item.id)?.quantity ?? 0;
+    const addReason = addBlock(item.cost_gp, left);
     if (lots === 0) {
       return (
         <Button
@@ -287,6 +305,8 @@ export function OutfitStep({
           variant="secondary"
           icon="plus"
           aria-label={`Add ${item.name} to the cart`}
+          disabled={addReason !== null}
+          disabledReason={addReason}
           onClick={() => setLots(item.id, 1)}
         >
           Add
@@ -299,6 +319,7 @@ export function OutfitStep({
         lots={lots}
         bundle={lotSize(full.byId.get(item.id)) > 1}
         onLots={(next) => setLots(item.id, next)}
+        addReason={addReason}
       />
     );
   };
@@ -370,7 +391,7 @@ export function OutfitStep({
                 icon="chest"
                 tooltip="Replace your cart with the items in this kit that your gold covers"
                 onClick={onKit}
-                disabled={equipment === null}
+                loading={equipment === null}
               >
                 Fill with the {kit.toLowerCase()} kit
               </Button>
@@ -505,6 +526,7 @@ export function OutfitStep({
                         lots={line.quantity}
                         bundle={lotSize(detail) > 1}
                         onLots={(next) => setLots(line.itemId, next)}
+                        addReason={addBlock(item.cost_gp, left)}
                       />
                     </span>
                   )}

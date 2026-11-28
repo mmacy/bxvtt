@@ -218,8 +218,12 @@ export function PartyPanel() {
               size="sm"
               variant={editing ? 'secondary' : 'ghost'}
               icon={editing ? 'check' : 'sort'}
-              disabled={!reorderPermission.allowed}
-              disabledReason={reorderPermission.reason}
+              disabled={!reorderPermission.allowed || (ordered.length < 2 && !editing)}
+              disabledReason={
+                reorderPermission.allowed
+                  ? `${ordered[0]?.name ?? 'This character'} is the only one in the marching order.`
+                  : reorderPermission.reason
+              }
               onClick={() => setEditing((e) => !e)}
             >
               {editing ? 'Done' : 'Change order'}

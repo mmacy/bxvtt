@@ -120,8 +120,8 @@ function ShellShortcuts() {
   useAction({ id: 'table.saves', label: 'Saves', icon: 'download', run: () => setSavesOpen(true) });
   useAction({
     id: 'table.settings',
-    label: 'Table settings',
-    icon: 'settings',
+    label: referee ? 'Table settings' : 'Table rules',
+    icon: referee ? 'settings' : 'scroll',
     run: () => setSettingsOpen(true),
   });
   useAction({

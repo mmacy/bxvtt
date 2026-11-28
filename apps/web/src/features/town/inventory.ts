@@ -145,6 +145,23 @@ export function goldIn(purse: Purse): number {
   return purse.gp;
 }
 
+/**
+ * The gold the party holds, when the view alone settles it: every purse holds gold pieces and no other coin.
+ * bxapi counts the value of every coin, and the coin values are its rules, so a party that carries silver,
+ * copper, electrum, or platinum has no total here.
+ *
+ * @param purses - The purses of every party member, the dead included.
+ * @returns The gold pieces in all the purses together, or `null` when another coin is in any of them.
+ */
+export function partyGoldPieces(purses: readonly Purse[]): number | null {
+  let total = 0;
+  for (const purse of purses) {
+    if (purse.pp + purse.ep + purse.sp + purse.cp > 0) return null;
+    total += purse.gp;
+  }
+  return total;
+}
+
 /** Whether a purse holds no coins at all. */
 export function isEmptyPurse(purse: Purse): boolean {
   return purse.pp + purse.gp + purse.ep + purse.sp + purse.cp === 0;

@@ -124,6 +124,42 @@ describe('leaving town', () => {
     );
   });
 
+  it('confirms the dungeon whose Set out button was pressed, not the first one', async () => {
+    const api = createFakeApi();
+    stubCatalog(api, {
+      items: [
+        {
+          ...ADVENTURES.items[0],
+          info: {
+            name: 'The Drowned Bell',
+            dungeons: [
+              { id: 'priory', name: "The priory on Corvane's Holm" },
+              { id: 'barrow', name: 'The barrow' },
+            ],
+          },
+        },
+      ],
+    });
+    const { user, store } = renderWithTable(<TownStage />, {
+      snapshot: fixtureSnapshot('town', 'player'),
+      api,
+    });
+    const game = store.getState().game;
+    if (!game) throw new Error('No game.');
+    api.sendCommand.mockResolvedValue(accepted(game));
+    const buttons = await screen.findAllByRole('button', { name: 'Set out' });
+    await user.click(buttons[1] as HTMLElement);
+    const dialog = await screen.findByRole('dialog', { name: 'Set out for the barrow?' });
+    await user.click(within(dialog).getByRole('button', { name: 'Set out' }));
+    await waitFor(() =>
+      expect(api.sendCommand).toHaveBeenCalledWith(
+        store.getState().tableId,
+        { command_type: 'enter_dungeon', dungeon_id: 'barrow' },
+        game.revision,
+      ),
+    );
+  });
+
   it("shows bxapi's refusal inside the dialog", async () => {
     const { api, user, store } = setup();
     const game = store.getState().game;
@@ -355,9 +391,10 @@ describe('the temple', () => {
     const button = screen.getByRole('button', { name: 'Buy raise dead for Osric' });
     expect(button).toHaveAttribute('aria-disabled', 'true');
     expect(button).toHaveAccessibleDescription(/Only Ruth, who plays Osric, can have Osric buy healing/);
+    // Each button gives the reason, so no paragraph under the services repeats it.
     expect(
-      screen.getAllByText(/Only Ruth, who plays Osric, can have Osric buy healing/).length,
-    ).toBeGreaterThan(0);
+      screen.queryByText(/Only Ruth, who plays Osric, can have Osric buy healing/, { selector: 'p' }),
+    ).not.toBeInTheDocument();
   });
 });
 
@@ -719,6 +756,45 @@ describe('spells to prepare', () => {
   });
 });
 
+describe('the temple and what the party can pay', () => {
+  /** The service buttons for Brenna, who the fixture's referee treats first. */
+  const buy = (service: string) => screen.getByRole('button', { name: `Buy ${service} for Brenna` });
+
+  it('disables a service that costs more than the party carries, and keeps the rest and a free one enabled', async () => {
+    const snapshot = fixtureSnapshot('town', 'referee');
+    const view = snapshot.game?.view;
+    if (!view) throw new Error('No view.');
+    view.town_healing_prices = { ...view.town_healing_prices, cure_disease: 0 };
+    const { api, user } = setup(snapshot);
+    await user.click(screen.getByRole('tab', { name: 'Temple' }));
+    // The fixture party carries 303 gp in gold pieces alone.
+    const dear = buy('raise dead');
+    expect(dear).toHaveAttribute('aria-disabled', 'true');
+    expect(dear).toHaveAccessibleDescription('The party has 303 gp, and this costs 1,000 gp.');
+    await user.click(dear);
+    expect(api.sendCommand).not.toHaveBeenCalled();
+    // The reason is the one place that says it, so no sentence repeats it under the service.
+    expect(
+      screen.queryByText(/The party has 303 gp, and this costs/, { selector: 'p' }),
+    ).not.toBeInTheDocument();
+    expect(buy('remove curse')).not.toHaveAttribute('aria-disabled');
+    const free = buy('cure disease');
+    expect(free).not.toHaveAttribute('aria-disabled');
+    expect(screen.getByText('Free')).toBeInTheDocument();
+  });
+
+  it('leaves the decision to bxapi when a purse holds a coin other than gold', async () => {
+    const snapshot = fixtureSnapshot('town', 'referee');
+    const brenna = snapshot.game?.view.party.find((member) => member.name === 'Brenna');
+    const purse = (brenna?.inventory as { purse?: Record<string, number> } | undefined)?.purse;
+    if (!purse) throw new Error('No purse.');
+    purse.sp = 5000;
+    const { user } = setup(snapshot);
+    await user.click(screen.getByRole('tab', { name: 'Temple' }));
+    expect(buy('raise dead')).not.toHaveAttribute('aria-disabled');
+  });
+});
+
 describe('the temple and a dead member', () => {
   function withDeadOsric() {
     const snapshot = fixtureSnapshot('town', 'referee');
@@ -729,7 +805,7 @@ describe('the temple and a dead member', () => {
     return snapshot;
   }
 
-  it('names the button "Osric, dead", lists raise dead first, and leaves every Buy button enabled', async () => {
+  it('names the button "Osric, dead" and lists raise dead first', async () => {
     const { user } = setup(withDeadOsric());
     await user.click(screen.getByRole('tab', { name: 'Temple' }));
     const group = await screen.findByRole('group', { name: 'Patient' });
@@ -737,7 +813,6 @@ describe('the temple and a dead member', () => {
     expect(within(group).getByRole('button', { name: /^Brenna, \d+ of \d+ hp$/ })).toBeInTheDocument();
     const buttons = screen.getAllByRole('button', { name: /^Buy .* for Osric$/ });
     expect(buttons[0]).toHaveAccessibleName('Buy raise dead for Osric');
-    for (const button of buttons) expect(button).toBeEnabled();
   });
 
   it("shows bxapi's refusal when a service can't help a dead member", async () => {

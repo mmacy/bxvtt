@@ -255,7 +255,7 @@ test.describe('axe on the screens added in the fix round', () => {
 });
 
 test.describe('axe on the table rules', () => {
-  test('the Rules panel, a roster mark, and a 4d6 roll', async ({ crew }, testInfo) => {
+  test('the Table rules panel, a roster mark, and a 4d6 roll', async ({ crew }, testInfo) => {
     const staged = await stagedTable(crew, 'lobby');
     const { ruth, sam, tableId } = staged;
     // Wren comes from another table, and the house rules make the rest of the party's creation rules differ.
@@ -286,8 +286,13 @@ test.describe('axe on the table rules', () => {
     ] as const) {
       await openTable(actor.page, staged.path);
       await settle(actor.page, 'lobby');
-      await actor.page.getByRole('button', { name: 'Rules', exact: true }).click();
-      await expect(actor.page.getByRole('switch', { name: '4d6 drop lowest' })).toBeChecked();
+      // A referee changes the rules in the form, and a player reads them in the summary.
+      if (who === 'referee') {
+        await actor.page.getByRole('button', { name: 'Change rules' }).click();
+        await expect(actor.page.getByRole('switch', { name: '4d6 drop lowest' })).toBeChecked();
+      } else {
+        await expect(actor.page.getByText('Roll 4d6, drop the lowest')).toBeVisible();
+      }
       await check(actor.page, `lobby-rules-${who}`);
     }
     await ruth.page.getByRole('button', { name: 'Other table: show why' }).click();
