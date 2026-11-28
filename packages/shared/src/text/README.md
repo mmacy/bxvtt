@@ -13,7 +13,7 @@ const ctx = contextFromPlayerView(view);
 
 if (!outcome.accepted) {
   const sentences = describeRejections(outcome.rejections, ctx);
-  // ["Wren isn't in the front rank, so they can't reach the monsters in melee or with a touch. Close with the monsters first, or use a missile weapon or a spell with range."]
+  // ["Wren isn't in the front rank, so they can't reach the monsters."]
 }
 
 for (const line of describeEvents(outcome.events, ctx, { messages: outcome.messages })) {
@@ -32,7 +32,7 @@ for (const line of describeEvents(outcome.events, ctx, { messages: outcome.messa
 
 ## Carry `TextContext` forward across commands
 
-`contextFromPlayerView(view)` reads the names the player view states: each member's `class_name`, `item_names` and `item_names_plural`, `spell_names` and `reversed_spell_names`, the entered `dungeons`, the entered `areas` of each `explored` level, and the monsters in each encounter group's `members`, which it names with `creatureNames`. These names win over the built-in catalog, so a custom class, a spell the adventure bundles, a dungeon, and an area read correctly without the referee view. With a view from an older bxapi that lacks these names, the catalog names them. A gem or a piece of jewellery that has a name of its own reads by the name in the view's `valuable_names`, as a common noun with an article, such as "Wren takes a silver altar candlestick." One that has none, such as a gem rolled on the treasure tables, reads by its kind in `item_names`: "Wren takes a gem."
+`contextFromPlayerView(view)` reads the names the player view states: each member's `class_name`, `item_names` and `item_names_plural`, `spell_names` and `reversed_spell_names`, the entered `dungeons`, the entered `areas` of each `explored` level, and the monsters in each encounter group's `members`, which it names with `creatureNames`. These names win over the built-in catalog, so a custom class, a spell the adventure bundles, a dungeon, and an area read correctly without the referee view. With a view from an older bxapi that lacks these names, the catalog names them. A gem or a piece of jewellery that has a name of its own reads in a sentence by its phrase in the view's `valuable_phrases`, as written, such as "Wren takes a silver altar candlestick." or "Wren takes Ossor's Eye."; the text keeps `valuable_names` for lists and labels. A feed entry records the phrases it used in `names.valuable_phrases`. An entry stored before osrlib 2.10.0 has a name and no phrase, so the text words the name itself (a common noun with an article, and `the` for a possessive). One that has none, such as a gem rolled on the treasure tables, reads by its kind in `item_names`: "Wren takes a gem."
 
 Always pass the previous `TextContext` as the second argument to `contextFromPlayerView(nextView, prevCtx)` after describing an outcome so names of consumed potions or defeated monster groups remain available after leaving the live view:
 
