@@ -14,12 +14,14 @@ function CallerStatus() {
   }
   if (member === null)
     return <span className={styles.callerText}>No caller. The referee moves the party.</span>;
+  const text = isMe ? 'You are the caller' : `${member.name} is the caller`;
+  // In a narrow bar only the dot shows, so it carries the sentence as its tooltip.
   return (
     <>
-      <Avatar name={member.name} color={member.color} size="xs" decorative />
-      <span className={styles.callerText}>
-        {isMe ? 'You are the caller' : `${member.name} is the caller`}
+      <span title={text}>
+        <Avatar name={member.name} color={member.color} size="xs" decorative />
       </span>
+      <span className={styles.callerText}>{text}</span>
     </>
   );
 }
