@@ -87,12 +87,18 @@ export function foodBadge(
       tooltip: `${names} ${one ? 'carries' : 'carry'} no rations${shared}`,
     };
   }
+  // With one living member there is nobody to compare, so the tooltip says only how long the food lasts.
+  const everyone = short.length === living;
   const first =
-    short.length === living ? 'Everyone runs out together' : `${names} ${one ? 'runs' : 'run'} out first`;
+    everyone && living === 1
+      ? ''
+      : everyone
+        ? '. Everyone runs out together'
+        : `. ${names} ${one ? 'runs' : 'run'} out first`;
   return {
     text: count(days, 'day'),
     tone: days === 1 ? 'warning' : 'neutral',
-    tooltip: `Food for ${count(days, 'day')}. ${first}${shared}`,
+    tooltip: `Food for ${count(days, 'day')}${first}${shared}`,
   };
 }
 

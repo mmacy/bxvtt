@@ -115,6 +115,20 @@ describe('food left', () => {
       tooltip: 'Food for 3 days. Everyone runs out together',
     });
   });
+
+  it('says only how long the food lasts when one member is alive', () => {
+    const alone = supplies({
+      rations: 4,
+      food_days: 4,
+      food_days_shared: 4,
+      food_short_first_ids: ['character-0001'],
+    });
+    expect(foodBadge(alone, party.slice(0, 1))).toEqual({
+      text: '4 days',
+      tone: 'neutral',
+      tooltip: 'Food for 4 days',
+    });
+  });
 });
 
 describe('the supply badges', () => {
