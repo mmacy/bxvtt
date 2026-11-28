@@ -132,9 +132,8 @@ export function readInventory(member: MemberView): MemberInventory {
     valuables.push({
       instanceId: valuable.instance_id,
       kind: valuable.kind === 'jewellery' ? 'jewellery' : 'gem',
-      name: capitalizeFirst(
-        stripIndefinite(text(valuable.name, valuable.kind === 'jewellery' ? 'Jewellery' : 'Gem')),
-      ),
+      // A name shows as `valuable_names` writes it. A piece with no name shows its kind.
+      name: text(valuable.name, valuable.kind === 'jewellery' ? 'Jewellery' : 'Gem'),
       valueGp: whole(valuable.value_gp),
     });
   }

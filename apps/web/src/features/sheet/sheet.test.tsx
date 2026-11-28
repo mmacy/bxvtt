@@ -71,6 +71,22 @@ describe('readInventory', () => {
     expect(inventory.valuables[0]).toMatchObject({ name: 'Gem', valueGp: 50, commandId: 'valuable-0001' });
     expect(inventory.purse).toEqual({ pp: 0, gp: 12, ep: 0, sp: 0, cp: 0 });
   });
+
+  it('shows a valuable by its name as written, and a piece with no name by its kind', () => {
+    const { valuables } = readInventory({
+      valuables: [
+        {
+          instance_type: 'valuable',
+          instance_id: 'valuable-0001',
+          kind: 'jewellery',
+          name: 'A unicorn-horn cup',
+        },
+        { instance_type: 'valuable', instance_id: 'valuable-0002', kind: 'gem', name: "ossor's Eye" },
+        { instance_type: 'valuable', instance_id: 'valuable-0003', kind: 'jewellery', name: '' },
+      ],
+    });
+    expect(valuables.map((entry) => entry.name)).toEqual(['A unicorn-horn cup', "ossor's Eye", 'Jewellery']);
+  });
 });
 
 describe('moveTo', () => {
