@@ -919,16 +919,11 @@ export class GameService {
         events: forPlayers.events,
         messages: forPlayers.messages,
         clock_rounds: live.view.clock_rounds,
-        names: entryNames(
-          forPlayers.events,
-          live.labels,
-          itemNames([previous, live.view], forPlayers.events),
-          {
-            view: live.view,
-            dungeons: dungeonNames(live.view),
-            actorId: meta.class === 'referee' ? null : meta.actorId,
-          },
-        ),
+        names: entryNames(forPlayers.events, live.labels, itemNames(live.view, forPlayers.events, previous), {
+          view: live.view,
+          dungeons: dungeonNames(live.view),
+          actorId: meta.class === 'referee' ? null : meta.actorId,
+        }),
         actor_id: meta.class === 'referee' ? null : (meta.actorId ?? null),
         xp_gained: xpGained,
       },
@@ -940,7 +935,7 @@ export class GameService {
         events: outcome.events,
         messages: outcome.messages,
         clock_rounds: live.view.clock_rounds,
-        names: entryNames(outcome.events, live.labels, itemNames([previous, live.view], outcome.events), {
+        names: entryNames(outcome.events, live.labels, itemNames(live.view, outcome.events, previous), {
           view: live.view,
           dungeons: dungeonNames(live.view),
           actorId: meta.actorId,
@@ -1043,7 +1038,7 @@ export class GameService {
   namesFor(tableId: string, sessionId: string, events: GameEvent[]): EntryNames | undefined {
     const live = this.live.get(tableId);
     if (live === undefined || live.sessionId !== sessionId) return undefined;
-    return entryNames(events, live.labels, itemNames([live.view], events), {
+    return entryNames(events, live.labels, itemNames(live.view, events), {
       dungeons: dungeonNames(live.view),
     });
   }

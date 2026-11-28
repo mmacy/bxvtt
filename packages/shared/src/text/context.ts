@@ -177,6 +177,23 @@ function asNumber(value: unknown): number | undefined {
   return typeof value === 'number' ? value : undefined;
 }
 
+/** A JSON object whose values are all strings, such as an event's `item_names`, or `{}` for anything else. */
+function stringRecord(value: unknown): Record<string, string> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === 'string'),
+  );
+}
+
+/**
+ * The fields of an event that name its items, each with the field of their plurals. An `equipment_destroyed` event's
+ * `item_names` is a list of the destroyed items' names, not a map, so it reads as `{}`.
+ */
+const EVENT_ITEM_NAME_FIELDS = [
+  ['item_names', 'item_names_plural'],
+  ['saved_item_names', 'saved_item_names_plural'],
+] as const;
+
 function asArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
@@ -769,6 +786,10 @@ export interface LearnableEvent {
  *   that label, so a disguised monster isn't unmasked by its defeat.
  * - An identified item reveals what an item instance ID was.
  * - A new party member and a new encounter group reveal their names.
+ * - Since osrlib 2.12, an item event names the items it lists in `item_names` and `item_names_plural` (and an
+ *   `equipment_destroyed` event names its saved items in `saved_item_names`), with the names the party knew when it
+ *   happened. Those names fill in only the items the context doesn't name, so an item a command used up, sold, or
+ *   left behind still has a name. An event stored before 2.12 has none.
  *
  * Call it with the events of a command outcome before you describe them, so that a line like `monster-0003 is
  * slain` can say which kind of monster it was.
@@ -777,6 +798,14 @@ export function extendContextWithEvents(ctx: TextContext, events: readonly Learn
   let next: TextContext | undefined;
   const edit = (): TextContext => (next ??= cloneContext(ctx));
   for (const event of events) {
+    for (const [namesKey, pluralsKey] of EVENT_ITEM_NAME_FIELDS) {
+      const names = stringRecord(event[namesKey]);
+      const unknown = Object.fromEntries(
+        Object.entries(names).filter(([id]) => (next ?? ctx).items[id] === undefined),
+      );
+      if (Object.keys(unknown).length > 0)
+        registerItemNames(edit(), unknown, stringRecord(event[pluralsKey]));
+    }
     switch (event.event_type) {
       case 'monster_defeated': {
         const monsterId = asString(event.monster_id);

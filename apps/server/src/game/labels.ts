@@ -56,33 +56,63 @@ export interface ItemNames {
   phrases: Map<string, string>;
 }
 
+/** The fields of an event that name the items it lists, each with the field of their plurals. */
+const EVENT_NAME_FIELDS = [
+  ['item_names', 'item_names_plural'],
+  ['saved_item_names', 'saved_item_names_plural'],
+] as const;
+
+/** A JSON object whose values are all strings, or `{}` for anything else, such as a list. */
+function stringRecord(value: unknown): Record<string, string> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === 'string'),
+  );
+}
+
 /**
- * Collects the item names for a command's feed entry from what a player can see: the player view from before the
- * command and the one from after it, whose `item_names` and `item_names_plural` name every item ID each view shows
- * (a pile's `contents` among them), the own name of each valuable those views show (`valuable_names`) with its phrase (`valuable_phrases`), and
- * the `display_name` of each `item_identified` event. The view from after
- * wins, so an item identified and kept reads by its true name. An event's name fills in only an ID that neither
- * view names. An item identified and used up in the same command, such as a potion drunk before the party knew
- * it, keeps the masked name of the view from before, and the event's own line states its true name. The referee
- * view is never read, so a masked magic item keeps its masked name.
+ * Collects the item names for a command's feed entry from what a player can see. The referee view is never read,
+ * so a masked magic item keeps its masked name.
  *
- * @param views - The player views, oldest first.
+ * - **The events:** since osrlib 2.12, each item event names the items it lists in `item_names` and
+ *   `item_names_plural` (and `equipment_destroyed` its saved items in `saved_item_names`), with the names the party
+ *   knew when it happened. So an item that the command used up, sold, or left behind has a name, and an item
+ *   identified before it was used has its true name. A later event's name wins.
+ * - **The player view after the command:** its `item_names` and `item_names_plural` fill in an ID that no event
+ *   names, and the `display_name` of an `item_identified` event fills in one that neither names.
+ * - **Named valuables:** an event names a gem or a piece of jewellery by its kind, and only a view states the own
+ *   name of a piece that has one (`valuable_names`) with its phrase (`valuable_phrases`). So the view from before
+ *   the command, `earlier`, still names a valuable that the command sold or gave away. The view after wins.
+ *
+ * @param view - The player view after the command.
  * @param events - The events of the command.
+ * @param earlier - The player view before the command, read only for named valuables.
  */
-export function itemNames(views: readonly PlayerView[], events: readonly GameEvent[] = []): ItemNames {
+export function itemNames(
+  view: PlayerView,
+  events: readonly GameEvent[] = [],
+  earlier?: PlayerView,
+): ItemNames {
   const names: ItemNames = { one: new Map(), many: new Map(), phrases: new Map() };
-  for (const view of views) {
-    for (const [id, name] of Object.entries(view.item_names ?? {})) names.one.set(id, name);
-    for (const [id, name] of Object.entries(view.item_names_plural ?? {})) names.many.set(id, name);
-    // `item_names` names a gem or a piece of jewellery by its kind, and `valuable_names` has the own name of each
-    // piece that has one. That name wins, with no plural, because a named valuable is one thing.
-    for (const [id, name] of Object.entries(view.valuable_names ?? {})) {
-      names.one.set(id, name);
-      names.many.delete(id);
-      const phrase = view.valuable_phrases?.[id];
-      if (phrase === undefined) names.phrases.delete(id);
-      else names.phrases.set(id, phrase);
+  for (const event of events) {
+    const fields = event as unknown as Record<string, unknown>;
+    for (const [namesKey, pluralsKey] of EVENT_NAME_FIELDS) {
+      const plurals = stringRecord(fields[pluralsKey]);
+      for (const [id, name] of Object.entries(stringRecord(fields[namesKey]))) {
+        if (name.trim() === '') continue;
+        names.one.set(id, name);
+        const plural = plurals[id];
+        if (plural === undefined || plural.trim() === '') names.many.delete(id);
+        else names.many.set(id, plural);
+      }
     }
+  }
+  const plurals = view.item_names_plural ?? {};
+  for (const [id, name] of Object.entries(view.item_names ?? {})) {
+    if (names.one.has(id)) continue;
+    names.one.set(id, name);
+    const plural = plurals[id];
+    if (plural !== undefined) names.many.set(id, plural);
   }
   for (const event of events) {
     // An event stored before osrlib 2.8 has no display names.
@@ -91,6 +121,16 @@ export function itemNames(views: readonly PlayerView[], events: readonly GameEve
       if (names.one.has(id)) continue;
       names.one.set(id, event.display_name);
       if (event.display_name_plural) names.many.set(id, event.display_name_plural);
+    }
+  }
+  for (const source of earlier === undefined ? [view] : [earlier, view]) {
+    // A named valuable's own name wins, with no plural, because a named valuable is one thing.
+    for (const [id, name] of Object.entries(source.valuable_names ?? {})) {
+      names.one.set(id, name);
+      names.many.delete(id);
+      const phrase = source.valuable_phrases?.[id];
+      if (phrase === undefined) names.phrases.delete(id);
+      else names.phrases.set(id, phrase);
     }
   }
   return names;

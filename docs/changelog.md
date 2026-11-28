@@ -14,10 +14,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 This release needs a `bxapi` built on `osrlib` 2.12.0, which is `bxapi` 0.3.0. Update and restart `bxapi` before you start this version. With an older engine, the server refuses every game request, ability roll, and WebSocket snapshot with `503 bxapi_outdated`.
 
+### Added
+
+- **Light and food left in the top bar (`@bxvtt/web`):** Two badges after the clock show the party's light left, counting the spare torches and oil only while someone can light them, and the days of food before the first member goes short. Each tooltip says what makes up the number and who runs out first. On a phone, the badges are the first row of the **Party** panel. Both come from `bxapi`'s `PlayerView.supplies`, and a view without it shows neither. ([#65](https://github.com/mmacy/bxvtt/issues/65))
+
 ### Changed
 
+- **The feed names items from the events (`@bxvtt/server`, `@bxvtt/shared/text`):** An item event names the items it lists, as the party knew them when it happened, so an item that a command used up, sold, or left behind keeps its name without the server comparing the views before and after the command. The feed also names the town and the dungeon that the party enters from the event, states the mode of a spell that an adventure bundles, and says when poison killed a creature. An event stored before `osrlib` 2.12.0 reads as before.
 - **`osrlib` 2.12.0 or later (`@bxvtt/server`):** The server's minimum engine version is 2.12.0, because the client reads the player view fields that `osrlib` 2.12.0 added, such as `spell_modes`, a scroll's `spells`, the temple's answers for each usage, and `evade_rejections`. An older engine gets `503 bxapi_outdated`, and `GET /api/health` reports it as outdated.
-- **`bxapi` types and coverage data for `osrlib` 2.12.0 (`@bxvtt/shared/bxapi`, `@bxvtt/shared/text`):** The generated types and `data/codes.json` come from `bxapi` on `osrlib` 2.12.0. The text layer words the new refusals: an invisible target of a spell or an item outside a battle, a party that can't flee because nobody can act, a member is caught in a web, or a member is overloaded, a temple usage the temple doesn't sell, and each `reason` of `town.healing.no_effect`. A template variant can now match a param's value with `is`, such as `{ is: { reason: 'dead' } }`.
+- **`bxapi` types and coverage data for `osrlib` 2.12.0 (`@bxvtt/shared/bxapi`, `@bxvtt/shared/text`):** The generated types and `data/codes.json` come from `bxapi` on `osrlib` 2.12.0. The text layer words the new refusals: an invisible target of a spell or an item outside a battle, a party that can't flee because nobody can act, a member is held fast, or a member carries too much to run, a temple usage the temple doesn't sell, and each `reason` of `town.healing.no_effect`. The refusal to drop coins or food names which one the party lacks. A template variant can now match a param's value with `is`, such as `{ is: { reason: 'dead' } }`. With `BXAPI_URL`, `npm run gen:bxapi` regenerates the code list too when you set `OSRLIB_PYTHON`, and otherwise reports a code list from another `osrlib`.
+
+### Fixed
+
+- **The map's light chip without a menu shows its sentence on keyboard focus (`@bxvtt/web`):** The chip that a viewer with no light actions sees puts the full sentence, such as "Brenna's torch, about 6 turns left", in a tooltip that opens on hover and on focus, in place of a native title that a keyboard user couldn't reach.
 
 ## [0.6.0] - 2026-11-27
 

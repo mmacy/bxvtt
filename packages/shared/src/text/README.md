@@ -58,12 +58,19 @@ To format a historical `game` feed entry, call `describeGameEntry(entry, ctx, { 
 
 ## Regenerate coverage data (`data/codes.json` and `data/catalog.json`)
 
-When `osrlib` adds or changes event types, rejection codes, commands, or built-in catalog items, regenerate the extracted metadata from your `bxapi` checkout and run the `shared` test suite:
+When `osrlib` adds or changes event types, rejection codes, commands, or built-in catalog items, regenerate the extracted metadata and run the `shared` test suite. `npm run gen:bxapi` regenerates it with the `bxapi` types, from the same `osrlib`:
 
 ```sh
-uv run --project ~/repos/bxapi python packages/shared/src/text/tools/extract-codes.py
-npx prettier --write packages/shared/src/text/data
+npm run gen:bxapi                     # bxapi checkout at ~/repos/bxapi (or $BXAPI_DIR), through uv
+BXAPI_URL=http://127.0.0.1:8651 OSRLIB_PYTHON=<bxapi checkout>/.venv/bin/python npm run gen:bxapi
 npx vitest run --project shared
+```
+
+With `BXAPI_URL` and no `OSRLIB_PYTHON`, the generator can't reach the server's `osrlib`. It compares the `osrlib_version` in `data/codes.json` with the server's `engine_version`, and when they differ it prints the command to run and exits with status 1. To regenerate only the code list, run the extractor with a Python that has that `osrlib` installed, from the repository root:
+
+```sh
+<bxapi checkout>/.venv/bin/python -I packages/shared/src/text/tools/extract-codes.py
+npx prettier --write packages/shared/src/text/data
 ```
 
 Tests fail automatically if any rejection code, event code, battle action, weapon quality, time unit, command, or command field lacks prose or references an unused parameter. The test `covers the number of codes that osrlib defines` states how many event codes osrlib defines. Update that number only after every new code has wording of its own.

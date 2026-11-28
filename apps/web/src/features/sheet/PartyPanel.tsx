@@ -37,6 +37,7 @@ import {
   Tooltip,
   cx,
 } from '@/ui';
+import { PartySupplies } from '@/features/table/Supplies';
 import { effectLabel, effectRemaining } from './actions';
 import { conditionTone } from './SheetSections';
 import styles from './party.module.css';
@@ -186,6 +187,7 @@ export function PartyPanel() {
 
   return (
     <div className={styles.panel}>
+      <PartySupplies />
       {(view?.fatigued || view?.exhausted || deprived.length > 0) && (
         <section className={styles.partyState} aria-label="Party conditions">
           {(view?.fatigued || view?.exhausted || deprived.length > 0) && (

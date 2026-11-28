@@ -6,7 +6,17 @@ import { directionLabel } from '@bxvtt/shared/text';
 import type { RefObject } from 'react';
 import type { MapThemeName } from '@/app';
 import { Minimap, type Direction, type DungeonMapHandle, type LevelMap } from '@/map';
-import { Badge, Button, DropdownMenu, Icon, IconButton, SegmentedControl, cx, type MenuEntry } from '@/ui';
+import {
+  Badge,
+  Button,
+  DropdownMenu,
+  Icon,
+  IconButton,
+  SegmentedControl,
+  Tooltip,
+  cx,
+  type MenuEntry,
+} from '@/ui';
 import type { LevelOption } from './levels';
 import styles from './explore.module.css';
 
@@ -257,10 +267,12 @@ export function LightIndicator({ text, short, lit, menu }: LightIndicatorProps) 
           }
         />
       ) : (
-        <span className={cx(look, styles.lightStatic)} title={text}>
-          <Icon name={lit ? 'torch' : 'moon'} size={14} />
-          {short}
-        </span>
+        <Tooltip content={text}>
+          <span className={cx(look, styles.lightStatic)} tabIndex={0}>
+            <Icon name={lit ? 'torch' : 'moon'} size={14} />
+            {short}
+          </span>
+        </Tooltip>
       )}
       <span className={styles.srOnly} role="status">
         {text}
