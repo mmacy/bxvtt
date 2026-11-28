@@ -667,6 +667,10 @@ export const COMMAND_FIELD_TEXT: Record<string, Record<string, FieldText>> = {
       'The party member receiving treatment, including a fallen member. Their gold pays first, and the party covers the rest.',
     ),
     service: field('Service', 'Which temple service to buy.'),
+    spell_mode: field(
+      'Spell mode',
+      "Which of the spell's uses the temple cleric casts, such as curing paralysis. Leave it empty for the first.",
+    ),
   },
   parley: {
     character_id: field(

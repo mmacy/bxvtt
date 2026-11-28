@@ -27,6 +27,7 @@ export function emptyDungeonState(): DungeonState {
     inspect_attempts: {},
     removal_attempts: {},
     lock_failures: {},
+    trap_doors: {},
   };
 }
 
@@ -226,6 +227,10 @@ export function playerViewFrom(
     town_description: '',
     town_services: [],
     town_healing_prices: {},
+    town_healing_rejections: {},
+    town_healing_caster_levels: {},
+    town_healing_mode_rejections: {},
+    town_healing_mode_names: {},
     party: [],
     location: state.location,
     clock_rounds: 0,
@@ -235,6 +240,12 @@ export function playerViewFrom(
     spell_names: {},
     spell_levels: {},
     reversed_spell_names: {},
+    spell_ranges: {},
+    reversed_spell_ranges: {},
+    spell_range_texts: {},
+    reversed_spell_range_texts: {},
+    spell_modes: {},
+    reversed_spell_modes: {},
     item_names: {},
     item_names_plural: {},
     valuable_names: {},

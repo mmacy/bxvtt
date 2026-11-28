@@ -220,6 +220,12 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
 
   // Encounters and chases --------------------------------------------------------------------------------------
   'encounter.evade.already_evading': 'The party is already fleeing.',
+  'encounter.evade.cannot_move': [
+    { when: ['character'], text: "{character|member} is caught in a web, so the party can't flee." },
+    { when: ['reason'], text: "The party can't flee because {reason|moveReason}." },
+    { text: "The party can't flee right now." },
+  ],
+  'encounter.evade.nobody_able_to_act': "No one in the party can act, so the party can't flee.",
   'encounter.evade.nothing_to_drop': 'The party has no {drop|raw} to drop.',
   'encounter.none_active': "The party isn't in an encounter.",
   'encounter.parley.mid_pursuit': "The monsters are chasing the party, so there's no time to talk.",
@@ -336,6 +342,7 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
     { text: "That character can't read {item|item}." },
   ],
   'items.use.battle_only': 'You can use {item|item} only during a battle.',
+  'items.use.invisible_target': "{target|entity} is invisible, so you can't use an item on them.",
   'items.use.not_usable': [
     { when: ['character'], text: "{character|possessive} class can't use {item|item}." },
     { text: "That character's class can't use {item|item}." },
@@ -395,6 +402,7 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
     },
     { text: 'The target is {distance_feet|feet} away, but {spell|spell} reaches only {range_feet|feet}.' },
   ],
+  'magic.cast.invisible_target': "{target|entity} is invisible, so you can't aim a spell at it.",
   'magic.cast.silenced_area': "{caster|member} is standing in magical silence and can't cast spells.",
   'magic.cast.target_count': [
     {
@@ -486,7 +494,32 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   // Town -------------------------------------------------------------------------------------------------------
   'town.healing.caster_level_out_of_range':
     "A level {caster_level|number} cleric can't cast {item|service}. Choose a level from {minimum|number} to {maximum|number}.",
-  'town.healing.no_effect': "{character|member} doesn't need {item|service} right now.",
+  'town.healing.mode_not_offered': "The temple doesn't offer that use of {item|service}.",
+  // The `reason` param says why the service would do nothing. Each reason has its own wording.
+  'town.healing.no_effect': [
+    { is: { reason: 'dead' }, text: "{character|member} is dead, so {item|service} won't help." },
+    { is: { reason: 'weakened' }, text: "{character|member} is weakened, so magic can't heal them." },
+    { is: { reason: 'diseased' }, text: "{character|member} is diseased, so magic can't heal them." },
+    { is: { reason: 'full_hit_points' }, text: '{character|member} already has all their hit points.' },
+    { is: { reason: 'not_diseased' }, text: "{character|member} isn't diseased." },
+    { is: { reason: 'not_poisoned' }, text: "{character|member} isn't poisoned." },
+    { is: { reason: 'not_cursed' }, text: '{character|member} has no curse that {item|service} can lift.' },
+    { is: { reason: 'not_paralysed' }, text: "{character|member} isn't paralysed." },
+    { is: { reason: 'not_dead' }, text: "{character|member} isn't dead." },
+    {
+      is: { reason: 'no_death_record' },
+      text: "No one knows how long {character|member} has been dead, so the temple can't raise them.",
+    },
+    {
+      is: { reason: 'caster_level_too_low' },
+      text: '{character|member} has been dead too long for a cleric of that level to raise.',
+    },
+    {
+      is: { reason: 'dead_too_long' },
+      text: '{character|member} has been dead too long for any temple cleric to raise.',
+    },
+    { text: "{character|member} doesn't need {item|service} right now." },
+  ],
   'town.sell.no_fixed_value': 'Merchants in town buy only gems and jewellery, not {item|item}.',
 };
 

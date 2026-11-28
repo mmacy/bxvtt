@@ -12,6 +12,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+This release needs a `bxapi` built on `osrlib` 2.12.0, which is `bxapi` 0.3.0. Update and restart `bxapi` before you start this version. With an older engine, the server refuses every game request, ability roll, and WebSocket snapshot with `503 bxapi_outdated`.
+
+### Changed
+
+- **`osrlib` 2.12.0 or later (`@bxvtt/server`):** The server's minimum engine version is 2.12.0, because the client reads the player view fields that `osrlib` 2.12.0 added, such as `spell_modes`, a scroll's `spells`, the temple's answers for each usage, and `evade_rejections`. An older engine gets `503 bxapi_outdated`, and `GET /api/health` reports it as outdated.
+- **`bxapi` types and coverage data for `osrlib` 2.12.0 (`@bxvtt/shared/bxapi`, `@bxvtt/shared/text`):** The generated types and `data/codes.json` come from `bxapi` on `osrlib` 2.12.0. The text layer words the new refusals: an invisible target of a spell or an item outside a battle, a party that can't flee because nobody can act, a member is caught in a web, or a member is overloaded, a temple usage the temple doesn't sell, and each `reason` of `town.healing.no_effect`. A template variant can now match a param's value with `is`, such as `{ is: { reason: 'dead' } }`.
+
 ## [0.6.0] - 2026-11-27
 
 This release still needs a `bxapi` built on `osrlib` 2.10.0, so the engine requirement is the same as in 0.5.0. It was built and tested against `bxapi` 0.1.0 at commit `0360606`, which is `bxapi` `main` from its pull request 63 onward. `SCHEMA_VERSION` stays at `8`, so the server starts on a 0.5.0 database without a migration. Three changes can break a client of the HTTP or WebSocket protocol or the `@bxvtt/shared/client` SDK, and the list after this paragraph names each one. A referee who hosts a server should also know that players no longer receive the invite code, and that a table whose game `bxapi` has lost now shows a screen with a way out in place of reconnecting forever.

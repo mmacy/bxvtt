@@ -204,6 +204,9 @@ test('a victory in the table’s second adventure counts only that game’s ques
   const back = ruth.page.getByRole('alertdialog', { name: 'Return to lobby?' });
   await expect(back).toContainText('A new game starts the characters from their first sheets');
   await back.getByRole('button', { name: 'Return to lobby' }).click();
+  // The Victory heading is gone while the dialog is still open, so wait for the lobby itself before the next game
+  // starts. Starting it earlier gets `game_active`.
+  await expect(ruth.page.getByRole('heading', { name: 'Party', level: 2 })).toBeVisible({ timeout: 20_000 });
   await expect(ruth.page.getByRole('heading', { name: 'Victory' })).toHaveCount(0);
 
   await ruth.client.startGame(tableId, { adventure_id: ADVENTURES.bell, seed: 1981 });
