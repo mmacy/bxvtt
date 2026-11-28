@@ -1,7 +1,7 @@
 {
   "name": "bxvtt",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "A web-based virtual tabletop for B/X games, built on bxapi.",
   "type": "module",
   "engines": {

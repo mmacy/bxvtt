@@ -162,11 +162,16 @@ async function toWebp(png) {
   }
 }
 
-/** Dismisses toasts, moves the pointer away, waits for animation, and writes one screenshot. */
-async function snap(page, name, { settle = 700 } = {}) {
+/** Closes every toast on a page. A dialog makes the page behind it inert, so this runs before one opens. */
+async function dismissToasts(page) {
   for (const button of await page.getByRole('button', { name: 'Dismiss notification' }).all()) {
     await button.click().catch(() => {});
   }
+}
+
+/** Dismisses toasts, moves the pointer away, waits for animation, and writes one screenshot. */
+async function snap(page, name, { settle = 700 } = {}) {
+  await dismissToasts(page);
   await page.mouse.move(2, 2);
   await sleep(settle);
   if (only !== undefined && !only.includes(name)) return;
@@ -386,6 +391,12 @@ async function main() {
   await wizard.getByRole('button', { name: /^Add Dagger/ }).click();
   await wizard.getByRole('button', { name: /^Add Torches/ }).click();
   await wizard.getByRole('button', { name: /^Add Backpack/ }).click();
+  // Each click scrolls its row into view. The shot starts at the top, where the column headings are.
+  await wizard.evaluate((dialog) => {
+    for (const element of dialog.querySelectorAll('*')) {
+      if (element.scrollTop > 0) element.scrollTop = 0;
+    }
+  });
   await snap(theoPage, 'wizard-outfit');
   await next();
   // The player names the character on the review step, and the wizard closes once the server stores it.
@@ -448,6 +459,7 @@ async function main() {
   // The party rests a night in town. Theo opens the prepare dialog on Mazpar's Spells tab, and the API sends
   // the same choice, so Mazpar memorizes sleep.
   await apis.sam.send({ command_type: 'rest', kind: 'night' });
+  await dismissToasts(theoPage);
   await theoPage
     .getByRole('list', { name: 'Marching order' })
     .getByRole('button', { name: 'Mazpar', exact: true })
