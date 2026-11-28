@@ -95,6 +95,30 @@ All paths below sit under `/api` (for example, `GET /api/health`), and `{t}` den
 4. Deletes the user's stored characters (also from `bxapi`), ability rolls, retired tokens, and user row. A game in progress keeps its copy of each character.
 5. Cancels pending rejoin requests for the user.
 
+When a member leaves (`POST /tables/{t}/leave`) or a referee removes them (`DELETE /tables/{t}/members/{user_id}`), the server cancels the table's rejoin requests for that member, including an approval that no browser has claimed yet. It also cancels a pending request that no remaining referee could approve, which happens when the only other referee leaves, is removed, or becomes a player. The referees receive the new `rejoin_requests` list, and the visitor's next poll reads `cancelled`. Deleting a table cancels all of its requests. A request that names a member who is no longer at the table is refused with `404 not_found` (or `404 invite_invalid` after a removal, which gives the table a new invite code).
+
+A `cancelled` answer has a `cancel_reason`, and every other answer has `null`:
+
+| `cancel_reason` | When |
+| --- | --- |
+| `member_returned` | The member came online at the table. |
+| `member_left` | The member left, a referee removed them, or the table was deleted. The reason doesn't say which. |
+| `no_referee` | No referee other than the member is left to approve. |
+| `visitor` | The visitor's browser cancelled, stopped polling, or asked again. |
+
+Each reason tells the visitor only what `POST /rejoin/lookup` already shows anyone with the invite code: which members are offline and could be approved.
+
+The battle declarations that a leaver saved for the current round stay. The leaver's characters stay in the battle in empty seats, which a referee controls, so a referee can replace or clear those declarations, and the round resolves with them.
+
+### A game that can't be loaded
+
+A table in play needs its `bxapi` session for its game state, so the server can't send a WebSocket `snapshot` while `bxapi` can't load the session. It sends an `error` frame and closes the socket, and the two causes differ in both:
+
+- **`bxapi_unavailable`, closed with `try_again_later`:** The server can't reach `bxapi` right now. This ends by itself when `bxapi` answers again, and `TableConnection` keeps reconnecting.
+- **`game_missing`, closed with `game_missing`:** `bxapi` answered that it has no such session, for example because its database was reset. Waiting doesn't help, so `TableConnection` stops with the close reason `game_missing`, and calling `connect()` again tries once more. The server records it, and `GameSummary.missing` is `true` in `GET /tables` and `GET /tables/{t}` until a referee ends the game or `bxapi` has the session again. Game requests answer `410 game_missing`. A server that holds the game in memory learns of the loss with the next action, and then closes every connection of the table with `resync`, so open screens reconnect and hear why.
+
+Both causes reach every member with the same code and `detail`, and neither names the session or `bxapi`'s answer. The table routes that don't need the session still work in both cases: `GET /tables/{t}`, `POST /tables/{t}/leave`, `DELETE /tables/{t}` (a session that `bxapi` doesn't have counts as deleted, and one it can't reach is deleted later), and `DELETE /tables/{t}/game`, which returns the table to its lobby with its saves. The lobby opens even after a full reset of `bxapi` that also took the saves and the roster's characters. A deleted table stops counting toward its creator's table limit at once.
+
 ### Tables, members, roster, and characters
 
 | Method and path | `BxvttClient` method | Authorization | Response |
@@ -193,7 +217,7 @@ Clients send `auth` as their first frame within 10 seconds of connecting. `Table
 | Server to client | `rejoin_requests` | Pending rejoin requests for the table (referees only). |
 | Server to client | `notice` | `code` (`table_changed`, `game_restored`, `game_started`, or `game_ended`) and `detail`. |
 | Server to client | `heartbeat` | `server_time`. |
-| Server to client | `error` | `code` and `detail` when a client frame fails validation or rate limits. |
+| Server to client | `error` | `code` and `detail` when a client frame fails validation or rate limits, or before the server closes a socket whose snapshot it can't build (`bxapi_unavailable`, `bxapi_outdated`, or `game_missing`; see [A game that can't be loaded](#a-game-that-cant-be-loaded)). |
 | Server to client | `removed` | `reason` (`left`, `kicked`, or `table_deleted`), followed by socket closure. |
 
 ### WebSocket close codes (`WS_CLOSE_CODES`)
@@ -206,7 +230,8 @@ Clients send `auth` as their first frame within 10 seconds of connecting. `Table
 | `4001` | `auth_failed` | Stops reconnecting (invalid, retired, or signed-out token). |
 | `4003` | `removed` | Stops reconnecting (user left, was removed, or table was deleted). |
 | `4008` | `rate_limited` | Exceeded connection quota or 40 frames per 2 seconds. |
-| `4010` | `resync` | Reconnects immediately (sent when a member's role changes). |
+| `4010` | `resync` | Reconnects immediately (sent when a member's role changes, and when the server finds the table's game missing). |
+| `4012` | `game_missing` | Stops reconnecting (`bxapi` no longer has the table's game). `connect()` tries once more. |
 
 ## Problem responses (`PROBLEM_CODES`)
 
@@ -218,6 +243,7 @@ Every HTTP error returns an RFC 9457 `application/problem+json` object containin
 - **404:** `not_found`, `invite_invalid`
 - **405:** `method_not_allowed`
 - **409:** `last_referee`, `game_active`, `no_game`, `duplicate_character`, `roster_empty`, `revision_conflict` (includes `revision`), `stale_version`, `not_in_battle`, `not_a_declarer`, `declarations_incomplete`, `use_declarations`, `ability_roll_used` (also for a roll that a later character or a sub-par restart closed), `ability_roll_locked` (includes `class_id`), `ability_rerolls_used` (includes `ability_score_rerolls` and `roll_id`), `ability_roll_superseded` (includes `roll_id`), `hit_points_not_rolled`, `gold_not_rolled`, `version_unsupported`, `session_busy`, `rejoin_member_online`, `rejoin_pending`, `rejoin_not_pending`, `rejoin_no_approver`
+- **410:** `game_missing` (`bxapi` no longer has the table's game; see [A game that can't be loaded](#a-game-that-cant-be-loaded))
 - **413:** `content_too_large`
 - **415:** `unsupported_media_type`
 - **422:** `validation_error` (includes `errors`), `unknown_command`, `content_invalid`, `character_invalid` (includes `rejections` or `field`/`index`/`id`), `party_invalid`
