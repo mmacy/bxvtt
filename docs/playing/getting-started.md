@@ -72,9 +72,9 @@ Each character you create joins the **Party** list when the wizard closes. If ad
 
 ## Wait in the lobby
 
-Before play starts, everyone gathers in the lobby.
+Before play starts, everyone gathers in the lobby. The screenshot shows the referee's view. A player sees **Party**, **Table rules**, and **People at the table**, and has no start, invite, or settings panels.
 
-![The table lobby showing four party members in marching order](../images/lobby.webp)
+![The table lobby as the referee sees it, with four party members in marching order, the Table rules summary under them, and the start, people, invite, and settings panels beside them](../images/lobby.webp)
 
 - **Party** displays the characters in marching order, where the top rows form the front rank. Select any character's name to inspect their sheet (and **Delete character** if you own them and want to remove them permanently). You can pull your own character off the roster with the remove button on the character's row (named, for example, **Remove Wren from party**), while the referee controls the final marching order.
 - **Your characters** lists any characters you created earlier (or removed from the roster) that are not currently in **Party**. Select **Add to party** if a character is waiting here. Its button opens the character wizard and reads **Create a character**, or **Resume character** while you have an unfinished character at this table.
