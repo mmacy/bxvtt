@@ -7,7 +7,7 @@ import { fixtureSnapshot } from '@/app/testing/fixtures';
 import { createFakeApi, renderWithTable } from '@/app/testing/renderWithTable';
 import { LobbyPage } from './LobbyPage';
 import { moveItem } from './RosterPanel';
-import { creationRuleDifferences, matchStartingRuleset, rosterMark } from './rules';
+import { RULES_FOR_PLAY, creationRuleDifferences, matchStartingRuleset, rosterMark } from './rules';
 import { startChecks } from './StartGamePanel';
 import { resetStartingRulesets } from './startingRulesets';
 
@@ -44,10 +44,15 @@ const STARTING: StartingRuleset[] = [
   },
 ];
 
-/** The Rules panel's toggle, not the rules reference or a roster mark. */
-function rulesToggle() {
-  return screen.getByRole('button', { name: /^Rules$/ });
+/** The referee's button that swaps the Table rules summary for the form. */
+function changeRules() {
+  return screen.getByRole('button', { name: 'Change rules' });
 }
+
+/** Every boolean rule for play turned off. */
+const NO_OPTIONAL_RULES = Object.fromEntries(
+  RULES_FOR_PLAY.filter((rule) => rule.kind === 'boolean').map((rule) => [rule.key, false]),
+);
 
 const TABLE_RULES: CreationRules = {
   ability_score_method: '3d6',
@@ -179,8 +184,10 @@ describe('LobbyPage', () => {
     api.listAdventures.mockResolvedValue({ items: [] });
     api.listCharacters.mockResolvedValue({ items: [] });
     const start = screen.getByRole('button', { name: 'Start game' });
-    expect(start).toHaveAttribute('aria-disabled', 'true');
+    // The list under "Before you start" is the one place that says why, and the button points to it.
+    expect(start).toBeDisabled();
     expect(start).toHaveAccessibleDescription('Choose an adventure.');
+    expect(screen.getByRole('list', { name: 'Before you start' })).toHaveTextContent('Choose an adventure.');
     await user.click(start);
     expect(api.startGame).not.toHaveBeenCalled();
     const leader = (store.getState().table as TableDetail).roster[0]!.name;
@@ -190,8 +197,8 @@ describe('LobbyPage', () => {
     expect(api.reorderRoster).not.toHaveBeenCalled();
   });
 
-  it('shows a player the lobby read-only while waiting for the referee', async () => {
-    const { api, store, user } = renderWithTable(<LobbyPage />, {
+  it("shows a player the lobby without the referee's cards while waiting for the referee", async () => {
+    const { api, store } = renderWithTable(<LobbyPage />, {
       snapshot: fixtureSnapshot('lobby', 'player'),
     });
     api.listCharacters.mockResolvedValue({ items: [] });
@@ -203,46 +210,107 @@ describe('LobbyPage', () => {
     expect(screen.queryByRole('button', { name: 'Remove Osric from party' })).not.toBeInTheDocument();
     expect(api.listAdventures).not.toHaveBeenCalled();
     expect(store.getState().role).toBe('player');
-    await user.click(screen.getByRole('button', { name: 'Table settings' }));
-    expect(await screen.findByText('Only a referee can change these settings.')).toBeInTheDocument();
+    // The referee's cards don't render for a player, so the page has nothing that looks barred.
+    expect(screen.queryByRole('heading', { name: 'Invite players' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Invite link' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Table settings' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Change rules' })).not.toBeInTheDocument();
   });
 
-  it("shows a player the table's rules, read-only, and no marks on the party", async () => {
+  it("shows a player the table's rules as a summary with no controls, and no marks on the party", async () => {
     const snapshot = fixtureSnapshot('lobby', 'player');
     const table: TableDetail = {
       ...snapshot.table,
+      settings: {
+        ...snapshot.table.settings,
+        ability_score_rerolls: 2,
+        ruleset: {
+          ...snapshot.table.settings.ruleset,
+          ...NO_OPTIONAL_RULES,
+          weapon_reload: true,
+          aoe_friendly_fire: true,
+        },
+      },
       roster: snapshot.table.roster.map((entry) => ({ ...entry, creation_rules: null })),
     };
     const fake = createFakeApi();
     fake.listRulesets.mockResolvedValue({ items: STARTING });
     fake.listCharacters.mockResolvedValue({ items: [] });
     const { user } = renderWithTable(<LobbyPage />, { snapshot: { ...snapshot, table }, api: fake });
-    // The collapsed panel names the starting rules the table matches.
-    expect(await screen.findByText('Standard B/X')).toBeInTheDocument();
-    await user.click(rulesToggle());
-    expect(screen.getByText('Only a referee can change the rules.')).toBeInTheDocument();
-    // The switches are read-only, not disabled, so their labels stay at full contrast and a click changes nothing.
-    const reroll = screen.getByRole('switch', { name: /Hit die reroll/ });
-    expect(reroll).toHaveAttribute('aria-readonly', 'true');
-    expect(reroll).toBeChecked();
-    await user.click(reroll);
-    expect(reroll).toBeChecked();
-    expect(fake.updateTable).not.toHaveBeenCalled();
-    expect(screen.getByRole('switch', { name: /Back-stab from hiding/ })).toHaveAttribute(
-      'aria-readonly',
-      'true',
+    const panel = screen.getByRole('heading', { name: 'Table rules' }).closest('section');
+    if (panel === null) throw new Error('No Table rules panel.');
+    const rules = within(panel);
+    // The badge names the starting rules, unless the table's rules match neither.
+    expect(await rules.findByText('Custom')).toBeInTheDocument();
+    const creating = within(rules.getByRole('region', { name: 'Creating a character' }));
+    expect(creating.getByText('Ability scores').nextSibling).toHaveTextContent('Roll 3d6');
+    expect(creating.getByText('Rerolls').nextSibling).toHaveTextContent('2 per character');
+    expect(creating.getByText('First-level hit points').nextSibling).toHaveTextContent(
+      'Roll, and reroll a 1 or 2',
     );
-    expect(screen.getByRole('checkbox', { name: 'Unlimited' })).toHaveAttribute('aria-readonly', 'true');
-    // The selects and the number are read-only too, so the rules the table plays by stay easy to read.
-    const startingRules = screen.getByRole('combobox', { name: 'Starting rules' });
-    expect(startingRules).toHaveAttribute('aria-readonly', 'true');
-    await user.click(startingRules);
-    expect(screen.queryByRole('listbox')).toBeNull();
-    expect(screen.getByRole('combobox', { name: 'Encumbrance' })).toHaveAttribute('aria-readonly', 'true');
-    expect(screen.getByRole('spinbutton', { name: 'Ability score rerolls' })).toHaveAttribute('readonly');
-    // A player has nothing to choose, so the field has no hint about choosing.
-    expect(screen.queryByText(/Choosing one changes every rule/)).toBeNull();
+    expect(creating.getByText('Poor ability scores').nextSibling).toHaveTextContent('Keep the character');
+    const playing = within(rules.getByRole('region', { name: 'Playing' }));
+    expect(playing.getByText('Encumbrance').nextSibling).toHaveTextContent('Basic');
+    expect(playing.getByText('Optional rules').nextSibling).toHaveTextContent('Weapon reload, Friendly fire');
+    // Nothing in the panel changes a rule.
+    expect(rules.queryByRole('switch')).toBeNull();
+    expect(rules.queryByRole('combobox')).toBeNull();
+    expect(rules.queryByRole('spinbutton')).toBeNull();
+    expect(rules.queryByText(/Only a referee can change the rules/)).toBeNull();
     expect(screen.queryByText(/Rules unknown|Other table|Different rules/)).toBeNull();
+    // A rule's name opens its explanation in place.
+    await user.click(rules.getByRole('button', { name: 'Friendly fire' }));
+    expect(await screen.findByRole('dialog', { name: 'Friendly fire' })).toHaveTextContent(
+      'An area spell cast at monsters in melee also hits the party members fighting them.',
+    );
+    expect(fake.updateTable).not.toHaveBeenCalled();
+  });
+
+  it('says none when no optional rule is on, and names the standard starting rules', async () => {
+    const snapshot = fixtureSnapshot('lobby', 'player');
+    const table: TableDetail = {
+      ...snapshot.table,
+      settings: {
+        ...snapshot.table.settings,
+        ability_score_rerolls: null,
+        sub_par_restart: true,
+        party_control: 'anyone',
+        ruleset: { ...snapshot.table.settings.ruleset, ...NO_OPTIONAL_RULES, max_hp_at_first_level: true },
+      },
+    };
+    const fake = createFakeApi();
+    fake.listRulesets.mockResolvedValue({ items: STARTING });
+    fake.listCharacters.mockResolvedValue({ items: [] });
+    renderWithTable(<LobbyPage />, { snapshot: { ...snapshot, table }, api: fake });
+    const summary = within(await screen.findByRole('region', { name: 'Creating a character' }));
+    expect(summary.getByText('Rerolls').nextSibling).toHaveTextContent('Unlimited');
+    expect(summary.getByText('First-level hit points').nextSibling).toHaveTextContent('Maximum');
+    expect(summary.getByText('Poor ability scores').nextSibling).toHaveTextContent('Can start over');
+    const playing = within(screen.getByRole('region', { name: 'Playing' }));
+    expect(playing.getByText('Moving the party').nextSibling).toHaveTextContent('Anyone with a character');
+    expect(playing.getByText('Optional rules').nextSibling).toHaveTextContent('None');
+  });
+
+  it('gives a referee the same summary, and a form that Done closes', async () => {
+    const snapshot = fixtureSnapshot('lobby', 'referee');
+    const fake = createFakeApi();
+    fake.listRulesets.mockResolvedValue({ items: STARTING });
+    fake.listAdventures.mockResolvedValue({ items: [] });
+    fake.listCharacters.mockResolvedValue({ items: [] });
+    const { user } = renderWithTable(<LobbyPage />, { snapshot, api: fake });
+    const panel = screen.getByRole('heading', { name: 'Table rules' }).closest('section');
+    if (panel === null) throw new Error('No Table rules panel.');
+    expect(await within(panel).findByText('Standard B/X')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Creating a character' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Starting rules' })).toBeNull();
+    await user.click(changeRules());
+    expect(screen.queryByRole('region', { name: 'Creating a character' })).toBeNull();
+    // Focus moves to the first control of the form.
+    await waitFor(() => expect(screen.getByRole('combobox', { name: 'Starting rules' })).toHaveFocus());
+    await user.click(screen.getByRole('button', { name: 'Done' }));
+    expect(screen.getByRole('region', { name: 'Creating a character' })).toBeInTheDocument();
+    expect(changeRules()).toHaveFocus();
+    expect(fake.updateTable).not.toHaveBeenCalled();
   });
 
   it('lets a referee pick starting rules, and asks first when it discards changes', async () => {
@@ -269,7 +337,7 @@ describe('LobbyPage', () => {
       `No creation rules were recorded for ${first?.name ?? ''}.`,
     );
     await user.keyboard('{Escape}');
-    await user.click(rulesToggle());
+    await user.click(changeRules());
     await user.click(await screen.findByRole('combobox', { name: 'Starting rules' }));
     await user.click(await screen.findByRole('option', { name: 'Creation house rules' }));
     expect(await screen.findByText('Use creation house rules?')).toBeInTheDocument();
@@ -294,7 +362,7 @@ describe('LobbyPage', () => {
     fake.listCharacters.mockResolvedValue({ items: [] });
     const { api, user } = renderWithTable(<LobbyPage />, { snapshot, api: fake });
     api.updateTable.mockResolvedValue(snapshot.table);
-    await user.click(rulesToggle());
+    await user.click(changeRules());
     await user.click(screen.getByRole('switch', { name: /4d6 drop lowest/ }));
     expect(api.updateTable).toHaveBeenCalledWith(snapshot.table.id, {
       settings: { ruleset: { ability_score_method: '4d6_drop_lowest' } },
@@ -409,7 +477,7 @@ describe('LobbyPage', () => {
         }),
     );
     const { user, unmount } = renderWithTable(<LobbyPage />, { snapshot, api: fake });
-    await user.click(rulesToggle());
+    await user.click(changeRules());
     const rerolls = screen.getByRole('spinbutton', { name: 'Ability score rerolls' });
     await user.clear(rerolls);
     await user.type(rerolls, '5{Enter}');

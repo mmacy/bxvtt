@@ -201,13 +201,10 @@ function RulesSection({ title, hint, children }: { title: string; hint?: string;
 /**
  * The rules part of the table's settings: the starting rules, the SRD's optional rules for creating a character,
  * the house rules, and the rules for play. A referee changes them, and each change applies at once. A player sees
- * the same values read-only. The lobby's Rules panel and the Rules tab of the play screen's settings dialog both
- * render it.
- *
- * @param props.showNote - Shows a player the note that only a referee can change the rules, for the lobby. The
- *   dialog's description already says it.
+ * the same values read-only. The lobby's Table rules panel shows it to a referee who chooses to change the rules,
+ * and the Rules tab of the play screen's settings dialog renders it.
  */
-export function TableRulesForm({ showNote = false }: { showNote?: boolean }) {
+export function TableRulesForm() {
   const table = useTableDetail();
   const referee = useIsReferee();
   const starting = useStartingRulesets();
@@ -229,7 +226,6 @@ export function TableRulesForm({ showNote = false }: { showNote?: boolean }) {
 
   return (
     <div className={styles.rules}>
-      {showNote && readOnly && <p className={styles.note}>Only a referee can change the rules.</p>}
       <Field
         label="Starting rules"
         hint={

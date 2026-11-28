@@ -22,9 +22,9 @@ const SUB_PAR_SEED = 6;
 /** A seed whose 4d6 drop lowest roll qualifies for every class, with Constitution 14. */
 const HOUSE_RULES_SEED = 5;
 
-/** The lobby's Rules panel toggle. The header's Rules reference button has a longer name. */
-function rulesToggle(page: Page) {
-  return page.getByRole('button', { name: 'Rules', exact: true });
+/** The lobby's Table rules panel, which names the starting rules in a badge. */
+function rulesPanel(page: Page) {
+  return page.getByRole('heading', { name: 'Table rules' }).locator('xpath=ancestor::section[1]');
 }
 
 /** The scores the wizard shows for the six abilities, read from each score's accessible name. */
@@ -57,36 +57,40 @@ test.describe('table rules', () => {
     await openTable(ruth.page, `/tables/${table.id}`);
     await openTable(sam.page, `/tables/${table.id}`);
 
-    // A new table plays standard B/X, which the collapsed panel names.
-    await expect(rulesToggle(ruth.page)).toHaveAttribute('aria-expanded', 'false');
-    await expect(sam.page.getByText('Standard B/X', { exact: true })).toBeVisible();
+    // A new table plays standard B/X, which the panel's badge names. Both see the summary, not the form.
+    await expect(rulesPanel(ruth.page).getByText('Standard B/X', { exact: true })).toBeVisible();
+    await expect(rulesPanel(sam.page).getByText('Standard B/X', { exact: true })).toBeVisible();
+    await expect(sam.page.getByText('Roll 3d6', { exact: true })).toBeVisible();
+    await expect(ruth.page.getByRole('combobox', { name: 'Starting rules' })).toHaveCount(0);
 
-    await rulesToggle(ruth.page).click();
+    await ruth.page.getByRole('button', { name: 'Change rules' }).click();
     const starting = ruth.page.getByRole('combobox', { name: 'Starting rules' });
+    await expect(starting).toBeFocused();
     await expect(starting).toHaveText('Standard B/X');
     await starting.click();
     await ruth.page.getByRole('option', { name: 'Creation house rules' }).click();
     await expect(ruth.page.getByRole('switch', { name: '4d6 drop lowest' })).toBeChecked();
     await expect(ruth.page.getByRole('switch', { name: 'Maximum hit points' })).toBeChecked();
     await expect(starting).toHaveText('Creation house rules');
-    await expect(sam.page.getByText('Creation house rules', { exact: true })).toBeVisible();
+    await expect(rulesPanel(sam.page).getByText('Creation house rules', { exact: true })).toBeVisible();
+    await expect(sam.page.getByText('Roll 4d6, drop the lowest', { exact: true })).toBeVisible();
+    await expect(sam.page.getByText('Maximum', { exact: true })).toBeVisible();
 
     // A rule for play the starting rules don't set makes the table's rules custom.
     await ruth.page.getByRole('switch', { name: 'Individual initiative' }).click();
     await expect(ruth.page.getByRole('switch', { name: 'Individual initiative' })).toBeChecked();
     await expect(starting).toHaveText('Custom');
-    await expect(sam.page.getByText('Custom', { exact: true })).toBeVisible();
 
-    // The player reads the same rules, and can't change them.
-    await rulesToggle(sam.page).click();
-    await expect(sam.page.getByText('Only a referee can change the rules.')).toBeVisible();
-    await expect(sam.page.getByText('Custom', { exact: true })).toBeVisible();
-    const samDice = sam.page.getByRole('switch', { name: '4d6 drop lowest' });
-    await expect(samDice).toBeChecked();
-    await expect(samDice).toHaveAttribute('aria-readonly', 'true');
-    await samDice.click();
-    await expect(samDice).toBeChecked();
-    await expect(sam.page.getByRole('switch', { name: 'Individual initiative' })).toBeChecked();
+    // The player reads the same rules, with no control that looks barred, and can tap a rule for its meaning.
+    const samRules = rulesPanel(sam.page);
+    await expect(samRules.getByText('Custom', { exact: true })).toBeVisible();
+    await expect(samRules.getByRole('switch')).toHaveCount(0);
+    await expect(samRules.getByRole('combobox')).toHaveCount(0);
+    await samRules.getByRole('button', { name: 'Individual initiative' }).click();
+    await expect(sam.page.getByRole('dialog', { name: 'Individual initiative' })).toContainText(
+      'Every combatant rolls their own initiative',
+    );
+    await sam.page.keyboard.press('Escape');
     expect((await sam.client.getTable(table.id)).settings.ruleset.ability_score_method).toBe(
       '4d6_drop_lowest',
     );
@@ -98,9 +102,14 @@ test.describe('table rules', () => {
     await expect(confirm).toBeVisible();
     await confirm.getByRole('button', { name: 'Use standard B/X' }).click();
     await expect(starting).toHaveText('Standard B/X');
-    await expect(samDice).not.toBeChecked();
-    await expect(sam.page.getByRole('switch', { name: 'Individual initiative' })).not.toBeChecked();
-    await expect(sam.page.getByText('Standard B/X', { exact: true })).toBeVisible();
+    await expect(samRules.getByText('Standard B/X', { exact: true })).toBeVisible();
+    await expect(sam.page.getByText('Roll 3d6', { exact: true })).toBeVisible();
+    await expect(samRules.getByRole('button', { name: 'Individual initiative' })).toHaveCount(0);
+
+    // Done returns the referee to the summary and puts focus back on the button that opened the form.
+    await ruth.page.getByRole('button', { name: 'Done' }).click();
+    await expect(ruth.page.getByRole('button', { name: 'Change rules' })).toBeFocused();
+    await expect(starting).toHaveCount(0);
   });
 
   test('the referee changes a rule for play in the table settings, and the player sees it in theirs', async ({
@@ -130,15 +139,20 @@ test.describe('table rules', () => {
     await ruthRules.getByRole('switch', { name: 'Weapon reload' }).click();
     await expect(ruthRules.getByRole('switch', { name: 'Weapon reload' })).toBeChecked();
 
-    const samRules = await openRules(sam.page);
-    await expect(samRules.getByText('Only a referee can change these settings.')).toBeVisible();
-    const samSwitch = samRules.getByRole('switch', { name: 'Weapon reload' });
-    await expect(samSwitch).toBeChecked();
-    await expect(samSwitch).toHaveAttribute('aria-readonly', 'true');
+    // A player's menu has the table's rules to read, and no settings or invite link.
+    await sam.page.getByRole('button', { name: 'Table menu' }).click();
+    await expect(sam.page.getByRole('menuitem', { name: 'Table settings' })).toHaveCount(0);
+    await expect(sam.page.getByRole('menuitem', { name: 'Copy invite link' })).toHaveCount(0);
+    await sam.page.getByRole('menuitem', { name: 'Table rules' }).click();
+    const samRules = sam.page.getByRole('dialog', { name: 'Table rules' });
+    await expect(samRules.getByText('Changes apply to the next new game.')).toHaveCount(0);
+    await expect(samRules.getByRole('switch')).toHaveCount(0);
+    const reload = samRules.getByRole('button', { name: 'Weapon reload' });
+    await expect(reload).toBeVisible();
 
     // The referee turns it off again, and the player's open dialog follows.
     await ruthRules.getByRole('switch', { name: 'Weapon reload' }).click();
-    await expect(samSwitch).not.toBeChecked();
+    await expect(reload).toHaveCount(0);
   });
 
   test('a player rerolls until the table’s limit runs out, and a higher limit lets them roll again', async ({

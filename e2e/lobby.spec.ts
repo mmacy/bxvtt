@@ -75,9 +75,14 @@ test.describe('first run and lobby', () => {
     const ruthsList = ruth.page.getByRole('heading', { name: 'People at the table' }).locator('xpath=../..');
     await expect(ruthsList.getByRole('listitem').filter({ hasText: 'Sam' })).toContainText('Player');
 
-    // A player sees no invite controls and no member actions.
+    // A player sees no invite controls, no table settings, and no member actions, and reads the table's rules.
+    await expect(sam.page.getByRole('heading', { name: 'Invite players' })).toHaveCount(0);
+    await expect(sam.page.getByRole('textbox', { name: 'Invite link' })).toHaveCount(0);
     await expect(sam.page.getByRole('button', { name: 'Replace invite link' })).toHaveCount(0);
+    await expect(sam.page.getByRole('button', { name: 'Table settings' })).toHaveCount(0);
     await expect(sam.page.getByRole('button', { name: /Actions for/ })).toHaveCount(0);
+    await expect(sam.page.getByRole('heading', { name: 'Table rules' })).toBeVisible();
+    await expect(sam.page.getByRole('button', { name: 'Change rules' })).toHaveCount(0);
 
     // When Sam closes the tab, Ruth sees him go away.
     await sam.page.close();

@@ -1,6 +1,7 @@
 export { LobbyPage } from './LobbyPage';
 export { TableSettingsForm } from './TableSettingsForm';
 export { TableRulesForm } from './TableRulesForm';
+export { RulesSummary } from './RulesSummary';
 export { InvitePanel, copyInviteLink, inviteLink } from './InvitePanel';
 export { MembersPanel } from './MembersPanel';
 export { RosterPanel, moveItem } from './RosterPanel';

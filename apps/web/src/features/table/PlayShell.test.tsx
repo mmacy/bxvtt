@@ -54,6 +54,26 @@ describe('PlayShell', () => {
     expect(screen.getByRole('alertdialog', { name: 'Delete table?' })).toBeInTheDocument();
   });
 
+  it('gives a player the table rules to read, and a referee the invite link and the settings', async () => {
+    const player = renderWithTable(<PlayShell />, { snapshot: fixtureSnapshot('town', 'player') });
+    await player.user.click(screen.getByRole('button', { name: 'Table menu' }));
+    expect(screen.queryByRole('menuitem', { name: 'Table settings' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Copy invite link' })).not.toBeInTheDocument();
+    await player.user.click(await screen.findByRole('menuitem', { name: 'Table rules' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Table rules' });
+    expect(within(dialog).getByText('Ability scores')).toBeInTheDocument();
+    expect(within(dialog).queryByText('Changes apply to the next new game.')).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('switch')).not.toBeInTheDocument();
+    player.unmount();
+
+    const referee = renderWithTable(<PlayShell />, { snapshot: fixtureSnapshot('town', 'referee') });
+    await referee.user.click(screen.getByRole('button', { name: 'Table menu' }));
+    expect(await screen.findByRole('menuitem', { name: 'Copy invite link' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Table rules' })).not.toBeInTheDocument();
+    await referee.user.click(screen.getByRole('menuitem', { name: 'Table settings' }));
+    expect(await screen.findByRole('dialog', { name: 'Table settings' })).toBeInTheDocument();
+  });
+
   it('says so when the connection drops, without unmounting the table', () => {
     renderWithTable(<PlayShell />, { data: { status: 'reconnecting' } });
     expect(screen.getByText('Connection lost. Reconnecting to the table.')).toBeInTheDocument();
