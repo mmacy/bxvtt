@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { isProblem } from '@bxvtt/shared/client';
-import type { TestServer, TestUser } from './helpers';
-import { connect, createUser, received, startServer } from './helpers';
+import type { TestConnection, TestServer, TestUser } from './helpers';
+import { connect, createTable, createUser, received, startServer } from './helpers';
 
 describe('tables and roles', () => {
   let server: TestServer;
@@ -159,5 +159,91 @@ describe('tables and roles', () => {
     await referee.client.deleteTable(table.id);
     await received(ws, 'removed', (message) => message.reason === 'table_deleted');
     expect((await player.client.listTables()).items.map((item) => item.id)).not.toContain(table.id);
+  });
+});
+
+describe('who receives the invite code', () => {
+  let server: TestServer;
+
+  beforeAll(async () => {
+    server = await startServer();
+  });
+
+  afterAll(async () => {
+    await server.close();
+  });
+
+  /** The texts of every message a connection received from `from` on. */
+  const frames = (ws: TestConnection, from = 0) =>
+    ws.messages.slice(from).map((message) => JSON.stringify(message));
+
+  it('sends the code to a referee in every response and message, and to a player in none', async () => {
+    const ref = await createUser(server, 'Ref');
+    const pat = await createUser(server, 'Pat');
+    const created = await ref.client.createTable({ name: 'Codes' });
+    const joined = await pat.client.joinTable(created.invite_code);
+    expect(joined).not.toHaveProperty('invite_code');
+    const refWs = await connect(server, ref, created.id);
+    const patWs = await connect(server, pat, created.id);
+
+    expect((await received(refWs, 'snapshot')).table.invite_code).toBe(created.invite_code);
+
+    // Replacing the code and renaming the table each send the table to every member.
+    const replaced = await ref.client.regenerateInviteCode(created.id);
+    await ref.client.updateTable(created.id, { name: 'Codes 2' });
+    const refTable = await received(refWs, 'table', (message) => message.table.name === 'Codes 2');
+    expect(refTable.table.invite_code).toBe(replaced.invite_code);
+    await received(patWs, 'table', (message) => message.table.name === 'Codes 2');
+    expect((await ref.client.getTable(created.id)).invite_code).toBe(replaced.invite_code);
+    await pat.client.getTable(created.id);
+    await pat.client.listTables();
+
+    const patTexts = [...pat.received, ...frames(patWs)];
+    expect(patTexts.filter((text) => text.includes('invite_code'))).toEqual([]);
+    for (const code of [created.invite_code, replaced.invite_code]) {
+      expect(patTexts.filter((text) => text.includes(code))).toEqual([]);
+    }
+    refWs.close();
+    patWs.close();
+  });
+
+  it('sends the code to a member promoted to referee without a reload', async () => {
+    const ref = await createUser(server, 'Ref');
+    const pat = await createUser(server, 'Pat');
+    const table = await createTable(ref, [pat]);
+    const patWs = await connect(server, pat, table.id);
+    expect(frames(patWs).some((text) => text.includes('invite_code'))).toBe(false);
+
+    const promoted = await ref.client.setMemberRole(table.id, pat.id, 'referee');
+    expect(promoted.invite_code).toBe(table.invite_code);
+    // The open connection hears the new role, and the code with it, without the player reloading.
+    await received(
+      patWs,
+      'snapshot',
+      (message) => message.role === 'referee' && message.table.invite_code === table.invite_code,
+    );
+    expect((await pat.client.getTable(table.id)).invite_code).toBe(table.invite_code);
+    patWs.close();
+  });
+
+  it('stops sending the code to a referee who becomes a player', async () => {
+    const ref = await createUser(server, 'Ref');
+    const coRef = await createUser(server, 'Coref');
+    const table = await createTable(ref, [coRef]);
+    await ref.client.setMemberRole(table.id, coRef.id, 'referee');
+    const coWs = await connect(server, coRef, table.id);
+    expect((await received(coWs, 'snapshot')).table.invite_code).toBe(table.invite_code);
+
+    const from = coWs.messages.length;
+    const demoted = await coRef.client.setMemberRole(table.id, coRef.id, 'player');
+    // The demoted referee's own response is built for the role they now have.
+    expect(demoted).not.toHaveProperty('invite_code');
+    await received(coWs, 'snapshot', (message) => message.role === 'player');
+    await ref.client.regenerateInviteCode(table.id);
+    await ref.client.updateTable(table.id, { name: 'Later' });
+    await received(coWs, 'table', (message) => message.table.name === 'Later');
+    expect(frames(coWs, from).filter((text) => text.includes('invite_code'))).toEqual([]);
+    expect(await coRef.client.getTable(table.id)).not.toHaveProperty('invite_code');
+    coWs.close();
   });
 });

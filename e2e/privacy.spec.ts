@@ -3,7 +3,7 @@
  * the dungeon and through two fights, while the referee writes private notes, places a referee-only pin, rolls in
  * secret, and reads a treasure's referee notes in the area key while the player stands in the same room. It
  * records every API response body and WebSocket frame the player's browser receives, and scans them for markers
- * of referee-only content, among them the referee notes of every sample adventure. It scans the referee's own
+ * of referee-only content, among them the referee notes of every sample adventure and the table's invite code. It scans the referee's own
  * traffic as the control, so a marker the scan can't find never passes for a guarded one. The second test does the
  * same while a returning player asks to come back in: the requests go to referees alone, and the visitor learns
  * nothing but the table's name, the offline members, and, once let in, their own new sign-in.
@@ -161,14 +161,23 @@ test('a player receives no referee data through a whole game of The Drowned Bell
     'Gatehouse stair',
     'robed corpse',
   ]);
-  // The control: the same scan finds the referee notes, their field, and the referee view's feature handles in
-  // what the referee's browser received, so a leak of any of them to the player would fail this test.
+  // The control: the same scan finds the referee notes, their field, the referee view's feature handles, and the
+  // invite code in what the referee's browser received, so a leak of any of them to the player would fail this
+  // test.
   expect(SAMPLE_REFEREE_NOTES, 'the sample adventures should have referee notes').toHaveLength(13);
-  const refereeData = findLeaks(ruth.received, ['"referee_notes"', '"feature_handles"', CHAPEL_NOTE]);
+  const refereeData = findLeaks(ruth.received, [
+    '"referee_notes"',
+    '"feature_handles"',
+    CHAPEL_NOTE,
+    '"invite_code"',
+    table.invite_code,
+  ]);
   expect(refereeData.map((found) => found.marker)).toEqual([
     '"referee_notes"',
     '"feature_handles"',
     CHAPEL_NOTE,
+    '"invite_code"',
+    table.invite_code,
     '"referee":{',
   ]);
   const leaks = findLeaks(sam.received, [
@@ -178,6 +187,8 @@ test('a player receives no referee data through a whole game of The Drowned Bell
     NOTES_MARKER,
     PIN_MARKER,
     ROLL_MARKER,
+    '"invite_code"',
+    table.invite_code,
   ]);
   expect(leaks.map((leak) => `${leak.marker} … ${leak.context}`)).toEqual([]);
   // The player's page shows none of the notes either.
@@ -238,6 +249,7 @@ test('rejoin requests reach referees alone, and a visitor learns only what the j
     ...BELL_MARKERS,
     ...SAMPLE_REFEREE_NOTES,
     ...rejoinMarkers,
+    '"invite_code"',
   ]);
   expect(patLeaks.map((leak) => `${leak.marker} … ${leak.context}`)).toEqual([]);
   expect(pat.received.length, 'the recorder should have captured traffic').toBeGreaterThan(5);

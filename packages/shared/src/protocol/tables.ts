@@ -123,14 +123,19 @@ export const TableSummary = z.object({
 export type TableSummary = z.infer<typeof TableSummary>;
 
 /**
- * Everything about a table except the game state: members, settings, roster, and invite code. The `table`
- * WebSocket message carries the same object, so a client replaces its copy with each one.
+ * Everything about a table except the game state: members, settings, roster, and, for a referee, the invite code.
+ * The `table` WebSocket message carries the same object, built for each recipient's role, so a client replaces its
+ * copy with each one.
  */
 export const TableDetail = z.object({
   id: TableId,
   name: z.string(),
-  /** The invite code, grouped as `XXXXX-XXXXX-XXXXX-XXXXX`. Every member can see it, and only a referee can change it. */
-  invite_code: z.string(),
+  /**
+   * The invite code, grouped as `XXXXX-XXXXX-XXXXX-XXXXX`. The server sends it only to a referee of the table and
+   * omits it for a player. A member who becomes a referee receives it in the next `table` message, and a referee who
+   * becomes a player stops receiving it.
+   */
+  invite_code: z.string().optional(),
   phase: TablePhase,
   settings: TableSettings,
   members: z.array(Member),
@@ -141,6 +146,14 @@ export const TableDetail = z.object({
 });
 /** Everything about a table except the game state. */
 export type TableDetail = z.infer<typeof TableDetail>;
+
+/**
+ * A table as a referee receives it, with the invite code. `POST /api/tables` and
+ * `POST /api/tables/{table_id}/invite-code` answer with this shape, because only a referee can call them.
+ */
+export const RefereeTableDetail = TableDetail.extend({ invite_code: z.string() });
+/** A table as a referee receives it, with the invite code. */
+export type RefereeTableDetail = z.infer<typeof RefereeTableDetail>;
 
 /** Response of `GET /api/tables`: the tables the user is a member of, most recently created first. */
 export const TableList = z.object({ items: z.array(TableSummary) });

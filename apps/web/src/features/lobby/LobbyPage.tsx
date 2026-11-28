@@ -10,7 +10,18 @@ import {
   useMembers,
   useTableDetail,
 } from '@/app';
-import { Badge, Banner, Button, DropdownMenu, IconButton, Panel, PageLayout, Wordmark } from '@/ui';
+import {
+  Badge,
+  Banner,
+  breakpoints,
+  Button,
+  DropdownMenu,
+  IconButton,
+  Panel,
+  PageLayout,
+  useMediaQuery,
+  Wordmark,
+} from '@/ui';
 import { ProfileMenu, RulesReference } from '@/features/home';
 import { AdventurePicker } from './AdventurePicker';
 import { InvitePanel } from './InvitePanel';
@@ -23,6 +34,11 @@ import { TableRulesForm } from './TableRulesForm';
 import { TableSettingsForm } from './TableSettingsForm';
 import { useTableExit } from './TableExit';
 import styles from './lobby.module.css';
+
+/** Below the phone breakpoint the party comes right after the start button. */
+const PHONE_QUERY = `(max-width: ${breakpoints.phone - 1}px)`;
+/** The width where the lobby becomes one column, the same as in `lobby.module.css`. */
+const ONE_COLUMN_QUERY = '(max-width: 860px)';
 
 /** The default adventure to suggest: the first sample, or else the first adventure. */
 function suggested(adventures: AdventureListing[]): string | null {
@@ -93,6 +109,8 @@ export function LobbyPage({ banner }: { banner?: ReactNode }) {
   const [selected, setSelected] = useState<string | null>(null);
   const tableId = table?.id ?? null;
   const exit = useTableExit();
+  const phone = useMediaQuery(PHONE_QUERY);
+  const oneColumn = useMediaQuery(ONE_COLUMN_QUERY);
 
   const [reload, setReload] = useState(0);
   const loadAdventures = useCallback(async () => setReload((n) => n + 1), []);
@@ -126,6 +144,71 @@ export function LobbyPage({ banner }: { banner?: ReactNode }) {
   const refereeNames = members.filter((m) => m.role === 'referee').map((m) => m.name);
   const adventure = adventures?.find((a) => a.id === selected) ?? null;
   const online = members.filter((m) => m.online).length;
+
+  const blocks = {
+    main: (
+      <div key="main" className={styles.main}>
+        <Panel title="Party" meta={`${table.roster.length} in marching order`}>
+          <RosterPanel />
+        </Panel>
+        {/* Every member reads the rules early, and a referee sets them before the players create characters. */}
+        <TableRulesPanel />
+        {referee && (
+          <Panel title="Adventure" meta="Only referees see this until the game starts">
+            <AdventurePicker
+              tableId={table.id}
+              adventures={adventures}
+              error={adventureError}
+              selectedId={selected}
+              onSelect={setSelected}
+              onChanged={loadAdventures}
+            />
+          </Panel>
+        )}
+      </div>
+    ),
+    start: (
+      <div key="start" className={styles.start}>
+        {referee ? (
+          <Panel title="Start game">
+            <StartGamePanel table={table} adventure={adventure} />
+            <LobbySaves />
+          </Panel>
+        ) : (
+          <>
+            <Banner tone="neutral" icon="hourglass" title="Waiting for the referee to start">
+              You'll enter the game automatically as soon as the referee starts it.
+            </Banner>
+            <LobbySaves />
+          </>
+        )}
+      </div>
+    ),
+    rest: (
+      <aside key="rest" className={styles.side}>
+        <Panel title="People at the table" meta={`${members.length}`} bodyPadding="sm">
+          <MembersPanel />
+        </Panel>
+        {referee && (
+          <>
+            <Panel title="Invite players">
+              <InvitePanel />
+            </Panel>
+            <Panel title="Table settings" collapsible defaultOpen>
+              <TableSettingsForm />
+            </Panel>
+          </>
+        )}
+      </aside>
+    ),
+  };
+  // Two columns put the party on the left. One column puts the start button first, and then on a phone the party,
+  // so the referee doesn't scroll past the settings to reach it.
+  const order: (keyof typeof blocks)[] = phone
+    ? ['start', 'main', 'rest']
+    : oneColumn
+      ? ['start', 'rest', 'main']
+      : ['main', 'start', 'rest'];
 
   return (
     <PageLayout
@@ -177,56 +260,9 @@ export function LobbyPage({ banner }: { banner?: ReactNode }) {
           </div>
         </header>
 
-        <div className={styles.columns}>
-          <div className={styles.main}>
-            <Panel title="Party" meta={`${table.roster.length} in marching order`}>
-              <RosterPanel />
-            </Panel>
-            {/* Every member reads the rules early, and a referee sets them before the players create characters. */}
-            <TableRulesPanel />
-            {referee && (
-              <Panel title="Adventure" meta="Only referees see this until the game starts">
-                <AdventurePicker
-                  tableId={table.id}
-                  adventures={adventures}
-                  error={adventureError}
-                  selectedId={selected}
-                  onSelect={setSelected}
-                  onChanged={loadAdventures}
-                />
-              </Panel>
-            )}
-          </div>
-
-          <aside className={styles.side}>
-            {referee ? (
-              <Panel title="Start game">
-                <StartGamePanel table={table} adventure={adventure} />
-                <LobbySaves />
-              </Panel>
-            ) : (
-              <>
-                <Banner tone="neutral" icon="hourglass" title="Waiting for the referee to start">
-                  You'll enter the game automatically as soon as the referee starts it.
-                </Banner>
-                <LobbySaves />
-              </>
-            )}
-            <Panel title="People at the table" meta={`${members.length}`} bodyPadding="sm">
-              <MembersPanel />
-            </Panel>
-            {referee && (
-              <>
-                <Panel title="Invite players">
-                  <InvitePanel />
-                </Panel>
-                <Panel title="Table settings" collapsible defaultOpen>
-                  <TableSettingsForm />
-                </Panel>
-              </>
-            )}
-          </aside>
-        </div>
+        {/* The blocks keep one parent and a key each, so changing their order on a resize moves them and keeps
+            their state. Their order in the page is the order on screen, so the tab order follows it. */}
+        <div className={styles.columns}>{order.map((block) => blocks[block])}</div>
       </div>
       {exit.dialogs}
     </PageLayout>

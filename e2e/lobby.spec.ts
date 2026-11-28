@@ -270,7 +270,9 @@ test.describe('first run and lobby', () => {
     await sam.page.goto(`/tables/${table.id}`);
 
     const adventures = ruth.page.getByRole('radiogroup', { name: 'Adventure' });
-    const start = ruth.page.getByRole('complementary').filter({ hasText: 'Start game' });
+    const start = ruth.page
+      .locator('section')
+      .filter({ has: ruth.page.getByRole('heading', { name: 'Start game', level: 2 }) });
     for (const name of [
       'The Barrow of the Forgotten King',
       'The Toll at Crookback Bridge',

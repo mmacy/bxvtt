@@ -59,6 +59,7 @@ import type {
   StartingRollsStatus,
   StartingRulesetList,
   StoredCharacter,
+  RefereeTableDetail,
   TableDetail,
   TableList,
   UpdateTableRequest,
@@ -263,12 +264,12 @@ export class BxvttClient {
    *
    * @param body - The name, and the host key when the server needs one.
    */
-  createTable(body: CreateTableRequest): Promise<TableDetail> {
+  createTable(body: CreateTableRequest): Promise<RefereeTableDetail> {
     return this.request('POST', '/api/tables', { body });
   }
 
   /**
-   * Reads a table.
+   * Reads a table. The response holds `invite_code` only when the user is a referee of the table.
    *
    * @param tableId - The table ID.
    */
@@ -300,7 +301,7 @@ export class BxvttClient {
    *
    * @param tableId - The table ID.
    */
-  regenerateInviteCode(tableId: string): Promise<TableDetail> {
+  regenerateInviteCode(tableId: string): Promise<RefereeTableDetail> {
     return this.request('POST', `/api/tables/${enc(tableId)}/invite-code`);
   }
 

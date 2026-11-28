@@ -120,20 +120,21 @@ function DetailsButton({ item, detail }: { item: EquipmentSummary; detail: Equip
       title={item.name}
       width="280px"
       trigger={
-        // The button's name already ends "show details", so the tooltip isn't its description too.
+        // The button's name already ends "show details", so the tooltip isn't its description too. The name comes
+        // from the visible text, with hidden separators, so it always contains what a speech user reads on screen.
         <Tooltip content="Show this item's details" describe={false}>
-          <button
-            type="button"
-            className={styles.shopNameButton}
-            aria-label={`${item.name}, ${rowSummary(item.id, item.name, detail) || itemTypeLabel(item.item_type)}, show details`}
-          >
+          <button type="button" className={styles.shopNameButton}>
             <span className={styles.shopIcon}>
               <Icon name={itemIcon(item.id, item.item_type)} size={16} />
             </span>
             <span className={styles.shopNameText}>
-              <span className={styles.shopName}>{item.name}</span>
+              <span className={styles.shopName}>
+                {item.name}
+                <span className="visually-hidden-inline">,</span>
+              </span>
               <span className={styles.shopSub}>
                 {rowSummary(item.id, item.name, detail) || itemTypeLabel(item.item_type)}
+                <span className="visually-hidden-inline">, show details</span>
               </span>
             </span>
           </button>

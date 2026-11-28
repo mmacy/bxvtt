@@ -56,6 +56,7 @@ export function ShellTopBar() {
   const [confirm, setConfirm] = useState<'end' | null>(null);
   const exit = useTableExit();
   if (table === null) return null;
+  const inviteCode = table.invite_code;
 
   const save = () =>
     void run(() => getApi().createSave(table.id), {
@@ -71,12 +72,15 @@ export function ShellTopBar() {
       ? { label: 'Table settings', icon: 'settings', onSelect: () => ui.setSettingsOpen(true) }
       : { label: 'Table rules', icon: 'scroll', onSelect: () => ui.setSettingsOpen(true) },
     ...(referee
+      ? [{ label: 'Seats and caller', icon: 'users' as const, onSelect: () => ui.setSeatsOpen(true) }]
+      : []),
+    // The server sends the invite code to referees only.
+    ...(referee && inviteCode !== undefined
       ? [
-          { label: 'Seats and caller', icon: 'users' as const, onSelect: () => ui.setSeatsOpen(true) },
           {
             label: 'Copy invite link',
             icon: 'link' as const,
-            onSelect: () => void copyInviteLink(table.invite_code),
+            onSelect: () => void copyInviteLink(inviteCode),
           },
         ]
       : []),

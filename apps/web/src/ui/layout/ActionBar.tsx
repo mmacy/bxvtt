@@ -127,7 +127,12 @@ function press(element: HTMLElement): void {
 export interface ActionBarProps {
   /** Accessible name, such as "Party actions". */
   'aria-label': string;
-  /** Text or status on the leading edge, such as "Wren is the caller". Long text truncates. */
+  /**
+   * Text or status on the leading edge, such as "Wren is the caller". Long text truncates. Below 760 px of bar
+   * width the last `span` is hidden visually and stays for assistive technology. A `span` marked
+   * `data-status-short` and `aria-hidden="true"` before it shows only then, as a short visible form such as
+   * "No caller".
+   */
   status?: ReactNode;
   /** The accessible name of the overflow menu's button. Defaults to "More actions". */
   moreLabel?: string;

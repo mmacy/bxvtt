@@ -417,4 +417,26 @@ test.describe('referee tools', () => {
     await expect(order.getByRole('listitem').filter({ hasText: 'Tinks' })).toContainText('Ruth');
     await expect(order.getByRole('listitem').filter({ hasText: 'Flarg' })).toContainText('You');
   });
+
+  test('the caller on a phone: the dot opens its tooltip from the keyboard, and no caller reads "No caller"', async ({
+    crew,
+  }) => {
+    const { ruth, sam, tableId } = await bellTable(crew);
+    await sam.page.setViewportSize({ width: 390, height: 844 });
+    const dot = sam.page.getByRole('img', { name: 'You are the caller' });
+    await dot.focus();
+    await sam.page.keyboard.press('Shift+Tab');
+    await sam.page.keyboard.press('Tab');
+    await expect(dot).toBeFocused();
+    await expect(sam.page.getByRole('tooltip')).toHaveText('You are the caller');
+    // Tooltips that close while they are still opening, as when someone holds Tab, don't stay on screen.
+    for (let i = 0; i < 6; i += 1) await sam.page.keyboard.press('Shift+Tab');
+    await expect.poll(() => sam.page.getByRole('tooltip').count()).toBeLessThanOrEqual(1);
+
+    await ruth.client.updateTable(tableId, { settings: { caller_user_id: null } });
+    await expect(sam.page.getByText('No caller', { exact: true })).toBeVisible();
+    await sam.page.setViewportSize({ width: 1440, height: 900 });
+    await expect(sam.page.getByText('No caller', { exact: true })).toBeHidden();
+    await expect(sam.page.getByText('No caller. The referee moves the party.')).toBeVisible();
+  });
 });

@@ -32,8 +32,10 @@ export function InvitePanel() {
   const store = useTableStoreApi();
   const { run } = useApiAction();
   const [confirming, setConfirming] = useState(false);
-  if (table === null) return null;
-  const link = inviteLink(table.invite_code);
+  // The server sends the invite code to referees only.
+  const inviteCode = table?.invite_code;
+  if (table === null || inviteCode === undefined) return null;
+  const link = inviteLink(inviteCode);
 
   const regenerate = async () => {
     const result = await run(() => getApi().regenerateInviteCode(table.id), {
@@ -58,7 +60,7 @@ export function InvitePanel() {
           variant="secondary"
           icon="copy"
           tooltip="Copy the invite link to send to your players"
-          onClick={() => void copyInviteLink(table.invite_code)}
+          onClick={() => void copyInviteLink(inviteCode)}
         >
           Copy
         </Button>

@@ -64,7 +64,7 @@ export async function buildSnapshot(
       type: 'snapshot',
       user,
       role,
-      table: ctx.tables.detail(tableId),
+      table: ctx.tables.detail(tableId, role),
       presence: ctx.hub.presence(tableId),
       game,
       declarations: live === null ? null : await ctx.game.battle.state(live),

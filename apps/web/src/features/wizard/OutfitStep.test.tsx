@@ -84,6 +84,15 @@ describe('OutfitStep on a phone', () => {
     expect(screen.getAllByRole('button', { name: /^Add .* to the cart$/ })).toHaveLength(ITEMS.length);
   });
 
+  it("names an item's details button with its visible text, so a speech user can say what they see", async () => {
+    renderStep(true);
+    const list = await screen.findByRole('list', { name: 'Equipment for sale' });
+    const button = await within(list).findByRole('button', {
+      name: /^Mace,\s*1d6, blunt, melee,\s*show details$/,
+    });
+    expect(button).not.toHaveAttribute('aria-label');
+  });
+
   it('shows the price and weight, only the price without a listed weight, and Free for no cost', async () => {
     renderStep(true);
     const list = await screen.findByRole('list', { name: 'Equipment for sale' });

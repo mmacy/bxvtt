@@ -13,7 +13,7 @@ describe('PlayShell', () => {
     if (topBar === null) throw new Error('The table name is outside the top bar.');
     expect(within(topBar).getByText('Exploring')).toBeInTheDocument();
     expect(within(topBar).getByText(/^Day 1, /)).toBeInTheDocument();
-    expect(screen.getByText('You are the caller')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'You are the caller' })).toBeInTheDocument();
     expect(screen.getByRole('toolbar', { name: 'Map tools' })).toBeInTheDocument();
     expect(screen.queryByRole('switch', { name: 'Referee lens' })).not.toBeInTheDocument();
     expect(screen.queryByRole('tab', { name: /Referee/ })).not.toBeInTheDocument();
@@ -78,6 +78,16 @@ describe('PlayShell', () => {
     renderWithTable(<PlayShell />, { data: { status: 'reconnecting' } });
     expect(screen.getByText('Connection lost. Reconnecting to the table.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Thursday at the Drowned Bell' })).toBeInTheDocument();
+  });
+});
+
+describe("the action bar's caller", () => {
+  it("opens the caller dot's tooltip from the keyboard", async () => {
+    renderWithTable(<PlayShell />, { snapshot: fixtureSnapshot('exploring', 'player') });
+    const dot = screen.getByRole('img', { name: 'You are the caller' });
+    fireEvent.keyDown(document, { key: 'Tab' });
+    act(() => dot.focus());
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('You are the caller');
   });
 });
 

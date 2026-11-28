@@ -6,6 +6,7 @@
  */
 import type { Page } from '@playwright/test';
 import { isProblem } from '@bxvtt/shared/client';
+import { RefereeTableDetail } from '@bxvtt/shared/protocol';
 import { BXAPI_URL } from './support/env';
 import { expect, test, type Crew } from './support/fixtures';
 import { moveWithKey } from './support/party-actions';
@@ -212,7 +213,7 @@ test.describe('resilience', () => {
   }) => {
     const { ruth, sam, path, tableId } = await bellParty(crew);
     const pat = await crew.person('Pat');
-    await pat.client.joinTable((await ruth.client.getTable(tableId)).invite_code);
+    await pat.client.joinTable(RefereeTableDetail.parse(await ruth.client.getTable(tableId)).invite_code);
     await ruth.client.setMemberRole(tableId, pat.id, 'referee');
     await enterDungeon(sam.client, tableId, 'priory');
     await openTable(pat.page, path);

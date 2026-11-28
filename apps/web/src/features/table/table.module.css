@@ -245,6 +245,12 @@
   white-space: nowrap;
 }
 
+/* The caller's dot takes focus to show its tooltip, so the focus ring follows its round shape. */
+.callerDot {
+  display: inline-flex;
+  border-radius: var(--radius-pill);
+}
+
 /* End screen */
 .end {
   display: grid;

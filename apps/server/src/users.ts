@@ -259,7 +259,7 @@ export async function deleteUser(ctx: Context, userId: string): Promise<void> {
   const blocked = tableIds.filter((id) => tables.leaveOutcome(id, userId) === 'last_referee');
   if (blocked.length > 0) {
     const names = new Intl.ListFormat('en', { type: 'conjunction' }).format(
-      blocked.map((id) => tables.detail(id).name),
+      blocked.map((id) => tables.detail(id, 'referee').name),
     );
     throw new ApiError(
       'last_referee',
