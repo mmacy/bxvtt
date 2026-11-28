@@ -3,13 +3,8 @@
  * test through the interface. Every character uses a fixed seed.
  */
 import type { BxvttClient } from '@bxvtt/shared/client';
-import type {
-  Command,
-  GameState,
-  StoredCharacter,
-  TableDetail,
-  UpdateTableRequest,
-} from '@bxvtt/shared/protocol';
+import type { Command, GameState, StoredCharacter, UpdateTableRequest } from '@bxvtt/shared/protocol';
+import { RefereeTableDetail } from '@bxvtt/shared/protocol';
 import { expect, type Page } from '@playwright/test';
 import type { Actor } from './fixtures';
 
@@ -114,7 +109,7 @@ export interface TableSetup {
 
 /** A table that {@link setupTable} made. */
 export interface SetupResult {
-  table: TableDetail;
+  table: RefereeTableDetail;
   game: GameState | null;
   characters: StoredCharacter[];
   /** The table page's path, such as `/tables/tbl_…`. */
@@ -147,7 +142,7 @@ export async function setupTable(setup: TableSetup): Promise<SetupResult> {
         seed: setup.seed ?? 1981,
       })
     : null;
-  const table = await referee.client.getTable(created.id);
+  const table = RefereeTableDetail.parse(await referee.client.getTable(created.id));
   return { table, game, characters, path: `/tables/${created.id}` };
 }
 

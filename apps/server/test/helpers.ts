@@ -3,13 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { BxvttClient, TableConnection } from '@bxvtt/shared/client';
-import type {
-  CharacterChoices,
-  GameState,
-  ServerMessage,
-  StoredCharacter,
-  TableDetail,
-} from '@bxvtt/shared/protocol';
+import type { CharacterChoices, GameState, ServerMessage, StoredCharacter } from '@bxvtt/shared/protocol';
+import { RefereeTableDetail } from '@bxvtt/shared/protocol';
 import { createServer } from '../src/app';
 import type { Server } from '../src/app';
 import type { Config } from '../src/config';
@@ -251,10 +246,10 @@ export async function createTable(
   referee: TestUser,
   players: TestUser[],
   name = 'Test table',
-): Promise<TableDetail> {
+): Promise<RefereeTableDetail> {
   const table = await referee.client.createTable({ name });
   for (const player of players) await player.client.joinTable(table.invite_code);
-  return referee.client.getTable(table.id);
+  return RefereeTableDetail.parse(await referee.client.getTable(table.id));
 }
 
 /**

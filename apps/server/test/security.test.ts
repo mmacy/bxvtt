@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { BxvttClient, isProblem } from '@bxvtt/shared/client';
 import type { GameState, ServerMessage } from '@bxvtt/shared/protocol';
-import { WS_CLOSE_CODES } from '@bxvtt/shared/protocol';
+import { RefereeTableDetail, WS_CLOSE_CODES } from '@bxvtt/shared/protocol';
 import type { TestServer, TestUser } from './helpers';
 import {
   connect,
@@ -317,7 +317,8 @@ describe('membership changes', () => {
     const referee = await createUser(server, 'Ref');
     const mallory = await createUser(server, 'Mallory');
     const table = await createTable(referee, [mallory]);
-    const seen = (await mallory.client.getTable(table.id)).invite_code;
+    // Mallory joined with this code, so she knows it even though the server never sends it to a player.
+    const seen = table.invite_code;
     const after = await referee.client.removeMember(table.id, mallory.id);
     expect(after.invite_code).not.toBe(seen);
     await expect(mallory.client.joinTable(seen)).rejects.toSatisfy((error) =>
@@ -331,7 +332,9 @@ describe('membership changes', () => {
   it("closes a removed member's socket and a demoted referee's socket before either hears more", async () => {
     const { referee, player, tableId } = await startBarrow(server);
     const coRef = await createUser(server, 'Coref');
-    await coRef.client.joinTable((await referee.client.getTable(tableId)).invite_code);
+    await coRef.client.joinTable(
+      RefereeTableDetail.parse(await referee.client.getTable(tableId)).invite_code,
+    );
     await referee.client.setMemberRole(tableId, coRef.id, 'referee');
     const coWs = await connect(server, coRef, tableId);
     const playerWs = await connect(server, player, tableId);

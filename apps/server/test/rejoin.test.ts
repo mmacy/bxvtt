@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { BxvttClient, isProblem } from '@bxvtt/shared/client';
 import type { BxvttProblemError } from '@bxvtt/shared/client';
-import type { RejoinTicket, TableDetail } from '@bxvtt/shared/protocol';
+import type { RefereeTableDetail, RejoinTicket } from '@bxvtt/shared/protocol';
 import type { TestConnection, TestServer, TestUser } from './helpers';
 import { connect, createCharacter, createTable, createUser, received, startServer, waitFor } from './helpers';
 
@@ -34,7 +34,7 @@ describe('rejoining a table as an existing member', () => {
   let host: TestUser;
   let alice: TestUser;
   let bob: TestUser;
-  let table: TableDetail;
+  let table: RefereeTableDetail;
   let hostWs: TestConnection;
 
   beforeAll(async () => {

@@ -228,17 +228,18 @@ export class TableStore {
   }
 
   /**
-   * Builds the full description of a table.
+   * Builds the description of a table for a member. Only a referee's copy holds the invite code.
    *
    * @param tableId - The table ID.
+   * @param role - The role of the member who receives it.
    */
-  detail(tableId: string): TableDetail {
+  detail(tableId: string, role: Role): TableDetail {
     const row = this.row(tableId);
     if (row === undefined) notFound('table', tableId);
     return {
       id: str(row, 'id'),
       name: str(row, 'name'),
-      invite_code: str(row, 'invite_code'),
+      ...(role === 'referee' ? { invite_code: str(row, 'invite_code') } : {}),
       phase: strOrNull(row, 'session_id') === null ? 'lobby' : 'playing',
       settings: this.settings(tableId),
       members: this.members(tableId),
@@ -247,6 +248,18 @@ export class TableStore {
       created_by: str(row, 'created_by'),
       created_at: str(row, 'created_at'),
     };
+  }
+
+  /**
+   * Builds the description of a table for a member in their current role.
+   *
+   * @param tableId - The table ID.
+   * @param userId - The member who receives it.
+   */
+  detailFor(tableId: string, userId: string): TableDetail {
+    const role = this.roleOf(tableId, userId);
+    if (role === null) notFound('table', tableId);
+    return this.detail(tableId, role);
   }
 
   /**
@@ -296,14 +309,21 @@ export class TableStore {
   }
 
   /**
-   * Sends the table's description to every connection of the table.
+   * Sends the table's description to every connection of the table, built for each recipient's current role.
    *
    * @param tableId - The table ID.
    */
   broadcastTable(tableId: string): void {
     if (this.row(tableId) === undefined) return;
-    const table = this.detail(tableId);
-    this.ctx.hub.broadcast(tableId, { type: 'table', table });
+    const byRole = new Map<Role, TableDetail>();
+    this.ctx.hub.send(tableId, ({ role }) => {
+      let table = byRole.get(role);
+      if (table === undefined) {
+        table = this.detail(tableId, role);
+        byRole.set(role, table);
+      }
+      return { type: 'table', table };
+    });
   }
 
   private gameSummary(row: Row): GameSummary | null {
@@ -494,13 +514,12 @@ export function registerTableRoutes(app: FastifyInstance, ctx: Context): void {
     }
     const id = tables.create(body.name, user);
     request.log.info({ table: id, user: user.id }, 'table created');
-    return reply.status(201).send(tables.detail(id));
+    return reply.status(201).send(tables.detail(id, 'referee'));
   });
 
   app.get('/api/tables/:tableId', async (request) => {
     const { tableId } = TableParams.parse(request.params);
-    tables.requireMember(tableId, ctx.auth.user(request));
-    return tables.detail(tableId);
+    return tables.detail(tableId, tables.requireMember(tableId, ctx.auth.user(request)));
   });
 
   app.patch('/api/tables/:tableId', async (request) => {
@@ -559,7 +578,7 @@ export function registerTableRoutes(app: FastifyInstance, ctx: Context): void {
       ctx.game.broadcastState(tableId);
     }
     if (after.auto_resolve && !before.auto_resolve) await ctx.game.battle.maybeAutoResolve(tableId, user);
-    return tables.detail(tableId);
+    return tables.detailFor(tableId, user.id);
   });
 
   app.delete('/api/tables/:tableId', async (request, reply) => {
@@ -573,10 +592,11 @@ export function registerTableRoutes(app: FastifyInstance, ctx: Context): void {
 
   app.post('/api/tables/:tableId/invite-code', async (request) => {
     const { tableId } = TableParams.parse(request.params);
-    tables.requireReferee(tableId, ctx.auth.user(request));
+    const user = ctx.auth.user(request);
+    tables.requireReferee(tableId, user);
     ctx.db.run('UPDATE tables SET invite_code = ? WHERE id = ?', newInviteCode(), tableId);
     tables.broadcastTable(tableId);
-    return tables.detail(tableId);
+    return tables.detailFor(tableId, user.id);
   });
 
   app.post('/api/join', async (request) => {
@@ -605,7 +625,7 @@ export function registerTableRoutes(app: FastifyInstance, ctx: Context): void {
       ctx.feed.system(tableId, user.id, 'member_joined', { user_id: user.id });
       tables.broadcastTable(tableId);
     }
-    return tables.detail(tableId);
+    return tables.detailFor(tableId, user.id);
   });
 
   app.post('/api/tables/:tableId/leave', async (request, reply) => {
@@ -643,7 +663,7 @@ export function registerTableRoutes(app: FastifyInstance, ctx: Context): void {
       // The member's projection changes with the role, so they get a new snapshot.
       ctx.game.resyncUser(tableId, userId);
     }
-    return tables.detail(tableId);
+    return tables.detailFor(tableId, user.id);
   });
 
   app.delete('/api/tables/:tableId/members/:userId', async (request) => {
@@ -661,7 +681,7 @@ export function registerTableRoutes(app: FastifyInstance, ctx: Context): void {
     ctx.hub.removeUser(tableId, userId, 'kicked');
     tables.broadcastTable(tableId);
     ctx.game.broadcastState(tableId);
-    return tables.detail(tableId);
+    return tables.detailFor(tableId, user.id);
   });
 
   app.post('/api/tables/:tableId/roster', async (request) => {
@@ -702,7 +722,7 @@ export function registerTableRoutes(app: FastifyInstance, ctx: Context): void {
       now(),
     );
     tables.broadcastTable(tableId);
-    return tables.detail(tableId);
+    return tables.detailFor(tableId, user.id);
   });
 
   app.delete('/api/tables/:tableId/roster/:entryId', async (request) => {
@@ -720,12 +740,13 @@ export function registerTableRoutes(app: FastifyInstance, ctx: Context): void {
     }
     ctx.db.run('DELETE FROM roster WHERE id = ?', entryId);
     tables.broadcastTable(tableId);
-    return tables.detail(tableId);
+    return tables.detailFor(tableId, user.id);
   });
 
   app.put('/api/tables/:tableId/roster', async (request) => {
     const { tableId } = TableParams.parse(request.params);
-    tables.requireReferee(tableId, ctx.auth.user(request));
+    const user = ctx.auth.user(request);
+    tables.requireReferee(tableId, user);
     tables.requireLobby(tableId);
     const body = parseBody(ReorderRosterRequest, request);
     const current = tables.roster(tableId).map((entry) => entry.id);
@@ -744,6 +765,6 @@ export function registerTableRoutes(app: FastifyInstance, ctx: Context): void {
       });
     });
     tables.broadcastTable(tableId);
-    return tables.detail(tableId);
+    return tables.detailFor(tableId, user.id);
   });
 }
