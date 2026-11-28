@@ -27,13 +27,13 @@ describe('a param that bxapi or the server sends as null', () => {
         },
         ctx,
       ),
-    ).toBe("That target is invisible, so Wren can't target it. Choose another target.");
+    ).toBe("That target is invisible, so Wren can't target it.");
     expect(
       describeRejection(
         { code: 'items.use.target_healed_today', params: { item: 'magic-item-0001', target: null } },
         ctx,
       ),
-    ).toBe('A staff of healing has already healed them today. Choose someone else.');
+    ).toBe('A staff of healing has already healed them today.');
   });
 
   it('still names a target that is there', () => {

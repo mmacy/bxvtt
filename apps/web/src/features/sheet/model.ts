@@ -194,12 +194,13 @@ export function readEntry(
   if (value.instance_type === 'valuable') {
     const instanceId = str(value.instance_id) ?? `valuable-${index}`;
     const kind = str(value.kind);
-    const rawName = stripIndefinite(str(value.name) ?? (kind === 'jewellery' ? 'Jewellery' : 'Gem'));
+    // A name shows as `valuable_names` writes it. A piece with no name shows its kind.
+    const rawName = str(value.name) ?? (kind === 'jewellery' ? 'Jewellery' : 'Gem');
     return {
       key: `${slot}:${instanceId}`,
       commandId: instanceId,
       kind: 'valuable',
-      name: capitalizeFirst(rawName),
+      name: rawName,
       units: rawName.toLowerCase(),
       quantity: 1,
       slot,

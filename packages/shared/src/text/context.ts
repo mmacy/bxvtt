@@ -89,6 +89,14 @@ export interface TextContext {
    * `potions`. An item with no entry here takes the plural the text layer forms from its name.
    */
   itemsPlural?: Record<string, string>;
+  /**
+   * What to call each named gem and piece of jewellery in the middle of a sentence, by instance ID, as bxapi's
+   * `valuable_phrases` states it: `the abbot's seal ring`, `a silver altar candlestick`, `Ossor's Eye`. The text
+   * uses it as written, with `items` holding the name as written. A valuable with no entry here reads as `items`
+   * names it, as any item: an unnamed gem reads `a gem`, and a named valuable from an entry stored before osrlib
+   * 2.10.0 reads by the fallback in `legacyValuableNoun`.
+   */
+  valuablePhrases?: Record<string, string>;
   /** Spell names by ID, as the rules write them: `Magic Missile`. */
   spells: Record<string, string>;
   /**
@@ -213,6 +221,11 @@ export interface PlayerViewLike {
    * `{ 'valuable-0007': "Prior's chain of office" }`. A valuable that isn't a key reads by its kind in `item_names`.
    */
   valuable_names?: Readonly<Record<string, string>>;
+  /**
+   * What to call each valuable in `valuable_names` in the middle of a sentence, by instance ID, such as
+   * `{ 'valuable-0007': "the prior's chain of office" }`. A view from before osrlib 2.10.0 has none.
+   */
+  valuable_phrases?: Readonly<Record<string, string>>;
   /** The party's map, with the areas it has entered on each level. */
   explored?: ReadonlyArray<{
     dungeon_id: string;
@@ -261,18 +274,63 @@ function registerInventory(items: Record<string, string>, inventory: unknown): v
 
 /**
  * The own name of each gem and piece of jewellery that a player view shows, by instance ID, from the view's
- * `valuable_names`, such as `{ 'valuable-0007': "Prior's chain of office" }`. The view's `item_names` names a
- * valuable by its kind alone. A piece rolled on the treasure tables has no name of its own, so it isn't listed and
- * keeps the kind.
+ * `valuable_names`, such as `{ 'valuable-0007': "Prior's chain of office" }`. Show a name as written in a list.
+ * The view's `item_names` names a valuable by its kind alone. A piece rolled on the treasure tables has no name of
+ * its own, so it isn't listed and keeps the kind. To put a piece in a sentence, use its phrase from
+ * [`valuablePhrases`][valuablePhrases].
  *
  * @param view - The player view.
  */
 export function valuableNames(view: PlayerViewLike): Record<string, string> {
   const names: Record<string, string> = {};
   for (const [id, name] of Object.entries(view.valuable_names ?? {})) {
-    if (idKind(id) === 'valuable' && name.trim() !== '') names[id] = name;
+    if (idKind(id) === 'valuable') names[id] = name;
   }
   return names;
+}
+
+/**
+ * What to call each named valuable of a player view in the middle of a sentence, by instance ID, from the view's
+ * `valuable_phrases`, such as `{ 'valuable-0007': "the prior's chain of office" }`. The text uses the phrase
+ * as written. The keys are the ones of [`valuableNames`][valuableNames], and a view from before osrlib 2.10.0
+ * has none.
+ *
+ * @param view - The player view.
+ */
+export function valuablePhrases(view: PlayerViewLike): Record<string, string> {
+  const phrases: Record<string, string> = {};
+  for (const [id, phrase] of Object.entries(view.valuable_phrases ?? {})) {
+    if (idKind(id) === 'valuable') phrases[id] = phrase;
+  }
+  return phrases;
+}
+
+/**
+ * The context's item entry for a valuable whose phrase bxapi didn't state, which is only a name recorded by an
+ * entry or a view from before osrlib 2.10.0. It reads the name as any item an author names: a common noun with an
+ * article, and `the` for a possessive. This stands in for the phrase bxapi has stated since 2.10.0, and it gets a
+ * name wrong that is a proper name or a plural. Nothing reaches it for a valuable of a current view or entry.
+ */
+function legacyValuableNoun(id: string, name: string): string {
+  return storedNoun(nounForId(id, name));
+}
+
+/**
+ * Record a named valuable. With bxapi's phrase, the context keeps the name as written and the phrase as written.
+ * Without one, which only a name from before osrlib 2.10.0 is, the context falls back to
+ * [`legacyValuableNoun`][legacyValuableNoun]. A valuable is one thing, so it has no plural.
+ */
+function registerValuable(ctx: TextContext, id: string, name: string, phrase: string | undefined): void {
+  if (phrase === undefined) {
+    // Fallback for names stored before osrlib 2.10.0, with no phrase.
+    if (name.trim() === '') return;
+    ctx.items[id] = legacyValuableNoun(id, name);
+    delete ctx.valuablePhrases?.[id];
+  } else {
+    ctx.items[id] = name;
+    (ctx.valuablePhrases ??= {})[id] = phrase;
+  }
+  delete ctx.itemsPlural?.[id];
 }
 
 /** Record item names and their plurals by ID. A built-in equipment ID keeps the noun osrlib states for it. */
@@ -312,11 +370,9 @@ export function contextFromPlayerView(view: PlayerViewLike, base?: TextContext):
     registerInventory(ctx.items, member.inventory);
   }
   registerItemNames(ctx, view.item_names ?? {}, view.item_names_plural ?? {});
-  // `item_names` names a valuable by its kind, so its own name goes on top, with no plural: it is one thing.
-  for (const [id, name] of Object.entries(valuableNames(view))) {
-    ctx.items[id] = storedNoun(nounForId(id, name));
-    delete ctx.itemsPlural?.[id];
-  }
+  // `item_names` names a valuable by its kind, so its own name and its phrase go on top.
+  const phrases = valuablePhrases(view);
+  for (const [id, name] of Object.entries(valuableNames(view))) registerValuable(ctx, id, name, phrases[id]);
   for (const [id, name] of Object.entries(view.spell_names ?? {})) {
     if (name.trim() !== '') ctx.spells[id] = name;
   }
@@ -618,6 +674,11 @@ export interface EntryNamesLike {
   items?: Readonly<Record<string, string>>;
   /** What to call two or more of each item in `items`, by item ID. */
   items_plural?: Readonly<Record<string, string>>;
+  /**
+   * What to call each named valuable of `items` in the middle of a sentence, by item ID, as the player view's
+   * `valuable_phrases` states it. An entry stored before osrlib 2.10.0 has none.
+   */
+  valuable_phrases?: Readonly<Record<string, string>>;
   /** Dungeon names by dungeon ID, for the dungeons the party has entered. */
   dungeons?: Readonly<Record<string, string>>;
 }
@@ -682,6 +743,14 @@ export function extendContextWithEntryNames(
   const unknownItems = Object.fromEntries(
     Object.entries(names.items ?? {}).filter(([id]) => next.items[id] === undefined),
   );
+  // A named valuable reads by the phrase the entry recorded. One with none, from an entry stored before osrlib
+  // 2.10.0, stays in `unknownItems` and reads by the fallback in `legacyValuableNoun`.
+  for (const [id, phrase] of Object.entries(names.valuable_phrases ?? {})) {
+    const name = unknownItems[id];
+    if (idKind(id) !== 'valuable' || name === undefined) continue;
+    registerValuable(next, id, name, phrase);
+    delete unknownItems[id];
+  }
   return extendContextWithNames(next, unknownItems, names.items_plural ?? {});
 }
 
@@ -794,6 +863,7 @@ export function cloneContext(ctx: TextContext): TextContext {
     dungeons: { ...ctx.dungeons },
   };
   if (ctx.itemsPlural !== undefined) copy.itemsPlural = { ...ctx.itemsPlural };
+  if (ctx.valuablePhrases !== undefined) copy.valuablePhrases = { ...ctx.valuablePhrases };
   if (ctx.reversedSpells !== undefined) copy.reversedSpells = { ...ctx.reversedSpells };
   if (ctx.townName !== undefined) copy.townName = ctx.townName;
   if (ctx.triggers !== undefined) copy.triggers = { ...ctx.triggers };
@@ -810,6 +880,8 @@ export function mergeContexts(...contexts: readonly TextContext[]): TextContext 
     Object.assign(merged.monsters, ctx.monsters);
     Object.assign(merged.items, ctx.items);
     if (ctx.itemsPlural !== undefined) merged.itemsPlural = { ...merged.itemsPlural, ...ctx.itemsPlural };
+    if (ctx.valuablePhrases !== undefined)
+      merged.valuablePhrases = { ...merged.valuablePhrases, ...ctx.valuablePhrases };
     Object.assign(merged.spells, ctx.spells);
     Object.assign(merged.areas, ctx.areas);
     Object.assign(merged.dungeons, ctx.dungeons);
@@ -997,6 +1069,12 @@ export function resolveItemNoun(id: string, ctx: TextContext, options: { name?: 
   if (stated) return stated;
   const fromContext = ctx.items[id];
   if (fromContext) {
+    // A named valuable reads by bxapi's phrase, as written. `one` is the phrase without its article.
+    const phrase = kind === 'valuable' ? ctx.valuablePhrases?.[id] : undefined;
+    if (phrase !== undefined) {
+      const one = stripArticle(phrase);
+      return { one, many: pluralize(one), phrase };
+    }
     const noun = nounForId(id, fromContext);
     // bxapi's plural, when the context has it, replaces the one the text layer would form.
     const plural = ctx.itemsPlural?.[id];
@@ -1055,7 +1133,7 @@ export function itemList(ids: readonly string[], ctx: TextContext, options: Item
       unnamed = true;
       continue;
     }
-    const key = JSON.stringify([noun.one, noun.many, noun.proper === true]);
+    const key = JSON.stringify([noun.one, noun.many, noun.proper === true, noun.phrase ?? null]);
     const units = options.lots ? (equipmentLotSize(id) ?? 1) : 1;
     const known = groups.get(key);
     if (known === undefined) {

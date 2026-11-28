@@ -191,6 +191,23 @@ describe('members', () => {
   });
 });
 
+describe('valuables in the pack', () => {
+  it('shows a valuable by its name as written, and a piece with no name by its kind', () => {
+    const brenna = structuredClone(fixtureSnapshot('town', 'player').game?.view.party[0]);
+    if (!brenna) throw new Error('No Brenna.');
+    (brenna.inventory as Record<string, unknown>).valuables = [
+      { instance_id: 'valuable-0001', kind: 'jewellery', name: 'A unicorn-horn cup', value_gp: 80 },
+      { instance_id: 'valuable-0002', kind: 'gem', name: "ossor's Eye", value_gp: 500 },
+      { instance_id: 'valuable-0003', kind: 'gem', name: '', value_gp: 50 },
+    ];
+    expect(readInventory(brenna).valuables.map((valuable) => valuable.name)).toEqual([
+      'A unicorn-horn cup',
+      "ossor's Eye",
+      'Gem',
+    ]);
+  });
+});
+
 describe('the schema form', () => {
   const giveItems = {
     required: ['character_id', 'recipient_id'],

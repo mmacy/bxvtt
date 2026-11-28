@@ -12,6 +12,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed
+
+- **Named gems and jewellery read by `osrlib`'s phrase (`@bxvtt/shared/text`, `@bxvtt/shared/protocol`, `@bxvtt/server`):** The feed, including its give and drop lines, and the dropped-pile lists word a named valuable in a sentence with the `valuable_phrases` entry that `osrlib` 2.10 states, such as "Wren takes Ossor's Eye." and "Wren takes the abbot's gold ring.", and use `valuable_names` only for lists. A game entry's `names` has a new optional `valuable_phrases` record with the phrase of each named valuable the entry's events name. An entry stored before 2.10 has a name and no phrase, and the text words its name as before. ([#47](https://github.com/mmacy/bxvtt/issues/47))
+- **The sample adventures set `phrase` on their possessive valuables (`adventures`):** The Drowned Bell's "Abbot's gold ring" and "Prior's chain of office" read "the abbot's gold ring" and "the prior's chain of office". The `valuable` helper in `adventures/tools/lib.mjs` takes `phrase` as its fifth argument, and the authoring guide says when to set it.
+- **Refusals state the cause once (`@bxvtt/shared/text`):** A refusal of a battle, exploration, item, or magic action says why the action won't work, such as "Wren isn't in the front rank, so they can't reach the monsters.", and no longer adds a next step that the controls already show or restates a rule you didn't break. A refusal no longer writes a distance or a limit that `bxapi` doesn't send with it.
+
+### Fixed
+
+- **Named valuables in the inventory and the treasure lists (`@bxvtt/web`):** The inventory and the treasure buyers' list show a named gem or piece of jewellery as the adventure writes it, so "A unicorn-horn cup" no longer loses its first word. A piece with no name still shows as "Gem" or "Jewellery".
+
 ## [0.5.0] - 2026-11-27
 
 This release needs a `bxapi` built on `osrlib` 2.10.0, which is `bxapi` `main` from its pull request 63 onward. Update and restart `bxapi` before you start this version. With an older engine, the server refuses every game request, ability roll, and WebSocket snapshot with `503 bxapi_outdated`.
