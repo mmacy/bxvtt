@@ -49,6 +49,7 @@ const gameGroups: Array<{ title: string; names: IconName[] }> = [
       'ear',
       'rest',
       'town',
+      'food',
     ],
   },
   {

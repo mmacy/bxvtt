@@ -676,7 +676,7 @@ export function searchKindNoun(kind: string): string {
 const HEALING_SERVICES: Record<string, { label: string; description: string }> = {
   cure_light_wounds: {
     label: 'Cure light wounds',
-    description: 'Heals a few hit points and can cure paralysis.',
+    description: 'Heals a few hit points.',
   },
   cure_serious_wounds: {
     label: 'Cure serious wounds',

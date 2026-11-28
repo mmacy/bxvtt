@@ -31,6 +31,7 @@ import {
   DoorClosedLocked,
   DoorOpen,
   Download,
+  Drumstick,
   Ear,
   Ellipsis,
   EllipsisVertical,
@@ -213,6 +214,7 @@ const lucideIcons = {
   map: Map,
   rest: Tent,
   town: Castle,
+  food: Drumstick,
 } satisfies Record<string, LucideIcon>;
 
 type LucideIconName = keyof typeof lucideIcons;

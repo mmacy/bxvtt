@@ -668,8 +668,8 @@ export const COMMAND_FIELD_TEXT: Record<string, Record<string, FieldText>> = {
     ),
     service: field('Service', 'Which temple service to buy.'),
     spell_mode: field(
-      'Spell mode',
-      "Which of the spell's uses the temple cleric casts, such as curing paralysis. Leave it empty for the first.",
+      'How to cast',
+      "Leave it empty to cast the spell's usual use. Choose cure paralysis to end paralysis.",
     ),
   },
   parley: {

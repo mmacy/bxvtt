@@ -138,4 +138,30 @@ test.describe('play screen shell', () => {
       .poll(async () => sent.includes('rest') || (await told.count()) > 0, { timeout: 6000 })
       .toBe(true);
   });
+
+  // #65: the party's light and food left, from the player view's supplies.
+  test('the top bar shows light and food left, and a phone shows them in the party panel', async ({
+    crew,
+  }) => {
+    const staged = await stagedTable(crew, 'exploring');
+    const { page, client } = staged.sam;
+    const supplies = (await client.getGame(staged.table.id)).view.supplies;
+    expect(supplies?.rations).toBe(0);
+    await openTable(page, staged.path);
+    const bar = page.getByRole('banner');
+    await expect(bar.getByText(/^Light left: /)).toBeVisible();
+    await expect(bar.getByText('Food left: No food')).toBeVisible();
+    await bar.getByText('Food left: No food').hover();
+    await expect(page.getByRole('tooltip')).toContainText('No one in the party carries rations');
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(bar.getByText(/^Food left: /)).toBeHidden();
+    await page
+      .getByRole('button', { name: /table panels/i })
+      .first()
+      .click();
+    await page.getByRole('tab', { name: 'Party' }).click();
+    await expect(page.getByText('Supplies', { exact: true })).toBeVisible();
+    await expect(page.getByText('Food left: No food').last()).toBeVisible();
+  });
 });

@@ -270,15 +270,21 @@ function goodsText(
 }
 
 /**
- * The label of the mode a spell was cast in, from osrlib's `SpellMode.display_name` in the built-in catalog, such
- * as `Blind a creature` for the reverse of light. A form with a single mode has nothing to tell apart, so it has
- * no label here. Neither has a spell the built-in catalog doesn't have, such as one an adventure bundles, because
- * the text never reads the words of a mode's key.
+ * The label of the mode a spell was cast in, such as `Blind a creature` for the reverse of light. Since osrlib
+ * 2.12, the event states it in `mode_display_name`. A form that the built-in catalog lists with a single mode has
+ * nothing to tell apart, so it has no label. An event stored before 2.12 reads the label from the built-in catalog,
+ * so a spell the catalog doesn't have, such as one an adventure bundles, has none, because the text never reads
+ * the words of a mode's key.
  */
-function spellModeName(spellId: string, reversed: boolean, mode: string): string | undefined {
+function spellModeName(
+  spellId: string,
+  reversed: boolean,
+  mode: string,
+  displayName: string | null | undefined,
+): string | undefined {
   const modes = spellModeCatalogNames(spellId, reversed);
-  if (modes === undefined || Object.keys(modes).length < 2) return undefined;
-  return modes[mode];
+  if (modes !== undefined && Object.keys(modes).length < 2) return undefined;
+  return nonEmpty(displayName) ?? modes?.[mode];
 }
 
 /** Phrase for how a weapon is named in an attack: ` with a sword`, ` with its claw`, or nothing. */
@@ -736,8 +742,10 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
           ids: [event.target_id],
         };
       }
+      // Since osrlib 2.12, the event says when poison killed the creature. An older event says nothing of it.
+      const dies = event.poison === true ? 'dies of poison' : 'dies';
       return {
-        text: party ? `${target} dies!` : `${target} dies.`,
+        text: party ? `${target} ${dies}!` : `${target} ${dies}.`,
         category: 'death',
         tone: party ? 'danger' : 'good',
         icon: 'skull',
@@ -851,7 +859,12 @@ function describeKnown(event: GameEvent, ctx: TextContext): Parts {
       }
       const at = event.target_ids.length > 0 ? ` at ${nameList(event.target_ids, ctx)}` : '';
       const manual = event.manual ? ' The referee adjudicates the effect.' : '';
-      const mode = spellModeName(event.spell_id, event.reversed === true, event.mode);
+      const mode = spellModeName(
+        event.spell_id,
+        event.reversed === true,
+        event.mode,
+        event.mode_display_name,
+      );
       return {
         text: `${caster} casts ${spell}${at}.${manual}`,
         detail: mode === undefined ? undefined : `Spell mode: ${mode}.`,
@@ -2141,9 +2154,13 @@ function describeLocation(
     passage: 'walks through a passage',
     trap: 'is swept away by a trap',
   };
+  // Since osrlib 2.12, a level or dungeon entry names the dungeon. An older event, or a dungeon with no name, reads
+  // the name the context has.
+  const enteredDungeon = nonEmpty(event.display_name)?.trim() ?? dungeonName(event.location_id, ctx);
   switch (event.location_kind) {
     case 'town': {
-      const town = ctx.townName ?? 'town';
+      // Since osrlib 2.12, the event names the town. An older event reads the name from the player view.
+      const town = nonEmpty(event.display_name)?.trim() ?? ctx.townName ?? 'town';
       return {
         text: withNarrative(`The party arrives in ${town}.`, event.narrative),
         category: 'town',
@@ -2166,7 +2183,7 @@ function describeLocation(
       };
     }
     case 'level': {
-      const dungeon = placeInSentence(dungeonName(event.location_id, ctx));
+      const dungeon = placeInSentence(enteredDungeon);
       const how = verbs[via] ?? 'goes';
       return {
         text: withNarrative(`The party ${how} to level ${level} of ${dungeon}.`, event.narrative),
@@ -2176,7 +2193,7 @@ function describeLocation(
       };
     }
     default: {
-      const dungeon = placeInSentence(dungeonName(event.location_id, ctx));
+      const dungeon = placeInSentence(enteredDungeon);
       const levelText = level !== null && level !== undefined ? `, level ${level}` : '';
       const how =
         via === 'placed'

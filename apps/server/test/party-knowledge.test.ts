@@ -252,8 +252,8 @@ describe('what the party knows of the dungeon', () => {
         candidate.kind === 'game' && candidate.command_type === 'use_item',
     );
     if (entry === undefined) throw new Error('no use_item entry');
-    // The view from before the command names the potion as the party knew it.
-    expect(entry.names?.items[potion]).toBe('potion');
+    // The use event names the potion by the name its identification gave it, and no view names it after.
+    expect(entry.names?.items[potion]).toBe('potion of healing');
     const text = describeGameEntry(entry, emptyContext(), { only: 'player' })
       .map((line) => line.text)
       .join(' ');

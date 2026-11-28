@@ -1,10 +1,15 @@
-// Regenerate the bxapi OpenAPI snapshot and its TypeScript types.
+// Regenerate the bxapi OpenAPI snapshot and its TypeScript types, and the text layer's code list.
 // Usage: npm run gen:bxapi            (exports the document from ~/repos/bxapi, or $BXAPI_DIR)
 //        BXAPI_URL=http://127.0.0.1:8653 npm run gen:bxapi   (downloads it from a running server)
+//        BXAPI_URL=... OSRLIB_PYTHON=/path/to/bxapi/.venv/bin/python npm run gen:bxapi
 // It writes openapi.json, schema.d.ts (the types), and ruleset.json (the `Ruleset` fields, their values, and their
-// defaults, which the protocol's ruleset check reads).
+// defaults, which the protocol's ruleset check reads). Then it regenerates packages/shared/src/text/data/codes.json
+// and catalog.json from osrlib's source with packages/shared/src/text/tools/extract-codes.py, which needs a Python
+// that has the same osrlib installed as the bxapi: the bxapi checkout's (`uv run`), or $OSRLIB_PYTHON. With
+// BXAPI_URL and no OSRLIB_PYTHON, it can't reach that osrlib, so it compares the code list's osrlib version with the
+// server's engine and prints the command to run when they differ.
 import { execFileSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
@@ -76,3 +81,34 @@ execFileSync(
 console.log(
   `Wrote ${join(outDir, 'openapi.json')}, ruleset.json, and schema.d.ts for bxapi ${doc.info?.version}`,
 );
+
+// The text layer's code list. It has to come from the osrlib that the bxapi above runs, or the coverage tests check
+// the text against the wrong codes.
+const repoRoot = new URL('..', import.meta.url).pathname;
+const extractScript = join(repoRoot, 'packages/shared/src/text/tools/extract-codes.py');
+const textData = join(repoRoot, 'packages/shared/src/text/data');
+const codesPath = join(textData, 'codes.json');
+const extract = (command, args) => {
+  execFileSync(command, args, { cwd: repoRoot, stdio: 'inherit' });
+  execFileSync('npx', ['prettier', '--write', textData], { cwd: repoRoot, stdio: 'inherit' });
+};
+if (process.env.OSRLIB_PYTHON) {
+  extract(process.env.OSRLIB_PYTHON, ['-I', extractScript]);
+} else if (!process.env.BXAPI_URL) {
+  extract('uv', ['run', '--project', bxapiDir, 'python', extractScript]);
+} else {
+  const meta = await fetch(new URL('/v1/meta', process.env.BXAPI_URL)).then((response) => response.json());
+  const listed = JSON.parse(readFileSync(codesPath, 'utf8')).osrlib_version;
+  if (meta.engine_version !== listed) {
+    console.warn(
+      `codes.json lists the codes of osrlib ${listed}, but the bxapi at ${process.env.BXAPI_URL} runs osrlib ` +
+        `${meta.engine_version}. Regenerate it with the Python of that bxapi:\n` +
+        `  OSRLIB_PYTHON=<bxapi checkout>/.venv/bin/python BXAPI_URL=${process.env.BXAPI_URL} npm run gen:bxapi\n` +
+        'or, from the repository root:\n' +
+        `  <bxapi checkout>/.venv/bin/python -I packages/shared/src/text/tools/extract-codes.py && npx prettier --write packages/shared/src/text/data`,
+    );
+    process.exitCode = 1;
+  } else {
+    console.log(`codes.json already lists the codes of osrlib ${listed}.`);
+  }
+}

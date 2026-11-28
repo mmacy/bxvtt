@@ -221,12 +221,23 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   // Encounters and chases --------------------------------------------------------------------------------------
   'encounter.evade.already_evading': 'The party is already fleeing.',
   'encounter.evade.cannot_move': [
-    { when: ['character'], text: "{character|member} is caught in a web, so the party can't flee." },
-    { when: ['reason'], text: "The party can't flee because {reason|moveReason}." },
+    // osrlib names the overloaded member from mmacy/osrlib-python#411 on. Before that, only the reason comes.
+    {
+      when: ['character'],
+      is: { reason: 'overloaded' },
+      text: '{character|member} is carrying too much to run.',
+    },
+    { when: ['character'], text: "{character|member} is held fast and can't move." },
+    { is: { reason: 'overloaded' }, text: 'A party member is carrying too much to run.' },
     { text: "The party can't flee right now." },
   ],
-  'encounter.evade.nobody_able_to_act': "No one in the party can act, so the party can't flee.",
-  'encounter.evade.nothing_to_drop': 'The party has no {drop|raw} to drop.',
+  'encounter.evade.nobody_able_to_act': 'No one in the party can act.',
+  // Only the living members' coins and rations count, so the text says "living".
+  'encounter.evade.nothing_to_drop': [
+    { is: { drop: 'treasure' }, text: 'No living party member has any coins.' },
+    { is: { drop: 'food' }, text: 'No living party member carries food.' },
+    { text: 'The party has nothing to drop.' },
+  ],
   'encounter.none_active': "The party isn't in an encounter.",
   'encounter.parley.mid_pursuit': "The monsters are chasing the party, so there's no time to talk.",
   'encounter.spawn.mid_pursuit': "You can't spawn monsters during a chase. Wait until the chase ends.",
@@ -502,7 +513,10 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
     { is: { reason: 'diseased' }, text: "{character|member} is diseased, so magic can't heal them." },
     { is: { reason: 'full_hit_points' }, text: '{character|member} already has all their hit points.' },
     { is: { reason: 'not_diseased' }, text: "{character|member} isn't diseased." },
-    { is: { reason: 'not_poisoned' }, text: "{character|member} isn't poisoned." },
+    {
+      is: { reason: 'not_poisoned' },
+      text: "{character|member} isn't poisoned and didn't die of poison recently.",
+    },
     { is: { reason: 'not_cursed' }, text: '{character|member} has no curse that {item|service} can lift.' },
     { is: { reason: 'not_paralysed' }, text: "{character|member} isn't paralysed." },
     { is: { reason: 'not_dead' }, text: "{character|member} isn't dead." },

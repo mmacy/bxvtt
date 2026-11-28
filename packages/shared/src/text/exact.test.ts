@@ -13,6 +13,7 @@ import {
   extendContextWithEvents,
   extendContextWithReferee,
   humanizeMessage,
+  itemName,
   type TextContext,
 } from './index';
 
@@ -260,10 +261,19 @@ describe('rejections', () => {
 
   it('names who holds the party in a web when it refuses to flee', () => {
     expect(rej('encounter.evade.cannot_move', { character: 'character-0003' })).toBe(
-      "Wren is caught in a web, so the party can't flee.",
+      "Wren is held fast and can't move.",
     );
     expect(rej('encounter.evade.cannot_move', { reason: 'overloaded' })).toBe(
-      "The party can't flee because a party member is overloaded.",
+      'A party member is carrying too much to run.',
+    );
+    expect(rej('encounter.evade.cannot_move', { character: 'character-0003', reason: 'overloaded' })).toBe(
+      'Wren is carrying too much to run.',
+    );
+    expect(rej('encounter.evade.nothing_to_drop', { drop: 'treasure' })).toBe(
+      'No living party member has any coins.',
+    );
+    expect(rej('encounter.evade.nothing_to_drop', { drop: 'food' })).toBe(
+      'No living party member carries food.',
     );
   });
 });
@@ -833,9 +843,10 @@ describe('events', () => {
 });
 
 describe("a spell's mode in the feed", () => {
-  const cast = (spellId: string, mode: string, reversed = false) =>
+  const cast = (spellId: string, mode: string, reversed = false, fields: Record<string, unknown> = {}) =>
     describeEvent(
       {
+        ...fields,
         event_type: 'spell_cast',
         code: 'magic.cast.cast',
         visibility: 'player',
@@ -855,9 +866,19 @@ describe("a spell's mode in the feed", () => {
     expect(cast('sleep', 'hd_budget')).toBe('Spell mode: Put creatures of 4 Hit Dice or lower to sleep.');
   });
 
-  it("leaves out a form's only mode and a spell the built-in catalog doesn't have", () => {
+  it("leaves out a form's only mode, and a bundled spell's mode on an event stored before osrlib 2.12", () => {
     expect(cast('fire_ball', 'damage')).toBeUndefined();
+    expect(cast('fire_ball', 'damage', false, { mode_display_name: 'Burst of flame' })).toBeUndefined();
     expect(cast('ember_dart', 'kill_green_slime')).toBeUndefined();
+  });
+
+  it("names the mode by the event's label since osrlib 2.12, for a bundled spell too", () => {
+    expect(cast('ember_dart', 'kill_green_slime', false, { mode_display_name: 'Kill green slime' })).toBe(
+      'Spell mode: Kill green slime.',
+    );
+    expect(cast('light_mu', 'blind', true, { mode_display_name: 'Blind a creature' })).toBe(
+      'Spell mode: Blind a creature.',
+    );
   });
 });
 
@@ -1027,5 +1048,67 @@ describe('trap events', () => {
       ctx,
     );
     expect(safe?.text).toBe("The trap doesn't go off.");
+  });
+});
+
+describe('the event fields of osrlib 2.12, and the events stored before them', () => {
+  const line = (event: Record<string, unknown>) => describeEvents([event as never], ctx)[0]?.text;
+  const death = (fields: Record<string, unknown> = {}) => ({
+    event_type: 'death',
+    code: 'combat.death.died',
+    visibility: 'player',
+    target_id: 'character-0001',
+    ...fields,
+  });
+
+  it('says when poison killed a creature, and a plain death for an older event', () => {
+    expect(line(death({ poison: true }))).toBe('Brenna dies of poison!');
+    expect(line(death({ poison: false }))).toBe('Brenna dies!');
+    expect(line(death())).toBe('Brenna dies!');
+  });
+
+  it('names the town and the dungeon from the event, and from the view for an older event', () => {
+    const entered = (fields: Record<string, unknown>) => ({
+      event_type: 'location_entered',
+      code: 'exploration.location.entered',
+      visibility: 'player',
+      ...fields,
+    });
+    expect(line(entered({ location_kind: 'town', location_id: 'town', display_name: 'Oakhollow' }))).toBe(
+      'The party arrives in Oakhollow.',
+    );
+    expect(line(entered({ location_kind: 'town', location_id: 'town' }))).toBe(
+      'The party arrives in Threshold.',
+    );
+    expect(
+      line(
+        entered({
+          location_kind: 'dungeon',
+          location_id: 'crypt',
+          level_number: 1,
+          display_name: 'The Old Crypt',
+        }),
+      ),
+    ).toBe('The party enters the Old Crypt, level 1.');
+  });
+
+  it('names an item that a command used up by the name the event states', () => {
+    const consumed = {
+      event_type: 'item_consumed',
+      code: 'items.potion.consumed',
+      visibility: 'player',
+      character_id: 'character-0003',
+      item_id: 'magic-item-0009',
+      item_names: { 'magic-item-0009': 'potion' },
+      item_names_plural: { 'magic-item-0009': 'potions' },
+    };
+    const learned = extendContextWithEvents(ctx, [consumed]);
+    expect(itemName('magic-item-0009', learned)).toBe('a potion');
+    expect(itemName('magic-item-0009', ctx)).toBe('a magic item');
+    // A name the context already has wins, such as a named valuable's own name.
+    const sold = { ...consumed, item_names: { 'valuable-0001': 'gem' } };
+    expect(itemName('valuable-0001', extendContextWithEvents(ctx, [sold]))).toBe(
+      itemName('valuable-0001', ctx),
+    );
   });
 });

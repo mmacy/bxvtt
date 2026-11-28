@@ -29,6 +29,7 @@ import {
 } from '@/ui';
 import { copyInviteLink, useTableExit } from '@/features/lobby';
 import { RETURN_TO_LOBBY_CONFIRM } from './returnToLobby';
+import { TopBarSupplies } from './Supplies';
 import styles from './table.module.css';
 
 const GAME_MODES: readonly string[] = ['town', 'exploring', 'encounter', 'battle', 'game_over', 'victory'];
@@ -136,14 +137,17 @@ export function ShellTopBar() {
         mode={isGameMode(mode) ? mode : undefined}
         clock={
           view ? (
-            <Tooltip content="Elapsed game time since the adventure began (1 turn = 10 minutes, 1 round = 10 seconds).">
-              <span className={styles.clockWrap} tabIndex={0}>
-                <GameClock
-                  time={formatGameClock(clockRounds ?? view.clock_rounds)}
-                  round={mode === 'battle' && round !== null ? round : undefined}
-                />
-              </span>
-            </Tooltip>
+            <>
+              <Tooltip content="Elapsed game time since the adventure began (1 turn = 10 minutes, 1 round = 10 seconds).">
+                <span className={styles.clockWrap} tabIndex={0}>
+                  <GameClock
+                    time={formatGameClock(clockRounds ?? view.clock_rounds)}
+                    round={mode === 'battle' && round !== null ? round : undefined}
+                  />
+                </span>
+              </Tooltip>
+              <TopBarSupplies />
+            </>
           ) : undefined
         }
         actions={
