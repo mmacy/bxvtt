@@ -1146,16 +1146,24 @@ export interface paths {
          *     - **Town purchases (`purchase_equipment`):** Pass a party member's `party[i].id` (such as `"character-0001"`) as
          *       `character_id` and repeat equipment `id` values in `item_ids` once per purchase lot (unlike `purchases` on
          *       `POST /v1/characters`, which takes `{item_id, quantity}` objects).
-         *     - **Out-of-battle spells (`cast_spell`):** Pass `character_id`, `spell_id`, and `mode` set to a `SpellMode.key`
-         *       from `GET /v1/rules/spells/{spell_id}` (such as `"heal"` on `cure_light_wounds`, not the session's
-         *       `SessionMode`), plus target IDs in `targets` (such as `["character-0001"]` or `"cell:barrow:1:0,0"`).
+         *     - **Temple services (`purchase_healing`):** Pass `character_id` and a `service` from `town_healing_prices`.
+         *       Leave `caster_level` out for the lowest level that can perform the service, which
+         *       `town_healing_caster_levels` gives. Leave `spell_mode` out for the service's first usage, or set it to a usage
+         *       key from `town_healing_mode_names`, such as `"cure_paralysis"` on `cure_light_wounds`.
+         *     - **Out-of-battle spells (`cast_spell`):** Pass `character_id`, `spell_id`, and `mode` set to the `key` of an
+         *       entry in the player view's `spell_modes[spell_id]` (such as `"heal"` on `cure_light_wounds`, not the session's
+         *       `SessionMode`), plus target IDs in `targets` (such as `["character-0001"]`). A usage whose `accepts_cells` is
+         *       `true` also takes a cell of the level the party stands on, in the form `"cell:barrow:1:0,0"`. A usage whose
+         *       `one_target_per_missile` is `true` takes exactly the caster's `missile_counts[spell_id]` targets.
+         *     - **Scrolls (`use_item`):** An identified spell scroll's entry in a member's `inventory` lists the spells left on
+         *       it in `spells`. Pass one of them as `spell_id`, or leave `spell_id` out to read the first.
          *     - **Battle rounds (`resolve_battle_round`):** Include exactly one `BattleDeclaration` in `declarations` for each
          *       member ID in `encounter.declarers`. Pass `target_group_id` from `encounter.groups[i].id` (such as
-         *       `"group-0001"`) for `attack`, `close`, thrown splash items, and `area` or `hd_budget` spells (such as
-         *       `fire_ball` or `sleep` with `spell_mode: "hd_budget"`). In battle, spell casts set `spell_mode` rather than
-         *       `mode`. Spells and scrolls with `single` or `up_to_n` targeting (such as `magic_missile` with
-         *       `spell_mode: "missiles"`) take individual `"monster-NNNN"` or `"npc-NNNN"` IDs from
-         *       `encounter.groups[i].members` in `targets`. Use an entry whose `status` is `"alive"`.
+         *       `"group-0001"`) for `attack`, `close`, thrown splash items, and spells whose usage has a `target_group` of
+         *       `"required"` or `"optional"` in `spell_modes` (such as `fire_ball`, or `sleep` with `spell_mode: "hd_budget"`).
+         *       In battle, spell casts set `spell_mode` rather than `mode`. Spells and scrolls with `single` or `up_to_n`
+         *       targeting (such as `magic_missile` with `spell_mode: "missiles"`) take individual `"monster-NNNN"` or
+         *       `"npc-NNNN"` IDs from `encounter.groups[i].members` in `targets`. Use an entry whose `status` is `"alive"`.
          *     - **Treasure caches (`inspect_treasure`, `remove_treasure_trap`, `take_treasure`):** Pass a handle from the
          *       player view's `features_here` as `feature_id`. The list has the `explored[i].features[j].id` of each treasure
          *       cache the party can reach from where it stands. The handle starts with `feature:`. Don't parse it. A referee
@@ -1279,37 +1287,53 @@ export interface paths {
          *     - `party`: party members in marching order, with in-session `id` (such as `"character-0001"`, passed as
          *       `character_id` to commands), hit points, conditions, inventory, `scores`, `armour_class`, `thac0`, `saves`,
          *       `movement_rate_feet`, and `thief_skills`. Combat stats include bonuses and curses from worn unidentified magic
-         *       items while `inventory` masks unidentified names (such as `"a shield with a faint aura"`).
+         *       items while `inventory` masks unidentified names (such as `"a shield with a faint aura"`). An identified spell
+         *       scroll's `inventory` entry has `spells`, the spells left on it in the order `use_item` reads them, to offer as
+         *       `use_item`'s `spell_id`.
          *     - `dungeons`: IDs and names of dungeons the party has entered. `can_travel_to_town` states whether
          *       `travel_to_town` is currently usable from the party's position.
          *     - `explored`: the party's known map for each level. Each entry includes mapped `cells` and `edges`, entered
          *       `areas` with their names, descriptions, and walked cells, visible `features` with opaque `feature:` IDs,
          *       known `transitions` without destinations or gates, and `entrance` when that cell is known. A feature's
          *       `emptied` is `true` once the party has emptied that authored cache, and `trap_state` on a feature or an area
-         *       is the trap's state as the party knows it. Feature cache contents, hidden discoveries, and destinations that
-         *       the party hasn't learned stay omitted.
+         *       is the trap's state as the party knows it. An edge's `trap_state` marks a door where the party has found or
+         *       sprung a room trap that opening the door springs. Feature cache contents, hidden discoveries, and destinations
+         *       that the party hasn't learned stay omitted.
          *     - `features_here`: the feature IDs that `inspect_treasure`, `remove_treasure_trap`, and `take_treasure` accept as
          *       `feature_id` from where the party stands. It's empty outside `exploring` mode.
          *     - `spell_names`, `reversed_spell_names`, and `spell_levels`: the name and level of every spell ID the view
          *       shows. Each member's `spell_slots`, `preparable_spells`, and `learnable_spells` give what a `prepare_spells` or
          *       `learn_spell` dialog offers that member. A member's `can_prepare_now` says whether the session accepts a
          *       `prepare_spells` from them now, `needs_sleep_to_prepare` says whether they have to sleep first, and
-         *       `reverses_at` says whether they choose a reversible spell's form at `"memorize"` or at `"cast"`.
+         *       `reverses_at` says whether they choose a reversible spell's form at `"memorize"` or at `"cast"`. The names
+         *       include the spells on an identified scroll.
+         *     - `spell_modes` and `reversed_spell_modes`: what a cast dialog offers for each spell in `spell_names`, in its
+         *       normal form and its reverse. Each entry is osrlib's `SpellModeView` of one usage: its `key`, which you send as
+         *       `cast_spell`'s `mode`, a battle `cast` declaration's `spell_mode`, or a scroll's `mode`, its `display_name`,
+         *       whether it's `manual`, and the checks the session makes of its targets (`targeting`, `min_targets`,
+         *       `max_targets`, `accepts_cells`, `target_group`, `one_target_per_missile`, and `scroll_missile_count`).
+         *       `spell_ranges` and `reversed_spell_ranges` give each form's range as osrlib's `RangeSpec`, and
+         *       `spell_range_texts` and `reversed_spell_range_texts` give it as the spell's page prints it, to show the player.
+         *       Each member's `missile_counts` and `reversed_missile_counts` give how many targets that member's cast of a
+         *       missile usage, such as `magic_missile`'s, takes.
          *     - `item_names` and `item_names_plural`: what to call each item ID the view shows, in a member's `inventory` or
          *       in the `contents` of a pile in `piles`. `valuable_names` has the own name of each gem or piece of jewellery
          *       that has one, keyed by its instance ID, to show in a list. `valuable_phrases` has what to call each of those
          *       pieces in the middle of a sentence, with its article and its case, such as `"a silver altar candlestick"` or
          *       `"Ossor's Eye"`.
          *     - `encounter`: active encounter state, or `null`. Pass `declarers` to build `resolve_battle_round`, and pass a
-         *       group's `id` as `target_group_id` for attacks, `close`, thrown splash items, and `area` or `hd_budget` spells
-         *       (such as `fire_ball` and `sleep`). Each group also has `members` with individual `"monster-NNNN"` or
+         *       group's `id` as `target_group_id` for attacks, `close`, thrown splash items, and spells whose usage names a
+         *       group (such as `fire_ball` and `sleep`). Each group also has `members` with individual `"monster-NNNN"` or
          *       `"npc-NNNN"` IDs and coarse `status` values. Use an `"alive"` member's `id` in `targets` for a `single` or
          *       `up_to_n` spell or scroll. To find catalog templates matching a group's `family_id`, search
          *       `GET /v1/rules/monsters` with `q` and check `family_id` on `GET /v1/rules/monsters/{monster_id}`. In
          *       `encounter` mode, `evade_rejections` maps each `evade` `drop` value (`"none"`, `"treasure"`, and `"food"`) to
          *       the rejections the session would give that `evade` now, and an empty list means it would accept it. Read it to
-         *       enable or disable each choice of a flee menu. The map is empty in `battle` mode, where the session refuses
-         *       every `evade`.
+         *       enable or disable each choice of a flee menu, and show the reason, such as
+         *       `encounter.evade.nobody_able_to_act` when no living member can act or `encounter.evade.cannot_move` when a
+         *       member is entangled or overloaded. The map is empty in `battle` mode, where the session refuses every `evade`.
+         *       While monsters pursue the party, `pursuit_gap_feet` is the distance to the nearest pursuer, and each group's
+         *       `distance_feet` follows the chase.
          *     - `journal` and `quests`: discovered journal entries and active or completed quests.
          *     - `supplies`: how long the party's light and food last, in rounds and days, so a client can show "light left"
          *       and "food left" without counting items. `light_reserve_usable` says whether the party has what a
@@ -1319,11 +1343,16 @@ export interface paths {
          *       `town_healing_funds_gp` is the whole gold pieces the party can pay toward a fee, so a service is affordable
          *       when its price is at most that number.
          *     - `town_healing_rejections` and `town_healing_caster_levels`: in `town` mode, for each member ID and then each
-         *       temple service, the rejections `purchase_healing` without `caster_level` would get, leaving the fee out, and
-         *       the lowest cleric level that can perform each service the member can receive. An empty list means the temple
-         *       can perform the service for that member, and the temple refuses a service that would do nothing, with
-         *       `town.healing.no_effect` and a `reason` param. Read both to build the temple screen, and send the level as
+         *       temple service, the rejections `purchase_healing` without `caster_level` or `spell_mode` would get, leaving the
+         *       fee out, and the lowest cleric level that can perform each service the member can receive. An empty list means
+         *       the temple can perform the service for that member, and the temple refuses a service that would do nothing,
+         *       with `town.healing.no_effect` and a `reason` param. Read both to build the temple screen, and send the level as
          *       `caster_level`. Both maps are empty outside `town` mode.
+         *     - `town_healing_mode_rejections` and `town_healing_mode_names`: for each service that the temple sells in more
+         *       than one usage, such as `cure_light_wounds` in `heal` and `cure_paralysis`, the same answer as
+         *       `town_healing_rejections` for each usage, keyed by member ID, service, and usage key, and each usage's display
+         *       name. Offer each usage with an empty list, and send its key as `purchase_healing`'s `spell_mode`.
+         *       `town_healing_rejections` answers for each service's first usage only.
          */
         get: operations["get_player_view"];
         put?: never;
@@ -1347,16 +1376,19 @@ export interface paths {
          *
          *     A session's adventure can add spells to the built-in catalog, and `GET /v1/rules/spells/{spell_id}` serves only
          *     the built-in ones. This operation reads the session's own catalog, osrlib's `GameSession.effective_spells`, so
-         *     it also answers for a spell the adventure adds. Use `level` and `spell_list` to place a spell from a member's
-         *     `spell_book` in a `prepare_spells` dialog, and the `key` of each entry in `modes` as the `mode` of a `cast_spell`
-         *     command. Show a mode's `display_name` as its label.
+         *     it also answers for a spell the adventure adds.
+         *
+         *     The player view already has what a cast dialog needs: each usage's key, label, and target checks in
+         *     `spell_modes`, each form's range in `spell_ranges` and `spell_range_texts`, and each member's missile counts in
+         *     `missile_counts`. Call this operation for the rest of the spell, such as its `spell_list`, its `duration`, and
+         *     the text in `intro` and in each mode's `prose`, to show a spell's full description.
          *
          *     The operation serves the spells in `spell_names` and no others: the ones in a member's `spell_book`,
-         *     `memorized_spells`, `preparable_spells`, or `learnable_spells`, and the ones behind an effect on a member. So it
-         *     answers for a spell the adventure adds as soon as a member could prepare or learn it. A spell the view doesn't
-         *     name gets 404 `not_found`, whether or not the session's catalog has it, so the response doesn't reveal a spell
-         *     on an unidentified scroll or a spell the adventure keeps for its monsters. A player and a referee get the same
-         *     answer.
+         *     `memorized_spells`, `preparable_spells`, or `learnable_spells`, the ones on an identified scroll, and the ones
+         *     behind an effect on a member. So it answers for a spell the adventure adds as soon as a member could prepare or
+         *     learn it. A spell the view doesn't name gets 404 `not_found`, whether or not the session's catalog has it, so the
+         *     response doesn't reveal a spell on an unidentified scroll or a spell the adventure keeps for its monsters. A
+         *     player and a referee get the same answer.
          */
         get: operations["get_session_spell"];
         put?: never;
@@ -30952,6 +30984,16 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            /** @description - `content_invalid`: The server's osrlib refuses the stored character, which an older osrlib version accepted, such as a character whose custom class casts from two spell lists. `detail` has osrlib's reason. Delete the character, and import a fixed document via `POST /v1/characters/import`. */
+            422: {
+                headers: {
+                    "X-Request-Id": components["headers"]["X-Request-Id"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             /** @description - `rate_limited`: Your client exceeded the per-minute request budget (`BXAPI_RATE_LIMIT_PER_MINUTE`, 600 by default). Wait the seconds in the `Retry-After` header and retry. Requests without a valid API key share a separate budget and receive 429 instead of 401 `unauthorized` when that budget is exhausted. */
             429: {
                 headers: {
@@ -32079,7 +32121,7 @@ export interface operations {
             /**
              * @description - `validation_error`: The request doesn't match the operation's schema. A required field is missing, a value has the wrong type or is out of range, or the body isn't valid JSON. `errors` lists the first 20 problems, and the `loc` of each is the path to the value. Fix the request before you send it again. Sending both `character_ids` and `party_document`, sending neither, or passing more than 20 `character_ids` returns this code too.
              *     - `party_invalid`: osrlib refuses the party (such as an empty `character_ids` list), `party_document` has more than 20 characters, or two party members share the same id.
-             *     - `content_invalid`: `party_document` isn't a valid party document, or the server's osrlib refuses a stored adventure uploaded under an older osrlib version. Fix the party document, or upload a fixed adventure via `POST /v1/adventures` and start the session with the new `adventure_id`.
+             *     - `content_invalid`: `party_document` isn't a valid party document, or the server's osrlib refuses a stored adventure or a stored character that an older osrlib version accepted, such as a character whose custom class casts from two spell lists. Fix the party document, upload a fixed adventure via `POST /v1/adventures` and start the session with the new `adventure_id`, or import a fixed character via `POST /v1/characters/import` and send its new id.
              *     - `idempotency_key_reused`: Your client already sent this `Idempotency-Key` with a different method, path, query, body, or role. Generate a new key for each distinct request.
              */
             422: {
