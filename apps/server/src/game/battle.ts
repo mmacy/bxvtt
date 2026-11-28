@@ -10,7 +10,13 @@ import type {
   RoundProjection,
   User,
 } from '@bxvtt/shared/protocol';
-import { DeclarationBody, ResolveRoundRequest, SaveDeclarationRequest } from '@bxvtt/shared/protocol';
+import {
+  DeclarationBody,
+  PreviewCandidatesRequest,
+  ResolveRoundRequest,
+  SaveDeclarationRequest,
+} from '@bxvtt/shared/protocol';
+import type { PreviewCandidatesResult } from '@bxvtt/shared/protocol';
 import type { Context } from '../context';
 import { json, str } from '../db';
 import { ApiError, parseBody } from '../errors';
@@ -45,6 +51,11 @@ interface Preview {
   projection: RoundProjection | null;
   /** When the preview failed, in milliseconds since the epoch, or `null` when it succeeded. */
   failedAt: number | null;
+}
+
+/** A refusal as a comparable key: its member, its code, and its params. */
+function refusalKey(refusal: DeclarationRefusal): string {
+  return JSON.stringify([refusal.member_id, refusal.code, refusal.params]);
 }
 
 /** How long the server waits before it asks bxapi again for a preview that failed. */
@@ -311,6 +322,73 @@ export class BattleService {
   }
 
   /**
+   * Asks bxapi which candidate declarations it would accept beside the stored ones, and stores nothing. The web
+   * client offers a one-click choice only when bxapi accepts it, so it never suggests a choice that would hold up
+   * the round. Each candidate is for a declarer who hasn't declared, in a seat the user holds unless the user is a
+   * referee. A candidate for a member who has declared or can't act is never accepted, and no candidate is accepted
+   * when the candidates would make a saved declaration fail.
+   *
+   * @param tableId - The table ID.
+   * @param user - The user asking.
+   * @param role - The user's role.
+   * @param candidates - A candidate declaration for each member, by member ID.
+   */
+  async previewCandidates(
+    tableId: string,
+    user: User,
+    role: Role,
+    candidates: Record<string, DeclarationBody>,
+  ): Promise<PreviewCandidatesResult> {
+    const live = await this.game.require(tableId);
+    // A client a push behind can ask just after the battle ends. Nothing is accepted then.
+    if (!inBattle(live)) return { revision: live.revision, accepted: [] };
+    const { declarations: stored } = this.stored(live);
+    const declarers = live.view.encounter?.declarers ?? [];
+    // A candidate for a member who has declared, or who can no longer act, comes from a client a push behind. The
+    // preview leaves it out and doesn't accept it, rather than failing the request.
+    const judged = Object.keys(candidates).filter(
+      (memberId) => declarers.includes(memberId) && stored[memberId] === undefined,
+    );
+    for (const memberId of judged) this.checkMember(live, user, role, memberId);
+    const declarations = declarers.flatMap((memberId) => {
+      const candidate = judged.includes(memberId) ? candidates[memberId] : undefined;
+      if (candidate !== undefined) return [{ ...candidate, character_id: memberId }];
+      return stored[memberId] ?? [];
+    });
+    let result: BattleRoundPreview;
+    try {
+      result = await this.ctx.bxapi.post<BattleRoundPreview>(
+        `/v1/sessions/${encodeURIComponent(live.sessionId)}/battle-round/preview`,
+        { declarations },
+      );
+    } catch (error) {
+      // Without bxapi's answer the server can't vouch for any candidate, so it accepts none.
+      this.ctx.log.warn({ err: error, table: tableId }, 'could not preview the candidate declarations');
+      return { revision: live.revision, accepted: [] };
+    }
+    // A candidate must not make a saved declaration fail. The stored declarations' own preview is cached, so this
+    // usually costs no request. When the candidates add a rejection to a saved declaration, the server can't tell
+    // which candidate caused it, so it accepts none of them.
+    const saved = declarers.flatMap((memberId) => stored[memberId] ?? []);
+    const before = saved.length === 0 ? null : await this.preview(live, saved);
+    const known = new Set((before?.refusals ?? []).map(refusalKey));
+    const breaksSaved =
+      before?.failedAt != null ||
+      previewRefusals(result.rejections, declarers).some(
+        (refusal) =>
+          refusal.member_id !== null &&
+          !judged.includes(refusal.member_id) &&
+          !known.has(refusalKey(refusal)),
+      );
+    return {
+      revision: live.revision,
+      accepted: breaksSaved
+        ? []
+        : judged.filter((memberId) => (result.rejections[memberId] ?? []).length === 0),
+    };
+  }
+
+  /**
    * Resolves the round on request.
    *
    * @param tableId - The table ID.
@@ -491,6 +569,14 @@ export function registerBattleRoutes(app: FastifyInstance, ctx: Context): void {
     const user = ctx.auth.user(request);
     const role = ctx.tables.requireMember(tableId, user);
     return battle.clear(tableId, user, role, memberId);
+  });
+
+  app.post('/api/tables/:tableId/game/declarations/preview', async (request) => {
+    const { tableId } = TableParams.parse(request.params);
+    const user = ctx.auth.user(request);
+    const role = ctx.tables.requireMember(tableId, user);
+    const body = parseBody(PreviewCandidatesRequest, request);
+    return battle.previewCandidates(tableId, user, role, body.candidates);
   });
 
   app.post('/api/tables/:tableId/game/declarations/resolve', async (request) => {

@@ -136,6 +136,31 @@ export const DeclarationsState = z.object({
 export type DeclarationsState = z.infer<typeof DeclarationsState>;
 
 /**
+ * Body of `POST /api/tables/{table_id}/game/declarations/preview`: a candidate declaration for each of some members
+ * who haven't declared, keyed by member ID. The seat's user or a referee may send a candidate for a member. The
+ * server asks bxapi to preview the candidates beside the stored declarations and stores nothing, so a client can
+ * learn which one-click choices the session would accept before offering them.
+ */
+export const PreviewCandidatesRequest = z.strictObject({
+  candidates: z
+    .record(z.string(), DeclarationBody)
+    .refine((candidates) => Object.keys(candidates).length <= 20, 'At most 20 candidates.'),
+});
+/** Body of `POST /api/tables/{table_id}/game/declarations/preview`. */
+export type PreviewCandidatesRequest = z.infer<typeof PreviewCandidatesRequest>;
+
+/**
+ * Response of `POST /api/tables/{table_id}/game/declarations/preview`: the revision the preview judged, and the
+ * members whose candidates the session would accept beside the stored declarations and the other candidates.
+ */
+export const PreviewCandidatesResult = z.object({
+  revision: z.number().int(),
+  accepted: z.array(MemberId),
+});
+/** Response of `POST /api/tables/{table_id}/game/declarations/preview`. */
+export type PreviewCandidatesResult = z.infer<typeof PreviewCandidatesResult>;
+
+/**
  * Body of `POST /api/tables/{table_id}/game/declarations/resolve`. The caller or a referee may resolve a round
  * once every declarer has declared. A referee may pass `fill_with_hold` to resolve early, and the server then
  * declares `hold` for each member who hasn't declared. It never replaces a stored declaration, even one the
