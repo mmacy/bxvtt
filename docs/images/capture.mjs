@@ -413,7 +413,12 @@ async function main() {
   await ruthPage.goto(`${base}/tables/${tableId}`);
   await ruthPage.getByRole('button', { name: 'Start game' }).waitFor();
   await sleep(1200);
+  // The lobby is taller than the other screens now that the Table rules panel sits under the party, so this shot
+  // uses a taller window to show the whole panel.
+  await ruthPage.setViewportSize({ width: viewport.width, height: 1240 });
+  await sleep(500);
   await snap(ruthPage, 'lobby');
+  await ruthPage.setViewportSize(viewport);
 
   // Ruth starts the game from the lobby, with everyone online.
   await ruth.call('POST', `/tables/${tableId}/game`, {
