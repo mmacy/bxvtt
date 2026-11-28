@@ -18,7 +18,7 @@ import type {
 import { commandInfo, describeRejection, describeRejections, type TextContext } from '@bxvtt/shared/text';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from '@/ui';
-import { describeProblem, getApi, type ProblemMessage } from './api';
+import { describeProblem, getApi, hasOwnScreen, type ProblemMessage } from './api';
 import { toParamMap } from './params';
 import { canSendCommand } from './permissions';
 import { useTableStore, useTableStoreApi } from './table/context';
@@ -133,7 +133,7 @@ export type ErrorResult = { status: 'error'; message: string; problem: ProblemMe
 
 function errorResult(error: unknown, display: RefusalDisplay): ErrorResult {
   const problem = describeProblem(error);
-  if (display === 'toast')
+  if (display === 'toast' && !hasOwnScreen(problem))
     toast.error(problem.title, { description: problem.detail, id: `problem-${problem.code}` });
   return { status: 'error', message: `${problem.title}. ${problem.detail}`, problem };
 }
@@ -615,7 +615,7 @@ export function useApiAction(): {
         return { ok: true, value };
       } catch (error) {
         const problem = describeProblem(error);
-        if ((options.display ?? 'toast') === 'toast') {
+        if ((options.display ?? 'toast') === 'toast' && !hasOwnScreen(problem)) {
           toast.error(options.errorTitle ?? problem.title, {
             description: options.errorTitle ? `${problem.title}. ${problem.detail}` : problem.detail,
             id: `problem-${problem.code}`,

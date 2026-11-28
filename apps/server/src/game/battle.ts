@@ -232,6 +232,15 @@ export class BattleService {
   }
 
   /**
+   * Forgets the preview the server holds for a table that was deleted.
+   *
+   * @param tableId - The deleted table.
+   */
+  forgetTable(tableId: string): void {
+    this.previews.delete(tableId);
+  }
+
+  /**
    * Saves a declaration for one member. The declaration is stored even when the preview refuses it, because
    * whether it works can depend on the moves the others declare.
    *

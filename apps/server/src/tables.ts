@@ -40,6 +40,8 @@ export interface GameRecord {
   ended: boolean;
   /** Dungeon names by dungeon ID, for autosave labels. */
   dungeon_names: Record<string, string>;
+  /** Whether bxapi answered that it no longer has the session. Absent in records from before the server noted it. */
+  missing?: boolean;
 }
 
 /**
@@ -315,6 +317,7 @@ export class TableStore {
       mode: record.mode,
       ended: record.ended,
       started_at: record.started_at,
+      missing: record.missing === true,
     };
   }
 
@@ -351,8 +354,9 @@ export class TableStore {
   }
 
   /**
-   * Removes a member: clears their seats, takes their characters off the roster, and stops them being the caller.
-   * The caller checks that the table keeps a referee.
+   * Removes a member: clears their seats, takes their characters off the roster, stops them being the caller, and
+   * ends the rejoin requests that named them or that only they could approve. The caller checks that the table
+   * keeps a referee.
    *
    * @param tableId - The table ID.
    * @param userId - The member's user ID.
@@ -368,6 +372,8 @@ export class TableStore {
         userId,
       );
     });
+    // A request to come back as the member, or one only the member could have approved, has nobody to use it.
+    this.ctx.rejoin.membersChanged(tableId);
   }
 
   /**
@@ -631,6 +637,8 @@ export function registerTableRoutes(app: FastifyInstance, ctx: Context): void {
         userId,
       );
       ctx.feed.system(tableId, user.id, 'role_changed', { user_id: userId, role: body.role });
+      // A demoted referee can't approve, so a request only they could approve ends.
+      ctx.rejoin.membersChanged(tableId);
       tables.broadcastTable(tableId);
       // The member's projection changes with the role, so they get a new snapshot.
       ctx.game.resyncUser(tableId, userId);

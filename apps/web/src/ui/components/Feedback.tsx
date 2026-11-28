@@ -49,6 +49,8 @@ export interface EmptyStateProps {
   action?: ReactNode;
   /** "compact" fits in a dock tab or a list. */
   size?: 'compact' | 'default';
+  /** The element for the title: a paragraph by default, or a heading when the state is the whole page. */
+  titleAs?: 'p' | 'h1' | 'h2';
   className?: string;
 }
 
@@ -59,6 +61,7 @@ export function EmptyState({
   description,
   action,
   size = 'default',
+  titleAs: Title = 'p',
   className,
 }: EmptyStateProps) {
   return (
@@ -68,7 +71,7 @@ export function EmptyState({
           <Icon name={icon} size={size === 'compact' ? 24 : 32} />
         </span>
       )}
-      <p className={styles.emptyTitle}>{title}</p>
+      <Title className={styles.emptyTitle}>{title}</Title>
       {description && <p className={styles.emptyDescription}>{description}</p>}
       {action && <div className={styles.emptyAction}>{action}</div>}
     </div>

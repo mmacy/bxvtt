@@ -93,6 +93,12 @@ export const GameSummary = z.object({
   mode: z.string(),
   ended: z.boolean(),
   started_at: Timestamp,
+  /**
+   * `true` when the server found that bxapi no longer has the game, so the game can't be loaded until a referee
+   * ends it or deletes the table (`game_missing`). It stays `false` while bxapi is only unreachable, which ends
+   * by itself. Optional in the type so that older fixtures still compile. This server always sends it.
+   */
+  missing: z.boolean().optional(),
 });
 /** The short facts about a table's current game. */
 export type GameSummary = z.infer<typeof GameSummary>;

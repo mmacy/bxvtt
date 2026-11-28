@@ -16,7 +16,7 @@ import type {
   User,
 } from '@bxvtt/shared/protocol';
 import { REFEREE_VIEW_OMITTED_FIELDS } from '@bxvtt/shared/protocol';
-import { BxapiProblem, BxapiUnreachable, callBxapi, toApiError } from '../bxapi';
+import { BxapiProblem, BxapiUnreachable, callBxapi, isMissingSession, toApiError } from '../bxapi';
 import type { Context } from '../context';
 import { str } from '../db';
 import { ApiError } from '../errors';
@@ -207,14 +207,22 @@ export class GameService {
    */
   async load(tableId: string, sessionId: string): Promise<LiveGame> {
     const path = `/v1/sessions/${encodeURIComponent(sessionId)}`;
-    const [info, view, commands, refereeView] = await callBxapi(() =>
-      Promise.all([
+    let info: SessionInfo;
+    let view: PlayerView;
+    let commands: SessionCommands;
+    let refereeView: RefereeView;
+    try {
+      [info, view, commands, refereeView] = await Promise.all([
         this.ctx.bxapi.get<SessionInfo>(path),
         this.ctx.bxapi.get<PlayerView>(`${path}/view`),
         this.ctx.bxapi.get<SessionCommands>(`${path}/commands`),
         this.ctx.bxapi.get<RefereeView>(`${path}/referee-view`),
-      ]),
-    );
+      ]);
+    } catch (error) {
+      if (isMissingSession(error)) throw this.sessionLost(tableId, sessionId);
+      throw toApiError(error);
+    }
+    this.noteSessionFound(tableId, sessionId);
     const previous = this.live.get(tableId);
     const labels = previous?.sessionId === sessionId ? previous.labels : newLabelBook();
     const live: LiveGame = {
@@ -240,6 +248,49 @@ export class GameService {
   }
 
   /**
+   * Notes that bxapi no longer has a table's session: the table's game record says so, which its members see as
+   * `GameSummary.missing`, and the server forgets the game it held in memory. The table stays as it was
+   * otherwise, so a referee can end the game or delete the table.
+   *
+   * @param tableId - The table ID.
+   * @param sessionId - The session bxapi doesn't have.
+   * @returns The `game_missing` error to throw.
+   */
+  private sessionLost(tableId: string, sessionId: string): ApiError {
+    this.live.delete(tableId);
+    const game = this.ctx.tables.game(tableId);
+    if (game !== null && game.sessionId === sessionId && game.record.missing !== true) {
+      this.ctx.log.warn(
+        { table: tableId, session: sessionId },
+        'bxapi no longer has the session of this table',
+      );
+      this.ctx.tables.setGame(tableId, { sessionId, record: { ...game.record, missing: true } });
+      this.ctx.tables.broadcastTable(tableId);
+      // The open screens show a game that is gone. Each reconnects and hears why it can't load.
+      this.ctx.hub.reconnectTable(tableId, 'game missing');
+    }
+    return new ApiError(
+      'game_missing',
+      "The game service no longer has this table's game, so the table can't open. A referee can delete the table, and a player can leave it.",
+    );
+  }
+
+  /**
+   * Clears the note that bxapi lost a table's session, when bxapi has it again, for example after the host restored
+   * bxapi's database from a backup.
+   *
+   * @param tableId - The table ID.
+   * @param sessionId - The session bxapi answered for.
+   */
+  private noteSessionFound(tableId: string, sessionId: string): void {
+    const game = this.ctx.tables.game(tableId);
+    if (game === null || game.sessionId !== sessionId || game.record.missing !== true) return;
+    const { missing: _missing, ...record } = game.record;
+    this.ctx.tables.setGame(tableId, { sessionId, record });
+    this.ctx.tables.broadcastTable(tableId);
+  }
+
+  /**
    * Reads the dynamic referee state at the game's revision, from bxapi when the cached copy is older.
    *
    * @param live - The game.
@@ -247,9 +298,15 @@ export class GameService {
   async refereeFor(live: LiveGame): Promise<RefereeState> {
     if (live.referee !== null && live.refereeRevision === live.revision) return live.referee;
     const revision = live.revision;
-    const view = await callBxapi(() =>
-      this.ctx.bxapi.get<RefereeView>(`/v1/sessions/${encodeURIComponent(live.sessionId)}/referee-view`),
-    );
+    let view: RefereeView;
+    try {
+      view = await this.ctx.bxapi.get<RefereeView>(
+        `/v1/sessions/${encodeURIComponent(live.sessionId)}/referee-view`,
+      );
+    } catch (error) {
+      if (isMissingSession(error)) throw this.sessionLost(live.tableId, live.sessionId);
+      throw toApiError(error);
+    }
     if (live.revision === revision) {
       live.referee = refereeState(view);
       live.refereeRevision = revision;
@@ -718,6 +775,7 @@ export class GameService {
           continue;
         }
         if (!(error instanceof BxapiProblem)) throw error;
+        if (isMissingSession(error)) throw this.sessionLost(live.tableId, live.sessionId);
         switch (error.code) {
           case 'revision_conflict':
             await this.conflictLocked(live, userId);
@@ -931,6 +989,7 @@ export class GameService {
   async deleteTable(tableId: string): Promise<void> {
     await this.locked(tableId, async () => {
       this.live.delete(tableId);
+      this.battle.forgetTable(tableId);
       // A deletion that fails is remembered and tried again later (see BxapiJanitor).
       for (const row of this.ctx.db.all('SELECT id FROM saves WHERE table_id = ?', tableId)) {
         await this.ctx.janitor.remove('save', str(row, 'id'));
@@ -943,6 +1002,7 @@ export class GameService {
       }
       await this.ctx.adventures.removeAll(tableId);
       this.ctx.db.run('DELETE FROM tables WHERE id = ?', tableId);
+      this.ctx.rejoin.forgetTable(tableId);
       this.ctx.hub.removeUser(tableId, null, 'table_deleted');
     });
   }

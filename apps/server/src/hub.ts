@@ -190,6 +190,20 @@ export class Hub {
   }
 
   /**
+   * Closes every connection of a table with the `resync` code, so each client reconnects at once and learns the
+   * table's new state from its snapshot, or from the error that replaces it.
+   *
+   * @param tableId - The table.
+   * @param reason - Why, for the close frame.
+   */
+  reconnectTable(tableId: string, reason: string): void {
+    for (const connection of [...(this.byTable.get(tableId) ?? [])]) {
+      connection.socket.close(WS_CLOSE_CODES.resync, reason);
+      this.remove(connection);
+    }
+  }
+
+  /**
    * Holds the messages for a connection until {@link Hub.activate} sends a new snapshot ahead of them.
    *
    * @param connection - The connection.

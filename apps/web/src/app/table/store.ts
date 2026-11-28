@@ -52,6 +52,8 @@ export type TableConnectionStatus = ConnectionStatus;
 export interface TableTransport {
   sendPing: (ping: MapPing) => void;
   resync: () => void;
+  /** Opens the connection again after it stopped because the game couldn't be loaded. */
+  reconnect?: () => void;
 }
 
 export interface TableData {
@@ -136,6 +138,8 @@ export interface TableActions {
   sendPing: (ping: MapPing) => void;
   /** Asks the server for a new snapshot. */
   resync: () => void;
+  /** Tries the connection once more after it stopped because the game couldn't be loaded. */
+  reconnect: () => void;
 }
 
 export type TableState = TableData & TableActions;
@@ -412,6 +416,8 @@ export function createTableStore(
     sendPing: (ping) => transport.sendPing(ping),
 
     resync: () => transport.resync(),
+
+    reconnect: () => transport.reconnect?.(),
   }));
 }
 

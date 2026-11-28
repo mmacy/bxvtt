@@ -79,6 +79,22 @@ describe('useSendCommand', () => {
     expect(screen.queryByRole('region', { name: 'Notifications' })?.textContent ?? '').toBe('');
   });
 
+  it('shows no toast when the game service lost the game, because the page switches screens', async () => {
+    const { api, user } = renderWithTable(<SearchButton />);
+    api.sendCommand.mockRejectedValue(
+      new BxvttProblemError({
+        type: 'about:blank',
+        title: 'Gone',
+        status: 410,
+        code: 'game_missing',
+        detail: "The game service no longer has this table's game.",
+      }),
+    );
+    await user.click(screen.getByRole('button', { name: 'Search' }));
+    await waitFor(() => expect(screen.getByLabelText('status')).toHaveTextContent('error'));
+    expect(screen.queryByText("The game can't be loaded")).toBeNull();
+  });
+
   it('handles a revision conflict with a calm notice and the new state', async () => {
     const { api, store, user } = renderWithTable(<SearchButton />);
     const game = store.getState().game as GameState;

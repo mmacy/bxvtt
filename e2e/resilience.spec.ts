@@ -1,9 +1,12 @@
 /**
  * Resilience: reloads on every screen, the back button, two tabs for one user, two people acting at the same
- * moment, a member removed during play, and a referee demoted while their play screen is open. The server restart
+ * moment, a member removed during play, a referee demoted while their play screen is open, and a game that the
+ * game service no longer has. The server restart
  * test is in `restart.spec.ts`, because it stops the server that every other spec shares.
  */
 import type { Page } from '@playwright/test';
+import { isProblem } from '@bxvtt/shared/client';
+import { BXAPI_URL } from './support/env';
 import { expect, test, type Crew } from './support/fixtures';
 import { moveWithKey } from './support/party-actions';
 import { openRefereeSection } from './support/referee';
@@ -225,5 +228,79 @@ test.describe('resilience', () => {
     await expect(pat.page.getByText(/The Drain Folk kobolds are hungry/)).toHaveCount(0);
     await reload(pat.page);
     await expect(pat.page.getByRole('tab', { name: 'Referee', exact: true })).toHaveCount(0);
+  });
+
+  test('a game the game service lost shows why, a player can leave, and a referee can return to the lobby and delete the table (#24)', async ({
+    crew,
+  }) => {
+    const { ruth, sam, path, tableId, game } = await bellParty(crew);
+    if (game === null) throw new Error('The game did not start.');
+    await openTable(ruth.page, path);
+    await openTable(sam.page, path);
+    await expect(modeBadge(sam.page, 'In town')).toBeVisible();
+
+    // The game service loses the session, as after its database was reset.
+    const deleted = await fetch(`${BXAPI_URL}/v1/sessions/${encodeURIComponent(game.session_id)}`, {
+      method: 'DELETE',
+    });
+    expect(deleted.status).toBe(204);
+    // The server holds the game in memory, so it learns of the loss with the next action.
+    const failed = await ruth.client
+      .sendCommand(tableId, { command_type: 'enter_dungeon', dungeon_id: 'priory' }, game.revision)
+      .then(
+        () => null,
+        (error: unknown) => error,
+      );
+    expect(isProblem(failed, 'game_missing')).toBe(true);
+
+    // Both open screens switch to the screen that says why, with the way out for each role.
+    const heading = "The game at Test table can't be loaded";
+    await expect(sam.page.getByRole('heading', { name: heading, level: 1 })).toBeVisible();
+    await expect(ruth.page.getByRole('heading', { name: heading, level: 1 })).toBeVisible();
+    await expect(sam.page.getByText('Ask the host to check the game service.')).toBeVisible();
+    await expect(sam.page.getByRole('button', { name: 'Return to lobby' })).toHaveCount(0);
+    // A referee keeps the table by returning to the lobby, and deletes it from the lobby's menu.
+    await expect(ruth.page.getByRole('button', { name: 'Return to lobby' })).toBeVisible();
+    await expect(ruth.page.getByRole('button', { name: 'Delete table' })).toHaveCount(0);
+    await expect(ruth.page.getByRole('button', { name: 'Leave table' })).toHaveCount(0);
+
+    // Trying again finds the game still missing.
+    await sam.page.getByRole('button', { name: 'Try again' }).click();
+    await expect(sam.page.getByText("The game still can't be loaded.").first()).toBeVisible();
+    await expect(sam.page.getByRole('heading', { name: heading, level: 1 })).toBeVisible();
+
+    // The table list says so without opening the table.
+    await sam.page.getByRole('link', { name: 'Your tables' }).click();
+    const row = sam.page.getByRole('link', { name: /Test table/ });
+    await expect(row.getByText("Can't load")).toBeVisible();
+    await expect(row.getByText('In town')).toHaveCount(0);
+
+    // Sam opens it again and leaves.
+    await row.click();
+    await sam.page.getByRole('button', { name: 'Leave table' }).click();
+    await sam.page
+      .getByRole('alertdialog', { name: 'Leave table?' })
+      .getByRole('button', { name: 'Leave table' })
+      .click();
+    await expect(sam.page).toHaveURL(/\/$/);
+    await expect(sam.page.getByRole('link', { name: /Test table/ })).toHaveCount(0);
+
+    // Ruth reloads, returns the table to its lobby, and deletes it from the table menu there.
+    await ruth.page.reload();
+    await ruth.page.getByRole('button', { name: 'Return to lobby' }).click();
+    await ruth.page
+      .getByRole('alertdialog', { name: 'Return to lobby?' })
+      .getByRole('button', { name: 'Return to lobby' })
+      .click();
+    await expect(ruth.page.getByRole('heading', { name: 'Test table', level: 1 })).toBeVisible();
+    await ruth.page.getByRole('button', { name: 'Table menu' }).click();
+    await ruth.page.getByRole('menuitem', { name: 'Delete table' }).click();
+    await ruth.page
+      .getByRole('alertdialog', { name: 'Delete table?' })
+      .getByRole('button', { name: 'Delete table' })
+      .click();
+    await expect(ruth.page).toHaveURL(/\/$/);
+    await expect(ruth.page.getByRole('link', { name: /Test table/ })).toHaveCount(0);
+    expect((await ruth.client.listTables()).items.map((item) => item.id)).not.toContain(tableId);
   });
 });

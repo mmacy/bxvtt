@@ -18,6 +18,7 @@ import {
 import { Button, Card, EmptyState, PageLayout, Skeleton, Spinner } from '@/ui';
 import { NameForm, ProfileMenu, homeNoticeState, type HomeNotice } from '@/features/home';
 import { ConnectionBanner } from './ConnectionBanner';
+import { GameMissing } from './GameMissing';
 import { LoadingScreen } from './LoadingScreen';
 import { LobbyPagePart, PlayShellPart, preloadTableScreens } from './parts';
 import { RejoinPrompt } from './RejoinPrompt';
@@ -152,6 +153,7 @@ function TableScreen() {
   const connectionError = useTableStore((s) => s.connectionError);
   const hasGame = useTableStore((s) => s.game !== null);
   const playing = useTableStore((s) => s.table?.phase === 'playing');
+  const tableId = useTableStore((s) => s.tableId);
 
   // The user's own leave or delete navigates home when its request answers. The removal can arrive first.
   if (removed !== null && exitRequested) return <Navigate to="/" replace />;
@@ -178,6 +180,9 @@ function TableScreen() {
       </Centered>
     );
   }
+  // The game service no longer has the game, so waiting won't help. The screen offers the way out, and it stays
+  // through a retry until a snapshot arrives.
+  if (closeReason === 'game_missing' && status !== 'open') return <GameMissing tableId={tableId} />;
   if (!ready) {
     return (
       <Centered>
