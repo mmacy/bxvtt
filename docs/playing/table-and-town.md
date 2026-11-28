@@ -17,7 +17,7 @@ When the referee starts or restores a game, the play screen opens for everyone a
 - **Action bar (bottom):** Displays who the caller is alongside contextual actions for the current mode. On narrower screens, buttons condense to icons and excess items move into **More actions**.
 - **Dock (right):** Contains the **Party** (`Alt+1`), **Feed** (`Alt+2`), and **Journal** (`Alt+3`) tabs, plus **Referee** (`Alt+4`) for referees with the referee lens enabled.
 
-Open the **Table menu** in the top bar for **Save game** (`Ctrl+S`, or `Cmd+S` on macOS), **Saves**, **Table settings**, **Copy invite link**, **Rules reference** (`B`), **Keyboard shortcuts** (`?`), **Command palette** (`Ctrl+K` or `Cmd+K`), **Your tables**, and **Leave table**. Referees also see **Seats and caller** (to assign who controls each character and who speaks for the party), **Return to lobby**, and **Delete table**. See [Leave or delete a table](../refereeing/lobby-and-setup.md#leave-or-delete-a-table) for what leaving and deleting do.
+Open the **Table menu** in the top bar for **Save game** (`Ctrl+S`, or `Cmd+S` on macOS), **Saves**, **Table rules** (referees see **Table settings** and **Copy invite link** instead), **Rules reference** (`B`), **Keyboard shortcuts** (`?`), **Command palette** (`Ctrl+K` or `Cmd+K`), **Your tables**, and **Leave table**. Referees also see **Seats and caller** (to assign who controls each character and who speaks for the party), **Return to lobby**, and **Delete table**. See [Leave or delete a table](../refereeing/lobby-and-setup.md#leave-or-delete-a-table) for what leaving and deleting do.
 
 ## Who controls what
 
@@ -54,7 +54,7 @@ The **Ready for the dungeon?** card checks whether the party has prepared spells
 2. Choose a character under **Patient**.
 3. Select **Buy** beside a temple service: **Cure light wounds**, **Cure serious wounds**, **Cure disease**, **Neutralize poison**, **Remove curse**, or **Raise dead**.
 
-The entire party pools its coins for temple services: `bxapi` deducts the fee in whole gold pieces from the patient's purse first, then from the remaining party members in marching order. A fallen character with an empty purse can still be raised as long as the party has enough gold together. Referees also see an optional **Cleric level (optional)** input when an adventure or house ruling calls for a higher-level caster.
+The whole party shares temple fees. `bxapi` charges the patient's purse first, then the other members' purses in marching order, dead members included. Each purse pays what its coins are worth in whole gold pieces, so silver, electrum, platinum, and copper count, and any value under one gold piece stays in the purse. `bxapi` refuses the purchase when the purses together hold fewer whole gold pieces than the price. A fallen character with an empty purse can still be raised when the other purses cover the fee. A **Buy** button is unavailable, with the reason on hover and keyboard focus, when the party's gold pieces can't cover the price. If any purse holds another coin, the button stays available and `bxapi` decides. Referees also see an optional **Cleric level (optional)** input when an adventure or house ruling calls for a higher-level caster.
 
 ### Sell gems and jewellery
 

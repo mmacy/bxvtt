@@ -19,7 +19,7 @@ You enter the lobby as the table's referee. The server requires at least one ref
 
 ## Invite players and manage members
 
-- **Share the invite link:** In **Invite players**, select **Copy** and send the link to your group (see [Play over the internet](../getting-started/share-online.md) when hosting remotely). Every member at the table can view the invite code, so treat it as group-visible. If a link leaks, select **Replace invite link** and confirm to invalidate the previous code immediately. Current members keep their places.
+- **Share the invite link:** In **Invite players**, select **Copy** and send the link to your group (see [Play over the internet](../getting-started/share-online.md) when hosting remotely). Inviting is a referee tool, so players see no **Invite players** panel. If a link leaks, select **Replace invite link** and confirm to invalidate the previous code immediately. Current members keep their places.
 - **Change roles or remove members:** In **People at the table**, open **Actions for** any member to choose **Make referee**, **Make player** (disabled when only one referee remains), or **Remove from table**. Removing a member disconnects them immediately and rotates the invite code so the old link cannot be reused. Manage removals in the lobby between games, because the play screen has no member removal menu.
 - **Approve returning players:** When a player opens your invite link from a new quick-tunnel URL or a different browser and chooses **I've played at this table before**, a banner appears at the top of your lobby or play screen: **Someone asked to rejoin as** followed by that member's name. Confirm with the player over voice or chat, then select **Approve** (or **Decline**). A referee can never approve a rejoin request for their personal account; if you might switch browsers, promote a co-referee beforehand.
 
@@ -48,7 +48,7 @@ Selecting an adventure card expands its **Hooks** so you can read the setup to y
 
 Each table stores one set of rules. You set them before players create characters, because the rules decide how each player rolls a character, and again before you start a game, because they also decide how the game plays. Every member can read them, and only a referee can change them.
 
-Expand **Rules** in the lobby, or open **Table settings** in the **Table menu** and select the **Rules** tab. The panel starts with **Starting rules**, then **Optional rules**, **House rules**, and **Rules for play**. Each change takes effect for everyone at once.
+In the lobby, the **Table rules** panel summarizes the rules in the game's terms: how characters are created and how the game plays. Select **Change rules** to open the form, and **Done** to return to the summary. During play, open **Table settings** in the **Table menu** and select the **Rules** tab. The form starts with **Starting rules**, then **Optional rules**, **House rules**, and **Rules for play**. Each change takes effect for everyone at once, and players see it in their summary without reloading.
 
 ### Start from a set of rules
 
@@ -112,7 +112,7 @@ A card with no badge was rolled at this table under the table's current rules. T
 
 ## Configure table settings, seats, and the caller
 
-Open **Table settings** in the lobby (or select **Table settings** in the **Table menu** at any point during play, where it is the **Table** tab) to control table flow:
+Open **Table settings** in the lobby, which only a referee sees (or select **Table settings** in the **Table menu** at any point during play, where it is the **Table** tab) to control table flow:
 
 - **Who moves the party:** **The caller** (default, matching B/X procedure) or **Anyone with a character** (convenient for small or informal groups).
 - **Caller:** Pick a specific member or leave it **Not chosen** (when a game starts with no caller chosen, the owner of the first character in marching order becomes the caller automatically).
