@@ -9,7 +9,7 @@ import {
   spellFormName,
   type TextContext,
 } from '@bxvtt/shared/text';
-import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   getApi,
   loadCatalog,
@@ -42,13 +42,11 @@ import {
   currentProjection,
   liveGroups,
   memberDistance,
+  attackPlans,
   memberGap,
-  membersInReach,
   memorizedSpells,
-  planAttack,
   spellModeOptions,
   spellRangeText,
-  spellRangeFeet,
   stealthLists,
   usableItems,
   type CarriedItem,
@@ -206,6 +204,13 @@ export function Composer({
   // mirror to show and resending it would only be refused.
   const gaze: GazeChoice = chosenGaze === 'mirror' && !hasMirror ? 'none' : chosenGaze;
   const [error, setError] = useState<string | null>(null);
+  const refusal = current && refusals.length > 0 ? refusals.join(' ') : null;
+
+  // The whole composer comes into view when it opens, even when the board is at its height limit.
+  const section = useRef<HTMLElement>(null);
+  useEffect(() => {
+    section.current?.scrollIntoView?.({ block: 'nearest' });
+  }, []);
 
   const submit = async (body: DeclarationBody) => {
     const full: DeclarationBody = gaze === 'none' ? body : { ...body, gaze_defense: gaze };
@@ -216,7 +221,7 @@ export function Composer({
   };
 
   return (
-    <section className={styles.composer} aria-label={`Declare for ${member.name}`}>
+    <section ref={section} className={styles.composer} aria-label={`Declare for ${member.name}`}>
       <div className={styles.composerHead}>
         <SegmentedControl
           size="sm"
@@ -268,12 +273,9 @@ export function Composer({
         </div>
       )}
 
-      {/* A forecast that shows each time the composer opens, so it waits for a pause instead of interrupting. */}
-      {refusals.length > 0 && (
-        <Banner tone="warning" announce="status">
-          {refusals.join(' ')}
-        </Banner>
-      )}
+      {/* bxapi's refusal shows once, under the saved choice. While another tab is open, it shows here instead, in
+          the same line. The member's row announces it, so this line doesn't. */}
+      {refusal && tab !== tabFor(current?.action) && <p className={styles.composerRefusal}>{refusal}</p>}
       {error && <Banner tone="danger">{error}</Banner>}
 
       <div className={styles.composerBody}>
@@ -284,12 +286,21 @@ export function Composer({
             gear={gear}
             canBackStab={lists.canBackStab.includes(member.id)}
             current={current}
+            refusal={refusal}
             pending={pending}
             onSubmit={submit}
           />
         )}
         {tab === 'cast' && (
-          <CastChoices member={member} encounter={encounter} ctx={ctx} pending={pending} onSubmit={submit} />
+          <CastChoices
+            member={member}
+            encounter={encounter}
+            ctx={ctx}
+            current={current}
+            refusal={refusal}
+            pending={pending}
+            onSubmit={submit}
+          />
         )}
         {tab === 'move' && (
           <MoveChoices
@@ -297,6 +308,7 @@ export function Composer({
             encounter={encounter}
             ctx={ctx}
             current={current}
+            refusal={refusal}
             pending={pending}
             onSubmit={submit}
           />
@@ -307,6 +319,8 @@ export function Composer({
             encounter={encounter}
             items={usable}
             ctx={ctx}
+            current={current}
+            refusal={refusal}
             pending={pending}
             onSubmit={submit}
           />
@@ -317,18 +331,28 @@ export function Composer({
             encounter={encounter}
             gear={gear}
             ctx={ctx}
+            current={current}
+            refusal={refusal}
             pending={pending}
             onSubmit={submit}
           />
         )}
         {tab === 'turn' && (
-          <TurnChoice member={member} encounter={encounter} pending={pending} onSubmit={submit} />
+          <TurnChoice
+            member={member}
+            encounter={encounter}
+            current={current}
+            refusal={refusal}
+            pending={pending}
+            onSubmit={submit}
+          />
         )}
         {tab === 'hide' && (
           <div className={styles.choiceRow}>
             <p className={styles.choiceHint}>
               {member.name} slips into the shadows to set up a back-stab. The referee rolls in secret.
             </p>
+            {current?.action === 'hide' && refusal && <span className={styles.tileRefusal}>{refusal}</span>}
             <Button
               size="sm"
               variant="secondary"
@@ -345,6 +369,7 @@ export function Composer({
         {tab === 'hold' && (
           <div className={styles.choiceRow}>
             <p className={styles.choiceHint}>{member.name} stays put and does nothing this round.</p>
+            {current?.action === 'hold' && refusal && <span className={styles.tileRefusal}>{refusal}</span>}
             <Button
               size="sm"
               variant="secondary"
@@ -398,6 +423,8 @@ interface TileProps {
   meta?: ReactNode;
   note?: ReactNode;
   disabledReason?: string | null;
+  /** bxapi's refusal of the saved choice, shown in place of the note on the selected tile. */
+  refusal?: string | null;
   icon?: IconName;
   label: string;
   onClick: () => void;
@@ -406,11 +433,23 @@ interface TileProps {
 }
 
 /** One choice, such as a target group. A disabled tile says why. */
-function Tile({ title, meta, note, disabledReason, icon, label, onClick, pending, selected }: TileProps) {
+function Tile({
+  title,
+  meta,
+  note,
+  disabledReason,
+  refusal,
+  icon,
+  label,
+  onClick,
+  pending,
+  selected,
+}: TileProps) {
   const disabled = Boolean(disabledReason) || pending;
   // The label names the tile, so the note or the reason it shows is its description.
   const detail = useId();
-  const described = disabledReason || note ? detail : undefined;
+  const shownRefusal = selected ? refusal : null;
+  const described = disabledReason || shownRefusal || note ? detail : undefined;
   return (
     <Card
       padding="none"
@@ -437,6 +476,10 @@ function Tile({ title, meta, note, disabledReason, icon, label, onClick, pending
         {disabledReason ? (
           <span id={detail} className={styles.tileReason}>
             {disabledReason}
+          </span>
+        ) : shownRefusal ? (
+          <span id={detail} className={styles.tileRefusal}>
+            {shownRefusal}
           </span>
         ) : (
           note && (
@@ -470,6 +513,10 @@ function groupConditions(group: EncounterGroupView): string | null {
 interface ChoiceProps {
   member: MemberView;
   encounter: EncounterView;
+  /** The member's saved declaration, to mark the choice it names. */
+  current?: DeclarationBody | null;
+  /** bxapi's refusal of the saved declaration, shown under the choice it names. */
+  refusal?: string | null;
   pending: boolean;
   onSubmit: (body: DeclarationBody) => Promise<void>;
 }
@@ -481,10 +528,11 @@ function AttackChoices({
   encounter,
   gear,
   canBackStab,
-  current,
+  current = null,
+  refusal = null,
   pending,
   onSubmit,
-}: ChoiceProps & { gear: MemberGear; canBackStab: boolean; current: DeclarationBody | null }) {
+}: ChoiceProps & { gear: MemberGear; canBackStab: boolean }) {
   const [weaponId, setWeaponId] = useState<string>('auto');
   // bxapi lists who can back-stab this round. A saved back-stab stays visible so the player can change it, and the
   // row shows bxapi's reason when it won't work.
@@ -527,33 +575,46 @@ function AttackChoices({
         </div>
       )}
       <div className={styles.tiles}>
-        {liveGroups(encounter).map((group) => {
-          const plan = planAttack(member, encounter, group, gear, chosen);
-          const conditions = groupConditions(group);
-          const verb =
-            plan.kind === 'missile'
-              ? plan.weapon?.thrown
-                ? 'Throw'
-                : 'Shoot'
-              : plan.kind === 'close'
-                ? 'Close in and attack'
-                : 'Attack';
-          return (
-            <Tile
-              key={group.id}
-              icon={
-                plan.kind === 'missile' ? (plan.weapon?.thrown ? 'target' : 'weapon-bow') : 'weapon-sword'
-              }
-              title={groupTitle(group)}
-              meta={groupMeta(group, plan.distance)}
-              note={conditions ? `${plan.note} ${capitalize(conditions)}.` : plan.note}
-              disabledReason={plan.reason}
-              label={`${verb}: ${theGroup(viewLabels(group))}, ${formatFeet(plan.distance)} away`}
-              selected={current?.action === 'attack' && current.target_group_id === group.id}
-              pending={pending}
-              onClick={() => void onSubmit(attackDeclaration(plan, { weaponId: chosen, backStab: stabbing }))}
-            />
-          );
+        {liveGroups(encounter).flatMap((group) => {
+          // One row per group: the first way the member can attack it, which bxapi's preview then judges. A
+          // weapon that is reloading keeps its row, unavailable, and the next way to attack follows it.
+          const plans = attackPlans(member, encounter, group, gear, chosen);
+          const first = plans[0];
+          const shown =
+            first?.kind === 'missile' && first.reason !== null ? plans.slice(0, 2) : plans.slice(0, 1);
+          return shown.map((plan) => {
+            const conditions = groupConditions(group);
+            const verb =
+              plan.kind === 'missile'
+                ? plan.weapon?.thrown
+                  ? 'Throw'
+                  : 'Shoot'
+                : plan.kind === 'close'
+                  ? 'Close in and attack'
+                  : 'Attack';
+            const body = attackDeclaration(plan, { weaponId: chosen, backStab: stabbing });
+            return (
+              <Tile
+                key={`${group.id}-${plan.kind}`}
+                icon={
+                  plan.kind === 'missile' ? (plan.weapon?.thrown ? 'target' : 'weapon-bow') : 'weapon-sword'
+                }
+                title={groupTitle(group)}
+                meta={groupMeta(group, plan.distance)}
+                note={conditions ? `${plan.note} ${capitalize(conditions)}.` : plan.note}
+                disabledReason={plan.reason}
+                refusal={refusal}
+                label={`${verb}: ${theGroup(viewLabels(group))}, ${formatFeet(plan.distance)} away`}
+                selected={
+                  current?.action === 'attack' &&
+                  current.target_group_id === group.id &&
+                  (shown.length === 1 || (current.move === 'close') === (plan.kind === 'close'))
+                }
+                pending={pending}
+                onClick={() => void onSubmit(body)}
+              />
+            );
+          });
         })}
       </div>
     </div>
@@ -566,9 +627,24 @@ function capitalize(text: string): string {
 
 // Cast ---------------------------------------------------------------------------------------------------------
 
-function CastChoices({ member, encounter, ctx, pending, onSubmit }: ChoiceProps & { ctx: TextContext }) {
+function CastChoices({
+  member,
+  encounter,
+  ctx,
+  current = null,
+  refusal = null,
+  pending,
+  onSubmit,
+}: ChoiceProps & { ctx: TextContext }) {
   const spells = memorizedSpells(member);
-  const [choice, setChoice] = useState(0);
+  // A saved cast opens on its spell, so its refusal shows under it.
+  const saved = current?.action === 'cast' ? current : null;
+  const [choice, setChoice] = useState(() =>
+    Math.max(
+      0,
+      spells.findIndex((spell) => spell.spellId === saved?.spell_id),
+    ),
+  );
   const selected = spells[choice] ?? spells[0];
   return (
     <div className={styles.choiceStack}>
@@ -595,6 +671,8 @@ function CastChoices({ member, encounter, ctx, pending, onSubmit }: ChoiceProps 
           spellId={selected.spellId}
           memorizedReversed={selected.reversed}
           ctx={ctx}
+          current={saved?.spell_id === selected.spellId ? saved : null}
+          refusal={saved?.spell_id === selected.spellId ? refusal : null}
           pending={pending}
           onSubmit={onSubmit}
         />
@@ -609,6 +687,8 @@ function SpellTargets({
   spellId,
   memorizedReversed,
   ctx,
+  current = null,
+  refusal = null,
   pending,
   onSubmit,
 }: ChoiceProps & { spellId: string; memorizedReversed: boolean; ctx: TextContext }) {
@@ -628,7 +708,6 @@ function SpellTargets({
       <p className={styles.choiceHint}>This spell&apos;s details didn&apos;t load. Try again in a moment.</p>
     );
 
-  const range = spellRangeFeet(spell.range_spec);
   const targeting = mode.targeting?.mode ?? null;
   const name = capitalize(spellFormName(spellId, reversed, ctx));
   // A divine caster chooses the form as they cast. An arcane caster chose it when memorizing the copy.
@@ -696,18 +775,14 @@ function SpellTargets({
         <div className={styles.tiles}>
           {liveGroups(encounter).map((group) => {
             const distance = memberDistance(group, member.id);
-            const reason =
-              range !== null && distance > range
-                ? `Out of range: ${formatFeet(distance)} away, but ${name} only reaches ${formatFeet(range)}.`
-                : null;
             return (
               <Tile
                 key={group.id}
                 icon="spell"
                 title={groupTitle(group)}
                 meta={groupMeta(group, distance)}
-                note={groupConditions(group) ? capitalize(groupConditions(group) ?? '') : undefined}
-                disabledReason={reason}
+                refusal={refusal}
+                selected={current?.target_group_id === group.id}
                 label={`Cast ${name} at ${theGroup(viewLabels(group))}`}
                 pending={pending}
                 onClick={() => void onSubmit({ ...base, target_group_id: group.id })}
@@ -728,6 +803,7 @@ function SpellTargets({
           >
             Cast {name}
           </Button>
+          {refusal && <span className={styles.tileRefusal}>{refusal}</span>}
         </div>
       )}
 
@@ -736,35 +812,23 @@ function SpellTargets({
           {atParty && (
             <div className={styles.chipGroup} role="group" aria-label="Party members">
               <span className={styles.chipLabel}>Party</span>
-              {living.map((id) => {
-                const gap = memberGap(encounter, member.id, id) ?? 0;
-                const tooFar = range !== null && gap > range && id !== member.id;
-                return (
-                  <Button
-                    key={id}
-                    size="sm"
-                    variant={targets.includes(id) ? 'primary' : 'ghost'}
-                    aria-pressed={targets.includes(id)}
-                    disabled={tooFar}
-                    disabledReason={
-                      tooFar && range !== null
-                        ? `Out of range: ${memberName(id, ctx)} stands ${formatFeet(gap)} away, but ${name} only reaches ${formatFeet(range)}.`
-                        : null
-                    }
-                    onClick={() => toggle(id)}
-                  >
-                    {id === member.id ? `${memberName(id, ctx)} (self)` : memberName(id, ctx)}
-                  </Button>
-                );
-              })}
+              {living.map((id) => (
+                <Button
+                  key={id}
+                  size="sm"
+                  variant={targets.includes(id) ? 'primary' : 'ghost'}
+                  aria-pressed={targets.includes(id)}
+                  onClick={() => toggle(id)}
+                >
+                  {id === member.id ? `${memberName(id, ctx)} (self)` : memberName(id, ctx)}
+                </Button>
+              ))}
             </div>
           )}
           {atMonsters && monsters.length > 0 && (
             <div className={styles.chipGroup} role="group" aria-label="Monsters">
               <span className={styles.chipLabel}>Monsters</span>
-              {monsters.map(({ creature, group }) => {
-                const distance = memberDistance(group, member.id);
-                const tooFar = range !== null && distance > range;
+              {monsters.map(({ creature }) => {
                 const chosen = targets.includes(creature.id);
                 return (
                   <Button
@@ -772,12 +836,6 @@ function SpellTargets({
                     size="sm"
                     variant={chosen ? 'primary' : 'ghost'}
                     aria-pressed={chosen}
-                    disabled={tooFar}
-                    disabledReason={
-                      tooFar && range !== null
-                        ? `Out of range: ${formatFeet(distance)} away, but ${name} only reaches ${formatFeet(range)}.`
-                        : null
-                    }
                     onClick={() => toggle(creature.id)}
                   >
                     {creature.name}
@@ -801,6 +859,9 @@ function SpellTargets({
                 ? ` at ${targets.length === 1 ? targetName(targets[0] ?? '', ctx) : `${targets.length} targets`}`
                 : ''}
             </Button>
+            {refusal && (current?.targets ?? []).length > 0 && (
+              <span className={styles.tileRefusal}>{refusal}</span>
+            )}
           </div>
         </>
       )}
@@ -824,10 +885,11 @@ function MoveChoices({
   member,
   encounter,
   ctx,
-  current,
+  current = null,
+  refusal = null,
   pending,
   onSubmit,
-}: ChoiceProps & { ctx: TextContext; current: DeclarationBody | null }) {
+}: ChoiceProps & { ctx: TextContext }) {
   const moving = current?.action === 'move' ? current.move : null;
   const [replacement, setReplacement] = useState('none');
   const immobile = encounter.immobile.includes(member.id);
@@ -838,24 +900,24 @@ function MoveChoices({
     move,
     ...(replacement !== 'none' ? { replacement_id: replacement } : {}),
   });
-  const rate = member.encounter_rate_feet;
   return (
     <div className={styles.choiceStack}>
       <div className={styles.tiles}>
         {liveGroups(encounter).map((group) => {
           const distance = memberDistance(group, member.id);
+          // bxapi's front rank says the member is in melee with the group, so a close would go nowhere.
+          const engaged = group.front_rank.includes(member.id)
+            ? `${member.name} is already in melee with ${theGroup(viewLabels(group))}.`
+            : null;
           return (
             <Tile
               key={group.id}
               icon="footprints"
               title={`Close in on ${theGroup(viewLabels(group))}`}
               meta={formatFeet(distance, 'short')}
-              note={
-                group.front_rank.includes(member.id)
-                  ? 'Already in melee.'
-                  : 'Move toward them without attacking.'
-              }
-              disabledReason={stuck}
+              note="Move toward them without attacking."
+              disabledReason={stuck ?? engaged}
+              refusal={refusal}
               label={`Close in on ${theGroup(viewLabels(group))}`}
               selected={moving === 'close' && current?.target_group_id === group.id}
               pending={pending}
@@ -868,6 +930,7 @@ function MoveChoices({
           title="Fighting withdrawal"
           note="Back away from the monsters, facing them, without attacking."
           disabledReason={stuck}
+          refusal={refusal}
           label="Fighting withdrawal"
           selected={moving === 'fighting_withdrawal'}
           pending={pending}
@@ -876,8 +939,9 @@ function MoveChoices({
         <Tile
           icon="footprints"
           title="Retreat"
-          note={`Turn and run, ${rate} feet a round.`}
+          note="Turn and run without attacking."
           disabledReason={stuck}
+          refusal={refusal}
           label="Retreat"
           selected={moving === 'retreat'}
           pending={pending}
@@ -911,10 +975,14 @@ function ItemChoices({
   encounter,
   items,
   ctx,
+  current = null,
+  refusal = null,
   pending,
   onSubmit,
 }: ChoiceProps & { items: CarriedItem[]; ctx: TextContext }) {
-  const reach = membersInReach(encounter, member.id);
+  const used = current?.action === 'use_item' ? current : null;
+  // The refusal of a saved use, for the item it names.
+  const refusalFor = (itemId: string) => (used?.item_id === itemId ? refusal : null);
   const [drinker, setDrinker] = useState<Record<string, string>>({});
   return (
     <div className={styles.itemList}>
@@ -938,17 +1006,7 @@ function ItemChoices({
                   { value: member.id, label: `${member.name} drinks it` },
                   ...encounter.declarers
                     .filter((id) => id !== member.id)
-                    .map((id) => {
-                      const gap = memberGap(encounter, member.id, id);
-                      const near = reach.includes(id);
-                      return {
-                        value: id,
-                        label: near
-                          ? `Give it to ${memberName(id, ctx)}`
-                          : `Give it to ${memberName(id, ctx)} (${gap === null ? 'out of reach' : `${formatFeet(gap)} away`})`,
-                        disabled: !near,
-                      };
-                    }),
+                    .map((id) => ({ value: id, label: `Give it to ${memberName(id, ctx)}` })),
                 ]}
               />
               <Button
@@ -965,6 +1023,7 @@ function ItemChoices({
               >
                 Drink
               </Button>
+              {refusalFor(item.id) && <span className={styles.tileRefusal}>{refusalFor(item.id)}</span>}
             </div>
           );
         }
@@ -984,6 +1043,7 @@ function ItemChoices({
               >
                 Read
               </Button>
+              {refusalFor(item.id) && <span className={styles.tileRefusal}>{refusalFor(item.id)}</span>}
             </div>
           );
         }
@@ -1008,6 +1068,8 @@ function ItemChoices({
                         : `Aims it at ${theGroup(viewLabels(group))}.`
                     }
                     label={`${thrown ? 'Throw' : 'Use'} ${item.name} at ${theGroup(viewLabels(group))}`}
+                    selected={used?.item_id === item.id && used.target_group_id === group.id}
+                    refusal={refusalFor(item.id)}
                     pending={pending}
                     onClick={() =>
                       void onSubmit({ action: 'use_item', item_id: item.id, target_group_id: group.id })
@@ -1020,6 +1082,10 @@ function ItemChoices({
                   title="No target"
                   note="Use an effect that targets no monster group."
                   label={`Use ${item.name} without a target`}
+                  selected={
+                    used?.item_id === item.id && !used.target_group_id && (used.targets ?? []).length === 0
+                  }
+                  refusal={refusalFor(item.id)}
                   pending={pending}
                   onClick={() => void onSubmit({ action: 'use_item', item_id: item.id })}
                 />
@@ -1029,18 +1095,14 @@ function ItemChoices({
                   .filter((id) => id !== member.id)
                   .map((id) => {
                     const gap = memberGap(encounter, member.id, id);
-                    const near = reach.includes(id);
                     return (
                       <Tile
                         key={id}
-                        title={`Touch ${memberName(id, ctx)}`}
-                        note="Touch an ally within 5 feet."
-                        disabledReason={
-                          near
-                            ? null
-                            : `Out of reach: ${memberName(id, ctx)} stands ${gap === null ? 'too far' : formatFeet(gap)} away.`
-                        }
+                        title={memberName(id, ctx)}
+                        meta={gap === null ? undefined : formatFeet(gap, 'short')}
                         label={`Use ${item.name} on ${memberName(id, ctx)}`}
+                        selected={used?.item_id === item.id && used.targets?.[0] === id}
+                        refusal={refusalFor(item.id)}
                         pending={pending}
                         onClick={() => void onSubmit({ action: 'use_item', item_id: item.id, targets: [id] })}
                       />
@@ -1059,11 +1121,15 @@ function GiveChoices({
   encounter,
   gear,
   ctx,
+  current = null,
+  refusal = null,
   pending,
   onSubmit,
 }: ChoiceProps & { gear: MemberGear; ctx: TextContext }) {
-  const [itemId, setItemId] = useState(gear.items[0]?.id ?? '');
-  const reach = membersInReach(encounter, member.id);
+  const given = current?.action === 'give_item' ? current : null;
+  // The choice is read against the gear on every render, so an item given away meanwhile never stays chosen.
+  const [chosenItem, setItemId] = useState(given?.item_id ?? '');
+  const itemId = gear.items.some((item) => item.id === chosenItem) ? chosenItem : (gear.items[0]?.id ?? '');
   const others = encounter.declarers.filter((id) => id !== member.id);
   return (
     <div className={styles.choiceStack}>
@@ -1083,19 +1149,15 @@ function GiveChoices({
       <div className={styles.tiles}>
         {others.map((id) => {
           const gap = memberGap(encounter, member.id, id);
-          const near = reach.includes(id);
           return (
             <Tile
               key={id}
               icon="hand"
               title={memberName(id, ctx)}
-              note={near ? 'Within reach.' : undefined}
-              disabledReason={
-                near
-                  ? null
-                  : `Out of reach: ${memberName(id, ctx)} stands ${gap === null ? 'too far' : formatFeet(gap)} away.`
-              }
-              label={`Give to ${memberName(id, ctx)}`}
+              meta={gap === null ? undefined : formatFeet(gap, 'short')}
+              label={`Give it to ${memberName(id, ctx)}`}
+              selected={given?.targets?.[0] === id}
+              refusal={refusal}
               pending={pending}
               onClick={() => void onSubmit({ action: 'give_item', item_id: itemId, targets: [id] })}
             />
@@ -1106,7 +1168,7 @@ function GiveChoices({
   );
 }
 
-function TurnChoice({ member, encounter, pending, onSubmit }: ChoiceProps) {
+function TurnChoice({ member, encounter, current = null, refusal = null, pending, onSubmit }: ChoiceProps) {
   const undead = liveGroups(encounter).filter((g) => g.categories.includes('undead'));
   const reason = undead.length === 0 ? 'None of the monsters here are undead.' : null;
   return (
@@ -1117,6 +1179,8 @@ function TurnChoice({ member, encounter, pending, onSubmit }: ChoiceProps) {
         note={`Affects ${joinList(undead.map((g) => theGroup(viewLabels(g))))}.`}
         disabledReason={reason}
         label={`${member.name} turns undead`}
+        selected={current?.action === 'turn_undead'}
+        refusal={refusal}
         pending={pending}
         onClick={() => void onSubmit({ action: 'turn_undead' })}
       />

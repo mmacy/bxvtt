@@ -1,6 +1,7 @@
 /* The encounter panel, the battle board, and the aftermath: overlays at the bottom center of the stage. */
 
 .board {
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -20,6 +21,18 @@
   align-items: center;
   gap: var(--space-2) var(--space-3);
   min-height: var(--control-sm);
+}
+
+/* On a phone the rows don't shrink at all. The board scrolls as one, so every row can be reached. */
+.boardPhone > .memberList {
+  flex: none;
+  overflow-y: visible;
+}
+
+/* Only the member list shrinks and scrolls, so the header, the track, the playback strip, and the footer always
+   show in full. */
+.board > :not(.memberList, .refereeBlock) {
+  flex: none;
 }
 
 .headKeepClose {
@@ -186,6 +199,15 @@
   margin-inline-start: auto;
 }
 
+.stripControlsOwnLine {
+  flex-basis: 100%;
+}
+
+/* A beat keeps the height of a two-line beat, so the board doesn't jump as the lines change. */
+.stripPlaying {
+  min-height: var(--space-16);
+}
+
 .stripCount {
   font-family: var(--font-numeric);
   font-size: var(--text-sm);
@@ -236,7 +258,8 @@
   display: grid;
   flex: 1 1 auto;
   gap: var(--space-1);
-  min-height: 0;
+  /* The list shrinks and scrolls, but always shows at least one row. Past that, the board scrolls. */
+  min-height: var(--space-16);
   margin: 0;
   padding: 0;
   overflow-y: auto;
@@ -373,6 +396,11 @@
 .refusalLine {
   font-size: var(--text-sm);
   color: var(--color-danger-strong);
+}
+
+/* The empty live region takes no room in the status column. */
+.memberStatus > .refusalLine:empty {
+  margin-top: calc(-1 * var(--space-0-5));
 }
 
 .memberActions {
@@ -533,6 +561,21 @@
   font-size: var(--text-sm);
   line-height: var(--leading-snug);
   color: var(--color-warning-strong);
+}
+
+/* bxapi's refusal of the saved choice at the top of the composer, while another tab is open. */
+.composerRefusal {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-danger);
+}
+
+/* bxapi's refusal of the saved choice, under the choice it names. */
+.tileRefusal {
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  color: var(--color-danger);
 }
 
 .chipGroup {
@@ -1066,6 +1109,14 @@
 .barNote {
   font-size: var(--text-sm);
   color: var(--color-text-subtle);
+}
+
+/* At phone width the referee's Monsters and Collapse leave too little room for the decorative icon and the round
+   heading side by side, so the icon gives way and the heading stays on the first line. */
+@media (max-width: 640px) {
+  .boardTitle > svg:first-child {
+    display: none;
+  }
 }
 
 @media (max-width: 900px) {

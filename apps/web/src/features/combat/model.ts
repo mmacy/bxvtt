@@ -1,11 +1,10 @@
 /**
  * Pure helpers that read the encounter view and the party's sheets to offer combat choices.
  *
- * Nothing here decides what the rules allow. The helpers read the facts that the `BattleDeclaration`
- * documentation tells a client to read (each group's `front_rank` and `member_distance_feet`, each member's
- * `encounter_rate_feet`, `immobile`, `reloading`, and `advance_feet`), turn them into the plausible choices for a
- * member, and explain a choice that those facts rule out. bxapi checks every declaration again when the round
- * resolves, and the board shows its refusal next to the declaration it names.
+ * Nothing here decides what the rules allow. The helpers read facts the view states (each group's `front_rank`,
+ * the wielded weapons' qualities, and the encounter's `immobile` and `reloading` lists) and turn them into the
+ * choices to offer a member. They never judge whether an attack, a spell, or a touch reaches its target: bxapi's
+ * round preview judges each declaration once it's declared, and the board shows its refusal next to the member.
  */
 import type { BattleDeclaration, EncounterGroupView, EncounterView, MemberView } from '@bxvtt/shared/bxapi';
 import type {
@@ -19,7 +18,6 @@ import type {
 import {
   battleActionLabel,
   describeRejection,
-  formatFeet,
   groupName,
   itemPhrase,
   joinList,
@@ -50,8 +48,6 @@ export interface WeaponInfo {
   thrown: boolean;
   /** Whether it's a gear item that works as a weapon, such as a torch, rather than a weapon. */
   improvised: boolean;
-  /** The far end of the weapon's long range band, in feet, or `null` for a weapon with no ranges. */
-  longRangeFeet: number | null;
 }
 
 /** What kind of thing a carried item is, for offering it in a fight. */
@@ -95,11 +91,6 @@ function qualitiesOf(record: Json | null): string[] {
   return asArray(record?.qualities).filter((q): q is string => typeof q === 'string');
 }
 
-function longRange(ranges: unknown): number | null {
-  const long = asRecord(asRecord(ranges)?.long);
-  return asNumber(long?.max_feet);
-}
-
 function isThrown(qualities: readonly string[]): boolean {
   if (!qualities.includes('missile')) return false;
   if (qualities.includes('melee')) return true;
@@ -141,7 +132,6 @@ export function memberGear(member: MemberView, ctx: TextContext): MemberGear {
         reload: qualities.includes('reload'),
         thrown: isThrown(qualities),
         improvised: false,
-        longRangeFeet: longRange(record.missile_ranges),
       });
       continue;
     }
@@ -161,7 +151,6 @@ export function memberGear(member: MemberView, ctx: TextContext): MemberGear {
       reload: qualities.includes('reload'),
       thrown: isThrown(qualities),
       improvised: asString(template.item_type) !== 'weapon',
-      longRangeFeet: longRange(template.missile_ranges ?? combat?.missile_ranges),
     });
   }
 
@@ -234,20 +223,6 @@ export function isDeclarer(encounter: EncounterView | null, memberId: string): b
   return encounter?.declarers.includes(memberId) ?? false;
 }
 
-/**
- * The members who stand within 5 feet of this member on the range track. The `BattleDeclaration` documentation
- * says two members reach each other when their advances differ by 5 feet or less, which a give, a potion given
- * to drink, and a touch need.
- */
-export function membersInReach(encounter: EncounterView | null, memberId: string): string[] {
-  const advances = encounter?.advance_feet ?? {};
-  const mine = advances[memberId];
-  if (mine === undefined) return [];
-  return Object.entries(advances)
-    .filter(([id, advance]) => id !== memberId && Math.abs(advance - mine) <= 5)
-    .map(([id]) => id);
-}
-
 /** How far apart two members stand on the range track, or `null` when either has no place. */
 export function memberGap(encounter: EncounterView | null, a: string, b: string): number | null {
   const advances = encounter?.advance_feet ?? {};
@@ -259,26 +234,32 @@ export function memberGap(encounter: EncounterView | null, a: string, b: string)
 // Attacks ------------------------------------------------------------------------------------------------------
 
 /**
- * How a member would attack a group this round:
+ * One way a member can attack a group this round. The client never judges whether the attack reaches: bxapi's
+ * round preview does that once the player declares it, and the board shows its refusal.
  *
- * - `melee`: within 5 feet, or in the group's front rank, so the member attacks where they stand.
- * - `missile`: a wielded missile weapon reaches the group, so the member shoots from where they stand.
- * - `close`: the group is within the member's encounter rate plus 5 feet, so the member closes and attacks.
- * - `out_of_reach`: none of these, and `reason` says why.
+ * - `melee`: the member is in the group's `front_rank`, so they attack where they stand.
+ * - `missile`: the member wields a missile weapon they can fire this round, so they shoot or throw from where they
+ *   stand.
+ * - `close`: the member closes on the group and attacks it in the same round.
  */
 export interface AttackPlan {
   group: EncounterGroupView;
+  /** The member's distance to the group, from `member_distance_feet`. */
   distance: number;
-  kind: 'melee' | 'missile' | 'close' | 'out_of_reach';
+  kind: 'melee' | 'missile' | 'close';
+  /** The wielded weapon the attack names in its words, or `null` when the member has none for it. */
   weapon: WeaponInfo | null;
-  /** One line about the attack for the choice, such as "Closes 20 feet, then attacks". */
+  /** One line about the attack for the choice, such as "Shoots with a sling.". */
   note: string;
-  /** Why the member can't attack the group this round, when `kind` is `out_of_reach`. */
+  /** Why the member can't make this attack this round, from a list bxapi states, or `null`. */
   reason: string | null;
 }
 
 /**
- * Plans a member's attack on a group from the facts that the view reports.
+ * The attacks a member can declare on a group, from the facts the view states: the group's `front_rank`, the
+ * wielded weapons' qualities, and the encounter's `reloading` and `immobile` lists. A member in the front rank
+ * attacks where they stand. Anyone else can shoot with a missile weapon and can close in and attack. Whether a
+ * shot or a close reaches is bxapi's to say, so every choice stays open.
  *
  * @param member - The attacking member.
  * @param encounter - The encounter view.
@@ -286,66 +267,47 @@ export interface AttackPlan {
  * @param gear - The member's gear.
  * @param weaponId - A wielded weapon the player chose, or `null` to let the session choose.
  */
-export function planAttack(
+export function attackPlans(
   member: MemberView,
   encounter: EncounterView,
   group: EncounterGroupView,
   gear: MemberGear,
   weaponId: string | null = null,
-): AttackPlan {
+): AttackPlan[] {
   const distance = memberDistance(group, member.id);
   const chosen = weaponId === null ? null : (gear.wielded.find((w) => w.id === weaponId) ?? null);
-  const melee = chosen ?? gear.wielded.find((w) => w.melee) ?? null;
+  const melee =
+    chosen ?? gear.wielded.find((w) => w.melee && !w.improvised) ?? gear.wielded.find((w) => w.melee) ?? null;
+  const strikes = melee ? `strikes with ${melee.name}` : 'strikes unarmed';
   const base = { group, distance };
-  if (group.front_rank.includes(member.id) || distance <= 5) {
-    return {
-      ...base,
-      kind: 'melee',
-      weapon: melee,
-      note: melee ? `In reach. Strikes with ${melee.name}.` : 'In reach. Strikes unarmed.',
-      reason: null,
-    };
+  if (group.front_rank.includes(member.id)) {
+    return [{ ...base, kind: 'melee', weapon: melee, note: `${capitalize(strikes)}.`, reason: null }];
   }
+  const plans: AttackPlan[] = [];
   const reloading = encounter.reloading.includes(member.id);
-  const missiles = (chosen ? [chosen] : gear.wielded).filter((w) => w.missile && !(reloading && w.reload));
-  const reaching = missiles.find((w) => w.longRangeFeet === null || w.longRangeFeet >= distance);
-  if (reaching) {
-    return {
+  const missiles = (chosen ? [chosen] : gear.wielded).filter((w) => w.missile);
+  const missile = missiles.find((w) => !(reloading && w.reload));
+  // A weapon bxapi lists as reloading can't shoot this round. It stays in the list, unavailable with the reason, so
+  // the shot doesn't vanish without a word.
+  const reloadingWeapon = missile ? undefined : missiles.find((w) => reloading && w.reload);
+  const shooter = missile ?? reloadingWeapon;
+  if (shooter) {
+    plans.push({
       ...base,
       kind: 'missile',
-      weapon: reaching,
-      note: reaching.thrown
-        ? `Throws ${reaching.name} ${formatFeet(distance)}.`
-        : `Shoots with ${reaching.name} from ${formatFeet(distance)}.`,
-      reason: null,
-    };
+      weapon: shooter,
+      note: shooter.thrown ? `Throws ${shooter.name}.` : `Shoots with ${shooter.name}.`,
+      reason: missile ? null : `${member.name} is reloading ${shooter.name} this round.`,
+    });
   }
-  const name = member.name;
-  if (encounter.immobile.includes(member.id)) {
-    return {
-      ...base,
-      kind: 'out_of_reach',
-      weapon: null,
-      note: '',
-      reason: `${name} can't move this round and can't reach ${formatFeet(distance)}.`,
-    };
-  }
-  const rate = member.encounter_rate_feet;
-  if (distance <= rate + 5) {
-    return {
-      ...base,
-      kind: 'close',
-      weapon: melee,
-      note: `Closes ${formatFeet(Math.max(0, distance - 5))}, then attacks.`,
-      reason: null,
-    };
-  }
-  const shortRange = missiles.find((w) => w.longRangeFeet !== null);
-  const reason =
-    shortRange && shortRange.longRangeFeet !== null
-      ? `Out of range: ${formatFeet(distance)} away, while ${shortRange.name} reaches ${formatFeet(shortRange.longRangeFeet)}.`
-      : `Out of reach: ${formatFeet(distance)} away, while ${name} moves ${formatFeet(rate)} per round.`;
-  return { ...base, kind: 'out_of_reach', weapon: null, note: '', reason };
+  plans.push({
+    ...base,
+    kind: 'close',
+    weapon: melee,
+    note: `Closes in, then ${strikes}.`,
+    reason: encounter.immobile.includes(member.id) ? `${member.name} can't move this round.` : null,
+  });
+  return plans;
 }
 
 /** The declaration for an attack plan. */
@@ -360,101 +322,13 @@ export function attackDeclaration(
   return body;
 }
 
-/**
- * The common case: attack the nearest group with the wielded weapon, closing in when that brings the member
- * into reach. Returns `null` when no group is left, and the plan with its reason when the group is out of reach.
- */
-export function quickAttack(
-  member: MemberView,
-  encounter: EncounterView | null,
-  gear: MemberGear,
-): { plan: AttackPlan; declaration: DeclarationBody | null } | null {
-  if (encounter === null) return null;
-  const group = nearestGroup(encounter, member.id);
-  if (group === null) return null;
-  const plan = planAttack(member, encounter, group, gear);
-  return { plan, declaration: plan.kind === 'out_of_reach' ? null : attackDeclaration(plan) };
-}
-
-// The suggested action -------------------------------------------------------------------------------------------
-
-/**
- * The row's highlighted one-click choice. It is a default, never a rule: bxapi still decides what is legal, and
- * every other choice stays one click away under "More choices".
- *
- * - `melee`: attack a group the member already stands against. Read from each group's `front_rank`.
- * - `missile`: shoot or throw a wielded missile weapon at a group it reaches. Read from each group's
- *   `member_distance_feet`, the weapon's `missile_ranges`, and `reloading`.
- * - `cast`: open the Cast tab for a member with a spell memorized (`memorized_spells`). It never casts for them.
- * - `close`: close in and attack, or close in, only for a member who looks like a front-line fighter by facts the
- *   view states: in the party's front rank (`encounter.front_rank`), wielding a real melee weapon (the
- *   inventory's `wielded`), wearing armour or a shield (`worn_armour`, `shield`), and of a class that casts no
- *   spells at any level (the class catalog's magic abilities). Also needs the member to be able to move
- *   (`immobile`).
- * - `hold`: anyone else, with a line that says why.
- */
-export type Suggestion =
-  | { kind: 'melee' | 'missile' | 'close'; body: DeclarationBody; plan: AttackPlan; reason: null }
-  | { kind: 'cast'; body: null; plan: null; reason: null }
-  | { kind: 'hold'; body: DeclarationBody; plan: null; reason: string };
-
 export interface SuggestionFacts {
   /** Whether the member's class casts spells (a magic ability in the class catalog), at any level. */
   casts: boolean;
 }
 
-/** Chooses the row's highlighted choice from what the view and the catalogs state. */
-export function suggestAction(
-  member: MemberView,
-  encounter: EncounterView | null,
-  gear: MemberGear,
-  facts: SuggestionFacts,
-): Suggestion | null {
-  if (encounter === null) return null;
-  const groups = liveGroups(encounter);
-  if (groups.length === 0) return null;
-  const byDistance = [...groups].sort((a, b) => memberDistance(a, member.id) - memberDistance(b, member.id));
-  // Already in melee: strike the group the member stands against.
-  const engaged = byDistance.find((g) => g.front_rank.includes(member.id));
-  if (engaged) {
-    const plan = planAttack(member, encounter, engaged, gear);
-    if (plan.kind === 'melee') return { kind: 'melee', body: attackDeclaration(plan), plan, reason: null };
-  }
-  // A missile weapon that reaches the nearest group it can.
-  for (const group of byDistance) {
-    const plan = planAttack(member, encounter, group, gear);
-    if (plan.kind === 'missile')
-      return { kind: 'missile', body: attackDeclaration(plan), plan, reason: null };
-  }
-  // A caster with a spell ready picks it on the Cast tab.
-  if (memorizedSpells(member).length > 0) return { kind: 'cast', body: null, plan: null, reason: null };
-  // Closing to melee, only for a member who looks like a front-line fighter.
-  const fighter =
-    encounter.front_rank.includes(member.id) &&
-    gear.wielded.some((w) => w.melee && !w.improvised) &&
-    hasArmour(member) &&
-    !facts.casts &&
-    !encounter.immobile.includes(member.id);
-  const nearest = byDistance[0];
-  if (fighter && nearest) {
-    const plan = planAttack(member, encounter, nearest, gear);
-    if (plan.kind === 'close' || plan.kind === 'melee')
-      return {
-        kind: plan.kind === 'melee' ? 'melee' : 'close',
-        body: attackDeclaration(plan),
-        plan,
-        reason: null,
-      };
-    if (plan.kind === 'out_of_reach') {
-      // Too far to strike this round: close in without attacking.
-      const body: DeclarationBody = { action: 'move', move: 'close', target_group_id: nearest.id };
-      return { kind: 'close', body, plan, reason: null };
-    }
-  }
-  return { kind: 'hold', body: { action: 'hold' }, plan: null, reason: 'No attack from here.' };
-}
-
-function hasArmour(member: MemberView): boolean {
+/** Whether the member wears armour or carries a shield, from the inventory. */
+export function hasArmour(member: MemberView): boolean {
   const inventory = asRecord(member.inventory);
   return asRecord(inventory?.worn_armour) !== null || asRecord(inventory?.shield) !== null;
 }
@@ -624,18 +498,6 @@ export function repeatProblem(
       return `${capitalize(groupName(d.target_group_id, ctx))} ${group?.fled ? 'have escaped' : 'are gone'}.`;
     }
   }
-  // An attack only repeats as it was: from where the member stands now, it must still be the same kind of attack.
-  // A melee attack whose member fell back, or a shot that no longer reaches, doesn't repeat.
-  if (d.action === 'attack' && d.target_group_id && encounter) {
-    const group = encounter.groups.find((g) => g.id === d.target_group_id);
-    if (group) {
-      const plan = planAttack(member, encounter, group, gear, d.weapon_id ?? null);
-      const where = groupName(d.target_group_id, ctx);
-      if (plan.kind === 'out_of_reach') return plan.reason;
-      if (plan.kind === 'close' && d.move !== 'close')
-        return `${member.name} is no longer in reach of ${where}.`;
-    }
-  }
   if (d.action === 'move' && d.move === 'close' && d.target_group_id && encounter) {
     const group = encounter.groups.find((g) => g.id === d.target_group_id);
     if (group && group.front_rank.includes(member.id))
@@ -720,6 +582,9 @@ export function blockedReason(names: readonly string[]): string | null {
     : `${joinList(names)} need different actions first.`;
 }
 
+/** Why Resolve round is unavailable after bxapi refused the round as a whole and no action has changed since. */
+export const ROUND_REFUSED_REASON = "The round can't resolve until an action changes.";
+
 /** That the round waits for the named members to change their actions, or `null` for no names. */
 export function blockedNote(names: readonly string[]): string | null {
   if (names.length === 0) return null;
@@ -745,17 +610,6 @@ export function memorizedSpells(
     else list.push({ spellId, reversed, copies: 1 });
   }
   return list;
-}
-
-/** A spell's reach in feet from its range spec, for a range stated in feet or a touch, otherwise `null`. */
-export function spellRangeFeet(
-  rangeSpec: { kind?: string; feet?: number | null; per_level_feet?: number | null } | null | undefined,
-): number | null {
-  if (!rangeSpec) return null;
-  if (rangeSpec.kind === 'touch') return 5;
-  if (rangeSpec.kind === 'feet' && typeof rangeSpec.feet === 'number' && !rangeSpec.per_level_feet)
-    return rangeSpec.feet;
-  return null;
 }
 
 /** One way to cast a spell, as a spell template states it. */

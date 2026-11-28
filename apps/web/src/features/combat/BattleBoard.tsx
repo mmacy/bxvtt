@@ -1,7 +1,7 @@
 import type { EncounterView, MemberView } from '@bxvtt/shared/bxapi';
-import type { DeclarationBody, DeclarationsState, GameEntry, RoundProjection } from '@bxvtt/shared/protocol';
-import { conditionLabel, groupName, joinList, memberName, type TextContext } from '@bxvtt/shared/text';
-import { useEffect, useId, useMemo, useState } from 'react';
+import type { DeclarationBody, DeclarationsState, GameEntry } from '@bxvtt/shared/protocol';
+import { conditionLabel, joinList, memberName, type TextContext } from '@bxvtt/shared/text';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import {
   battleRound,
   tokenClass,
@@ -25,6 +25,7 @@ import {
   Avatar,
   Badge,
   Banner,
+  breakpoints,
   Button,
   ConfirmDialog,
   cx,
@@ -32,6 +33,7 @@ import {
   Icon,
   IconButton,
   TokenPortrait,
+  useMediaQuery,
   type IconName,
 } from '@/ui';
 import { showAftermath } from './Aftermath';
@@ -42,15 +44,12 @@ import {
   declarationBody,
   describeDeclaration,
   memberGear,
-  suggestAction,
-  type Suggestion,
-  type SuggestionFacts,
   blockedNote,
   blockedReason,
   blockingMembers,
+  ROUND_REFUSED_REASON,
   refusalTexts,
   repeatProblem,
-  quickAttack,
   stealthLists,
   currentProjection,
   type MemberGear,
@@ -58,6 +57,7 @@ import {
 import { useCombatPeople, type CombatPeople } from './people';
 import { PlaybackStrip } from './PlaybackStrip';
 import { trackFromView, type TrackMember } from './playback';
+import { quickCandidates, useQuickActions, type QuickAction, type QuickAnswer } from './quick';
 import { RangeTrack } from './RangeTrack';
 import { MonsterRoster, RefereeActions } from './RefereeTools';
 import { useCombatUi } from './state';
@@ -79,55 +79,44 @@ function isRound(entry: GameEntry): boolean {
   );
 }
 
-/** The row's highlighted choice, from {@link suggestAction}, in words for its button. */
-export interface QuickAction {
-  kind: Suggestion['kind'];
-  label: string;
-  /** What the button declares, or `null` for a choice that opens the composer (a spell). */
-  body: DeclarationBody | null;
-  /** Why the suggestion is to hold, shown under the member's name. */
-  reason: string | null;
-}
+export type { QuickAction } from './quick';
 
 /**
- * The quick action for a member: a back-stab for a member bxapi lists in `can_back_stab` whose nearest group is in
- * melee reach, a melee attack for a member already in melee, a missile attack in range, the Cast tab for a member with a
- * spell ready, closing in only for a front-line fighter, and otherwise holding.
+ * Each quick action for the members this user declares for and who haven't declared, and whether bxapi's answer
+ * for the current state is still out. The board and the action bar build the same lists, so they share one set of
+ * preview requests.
+ *
+ * @param enabled - Whether to ask, such as not once the battle has ended.
  */
-export function quickAction(
-  member: MemberView,
-  encounter: EncounterView | null,
-  gear: MemberGear,
-  ctx: TextContext,
-  facts: SuggestionFacts & {
-    /** Whether bxapi lists the member in `can_back_stab` this round. */
-    canBackStab?: boolean;
-  },
-): QuickAction | null {
-  // A member bxapi lists as able to back-stab is offered one on the nearest group in melee reach.
-  if (facts.canBackStab && encounter) {
-    const attack = quickAttack(member, encounter, gear);
-    if (attack?.declaration && (attack.plan.kind === 'melee' || attack.plan.kind === 'close')) {
-      const body: DeclarationBody = { ...attack.declaration, back_stab: true };
-      const label = `Back-stab ${groupName(attack.plan.group.id, ctx)}${body.move === 'close' ? ', closing in' : ''}`;
-      return { kind: 'melee', label, body, reason: null };
+export function useBattleQuickActions(enabled: boolean): QuickAnswer {
+  const encounter = useEncounter();
+  const party = useParty();
+  const declarations = useDeclarations();
+  const revision = useRevision();
+  const ctx = useTextContext();
+  const people = useCombatPeople();
+  const projection = currentProjection(declarations, revision);
+  const lists = useMemo(() => {
+    const result: Record<string, QuickAction[]> = {};
+    if (encounter === null) return result;
+    const declared = declarations?.declared ?? [];
+    const backStab = stealthLists(encounter, projection).canBackStab;
+    for (const member of party) {
+      if (
+        !encounter.declarers.includes(member.id) ||
+        declared.includes(member.id) ||
+        !people.isMine(member.id)
+      )
+        continue;
+      result[member.id] = quickCandidates(member, encounter, memberGear(member, ctx), ctx, {
+        casts: memberCasts(member),
+        canBackStab: backStab.includes(member.id),
+      });
     }
-  }
-  const suggestion = suggestAction(member, encounter, gear, facts);
-  if (suggestion === null) return null;
-  if (suggestion.kind === 'cast') return { kind: 'cast', label: 'Choose a spell', body: null, reason: null };
-  if (suggestion.kind === 'hold')
-    return { kind: 'hold', label: 'Hold', body: suggestion.body, reason: suggestion.reason };
-  // A missile attack says how it attacks, so a thrown dagger never reads like a melee attack.
-  const weapon = suggestion.plan.weapon;
-  const group = groupName(suggestion.plan.group.id, ctx);
-  const label =
-    suggestion.kind === 'missile' && weapon
-      ? weapon.thrown
-        ? `Throw ${weapon.name} at ${group}`
-        : `Shoot at ${group} with ${weapon.name}`
-      : describeDeclaration(suggestion.body, ctx, gear);
-  return { kind: suggestion.kind, label, body: suggestion.body, reason: null };
+    return result;
+  }, [encounter, party, declarations, projection, people, ctx]);
+  const state = `${revision ?? ''}|${JSON.stringify(declarations?.declarations ?? {})}`;
+  return useQuickActions(lists, state, enabled && encounter !== null);
 }
 
 /** The icon of each kind of suggestion. */
@@ -209,6 +198,22 @@ export function BattleBoard() {
   const setPlayback = useCombatUi((s) => s.setPlayback);
   const refereeOpen = useCombatUi((s) => s.refereeOpen);
   const setRefereeOpen = useCombatUi((s) => s.setRefereeOpen);
+  const listId = useId();
+  const phone = useMediaQuery(`(max-width: ${breakpoints.phone - 1}px)`);
+
+  // A composer belongs to the round it was opened in. When that round resolves, it closes, so the next round never
+  // opens with a stale composer. One opened during playback is already for the new round, and it stays.
+  const declaringRound = useDeclarations()?.round ?? 0;
+  const opened = useRef<{ composing: string | null; round: number }>({ composing, round: declaringRound });
+  useEffect(() => {
+    const before = opened.current;
+    if (composing !== null && composing === before.composing && declaringRound > before.round) {
+      opened.current = { composing: null, round: declaringRound };
+      setComposing(null);
+      return;
+    }
+    if (composing !== before.composing) opened.current = { composing, round: declaringRound };
+  }, [composing, declaringRound, setComposing]);
 
   useEffect(() => {
     if (revision !== null) recordSnapshot({ tableId, revision, encounter: liveEncounter, party });
@@ -256,6 +261,9 @@ export function BattleBoard() {
     return map;
   }, [party, ctx]);
   const refusals = useMemo(() => refusalTexts(declarations?.refusals ?? [], ctx), [declarations, ctx]);
+  // The board asks for the next round's quick actions while a round plays back, so they are ready when it ends. The
+  // rows show them only once the playback ends, since until then they show the beat on screen.
+  const quicks = useBattleQuickActions(liveEncounter !== null);
 
   if (encounter === null) return null;
   // The game ended in this round, and the shell keeps the board up while the round plays back.
@@ -275,8 +283,12 @@ export function BattleBoard() {
   };
 
   return (
-    <div className={styles.board} aria-label={`Battle, round ${round}`} role="region">
-      <header className={styles.boardHead}>
+    <div
+      className={cx(styles.board, phone && styles.boardPhone)}
+      aria-label={`Battle, round ${round}`}
+      role="region"
+    >
+      <header className={cx(styles.boardHead, styles.headKeepClose)}>
         <div className={styles.boardTitle}>
           <Icon name="battle" size={18} />
           <h2 className={styles.heading}>Round {round}</h2>
@@ -308,13 +320,18 @@ export function BattleBoard() {
             Monsters
           </Button>
         )}
-        <IconButton
-          icon={collapsed ? 'chevron-up' : 'chevron-down'}
-          label={collapsed ? 'Expand the battle board' : 'Collapse the battle board'}
+        <Button
           size="sm"
           variant="ghost"
+          iconEnd={collapsed ? 'chevron-up' : 'chevron-down'}
+          aria-label={collapsed ? 'Expand the battle board' : 'Collapse the battle board'}
+          aria-expanded={!collapsed}
+          // The list is only in the document while the board is expanded, as the kit's disclosures do it.
+          aria-controls={collapsed || holding ? undefined : listId}
           onClick={() => setCollapsed(!collapsed)}
-        />
+        >
+          {collapsed ? 'Expand' : 'Collapse'}
+        </Button>
       </header>
 
       <RangeTrack
@@ -325,41 +342,43 @@ export function BattleBoard() {
         popKey={playback.current ? `${playback.current.seq}-${playback.beatIndex}` : undefined}
         selected={composing}
         animate={!reduce}
-        compact={collapsed || composing !== null}
+        // Below the phone breakpoint the compact lane has no room for its stacked tokens, so the track keeps
+        // its full height, and Collapse hides the rows.
+        compact={collapsed && !phone}
         planned={playback.track ? null : (projection?.advance_feet ?? null)}
       />
 
-      {(composing === null || playback.playing) && (
-        <PlaybackStrip
-          playback={playback}
-          ctx={ctx}
-          idle={
-            // When everyone has declared, the footer says so and what happens next.
-            composing !== null || waiting.length === 0
-              ? null
-              : mineToDeclare
-                ? 'Declare an action for each of your characters.'
-                : 'Waiting for the party to declare.'
-          }
-        />
-      )}
+      {/* The strip stays while a composer is open, so the last round's result and Replay never leave the board. */}
+      <PlaybackStrip
+        playback={playback}
+        ctx={ctx}
+        idle={
+          // When everyone has declared, the footer says so and what happens next.
+          composing !== null || waiting.length === 0
+            ? null
+            : mineToDeclare
+              ? 'Declare an action for each of your characters.'
+              : 'Waiting for the party to declare.'
+        }
+      />
 
       {!collapsed && !holding && (
         <>
           {/* While a round plays back, the rows and the footer already show the next round. They dim so the eye
               goes to the playback, but a player can still declare for the next round. */}
-          <ul className={styles.memberList} aria-label="Actions this round">
+          <ul id={listId} className={styles.memberList} aria-label="Actions this round">
             {party.map((member) => (
               <MemberRow
                 key={member.id}
                 member={member}
                 encounter={encounter}
                 declarations={declarations}
-                projection={projection}
                 gear={gears[member.id] ?? { wielded: [], items: [] }}
                 people={people}
                 ctx={ctx}
                 refusals={refusals.byMember[member.id] ?? []}
+                quick={quicks.actions?.[member.id] ?? null}
+                quickPending={quicks.pending}
                 shown={playback.track?.members[member.id] ?? null}
                 playing={playback.track !== null}
                 composing={composing === member.id}
@@ -458,12 +477,14 @@ interface MemberRowProps {
   playing: boolean;
   encounter: EncounterView;
   declarations: DeclarationsState | null;
-  /** The preview's projection at the game's revision, or `null`. */
-  projection: RoundProjection | null;
   gear: MemberGear;
   people: CombatPeople;
   ctx: TextContext;
   refusals: string[];
+  /** The member's quick action, from {@link useBattleQuickActions}, or `null` for none. */
+  quick: QuickAction | null;
+  /** Whether bxapi's answer for the current state is still out, so `quick` is the previous one and waits. */
+  quickPending: boolean;
   composing: boolean;
   onCompose: (open: boolean) => void;
   onDeclared: () => void;
@@ -475,11 +496,12 @@ function MemberRow({
   playing,
   encounter,
   declarations,
-  projection,
   gear,
   people,
   ctx,
   refusals,
+  quick: offered,
+  quickPending,
   composing,
   onCompose,
   onDeclared,
@@ -496,18 +518,22 @@ function MemberRow({
   const hp = shown ? shown.hp : member.current_hp;
   const dead = shown ? shown.down && shown.conditions.includes('dead') : member.conditions.includes('dead');
   const down = shown ? shown.down || shown.hp <= 0 : dead || member.current_hp <= 0;
-  const casts = memberCasts(member);
-  const canBackStab = stealthLists(encounter, projection).canBackStab.includes(member.id);
   // While a round plays back, the row shows the beat on screen, so it offers nothing to declare yet.
-  const suggestion =
-    canAct && !declaration && !playing
-      ? quickAction(member, encounter, gear, ctx, { casts, canBackStab })
-      : null;
-  const quick = mine ? suggestion : null;
+  const quick = mine && canAct && !declaration && !playing ? offered : null;
   const again = mine && canAct && !declaration ? repeat.candidates([member.id])[0] : undefined;
   const [error, setError] = useState<string | null>(null);
   const reasonId = useId();
   const showReason = refusals.length > 0 && !composing;
+  // When the composer closes with focus inside it, such as when its round resolves, focus returns to the row's
+  // Actions button rather than to the page.
+  const actionsButton = useRef<HTMLButtonElement>(null);
+  const wasComposing = useRef(composing);
+  useEffect(() => {
+    const active = document.activeElement;
+    if (wasComposing.current && !composing && (active === null || active === document.body))
+      actionsButton.current?.focus({ preventScroll: true });
+    wasComposing.current = composing;
+  }, [composing]);
 
   const send = async (body: DeclarationBody) => {
     setError(null);
@@ -610,11 +636,17 @@ function MemberRow({
           )}
         >
           {status}
-          {showReason && (
-            <span id={reasonId} className={styles.refusalLine}>
-              {refusals.join(' ')}
-            </span>
-          )}
+          {/* A polite live region that stays mounted with its text, so a new refusal is announced once. While the
+              composer shows the refusal, the line is only hidden visually, so closing the composer announces
+              nothing again. */}
+          <span
+            id={reasonId}
+            className={cx(styles.refusalLine, composing && 'visually-hidden')}
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            {declaration && refusals.length > 0 ? refusals.join(' ') : ''}
+          </span>
           {error && <span className={styles.refusalLine}>{error}</span>}
         </div>
         <div className={styles.memberActions}>
@@ -623,9 +655,14 @@ function MemberRow({
               size="sm"
               variant="secondary"
               icon={QUICK_ICONS[quick.kind]}
-              loading={pending}
+              loading={pending || quickPending}
               tooltip={quickTooltip(quick, member.name)}
-              onClick={() => (quick.body ? void send(quick.body) : onCompose(true))}
+              onClick={() => {
+                // The previous answer's button stays in place while the new one is out, and can't be used.
+                if (quickPending) return;
+                if (quick.body) void send(quick.body);
+                else onCompose(true);
+              }}
             >
               {quick.label}
             </Button>
@@ -641,6 +678,7 @@ function MemberRow({
           )}
           {canAct && (
             <Button
+              ref={actionsButton}
               size="sm"
               variant={composing ? 'secondary' : 'ghost'}
               iconEnd={composing ? 'chevron-up' : 'chevron-down'}
@@ -679,7 +717,9 @@ function MemberRow({
           gear={gear}
           current={declaration ? declarationBody(declaration) : null}
           suggested={
-            suggestion ? (suggestion.body ?? (suggestion.kind === 'cast' ? { action: 'cast' } : null)) : null
+            quick && !quickPending
+              ? (quick.body ?? (quick.kind === 'cast' ? { action: 'cast' } : null))
+              : null
           }
           refusals={refusals}
           onDeclared={onDeclared}
@@ -777,6 +817,8 @@ function RoundFooter({
   // The round can't resolve while a declared action won't work. A hold for the members who haven't declared
   // never replaces one.
   const blocked = blockedReason(refusedNames);
+  // A refusal of the round as a whole stays until someone changes an action, so resolving again would only fail.
+  const resolveBlocked = blocked ?? (general.length > 0 ? ROUND_REFUSED_REASON : null);
 
   return (
     <footer className={cx(styles.boardFoot, playing && styles.dimmedForPlayback)}>
@@ -855,8 +897,8 @@ function RoundFooter({
                 variant="primary"
                 icon="play"
                 loading={pending}
-                disabled={blocked !== null}
-                disabledReason={blocked}
+                disabled={resolveBlocked !== null}
+                disabledReason={resolveBlocked}
                 onClick={() => void resolve()}
               >
                 Resolve round

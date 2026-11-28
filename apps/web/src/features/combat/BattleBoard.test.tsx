@@ -6,9 +6,15 @@ import { fixtureSnapshot, type Snapshot } from '@/app/testing/fixtures';
 import { createFakeApi, renderWithTable, type FakeApi } from '@/app/testing/renderWithTable';
 import { BattleBoard } from './BattleBoard';
 import { resetCombatMemory } from './memory';
+import { resetQuickActions } from './quick';
 import { resetCombatUi } from './state';
 
 function stubRules(api: FakeApi) {
+  // bxapi's preview accepts every quick action unless a test says otherwise.
+  api.previewCandidates.mockImplementation(async (_tableId, candidates) => ({
+    revision: 0,
+    accepted: Object.keys(candidates),
+  }));
   api.rules.mockImplementation(async (path: string) => {
     if (path === 'classes/cleric') return { id: 'cleric', abilities: [{ tag: 'turn_undead' }] } as never;
     if (path.startsWith('classes/')) return { id: path.slice(8), abilities: [] } as never;
@@ -25,6 +31,7 @@ function row(name: string): HTMLElement {
 beforeEach(() => {
   resetCombatMemory();
   resetCombatUi();
+  resetQuickActions();
 });
 
 /**
@@ -209,13 +216,93 @@ describe('BattleBoard', () => {
     const snapshot = fixtureSnapshot('battle', 'player');
     api.declare.mockResolvedValue(snapshot.declarations as DeclarationsState);
     const { user, store } = renderWithTable(<BattleBoard />, { snapshot, api });
-    const quick = within(row('Wren')).getAllByRole('button')[0];
-    if (!quick) throw new Error('No quick action.');
-    await user.click(quick);
+    await user.click(await within(row('Wren')).findByRole('button', { name: /goblins/ }));
     expect(api.declare).toHaveBeenCalledWith(
       store.getState().tableId,
       'character-0002',
       expect.objectContaining({ target_group_id: 'group-0001' }),
+    );
+  });
+
+  it('offers no quick action until bxapi answers, and none that bxapi refuses', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('battle', 'player');
+    const wren = snapshot.game?.view.party.find((m) => m.name === 'Wren');
+    if (!wren) throw new Error('No Wren in the fixture.');
+    // Wren carries only a sling, so her one choice to check is a shot at the goblins.
+    wren.inventory = {
+      ...wren.inventory,
+      wielded: [
+        {
+          instance_type: 'item',
+          quantity: 1,
+          template: {
+            item_type: 'weapon',
+            id: 'sling',
+            name: 'Sling',
+            qualities: ['blunt', 'missile'],
+            missile_ranges: { long: { max_feet: 160 } },
+          },
+        },
+      ],
+    };
+    let answer: () => void = () => undefined;
+    api.previewCandidates.mockImplementation(async () => {
+      await new Promise<void>((resolve) => (answer = resolve));
+      return { revision: 0, accepted: [] };
+    });
+    renderWithTable(<BattleBoard />, { snapshot, api });
+    await waitFor(() =>
+      expect(api.previewCandidates).toHaveBeenCalledWith(expect.any(String), {
+        'character-0002': { action: 'attack', target_group_id: 'group-0001' },
+      }),
+    );
+    expect(within(row('Wren')).queryByRole('button', { name: /goblins/ })).not.toBeInTheDocument();
+    await act(async () => answer());
+    // bxapi refused the shot, so Wren's row offers only Actions.
+    await waitFor(() => expect(api.previewCandidates).toHaveBeenCalledTimes(1));
+    expect(within(row('Wren')).getByRole('button', { name: 'Actions' })).toBeInTheDocument();
+    expect(within(row('Wren')).queryByRole('button', { name: /goblins/ })).not.toBeInTheDocument();
+  });
+
+  it('keeps the previous quick button in place, busy, while bxapi answers for the new state', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('battle', 'player');
+    let release: () => void = () => undefined;
+    let calls = 0;
+    api.previewCandidates.mockImplementation(async (_tableId, candidates) => {
+      calls += 1;
+      if (calls > 1) await new Promise<void>((resolve) => (release = resolve));
+      return { revision: 0, accepted: Object.keys(candidates) };
+    });
+    const { user, store } = renderWithTable(<BattleBoard />, { snapshot, api });
+    const quick = await within(row('Wren')).findByRole('button', { name: /goblins/ });
+    expect(quick).not.toHaveAttribute('aria-busy');
+    // Another member's declaration changes the state, and bxapi's new answer is out.
+    const declarations = snapshot.declarations as DeclarationsState;
+    act(() => {
+      store.getState().receive({
+        type: 'declarations',
+        declarations: {
+          ...declarations,
+          declarations: {
+            ...declarations.declarations,
+            'character-0003': { action: 'hold', character_id: 'character-0003' } as never,
+          },
+          declared: [...declarations.declared, 'character-0003'],
+        },
+      });
+    });
+    await waitFor(() => expect(calls).toBe(2));
+    const waiting = within(row('Wren')).getByRole('button', { name: /goblins/ });
+    expect(waiting).toHaveAttribute('aria-busy', 'true');
+    await user.click(waiting);
+    expect(api.declare).not.toHaveBeenCalled();
+    await act(async () => release());
+    await waitFor(() =>
+      expect(within(row('Wren')).getByRole('button', { name: /goblins/ })).not.toHaveAttribute('aria-busy'),
     );
   });
 
@@ -232,6 +319,33 @@ describe('BattleBoard', () => {
     expect(api.declare).toHaveBeenCalledWith(store.getState().tableId, 'character-0002', { action: 'hold' });
   });
 
+  it('offers an attack on a group however far it stands, and leaves the reach to the preview', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('battle', 'player');
+    const encounter = snapshot.game?.view.encounter;
+    const group = encounter?.groups[0];
+    if (!encounter || !group) throw new Error('No group in the fixture.');
+    // Wren stands far behind the others, out of any reach the browser could work out.
+    group.member_distance_feet['character-0002'] = 400;
+    group.front_rank = [];
+    encounter.advance_feet = { ...encounter.advance_feet, 'character-0002': -300 };
+    api.declare.mockResolvedValue(snapshot.declarations as DeclarationsState);
+    const { user, store } = renderWithTable(<BattleBoard />, { snapshot, api });
+    await user.click(within(row('Wren')).getByRole('button', { name: 'Actions' }));
+    const composer = screen.getByRole('region', { name: 'Declare for Wren' });
+    await user.click(within(composer).getByRole('radio', { name: 'Attack' }));
+    const close = within(composer).getByRole('button', { name: /^Close in and attack: the goblins/ });
+    expect(close).not.toHaveAttribute('aria-disabled');
+    expect(composer).not.toHaveTextContent(/Out of (reach|range)/);
+    await user.click(close);
+    expect(api.declare).toHaveBeenCalledWith(store.getState().tableId, 'character-0002', {
+      action: 'attack',
+      target_group_id: 'group-0001',
+      move: 'close',
+    });
+  });
+
   it('shows a refused declaration next to its member', () => {
     const api = createFakeApi();
     stubRules(api);
@@ -245,7 +359,9 @@ describe('BattleBoard', () => {
       },
     ];
     renderWithTable(<BattleBoard />, { snapshot, api });
-    expect(within(row('Brenna')).getByText(/front rank/)).toBeInTheDocument();
+    const line = within(row('Brenna')).getByText(/front rank/);
+    // The line is a polite live region, so a new refusal is announced without interrupting.
+    expect(line).toHaveAttribute('aria-live', 'polite');
   });
 
   it('keeps the round from resolving while the preview refuses a declaration, and says who has to change', () => {
@@ -291,7 +407,7 @@ describe('BattleBoard', () => {
     expect(note.closest('[aria-live="polite"]')).not.toBeNull();
   });
 
-  it('forecasts in the composer that the action won’t work, as a polite status rather than an alert', async () => {
+  it('shows the refusal once in the composer, under the saved choice, or as a line at the top on another tab', async () => {
     const api = createFakeApi();
     stubRules(api);
     const snapshot = fixtureSnapshot('battle', 'player');
@@ -306,7 +422,16 @@ describe('BattleBoard', () => {
     const { user } = renderWithTable(<BattleBoard />, { snapshot, api });
     await user.click(within(row('Brenna')).getByRole('button', { name: 'Change' }));
     const composer = screen.getByRole('region', { name: 'Declare for Brenna' });
-    expect(within(composer).getByRole('status')).toHaveTextContent(/Brenna isn't in the front rank/);
+    const saved = within(composer).getByRole('button', {
+      name: /^(Attack|Close in and attack): the goblins/,
+    });
+    expect(saved).toHaveAttribute('aria-pressed', 'true');
+    expect(saved).toHaveAccessibleDescription(/Brenna isn't in the front rank/);
+    expect(composer.textContent?.match(/Brenna isn't in the front rank/g)).toHaveLength(1);
+    await user.click(within(composer).getByRole('radio', { name: 'Move' }));
+    // On another tab it shows once at the top, as a line, not a banner, and the row's live region speaks it.
+    expect(composer.textContent?.match(/Brenna isn't in the front rank/g)).toHaveLength(1);
+    expect(within(composer).queryByRole('status')).not.toBeInTheDocument();
     expect(within(composer).queryByRole('alert')).not.toBeInTheDocument();
   });
 
@@ -329,6 +454,20 @@ describe('BattleBoard', () => {
     const resolve = screen.getByRole('button', { name: 'Resolve round' });
     expect(resolve).not.toHaveAttribute('aria-disabled');
     expect(footer()).not.toHaveTextContent(/needs a different action/);
+  });
+
+  it('keeps Resolve round unavailable after bxapi refused the round as a whole, until an action changes', () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = everyoneDeclared('player', false);
+    const declarations = snapshot.declarations as DeclarationsState;
+    declarations.refusals = [
+      { member_id: null, code: 'combat.attack.out_of_reach', params: { distance_feet: 40 } },
+    ];
+    renderWithTable(<BattleBoard />, { snapshot, api });
+    const resolve = screen.getByRole('button', { name: 'Resolve round' });
+    expect(resolve).toHaveAttribute('aria-disabled', 'true');
+    expect(resolve).toHaveAccessibleDescription("The round can't resolve until an action changes.");
   });
 
   it("says when the actions can't be checked, as a polite status, and keeps Resolve round available", () => {
@@ -538,7 +677,7 @@ describe('BattleBoard', () => {
     expect(within(row('Wren')).queryByRole('button', { name: /^Back-stab/ })).not.toBeInTheDocument();
   });
 
-  it("notes on the Close in tile whether the member is already in melee, from the group's front rank", async () => {
+  it("disables the Close in tile for a member already in melee, from the group's front rank", async () => {
     const api = createFakeApi();
     stubRules(api);
     const snapshot = withLists({ role: 'referee' });
@@ -549,13 +688,11 @@ describe('BattleBoard', () => {
     await user.click(within(row('Wren')).getByRole('button', { name: /Declare for Wren|Actions/ }));
     let composer = screen.getByRole('region', { name: 'Declare for Wren' });
     await user.click(within(composer).getByRole('radio', { name: 'Move' }));
-    expect(within(composer).getByRole('button', { name: /^Close in on/ })).toHaveAccessibleDescription(
-      'Already in melee.',
-    );
+    const close = within(composer).getByRole('button', { name: /^Close in on/ });
+    expect(close).toHaveAttribute('aria-disabled', 'true');
+    expect(close).toHaveAccessibleDescription('Wren is already in melee with the goblins.');
     const retreat = within(composer).getByRole('button', { name: 'Retreat' });
-    // The member's movement rate is in the note, so the tile's number slot holds only distances.
-    expect(retreat).toHaveAccessibleDescription('Turn and run, 30 feet a round.');
-    expect(retreat).toHaveTextContent(/^RetreatTurn and run, 30 feet a round\.$/);
+    expect(retreat).toHaveAccessibleDescription('Turn and run without attacking.');
     // The trade-places choice has a visible label, and its options are the members.
     const trade = within(composer).getByRole('combobox', { name: 'Trade places with' });
     expect(within(composer).getByText('Trade places with')).toBeVisible();
@@ -893,5 +1030,66 @@ describe("the preview's projection after a round resolves", () => {
     const composer = screen.getByRole('region', { name: 'Declare for Wren' });
     await user.click(within(composer).getByRole('radio', { name: 'Attack' }));
     expect(within(composer).queryByRole('checkbox', { name: 'Back-stab' })).not.toBeInTheDocument();
+  });
+});
+
+describe('the board keeps one size through the fight (#64)', () => {
+  it('keeps the track full height while a composer is open, and collapses only on Collapse', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const { user } = renderWithTable(<BattleBoard />, { snapshot: fixtureSnapshot('battle', 'player'), api });
+    const track = screen.getByRole('figure', { name: /^Battlefield/ });
+    const before = track.className;
+    await user.click(within(row('Wren')).getByRole('button', { name: 'Actions' }));
+    expect(screen.getByRole('region', { name: 'Declare for Wren' })).toBeInTheDocument();
+    expect(track.className).toBe(before);
+    const collapse = screen.getByRole('button', { name: 'Collapse the battle board' });
+    expect(collapse).toHaveTextContent('Collapse');
+    expect(collapse).toHaveAttribute('aria-expanded', 'true');
+    expect(collapse).toHaveAttribute(
+      'aria-controls',
+      screen.getByRole('list', { name: 'Actions this round' }).id,
+    );
+    await user.click(collapse);
+    const expand = screen.getByRole('button', { name: 'Expand the battle board' });
+    expect(expand).toHaveTextContent('Expand');
+    expect(expand).toHaveAttribute('aria-expanded', 'false');
+    // The member list isn't in the document while the board is collapsed, so the button controls nothing then.
+    expect(expand).not.toHaveAttribute('aria-controls');
+    expect(screen.getByRole('figure', { name: /^Battlefield/ }).className).not.toBe(before);
+  });
+
+  it('closes a composer opened in a round once that round resolves, and keeps one opened for the next round', async () => {
+    const api = createFakeApi();
+    stubRules(api);
+    const snapshot = fixtureSnapshot('battle', 'player');
+    const { user, store } = renderWithTable(<BattleBoard />, { snapshot, api });
+    await user.click(within(row('Wren')).getByRole('button', { name: 'Actions' }));
+    const composer = screen.getByRole('region', { name: 'Declare for Wren' });
+    // Focus sits inside the composer when its round resolves.
+    within(composer).getAllByRole('button')[0]?.focus();
+    expect(composer).toContainElement(document.activeElement as HTMLElement);
+    const declarations = snapshot.declarations as DeclarationsState;
+    const nextRound = (declarations.round ?? 1) + 1;
+    act(() => {
+      store.getState().receive({
+        type: 'declarations',
+        declarations: { ...declarations, round: nextRound, declared: [], declarations: {}, refusals: [] },
+      });
+    });
+    await waitFor(() =>
+      expect(screen.queryByRole('region', { name: 'Declare for Wren' })).not.toBeInTheDocument(),
+    );
+    // Focus returns to the row's Actions button rather than to the page.
+    expect(within(row('Wren')).getByRole('button', { name: 'Actions' })).toHaveFocus();
+    // A composer opened now is for the new round, and it stays when the same round's state arrives again.
+    await user.click(within(row('Wren')).getByRole('button', { name: 'Actions' }));
+    act(() => {
+      store.getState().receive({
+        type: 'declarations',
+        declarations: { ...declarations, round: nextRound, declared: [], declarations: {}, refusals: [] },
+      });
+    });
+    expect(screen.getByRole('region', { name: 'Declare for Wren' })).toBeInTheDocument();
   });
 });

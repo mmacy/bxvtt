@@ -8,6 +8,7 @@ import {
   stanceDescription,
   stanceLabel,
   capitalizeFirst,
+  count,
   type TextContext,
 } from '@bxvtt/shared/text';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
@@ -321,6 +322,33 @@ function Option({
   );
 }
 
+/** The catalog IDs of the rations that bxapi's `evade` drops as food. */
+/**
+ * Why the party can't scatter coins or drop food as it flees, or `null` when it may. bxapi decides what it accepts as
+ * bait, so this disables a choice only when nobody in the party, living or dead, carries anything that could be:
+ * no coin in any purse, or no item whose template states `ration: true` in its `params`. A choice it leaves enabled
+ * can still be refused, with bxapi's reason.
+ */
+export function fleeBaitReasons(party: readonly MemberView[]): {
+  treasure: string | null;
+  food: string | null;
+} {
+  const coins = party.some((m) => {
+    const purse = (m.inventory as { purse?: Record<string, number> } | null)?.purse ?? {};
+    return Object.values(purse).some((amount) => amount > 0);
+  });
+  const food = party.some((m) => {
+    const items =
+      (m.inventory as { items?: Array<{ template?: { params?: Record<string, unknown> | null } }> } | null)
+        ?.items ?? [];
+    return items.some((item) => item.template?.params?.ration === true);
+  });
+  return {
+    treasure: coins ? null : 'No one in the party has any coins.',
+    food: food ? null : 'No one in the party carries food.',
+  };
+}
+
 function reasonFor(commands: EncounterCommands, type: string, memberId?: string): string | null {
   if (!commands.legal(type)) return null;
   const permission = commands.can(type, memberId);
@@ -341,6 +369,7 @@ function PartyOptions({
   // One sentence above the choices says who chooses for the party, instead of the same refusal beside every
   // choice. Each button still gives its own reason on hover and focus.
   const partyReason = commands.partyPermission.reason;
+  const baitReasons = fleeBaitReasons(party);
   const able = party.filter((m) => encounter.declarers.includes(m.id));
   const turnerClasses = useTurnerClasses(able.map((m) => m.class_id));
   const turners = able.filter((m) => turnerClasses.includes(m.class_id));
@@ -415,12 +444,24 @@ function PartyOptions({
           >
             {(
               [
-                ['none', 'Run', 'Drop nothing.'],
-                ['treasure', 'Scatter coins', "Empty everyone's purse to tempt clever pursuers."],
-                ['food', 'Drop food', 'Drop one ration per member to tempt hungry pursuers.'],
+                ['none', 'Run', 'Drop nothing.', null],
+                [
+                  'treasure',
+                  'Scatter coins',
+                  "Empty everyone's purse to tempt clever pursuers.",
+                  baitReasons.treasure,
+                ],
+                ['food', 'Drop food', 'Drop food to slow them down.', baitReasons.food],
               ] as const
-            ).map(([drop, label, hint]) => (
-              <ListItem key={drop} value={drop} title={label} description={hint} />
+            ).map(([drop, label, hint, reason]) => (
+              <ListItem
+                key={drop}
+                value={drop}
+                title={label}
+                description={hint}
+                disabled={reason !== null}
+                disabledReason={reason}
+              />
             ))}
           </List>
         ),
@@ -538,6 +579,17 @@ function ItemOptions({
   );
 }
 
+/** The gold pieces in a member's purse, from the inventory the player view reports. */
+function purseGold(member: MemberView | undefined): number {
+  const purse = (member?.inventory as { purse?: { gp?: number } } | null)?.purse;
+  return purse?.gp ?? 0;
+}
+
+/** Why the gold field stops at the purse, as the sheet's transfer dialog says it. */
+function goldReason(member: MemberView): string {
+  return `${member.name} carries only ${count(purseGold(member), 'gold piece')}.`;
+}
+
 function useMemberItems(member: MemberView | undefined, ctx: TextContext): CarriedItem[] {
   return useMemo(() => (member ? memberGear(member, ctx).items : []), [member, ctx]);
 }
@@ -577,8 +629,10 @@ function UseItemPopover({
   const creatures = useEncounterCreatures();
   const { send, pending } = useSendCommand();
   const [open, setOpen] = useState(false);
-  const [memberId, setMemberId] = useState(members[0]?.id ?? '');
-  const member = members.find((m) => m.id === memberId);
+  // Read against the list on every render, so a seat handed to someone else never leaves a stale member chosen.
+  const [chosenMember, setMemberId] = useState('');
+  const member = members.find((m) => m.id === chosenMember) ?? members[0];
+  const memberId = member?.id ?? '';
   const items = useMemberItems(member, ctx).filter((i) => i.magic && i.kind !== 'magic');
   const [itemId, setItemId] = useState('');
   const item = items.find((i) => i.id === itemId) ?? items[0];
@@ -600,6 +654,10 @@ function UseItemPopover({
             .map((creature) => ({ value: creature.id, label: `At ${creature.name}` })),
           ...encounter.declarers.map((id) => ({ value: id, label: `On ${memberName(id, ctx)}` })),
         ];
+  // The target is read against the item's own targets on every render, so a target chosen for another item, such
+  // as a monster group before switching to a potion, is never sent.
+  const fallback = item?.kind === 'potion' ? memberId : '';
+  const chosenTarget = targets.some((t) => t.value === target) ? target : fallback;
   const use = async () => {
     if (!item) return;
     setError(null);
@@ -608,7 +666,7 @@ function UseItemPopover({
         command_type: 'use_item',
         character_id: memberId,
         item_id: item.id,
-        target_id: target === '' ? null : target,
+        target_id: chosenTarget === '' ? null : chosenTarget,
       },
       { display: 'inline' },
     );
@@ -654,12 +712,7 @@ function UseItemPopover({
               />
             </Field>
             <Field label={item?.kind === 'potion' ? 'Who drinks it' : 'Target'}>
-              <Select
-                size="sm"
-                value={target || (item?.kind === 'potion' ? memberId : '')}
-                onValueChange={setTarget}
-                options={targets}
-              />
+              <Select size="sm" value={chosenTarget} onValueChange={setTarget} options={targets} />
             </Field>
             <p className={styles.choiceHint}>Using an item takes one round, after which the monsters act.</p>
             {error && <Banner tone="danger">{error}</Banner>}
@@ -676,15 +729,25 @@ function UseItemPopover({
 function GivePopover({ members, all, ctx }: { members: MemberView[]; all: MemberView[]; ctx: TextContext }) {
   const { send, pending } = useSendCommand();
   const [open, setOpen] = useState(false);
-  const [giverId, setGiverId] = useState(members[0]?.id ?? '');
-  const giver = members.find((m) => m.id === giverId);
+  // The choices are read against the lists on every render, so a list that changes after the popover mounts, such
+  // as a seat handed to someone else, never leaves a stale giver or recipient selected.
+  const [chosenGiver, setGiverId] = useState('');
+  const giver = members.find((m) => m.id === chosenGiver) ?? members[0];
+  const giverId = giver?.id ?? '';
   const items = useMemberItems(giver, ctx);
   const recipients = all.filter((m) => m.id !== giverId);
   const [recipientId, setRecipientId] = useState('');
-  const [itemId, setItemId] = useState('');
+  const [chosenItem, setItemId] = useState('');
+  const itemId = items.some((i) => i.id === chosenItem) ? chosenItem : '';
   const [gold, setGold] = useState<number | null>(0);
   const [error, setError] = useState<string | null>(null);
-  const recipient = recipientId || recipients[0]?.id || '';
+  const recipient = (recipients.find((m) => m.id === recipientId) ?? recipients[0])?.id ?? '';
+  const giveReason =
+    recipient === ''
+      ? 'Choose who gets it.'
+      : !itemId && !gold
+        ? 'Choose an item or some gold to give.'
+        : null;
   const give = async () => {
     setError(null);
     const result = await send(
@@ -737,7 +800,14 @@ function GivePopover({ members, all, ctx }: { members: MemberView[]; all: Member
           />
         </Field>
         <Field label="Gold pieces">
-          <NumberInput value={gold} onChange={setGold} min={0} max={100000} width={6} />
+          <NumberInput
+            value={gold}
+            onChange={setGold}
+            min={0}
+            max={purseGold(giver)}
+            maxReason={giver ? goldReason(giver) : undefined}
+            width={6}
+          />
         </Field>
         <p className={styles.choiceHint}>Giving items takes one round.</p>
         {error && <Banner tone="danger">{error}</Banner>}
@@ -745,8 +815,8 @@ function GivePopover({ members, all, ctx }: { members: MemberView[]; all: Member
           size="sm"
           variant="primary"
           loading={pending}
-          disabled={!itemId && !gold}
-          disabledReason="Choose an item or some gold to give."
+          disabled={giveReason !== null}
+          disabledReason={giveReason}
           onClick={() => void give()}
         >
           Give
@@ -767,10 +837,15 @@ function DropPopover({
 }) {
   const { send, pending } = useSendCommand();
   const [open, setOpen] = useState(false);
-  const [memberId, setMemberId] = useState(members[0]?.id ?? '');
-  const member = members.find((m) => m.id === memberId);
+  // Read against the list on every render, so a seat handed to someone else never leaves a stale member chosen.
+  const [chosenMember, setMemberId] = useState('');
+  const member = members.find((m) => m.id === chosenMember) ?? members[0];
+  const memberId = member?.id ?? '';
   const items = useMemberItems(member, ctx);
-  const [chosen, setChosen] = useState<string[]>([]);
+  const [ticked, setChosen] = useState<string[]>([]);
+  // Read against the member's items on every render, so an item given away or a member who changed never sends an
+  // item the player can't see checked.
+  const chosen = ticked.filter((id) => items.some((item) => item.id === id));
   const [gold, setGold] = useState<number | null>(0);
   const [error, setError] = useState<string | null>(null);
   const drop = async () => {
@@ -825,7 +900,14 @@ function DropPopover({
           ))}
         </div>
         <Field label="Gold pieces">
-          <NumberInput value={gold} onChange={setGold} min={0} max={100000} width={6} />
+          <NumberInput
+            value={gold}
+            onChange={setGold}
+            min={0}
+            max={purseGold(member)}
+            maxReason={member ? goldReason(member) : undefined}
+            width={6}
+          />
         </Field>
         <p className={styles.choiceHint}>
           {pursuit
