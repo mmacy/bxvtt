@@ -262,6 +262,11 @@
   display: none;
 }
 
+/* A short form of the status, such as "No caller", shows only in a narrow bar, in place of the full text. */
+.actionStatus > [data-status-short] {
+  display: none;
+}
+
 /* In a narrow bar the status text is hidden visually but keeps its words for assistive technology. */
 @container (max-width: 760px) {
   .actionStatus > span:last-child {
@@ -271,6 +276,10 @@
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
+  }
+
+  .actionStatus > [data-status-short] {
+    display: inline;
   }
 }
 
