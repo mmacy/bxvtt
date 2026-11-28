@@ -70,19 +70,40 @@
   gap: var(--space-2);
 }
 
+/*
+ * Two columns: the party on the left, and the start button above the people and settings on the right. The second
+ * row takes the rest of the party column's height, so the right column stays packed at the top.
+ */
 .columns {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 380px;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    'main start'
+    'main rest';
   align-items: start;
-  gap: var(--space-6);
+  gap: var(--space-5) var(--space-6);
 }
 
 .main,
+.start,
 .side {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-5);
   min-width: 0;
+}
+
+.main {
+  grid-area: main;
+}
+
+.start {
+  grid-area: start;
+}
+
+.side {
+  grid-area: rest;
 }
 
 .grow {
@@ -512,14 +533,18 @@
   }
 }
 
+/* On one column the blocks stack in the page's order, which LobbyPage sets for the width. */
 @media (max-width: 860px) {
   .columns {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas: none;
   }
 
-  /* On one column, the start button and the waiting notice come first. */
+  .main,
+  .start,
   .side {
-    order: -1;
+    grid-area: auto;
   }
 }
 
