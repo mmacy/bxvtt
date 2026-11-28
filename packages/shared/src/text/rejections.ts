@@ -352,9 +352,9 @@ export const REJECTION_TEMPLATES: Record<string, Template> = {
   'items.use.target_not_allowed': [
     {
       when: ['character', 'target'],
-      text: "{target|entity} isn't in the party. {character|member} can give {item|item} only to a party member.",
+      text: "{character|member} can't give {item|item} to {target|entity}, who isn't in the party.",
     },
-    { text: "{target|entity} isn't in the party. You can give {item|item} only to a party member." },
+    { text: "{target|entity} isn't in the party." },
   ],
   'items.use.target_required': 'Choose a target for {item|item}.',
   'items.use.unknown_target': [
