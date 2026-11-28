@@ -12,6 +12,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- **`game_missing` problem code and `GameSummary.missing` (`@bxvtt/shared/protocol`, `@bxvtt/server`):** When `bxapi` answers that it no longer has a table's session, for example after its database was reset, the server records it and answers game requests with `410 game_missing`. The WebSocket sends an `error` with the same code and closes with the new close code `game_missing` (4012), on which `TableConnection` stops reconnecting with the close reason `game_missing`. Before, the server sent `bxapi_unavailable` and `try_again_later`, as it still does while `bxapi` is only unreachable, and the client tried again forever. `GameSummary.missing` is `true` for such a table in the table list and the table detail until a referee ends the game. ([#24](https://github.com/mmacy/bxvtt/issues/24))
+- **A screen for a game that can't be loaded (`@bxvtt/web`):** Opening such a table shows "The game at {table} can't be loaded" in place of reconnecting forever. A referee gets **Return to lobby**, which ends the lost game and keeps the saves, so the referee can continue from a save, start a new game, or delete the table from the lobby's table menu, even after a full reset of `bxapi`. A player gets **Try again** and **Leave table**. The table list shows a **Can't load** badge for the table. Deleting the table frees its place in the referee's table limit. ([#24](https://github.com/mmacy/bxvtt/issues/24))
+- **`RejoinStatus.cancel_reason` (`@bxvtt/shared/protocol`, `@bxvtt/server`, `@bxvtt/web`):** A cancelled rejoin request says why: `member_returned`, `member_left` (left, removed, or the table was deleted, without saying which), `no_referee`, or `visitor`. The join page shows a message for each, and it reads the members again when a request ends, so it no longer offers to rejoin as a member who is gone. ([#27](https://github.com/mmacy/bxvtt/issues/27))
+- **A `titleAs` prop on the kit's `EmptyState` (`@bxvtt/web`):** Pass `h1` or `h2` when the empty state is the whole page.
+
 ### Changed
 
 - **Named gems and jewellery read by `osrlib`'s phrase (`@bxvtt/shared/text`, `@bxvtt/shared/protocol`, `@bxvtt/server`):** The feed, including its give and drop lines, and the dropped-pile lists word a named valuable in a sentence with the `valuable_phrases` entry that `osrlib` 2.10 states, such as "Wren takes Ossor's Eye." and "Wren takes the abbot's gold ring.", and use `valuable_names` only for lists. A game entry's `names` has a new optional `valuable_phrases` record with the phrase of each named valuable the entry's events name. An entry stored before 2.10 has a name and no phrase, and the text words its name as before. ([#47](https://github.com/mmacy/bxvtt/issues/47))
@@ -21,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Fixed
 
 - **Named valuables in the inventory and the treasure lists (`@bxvtt/web`):** The inventory and the treasure buyers' list show a named gem or piece of jewellery as the adventure writes it, so "A unicorn-horn cup" no longer loses its first word. A piece with no name still shows as "Gem" or "Jewellery".
+- **Leaving a table ends the leaver's rejoin requests (`@bxvtt/server`):** When a member leaves or a referee removes them, the server cancels requests to rejoin as that member, including an approval nobody has claimed, and the referees' banner updates at once. A pending request that no remaining referee could approve ends too, when the only other referee leaves, is removed, or becomes a player, and deleting a table ends all of its requests. Before, such a request stayed in the banner until it expired, and it still counted toward the visitor's limit of 3 waiting requests. The battle declarations that a leaver saved stay, because their characters stay in the battle under the referee's control. ([#27](https://github.com/mmacy/bxvtt/issues/27))
 
 ## [0.5.0] - 2026-11-27
 

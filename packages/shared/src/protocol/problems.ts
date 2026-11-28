@@ -37,6 +37,12 @@ export const PROBLEM_CODES = {
   game_active: 409,
   /** 409: the table has no game in progress. */
   no_game: 409,
+  /**
+   * 410: the table is playing a game that bxapi no longer has, for example because bxapi's database was reset.
+   * Waiting doesn't help. A referee can end the game, which returns the table to its lobby with its saves, or
+   * delete the table, and a player can leave it. `GameSummary.missing` is `true` for such a table.
+   */
+  game_missing: 410,
   /** 409: the character is already on the roster. */
   duplicate_character: 409,
   /** 409: the roster is empty, so a game can't start. */

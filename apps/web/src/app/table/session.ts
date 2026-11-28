@@ -89,6 +89,7 @@ function openSession(tableId: string, token: string): Entry {
         lastResync = now;
         connection.resync();
       },
+      reconnect: () => connection.connect(),
     },
   });
   const pingTimers = new Set<ReturnType<typeof setTimeout>>();

@@ -1,4 +1,5 @@
-import type { RejoinCandidate, RejoinTicket } from '@bxvtt/shared/protocol';
+import { isProblem } from '@bxvtt/shared/client';
+import type { RejoinCancelReason, RejoinCandidate, RejoinTicket } from '@bxvtt/shared/protocol';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -35,8 +36,41 @@ function clockTime(iso: string): string {
   return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
+/** Why the server cancelled a request, in words for the player, by the cause the server gave. */
+function cancelledText(
+  reason: RejoinCancelReason | null | undefined,
+  name: string,
+): { title: string; detail: string } {
+  switch (reason) {
+    case 'member_returned':
+      return {
+        title: `${name} is back at the table`,
+        detail: `If you're signed in as ${name} in another browser, keep playing there.`,
+      };
+    case 'member_left':
+      return {
+        title: `${name} is no longer at the table`,
+        detail: 'Enter a new name above to join as a new member.',
+      };
+    case 'no_referee':
+      return {
+        title: 'No referee can let you in',
+        detail: 'Send a new request when a referee is at the table.',
+      };
+    default:
+      return {
+        title: 'Your rejoin request ended',
+        detail: `${name} came back to the table or left it, or no referee is left to let you in.`,
+      };
+  }
+}
+
 /** Why a request ended, in words for the player, with what to do next. */
-function endedText(status: string, name: string): { title: string; detail: string } {
+function endedText(
+  status: string,
+  name: string,
+  reason?: RejoinCancelReason | null,
+): { title: string; detail: string } {
   switch (status) {
     case 'declined':
       return {
@@ -50,10 +84,7 @@ function endedText(status: string, name: string): { title: string; detail: strin
         detail: 'Rejoin requests last 5 minutes. Send a new request when a referee is at the table.',
       };
     case 'cancelled':
-      return {
-        title: `${name} is back at the table or has left it`,
-        detail: `Your rejoin request was cancelled. If you're signed in as ${name} in another browser, keep playing in that browser.`,
-      };
+      return cancelledText(reason, name);
     default:
       return {
         title: 'This rejoin request was already used',
@@ -80,7 +111,7 @@ const LEFT_TEXT = {
 export interface RejoinProps {
   /** The invite code from the link. */
   inviteCode: string;
-  /** The members who are offline now, from `lookupRejoin`. */
+  /** The members who are offline now, from `lookupRejoin`. The component reads them again when a request ends. */
   members: RejoinCandidate[];
   /** Called when the visitor starts or stops a request, so the page can hide the "new here" path meanwhile. */
   onActiveChange?: (active: boolean) => void;
@@ -99,6 +130,23 @@ export function Rejoin({ inviteCode, members, onActiveChange }: RejoinProps) {
   const adopt = useIdentity((s) => s.adopt);
   const [step, setStep] = useState<Step>({ kind: 'choose' });
   const [hiccup, setHiccup] = useState(false);
+  // The members to offer. A request that ends reads them again, so a member who left drops off the list.
+  const [candidates, setCandidates] = useState(members);
+  const ended = step.kind === 'ended';
+  useEffect(() => {
+    if (!ended) return;
+    let cancelled = false;
+    getApi()
+      .lookupRejoin(inviteCode)
+      .then(
+        (found) => !cancelled && setCandidates(found.members),
+        // Removing a member gives the table a new invite code, so this one matches nothing now.
+        (error: unknown) => !cancelled && isProblem(error, 'invite_invalid') && setCandidates([]),
+      );
+    return () => {
+      cancelled = true;
+    };
+  }, [ended, inviteCode]);
   // The request that waits on the server now, for the page to cancel when it stops waiting.
   const live = useRef<RejoinTicket | null>(null);
   // Counts the visitor's asks, so an answer that arrives after "Stop waiting" is cancelled instead of shown.
@@ -175,7 +223,7 @@ export function Rejoin({ inviteCode, members, onActiveChange }: RejoinProps) {
           return;
         }
         if (status.status === 'cancelled' && away) end({ kind: 'ended', ...AWAY_TEXT });
-        else end({ kind: 'ended', ...endedText(status.status, waitingMember.name) });
+        else end({ kind: 'ended', ...endedText(status.status, waitingMember.name, status.cancel_reason) });
       } catch (error) {
         if (stopped) return;
         if (!isTransientFailure(error)) {
@@ -290,18 +338,20 @@ export function Rejoin({ inviteCode, members, onActiveChange }: RejoinProps) {
             {step.detail}
           </Banner>
         )}
-        <ul className={styles.rejoinList} aria-label="Members who can rejoin">
-          {members.map((member) => (
-            <li key={member.user_id}>
-              <Button variant="secondary" block onClick={() => void ask(member)}>
-                <span className={styles.rejoinMember}>
-                  <Avatar name={member.name} color={member.color} size="xs" decorative />
-                  <span className="visually-hidden">Rejoin as</span> {member.name}
-                </span>
-              </Button>
-            </li>
-          ))}
-        </ul>
+        {candidates.length > 0 && (
+          <ul className={styles.rejoinList} aria-label="Members who can rejoin">
+            {candidates.map((member) => (
+              <li key={member.user_id}>
+                <Button variant="secondary" block onClick={() => void ask(member)}>
+                  <span className={styles.rejoinMember}>
+                    <Avatar name={member.name} color={member.color} size="xs" decorative />
+                    <span className="visually-hidden">Rejoin as</span> {member.name}
+                  </span>
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </Card>
   );

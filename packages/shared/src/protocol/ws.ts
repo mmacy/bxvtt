@@ -13,7 +13,7 @@ import { User } from './users';
 export const WS_PATH = '/ws';
 
 /**
- * Close codes the server uses. A client stops reconnecting after `auth_failed` and `removed`, and reconnects
+ * Close codes the server uses. A client stops reconnecting after `auth_failed`, `removed`, and `game_missing`, and reconnects
  * after any other code: at once after `resync`, and with backoff otherwise.
  */
 export const WS_CLOSE_CODES = {
@@ -33,6 +33,12 @@ export const WS_CLOSE_CODES = {
   rate_limited: 4008,
   /** The user's role changed. Reconnect at once to get a snapshot for the new role. */
   resync: 4010,
+  /**
+   * bxapi no longer has the table's game, so no snapshot can be built until a referee ends the game or the host
+   * restores bxapi's data. An `error` message with the code `game_missing` comes first. Don't reconnect on your
+   * own: the table's HTTP routes still answer, so offer the member a way to leave, delete, or try again.
+   */
+  game_missing: 4012,
   /** The server can't build a snapshot now, usually because bxapi is down. Reconnect with backoff. */
   try_again_later: 1013,
 } as const;

@@ -30,6 +30,8 @@ Open the **Table menu** in the lobby header or in the play screen's top bar to l
 - **Delete table:** Deletes the table for everyone, with its saved games, chat, notes, and uploaded adventures. You can't recover them, but every member keeps their characters. Members who have the table open return to their table list, which tells them that a referee deleted the table.
 - **Leave table:** Takes you off the table and your characters out of the party. If you're the only referee and other members remain, you can't leave until you make another member a referee in **People at the table** (in the lobby, so return to the lobby first during play). If you're the last member, leaving also deletes the table, and the dialog says so before you confirm.
 
+If the game service loses a table's game, for example after its data was reset, the table list shows **Can't load** for the table, and opening it shows that its game can't be loaded instead of the table menu. A referee gets **Return to lobby**, which ends the lost game and keeps the table's saves, and **Try again**, for when the server host restores the game service's data. From the lobby you can start a new game, continue from a save, or delete the table from its table menu. Players get **Try again** and **Leave table**.
+
 Each person can be the referee of up to 50 tables that they created. When you reach the limit, delete a table you no longer use to make room. A table that you hand to another referee and leave stops counting toward your limit.
 
 ## Choose an adventure

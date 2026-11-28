@@ -28,6 +28,7 @@ import {
   type MenuEntry,
 } from '@/ui';
 import { copyInviteLink, useTableExit } from '@/features/lobby';
+import { RETURN_TO_LOBBY_CONFIRM } from './returnToLobby';
 import styles from './table.module.css';
 
 const GAME_MODES: readonly string[] = ['town', 'exploring', 'encounter', 'battle', 'game_over', 'victory'];
@@ -170,9 +171,7 @@ export function ShellTopBar() {
       <ConfirmDialog
         open={confirm === 'end'}
         onOpenChange={(open) => !open && setConfirm(null)}
-        title="Return to lobby?"
-        description="This ends the current session for everyone, while keeping all saves. Starting a new game resets characters to their initial sheets, so restore a save if you want to continue with their earned experience, treasure, and injuries."
-        confirmLabel="Return to lobby"
+        {...RETURN_TO_LOBBY_CONFIRM}
         tone="danger"
         onConfirm={end}
       />

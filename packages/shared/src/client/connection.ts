@@ -6,7 +6,7 @@ import { pageLocation } from './http';
 export type ConnectionStatus = 'idle' | 'connecting' | 'authenticating' | 'open' | 'reconnecting' | 'closed';
 
 /** Why a connection stopped for good. */
-export type CloseReason = 'closed_by_client' | 'auth_failed' | 'removed';
+export type CloseReason = 'closed_by_client' | 'auth_failed' | 'removed' | 'game_missing';
 
 /** The constructor of a WebSocket, so a caller can pass an implementation other than the global one. */
 export type WebSocketConstructor = new (url: string) => WebSocket;
@@ -155,8 +155,13 @@ export class TableConnection {
     });
   }
 
-  /** Opens the connection. Call it once. */
+  /**
+   * Opens the connection. Call it once, and again only after the connection closed with `game_missing`, to try
+   * once more.
+   */
   connect(): void {
+    if (this.socket !== null) return;
+    this.attempt = 0;
     this.stopped = false;
     this.open();
   }
@@ -238,6 +243,11 @@ export class TableConnection {
       if (event.code === WS_CLOSE_CODES.removed) {
         this.stopped = true;
         this.setStatus('closed', 'removed');
+        return;
+      }
+      if (event.code === WS_CLOSE_CODES.game_missing) {
+        this.stopped = true;
+        this.setStatus('closed', 'game_missing');
         return;
       }
       if (event.code === WS_CLOSE_CODES.resync) this.attempt = 0;

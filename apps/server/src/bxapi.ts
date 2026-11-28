@@ -178,6 +178,16 @@ export class BxapiClient {
   }
 }
 
+/**
+ * Whether bxapi answered that it has no session with the ID the request named, so the session is gone for good,
+ * for example after bxapi's database was reset. An unreachable bxapi is not this.
+ *
+ * @param error - The error from a {@link BxapiClient} call.
+ */
+export function isMissingSession(error: unknown): boolean {
+  return error instanceof BxapiProblem && error.code === 'not_found' && error.body.resource === 'session';
+}
+
 /** Converts a failed fetch into {@link BxapiUnreachable}. */
 function toUnreachable(error: unknown): BxapiUnreachable {
   const cause = error instanceof Error ? (error.cause as { code?: string } | undefined) : undefined;

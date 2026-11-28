@@ -99,6 +99,57 @@ describe('rejoining as an existing member', () => {
     expect(await screen.findByText('The referee declined your request to rejoin as Sam')).toBeInTheDocument();
   });
 
+  it.each([
+    [
+      'member_returned',
+      'Sam is back at the table',
+      "If you're signed in as Sam in another browser, keep playing there.",
+    ],
+    ['member_left', 'Sam is no longer at the table', 'Enter a new name above to join as a new member.'],
+    ['no_referee', 'No referee can let you in', 'Send a new request when a referee is at the table.'],
+    [
+      null,
+      'Your rejoin request ended',
+      'Sam came back to the table or left it, or no referee is left to let you in.',
+    ],
+  ] as const)('says why a request was cancelled (%s)', async (reason, title, detail) => {
+    const api = createFakeApi();
+    api.lookupRejoin.mockResolvedValue(lookup);
+    api.requestRejoin.mockResolvedValue(ticket);
+    api.rejoinStatus.mockResolvedValue({ ...pending, status: 'cancelled', cancel_reason: reason });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderJoin(api);
+    await user.click(await screen.findByRole('button', { name: 'Rejoin as Sam' }));
+    await act(() => vi.advanceTimersByTimeAsync(REJOIN_POLL_MS));
+    expect(await screen.findByText(title)).toBeInTheDocument();
+    expect(screen.getByText(detail)).toBeInTheDocument();
+  });
+
+  it('reads the members again when a request ends, so a member who left is no longer offered', async () => {
+    const api = createFakeApi();
+    api.lookupRejoin.mockResolvedValueOnce(lookup);
+    // A referee removed Sam, which gave the table a new invite code.
+    api.lookupRejoin.mockRejectedValue(
+      new BxvttProblemError({
+        type: 'about:blank',
+        title: 'Not Found',
+        status: 404,
+        code: 'invite_invalid',
+        detail: "That invite code doesn't match any table.",
+      }),
+    );
+    api.requestRejoin.mockResolvedValue(ticket);
+    api.rejoinStatus.mockResolvedValue({ ...pending, status: 'cancelled', cancel_reason: 'member_left' });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderJoin(api);
+    await user.click(await screen.findByRole('button', { name: 'Rejoin as Sam' }));
+    await act(() => vi.advanceTimersByTimeAsync(REJOIN_POLL_MS));
+    expect(await screen.findByText('Sam is no longer at the table')).toBeInTheDocument();
+    await act(() => vi.advanceTimersByTimeAsync(10));
+    expect(api.lookupRejoin).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('button', { name: 'Rejoin as Sam' })).not.toBeInTheDocument();
+  });
+
   it('shows the refusal when the member is online', async () => {
     const api = createFakeApi();
     api.lookupRejoin.mockResolvedValue({

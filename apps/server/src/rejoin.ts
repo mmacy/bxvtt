@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import type {
+  RejoinCancelReason,
   RejoinLookup,
   RejoinRequestList,
   RejoinRequestSummary,
@@ -30,6 +31,8 @@ interface PendingRejoin {
   state: RejoinState;
   /** When the visitor's browser last asked about the request. A request nobody asks about is abandoned. */
   polledAt: number;
+  /** Why the request was cancelled, once it is. */
+  cancelReason: RejoinCancelReason | null;
   /** When a referee approved it, and who. The visitor must claim the approval soon after. */
   approvedAt: number | null;
   approvedBy: string | null;
@@ -88,7 +91,6 @@ export class RejoinService {
       throw rateLimited('Too many invite code attempts from this IP address. Try again later.', retry);
   }
 
-  /** Ends the requests whose time ran out, and forgets the ones that ended long ago. */
   /**
    * Ends what time has ended: expired and abandoned requests, and approvals nobody claimed. The server calls it
    * every few seconds, so the referees' list drops a closed tab soon after the tab stops asking.
@@ -105,7 +107,7 @@ export class RejoinService {
         nowMs - pending.polledAt > this.ctx.config.rejoinAbandonMs
       ) {
         // The visitor stopped asking: the page closed or reloaded without cancelling.
-        pending.state = 'cancelled';
+        this.endAsCancelled(pending, 'visitor');
         changed.add(pending.tableId);
       } else if (
         pending.state === 'approved' &&
@@ -196,7 +198,7 @@ export class RejoinService {
           'A rejoin request for that member is already pending. Wait for that request to finish.',
         );
       }
-      pending.state = 'cancelled';
+      this.endAsCancelled(pending, 'visitor');
     }
     const fromAddress = [...this.requests.values()].filter(
       (pending) => waiting(pending) && pending.address === address,
@@ -219,6 +221,7 @@ export class RejoinService {
       expiresAt: nowMs + this.ctx.config.rejoinTtlMs,
       state: 'pending',
       polledAt: nowMs,
+      cancelReason: null,
       approvedAt: null,
       approvedBy: null,
     };
@@ -258,6 +261,7 @@ export class RejoinService {
       table_id: pending.tableId,
       token: null,
       user: null,
+      cancel_reason: pending.state === 'cancelled' ? pending.cancelReason : null,
     };
     if (pending.state === 'approved') {
       // The claim: only now does the member get a new token and lose the old one, because only now is a browser
@@ -293,8 +297,19 @@ export class RejoinService {
     const body = parseBody(RejoinStatusRequest, request);
     const pending = this.owned(requestId, body.secret);
     if (pending.state !== 'pending' && pending.state !== 'approved') return;
-    pending.state = 'cancelled';
+    this.endAsCancelled(pending, 'visitor');
     this.broadcast(pending.tableId);
+  }
+
+  /**
+   * Ends a request as `cancelled` and records why, for the visitor's next poll.
+   *
+   * @param pending - The request.
+   * @param reason - Why it ended.
+   */
+  private endAsCancelled(pending: PendingRejoin, reason: RejoinCancelReason): void {
+    pending.state = 'cancelled';
+    pending.cancelReason = reason;
   }
 
   /** Finds a request by its ID and the visitor's secret. A wrong secret reads as an unknown request. */
@@ -310,7 +325,7 @@ export class RejoinService {
     const gone = this.ctx.tables.roleOf(pending.tableId, pending.userId) === null;
     const online = this.ctx.hub.presence(pending.tableId).online.includes(pending.userId);
     if (!gone && !online) return false;
-    pending.state = 'cancelled';
+    this.endAsCancelled(pending, gone ? 'member_left' : 'member_returned');
     this.broadcast(pending.tableId);
     return true;
   }
@@ -327,7 +342,7 @@ export class RejoinService {
     for (const pending of this.requests.values()) {
       const waiting = pending.state === 'pending' || pending.state === 'approved';
       if (waiting && pending.tableId === tableId && pending.userId === userId) {
-        pending.state = 'cancelled';
+        this.endAsCancelled(pending, 'member_returned');
         changed = true;
       }
     }
@@ -346,11 +361,47 @@ export class RejoinService {
       if (pending.approvedBy === userId) pending.approvedBy = null;
       if (pending.userId !== userId) continue;
       if (pending.state === 'pending' || pending.state === 'approved') {
-        pending.state = 'cancelled';
+        this.endAsCancelled(pending, 'member_left');
         changed.add(pending.tableId);
       }
     }
     for (const tableId of changed) this.broadcast(tableId);
+  }
+
+  /**
+   * Ends the requests of a table that its members can no longer decide or use, after a member left, was removed,
+   * or changed role: a request whose member is no longer a member, and a pending request that no remaining
+   * referee could approve. An approval stays good while its member is still a member, because a referee already
+   * gave it. The referees' list updates over the WebSocket.
+   *
+   * @param tableId - The table.
+   */
+  membersChanged(tableId: string): void {
+    let changed = false;
+    for (const pending of this.requests.values()) {
+      if (pending.tableId !== tableId) continue;
+      if (pending.state !== 'pending' && pending.state !== 'approved') continue;
+      const gone = this.ctx.tables.roleOf(tableId, pending.userId) === null;
+      const undecidable =
+        pending.state === 'pending' && this.approvers(tableId, pending.userId, false).length === 0;
+      if (!gone && !undecidable) continue;
+      this.endAsCancelled(pending, gone ? 'member_left' : 'no_referee');
+      changed = true;
+    }
+    if (changed) this.broadcast(tableId);
+  }
+
+  /**
+   * Ends every request of a table that was deleted. Nobody is left to tell, so nothing is broadcast.
+   *
+   * @param tableId - The deleted table.
+   */
+  forgetTable(tableId: string): void {
+    for (const pending of this.requests.values()) {
+      if (pending.tableId !== tableId) continue;
+      if (pending.state === 'pending' || pending.state === 'approved')
+        this.endAsCancelled(pending, 'member_left');
+    }
   }
 
   /**
@@ -397,10 +448,7 @@ export class RejoinService {
       throw new ApiError('forbidden', "You can't approve or decline your own rejoin request.");
     }
     if (pending.state !== 'pending') {
-      throw new ApiError(
-        'rejoin_not_pending',
-        `That rejoin request is no longer pending (${pending.state}).`,
-      );
+      throw new ApiError('rejoin_not_pending', 'That rejoin request has already ended.');
     }
     return pending;
   }

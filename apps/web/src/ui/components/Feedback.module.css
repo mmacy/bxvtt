@@ -74,6 +74,7 @@
 }
 
 .emptyTitle {
+  margin: 0;
   font-family: var(--font-display);
   font-variation-settings: var(--font-display-plain);
   font-size: var(--text-xl);

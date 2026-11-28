@@ -287,6 +287,27 @@ test.describe('rejoining a table', () => {
     await expect(notice(page, 'A rejoin request is already pending')).toHaveCount(0);
   });
 
+  test('removing the member ends the request for the referee at once, and the visitor hears why (#27)', async ({
+    crew,
+  }) => {
+    const table = await joinedTable(crew);
+    const { ruth } = table;
+    await closeBrowser(table);
+    const visitor = await returningVisitor(crew, table);
+    await askToComeBack(visitor.page);
+    const prompt = requests(ruth.page);
+    await expect(prompt).toContainText('Someone asked to rejoin as Sam');
+    // Removing Sam gives the table a new invite code, so the visitor's next look at the members finds none.
+    crew.allowIssues(/404.*\/api\/rejoin\/lookup/);
+    await ruth.client.removeMember(table.tableId, table.samUser.id);
+    await expect(prompt).toHaveCount(0);
+    // The visitor hears that Sam is gone, and the page no longer offers to rejoin as him.
+    const gone = notice(visitor.page, 'Sam is no longer at the table');
+    await expect(gone).toBeVisible({ timeout: 15_000 });
+    await expect(gone).toContainText('Enter a new name above to join as a new member.');
+    await expect(candidates(visitor.page).getByRole('button', { name: 'Rejoin as Sam' })).toHaveCount(0);
+  });
+
   test('two players on one network can ask to come back in at the same time', async ({ crew }) => {
     const table = await joinedTable(crew);
     const { ruth } = table;
@@ -405,11 +426,9 @@ test.describe('rejoining a table', () => {
     await openTable(old.page, table.path);
     // The request ends for the referee at once, and the visitor's next poll learns why.
     await expect(requests(ruth.page)).toHaveCount(0);
-    const back = notice(page, 'Sam is back at the table or has left it');
+    const back = notice(page, 'Sam is back at the table');
     await expect(back).toBeVisible({ timeout: 15_000 });
-    await expect(back).toContainText(
-      "If you're signed in as Sam in another browser, keep playing in that browser",
-    );
+    await expect(back).toContainText("If you're signed in as Sam in another browser, keep playing there.");
     await expectSeat(old.page);
   });
 

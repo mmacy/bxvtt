@@ -100,6 +100,20 @@ export const RejoinState = z.enum(['pending', 'approved', 'claimed', 'declined',
 /** Where a rejoin request stands. */
 export type RejoinState = z.infer<typeof RejoinState>;
 
+/**
+ * Why a rejoin request was cancelled. Each says only what a visitor with the invite code can already learn from
+ * `POST /api/rejoin/lookup`, which lists the members who are offline and could be approved:
+ *
+ * - `member_returned`: the member came online at the table.
+ * - `member_left`: the member is no longer at the table. It doesn't say whether they left or a referee removed
+ *   them, or whether the table was deleted.
+ * - `no_referee`: no referee other than the member is left to approve.
+ * - `visitor`: the visitor's browser stopped waiting, stopped polling, or asked again.
+ */
+export const RejoinCancelReason = z.enum(['member_returned', 'member_left', 'no_referee', 'visitor']);
+/** Why a rejoin request was cancelled. */
+export type RejoinCancelReason = z.infer<typeof RejoinCancelReason>;
+
 /** Response of `POST /api/rejoin/{request_id}/status`. */
 export const RejoinStatus = z.object({
   status: RejoinState,
@@ -110,6 +124,11 @@ export const RejoinStatus = z.object({
   token: z.string().nullable(),
   /** The member, on the `approved` answer alone. */
   user: User.nullable(),
+  /**
+   * Why the request was cancelled, on the `cancelled` answer, and `null` otherwise. Optional in the type so that
+   * older fixtures still compile. This server always sends it.
+   */
+  cancel_reason: RejoinCancelReason.nullable().optional(),
 });
 /** Response of `POST /api/rejoin/{request_id}/status`. */
 export type RejoinStatus = z.infer<typeof RejoinStatus>;

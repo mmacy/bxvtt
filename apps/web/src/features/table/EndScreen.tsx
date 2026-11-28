@@ -213,7 +213,7 @@ function RefereeChoices() {
         open={ending}
         onOpenChange={setEnding}
         title="Return to lobby?"
-        description="This ends the current session for everyone, while keeping all saves. Starting a new game resets characters to their initial sheets, so restore a save if you want to continue with their earned experience, treasure, and injuries."
+        description="This ends the game for everyone and keeps every save. A new game starts the characters from their first sheets. Continue from a save to keep their experience, treasure, and injuries."
         confirmLabel="Return to lobby"
         onConfirm={async () => {
           await run(() => getApi().endGame(tableId), { errorTitle: "Couldn't end the game" });

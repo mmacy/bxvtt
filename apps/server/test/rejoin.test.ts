@@ -114,7 +114,10 @@ describe('rejoining a table as an existing member', () => {
     const browser = visitor(server);
     const ticket = await browser.requestRejoin(table.invite_code, bob.id);
     const back = await connect(server, bob, table.id);
-    expect((await browser.rejoinStatus(ticket.request_id, ticket.secret)).status).toBe('cancelled');
+    expect(await browser.rejoinStatus(ticket.request_id, ticket.secret)).toMatchObject({
+      status: 'cancelled',
+      cancel_reason: 'member_returned',
+    });
     expect(await failure(host.client.approveRejoin(table.id, ticket.request_id))).toBe('rejoin_not_pending');
     back.close();
     await waitFor(() => !server.server.ctx.hub.presence(table.id).online.includes(bob.id));
@@ -238,6 +241,124 @@ describe('rejoining a table as an existing member', () => {
     expect(await failure(host.client.approveRejoin(table.id, ticket.request_id))).toBe('forbidden');
     await bob.client.declineRejoin(table.id, ticket.request_id);
     hostWs = await connect(server, host, table.id);
+  });
+});
+
+describe('a rejoin request for a member who goes away (#27)', () => {
+  let server: TestServer;
+
+  beforeAll(async () => {
+    server = await startServer();
+  });
+
+  afterAll(async () => {
+    await server.close();
+  });
+
+  /** A table with a connected referee, two players, and a visitor waiting to rejoin as Alice. */
+  async function waiting() {
+    const host = await createUser(server, 'Rhea');
+    const alice = await createUser(server, 'Alice');
+    const bob = await createUser(server, 'Bob');
+    const table = await createTable(host, [alice, bob]);
+    const hostWs = await connect(server, host, table.id);
+    const browser = visitor(server);
+    const ticket = await browser.requestRejoin(table.invite_code, alice.id);
+    await received(hostWs, 'rejoin_requests', (m) => m.requests.some((r) => r.id === ticket.request_id));
+    const before = hostWs.messages.length;
+    /** Whether the referee's banner has emptied since the request arrived. */
+    const emptied = () =>
+      hostWs.messages.slice(before).some((m) => m.type === 'rejoin_requests' && m.requests.length === 0);
+    return { host, alice, bob, table, hostWs, browser, ticket, emptied };
+  }
+
+  it('ends when the member leaves, and the referee sees it end without a reload', async () => {
+    const { host, alice, table, hostWs, browser, ticket, emptied } = await waiting();
+    await alice.client.leaveTable(table.id);
+    await waitFor(emptied);
+    expect((await host.client.listRejoinRequests(table.id)).items).toEqual([]);
+    expect(await failure(host.client.approveRejoin(table.id, ticket.request_id))).toBe('rejoin_not_pending');
+    expect(await browser.rejoinStatus(ticket.request_id, ticket.secret)).toMatchObject({
+      status: 'cancelled',
+      cancel_reason: 'member_left',
+    });
+    hostWs.close();
+  });
+
+  it('ends when a referee removes the member', async () => {
+    const { host, alice, table, hostWs, browser, ticket, emptied } = await waiting();
+    await host.client.removeMember(table.id, alice.id);
+    await waitFor(emptied);
+    expect(await failure(host.client.approveRejoin(table.id, ticket.request_id))).toBe('rejoin_not_pending');
+    // The visitor learns that Alice is gone, the same as leaving: never that a referee removed her.
+    expect(await browser.rejoinStatus(ticket.request_id, ticket.secret)).toMatchObject({
+      status: 'cancelled',
+      cancel_reason: 'member_left',
+    });
+    // A new request for a member who is gone is refused.
+    expect(await failure(visitor(server, '203.0.113.9').requestRejoin(table.invite_code, alice.id))).toMatch(
+      /^(not_found|invite_invalid)$/,
+    );
+    // The old token still belongs to Alice, who is no longer a member.
+    expect((await alice.client.me()).id).toBe(alice.id);
+    hostWs.close();
+  });
+
+  it('ends an approval nobody has claimed yet when the member leaves, even if they join again before the claim', async () => {
+    const { host, alice, table, hostWs, browser, ticket } = await waiting();
+    await host.client.approveRejoin(table.id, ticket.request_id);
+    await alice.client.leaveTable(table.id);
+    // Alice joins again with the invite code before the visitor's browser polls. The approval she had as the
+    // member before must not hand her token to the visitor.
+    await alice.client.joinTable(table.invite_code);
+    const status = await browser.rejoinStatus(ticket.request_id, ticket.secret);
+    expect(status).toMatchObject({ status: 'cancelled', token: null, cancel_reason: 'member_left' });
+    expect((await alice.client.me()).id).toBe(alice.id);
+    hostWs.close();
+  });
+
+  it('ends when the only referee who could approve it leaves', async () => {
+    const host = await createUser(server, 'Rhea');
+    const second = await createUser(server, 'Sable');
+    const alice = await createUser(server, 'Alice');
+    const table = await createTable(host, [second, alice]);
+    await host.client.setMemberRole(table.id, second.id, 'referee');
+    const secondWs = await connect(server, second, table.id);
+    // A request to come back as Sable, whom only Rhea can approve.
+    const browser = visitor(server);
+    secondWs.close();
+    await waitFor(() => !server.server.ctx.hub.presence(table.id).online.includes(second.id));
+    const ticket = await browser.requestRejoin(table.invite_code, second.id);
+    await host.client.leaveTable(table.id);
+    expect(await browser.rejoinStatus(ticket.request_id, ticket.secret)).toMatchObject({
+      status: 'cancelled',
+      cancel_reason: 'no_referee',
+    });
+  });
+
+  it('ends when the only referee who could approve it becomes a player', async () => {
+    const host = await createUser(server, 'Rhea');
+    const second = await createUser(server, 'Sable');
+    const table = await createTable(host, [second]);
+    await host.client.setMemberRole(table.id, second.id, 'referee');
+    const secondWs = await connect(server, second, table.id);
+    // Rhea is offline, and only Sable can approve a request to come back as her.
+    const browser = visitor(server);
+    const ticket = await browser.requestRejoin(table.invite_code, host.id);
+    await received(secondWs, 'rejoin_requests', (m) => m.requests.length === 1);
+    await host.client.setMemberRole(table.id, second.id, 'player');
+    expect(await browser.rejoinStatus(ticket.request_id, ticket.secret)).toMatchObject({
+      status: 'cancelled',
+      cancel_reason: 'no_referee',
+    });
+    secondWs.close();
+  });
+
+  it('ends every request for a table that is deleted', async () => {
+    const { host, table, hostWs, browser, ticket } = await waiting();
+    await host.client.deleteTable(table.id);
+    expect((await browser.rejoinStatus(ticket.request_id, ticket.secret)).status).toBe('cancelled');
+    hostWs.close();
   });
 });
 

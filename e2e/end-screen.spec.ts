@@ -202,7 +202,7 @@ test('a victory in the table’s second adventure counts only that game’s ques
   await openTable(ruth.page, setup.path);
   await ruth.page.getByRole('button', { name: 'Return to lobby' }).click();
   const back = ruth.page.getByRole('alertdialog', { name: 'Return to lobby?' });
-  await expect(back).toContainText('Starting a new game resets characters to their initial sheets');
+  await expect(back).toContainText('A new game starts the characters from their first sheets');
   await back.getByRole('button', { name: 'Return to lobby' }).click();
   await expect(ruth.page.getByRole('heading', { name: 'Victory' })).toHaveCount(0);
 

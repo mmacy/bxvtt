@@ -85,6 +85,8 @@ function Intro() {
 /** What a table is doing, as separate facts: where it is, and in a game, the adventure and the mode. */
 function tableStatus(table: TableSummary): string[] {
   if (table.game === null || table.phase === 'lobby') return ['In the lobby'];
+  // A game that can't be loaded has no mode to tell.
+  if (table.game.missing === true) return [table.game.adventure_name];
   return [table.game.adventure_name, sessionModeLabel(table.game.mode)];
 }
 
@@ -159,11 +161,14 @@ function TableList({
               >
                 {table.role === 'referee' ? 'Referee' : 'Player'}
               </Badge>
-              {table.phase === 'playing' && (
-                <Badge tone="success" icon="play">
-                  Playing
-                </Badge>
-              )}
+              {table.phase === 'playing' &&
+                (table.game?.missing === true ? (
+                  <Badge tone="danger">Can't load</Badge>
+                ) : (
+                  <Badge tone="success" icon="play">
+                    Playing
+                  </Badge>
+                ))}
               <Icon name="chevron-right" size={16} className={styles.tableChevron} />
             </RouterLink>
           </Card>

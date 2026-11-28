@@ -122,6 +122,10 @@ const FIXED: Record<string, ProblemText> = {
     title: 'No game is in progress',
     detail: 'Ask the referee to start a game from the lobby.',
   },
+  game_missing: {
+    title: "The game can't be loaded",
+    detail: "The game service no longer has this table's game.",
+  },
   duplicate_character: {
     title: 'That character is already in the party',
     detail: 'Choose a different character.',
@@ -333,7 +337,18 @@ export function describeProblem(error: unknown, options: DescribeOptions = {}): 
 }
 
 /**
- * Shows an error toast for a failed API call.
+ * Whether the table page switches to a screen of its own for this problem, so a toast would say the same thing
+ * twice. A game that the game service lost (`game_missing`) closes the table's connection, and the page shows
+ * why and the way out.
+ *
+ * @param problem - The described problem.
+ */
+export function hasOwnScreen(problem: ProblemMessage): boolean {
+  return problem.code === 'game_missing';
+}
+
+/**
+ * Shows an error toast for a failed API call, unless the page shows the problem on a screen of its own.
  *
  * @param error - The value from a `catch`.
  * @param options - `title` replaces the problem's title, such as "Couldn't save the game".
@@ -341,6 +356,7 @@ export function describeProblem(error: unknown, options: DescribeOptions = {}): 
  */
 export function reportError(error: unknown, options: { title?: string } = {}): ProblemMessage {
   const message = describeProblem(error);
+  if (hasOwnScreen(message)) return message;
   toast.error(options.title ?? message.title, {
     description: options.title ? `${message.title}. ${message.detail}` : message.detail,
     id: `problem-${message.code}`,
