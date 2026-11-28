@@ -108,7 +108,7 @@ test.describe('character wizard', () => {
     });
   }
 
-  test('a fighter trades Intelligence for Strength, is refused for overspending, and shops within the gold', async ({
+  test('a fighter trades Intelligence for Strength, can’t add what the gold doesn’t cover, and shops within the gold', async ({
     crew,
   }) => {
     const sam = await crew.person('Sam');
@@ -139,15 +139,22 @@ test.describe('character wizard', () => {
     await next(dialog);
     expect((await rollHitPointsAndGold(dialog)).gold).toBe(110);
 
-    // Two suits of plate mail cost more than the 110 gp this roll gives a fighter.
+    // A second suit of plate mail costs more than the 50 gp left, so its plus button says so and does nothing.
     const shop = cart(dialog);
     await expect(shop).toContainText('110 gp');
     // The coin is drawn, not written as a letter in the text (R-108).
     await expect(shop).not.toContainText(/gold\s*g\s*\d/);
     await addToCart(dialog, ['Plate mail']);
-    await shop.getByRole('button', { name: 'Add one suit of plate mail' }).click();
-    await expect(shop.getByRole('alert')).toContainText("you don't have enough gold");
-    await expect(dialog.getByRole('contentinfo').getByRole('button', { name: 'Continue' })).toBeDisabled();
+    const more = shop.getByRole('button', { name: 'Add one suit of plate mail' });
+    await expect(more).toHaveAttribute('aria-disabled', 'true');
+    await expect(more).toHaveAccessibleDescription('This costs 60 gp, and you have 50 gp left.');
+    await more.click({ force: true });
+    await expect(shop).toContainText('60 gp spent, 50 gp left');
+    // A keyboard user reaches the button with Tab, and the reason shows on focus.
+    await shop.getByRole('button', { name: 'Remove one suit of plate mail' }).focus();
+    await sam.page.keyboard.press('Tab');
+    await expect(more).toBeFocused();
+    await expect(sam.page.getByRole('tooltip')).toContainText('This costs 60 gp, and you have 50 gp left.');
 
     await shop.getByRole('button', { name: 'Remove Plate mail from the cart' }).click();
     await addToCart(dialog, ['Plate mail', 'Sword', 'Shield', 'Torches (6)']);

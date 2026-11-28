@@ -116,7 +116,7 @@ export function TownActions() {
     group: 'Town',
     icon: 'moon',
     disabled: !restAccess.allowed || !services.rest || pending,
-    disabledReason: restAccess.allowed ? null : restAccess.explanation,
+    disabledReason: restAccess.explanation || services.reasons.rest,
     keywords: ['sleep', 'camp'],
     run: () => {
       setSection('rest');
@@ -129,7 +129,7 @@ export function TownActions() {
     group: 'Town',
     icon: 'sun',
     disabled: !restAccess.allowed || !services.rest || pending,
-    disabledReason: restAccess.allowed ? null : restAccess.explanation,
+    disabledReason: restAccess.explanation || services.reasons.rest,
     keywords: ['heal', 'camp'],
     run: () => {
       setSection('rest');

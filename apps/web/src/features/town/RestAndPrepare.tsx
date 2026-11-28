@@ -140,7 +140,6 @@ function RestPanel() {
           </div>
         ))}
       </div>
-      {!access.allowed && <p className={styles.explain}>{access.explanation}</p>}
       {report !== null && report.error !== null && <Banner tone="warning">{report.error}</Banner>}
       {report !== null && report.error === null && (
         <div className={styles.report} role="status" aria-label="Rest summary">

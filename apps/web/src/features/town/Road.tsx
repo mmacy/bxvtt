@@ -15,6 +15,7 @@ export function RoadPanel() {
   const access = useLeaveAccess();
   const services = useTownServices();
   const setLeaveOpen = useTownUi((s) => s.setLeaveOpen);
+  const setLeaveDungeonId = useTownUi((s) => s.setLeaveDungeonId);
   return (
     <section className={styles.road} aria-labelledby="road-title">
       <div className={styles.roadHead}>
@@ -56,8 +57,11 @@ export function RoadPanel() {
                 variant="secondary"
                 icon="door"
                 disabled={!access.allowed || !services.leave}
-                disabledReason={access.explanation}
-                onClick={() => setLeaveOpen(true)}
+                disabledReason={access.explanation || services.reasons.leave}
+                onClick={() => {
+                  setLeaveDungeonId(dungeon.id);
+                  setLeaveOpen(true);
+                }}
               >
                 Set out
               </Button>
@@ -77,6 +81,8 @@ export function RoadPanel() {
 export function LeaveDialog() {
   const open = useTownUi((s) => s.leaveOpen);
   const setOpen = useTownUi((s) => s.setLeaveOpen);
+  const startedFrom = useTownUi((s) => s.leaveDungeonId);
+  const setStartedFrom = useTownUi((s) => s.setLeaveDungeonId);
   const setSection = useTownUi((s) => s.setSection);
   const { dungeons } = useDungeons();
   const access = useLeaveAccess();
@@ -86,13 +92,22 @@ export function LeaveDialog() {
   const [error, setError] = useState<string | null>(null);
 
   const list: Dungeon[] = dungeons ?? [];
-  const chosen = list.find((dungeon) => dungeon.id === choice) ?? list[0] ?? null;
+  // The player's choice in the dialog comes first, then the dungeon whose button opened it.
+  const chosen =
+    list.find((dungeon) => dungeon.id === choice) ??
+    list.find((dungeon) => dungeon.id === startedFrom) ??
+    list[0] ??
+    null;
   const advice = useSpellAdvice();
   const missing = gaps(readinessChecklist(party, spellsForChecklist(advice)));
 
   const close = (next: boolean) => {
     setOpen(next);
-    if (!next) setError(null);
+    if (!next) {
+      setError(null);
+      setChoice(null);
+      setStartedFrom(null);
+    }
   };
 
   const go = async () => {

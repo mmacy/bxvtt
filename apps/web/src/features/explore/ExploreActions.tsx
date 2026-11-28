@@ -102,7 +102,16 @@ function MenuAction({
   const disabled = reason !== null || items.length === 0;
   const disabledReason = reason ?? (items.length === 0 ? (emptyReason ?? null) : null);
   useShortcut({ id, keys, label, group: 'Party', enabled: !disabled, run: () => setOpen(true) });
-  useAction({ id, label, group: 'Party', icon, shortcut: keys, disabled, run: () => setOpen(true) });
+  useAction({
+    id,
+    label,
+    group: 'Party',
+    icon,
+    shortcut: keys,
+    disabled,
+    disabledReason,
+    run: () => setOpen(true),
+  });
   return (
     <ActionBarMenu
       label={label}

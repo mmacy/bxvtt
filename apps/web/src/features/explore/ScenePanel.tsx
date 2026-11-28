@@ -151,7 +151,13 @@ function Actions({ entries, label }: { entries: MenuEntry[]; label: keyof typeof
   const [only] = actionable;
   if (actionable.length === 1 && only && (only.type === undefined || only.type === 'item')) {
     return (
-      <Button size="sm" variant="secondary" onClick={() => only.onSelect?.()}>
+      <Button
+        size="sm"
+        variant="secondary"
+        disabled={only.disabled}
+        disabledReason={only.disabledReason}
+        onClick={() => only.onSelect?.()}
+      >
         {only.label}
       </Button>
     );

@@ -127,6 +127,27 @@ export function InventoryTab({ member, model }: TabProps) {
   const lights = (view?.effects ?? []).filter((e) => e.character_id === member.id && e.kind === 'light');
   const anyAction = [equip, unequip, give, drop, use, light, extinguish].some((c) => c.legal !== null);
   const reason = useCanControlMember(member.id).reason;
+  const party = useParty();
+  // Give and Drop need something to hand over, and Give needs someone to hand it to. What counts is what the
+  // transfer dialog offers: the pack, the valuables, an equipped magic item, and the coins.
+  const carrying =
+    inventory.pack.length + inventory.valuables.length > 0 ||
+    equippedEntries(inventory).some((entry) => entry.kind === 'magic') ||
+    Object.values(inventory.purse).some((coins) => coins > 0);
+  const alone = party.every((other) => other.id === member.id);
+  // A member who carries only mundane equipped gear has something, just nothing the transfer dialog offers.
+  const empty =
+    equippedEntries(inventory).length > 0
+      ? `Everything ${member.name} carries is equipped.`
+      : `${member.name} isn't carrying anything.`;
+  const giveBlock = !give.permission.allowed
+    ? give.permission.reason
+    : !carrying
+      ? empty
+      : alone
+        ? 'Nobody else in the party can take it.'
+        : null;
+  const dropBlock = !drop.permission.allowed ? drop.permission.reason : !carrying ? empty : null;
 
   const menuFor = (entry: InventoryEntry): MenuEntry[] => {
     const items: MenuEntry[] = [];
@@ -160,16 +181,16 @@ export function InventoryTab({ member, model }: TabProps) {
       items.push({
         label: 'Give to…',
         icon: 'hand',
-        disabled: !give.permission.allowed,
-        disabledReason: give.permission.reason,
+        disabled: giveBlock !== null,
+        disabledReason: giveBlock,
         onSelect: () => setTransfer({ mode: 'give', entryKey: entry.key }),
       });
     if (drop.legal)
       items.push({
         label: 'Drop…',
         icon: 'arrow-down',
-        disabled: !drop.permission.allowed,
-        disabledReason: drop.permission.reason,
+        disabled: dropBlock !== null,
+        disabledReason: dropBlock,
         onSelect: () => setTransfer({ mode: 'drop', entryKey: entry.key }),
       });
     return items;
@@ -301,7 +322,7 @@ export function InventoryTab({ member, model }: TabProps) {
                 Put out light
               </Button>
             )}
-            {light.legal && here?.pile && (
+            {light.legal && here?.pile?.contents.some((item) => item.item_id === 'oil_flask') && (
               <Button
                 size="sm"
                 variant="ghost"
@@ -331,8 +352,8 @@ export function InventoryTab({ member, model }: TabProps) {
                 size="sm"
                 variant="secondary"
                 icon="hand"
-                disabled={!give.permission.allowed}
-                disabledReason={give.permission.reason}
+                disabled={giveBlock !== null}
+                disabledReason={giveBlock}
                 tooltip="Hand items or coins to another party member"
                 onClick={() => setTransfer({ mode: 'give', entryKey: null })}
               >
@@ -344,8 +365,8 @@ export function InventoryTab({ member, model }: TabProps) {
                 size="sm"
                 variant="ghost"
                 icon="arrow-down"
-                disabled={!drop.permission.allowed}
-                disabledReason={drop.permission.reason}
+                disabled={dropBlock !== null}
+                disabledReason={dropBlock}
                 tooltip="Leave items or coins on this square"
                 onClick={() => setTransfer({ mode: 'drop', entryKey: null })}
               >
@@ -404,7 +425,11 @@ function TransferDialog({ mode, member, model, initialKey, onClose }: TransferPr
   const party = useParty();
   const { send, pending } = useSendCommand();
   const recipients = party.filter((m) => m.id !== member.id);
-  const [recipient, setRecipient] = useState<string>(recipients[0]?.id ?? '');
+  const [chosenRecipient, setRecipient] = useState<string>('');
+  // The recipient is worked out on every render, so a member who leaves the party never stays chosen.
+  const recipient = recipients.some((m) => m.id === chosenRecipient)
+    ? chosenRecipient
+    : (recipients[0]?.id ?? '');
   const entries = useMemo(
     () => [
       ...model.inventory.pack,
@@ -584,7 +609,9 @@ function UseItemDialog({
   const targetOptions = [
     { value: 'self', label: `${member.name} (the user)` },
     ...party.filter((m) => m.id !== member.id).map((m) => ({ value: m.id, label: m.name })),
-    ...(encounter?.groups ?? []).map((g) => ({ value: g.id, label: capitalizeFirst(groupName(g.id, ctx)) })),
+    ...(encounter?.groups ?? [])
+      .filter((g) => !g.fled && g.count > 0)
+      .map((g) => ({ value: g.id, label: capitalizeFirst(groupName(g.id, ctx)) })),
   ];
   // A scroll's spell goes at creatures by ID, as `cast_spell.targets` does: party members, and the living
   // creatures the player view lists in the encounter.

@@ -649,7 +649,7 @@ function CastDialog({
           <Button
             variant="primary"
             icon="spell"
-            loading={pending}
+            loading={pending || entry.loading}
             disabled={!mode || needsTarget}
             disabledReason={
               entry.failed
@@ -745,7 +745,13 @@ function LearnDialog({
     label: s.name,
     description: oneLevel || s.level === undefined ? undefined : `${ordinal(s.level)} level`,
   }));
-  const chosen = spellId !== null && member.learnable_spells.includes(spellId) ? spellId : null;
+  // With one spell to learn, it is the choice.
+  const chosen =
+    spellId !== null && member.learnable_spells.includes(spellId)
+      ? spellId
+      : member.learnable_spells.length === 1
+        ? (member.learnable_spells[0] ?? null)
+        : null;
 
   const submit = async () => {
     if (!chosen) return;
@@ -778,10 +784,10 @@ function LearnDialog({
             icon="book"
             loading={pending}
             disabled={!chosen}
-            disabledReason="Choose a spell first."
+            disabledReason="Choose a spell to learn."
             onClick={() => void submit()}
           >
-            {chosen ? `Learn ${nameOf(chosen, false, ctx)}` : 'Learn spell'}
+            {chosen ? `Learn ${nameOf(chosen, false, ctx)}` : 'Learn'}
           </Button>
         </>
       }

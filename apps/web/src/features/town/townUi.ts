@@ -13,6 +13,9 @@ export interface TownUiState {
   /** Whether the "set out" dialog is open. */
   leaveOpen: boolean;
   setLeaveOpen: (open: boolean) => void;
+  /** The dungeon whose **Set out** button opened the dialog, or `null` when the dialog picks the first one. */
+  leaveDungeonId: string | null;
+  setLeaveDungeonId: (dungeonId: string | null) => void;
   /** The member the viewer is shopping for, or `null` until they choose. */
   buyerId: string | null;
   setBuyerId: (memberId: string | null) => void;
@@ -45,6 +48,7 @@ export interface RestReport {
 const INITIAL = {
   section: 'square',
   leaveOpen: false,
+  leaveDungeonId: null,
   buyerId: null,
   outfitterSearch: '',
   restReport: null,
@@ -55,6 +59,7 @@ export const useTownUi = create<TownUiState>()((set) => ({
   ...INITIAL,
   setSection: (section) => set({ section }),
   setLeaveOpen: (leaveOpen) => set({ leaveOpen }),
+  setLeaveDungeonId: (leaveDungeonId) => set({ leaveDungeonId }),
   setBuyerId: (buyerId) => set({ buyerId }),
   setOutfitterSearch: (outfitterSearch) => set({ outfitterSearch }),
   setRestReport: (restReport) => set({ restReport }),

@@ -243,7 +243,14 @@ function FieldInput({ commandType, field, value, values, onChange, can, actingFi
 
   switch (field.kind) {
     case 'member': {
-      const options = memberOptions(party, (member) => !field.acting || can(commandType, member.id));
+      // The acting member can't give to themselves, so the recipient list leaves them out. A target can be the
+      // acting member, such as a potion they drink or a scroll they read on themselves, so it keeps them.
+      const actingMemberId = typeof actingId === 'string' ? actingId : undefined;
+      const options = memberOptions(party, (member) =>
+        field.acting
+          ? can(commandType, member.id)
+          : field.name !== 'recipient_id' || member.id !== actingMemberId,
+      );
       return (
         <Field label={text.label} hint={text.help} required={field.required}>
           <Select
@@ -481,15 +488,30 @@ export function CommandFormDialog({ commandType, onClose }: CommandFormDialogPro
   );
 }
 
-/** The first required field that has no value yet, which keeps the form's submit button off. */
+/** Whether a form value has nothing in it: not set, blank, or a list with no entries. */
+function isEmptyValue(value: unknown): boolean {
+  if (value === undefined || value === null) return true;
+  if (typeof value === 'string') return value.trim() === '';
+  return Array.isArray(value) && value.length === 0;
+}
+
+/**
+ * The first required field that has no value yet, which keeps the form's submit button off. A required list with
+ * no entries counts as empty, and so does a required field inside a group that is required or has a value.
+ */
 export function firstMissingField(fields: readonly FormField[], values: Json): FormField | undefined {
-  return fields.find(
-    (field) =>
-      field.required &&
-      field.kind !== 'boolean' &&
-      field.kind !== 'group' &&
-      (values[field.name] === undefined || values[field.name] === ''),
-  );
+  for (const field of fields) {
+    if (field.kind === 'group') {
+      const inner = record(values[field.name]);
+      const started = inner !== null && Object.values(inner).some((value) => !isEmptyValue(value));
+      if (!field.required && !started) continue;
+      const missing = firstMissingField(field.fields, inner ?? {});
+      if (missing !== undefined) return missing;
+      continue;
+    }
+    if (field.required && field.kind !== 'boolean' && isEmptyValue(values[field.name])) return field;
+  }
+  return undefined;
 }
 
 function CommandFormBody({ commandType, onDone }: { commandType: string; onDone: () => void }) {
@@ -497,9 +519,23 @@ function CommandFormBody({ commandType, onDone }: { commandType: string; onDone:
   const legal = useLegalCommand(commandType);
   const ctx = useActionContext();
   const { send, pending } = useExploreSend();
-  const [values, setValues] = useState<Json>({});
+  const [chosen, setValues] = useState<Json>({});
   const [error, setError] = useState<string | null>(null);
   const memberField = legal?.member_field ?? null;
+  // When only one member can act, they are the acting member, so the form starts with them chosen.
+  const actors = (ctx?.view.party ?? []).filter((member) => ctx?.can(commandType, member.id) === true);
+  const onlyActor = memberField !== null && actors.length === 1 ? actors[0] : undefined;
+  const values: Json = {
+    ...(onlyActor !== undefined && memberField !== null ? { [memberField]: onlyActor.id } : {}),
+    ...chosen,
+  };
+  // A recipient who became the acting member is no longer on the list, so the form doesn't send them.
+  if (
+    memberField !== null &&
+    values.recipient_id !== undefined &&
+    values.recipient_id === values[memberField]
+  )
+    delete values.recipient_id;
   const fields = useMemo(() => {
     const json = record(schema.data?.json_schema);
     return json ? fieldsFromSchema(json, memberField) : null;

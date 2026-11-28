@@ -140,6 +140,7 @@ function RewardRow({
   const [who, setWho] = useState<string | null>(null);
   const target = who ?? initial;
   const { runAll, busy, outcome, clear } = useRefereeCommand();
+  const nobodyStanding = selector !== null && target === EVERYONE && standing.length === 0;
   const give = () => {
     const { source: _source, ...rest } = fields;
     const base = { ...rest, source: `quest:${questId}` };
@@ -167,8 +168,14 @@ function RewardRow({
         <Button
           size="sm"
           variant="secondary"
-          disabled={busy || (selector !== null && !target)}
-          disabledReason={selector !== null && !target ? 'Choose who receives this reward.' : null}
+          disabled={busy || (selector !== null && !target) || nobodyStanding}
+          disabledReason={
+            nobodyStanding
+              ? 'No one in the party is alive.'
+              : selector !== null && !target
+                ? 'Choose who receives this reward.'
+                : null
+          }
           onClick={give}
         >
           Give
